@@ -135,6 +135,7 @@ const PRE_FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementTy
   { id: "setup", label: "Setup", icon: FormInput },
   { id: "surveys", label: "Surveys", icon: ClipboardCheck },
   { id: "finalize", label: "Finalize", icon: Lock },
+  { id: "teaser-pages", label: "Teaser Pages", icon: FileText },
 ];
 
 const FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementType }[] = [
@@ -145,7 +146,6 @@ const FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementType }
 
 const POST_FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementType }[] = [
   { id: "reports", label: "Reports", icon: BarChart3 },
-  { id: "teaser-pages", label: "Teaser Pages", icon: FileText },
   { id: "late-backers", label: "Late Backers", icon: TrendingUp },
 ];
 
@@ -513,7 +513,7 @@ export default function IndieKitV2Page() {
                     <Package className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Add-on Sales</span>
                   </div>
-                  <p className="text-2xl font-bold mt-1">${(stats?.addOnPurchases || 0).toLocaleString()}</p>
+                  <p className="text-2xl font-bold mt-1">${(stats?.postSurveyAddonRevenue || 0).toLocaleString()}</p>
                 </CardContent>
               </Card>
               <Card>

@@ -28,9 +28,9 @@ export type AlwaysAvailableTab =
   | "account"
   | "projects";
 
-export type PreFulfillmentTab = "setup" | "surveys" | "finalize";
+export type PreFulfillmentTab = "setup" | "surveys" | "finalize" | "teaser-pages";
 export type FulfillmentTab = "payments" | "digital-delivery" | "physical-delivery";
-export type PostFulfillmentTab = "reports" | "teaser-pages" | "late-backers";
+export type PostFulfillmentTab = "reports" | "late-backers";
 
 export type PhaseTab = PreFulfillmentTab | FulfillmentTab | PostFulfillmentTab;
 

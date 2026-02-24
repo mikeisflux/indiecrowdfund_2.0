@@ -417,31 +417,33 @@ export async function GET(req: NextRequest) {
     // Pre-order count
     const preOrderBackers = pledges.filter(p => p.isPreOrder).length;
 
+    // Calculate balance due per pledge for post-campaign charge tracking
+    // pledge.amount = original total charged (includes reward + campaign addons + shipping)
+    // If addons are added post-campaign via IndieKit, addonsAmount increases but amount stays the same
+    // So balanceDue = max(0, currentExpectedTotal - originalChargedAmount)
+    const pledgesWithBalance = pledges.map(p => {
+      const pledgeTotal = Number(p.amount);
+      const expectedTotal = Number(p.rewardAmount) + Number(p.addonsAmount) + Number(p.shippingAmount);
+      const balanceDue = Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
+      return { ...p, balanceDue };
+    });
+
+    // Post-survey addon revenue = sum of all balance due amounts
+    // This represents money owed from post-campaign order edits (addon additions, shipping changes)
+    const postSurveyAddonRevenue = pledgesWithBalance.reduce((sum, p) => sum + p.balanceDue, 0);
+    const backersWithBalanceDue = pledgesWithBalance.filter(p => p.balanceDue > 0);
+
     // Calculate charge stats for workflow
     // "Charge Cards" is for ADDITIONAL charges (add-ons added via survey, shipping upgrades, etc.)
     // NOT for initial pledge payments - those are already collected when status is COMPLETED
-    //
-    // When a pledge is COMPLETED, the full amount (pledge + addons + shipping) was already charged.
-    // Add-ons in pledge.addons are from checkout and are ALREADY PAID in pledge.amount.
-    //
-    // We only need to charge if:
-    // 1. There's an explicit "additionalChargeAmount" field (not yet implemented)
-    // 2. The chargeStatus indicates a failed additional charge attempt
-    //
-    // For now, completed pledges don't need additional charges unless there's a FAILED status
-    const pledgesNeedingCharge = pledges.filter(p => {
-      // Only count pledges that have a failed additional charge attempt
-      return p.chargeStatus === "FAILED" || p.chargeStatus === "PENDING_RETRY";
-    });
-
     const statsChargeStats = {
-      notCharged: pledgesNeedingCharge.length, // Only count those with failed charges
+      notCharged: backersWithBalanceDue.length, // Backers with outstanding balance from post-campaign changes
       errored: pledges.filter(p => p.chargeStatus === "FAILED").length,
-      charged: pledges.filter(p => p.status === "COMPLETED").length, // All completed pledges have initial payment
-      paypalCollected: pledges.filter(p => p.paymentProcessor === "PAYPAL").length,
+      charged: 0, // TODO: track successful additional charge collections
+      paypalCollected: 0,
     };
 
-    // Calculate backers with addons
+    // Calculate backers with addons (campaign + post-campaign)
     const backersWithAddons = pledges.filter(p => p.addons && p.addons.length > 0).length;
 
     const stats = {
@@ -450,7 +452,9 @@ export async function GET(req: NextRequest) {
       surveysCompleted,
       surveysPending,
       totalRaised: Number(selectedProject.currentAmount),
-      addOnPurchases: Number(addOnSales._sum.amount || 0),
+      addOnPurchases: Number(addOnSales._sum.amount || 0), // Total campaign addon sales (all time)
+      postSurveyAddonRevenue, // Revenue from post-campaign IndieKit order edits only
+      backersWithBalanceDue: backersWithBalanceDue.length,
       backersWithAddons,
       totalAddonItems: Number(addOnSales._sum.quantity || 0),
       addonPurchaseCount: addOnSales._count || 0,

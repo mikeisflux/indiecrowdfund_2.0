@@ -22,6 +22,8 @@ export interface FulfillmentStats {
   surveysPending: number;
   totalRaised: number;
   addOnPurchases: number;
+  postSurveyAddonRevenue: number;
+  backersWithBalanceDue: number;
   backersWithAddons: number;
   totalAddonItems: number;
   addonPurchaseCount: number;

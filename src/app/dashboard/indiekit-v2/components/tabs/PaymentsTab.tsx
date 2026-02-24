@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, DollarSign, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { CreditCard, DollarSign, AlertCircle, CheckCircle, XCircle, Users } from "lucide-react";
 
 import type { FulfillmentStats } from "../../types";
 
@@ -62,23 +62,21 @@ export function PaymentsTab({ stats, onOpenChargePreview }: PaymentsTabProps) {
             </div>
           </div>
 
-          {/* Add-on Revenue */}
+          {/* Add-on Revenue - post-campaign only */}
           <div className="rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Add-on Revenue</p>
-                <p className="text-sm text-muted-foreground">Total from survey add-on purchases</p>
+                <p className="text-sm text-muted-foreground">Additional revenue from post-campaign order edits</p>
               </div>
-              <p className="text-2xl font-bold text-teal-600">${(stats?.addOnPurchases || 0).toLocaleString()}</p>
+              <p className="text-2xl font-bold text-teal-600">${(stats?.postSurveyAddonRevenue || 0).toLocaleString()}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-sm py-1 px-3">
-              {stats?.backersWithAddons || 0} backers with add-ons
-            </Badge>
-            <Badge variant="secondary" className="text-sm py-1 px-3">
-              {stats?.totalAddonItems || 0} total items
+              <Users className="h-3 w-3 mr-1" />
+              {stats?.backersWithBalanceDue || 0} backers with balance due
             </Badge>
           </div>
 
