@@ -226,7 +226,7 @@ export async function notifyBackerPledgeConfirmed(
       });
 
       console.log(`Sent pledge confirmation email to ${pledge.user.email} for pledge ${pledgeId}`);
-    } else if (result.blocked) {
+    } else if ("blocked" in result && result.blocked) {
       // Email address is on the blocklist - mark as sent to prevent infinite retry loop
       await db.pledge.update({
         where: { id: pledgeId },
@@ -452,7 +452,7 @@ export async function processUnsentConfirmationEmails() {
 
         results.successful++;
         console.log(`Retry: Sent pledge confirmation email for pledge ${pledge.id}`);
-      } else if (emailResult.blocked) {
+      } else if ("blocked" in emailResult && emailResult.blocked) {
         // Email address is on the blocklist (bounced, spam complaint, etc.)
         // Mark as sent to stop the retry loop - the email can't be delivered
         await db.pledge.update({
