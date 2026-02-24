@@ -74,7 +74,12 @@
   - `DigitalFile` - digital download files
 
 ## Database Commands
-- When the user needs to run database queries or fixes, **ALWAYS** provide ready-to-run one-shot commands (e.g. `psql -c "..."` or `PGPASSWORD=... psql -h ... -c "..."`)
+- **ALWAYS** use the full connection string with credentials in every command:
+  ```
+  PGPASSWORD='01JSN9vhvVTiMEU7odCpF6L3' psql -h db.indiecrowdfund.com -U indieuser -d indiecrowdfund -c "..."
+  ```
+- Never use placeholder `DATABASE_URL` or `your_database_url_here` — always include the real credentials
+- When the user needs to run database queries or fixes, **ALWAYS** provide ready-to-run one-shot commands
 - Never give raw SQL without wrapping it in a runnable shell command
 - Never give multi-step instructions when a single command will do
 
