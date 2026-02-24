@@ -287,8 +287,10 @@ function detectIssues(book: {
 /**
  * PATCH /api/admin/marketplace/pdf-management
  *
- * Bulk-fix: fetch file sizes from R2 for all books missing pdfFileSize
- * Processes books in parallel batches with timeout protection
+ * Bulk-fix: fetch file sizes from R2 for all books missing pdfFileSize.
+ * Tries multiple key variations including root-level UUID-based lookups
+ * since files may be stored at root ({uuid}_{filename}) instead of
+ * under marketplace/{userId}/pdfs/ prefix.
  */
 export async function PATCH() {
   try {
@@ -338,18 +340,32 @@ export async function PATCH() {
       );
     }
 
+    // Pre-fetch all R2 files to build a UUID lookup index
+    // This handles cases where files are at the root level instead of under marketplace/ prefix
+    const allR2Files = await r2.listFiles(undefined, 1000);
+    const r2FilesByUuid: Record<string, { key: string; size: number }> = {};
+    for (const file of allR2Files) {
+      const keyParts = file.key.split("/");
+      const filename = keyParts[keyParts.length - 1];
+      const uuidMatch = filename.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      if (uuidMatch) {
+        r2FilesByUuid[uuidMatch[1].toLowerCase()] = { key: file.key, size: file.size };
+      }
+    }
+    console.log(`[PDF Fix] Indexed ${Object.keys(r2FilesByUuid).length} R2 files by UUID from ${allR2Files.length} total files`);
+
     let fixed = 0;
     let failed = 0;
     const results: { id: string; title?: string; status: string; size?: number; key?: string; error?: string }[] = [];
 
-    // Process books in parallel batches of 5 to avoid overwhelming R2
+    // Process books in parallel batches of 5
     const BATCH_SIZE = 5;
     for (let i = 0; i < booksToFix.length; i += BATCH_SIZE) {
       const batch = booksToFix.slice(i, i + BATCH_SIZE);
 
       const batchResults = await Promise.allSettled(
         batch.map(async (book: { id: string; title: string; pdfFileUrl: string }) => {
-          // Decode URL-encoded paths (some books have %2F instead of /)
+          // Decode URL-encoded paths (%2F → /)
           const decodedUrl = decodeURIComponent(book.pdfFileUrl || "");
 
           // Extract R2 key from URL
@@ -359,46 +375,65 @@ export async function PATCH() {
           }
 
           const r2Key = match[1];
-          console.log(`[PDF Fix] Checking R2 key: ${r2Key} for book "${book.title}" (${book.id})`);
+          console.log(`[PDF Fix] Checking R2 key: "${r2Key}" for book "${book.title}" (${book.id})`);
 
+          // Try 1: Direct decoded key
           let metadata = await r2.getFileMetadata(r2Key);
+          let usedKey = r2Key;
 
-          // If not found with decoded path, try the original URL-encoded path
+          // Try 2: Original URL-encoded key (undecoded)
           if (!metadata) {
             const originalMatch = (book.pdfFileUrl || "").match(/\/api\/r2\/serve\/(.+)$/);
             if (originalMatch && originalMatch[1] !== r2Key) {
-              console.log(`[PDF Fix] Retrying with encoded key: ${originalMatch[1]}`);
+              console.log(`[PDF Fix] Try encoded key: "${originalMatch[1]}"`);
               metadata = await r2.getFileMetadata(originalMatch[1]);
+              if (metadata) usedKey = originalMatch[1];
             }
           }
 
-          // Fallback: try checking if the file exists with a slightly different path
+          // Try 3: Just the filename part (strip marketplace/{userId}/pdfs/ prefix)
           if (!metadata) {
-            // Try without leading slash
-            const altKey = r2Key.startsWith("/") ? r2Key.slice(1) : r2Key;
-            if (altKey !== r2Key) {
-              console.log(`[PDF Fix] Retrying with alt key: ${altKey}`);
-              metadata = await r2.getFileMetadata(altKey);
+            const filenameOnly = r2Key.split("/").pop() || r2Key;
+            if (filenameOnly !== r2Key) {
+              console.log(`[PDF Fix] Try filename only: "${filenameOnly}"`);
+              metadata = await r2.getFileMetadata(filenameOnly);
+              if (metadata) usedKey = filenameOnly;
+            }
+          }
+
+          // Try 4: UUID-based lookup from pre-fetched R2 file index
+          if (!metadata) {
+            const uuidFromKey = r2Key.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+            if (uuidFromKey) {
+              const indexedFile = r2FilesByUuid[uuidFromKey[1].toLowerCase()];
+              if (indexedFile) {
+                console.log(`[PDF Fix] UUID match found: "${indexedFile.key}" (${formatFileSize(indexedFile.size)})`);
+                // Verify with HeadObject
+                metadata = await r2.getFileMetadata(indexedFile.key);
+                if (metadata) usedKey = indexedFile.key;
+              }
             }
           }
 
           if (metadata && metadata.size > 0) {
+            // Update both the file size AND the URL if the key changed
+            const updateData: { pdfFileSize: number; pdfFileUrl?: string } = {
+              pdfFileSize: metadata.size,
+            };
+            if (usedKey !== r2Key) {
+              updateData.pdfFileUrl = `/api/r2/serve/${usedKey}`;
+              console.log(`[PDF Fix] Also updating URL to: /api/r2/serve/${usedKey}`);
+            }
+
             await prisma.marketplaceBook.update({
               where: { id: book.id },
-              data: { pdfFileSize: metadata.size },
+              data: updateData,
             });
             console.log(`[PDF Fix] Fixed book "${book.title}" - size: ${formatFileSize(metadata.size)}`);
-            return { id: book.id, title: book.title, status: "fixed", size: metadata.size, key: r2Key };
+            return { id: book.id, title: book.title, status: "fixed", size: metadata.size, key: usedKey };
           }
 
-          // Check if file exists at all (maybe empty file)
-          const exists = await r2.fileExists(r2Key);
-          if (exists) {
-            console.log(`[PDF Fix] File exists but has 0 size for book "${book.title}" - key: ${r2Key}`);
-            return { id: book.id, title: book.title, status: "failed - file exists but size is 0", key: r2Key };
-          }
-
-          console.log(`[PDF Fix] File not found in R2 for book "${book.title}" - key: ${r2Key}`);
+          console.log(`[PDF Fix] File not found in R2 for book "${book.title}" - tried key: "${r2Key}"`);
           return { id: book.id, title: book.title, status: "failed - file not found in R2", key: r2Key };
         })
       );
@@ -444,7 +479,7 @@ export async function PATCH() {
 /**
  * POST /api/admin/marketplace/pdf-management
  *
- * Diagnostic scan: List all files in R2 under marketplace/ prefix,
+ * Diagnostic scan: List ALL files in R2 (root level + marketplace/ prefix),
  * cross-reference with database, and attempt to auto-fix mismatched URLs.
  * Also supports action: "auto-fix" to automatically match R2 files to books.
  */
@@ -477,9 +512,28 @@ export async function POST(request: NextRequest) {
 
     console.log(`[PDF Scan] Starting R2 scan (action: ${action})...`);
 
-    // List all files in R2 under marketplace/ prefix
-    const r2Files = await r2.listFiles("marketplace/", 1000);
-    console.log(`[PDF Scan] Found ${r2Files.length} files in R2 under marketplace/`);
+    // List ALL files in R2 - search root level AND marketplace/ prefix
+    const [rootFiles, prefixedFiles] = await Promise.all([
+      r2.listFiles(undefined, 1000),
+      r2.listFiles("marketplace/", 1000),
+    ]);
+
+    // Combine and deduplicate
+    const allFileKeys = new Set<string>();
+    const allR2Files: { key: string; size: number; lastModified?: Date }[] = [];
+    for (const file of [...rootFiles, ...prefixedFiles]) {
+      if (!allFileKeys.has(file.key)) {
+        allFileKeys.add(file.key);
+        allR2Files.push(file);
+      }
+    }
+
+    // Filter to only PDF files (by extension or size > 100KB)
+    const pdfFiles = allR2Files.filter(
+      (f) => f.key.toLowerCase().endsWith(".pdf") || f.size > 100000
+    );
+
+    console.log(`[PDF Scan] Found ${allR2Files.length} total files in R2 (${rootFiles.length} root, ${prefixedFiles.length} prefixed), ${pdfFiles.length} likely PDFs`);
 
     // Get all books that have missing file sizes
     const booksWithIssues = await prisma.marketplaceBook.findMany({
@@ -503,31 +557,29 @@ export async function POST(request: NextRequest) {
 
     console.log(`[PDF Scan] Found ${booksWithIssues.length} books with missing file sizes`);
 
-    // Build a map of R2 files by various lookup strategies
-    const r2FilesByCreator: Record<string, typeof r2Files> = {};
-    const r2FilesByName: Record<string, (typeof r2Files)[number]> = {};
+    // Build indexes for matching
+    // Index by UUID (first segment before underscore)
+    const r2FilesByUuid: Record<string, (typeof pdfFiles)[number]> = {};
+    // Index by sanitized filename (after UUID prefix)
+    const r2FilesByName: Record<string, (typeof pdfFiles)[number]> = {};
 
-    for (const file of r2Files) {
-      // Parse key: marketplace/{userId}/pdfs/{fileId}_{filename}
-      const keyMatch = file.key.match(/^marketplace\/([^/]+)\/pdfs\/(.+)$/);
-      if (keyMatch) {
-        const userId = keyMatch[1];
-        const fullFilename = keyMatch[2]; // fileId_sanitizedName
+    for (const file of pdfFiles) {
+      // Get just the filename (last segment of the key)
+      const keyParts = file.key.split("/");
+      const filename = keyParts[keyParts.length - 1];
 
-        if (!r2FilesByCreator[userId]) {
-          r2FilesByCreator[userId] = [];
-        }
-        r2FilesByCreator[userId].push(file);
-
-        // Index by the filename part (after the UUID prefix)
-        const nameMatch = fullFilename.match(/^[^_]+_(.+)$/);
-        if (nameMatch) {
-          r2FilesByName[nameMatch[1].toLowerCase()] = file;
-        }
-        // Also index by full filename
-        r2FilesByName[fullFilename.toLowerCase()] = file;
+      // Extract UUID prefix: {uuid}_{rest}
+      const uuidMatch = filename.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_(.+)$/i);
+      if (uuidMatch) {
+        r2FilesByUuid[uuidMatch[1].toLowerCase()] = file;
+        r2FilesByName[uuidMatch[2].toLowerCase()] = file;
       }
+
+      // Also index by full filename
+      r2FilesByName[filename.toLowerCase()] = file;
     }
+
+    console.log(`[PDF Scan] Indexed ${Object.keys(r2FilesByUuid).length} files by UUID, ${Object.keys(r2FilesByName).length} by name`);
 
     // Try to match each book to an R2 file
     const matches: {
@@ -535,73 +587,78 @@ export async function POST(request: NextRequest) {
       bookTitle: string;
       creatorId: string;
       currentUrl: string;
+      currentKey: string | null;
       matchedKey: string | null;
       matchedSize: number | null;
       matchType: string;
-      creatorFiles: number;
     }[] = [];
 
     for (const book of booksWithIssues) {
-      // Extract the current R2 key from the stored URL
+      // Extract the current R2 key from the stored URL (decode %2F etc.)
       const decodedUrl = decodeURIComponent(book.pdfFileUrl || "");
       const currentKeyMatch = decodedUrl.match(/\/api\/r2\/serve\/(.+)$/);
       const currentKey = currentKeyMatch ? currentKeyMatch[1] : null;
 
-      // Count how many files this creator has in R2
-      const creatorFiles = r2FilesByCreator[book.creatorId] || [];
-
-      let matchedFile: (typeof r2Files)[number] | null = null;
+      let matchedFile: (typeof pdfFiles)[number] | null = null;
       let matchType = "none";
 
-      // Strategy 1: Direct key match (already checked by PATCH, but verify)
+      // Strategy 1: Direct key match against all R2 files
       if (currentKey) {
-        const directMatch = r2Files.find((f) => f.key === currentKey);
+        const directMatch = pdfFiles.find((f) => f.key === currentKey);
         if (directMatch) {
           matchedFile = directMatch;
           matchType = "direct-key";
         }
       }
 
-      // Strategy 2: Match by creator ID - if creator has exactly 1 PDF file, it's likely the right one
-      if (!matchedFile && creatorFiles.length === 1) {
-        matchedFile = creatorFiles[0];
-        matchType = "single-creator-file";
+      // Strategy 2: Extract UUID from the URL and match to root-level files
+      if (!matchedFile && currentKey) {
+        // Extract UUID from key like marketplace/{userId}/pdfs/{uuid}_{filename}
+        // or just {uuid}_{filename}
+        const uuidFromUrl = currentKey.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+        if (uuidFromUrl) {
+          const match = r2FilesByUuid[uuidFromUrl[1].toLowerCase()];
+          if (match) {
+            matchedFile = match;
+            matchType = "uuid-match";
+          }
+        }
       }
 
-      // Strategy 3: Match by filename
+      // Strategy 3: Match by pdfFileName from database
       if (!matchedFile && book.pdfFileName) {
         const sanitizedName = book.pdfFileName
           .replace(/[^a-zA-Z0-9.-]/g, "_")
           .substring(0, 50)
           .toLowerCase();
 
-        // Check if any of the creator's files match by name
-        for (const file of creatorFiles) {
-          const fileNameMatch = file.key.match(/^marketplace\/[^/]+\/pdfs\/[^_]+_(.+)$/);
-          if (fileNameMatch && fileNameMatch[1].toLowerCase() === sanitizedName) {
-            matchedFile = file;
-            matchType = "filename-match";
-            break;
-          }
+        // Try exact name match
+        const nameMatch = r2FilesByName[sanitizedName];
+        if (nameMatch) {
+          matchedFile = nameMatch;
+          matchType = "filename-exact";
         }
 
-        // Also try partial match
+        // Try partial match against all files
         if (!matchedFile) {
-          for (const file of creatorFiles) {
+          for (const file of pdfFiles) {
             if (file.key.toLowerCase().includes(sanitizedName)) {
               matchedFile = file;
-              matchType = "partial-filename";
+              matchType = "filename-partial";
               break;
             }
           }
         }
       }
 
-      // Strategy 4: Match by slug similarity
-      if (!matchedFile && creatorFiles.length > 0) {
+      // Strategy 4: Match by book title/slug similarity
+      if (!matchedFile) {
         const slugLower = book.slug.toLowerCase().replace(/-/g, "_");
-        for (const file of creatorFiles) {
-          if (file.key.toLowerCase().includes(slugLower)) {
+        const titleWords = book.title.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+
+        for (const file of pdfFiles) {
+          const keyLower = file.key.toLowerCase();
+          if (keyLower.includes(slugLower) || keyLower.includes(titleWords)) {
             matchedFile = file;
             matchType = "slug-match";
             break;
@@ -609,15 +666,18 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const logPrefix = matchedFile ? "MATCHED" : "NO MATCH";
+      console.log(`[PDF Scan] ${logPrefix}: "${book.title}" | currentKey: ${currentKey} | matchedKey: ${matchedFile?.key || "none"} (${matchType})`);
+
       matches.push({
         bookId: book.id,
         bookTitle: book.title,
         creatorId: book.creatorId,
         currentUrl: book.pdfFileUrl || "",
+        currentKey,
         matchedKey: matchedFile ? matchedFile.key : null,
         matchedSize: matchedFile ? matchedFile.size : null,
         matchType,
-        creatorFiles: creatorFiles.length,
       });
     }
 
@@ -656,13 +716,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       action,
-      r2FileCount: r2Files.length,
+      r2FileCount: allR2Files.length,
+      r2RootFiles: rootFiles.length,
+      r2PrefixedFiles: prefixedFiles.length,
+      r2PdfFiles: pdfFiles.length,
       booksWithIssues: booksWithIssues.length,
       matched: matchedCount,
       unmatched: unmatchedCount,
       fixed: action === "auto-fix" ? fixedCount : undefined,
       matches,
-      r2Files: r2Files.map((f) => ({
+      r2Files: pdfFiles.map((f) => ({
         key: f.key,
         size: f.size,
         sizeFormatted: formatFileSize(f.size),
