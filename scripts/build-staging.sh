@@ -42,7 +42,11 @@ rsync -a \
   --exclude='uploads' \
   . "$BUILD_DIR/"
 
-# Copy node_modules (faster than reinstalling)
+# Install dependencies first to ensure new packages are present
+echo "📦 Installing dependencies..."
+npm install --production=false
+
+# Copy node_modules to build directory
 echo "📦 Copying node_modules..."
 cp -r node_modules "$BUILD_DIR/"
 
