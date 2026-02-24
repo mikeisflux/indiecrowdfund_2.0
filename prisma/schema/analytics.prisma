@@ -1,0 +1,194 @@
+// ============================================
+// ANALYTICS
+// ============================================
+
+model AnalyticsEvent {
+  id          String    @id @default(cuid())
+  projectId   String
+  eventType   EventType
+
+  // Attribution
+  referrer    String?
+  channel     String?
+  customTag   String?
+
+  // Data
+  amount      Decimal?  @db.Decimal(10, 2)
+  userId      String?
+  metadata    Json?
+
+  project     Project   @relation(fields: [projectId], references: [id])
+
+  timestamp   DateTime  @default(now())
+
+  @@index([projectId, eventType, timestamp])
+  @@index([projectId, referrer])
+}
+
+enum EventType {
+  PAGE_VIEW
+  PROJECT_FOLLOW
+  VIDEO_PLAY
+  VIDEO_COMPLETE
+  PLEDGE_STARTED
+  PLEDGE_COMPLETED
+  PLEDGE_FAILED
+  REWARD_SELECTED
+  ADDON_SELECTED
+  SHARE
+}
+
+// ============================================
+// RECOMMENDATION ENGINE & BEHAVIORAL TRACKING
+// ============================================
+
+model UserBehavior {
+  id          String            @id @default(cuid())
+  userId      String?
+  sessionId   String
+  eventType   BehaviorEventType
+
+  // Event data
+  projectId   String?
+  categoryId  String?
+  rewardId    String?
+  searchQuery String?
+
+  // Context
+  path        String
+  referrer    String?
+  userAgent   String?
+  ipAddress   String?
+  country     String?
+
+  // Engagement metrics
+  timeSpent   Int?
+  scrollDepth Float?
+
+  metadata    Json?
+
+  timestamp   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
+
+  @@index([userId, eventType, timestamp])
+  @@index([sessionId, timestamp])
+  @@index([projectId, eventType])
+  @@index([categoryId, timestamp])
+}
+
+enum BehaviorEventType {
+  PAGE_VIEW
+  PAGE_EXIT
+  PROJECT_VIEW
+  PROJECT_CLICK
+  REWARD_CLICK
+  VIDEO_PLAY
+  VIDEO_COMPLETE
+  SEARCH
+  FILTER_APPLY
+  PROJECT_SAVE
+  PROJECT_SHARE
+  COMMENT_POST
+  PLEDGE_START
+  PLEDGE_COMPLETE
+  SCROLL_DEPTH
+  HOVER
+  CREATOR_VIEW
+}
+
+// User interest profile for AI-powered email matching
+model UserInterestProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Category interests (weighted by engagement)
+  categoryInterests Json     // { "TECHNOLOGY": 0.85, "GAMES": 0.72, ... }
+
+  // Tag interests from viewed/backed projects
+  tagInterests      Json     // { "indie": 0.9, "puzzle": 0.65, ... }
+
+  // Search-based interests
+  searchInterests   String[] // Keywords from search queries
+
+  // Engagement metrics
+  totalProjectsViewed    Int     @default(0)
+  totalProjectsBacked    Int     @default(0)
+  avgPledgeAmount        Float   @default(0)
+
+  // Preferred project attributes
+  preferredGoalRange     Json?   // { "min": 1000, "max": 50000 }
+  preferredDuration      Int?    // Preferred campaign duration in days
+
+  // Time preferences (for send time optimization)
+  activeHours            Int[]   // Hours when user is most active (0-23)
+  activeDays             Int[]   // Days when user is most active (0-6, 0=Sunday)
+
+  // Profile quality score (based on data available)
+  profileScore           Float   @default(0) // 0-100
+
+  // Last calculation timestamp
+  lastCalculatedAt       DateTime @default(now())
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([profileScore])
+  @@index([lastCalculatedAt])
+}
+
+model UserPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // Category preferences (weighted scores 0-1)
+  categoryScores  Json
+
+  // Preferred pledge ranges
+  minPledge       Float?
+  maxPledge       Float?
+  avgPledge       Float?
+
+  // Creator preferences
+  followedCreators String[]
+  backedCreators   String[]
+
+  // Content preferences
+  prefersVideo     Boolean  @default(true)
+  prefersLongForm  Boolean  @default(true)
+
+  // Geographic preferences
+  prefersLocal     Boolean  @default(false)
+  preferredCountries String[]
+
+  // Engagement level (0-100)
+  engagementScore  Int      @default(50)
+
+  // Email preferences
+  emailPreferences Json?
+
+  // Last calculated
+  lastUpdated      DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model ProjectSimilarity {
+  id               String   @id @default(cuid())
+  projectId        String
+  similarProjectId String
+  similarityScore  Float
+  reason           String
+
+  project          Project  @relation("ProjectSimilarities", fields: [projectId], references: [id])
+  similarProject   Project  @relation("SimilarProjects", fields: [similarProjectId], references: [id])
+
+  createdAt        DateTime @default(now())
+
+  @@unique([projectId, similarProjectId])
+  @@index([projectId, similarityScore])
+}

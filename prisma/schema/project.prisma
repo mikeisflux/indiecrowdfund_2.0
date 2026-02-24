@@ -1,0 +1,328 @@
+// ============================================
+// PROJECT MANAGEMENT
+// ============================================
+
+model Project {
+  id                    String        @id @default(cuid())
+  creatorId             String
+
+  // Basics
+  title                 String
+  subtitle              String?
+  slug                  String        @unique
+  category              String
+  subcategory           String?
+  secondaryCategory     String?
+  secondarySubcategory  String?
+  location              String?
+  imageUrl              String?
+  videoUrl              String?
+  goalAmount            Decimal       @db.Decimal(10, 2)
+  currency              String        @default("USD")
+
+  // Duration
+  durationType          DurationType
+  durationDays          Int?
+  endDate               DateTime?
+  launchDate            DateTime?
+
+  // Story
+  description           String        @db.Text
+  risks                 String        @db.Text
+  usesAI                Boolean       @default(false)
+  faqs                  Json?
+
+  // Payment
+  contactEmail          String
+  projectType           ProjectType
+  paymentProcessor      PaymentProcessor @default(STRIPE)
+  hasAdultContent       Boolean       @default(false)
+  hasRiskyContent       Boolean       @default(false)
+  promoContentSfw       Boolean       @default(true)  // Agrees promotional materials (video, image, title) are SFW
+  bankAccountId         String?
+
+  // Stripe
+  stripeAccountId       String?
+
+  // Promotion
+  prelaunchActive       Boolean         @default(false)
+  prelaunchStatus       PrelaunchStatus @default(DRAFT)
+  prelaunchDescription  String?         @db.Text
+  customReferralTags    String[]
+  googleAnalyticsId     String?
+  googleAnalyticsSecret String?
+  metaPixelId           String?
+  metaConversionsToken  String?
+
+  // Retailer Settings
+  allowRetailerPledges  Boolean       @default(false)
+  retailerDiscount      Float         @default(50)
+  retailerMinQuantity   Int           @default(1)
+  retailerMaxQuantity   Int?
+
+  // Status
+  status                ProjectStatus @default(DRAFT)
+  currentAmount         Decimal       @default(0) @db.Decimal(10, 2)
+  backerCount           Int           @default(0)
+  followerCount         Int           @default(0)
+  isStaffPick           Boolean       @default(false)
+
+  // AI-generated tags for matching
+  tags                  String[]
+
+  // Relations
+  creator               User          @relation("ProjectCreator", fields: [creatorId], references: [id])
+  projectItems          ProjectItem[]
+  rewards               Reward[]
+  pledges               Pledge[]
+  updates               Update[]
+  collaborators         ProjectCollaborator[]
+  messages              Message[]
+  analytics             AnalyticsEvent[]
+  comments              Comment[]
+  payouts               Payout[]
+  behaviors             UserBehavior[]
+  emailLogs             EmailLog[]
+  projectSimilarities   ProjectSimilarity[] @relation("ProjectSimilarities")
+  similarProjects       ProjectSimilarity[] @relation("SimilarProjects")
+  followers             ProjectFollower[]
+  retailerPledges       RetailerPledge[]
+  divinityCoinSettlements DivinityCoinSettlement[]
+  digitalFiles          DigitalFile[]
+  collectionItems       ProjectCollectionItem[]
+  notificationPrefs     ProjectNotificationPreference[]
+  fulfillmentIntegrations FulfillmentIntegration[]
+  chargebackCard        CreatorChargebackCard?
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  launchedAt            DateTime?
+  fundedAt              DateTime?
+  deletedAt             DateTime?     // Soft delete timestamp
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([category])
+  @@index([slug])
+  @@index([deletedAt])  // For soft delete filtering
+  @@index([status, deletedAt])  // Common query pattern
+}
+
+model ProjectFollower {
+  id          String   @id @default(cuid())
+  projectId   String
+  userId      String?
+  email       String?
+  isPrelaunch Boolean  @default(false)
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@unique([projectId, email])
+  @@index([projectId])
+}
+
+enum DurationType {
+  FIXED_DAYS
+  END_DATE
+}
+
+enum ProjectType {
+  INDIVIDUAL
+  BUSINESS
+  NONPROFIT
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  LIVE
+  PAUSED
+  FUNDED
+  FAILED
+  CANCELLED
+}
+
+enum PrelaunchStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum PaymentProcessor {
+  STRIPE
+  DIVINITYCOIN
+}
+
+// ============================================
+// PROJECT ITEMS (independent of rewards)
+// ============================================
+
+model ProjectItem {
+  id          String  @id @default(cuid())
+  projectId   String
+  title       String
+  description String? @db.Text
+  imageUrl    String?
+  endedAt     DateTime? // If set, item is no longer available for new pledges
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rewardItems RewardItem[]
+
+  @@index([projectId])
+}
+
+// ============================================
+// PROJECT VIEWS & REFERRAL TRACKING
+// ============================================
+
+model ProjectView {
+  id          String   @id @default(cuid())
+  projectId   String
+  date        DateTime @db.Date
+  views       Int      @default(0)
+  uniqueViews Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, date])
+  @@index([projectId, date])
+}
+
+model ReferralTracker {
+  id           String   @id @default(cuid())
+  projectId    String
+  referrer     String
+  referrerType String
+  tag          String?
+  date         DateTime @db.Date
+  visits       Int      @default(0)
+  pledges      Int      @default(0)
+  pledgeAmount Decimal  @default(0) @db.Decimal(10, 2)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([projectId, referrer, date])
+  @@index([projectId, date])
+  @@index([projectId, referrerType])
+}
+
+// ============================================
+// PROJECT REVIEW & APPROVAL
+// ============================================
+
+model ProjectReview {
+  id              String              @id @default(cuid())
+  projectId       String
+  reviewerId      String?
+  reviewerEmail   String?
+
+  // Review action
+  action          ReviewAction
+  previousStatus  ProjectStatus
+  newStatus       ProjectStatus
+
+  // Feedback
+  notes           String?             @db.Text
+  internalNotes   String?             @db.Text
+  rejectionReason ReviewRejectionReason?
+
+  // Auto-review flags
+  flagsRaised     String[]
+  aiConfidenceScore Float?
+
+  createdAt       DateTime            @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([reviewerId])
+}
+
+model ProjectTag {
+  id          String   @id @default(cuid())
+  projectId   String
+  tag         String
+  confidence  Float    @default(1.0)
+  source      TagSource @default(MANUAL)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, tag])
+  @@index([projectId])
+  @@index([tag])
+}
+
+enum ReviewAction {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REQUESTED_CHANGES
+  RESUBMITTED
+  FLAGGED
+  UNFLAGGED
+  DEACTIVATE
+  REACTIVATE
+  SEND_TO_REVIEW
+}
+
+enum ReviewRejectionReason {
+  INCOMPLETE_INFORMATION
+  POLICY_VIOLATION
+  PROHIBITED_CONTENT
+  INTELLECTUAL_PROPERTY
+  FRAUD_SUSPECTED
+  UNREALISTIC_GOALS
+  MISSING_REWARDS
+  IDENTITY_VERIFICATION
+  OTHER
+}
+
+enum TagSource {
+  MANUAL
+  AI_GENERATED
+  USER_SUGGESTED
+}
+
+// ============================================
+// COLLABORATORS
+// ============================================
+
+model ProjectCollaborator {
+  id                        String             @id @default(cuid())
+  projectId                 String
+  userId                    String?            // Optional - linked when user accepts invite
+  email                     String             // Required - used to identify the collaborator
+  title                     String?
+
+  // Permissions
+  canEditProject            Boolean            @default(false)
+  canManageCommunity        Boolean            @default(false)
+  canCoordinateFulfillment  Boolean            @default(false)
+  canConfigurePledgeManager Boolean            @default(false)
+
+  status                    CollaboratorStatus @default(PENDING)
+
+  project                   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user                      User?              @relation(fields: [userId], references: [id])
+
+  invitedAt                 DateTime           @default(now())
+  acceptedAt                DateTime?
+
+  @@unique([projectId, email])
+  @@index([projectId])
+  @@index([userId])
+  @@index([email])
+}
+
+enum CollaboratorStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}

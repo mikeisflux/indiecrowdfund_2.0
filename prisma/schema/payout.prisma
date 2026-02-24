@@ -1,0 +1,38 @@
+// ============================================
+// PAYOUTS
+// ============================================
+
+model Payout {
+  id                String       @id @default(cuid())
+  projectId         String
+  amount            Decimal      @db.Decimal(10, 2)
+  grossAmount       Decimal      @db.Decimal(10, 2)
+  processorFees     Decimal      @db.Decimal(10, 2)
+  platformFees      Decimal      @db.Decimal(10, 2)
+  type              PayoutType
+  status            PayoutStatus
+  payoutId          String?      @unique
+  bankAccountLast4  String?
+
+  project           Project      @relation(fields: [projectId], references: [id])
+
+  sentAt            DateTime?
+  createdAt         DateTime     @default(now())
+  deletedAt         DateTime?    // Soft delete timestamp
+
+  @@index([projectId])
+  @@index([deletedAt])  // For soft delete filtering
+}
+
+enum PayoutType {
+  CAMPAIGN
+  LATE_PLEDGE
+  PLEDGE_MANAGER
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}

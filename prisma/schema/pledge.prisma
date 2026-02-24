@@ -1,0 +1,151 @@
+// ============================================
+// PLEDGES & PAYMENTS
+// ============================================
+
+model Pledge {
+  id                    String       @id @default(cuid())
+  userId                String
+  projectId             String
+  rewardId              String?      // Optional - null for "pledge without reward"
+
+  // Backer number - order in which they backed this project (assigned on successful payment)
+  backerNumber          Int?
+
+  // Amounts
+  amount                Decimal      @db.Decimal(10, 2)
+  rewardAmount          Decimal      @default(0) @db.Decimal(10, 2)
+  addonsAmount          Decimal      @default(0) @db.Decimal(10, 2)
+  shippingAmount        Decimal      @default(0) @db.Decimal(10, 2)
+
+  // Payment
+  status                PledgeStatus
+  paymentProcessor      PaymentProcessor
+
+  // Stripe fields
+  stripePaymentIntentId String?      @unique
+  stripeSetupIntentId   String?      @unique
+  stripePaymentMethodId String?
+  stripeCustomerId      String?
+
+  // DivinityCoin fields
+  divinityCoinPaymentId String?      @unique
+
+  // Payment retry tracking
+  retryCount            Int          @default(0)
+  nextRetryAt           DateTime?
+  lastFailureReason     String?
+  chargedImmediately    Boolean      @default(false)  // True if campaign was already funded when pledge was made
+
+  // Survey
+  surveyCompleted       Boolean      @default(false)
+  shippingAddress       Json?
+  surveyResponses       Json?
+
+  // Fulfillment
+  fulfillmentStatus     FulfillmentStatus @default(NOT_STARTED)
+
+  // Modifier addon assignments
+  needsModifierAssignment Boolean     @default(false)  // True if backer has ambiguous modifier addon assignments
+
+  // Email tracking
+  confirmationEmailSent Boolean      @default(false)
+  metadata              Json?
+
+  // Conversion tracking - which email campaign led to this pledge
+  sourceCampaignId      String?
+  sourceCampaign        EmailCampaign? @relation("CampaignConversions", fields: [sourceCampaignId], references: [id])
+
+  // Relations
+  user                  User         @relation(fields: [userId], references: [id])
+  project               Project      @relation(fields: [projectId], references: [id])
+  reward                Reward?      @relation(fields: [rewardId], references: [id])
+  addons                PledgeAddon[]
+  modifierAssignments   PledgeModifierAssignment[]
+  divinityCoinTransactions DivinityCoinTransaction[]
+  emailLogs             EmailLog[]
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  deletedAt             DateTime?    // Soft delete timestamp
+
+  @@index([projectId, status])
+  @@index([userId])
+  @@index([rewardId])
+  @@index([status, nextRetryAt])  // For retry job queries
+  @@index([sourceCampaignId])
+  @@index([deletedAt])  // For soft delete filtering
+  @@index([needsModifierAssignment])  // For finding backers needing modifier assignment
+}
+
+model PledgeAddon {
+  id        String @id @default(cuid())
+  pledgeId  String
+  addonId   String
+  quantity  Int    @default(1)
+  amount    Decimal @db.Decimal(10, 2)
+
+  pledge    Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  addon     Reward @relation(fields: [addonId], references: [id])
+
+  @@unique([pledgeId, addonId])
+  @@index([pledgeId])
+}
+
+// Tracks which modifier addon is assigned to which base reward for each pledge
+// Example: Backer has Cover A, Cover B + Upgrade to Metal, Upgrade to Foil
+// This table stores: Cover A -> Metal, Cover B -> Foil
+model PledgeModifierAssignment {
+  id              String    @id @default(cuid())
+  pledgeId        String
+  rewardId        String    // The base reward being modified (e.g., Cover A)
+  modifierAddonId String    // The modifier addon being applied (e.g., Upgrade to Metal)
+
+  // Whether this was auto-assigned (simple case) or manually assigned
+  isAutoAssigned  Boolean   @default(false)
+  assignedBy      String?   // User ID if manually assigned by creator
+
+  pledge          Pledge    @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([pledgeId, modifierAddonId])  // Each modifier can only be assigned once per pledge
+  @@index([pledgeId])
+  @@index([rewardId])
+}
+
+// Maps reward + modifier addon combinations to specific SKUs
+// Example: Cover A + Upgrade to Metal = SKU-COVER-A-METAL
+model ModifierSkuMapping {
+  id                 String    @id @default(cuid())
+  projectId          String
+  baseRewardId       String    // The base reward (e.g., Cover A tier)
+  modifierAddonId    String    // The modifier addon (e.g., Upgrade to Metal)
+
+  // The resulting SKU when this combination is fulfilled
+  shopifySku         String
+  shopifyProductId   String?
+  shopifyVariantId   String?
+  shopifyProductName String?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([projectId, baseRewardId, modifierAddonId])
+  @@index([projectId])
+}
+
+enum PledgeStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+  CHARGEBACK
+}
+
+enum FulfillmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SHIPPED
+  DELIVERED
+}

@@ -1,0 +1,450 @@
+// ============================================
+// CHANGELOG
+// ============================================
+
+model ChangelogEntry {
+  id          String   @id @default(cuid())
+
+  // Content
+  title       String
+  description String   @db.Text
+  category    ChangelogCategory
+  version     String?  // e.g., "1.0.0", "2024-01"
+
+  // Git reference
+  commitHash  String?
+  branch      String?
+
+  // Publishing
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Author (admin who created)
+  authorId    String?
+  author      User?    @relation("ChangelogAuthor", fields: [authorId], references: [id])
+
+  @@index([category])
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+enum ChangelogCategory {
+  FEATURE
+  BUGFIX
+  IMPROVEMENT
+  SECURITY
+  PERFORMANCE
+  UI_UX
+  API
+  DOCUMENTATION
+  OTHER
+}
+
+// ============================================
+// BACKER DASHBOARD ENHANCEMENTS
+// ============================================
+
+// User saved addresses for shipping
+model UserAddress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label       String   // "Home", "Work", "Office", etc.
+  isDefault   Boolean  @default(false)
+
+  // Address fields
+  fullName    String
+  line1       String
+  line2       String?
+  city        String
+  state       String
+  postalCode  String
+  country     String
+  phone       String?
+
+  // Validation
+  isValidated Boolean  @default(false)
+  validatedAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+// Project collections/wishlists
+model ProjectCollection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  color       String?  // For UI theming
+
+  projects    ProjectCollectionItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isPublic])
+}
+
+model ProjectCollectionItem {
+  id           String   @id @default(cuid())
+  collectionId String
+  collection   ProjectCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  notes        String?  // Personal notes about the project
+  addedAt      DateTime @default(now())
+
+  @@unique([collectionId, projectId])
+  @@index([collectionId])
+  @@index([projectId])
+}
+
+// Notification preferences per project
+model ProjectNotificationPreference {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Notification types
+  updates     Boolean  @default(true)
+  comments    Boolean  @default(true)
+  surveys     Boolean  @default(true)
+  shipping    Boolean  @default(true)
+  messages    Boolean  @default(true)
+
+  // Email digest frequency
+  digestFrequency String @default("instant") // instant, daily, weekly, none
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// Creator follow relationship
+model CreatorFollow {
+  id          String   @id @default(cuid())
+  followerId  String   // The user doing the following
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  creatorId   String   // The creator being followed
+  creator     User     @relation("Following", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Notification preferences for this follow
+  notifyNewProjects Boolean @default(true)
+  notifyUpdates     Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, creatorId])
+  @@index([followerId])
+  @@index([creatorId])
+}
+
+// ============================================
+// LCS LOCATOR - COMIC SHOP DIRECTORY
+// ============================================
+
+model ComicShop {
+  id              String    @id @default(cuid())
+
+  // Basic Info
+  name            String
+  slug            String    @unique
+
+  // Location
+  address         String?
+  city            String
+  state           String?
+  zipCode         String?
+  country         String    @default("USA")
+  region          String?   // Northeast, Midwest, Southeast, Southwest, West, International
+
+  // Contact
+  phone           String?
+  email           String?
+  website         String?
+
+  // Social Media (future)
+  socialLinks     Json?     // { facebook, twitter, instagram }
+
+  // Stats (future features)
+  viewCount       Int       @default(0)
+  favoriteCount   Int       @default(0)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([city])
+  @@index([state])
+  @@index([region])
+  @@index([name])
+}
+
+// ============================================
+// HERO SLIDER
+// ============================================
+
+model HeroSlide {
+  id              String          @id @default(cuid())
+
+  // Content
+  title           String
+  subtitle        String?
+  description     String?         @db.Text
+
+  // Call to Action
+  buttonText      String?
+  buttonLink      String?
+  showPrimaryButton   Boolean     @default(true)
+  secondaryButtonText String?
+  secondaryButtonLink String?
+  showSecondaryButton Boolean     @default(true)
+
+  // Media
+  mediaType       HeroMediaType   @default(IMAGE)
+  imageUrl        String?
+  videoUrl        String?         // YouTube URL or uploaded video URL
+  videoThumbnail  String?         // Thumbnail for video slides
+  videoAutoplay   Boolean         @default(true)
+  videoMuted      Boolean         @default(true)
+  videoLoop       Boolean         @default(true)
+
+  // Display settings
+  textAlignment   String          @default("center")  // left, center, right
+  overlayOpacity  Int             @default(0)         // 0-100 for dark overlay on media
+  textColor       String          @default("white")   // white, dark
+  showSubtitle    Boolean         @default(true)
+  showDescription Boolean         @default(true)
+
+  // Status
+  isActive        Boolean         @default(true)
+  sortOrder       Int             @default(0)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+enum HeroMediaType {
+  IMAGE
+  YOUTUBE
+  VIDEO
+}
+
+// ============================================
+// ANNOUNCEMENT BAR
+// ============================================
+
+model AnnouncementBar {
+  id              String    @id @default(cuid())
+
+  // Content
+  text            String    @db.Text
+  linkUrl         String?
+  linkText        String?
+
+  // Styling
+  backgroundColor String    @default("#2563eb")
+  textColor       String    @default("#ffffff")
+
+  // Options
+  dismissible     Boolean   @default(true)
+  isActive        Boolean   @default(true)
+
+  // Scheduling (optional)
+  startDate       DateTime?
+  endDate         DateTime?
+
+  // Priority/ordering
+  sortOrder       Int       @default(0)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// ============================================
+// PROMOTIONAL POPUP
+// ============================================
+
+model PromoPopup {
+  id              String    @id @default(cuid())
+
+  // Settings
+  isActive        Boolean   @default(true)
+  showFrequency   String    @default("once_per_session") // once_per_session, once_per_day, every_visit
+
+  // Slides stored as JSON array
+  // Each slide: { title, subtitle, features[], iconName, gradientFrom, gradientTo }
+  slides          Json      @default("[]")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// WEBHOOK EVENT DEDUPLICATION
+// ============================================
+
+// Track processed webhook events to prevent duplicate processing
+model ProcessedWebhookEvent {
+  id              String    @id @default(cuid())
+  eventId         String    @unique  // Stripe event ID (evt_xxx)
+  eventType       String               // Event type (e.g., payment_intent.succeeded)
+  source          String    @default("stripe")  // Source system (stripe, etc.)
+  processedAt     DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([processedAt])
+}
+
+// ============================================
+// COMMUNITY CHAT
+// ============================================
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+
+  // Message type: text, emoji, sticker
+  type      ChatMessageType @default(TEXT)
+
+  // For stickers - stores sticker pack and sticker ID
+  stickerData Json?
+
+  // Author
+  userId    String
+  user      User     @relation("ChatMessages", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Soft delete (for admin moderation)
+  deletedAt   DateTime?
+  deletedById String?    // Admin who deleted the message
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([deletedAt, createdAt])
+}
+
+enum ChatMessageType {
+  TEXT
+  EMOJI
+  STICKER
+}
+
+model ChatPresence {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastActiveAt DateTime @default(now())
+  joinedAt     DateTime @default(now())
+
+  @@index([lastActiveAt])
+}
+
+// ============================================
+// ACHIEVEMENT BADGES
+// ============================================
+
+model UserAchievement {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  badgeType   BadgeType
+  earnedAt    DateTime    @default(now())
+
+  // Metadata about how badge was earned
+  metadata    Json?       // { projectId, pledgeId, etc }
+
+  @@unique([userId, badgeType])
+  @@index([userId])
+}
+
+enum BadgeType {
+  FIRST_PLEDGE                // First pledge ever
+  SUPER_BACKER_10            // Backed 10+ projects
+  SUPER_BACKER_25            // Backed 25+ projects
+  SUPER_BACKER_50            // Backed 50+ projects
+  EARLY_BIRD                 // Pledged within first 24 hours
+  STRETCH_GOAL_CONTRIBUTOR   // Contributed to reaching stretch goal
+  PREMIUM_SUPPORTER          // Pledged $500+ total
+  SURVEY_CHAMPION            // Completed 10+ surveys promptly
+  SURVEY_COMPLETIONIST       // Completed all pending surveys
+  REFERRAL_MASTER            // Referred 5+ successful backers
+  ANNIVERSARY_BACKER         // Active backer for 1+ year
+}
+
+// ============================================
+// REDEMPTION BONUS SYSTEM
+// ============================================
+
+// Monthly redemption bonus tracking with Decimal for precision
+model RedemptionBonusLedger {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Month tracking (first day of month)
+  month           DateTime
+
+  // Bonus calculation (using Decimal for financial precision)
+  totalBadges     Int      @default(0)
+  rawBonusPercent Decimal  @db.Decimal(10, 6)  // Sum of badge bonuses before cap (e.g., 0.000500 for 0.05%)
+  appliedBonusPercent Decimal @db.Decimal(10, 6)  // After 0.03% cap applied
+
+  // Usage tracking
+  redemptionCount Int      @default(0)
+  totalBonusApplied Decimal @default(0) @db.Decimal(10, 2)  // Total $ saved from bonus
+
+  applications    RedemptionBonusApplication[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, month])
+  @@index([userId, month])
+}
+
+// Track individual bonus applications to redemptions
+model RedemptionBonusApplication {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  redemptionId          String   // Link to DivinityCoinRedemption
+  bonusLedgerId         String
+  bonusLedger           RedemptionBonusLedger @relation(fields: [bonusLedgerId], references: [id], onDelete: Cascade)
+
+  bonusPercentApplied   Decimal  @db.Decimal(10, 6)
+  bonusAmountSaved      Decimal  @db.Decimal(10, 2)  // Actual $ saved
+
+  appliedAt             DateTime @default(now())
+
+  @@index([userId])
+  @@index([bonusLedgerId])
+  @@index([redemptionId])
+}
