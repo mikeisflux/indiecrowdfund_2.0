@@ -226,6 +226,13 @@ export async function notifyBackerPledgeConfirmed(
       });
 
       console.log(`Sent pledge confirmation email to ${pledge.user.email} for pledge ${pledgeId}`);
+    } else if (result.blocked) {
+      // Email address is on the blocklist - mark as sent to prevent infinite retry loop
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: { confirmationEmailSent: true },
+      });
+      console.log(`Pledge confirmation email blocked for ${pledge.user.email} (pledge ${pledgeId}) - address is on blocklist, marking as sent`);
     }
   } catch (error) {
     console.error(`Failed to send pledge confirmation email for pledge ${pledgeId}:`, error);
@@ -445,6 +452,16 @@ export async function processUnsentConfirmationEmails() {
 
         results.successful++;
         console.log(`Retry: Sent pledge confirmation email for pledge ${pledge.id}`);
+      } else if (emailResult.blocked) {
+        // Email address is on the blocklist (bounced, spam complaint, etc.)
+        // Mark as sent to stop the retry loop - the email can't be delivered
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: { confirmationEmailSent: true },
+        });
+
+        results.failed++;
+        console.log(`Retry: Email blocked for pledge ${pledge.id} (${pledge.user.email}) - marking as sent to stop retries`);
       } else {
         results.failed++;
       }
