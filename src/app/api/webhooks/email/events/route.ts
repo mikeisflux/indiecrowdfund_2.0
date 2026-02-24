@@ -139,8 +139,8 @@ function mapEventToStatus(event: MailgunEventType): string | null {
     case "delivered":
       return "DELIVERED";
     case "permanent_fail":
-    case "failed":
       return "BOUNCED";
+    case "failed":
     case "temporary_fail":
       return "FAILED";
     default:
@@ -366,9 +366,24 @@ export async function POST(request: NextRequest) {
 
         switch (sgEvent.event) {
           case "bounce":
+            // Only blocklist on hard bounces (invalid/non-existent addresses)
+            // Soft bounces (mailbox full, temp issues) should NOT permanently block
+            if (sgEvent.bounce_classification === "Reputable" || sgEvent.bounce_classification === "Content") {
+              // "Reputable" = ISP reputation block (temporary), "Content" = content-based block
+              // These are NOT invalid addresses - don't blocklist
+              console.log(`[SendGrid] Skipping blocklist for soft/reputation bounce: ${email} (${sgEvent.bounce_classification})`);
+            } else {
+              await handleBounce(email, sgEvent.reason || sgEvent.bounce_classification, "sendgrid-bounce");
+            }
+            break;
           case "blocked":
+            // "blocked" = ISP temporarily rejected (rate limiting, reputation throttling)
+            // Very common with Hotmail/Outlook - NOT a permanent failure, do NOT blocklist
+            console.log(`[SendGrid] ISP block (temporary) for: ${email}, reason: ${sgEvent.reason} - NOT adding to blocklist`);
+            break;
           case "dropped":
-            await handleBounce(email, sgEvent.reason || sgEvent.bounce_classification, "sendgrid-bounce");
+            // "dropped" = SendGrid's own suppression (previous bounce/spam) - already handled
+            console.log(`[SendGrid] Dropped by SendGrid for: ${email}, reason: ${sgEvent.reason} - NOT adding to blocklist`);
             break;
           case "spamreport":
             await handleSpamComplaint(email);
@@ -400,7 +415,7 @@ export async function POST(request: NextRequest) {
     // Handle bounce and spam events globally (update blocklist and subscriber lists)
     switch (eventType) {
       case "permanent_fail":
-      case "failed":
+        // Only permanent failures should be blocklisted
         if (email) {
           await handleBounce(
             email,
@@ -408,6 +423,10 @@ export async function POST(request: NextRequest) {
             "mailgun-bounce"
           );
         }
+        break;
+      case "failed":
+        // Generic "failed" could be temporary - log but don't blocklist
+        console.log(`[Mailgun] Generic failure for: ${email}, reason: ${eventData.reason || eventData["delivery-status"]?.description} - NOT adding to blocklist`);
         break;
       case "complained":
         if (email) {

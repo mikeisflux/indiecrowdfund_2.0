@@ -584,6 +584,8 @@ export function CommunicationSettings() {
   const [blocklistDialogOpen, setBlocklistDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<BlocklistEntry | null>(null);
   const [deletingEntry, setDeletingEntry] = useState<BlocklistEntry | null>(null);
+  const [purging, setPurging] = useState(false);
+  const [purgeConfirmOpen, setPurgeConfirmOpen] = useState(false);
 
   // Fetch mailboxes
   const fetchMailboxes = useCallback(async () => {
@@ -661,6 +663,48 @@ export function CommunicationSettings() {
       toast.error("Failed to delete entry");
     }
   };
+
+  // Purge webhook-added blocklist entries for Microsoft email domains
+  const handlePurgeWebhookBlocks = async () => {
+    setPurging(true);
+    try {
+      const response = await fetch("/api/admin/email-blocklist/purge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          domains: [
+            "hotmail.com", "hotmail.co.uk", "hotmail.fr", "hotmail.de",
+            "hotmail.it", "hotmail.es", "hotmail.ca", "hotmail.co.jp",
+            "outlook.com", "outlook.co.uk", "outlook.fr", "outlook.de",
+            "live.com", "live.co.uk", "live.fr", "live.ca",
+            "msn.com",
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to purge entries");
+      }
+
+      const data = await response.json();
+      toast.success(`Purged ${data.purged} blocklist entries, restored ${data.restoredSubscribers} subscribers`);
+      setPurgeConfirmOpen(false);
+      fetchBlocklist();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to purge entries");
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  // Count webhook-added Microsoft email blocks for the purge button badge
+  const webhookMicrosoftCount = blocklist.filter(
+    (e) =>
+      e.type === "EMAIL" &&
+      (e.source === "webhook-bounce" || e.source === "sendgrid-bounce" || e.source === "mailgun-bounce") &&
+      /(@hotmail\.|@outlook\.|@live\.|@msn\.)/i.test(e.value)
+  ).length;
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -803,15 +847,28 @@ export function CommunicationSettings() {
                 </CardDescription>
               </div>
             </div>
-            <Button
-              onClick={() => {
-                setEditingEntry(null);
-                setBlocklistDialogOpen(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Block Entry
-            </Button>
+            <div className="flex items-center gap-2">
+              {webhookMicrosoftCount > 0 && (
+                <Button
+                  variant="outline"
+                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                  onClick={() => setPurgeConfirmOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Purge Hotmail/Outlook Blocks
+                  <Badge variant="secondary" className="ml-2">{webhookMicrosoftCount}</Badge>
+                </Button>
+              )}
+              <Button
+                onClick={() => {
+                  setEditingEntry(null);
+                  setBlocklistDialogOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Block Entry
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -945,6 +1002,40 @@ export function CommunicationSettings() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Purge Webhook Blocks Confirmation */}
+      <AlertDialog open={purgeConfirmOpen} onOpenChange={setPurgeConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Purge Hotmail/Outlook Blocks</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove {webhookMicrosoftCount} webhook-added blocklist entries
+              for Hotmail, Outlook, Live, and MSN email addresses. These were likely
+              blocked due to temporary ISP rejections, not invalid addresses.
+              <br /><br />
+              Subscriber records will also be restored so these addresses receive future emails.
+              Only entries added by webhooks will be removed — manual blocks are kept.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={purging}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePurgeWebhookBlocks}
+              disabled={purging}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+            >
+              {purging ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Purging...
+                </>
+              ) : (
+                `Purge ${webhookMicrosoftCount} Entries`
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
