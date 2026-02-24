@@ -11,7 +11,15 @@ const execAsync = promisify(exec);
 
 export const dynamic = "force-dynamic";
 
-const BUILD_DIR = process.env.APP_ROOT || "/home/user/indiecrowdfund_2.0";
+// Determine build directory - must match the list endpoint logic
+function getBuildDir(): string {
+  if (process.env.APP_ROOT) return process.env.APP_ROOT;
+  const cwd = process.cwd();
+  if (cwd.includes("indiecrowdfund")) return cwd;
+  return "/root/indiecrowdfund_2.0";
+}
+
+const BUILD_DIR = getBuildDir();
 
 // GET - Download a build backup as tar.gz
 export async function GET(req: NextRequest) {
