@@ -76,7 +76,7 @@
 ## Database Commands
 - **ALWAYS** use the full connection string with credentials in every command:
   ```
-  PGPASSWORD='01JSN9vhvVTiMEU7odCpF6L3' psql -h db.indiecrowdfund.com -U indieuser -d indiecrowdfund -c "..."
+  PGPASSWORD='01JSN9vhvVTiMEU7odCpF6L3' psql -h localhost -U indieuser -d indiecrowdfund -c "..."
   ```
 - Never use placeholder `DATABASE_URL` or `your_database_url_here` — always include the real credentials
 - When the user needs to run database queries or fixes, **ALWAYS** provide ready-to-run one-shot commands
