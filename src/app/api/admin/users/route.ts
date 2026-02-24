@@ -700,17 +700,17 @@ export async function DELETE(req: NextRequest) {
           where: { file: { projectId: { in: projectIds } } }
         });
 
+        // Delete pledge addons (must be before rewards due to addonId FK)
+        await tx.pledgeAddon.deleteMany({
+          where: { pledge: { projectId: { in: projectIds } } }
+        });
+
         // Delete rewards and their related items
         await tx.rewardItem.deleteMany({
           where: { reward: { projectId: { in: projectIds } } }
         });
         await tx.reward.deleteMany({
           where: { projectId: { in: projectIds } }
-        });
-
-        // Delete pledge addons
-        await tx.pledgeAddon.deleteMany({
-          where: { pledge: { projectId: { in: projectIds } } }
         });
 
         // Delete pledges
