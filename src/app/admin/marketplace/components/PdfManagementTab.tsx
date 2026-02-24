@@ -15,6 +15,8 @@ import {
   Pencil,
   Save,
   X,
+  ScanSearch,
+  Wrench,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadges";
 import { PdfBook, PdfStats } from "../types";
@@ -31,6 +33,8 @@ interface PdfManagementTabProps {
   onRefresh: () => void;
   onSave: (bookId: string, url: string, fileName: string, fileSize: string) => void;
   onBulkFixSizes: () => void;
+  onR2Scan: () => void;
+  onR2AutoFix: () => void;
   isSaving: boolean;
 }
 
@@ -45,6 +49,8 @@ export function PdfManagementTab({
   onRefresh,
   onSave,
   onBulkFixSizes,
+  onR2Scan,
+  onR2AutoFix,
   isSaving,
 }: PdfManagementTabProps) {
   const [editingBookId, setEditingBookId] = useState<string | null>(null);
@@ -133,20 +139,49 @@ export function PdfManagementTab({
           <option value="has-pdf">Has PDF</option>
         </select>
         {pdfStats.missingSize > 0 && (
-          <Button
-            onClick={onBulkFixSizes}
-            variant="default"
-            size="sm"
-            disabled={isSaving}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <HardDrive className="w-4 h-4 mr-2" />
-            )}
-            Fix All Sizes ({pdfStats.missingSize})
-          </Button>
+          <>
+            <Button
+              onClick={onBulkFixSizes}
+              variant="default"
+              size="sm"
+              disabled={isSaving}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <HardDrive className="w-4 h-4 mr-2" />
+              )}
+              Fix Sizes ({pdfStats.missingSize})
+            </Button>
+            <Button
+              onClick={onR2Scan}
+              variant="outline"
+              size="sm"
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <ScanSearch className="w-4 h-4 mr-2" />
+              )}
+              Scan R2
+            </Button>
+            <Button
+              onClick={onR2AutoFix}
+              variant="default"
+              size="sm"
+              disabled={isSaving}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Wrench className="w-4 h-4 mr-2" />
+              )}
+              Auto-Fix R2 URLs
+            </Button>
+          </>
         )}
         <Button
           onClick={onRefresh}

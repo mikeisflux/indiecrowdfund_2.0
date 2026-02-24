@@ -442,6 +442,243 @@ export async function PATCH() {
 }
 
 /**
+ * POST /api/admin/marketplace/pdf-management
+ *
+ * Diagnostic scan: List all files in R2 under marketplace/ prefix,
+ * cross-reference with database, and attempt to auto-fix mismatched URLs.
+ * Also supports action: "auto-fix" to automatically match R2 files to books.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+
+    if (user?.role !== "SUPER_ADMIN" && user?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const action = (body as { action?: string }).action || "scan";
+
+    const r2 = await getR2Storage();
+    if (!r2) {
+      return NextResponse.json(
+        { error: "R2 storage not configured" },
+        { status: 500 }
+      );
+    }
+
+    console.log(`[PDF Scan] Starting R2 scan (action: ${action})...`);
+
+    // List all files in R2 under marketplace/ prefix
+    const r2Files = await r2.listFiles("marketplace/", 1000);
+    console.log(`[PDF Scan] Found ${r2Files.length} files in R2 under marketplace/`);
+
+    // Get all books that have missing file sizes
+    const booksWithIssues = await prisma.marketplaceBook.findMany({
+      where: {
+        deletedAt: null,
+        NOT: { pdfFileUrl: "" },
+        OR: [{ pdfFileSize: null }, { pdfFileSize: 0 }],
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        pdfFileUrl: true,
+        pdfFileName: true,
+        creatorId: true,
+        creator: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    console.log(`[PDF Scan] Found ${booksWithIssues.length} books with missing file sizes`);
+
+    // Build a map of R2 files by various lookup strategies
+    const r2FilesByCreator: Record<string, typeof r2Files> = {};
+    const r2FilesByName: Record<string, (typeof r2Files)[number]> = {};
+
+    for (const file of r2Files) {
+      // Parse key: marketplace/{userId}/pdfs/{fileId}_{filename}
+      const keyMatch = file.key.match(/^marketplace\/([^/]+)\/pdfs\/(.+)$/);
+      if (keyMatch) {
+        const userId = keyMatch[1];
+        const fullFilename = keyMatch[2]; // fileId_sanitizedName
+
+        if (!r2FilesByCreator[userId]) {
+          r2FilesByCreator[userId] = [];
+        }
+        r2FilesByCreator[userId].push(file);
+
+        // Index by the filename part (after the UUID prefix)
+        const nameMatch = fullFilename.match(/^[^_]+_(.+)$/);
+        if (nameMatch) {
+          r2FilesByName[nameMatch[1].toLowerCase()] = file;
+        }
+        // Also index by full filename
+        r2FilesByName[fullFilename.toLowerCase()] = file;
+      }
+    }
+
+    // Try to match each book to an R2 file
+    const matches: {
+      bookId: string;
+      bookTitle: string;
+      creatorId: string;
+      currentUrl: string;
+      matchedKey: string | null;
+      matchedSize: number | null;
+      matchType: string;
+      creatorFiles: number;
+    }[] = [];
+
+    for (const book of booksWithIssues) {
+      // Extract the current R2 key from the stored URL
+      const decodedUrl = decodeURIComponent(book.pdfFileUrl || "");
+      const currentKeyMatch = decodedUrl.match(/\/api\/r2\/serve\/(.+)$/);
+      const currentKey = currentKeyMatch ? currentKeyMatch[1] : null;
+
+      // Count how many files this creator has in R2
+      const creatorFiles = r2FilesByCreator[book.creatorId] || [];
+
+      let matchedFile: (typeof r2Files)[number] | null = null;
+      let matchType = "none";
+
+      // Strategy 1: Direct key match (already checked by PATCH, but verify)
+      if (currentKey) {
+        const directMatch = r2Files.find((f) => f.key === currentKey);
+        if (directMatch) {
+          matchedFile = directMatch;
+          matchType = "direct-key";
+        }
+      }
+
+      // Strategy 2: Match by creator ID - if creator has exactly 1 PDF file, it's likely the right one
+      if (!matchedFile && creatorFiles.length === 1) {
+        matchedFile = creatorFiles[0];
+        matchType = "single-creator-file";
+      }
+
+      // Strategy 3: Match by filename
+      if (!matchedFile && book.pdfFileName) {
+        const sanitizedName = book.pdfFileName
+          .replace(/[^a-zA-Z0-9.-]/g, "_")
+          .substring(0, 50)
+          .toLowerCase();
+
+        // Check if any of the creator's files match by name
+        for (const file of creatorFiles) {
+          const fileNameMatch = file.key.match(/^marketplace\/[^/]+\/pdfs\/[^_]+_(.+)$/);
+          if (fileNameMatch && fileNameMatch[1].toLowerCase() === sanitizedName) {
+            matchedFile = file;
+            matchType = "filename-match";
+            break;
+          }
+        }
+
+        // Also try partial match
+        if (!matchedFile) {
+          for (const file of creatorFiles) {
+            if (file.key.toLowerCase().includes(sanitizedName)) {
+              matchedFile = file;
+              matchType = "partial-filename";
+              break;
+            }
+          }
+        }
+      }
+
+      // Strategy 4: Match by slug similarity
+      if (!matchedFile && creatorFiles.length > 0) {
+        const slugLower = book.slug.toLowerCase().replace(/-/g, "_");
+        for (const file of creatorFiles) {
+          if (file.key.toLowerCase().includes(slugLower)) {
+            matchedFile = file;
+            matchType = "slug-match";
+            break;
+          }
+        }
+      }
+
+      matches.push({
+        bookId: book.id,
+        bookTitle: book.title,
+        creatorId: book.creatorId,
+        currentUrl: book.pdfFileUrl || "",
+        matchedKey: matchedFile ? matchedFile.key : null,
+        matchedSize: matchedFile ? matchedFile.size : null,
+        matchType,
+        creatorFiles: creatorFiles.length,
+      });
+    }
+
+    const matchedCount = matches.filter((m) => m.matchedKey).length;
+    const unmatchedCount = matches.filter((m) => !m.matchedKey).length;
+
+    console.log(`[PDF Scan] Matched ${matchedCount} books, ${unmatchedCount} unmatched`);
+
+    // If action is auto-fix, update the matched books
+    let fixedCount = 0;
+    if (action === "auto-fix") {
+      for (const match of matches) {
+        if (match.matchedKey && match.matchedSize && match.matchedSize > 0) {
+          const newUrl = `/api/r2/serve/${match.matchedKey}`;
+          // Extract filename from key
+          const keyParts = match.matchedKey.split("/");
+          const fullFilename = keyParts[keyParts.length - 1];
+          const fileIdAndName = fullFilename.split("_");
+          const originalName = fileIdAndName.slice(1).join("_");
+
+          console.log(`[PDF Scan] Auto-fixing book "${match.bookTitle}" - URL: ${newUrl}, Size: ${formatFileSize(match.matchedSize)}`);
+
+          await prisma.marketplaceBook.update({
+            where: { id: match.bookId },
+            data: {
+              pdfFileUrl: newUrl,
+              pdfFileSize: match.matchedSize,
+              pdfFileName: originalName || undefined,
+            },
+          });
+          fixedCount++;
+        }
+      }
+      console.log(`[PDF Scan] Auto-fixed ${fixedCount} books`);
+    }
+
+    return NextResponse.json({
+      action,
+      r2FileCount: r2Files.length,
+      booksWithIssues: booksWithIssues.length,
+      matched: matchedCount,
+      unmatched: unmatchedCount,
+      fixed: action === "auto-fix" ? fixedCount : undefined,
+      matches,
+      r2Files: r2Files.map((f) => ({
+        key: f.key,
+        size: f.size,
+        sizeFormatted: formatFileSize(f.size),
+        lastModified: f.lastModified?.toISOString(),
+      })),
+    });
+  } catch (error) {
+    console.error("Error scanning R2 files:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * Format file size to human readable
  */
 function formatFileSize(bytes: number): string {

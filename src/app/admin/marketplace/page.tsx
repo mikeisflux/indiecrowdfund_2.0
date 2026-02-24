@@ -508,6 +508,70 @@ export default function AdminMarketplacePage() {
     }
   };
 
+  const handleR2Scan = async (autoFix: boolean) => {
+    setIsSavingPdf(true);
+    try {
+      const response = await fetch("/api/admin/marketplace/pdf-management", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCSRFHeaders(),
+        },
+        body: JSON.stringify({ action: autoFix ? "auto-fix" : "scan" }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to scan R2");
+      }
+
+      const result = await response.json();
+
+      if (autoFix && result.fixed > 0) {
+        toast.success(`Auto-fixed ${result.fixed} books by matching R2 files`);
+      } else if (autoFix && result.fixed === 0 && result.matched === 0) {
+        toast.error(
+          `No matches found. ${result.r2FileCount} files in R2, ${result.booksWithIssues} books with issues.`,
+          { duration: 8000 }
+        );
+      } else if (!autoFix) {
+        // Scan mode - show results
+        if (result.matched > 0) {
+          toast.success(
+            `Found ${result.matched} potential matches out of ${result.booksWithIssues} books. ${result.r2FileCount} total files in R2. Click "Auto-Fix R2 URLs" to apply.`,
+            { duration: 10000 }
+          );
+        } else {
+          toast.error(
+            `No matches found. ${result.r2FileCount} files in R2, ${result.booksWithIssues} books with issues. Files may need to be re-uploaded.`,
+            { duration: 10000 }
+          );
+        }
+      }
+
+      if (result.unmatched > 0 && autoFix) {
+        const unmatchedBooks = (result.matches || [])
+          .filter((m: { matchedKey: string | null }) => !m.matchedKey)
+          .slice(0, 5)
+          .map((m: { bookTitle: string; creatorFiles: number }) =>
+            `${m.bookTitle} (${m.creatorFiles} files by creator)`
+          )
+          .join("\n");
+        toast.error(
+          `${result.unmatched} books still unmatched:\n${unmatchedBooks}`,
+          { duration: 10000 }
+        );
+      }
+
+      fetchPdfBooks(pdfFilter, pdfSearch);
+    } catch (error) {
+      console.error("Error scanning R2:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to scan R2");
+    } finally {
+      setIsSavingPdf(false);
+    }
+  };
+
   const handleSavePdf = async (bookId: string, url: string, fileName: string, fileSize: string) => {
     setIsSavingPdf(true);
     try {
@@ -738,6 +802,8 @@ export default function AdminMarketplacePage() {
             onRefresh={() => fetchPdfBooks(pdfFilter, pdfSearch)}
             onSave={handleSavePdf}
             onBulkFixSizes={handleBulkFixSizes}
+            onR2Scan={() => handleR2Scan(false)}
+            onR2AutoFix={() => handleR2Scan(true)}
             isSaving={isSavingPdf}
           />
         </TabsContent>
