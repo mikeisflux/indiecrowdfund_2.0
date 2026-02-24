@@ -43,9 +43,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
     }
 
-    // Get all ADDON type rewards for this project
+    // Get reward IDs that are used as pledge-level tiers (main reward on pledges)
+    // These should NOT appear in the add-ons checklist even if typed as ADDON
+    const pledgeTierIds = await db.pledge.findMany({
+      where: { projectId, rewardId: { not: null } },
+      select: { rewardId: true },
+      distinct: ["rewardId"],
+    });
+    const tierRewardIds = pledgeTierIds.map(p => p.rewardId).filter((id): id is string => id !== null);
+
+    // Get all ADDON type rewards, excluding those used as pledge tiers
     const addons = await db.reward.findMany({
-      where: { projectId, type: "ADDON" },
+      where: {
+        projectId,
+        type: "ADDON",
+        ...(tierRewardIds.length > 0 ? { id: { notIn: tierRewardIds } } : {}),
+      },
       select: {
         id: true,
         title: true,

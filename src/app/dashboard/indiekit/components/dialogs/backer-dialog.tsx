@@ -996,6 +996,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         backerName={backer.name}
         backerEmail={backer.email}
         reward={backer.reward ? { name: backer.reward, amount: backer.rewardAmount } : null}
+        rewardId={backer.rewardId}
         currentAddons={backer.addons || []}
         availableAddons={availableAddons}
         shippingAmount={backer.balance?.shippingAmount || 0}

@@ -54,6 +54,7 @@ interface EditOrderDialogProps {
   backerName: string;
   backerEmail?: string;
   reward: { name: string; amount: number } | null;
+  rewardId?: string;
   currentAddons: AddonEntry[];
   availableAddons: AvailableAddon[];
   shippingAmount: number;
@@ -70,6 +71,7 @@ export function EditOrderDialog({
   backerName,
   backerEmail,
   reward,
+  rewardId,
   currentAddons,
   availableAddons: availableAddonsProp,
   shippingAmount: initialShipping,
@@ -89,7 +91,9 @@ export function EditOrderDialog({
   const [balanceDueAmount, setBalanceDueAmount] = useState(0);
 
   // Use fetched addons if available, otherwise fall back to prop
-  const availableAddons = fetchedAddons.length > 0 ? fetchedAddons : availableAddonsProp;
+  // Also filter out the backer's pledge-level reward (tier) if it appears in the list
+  const availableAddons = (fetchedAddons.length > 0 ? fetchedAddons : availableAddonsProp)
+    .filter(a => !rewardId || a.id !== rewardId);
 
   // Fetch available addons directly when dialog opens
   useEffect(() => {
