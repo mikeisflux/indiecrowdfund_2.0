@@ -127,7 +127,7 @@ declare module "@prisma/client" {
 
   export type Role = "USER" | "ADMIN" | "CREATOR";
 
-  // Prisma namespace for JSON types
+  // Prisma namespace for JSON types and error classes
   export namespace Prisma {
     export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
     export interface JsonObject {
@@ -139,6 +139,16 @@ declare module "@prisma/client" {
       [key: string]: InputJsonValue;
     }
     export type InputJsonArray = InputJsonValue[];
+  }
+
+  // Error classes used at runtime
+  export class PrismaClientKnownRequestError extends Error {
+    code: string;
+    meta?: Record<string, unknown>;
+    clientVersion: string;
+  }
+  export class PrismaClientInitializationError extends Error {
+    clientVersion: string;
   }
 }
 

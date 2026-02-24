@@ -36,7 +36,7 @@ export async function DELETE() {
       where: { type: "EMAIL" },
       select: { value: true },
     });
-    const blockedEmails = allEntries.map((e) => e.value);
+    const blockedEmails = allEntries.map((e: { value: string }) => e.value);
 
     // Delete all blocklist entries
     const result = await db.emailBlocklist.deleteMany({});
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const entryIds = entriesToPurge.map((e) => e.id);
+    const entryIds = entriesToPurge.map((e: { id: string }) => e.id);
 
     // Delete all matching entries
     const result = await db.emailBlocklist.deleteMany({
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Also restore any subscriber records that were marked as bounced for these emails
-    const purgedEmails = entriesToPurge.map((e) => e.value);
+    const purgedEmails = entriesToPurge.map((e: { value: string }) => e.value);
     const restoredSubscribers = await db.emailListSubscriber.updateMany({
       where: {
         email: { in: purgedEmails },

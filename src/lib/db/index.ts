@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient, PrismaClientKnownRequestError, PrismaClientInitializationError } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -13,10 +13,10 @@ const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 500;
 
 function isTransientError(error: unknown): boolean {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+  if (error instanceof PrismaClientKnownRequestError) {
     return TRANSIENT_ERROR_CODES.includes(error.code);
   }
-  if (error instanceof Prisma.PrismaClientInitializationError) {
+  if (error instanceof PrismaClientInitializationError) {
     return true;
   }
   // Check for generic connection reset errors
@@ -52,7 +52,8 @@ function getPrismaClient(): PrismaClient {
     // Reconnect on transient errors by wrapping with retry logic
     globalForPrisma.prisma = client.$extends({
       query: {
-        async $allOperations({ args, query }) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async $allOperations({ args, query }: { args: any; query: (args: any) => Promise<any> }) {
           for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             try {
               return await query(args);
