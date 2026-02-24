@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
         id: true,
         title: true,
         slug: true,
-        urlPath: true,
         paymentProcessor: true,
+        creator: { select: { vanityUrl: true } },
       },
     });
 
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       paymentToken,
       pledge.reward?.title || null,
       addonItems,
-      project.urlPath || undefined,
+      project.creator.vanityUrl ? `/projects/${project.creator.vanityUrl}/${project.slug}` : undefined,
     );
 
     if (!emailResult?.success) {

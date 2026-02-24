@@ -7,6 +7,7 @@ const nextConfig = {
   // Note: Shopify iframe headers are handled by middleware.ts for proper CSP frame-ancestors support
   // Increase body size limit for server actions (default is 1MB)
   experimental: {
+    instrumentationHook: true,
     serverActions: {
       bodySizeLimit: '10mb',
     },

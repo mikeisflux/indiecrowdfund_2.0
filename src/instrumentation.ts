@@ -1,0 +1,37 @@
+/**
+ * Next.js Instrumentation
+ *
+ * Suppresses known benign errors from polluting PM2 stderr logs:
+ * - "Failed to find Server Action" from bot/scanner probes (handled by middleware)
+ * - "The requested resource isn't a valid image" from video URLs hitting image optimizer
+ * - "Input Buffer is empty" from Sharp processing empty/corrupt files
+ */
+
+export function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const originalConsoleError = console.error;
+
+    console.error = (...args: unknown[]) => {
+      const message = args
+        .map((a) => (typeof a === "string" ? a : a instanceof Error ? a.message : String(a)))
+        .join(" ");
+
+      // Suppress bot-triggered server action errors (already handled by middleware with 400/403)
+      if (message.includes("Failed to find Server Action")) {
+        return;
+      }
+
+      // Suppress image optimizer errors for non-image files (video URLs in image fields)
+      if (message.includes("The requested resource isn't a valid image")) {
+        return;
+      }
+
+      // Suppress Sharp empty buffer errors (corrupt or missing uploaded files)
+      if (message.includes("Input Buffer is empty")) {
+        return;
+      }
+
+      originalConsoleError(...args);
+    };
+  }
+}

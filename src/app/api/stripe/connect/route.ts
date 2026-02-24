@@ -88,7 +88,21 @@ export async function GET() {
           });
         }
       } catch (stripeError) {
-        console.error("Error checking Stripe account status:", stripeError);
+        const sErr = stripeError as { type?: string; code?: string; message?: string };
+        if (sErr.type === "StripePermissionError" || sErr.code === "account_invalid") {
+          // Account access revoked - mark as inactive and inform the user
+          console.warn(`[Stripe Connect] Account ${config.stripeAccountId} access revoked or invalid`);
+          await db.stripeConfig.update({
+            where: { id: config.id },
+            data: { isOnboarded: false, isActive: false },
+          });
+          return NextResponse.json({
+            connected: false,
+            onboarded: false,
+            error: "Stripe account access has been revoked. Please reconnect your Stripe account.",
+          });
+        }
+        console.error("Error checking Stripe account status:", sErr.message || stripeError);
         // Continue with DB value if Stripe check fails
       }
     }

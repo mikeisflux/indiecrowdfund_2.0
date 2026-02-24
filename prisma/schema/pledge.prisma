@@ -84,7 +84,7 @@ model PledgeAddon {
   amount    Decimal @db.Decimal(10, 2)
 
   pledge    Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
-  addon     Reward @relation(fields: [addonId], references: [id])
+  addon     Reward @relation(fields: [addonId], references: [id], onDelete: Cascade)
 
   @@unique([pledgeId, addonId])
   @@index([pledgeId])

@@ -27,9 +27,8 @@ export async function GET(req: NextRequest) {
             id: true,
             title: true,
             slug: true,
-            urlPath: true,
             paymentProcessor: true,
-            userId: true,
+            creatorId: true,
           },
         },
         reward: { select: { title: true, amount: true } },
@@ -113,7 +112,7 @@ export async function POST(req: NextRequest) {
           select: {
             id: true,
             paymentProcessor: true,
-            userId: true,
+            creatorId: true,
           },
         },
         user: { select: { id: true, email: true } },
@@ -150,7 +149,7 @@ export async function POST(req: NextRequest) {
     if (pledge.project.paymentProcessor === "STRIPE") {
       // Get the creator's Stripe Connect account
       const stripeConfig = await db.stripeConfig.findFirst({
-        where: { userId: pledge.project.userId, isActive: true },
+        where: { userId: pledge.project.creatorId, isActive: true },
       });
 
       if (!stripeConfig) {

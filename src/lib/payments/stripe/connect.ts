@@ -29,7 +29,19 @@ export async function checkAndUpdateStripeOnboarding(stripeConfigId: string, str
 
     return false;
   } catch (error) {
-    console.error("Error checking Stripe account status:", error);
+    // Handle revoked/invalid Stripe Connect accounts gracefully
+    const stripeErr = error as { type?: string; code?: string; message?: string };
+    if (stripeErr.type === "StripePermissionError" || stripeErr.code === "account_invalid") {
+      console.warn(`[Stripe Connect] Account ${stripeAccountId} access revoked or invalid, marking as inactive`);
+      try {
+        await db.stripeConfig.update({
+          where: { id: stripeConfigId },
+          data: { isOnboarded: false, isActive: false },
+        });
+      } catch { /* ignore update failure */ }
+      return false;
+    }
+    console.error("Error checking Stripe account status:", stripeErr.message || error);
     // Return DB value if Stripe check fails
     return currentOnboardedStatus;
   }

@@ -8,9 +8,13 @@ const globalForPrisma = globalThis as unknown as {
 const isBuildTime = process.env.NEXT_PHASE === "phase-production-build";
 
 // Transient error codes that should be retried (P1017 = server closed connection)
-const TRANSIENT_ERROR_CODES = ["P1017", "P1001", "P1002", "P1008"];
-const MAX_RETRIES = 2;
-const RETRY_DELAY_MS = 500;
+const TRANSIENT_ERROR_CODES = ["P1017", "P1001", "P1002", "P1008", "P1009"];
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 300;
+
+// Periodic connection pool keepalive interval (5 minutes)
+const KEEPALIVE_INTERVAL_MS = 5 * 60 * 1000;
+let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
 
 function isTransientError(error: unknown): boolean {
   if (error instanceof PrismaClientKnownRequestError) {
@@ -63,6 +67,10 @@ function getPrismaClient(): PrismaClient {
                   `[Prisma] Transient error (attempt ${attempt + 1}/${MAX_RETRIES + 1}), retrying in ${RETRY_DELAY_MS}ms...`,
                   error instanceof Error ? error.message : error
                 );
+                // On connection errors, disconnect to force pool refresh before retry
+                if (attempt === 0) {
+                  try { await client.$disconnect(); } catch { /* ignore */ }
+                }
                 await sleep(RETRY_DELAY_MS * (attempt + 1));
                 continue;
               }
@@ -74,6 +82,22 @@ function getPrismaClient(): PrismaClient {
         },
       },
     }) as unknown as PrismaClient;
+
+    // Start periodic keepalive to prevent stale connections (P1017 errors)
+    if (!keepaliveTimer) {
+      keepaliveTimer = setInterval(async () => {
+        try {
+          await client.$queryRawUnsafe("SELECT 1");
+        } catch {
+          // Connection is stale, disconnect to force fresh connections on next query
+          try { await client.$disconnect(); } catch { /* ignore */ }
+        }
+      }, KEEPALIVE_INTERVAL_MS);
+      // Don't prevent Node.js from exiting
+      if (keepaliveTimer && typeof keepaliveTimer === "object" && "unref" in keepaliveTimer) {
+        keepaliveTimer.unref();
+      }
+    }
   }
   return globalForPrisma.prisma;
 }
