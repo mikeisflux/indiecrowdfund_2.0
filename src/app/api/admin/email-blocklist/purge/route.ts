@@ -23,6 +23,55 @@ async function requireAdmin() {
   return session.user;
 }
 
+// DELETE - Remove ALL blocklist entries and restore bounced subscribers
+export async function DELETE() {
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    // Get all blocked emails before deleting so we can restore subscribers
+    const allEntries = await db.emailBlocklist.findMany({
+      where: { type: "EMAIL" },
+      select: { value: true },
+    });
+    const blockedEmails = allEntries.map((e) => e.value);
+
+    // Delete all blocklist entries
+    const result = await db.emailBlocklist.deleteMany({});
+
+    // Restore bounced subscribers
+    let restoredCount = 0;
+    if (blockedEmails.length > 0) {
+      const restored = await db.emailListSubscriber.updateMany({
+        where: {
+          email: { in: blockedEmails },
+          status: "bounced",
+        },
+        data: {
+          status: "subscribed",
+        },
+      });
+      restoredCount = restored.count;
+    }
+
+    console.log(`[Blocklist Purge] Admin ${admin.id} removed ALL ${result.count} blocklist entries, restored ${restoredCount} subscribers`);
+
+    return NextResponse.json({
+      purged: result.count,
+      restoredSubscribers: restoredCount,
+      message: `Removed all ${result.count} blocklist entries and restored ${restoredCount} subscriber records`,
+    });
+  } catch (error) {
+    console.error("Error removing all blocklist entries:", error);
+    return NextResponse.json(
+      { error: "Failed to remove blocklist entries" },
+      { status: 500 }
+    );
+  }
+}
+
 // POST - Purge webhook-added blocklist entries by domain
 // Body: { domain: "hotmail.com" } or { domains: ["hotmail.com", "outlook.com", "live.com"] }
 // Only removes entries added by webhooks (source starts with "webhook-" or "sendgrid-" or "mailgun-")
