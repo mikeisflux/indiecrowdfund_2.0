@@ -25,6 +25,7 @@ const csrfExemptRoutes = [
   "/api/stripe",
   "/api/health",
   "/api/track", // Analytics tracking endpoint
+  "/api/blocked", // Bot/blocked request sink
   "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
   "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
@@ -291,15 +292,20 @@ export function middleware(req: NextRequest) {
     syncBlockedIPsFromDb().catch(() => {});
   }
 
+  // Helper: rewrite bot/blocked requests to /api/blocked to prevent Next.js from
+  // trying to render error pages (which causes secondary "Failed to find Server Action" errors)
+  function rewriteToBlocked(reason: string, status: number) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/api/blocked";
+    url.searchParams.set("reason", reason);
+    url.searchParams.set("status", String(status));
+    return NextResponse.rewrite(url);
+  }
+
   // Check if IP is blocked (fast in-memory check)
   if (isIPBlockedFast(clientIP)) {
     console.log(`[Bot Blocker] Blocked request from ${clientIP} to ${pathname}`);
-    // Use JSON response for server action requests to prevent Next.js internal TypeError
-    const hasActionHeader = !!req.headers.get("Next-Action");
-    if (hasActionHeader || pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    return new NextResponse("Forbidden", { status: 403 });
+    return rewriteToBlocked("Forbidden", 403);
   }
 
   // Handle Server Action requests - detect bots and log for debugging
@@ -325,32 +331,26 @@ export function middleware(req: NextRequest) {
       console.log(`[Bot Blocker] Invalid action ID "${serverActionId}" from IP ${clientIP}`);
 
       // Record suspicious activity and potentially block
-      const shouldBlock = recordSuspiciousRequest(
+      recordSuspiciousRequest(
         clientIP,
         `Invalid server action ID: ${serverActionId}`,
         { actionId: serverActionId, path: pathname, userAgent }
       );
 
-      if (shouldBlock) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-
-      // Return 400 Bad Request for invalid action IDs (use JSON to prevent Next.js TypeError)
-      return NextResponse.json({ error: "Bad Request - Invalid action ID" }, { status: 400 });
+      // Rewrite to API endpoint to prevent Next.js renderErrorToResponseImpl from
+      // trying to resolve the invalid action ID and logging the error again
+      return rewriteToBlocked("Bad Request - Invalid action ID", 400);
     }
 
     // Rate limit server action requests per IP (catches brute-force action ID guessing)
     if (isServerActionRateLimited(clientIP)) {
       console.log(`[Bot Blocker] Server action rate limit exceeded for IP ${clientIP}`);
-      const shouldBlock = recordSuspiciousRequest(
+      recordSuspiciousRequest(
         clientIP,
         "Server action rate limit exceeded",
         { actionId: serverActionId, path: pathname, userAgent }
       );
-      if (shouldBlock) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-      return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
+      return rewriteToBlocked("Too Many Requests", 429);
     }
 
     // Detect suspicious server action patterns:
@@ -361,15 +361,12 @@ export function middleware(req: NextRequest) {
 
     if (!hasReferer && !hasOrigin && !hasSession) {
       console.log(`[Bot Blocker] Suspicious server action: no referer/origin/session from IP ${clientIP}`);
-      const shouldBlock = recordSuspiciousRequest(
+      recordSuspiciousRequest(
         clientIP,
         "Server action with no referer, origin, or session",
         { actionId: serverActionId, path: pathname, userAgent }
       );
-      if (shouldBlock) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-      return NextResponse.json({ error: "Bad Request" }, { status: 400 });
+      return rewriteToBlocked("Bad Request", 400);
     }
   }
 
