@@ -4,7 +4,7 @@ module.exports = {
       name: 'indiecrowdfund',
       script: 'node_modules/.bin/next',
       args: 'start -p 3000',
-      cwd: '/root/indiecrowdfund_2.0',
+      cwd: '/home/user/indiecrowdfund_2.0',
       instances: 4,
       exec_mode: 'cluster',
       autorestart: true,
