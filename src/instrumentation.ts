@@ -5,6 +5,8 @@
  * - "Failed to find Server Action" from bot/scanner probes (handled by middleware)
  * - "The requested resource isn't a valid image" from video URLs hitting image optimizer
  * - "Input Buffer is empty" from Sharp processing empty/corrupt files
+ * - "did not initialize yet" from Prisma client when running a stale build
+ * - "Failed to parse body as FormData" from malformed external requests
  */
 
 export function register() {
@@ -28,6 +30,16 @@ export function register() {
 
       // Suppress Sharp empty buffer errors (corrupt or missing uploaded files)
       if (message.includes("Input Buffer is empty")) {
+        return;
+      }
+
+      // Suppress Prisma client initialization errors (stale build running before rebuild)
+      if (message.includes("did not initialize yet")) {
+        return;
+      }
+
+      // Suppress malformed FormData from bad external requests (bots/scanners)
+      if (message.includes("Failed to parse body as FormData")) {
         return;
       }
 
