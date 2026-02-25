@@ -147,6 +147,24 @@ export async function GET(
       }
     );
 
+    // Determine if pledge requires physical shipping
+    // A pledge needs shipping only if the main reward OR any of its addons require shipping
+    const rewardWithShipping = await db.reward.findUnique({
+      where: { id: pledge.rewardId },
+      select: { shippingType: true },
+    });
+
+    const addonRewards = addonIds.length > 0
+      ? await db.reward.findMany({
+          where: { id: { in: addonIds } },
+          select: { shippingType: true },
+        })
+      : [];
+
+    const requiresShipping =
+      (rewardWithShipping?.shippingType !== "NO_SHIPPING") ||
+      addonRewards.some(a => a.shippingType !== "NO_SHIPPING");
+
     // Get available addons for this project that the backer can purchase
     const availableAddons = await db.reward.findMany({
       where: {
@@ -190,6 +208,7 @@ export async function GET(
         collectAddresses: survey.collectAddresses,
         status: survey.status,
         addressesLocked: survey.addressesLocked,
+        requiresShipping,
       },
       pledge: {
         id: pledge.id,
@@ -372,23 +391,40 @@ export async function POST(
         }
       }
 
-      // Check address if required
+      // Check address if required - but only for pledges that need physical shipping
       if (survey.collectAddresses) {
-        const addressToValidate = data.shippingAddress || existingResponse.shippingAddress;
-        if (!addressToValidate) {
-          return NextResponse.json(
-            { error: "Shipping address is required" },
-            { status: 400 }
-          );
-        }
-        // Validate address with strict schema on submit
-        const addressResult = addressSchemaStrict.safeParse(addressToValidate);
-        if (!addressResult.success) {
-          const errorMessage = addressResult.error.issues.map(i => i.message).join(', ');
-          return NextResponse.json(
-            { error: `Shipping address incomplete: ${errorMessage}` },
-            { status: 400 }
-          );
+        // Determine if this pledge requires shipping
+        const rewardForShipping = await db.reward.findUnique({
+          where: { id: pledge.rewardId },
+          select: { shippingType: true },
+        });
+        const addonRewardsForShipping = addonIds.length > 0
+          ? await db.reward.findMany({
+              where: { id: { in: addonIds } },
+              select: { shippingType: true },
+            })
+          : [];
+        const pledgeRequiresShipping =
+          (rewardForShipping?.shippingType !== "NO_SHIPPING") ||
+          addonRewardsForShipping.some(a => a.shippingType !== "NO_SHIPPING");
+
+        if (pledgeRequiresShipping) {
+          const addressToValidate = data.shippingAddress || existingResponse.shippingAddress;
+          if (!addressToValidate) {
+            return NextResponse.json(
+              { error: "Shipping address is required" },
+              { status: 400 }
+            );
+          }
+          // Validate address with strict schema on submit
+          const addressResult = addressSchemaStrict.safeParse(addressToValidate);
+          if (!addressResult.success) {
+            const errorMessage = addressResult.error.issues.map(i => i.message).join(', ');
+            return NextResponse.json(
+              { error: `Shipping address incomplete: ${errorMessage}` },
+              { status: 400 }
+            );
+          }
         }
       }
     }

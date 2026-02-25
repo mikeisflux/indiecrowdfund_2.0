@@ -37,8 +37,10 @@ import {
   CreditCard,
   ShieldCheck,
   Trash2,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
+import { ALL_COUNTRIES } from "@/types";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -52,6 +54,20 @@ interface AvailableAddon {
   alreadyPurchased: boolean;
 }
 
+interface SavedAddress {
+  id: string;
+  label: string;
+  isDefault: boolean;
+  fullName: string;
+  line1: string;
+  line2?: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  phone?: string | null;
+}
+
 interface SurveyData {
   survey: {
     id: string;
@@ -60,6 +76,7 @@ interface SurveyData {
     collectAddresses: boolean;
     status: string;
     addressesLocked: boolean;
+    requiresShipping: boolean;
   };
   pledge: {
     id: string;
@@ -146,6 +163,9 @@ export default function BackerSurveyPage() {
     phone: "",
   });
 
+  // Saved addresses from user profile
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+
   // Addon selection state
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
 
@@ -200,6 +220,62 @@ export default function BackerSurveyPage() {
     fetchSurvey();
   }, [fetchSurvey]);
 
+  // Fetch saved addresses from user profile
+  const fetchSavedAddresses = useCallback(async () => {
+    try {
+      const response = await fetch("/api/backer/addresses");
+      if (response.ok) {
+        const result = await response.json();
+        setSavedAddresses(result.addresses || []);
+      }
+    } catch (err) {
+      console.error("Error fetching saved addresses:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSavedAddresses();
+  }, [fetchSavedAddresses]);
+
+  // Auto-fill address from default saved address when survey loads
+  // Only if no address was previously saved in the survey response
+  useEffect(() => {
+    if (
+      savedAddresses.length > 0 &&
+      data &&
+      !data.response.shippingAddress?.name &&
+      shippingAddress.name === ""
+    ) {
+      const defaultAddr = savedAddresses.find(a => a.isDefault) || savedAddresses[0];
+      if (defaultAddr) {
+        setShippingAddress({
+          name: defaultAddr.fullName,
+          line1: defaultAddr.line1,
+          line2: defaultAddr.line2 || "",
+          city: defaultAddr.city,
+          state: defaultAddr.state,
+          postalCode: defaultAddr.postalCode,
+          country: defaultAddr.country,
+          phone: defaultAddr.phone || "",
+        });
+      }
+    }
+  }, [savedAddresses, data, shippingAddress.name]);
+
+  // Apply a saved address to the form
+  const applySavedAddress = (addr: SavedAddress) => {
+    setShippingAddress({
+      name: addr.fullName,
+      line1: addr.line1,
+      line2: addr.line2 || "",
+      city: addr.city,
+      state: addr.state,
+      postalCode: addr.postalCode,
+      country: addr.country,
+      phone: addr.phone || "",
+    });
+  };
+
   // Calculate addon totals
   const addonsTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
     if (qty <= 0) return sum;
@@ -219,7 +295,7 @@ export default function BackerSurveyPage() {
         body: JSON.stringify({
           itemResponses,
           backerResponses,
-          shippingAddress: data?.survey.collectAddresses && shippingAddress.name.trim()
+          shippingAddress: showAddressStep && shippingAddress.name.trim()
             ? shippingAddress
             : null,
           submit,
@@ -339,12 +415,15 @@ export default function BackerSurveyPage() {
     setIsProcessingPayment(false);
   };
 
+  // Whether address collection applies to this specific pledge
+  const showAddressStep = data?.survey.collectAddresses && data?.survey.requiresShipping;
+
   const getSteps = (): Step[] => {
     const steps: Step[] = ["intro"];
     if (data?.itemQuestions && data.itemQuestions.length > 0) steps.push("items");
     if (data?.backerQuestions && data.backerQuestions.length > 0) steps.push("questions");
     if (data?.availableAddons && data.availableAddons.length > 0) steps.push("addons");
-    if (data?.survey.collectAddresses) steps.push("address");
+    if (showAddressStep) steps.push("address");
     steps.push("review");
     // Payment step is only shown dynamically after submit if addons selected
     return steps;
@@ -848,6 +927,39 @@ export default function BackerSurveyPage() {
             </div>
           )}
 
+          {/* Saved Address Picker */}
+          {savedAddresses.length > 0 && !isAddressLocked && (
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardContent className="py-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <BookOpen className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">Use a saved address</span>
+                </div>
+                <div className="space-y-2">
+                  {savedAddresses.map((addr) => (
+                    <button
+                      key={addr.id}
+                      onClick={() => applySavedAddress(addr)}
+                      className="w-full text-left p-3 rounded-lg border bg-white hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                          {addr.label}
+                          {addr.isDefault && (
+                            <span className="ml-2 text-xs text-blue-600 font-normal">(Default)</span>
+                          )}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        {addr.fullName} — {addr.line1}, {addr.city}, {addr.state} {addr.postalCode}, {addr.country}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardContent className="py-4 space-y-4">
               <div className="space-y-2">
@@ -918,12 +1030,11 @@ export default function BackerSurveyPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="US">United States</SelectItem>
-                      <SelectItem value="CA">Canada</SelectItem>
-                      <SelectItem value="GB">United Kingdom</SelectItem>
-                      <SelectItem value="AU">Australia</SelectItem>
-                      <SelectItem value="DE">Germany</SelectItem>
-                      <SelectItem value="FR">France</SelectItem>
+                      {ALL_COUNTRIES.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1047,7 +1158,7 @@ export default function BackerSurveyPage() {
               )}
 
               {/* Address */}
-              {data.survey.collectAddresses && shippingAddress.name && (
+              {showAddressStep && shippingAddress.name && (
                 <div>
                   <h4 className="font-medium">Shipping Address</h4>
                   <p className="text-sm text-zinc-600">
@@ -1055,7 +1166,7 @@ export default function BackerSurveyPage() {
                     {shippingAddress.line1}<br />
                     {shippingAddress.line2 && <>{shippingAddress.line2}<br /></>}
                     {shippingAddress.city}, {shippingAddress.state} {shippingAddress.postalCode}<br />
-                    {shippingAddress.country}
+                    {ALL_COUNTRIES.find(c => c.code === shippingAddress.country)?.name || shippingAddress.country}
                   </p>
                 </div>
               )}
