@@ -5,9 +5,10 @@
 
 set -e  # Exit on any error
 
-REPO_DIR="/home/user/indiecrowdfund_2.0"
-BUILD_DIR="/home/user/indiecrowdfund_build"
-BACKUP_DIR="/home/user/indiecrowdfund_backup"
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+HOME_DIR="$(dirname "$REPO_DIR")"
+BUILD_DIR="${HOME_DIR}/indiecrowdfund_build"
+BACKUP_DIR="${HOME_DIR}/indiecrowdfund_backup"
 
 echo "🚀 Starting seamless deployment..."
 echo "=================================="

@@ -4,7 +4,7 @@
 # Backs up current build, builds new one, restarts PM2 on success
 # If build fails, reports errors and keeps the old build running
 
-REPO_DIR="/home/user/indiecrowdfund_2.0"
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
 
 # Colors for output
