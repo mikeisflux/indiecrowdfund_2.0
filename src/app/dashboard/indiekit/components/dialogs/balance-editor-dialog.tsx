@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ import {
   Plus,
   Minus,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,24 +34,26 @@ interface BalanceEditorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   backerId: string;
+  projectId: string;
   backerName: string;
   currentBalance: number;
-  onSave?: (adjustment: { type: string; amount: number; reason: string }) => void;
+  onSaved?: () => void;
 }
 
 export function BalanceEditorDialog({
   open,
   onOpenChange,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   backerId,
+  projectId,
   backerName,
   currentBalance,
-  onSave,
+  onSaved,
 }: BalanceEditorDialogProps) {
   const [adjustmentType, setAdjustmentType] = useState<"credit" | "charge">("credit");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [category, setCategory] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const newBalance = currentBalance + (
     adjustmentType === "credit"
@@ -57,26 +61,46 @@ export function BalanceEditorDialog({
       : parseFloat(amount || "0")
   );
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       toast.error("Please enter a valid amount");
       return;
     }
 
-    onSave?.({
-      type: adjustmentType,
-      amount: parsedAmount,
-      reason: `${category ? `[${category}] ` : ""}${reason}`,
-    });
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          pledgeId: backerId,
+          projectId,
+          type: adjustmentType,
+          amount: parsedAmount,
+          reason: `${category ? `[${category}] ` : ""}${reason}`,
+        }),
+      });
 
-    toast.success(`Balance ${adjustmentType === "credit" ? "credit" : "charge"} of $${parsedAmount.toFixed(2)} applied`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to apply adjustment");
+      }
 
-    // Reset and close
-    setAmount("");
-    setReason("");
-    setCategory("");
-    onOpenChange(false);
+      toast.success(`Balance ${adjustmentType === "credit" ? "credit" : "charge"} of $${parsedAmount.toFixed(2)} applied`);
+
+      // Reset and close
+      setAmount("");
+      setReason("");
+      setCategory("");
+      onOpenChange(false);
+      onSaved?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to apply balance adjustment");
+      console.error("Balance adjustment error:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -212,10 +236,14 @@ export function BalanceEditorDialog({
           <Button
             className="bg-teal-600 hover:bg-teal-700"
             onClick={handleSave}
-            disabled={!amount || parseFloat(amount) <= 0}
+            disabled={!amount || parseFloat(amount) <= 0 || isSaving}
           >
-            <DollarSign className="h-4 w-4 mr-2" />
-            Apply {adjustmentType === "credit" ? "Credit" : "Charge"}
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <DollarSign className="h-4 w-4 mr-2" />
+            )}
+            {isSaving ? "Applying..." : `Apply ${adjustmentType === "credit" ? "Credit" : "Charge"}`}
           </Button>
         </DialogFooter>
       </DialogContent>

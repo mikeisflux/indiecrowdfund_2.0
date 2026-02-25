@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ import {
   Package,
   Mail,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,16 +34,10 @@ interface TrackingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orderId: string;
+  projectId: string;
   backerName: string;
   backerEmail: string;
-  onSave?: (tracking: TrackingInfo) => void;
-}
-
-interface TrackingInfo {
-  carrier: string;
-  trackingNumber: string;
-  notifyBacker: boolean;
-  markAsShipped: boolean;
+  onSaved?: () => void;
 }
 
 const carriers = [
@@ -58,40 +54,62 @@ export function TrackingDialog({
   open,
   onOpenChange,
   orderId,
+  projectId,
   backerName,
   backerEmail,
-  onSave,
+  onSaved,
 }: TrackingDialogProps) {
   const [carrier, setCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [notifyBacker, setNotifyBacker] = useState(true);
   const [markAsShipped, setMarkAsShipped] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const selectedCarrier = carriers.find(c => c.id === carrier);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!carrier || !trackingNumber.trim()) {
       toast.error("Please select a carrier and enter a tracking number");
       return;
     }
 
-    onSave?.({
-      carrier,
-      trackingNumber: trackingNumber.trim(),
-      notifyBacker,
-      markAsShipped,
-    });
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/tracking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          pledgeId: orderId,
+          projectId,
+          carrier,
+          trackingNumber: trackingNumber.trim(),
+          notifyBacker,
+          markAsShipped,
+        }),
+      });
 
-    toast.success("Tracking information saved");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save tracking");
+      }
 
-    if (notifyBacker) {
-      toast.info(`Notification sent to ${backerEmail}`);
+      toast.success("Tracking information saved");
+
+      if (notifyBacker) {
+        toast.info(`Notification sent to ${backerEmail}`);
+      }
+
+      // Reset and close
+      setCarrier("");
+      setTrackingNumber("");
+      onOpenChange(false);
+      onSaved?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save tracking");
+      console.error("Tracking save error:", error);
+    } finally {
+      setIsSaving(false);
     }
-
-    // Reset and close
-    setCarrier("");
-    setTrackingNumber("");
-    onOpenChange(false);
   };
 
   const getTrackingUrl = () => {
@@ -108,7 +126,7 @@ export function TrackingDialog({
             Add Tracking Number
           </DialogTitle>
           <DialogDescription>
-            Add shipping tracking information for order #{orderId}
+            Add shipping tracking information for this order
           </DialogDescription>
         </DialogHeader>
 
@@ -194,7 +212,7 @@ export function TrackingDialog({
                 <p>To: {backerEmail}</p>
                 <p>Subject: Your order has shipped!</p>
                 <p className="mt-2">
-                  Your order #{orderId} is on its way! Track your package with {selectedCarrier?.name || "your carrier"}:
+                  Your order is on its way! Track your package with {selectedCarrier?.name || "your carrier"}:
                 </p>
                 <p className="font-mono text-xs mt-1 bg-muted p-1 rounded">{trackingNumber}</p>
               </div>
@@ -209,10 +227,14 @@ export function TrackingDialog({
           <Button
             className="bg-teal-600 hover:bg-teal-700"
             onClick={handleSave}
-            disabled={!carrier || !trackingNumber.trim()}
+            disabled={!carrier || !trackingNumber.trim() || isSaving}
           >
-            <Truck className="h-4 w-4 mr-2" />
-            Save Tracking
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Truck className="h-4 w-4 mr-2" />
+            )}
+            {isSaving ? "Saving..." : "Save Tracking"}
           </Button>
         </DialogFooter>
       </DialogContent>

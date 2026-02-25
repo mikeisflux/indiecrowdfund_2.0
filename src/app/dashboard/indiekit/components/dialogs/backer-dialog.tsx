@@ -972,8 +972,8 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
           postalCode: backer.shippingAddress.postalCode,
           country: backer.shippingAddress.country,
         } : null}
-        onConfirm={(address) => {
-          console.log("Address updated:", address);
+        onConfirm={() => {
+          onRefresh?.();
         }}
       />
 
@@ -981,11 +981,10 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         open={showBalanceEditor}
         onOpenChange={setShowBalanceEditor}
         backerId={backer.id}
+        projectId={backer.projectId || ""}
         backerName={backer.name}
         currentBalance={backer.balance?.balanceDue || 0}
-        onSave={(adjustment) => {
-          console.log("Balance adjustment:", adjustment);
-        }}
+        onSaved={onRefresh}
       />
 
       <EditOrderDialog
@@ -1013,11 +1012,10 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         open={showTracking}
         onOpenChange={setShowTracking}
         orderId={backer.id}
+        projectId={backer.projectId || ""}
         backerName={backer.name}
         backerEmail={backer.email}
-        onSave={(tracking) => {
-          console.log("Tracking added:", tracking);
-        }}
+        onSaved={onRefresh}
       />
 
       <RefundDialog
@@ -1050,9 +1048,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         onOpenChange={setShowNotes}
         backerId={backer.id}
         backerName={backer.name}
-        onSave={(note) => {
-          console.log("Note added:", note);
-        }}
+        projectId={backer.projectId}
       />
 
       <EmailComposerDialog
@@ -1060,9 +1056,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         onOpenChange={setShowEmailComposer}
         recipientEmail={backer.email}
         recipientName={backer.name}
-        onSend={(email) => {
-          console.log("Email sent:", email);
-        }}
+        projectId={backer.projectId}
       />
 
       <CancelOrderDialog

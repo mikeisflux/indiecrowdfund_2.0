@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +28,7 @@ import {
   Send,
   Eye,
   User,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,15 +37,8 @@ interface EmailComposerDialogProps {
   onOpenChange: (open: boolean) => void;
   recipientEmail?: string;
   recipientName?: string;
-  onSend?: (email: EmailData) => void;
-}
-
-interface EmailData {
-  to: string;
-  subject: string;
-  body: string;
-  template?: string;
-  trackOpens: boolean;
+  projectId?: string;
+  onSent?: () => void;
 }
 
 const emailTemplates = [
@@ -68,7 +63,8 @@ export function EmailComposerDialog({
   onOpenChange,
   recipientEmail = "",
   recipientName = "",
-  onSend,
+  projectId,
+  onSent,
 }: EmailComposerDialogProps) {
   const [to, setTo] = useState(recipientEmail);
   const [subject, setSubject] = useState("");
@@ -76,6 +72,7 @@ export function EmailComposerDialog({
   const [template, setTemplate] = useState("none");
   const [trackOpens, setTrackOpens] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const handleTemplateChange = (templateId: string) => {
     setTemplate(templateId);
@@ -121,7 +118,7 @@ export function EmailComposerDialog({
     setBody(body + tag);
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!to.trim()) {
       toast.error("Please enter a recipient email");
       return;
@@ -135,16 +132,34 @@ export function EmailComposerDialog({
       return;
     }
 
-    onSend?.({
-      to,
-      subject,
-      body,
-      template: template !== "none" ? template : undefined,
-      trackOpens,
-    });
+    setIsSending(true);
+    try {
+      const res = await fetch("/api/creator/email/compose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          to: to.trim(),
+          subject: subject.trim(),
+          content: body,
+          projectId,
+          trackOpens,
+        }),
+      });
 
-    toast.success(`Email sent to ${to}`);
-    onOpenChange(false);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send email");
+      }
+
+      toast.success(`Email sent to ${to}`);
+      onOpenChange(false);
+      onSent?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send email");
+      console.error("Send email error:", error);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const previewBody = body
@@ -274,9 +289,17 @@ export function EmailComposerDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSend}>
-            <Send className="h-4 w-4 mr-2" />
-            Send Email
+          <Button
+            className="bg-teal-600 hover:bg-teal-700"
+            onClick={handleSend}
+            disabled={isSending}
+          >
+            {isSending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            {isSending ? "Sending..." : "Send Email"}
           </Button>
         </DialogFooter>
       </DialogContent>
