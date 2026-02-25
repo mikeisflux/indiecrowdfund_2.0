@@ -61,10 +61,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    // Calculate balance due
+    // Calculate balance due - use stored value from metadata if available (set by order edits)
+    const pledgeMeta = (pledge.metadata as Record<string, unknown>) || {};
+    const storedBalanceDue = pledgeMeta.balanceDue != null ? Number(pledgeMeta.balanceDue) : null;
     const pledgeTotal = Number(pledge.amount);
     const expectedTotal = Number(pledge.rewardAmount) + Number(pledge.addonsAmount) + Number(pledge.shippingAmount);
-    const balanceDue = Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
+    const balanceDue = storedBalanceDue !== null
+      ? Math.max(0, Math.round(storedBalanceDue * 100) / 100)
+      : Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
 
     if (balanceDue <= 0) {
       return NextResponse.json({ error: "No balance due for this pledge" }, { status: 400 });
