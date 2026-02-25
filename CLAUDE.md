@@ -83,6 +83,15 @@
 - Never give raw SQL without wrapping it in a runnable shell command
 - Never give multi-step instructions when a single command will do
 
+## Branch Switch Commands
+- When the user asks for commands to switch to a branch and pull it down, **ALWAYS** provide all 3 commands:
+  ```
+  git fetch origin <branch-name>
+  git checkout <branch-name>
+  git pull origin <branch-name>
+  ```
+- Never omit the `git fetch` step
+
 ## Pre-Commit Checklist
 1. All imports are used
 2. No unused function parameters
