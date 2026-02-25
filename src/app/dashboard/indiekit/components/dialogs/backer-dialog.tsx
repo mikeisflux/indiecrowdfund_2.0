@@ -48,6 +48,7 @@ import {
   Loader2,
   Layers,
   ArrowRight,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Backer } from "../../types";
@@ -123,6 +124,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
   const [showEmailComposer, setShowEmailComposer] = useState(false);
   const [showCancelOrder, setShowCancelOrder] = useState(false);
   const [showPackingSlip, setShowPackingSlip] = useState(false);
+  const [resendingCharge, setResendingCharge] = useState(false);
 
   // Survey data state
   const [surveyData, setSurveyData] = useState<SurveyData | null>(null);
@@ -236,6 +238,45 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
     }
   };
 
+  const handleResendChargeRequest = async () => {
+    if (!backer?.projectId) {
+      toast.error("Missing project information");
+      return;
+    }
+
+    const balanceDue = (Number(backer.balance?.pledgeLevelAmount || 0) + Number(backer.balance?.addonsAmount || 0) + Number(backer.balance?.shippingAmount || 0)) - Number(backer.balance?.pledgeAmount || 0);
+
+    if (balanceDue <= 0) {
+      toast.info("No balance due for this backer");
+      return;
+    }
+
+    setResendingCharge(true);
+    try {
+      const res = await fetch("/api/creator/indiekit/orders/notify-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          pledgeId: backer.id,
+          projectId: backer.projectId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send charge request");
+      }
+
+      const data = await res.json();
+      toast.success(`Charge request sent to ${backer.email} for $${data.balanceDue.toFixed(2)}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send charge request");
+      console.error("Resend charge request error:", error);
+    } finally {
+      setResendingCharge(false);
+    }
+  };
+
   const handleSaveModifierAssignment = async (modifierAddonId: string, rewardId: string) => {
     if (!backer?.projectId) return;
 
@@ -333,6 +374,13 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                   <DropdownMenuItem onClick={() => setShowBalanceEditor(true)}>
                     <DollarSign className="h-4 w-4 mr-2" />
                     Adjust Balance
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleResendChargeRequest}
+                    disabled={resendingCharge || ((Number(backer.balance?.pledgeLevelAmount || 0) + Number(backer.balance?.addonsAmount || 0) + Number(backer.balance?.shippingAmount || 0)) - Number(backer.balance?.pledgeAmount || 0)) <= 0}
+                  >
+                    {resendingCharge ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                    {resendingCharge ? "Sending..." : "Resend Charge Request"}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowRefund(true)}>
                     <Undo2 className="h-4 w-4 mr-2" />
@@ -522,12 +570,24 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                         } else if (diff > 0.005) {
                           // Balance due from customer
                           return (
-                            <div className="flex justify-between">
-                              <span>Balance Due</span>
-                              <span className="text-red-600">
-                                ${diff.toFixed(2)}
-                              </span>
-                            </div>
+                            <>
+                              <div className="flex justify-between">
+                                <span>Balance Due</span>
+                                <span className="text-red-600">
+                                  ${diff.toFixed(2)}
+                                </span>
+                              </div>
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="text-teal-600 p-0 h-auto text-xs mt-1"
+                                onClick={handleResendChargeRequest}
+                                disabled={resendingCharge}
+                              >
+                                {resendingCharge ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Send className="h-3 w-3 mr-1" />}
+                                {resendingCharge ? "Sending..." : "Send Charge Request"}
+                              </Button>
+                            </>
                           );
                         } else {
                           // Balanced
