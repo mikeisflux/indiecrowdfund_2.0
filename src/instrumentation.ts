@@ -7,6 +7,7 @@
  * - "Input Buffer is empty" from Sharp processing empty/corrupt files
  * - "did not initialize yet" from Prisma client when running a stale build
  * - "Failed to parse body as FormData" from malformed external requests
+ * - "account_invalid" from Stripe when a creator's connected account is deactivated
  */
 
 export function register() {
@@ -40,6 +41,11 @@ export function register() {
 
       // Suppress malformed FormData from bad external requests (bots/scanners)
       if (message.includes("Failed to parse body as FormData")) {
+        return;
+      }
+
+      // Suppress Stripe account_invalid errors (creator's connected account deactivated)
+      if (message.includes("account_invalid")) {
         return;
       }
 
