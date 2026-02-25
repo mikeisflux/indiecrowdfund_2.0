@@ -176,13 +176,20 @@ export async function PATCH(req: NextRequest) {
       newAddonsAmount += Number(reward.amount) * addon.quantity;
     }
 
-    // Calculate the financial diff: what the original total was vs new total
-    const originalTotal = Number(pledge.amount);
+    // Calculate the financial diff based on ITEMS total change (not pledge.amount which may include overpayment/tips)
+    const chargedAmount = Number(pledge.amount);
     const rewardAmount = Number(pledge.rewardAmount);
-    const newShipping = shippingAmount !== undefined ? shippingAmount : Number(pledge.shippingAmount);
+    const previousAddonsAmount = Number(pledge.addonsAmount);
+    const previousShipping = Number(pledge.shippingAmount);
+    const newShipping = shippingAmount !== undefined ? shippingAmount : previousShipping;
+    const previousItemsTotal = rewardAmount + previousAddonsAmount + previousShipping;
     const newTotal = rewardAmount + newAddonsAmount + newShipping;
-    // Negative = we owe the customer (refund), Positive = customer owes more
-    const balanceChange = newTotal - originalTotal;
+    // Balance change based on items difference, not payment amount
+    const balanceChange = newTotal - previousItemsTotal;
+    // Accumulate balance due: existing balance + new change
+    const existingMetadata = (pledge.metadata as Record<string, unknown>) || {};
+    const previousBalanceDue = Number(existingMetadata.balanceDue || 0);
+    const newBalanceDue = Math.max(0, previousBalanceDue + balanceChange);
 
     // Perform all changes in a transaction
     await db.$transaction(async (tx) => {
@@ -225,18 +232,17 @@ export async function PATCH(req: NextRequest) {
         }
       }
 
-      // Update pledge addon/shipping amounts (NOT the pledge.amount which is the original charged amount)
-      const updateData: { addonsAmount: number; shippingAmount?: number } = {
-        addonsAmount: newAddonsAmount,
-      };
-
-      if (shippingAmount !== undefined) {
-        updateData.shippingAmount = shippingAmount;
-      }
-
+      // Update pledge addon/shipping amounts and balance due in metadata
       await tx.pledge.update({
         where: { id: pledgeId },
-        data: updateData,
+        data: {
+          addonsAmount: newAddonsAmount,
+          ...(shippingAmount !== undefined ? { shippingAmount } : {}),
+          metadata: {
+            ...existingMetadata,
+            balanceDue: newBalanceDue,
+          },
+        },
       });
 
       // Log the activity with financial details
@@ -254,13 +260,14 @@ export async function PATCH(req: NextRequest) {
           description: `Add-ons updated for pledge ${pledgeId}. New add-ons total: $${newAddonsAmount.toFixed(2)}${shippingAmount !== undefined ? `, Shipping: $${newShipping.toFixed(2)}` : ""}.${balanceNote}`,
           pledgeId,
           metadata: {
-            previousTotal: originalTotal,
+            previousItemsTotal,
             newTotal,
             balanceChange,
-            previousAddonsAmount: Number(pledge.addonsAmount),
+            previousAddonsAmount,
             newAddonsAmount,
-            previousShipping: Number(pledge.shippingAmount),
+            previousShipping,
             newShipping,
+            balanceDue: newBalanceDue,
           },
         },
       });
@@ -297,15 +304,17 @@ export async function PATCH(req: NextRequest) {
       success: true,
       addons: updatedAddons,
       balance: {
-        pledgeAmount: originalTotal, // Original charged amount (not the new order total)
+        pledgeAmount: chargedAmount,
         pledgeLevelAmount: Number(updatedPledge?.rewardAmount || 0),
         addonsAmount: Number(updatedPledge?.addonsAmount || 0),
         shippingAmount: Number(updatedPledge?.shippingAmount || 0),
+        balanceDue: newBalanceDue,
       },
       // Financial diff: negative means refund owed, positive means additional charge needed
       balanceChange,
-      previousTotal: originalTotal,
+      previousItemsTotal,
       newTotal,
+      balanceDue: newBalanceDue,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

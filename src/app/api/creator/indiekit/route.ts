@@ -418,10 +418,15 @@ export async function GET(req: NextRequest) {
     const preOrderBackers = pledges.filter(p => p.isPreOrder).length;
 
     // Calculate balance due per pledge for post-campaign charge tracking
-    // pledge.amount = original total charged (includes reward + campaign addons + shipping)
-    // If addons are added post-campaign via IndieKit, addonsAmount increases but amount stays the same
-    // So balanceDue = max(0, currentExpectedTotal - originalChargedAmount)
+    // Balance due is stored in metadata.balanceDue when orders are edited via IndieKit
+    // Falls back to items-vs-charged comparison for pledges that haven't been edited
     const pledgesWithBalance = pledges.map(p => {
+      const meta = (p.metadata as Record<string, unknown>) || {};
+      const storedBalanceDue = meta.balanceDue != null ? Number(meta.balanceDue) : null;
+      if (storedBalanceDue !== null) {
+        return { ...p, balanceDue: Math.max(0, Math.round(storedBalanceDue * 100) / 100) };
+      }
+      // Fallback for pledges never edited via IndieKit
       const pledgeTotal = Number(p.amount);
       const expectedTotal = Number(p.rewardAmount) + Number(p.addonsAmount) + Number(p.shippingAmount);
       const balanceDue = Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
@@ -538,8 +543,12 @@ export async function GET(req: NextRequest) {
       const rewardAmt = Number(pledge.rewardAmount) || 0;
       const addonsAmt = Number(pledge.addonsAmount) || 0;
       const shippingAmt = Number(pledge.shippingAmount) || 0;
-      const expectedTotal = rewardAmt + addonsAmt + shippingAmt;
-      const balanceDue = Math.max(0, expectedTotal - pledgeTotal);
+      // Use stored balanceDue from metadata if available (set by order edits)
+      const pledgeMeta = (pledge.metadata as Record<string, unknown>) || {};
+      const storedBalance = pledgeMeta.balanceDue != null ? Number(pledgeMeta.balanceDue) : null;
+      const balanceDue = storedBalance !== null
+        ? Math.max(0, storedBalance)
+        : Math.max(0, (rewardAmt + addonsAmt + shippingAmt) - pledgeTotal);
 
       // Determine charge status
       let chargeStatus: "not_charged" | "errored" | "charged" | "paypal_collected" = "not_charged";

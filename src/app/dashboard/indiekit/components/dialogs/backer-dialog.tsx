@@ -244,7 +244,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
       return;
     }
 
-    const balanceDue = (Number(backer.balance?.pledgeLevelAmount || 0) + Number(backer.balance?.addonsAmount || 0) + Number(backer.balance?.shippingAmount || 0)) - Number(backer.balance?.pledgeAmount || 0);
+    const balanceDue = Number(backer.balance?.balanceDue || 0);
 
     if (balanceDue <= 0) {
       toast.info("No balance due for this backer");
@@ -538,9 +538,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                     </div>
                     <div className="border-t pt-2 mt-2 font-medium">
                       {(() => {
-                        const totalCharged = Number(backer.balance?.pledgeAmount || 0);
-                        const currentOrderTotal = Number(backer.balance?.pledgeLevelAmount || 0) + Number(backer.balance?.addonsAmount || 0) + Number(backer.balance?.shippingAmount || 0);
-                        const diff = currentOrderTotal - totalCharged;
+                        const diff = Number(backer.balance?.balanceDue || 0);
                         if (diff < -0.005) {
                           // Credit owed to customer (order total is less than what they paid)
                           const creditAmount = Math.abs(diff);
