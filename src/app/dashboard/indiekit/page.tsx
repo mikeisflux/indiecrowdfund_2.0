@@ -323,6 +323,16 @@ export default function IndieKitPage() {
     }
   }, [fetchData, isInitialized]);
 
+  // Sync selectedBacker with latest backers data after refresh
+  // This ensures the backer dialog shows updated balance/addons after order edits
+  useEffect(() => {
+    setSelectedBacker(prev => {
+      if (!prev) return prev;
+      const updated = backers.find(b => b.id === prev.id);
+      return updated || prev;
+    });
+  }, [backers]);
+
   // Filter backers
   const filteredBackers = backers.filter((backer) => {
     const matchesSearch = backer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
