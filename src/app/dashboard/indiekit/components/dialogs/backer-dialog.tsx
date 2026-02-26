@@ -268,7 +268,11 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
       }
 
       const data = await res.json();
-      toast.success(`Charge request sent to ${backer.email} for $${data.balanceDue.toFixed(2)}`);
+      if (data.deduplicated) {
+        toast.info("Notification was already sent recently");
+      } else {
+        toast.success(`Charge request sent to ${backer.email} for $${data.balanceDue.toFixed(2)}`);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send charge request");
       console.error("Resend charge request error:", error);

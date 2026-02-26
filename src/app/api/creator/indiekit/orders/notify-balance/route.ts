@@ -74,6 +74,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No balance due for this pledge" }, { status: 400 });
     }
 
+    // Duplicate prevention: reject if a notification was sent within the last 60 seconds
+    const lastSentAt = pledgeMeta.balanceNotificationSentAt;
+    if (lastSentAt) {
+      const lastSentTime = new Date(lastSentAt as string).getTime();
+      const secondsSince = (Date.now() - lastSentTime) / 1000;
+      if (secondsSince < 60) {
+        return NextResponse.json({
+          success: true,
+          balanceDue,
+          emailSent: true,
+          deduplicated: true,
+          message: `Notification already sent ${Math.round(secondsSince)}s ago`,
+        });
+      }
+    }
+
     // Generate a secure payment token
     const paymentToken = crypto.randomBytes(32).toString("hex");
     const tokenExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days

@@ -260,7 +260,12 @@ export function EditOrderDialog({
         throw new Error(data.error || "Failed to send notification");
       }
 
-      toast.success(`Balance notification sent to ${backerEmail || backerName}`);
+      const data = await res.json();
+      if (data.deduplicated) {
+        toast.info("Notification was already sent recently");
+      } else {
+        toast.success(`Balance notification sent to ${backerEmail || backerName}`);
+      }
       setShowBalanceDuePrompt(false);
       onOpenChange(false);
     } catch (error) {
