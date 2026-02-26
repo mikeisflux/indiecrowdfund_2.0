@@ -16,6 +16,10 @@ const RETRY_DELAY_MS = 300;
 const KEEPALIVE_INTERVAL_MS = 5 * 60 * 1000;
 let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
 
+// Track initialization failures to avoid spamming logs every request
+let lastInitErrorTime = 0;
+const INIT_ERROR_COOLDOWN_MS = 30_000; // Only log init errors every 30 seconds
+
 function isTransientError(error: unknown): boolean {
   if (error instanceof PrismaClientKnownRequestError) {
     return TRANSIENT_ERROR_CODES.includes(error.code);
@@ -46,12 +50,25 @@ function getPrismaClient(): PrismaClient {
   }
 
   if (!globalForPrisma.prisma) {
-    const client = new PrismaClient({
-      log:
-        process.env.NODE_ENV === "development"
-          ? ["query", "error", "warn"]
-          : ["error"],
-    });
+    let client: PrismaClient;
+    try {
+      client = new PrismaClient({
+        log:
+          process.env.NODE_ENV === "development"
+            ? ["query", "error", "warn"]
+            : ["error"],
+      });
+    } catch (error) {
+      const now = Date.now();
+      if (now - lastInitErrorTime > INIT_ERROR_COOLDOWN_MS) {
+        lastInitErrorTime = now;
+        console.error(
+          "[Prisma] Failed to initialize PrismaClient. Run 'npx prisma generate' and restart PM2.",
+          error instanceof Error ? error.message : error
+        );
+      }
+      throw new Error("Database client not available. Please try again later.");
+    }
 
     // Reconnect on transient errors by wrapping with retry logic
     globalForPrisma.prisma = client.$extends({
