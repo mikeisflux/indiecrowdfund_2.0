@@ -91,7 +91,15 @@ export async function POST(req: NextRequest) {
 
     // If block flag is set, add to blocked IPs
     if (block) {
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      // Scale block duration based on repeat offenses:
+      // 1st block = 24h, 2nd = 3 days, 3rd = 7 days, 4th+ = 30 days
+      const existing = await db.blockedIP.findUnique({
+        where: { ipAddress: ip },
+        select: { violationCount: true },
+      });
+      const violations = (existing?.violationCount || 0) + 1;
+      const durationHours = violations <= 1 ? 24 : violations === 2 ? 72 : violations === 3 ? 168 : 720;
+      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
 
       await db.blockedIP.upsert({
         where: { ipAddress: ip },
@@ -113,7 +121,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      console.log(`[Bot Blocker API] IP blocked: ${ip} - ${reason}`);
+      console.log(`[Bot Blocker API] IP blocked: ${ip} - ${reason} (${durationHours}h, violation #${violations})`);
     }
 
     return NextResponse.json({ success: true });
