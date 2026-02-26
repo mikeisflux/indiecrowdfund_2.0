@@ -236,7 +236,7 @@ export function ActiveProjectPanel({
     }
   };
 
-  if (!project || (project.status !== "LIVE" && project.status !== "APPROVED")) {
+  if (!project) {
     return (
       <Card className="h-[400px] flex items-center justify-center">
         <div className="text-center text-zinc-500">
@@ -255,7 +255,12 @@ export function ActiveProjectPanel({
           <div>
             <div className="flex items-center gap-2">
               <CardTitle>{project.title}</CardTitle>
-              <Badge className={project.status === "LIVE" ? "bg-emerald-600" : "bg-amber-600"}>
+              <Badge className={
+                project.status === "LIVE" ? "bg-emerald-600" :
+                project.status === "FUNDED" ? "bg-blue-600" :
+                project.status === "FAILED" ? "bg-red-600" :
+                "bg-amber-600"
+              }>
                 {project.status}
               </Badge>
             </div>
@@ -450,26 +455,28 @@ export function ActiveProjectPanel({
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            {project.status === "APPROVED" ? (
-              <Button
-                onClick={onMakeLive}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-              >
-                <Zap className="mr-2 h-4 w-4" />
-                Make Live
-              </Button>
-            ) : (
-              <Button
-                variant="destructive"
-                onClick={onDeactivate}
-                className="flex-1"
-              >
-                <Power className="mr-2 h-4 w-4" />
-                Deactivate
-              </Button>
-            )}
-          </div>
+          {(project.status === "LIVE" || project.status === "APPROVED") && (
+            <div className="flex items-center gap-2">
+              {project.status === "APPROVED" ? (
+                <Button
+                  onClick={onMakeLive}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <Zap className="mr-2 h-4 w-4" />
+                  Make Live
+                </Button>
+              ) : (
+                <Button
+                  variant="destructive"
+                  onClick={onDeactivate}
+                  className="flex-1"
+                >
+                  <Power className="mr-2 h-4 w-4" />
+                  Deactivate
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
 
