@@ -56,10 +56,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "This balance has already been paid" }, { status: 410 });
     }
 
-    // Calculate balance due
+    // Calculate balance due - prefer stored value from creator's order edit
+    const storedBalanceDue = meta.balanceDueAmount != null ? Number(meta.balanceDueAmount) : null;
     const pledgeTotal = Number(pledge.amount);
     const expectedTotal = Number(pledge.rewardAmount) + Number(pledge.addonsAmount) + Number(pledge.shippingAmount);
-    const balanceDue = Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
+    const balanceDue = storedBalanceDue !== null
+      ? Math.max(0, Math.round(storedBalanceDue * 100) / 100)
+      : Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
 
     if (balanceDue <= 0) {
       return NextResponse.json({ error: "No balance due" }, { status: 400 });
@@ -70,7 +73,7 @@ export async function GET(req: NextRequest) {
       projectTitle: pledge.project.title,
       projectSlug: pledge.project.slug,
       backerName: pledge.user.name || "Backer",
-      paymentProcessor: pledge.project.paymentProcessor,
+      paymentProcessor: pledge.project.paymentProcessor || "STRIPE",
       balanceDue,
       reward: pledge.reward ? { title: pledge.reward.title, amount: Number(pledge.reward.amount) } : null,
       addons: pledge.addons.map((a: { addon: { title: string; amount: unknown }; quantity: number }) => ({
@@ -137,10 +140,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Balance already paid" }, { status: 410 });
     }
 
-    // Calculate balance due
+    // Calculate balance due - prefer stored value from creator's order edit
+    const storedBalanceDue = meta.balanceDueAmount != null ? Number(meta.balanceDueAmount) : null;
     const pledgeTotal = Number(pledge.amount);
     const expectedTotal = Number(pledge.rewardAmount) + Number(pledge.addonsAmount) + Number(pledge.shippingAmount);
-    const balanceDue = Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
+    const balanceDue = storedBalanceDue !== null
+      ? Math.max(0, Math.round(storedBalanceDue * 100) / 100)
+      : Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
 
     if (balanceDue <= 0) {
       return NextResponse.json({ error: "No balance due" }, { status: 400 });
@@ -243,6 +249,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         clientSecret: dcData.clientSecret,
+        publishableKey: dcData.publishableKey,
         paymentProcessor: "DIVINITYCOIN",
         amount: balanceDue,
         divinityCoinPaymentId: dcData.paymentId,

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { StripePaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm";
+import { getCSRFHeaders } from "@/lib/csrf";
 import {
   DollarSign,
   CheckCircle2,
@@ -42,6 +43,7 @@ export default function BalancePaymentPage() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [dcStripePromise, setDcStripePromise] = useState<Promise<Stripe | null> | null>(null);
 
   const fetchDetails = useCallback(async () => {
     try {
@@ -90,11 +92,12 @@ export default function BalancePaymentPage() {
   const handleStartPayment = async () => {
     if (!details) return;
     setPaymentStarted(true);
+    setError(null);
 
     try {
       const res = await fetch("/api/pay/balance", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ token }),
       });
 
@@ -107,6 +110,11 @@ export default function BalancePaymentPage() {
 
       const data = await res.json();
       setClientSecret(data.clientSecret);
+
+      // For DivinityCoin, load the DC Stripe instance using the publishable key from the API
+      if (data.paymentProcessor === "DIVINITYCOIN" && data.publishableKey && !dcStripePromise) {
+        setDcStripePromise(loadStripe(data.publishableKey));
+      }
     } catch {
       setError("Failed to start payment");
       setPaymentStarted(false);
@@ -118,7 +126,7 @@ export default function BalancePaymentPage() {
       // Confirm the balance payment on our backend
       await fetch("/api/pay/balance/confirm", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ token }),
       });
       setPaymentSuccess(true);
@@ -182,6 +190,9 @@ export default function BalancePaymentPage() {
   }
 
   if (!details) return null;
+
+  // Determine which Stripe instance to use based on payment processor
+  const activeStripePromise = details.paymentProcessor === "DIVINITYCOIN" ? dcStripePromise : stripePromise;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -278,20 +289,48 @@ export default function BalancePaymentPage() {
           </Button>
         )}
 
-        {paymentStarted && clientSecret && stripePromise && details.paymentProcessor === "STRIPE" && (
+        {paymentStarted && clientSecret && activeStripePromise && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Payment Details</CardTitle>
             </CardHeader>
             <CardContent>
               <Elements
-                stripe={stripePromise}
+                key={clientSecret}
+                stripe={activeStripePromise}
                 options={{
                   clientSecret,
                   appearance: {
                     theme: "stripe",
                     variables: {
                       colorPrimary: "#0d9488",
+                      fontFamily: "system-ui, -apple-system, sans-serif",
+                      borderRadius: "8px",
+                      spacingUnit: "5px",
+                    },
+                    rules: {
+                      ".Tab": {
+                        borderRadius: "8px",
+                        boxShadow: "none",
+                      },
+                      ".Tab--selected": {
+                        borderColor: "#0d9488",
+                        boxShadow: "0 0 0 1.5px #0d9488",
+                      },
+                      ".Input": {
+                        borderRadius: "8px",
+                        boxShadow: "none",
+                        padding: "10px 12px",
+                      },
+                      ".Input:focus": {
+                        borderColor: "#0d9488",
+                        boxShadow: "0 0 0 1.5px #0d9488",
+                      },
+                      ".Label": {
+                        fontWeight: "500",
+                        fontSize: "14px",
+                        marginBottom: "6px",
+                      },
                     },
                   },
                 }}
@@ -315,6 +354,13 @@ export default function BalancePaymentPage() {
           <div className="text-center py-8">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-teal-600 mb-4" />
             <p className="text-muted-foreground">Setting up payment...</p>
+          </div>
+        )}
+
+        {paymentStarted && clientSecret && !activeStripePromise && (
+          <div className="text-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-teal-600 mb-4" />
+            <p className="text-muted-foreground">Loading payment form...</p>
           </div>
         )}
 
