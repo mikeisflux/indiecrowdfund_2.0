@@ -6,8 +6,6 @@ const nextConfig = {
   // Increase body size limit for server actions (default is 1MB)
   experimental: {
     instrumentationHook: true,
-    // Prevent webpack from bundling these server-only packages (fixes MODULE_NOT_FOUND in production)
-    serverComponentsExternalPackages: ['jsdom', '@aws-sdk/client-s3', '@aws-sdk/s3-request-presigner'],
     serverActions: {
       bodySizeLimit: '10mb',
     },
