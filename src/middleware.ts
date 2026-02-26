@@ -308,24 +308,9 @@ export function middleware(req: NextRequest) {
     return rewriteToBlocked("Forbidden", 403);
   }
 
-  // Handle Server Action requests - detect bots and log for debugging
+  // Handle Server Action requests - detect bots
   const serverActionId = req.headers.get("Next-Action");
   if (serverActionId) {
-    const logData = {
-      timestamp: new Date().toISOString(),
-      type: "SERVER_ACTION_REQUEST",
-      actionId: serverActionId,
-      pathname,
-      method: req.method,
-      referer: req.headers.get("referer") || "none",
-      origin: req.headers.get("origin") || "none",
-      userAgent,
-      ip: clientIP,
-      sessionCookie: req.cookies.get("session_token") ? "present" : "absent",
-      acceptLanguage: req.headers.get("accept-language") || "none",
-    };
-    console.log("[Server Action Debug]", JSON.stringify(logData));
-
     // Check if this is an invalid/malformed action ID (bot behavior)
     if (!isValidServerActionId(serverActionId)) {
       console.log(`[Bot Blocker] Invalid action ID "${serverActionId}" from IP ${clientIP}`);
