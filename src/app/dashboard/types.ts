@@ -113,4 +113,5 @@ export interface DashboardData {
   allAddons: RewardAddonItem[];
   referrers: Referrer[];
   fulfillmentStats: FulfillmentStats | null;
+  userRole?: string;
 }

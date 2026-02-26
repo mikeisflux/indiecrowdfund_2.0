@@ -317,14 +317,16 @@ export default function CreatorDashboard() {
                       </div>
                     </TabsTrigger>
                   </Link>
-                  <Link href={`/dashboard/indiekit?project=${selectedProjectId}`}>
-                    <TabsTrigger value="indiekit" asChild>
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
-                        <Package className="mr-2 h-4 w-4" />
-                        IndieKit
-                      </div>
-                    </TabsTrigger>
-                  </Link>
+                  {data?.userRole === "SUPER_ADMIN" && (
+                    <Link href={`/dashboard/indiekit?project=${selectedProjectId}`}>
+                      <TabsTrigger value="indiekit" asChild>
+                        <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
+                          <Package className="mr-2 h-4 w-4" />
+                          IndieKit
+                        </div>
+                      </TabsTrigger>
+                    </Link>
+                  )}
                   <Link href={`/dashboard/indiekit-v2?project=${selectedProjectId}`}>
                     <TabsTrigger value="indiekit-v2" asChild>
                       <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">

@@ -14,6 +14,25 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
 
+    // Get user role and check if they have at least one approved prelaunch page or campaign
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    const userRole = user?.role || "USER";
+
+    const approvedProjectCount = await db.project.count({
+      where: {
+        creatorId: session.user.id,
+        deletedAt: null,
+        OR: [
+          { status: { in: ["APPROVED", "LIVE", "FUNDED"] } },
+          { prelaunchStatus: "APPROVED" },
+        ],
+      },
+    });
+    const hasApprovedProject = approvedProjectCount > 0;
+
     // Get user's own projects that are funded/completed (eligible for fulfillment)
     // Also include DRAFT projects with prelaunchActive=true
     const ownProjects = await db.project.findMany({
@@ -948,6 +967,8 @@ export async function GET(req: NextRequest) {
       workflowState,
       emailMemberCount,
       userEmail: session.user.email || "",
+      userRole,
+      hasApprovedProject,
       rewards: projectRewards.map((r: { id: string; title: string; amount: unknown }) => ({ id: r.id, name: r.title, amount: Number(r.amount) })),
       addons: projectAddons.filter((a: { visibility?: string }) => a.visibility !== "HIDDEN").map((a: { id: string; title: string; amount: unknown }) => ({ id: a.id, name: a.title, price: Number(a.amount) })),
       surveyAddons: projectAddons.filter((a: { showInSurvey?: boolean }) => a.showInSurvey).map((a: { id: string; title: string; description?: string; amount: unknown; imageUrl?: string | null; quantityAvailable?: number | null; quantityClaimed?: number; isEnded?: boolean }) => ({

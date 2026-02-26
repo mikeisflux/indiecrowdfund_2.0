@@ -16,6 +16,13 @@ export async function GET(req: NextRequest) {
     // Validate days parameter - default 30, min 1, max 365
     const days = Math.min(365, Math.max(1, parseInt(searchParams.get("days") || "30") || 30));
 
+    // Get user role for conditional UI (e.g. hiding IndieKit 1.0 for non-super-admins)
+    const currentUser = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    const userRole = currentUser?.role || "USER";
+
     // Get user's own projects
     const ownProjects = await db.project.findMany({
       where: {
@@ -621,6 +628,7 @@ export async function GET(req: NextRequest) {
       allAddons: addonsList.map((a) => ({ id: a.id, title: a.title })),
       referrers: processedReferrers,
       fulfillmentStats,
+      userRole,
     });
   } catch (error) {
     console.error("Creator dashboard error:", error);

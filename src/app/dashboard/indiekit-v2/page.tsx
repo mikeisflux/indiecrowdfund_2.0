@@ -185,6 +185,8 @@ export default function IndieKitV2Page() {
   const [timeline, setTimeline] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [surveyQuestions, setSurveyQuestions] = useState<any[]>([]);
+  const [userRole, setUserRole] = useState<string>("USER");
+  const [hasApprovedProject, setHasApprovedProject] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBackers, setSelectedBackers] = useState<string[]>([]);
@@ -208,6 +210,9 @@ export default function IndieKitV2Page() {
     ["ACTIVE", "FUNDED", "COMPLETED", "FULFILLING", "LIVE"].includes(p.status) ||
     p.prelaunchActive === true
   ) || backers.length > 0;
+
+  // Email access is locked unless creator has an approved prelaunch page or campaign (super admins always have access)
+  const emailAccessLocked = userRole !== "SUPER_ADMIN" && !hasApprovedProject;
 
   const fulfillmentPercent = stats ? (stats.fulfilledBackers / stats.totalBackers) * 100 : 0;
 
@@ -251,6 +256,8 @@ export default function IndieKitV2Page() {
       setSurveyAddons(data.surveyAddons || []);
       setTimeline(data.timeline || []);
       setSurveyQuestions(data.surveyQuestions || []);
+      setUserRole(data.userRole || "USER");
+      setHasApprovedProject(data.hasApprovedProject ?? false);
 
       if (!selectedProjectId && data.projects?.length > 0) {
         const savedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
@@ -637,6 +644,7 @@ export default function IndieKitV2Page() {
                   backers={backers}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}
+                  emailAccessLocked={emailAccessLocked}
                 />
               )}
 
@@ -651,6 +659,7 @@ export default function IndieKitV2Page() {
                   onRefresh={fetchData}
                   segments={segments}
                   hasActiveCampaign={hasActiveCampaign}
+                  emailAccessLocked={emailAccessLocked}
                 />
               )}
 
