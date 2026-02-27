@@ -39,21 +39,22 @@ async function verifyProjectAccess(projectId: string, userId: string) {
 // GET - Get all backer questions for a survey
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await verifyProjectAccess(params.id, session.user.id);
+    const project = await verifyProjectAccess(id, session.user.id);
     if (!project) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const survey = await db.survey.findUnique({
-      where: { projectId: params.id },
+      where: { projectId: id },
     });
 
     if (!survey) {
@@ -78,28 +79,29 @@ export async function GET(
 // POST - Create a new backer question
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await verifyProjectAccess(params.id, session.user.id);
+    const project = await verifyProjectAccess(id, session.user.id);
     if (!project) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Auto-create survey if it doesn't exist
     let survey = await db.survey.findUnique({
-      where: { projectId: params.id },
+      where: { projectId: id },
     });
 
     if (!survey) {
       survey = await db.survey.create({
         data: {
-          projectId: params.id,
+          projectId: id,
           introTitle: "Backer Survey",
           introMessage: "Please complete this survey to help us fulfill your order.",
           collectAddresses: true,
@@ -122,7 +124,7 @@ export async function POST(
       const validRewards = await db.reward.count({
         where: {
           id: { in: data.targetRewardIds },
-          projectId: params.id,
+          projectId: id,
         },
       });
 
@@ -165,21 +167,22 @@ export async function POST(
 // PUT - Update a backer question
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await verifyProjectAccess(params.id, session.user.id);
+    const project = await verifyProjectAccess(id, session.user.id);
     if (!project) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const survey = await db.survey.findUnique({
-      where: { projectId: params.id },
+      where: { projectId: id },
     });
 
     if (!survey) {
@@ -222,7 +225,7 @@ export async function PUT(
       const validRewards = await db.reward.count({
         where: {
           id: { in: data.targetRewardIds },
-          projectId: params.id,
+          projectId: id,
         },
       });
 
@@ -265,21 +268,22 @@ export async function PUT(
 // DELETE - Delete a backer question
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await verifyProjectAccess(params.id, session.user.id);
+    const project = await verifyProjectAccess(id, session.user.id);
     if (!project) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const survey = await db.survey.findUnique({
-      where: { projectId: params.id },
+      where: { projectId: id },
     });
 
     if (!survey) {

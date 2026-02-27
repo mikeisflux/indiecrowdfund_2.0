@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic";
 // GET /api/projects/slug/[slug]/check - Check if a slug is available
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const slug = params.slug;
+    const { slug } = await params;
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
 

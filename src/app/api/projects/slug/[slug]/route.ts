@@ -4,9 +4,11 @@ import { auth } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { slug } = await params;
+
     // Get current user session (optional - for showing secret rewards to creators/admins)
     const session = await auth();
     const userId = session?.user?.id;
@@ -17,7 +19,7 @@ export async function GET(
     const secretToken = searchParams.get("secret");
 
     const project = await db.project.findUnique({
-      where: { slug: params.slug },
+      where: { slug },
       include: {
         creator: {
           select: {

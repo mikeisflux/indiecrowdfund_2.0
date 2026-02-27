@@ -4,9 +4,10 @@ import { db } from "@/lib/db";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,7 +15,7 @@ export async function POST(
 
     // Get the reward to copy
     const reward = await db.reward.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         items: true,
         project: {

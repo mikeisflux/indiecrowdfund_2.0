@@ -290,11 +290,12 @@ async function handleCollaborators(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const project = await db.project.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         creator: {
           select: {
@@ -352,16 +353,17 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const project = await db.project.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { creatorId: true, status: true, prelaunchStatus: true },
     });
 
@@ -377,7 +379,7 @@ export async function PATCH(
       // Check if user is a collaborator with edit permission
       const collaborator = await db.projectCollaborator.findFirst({
         where: {
-          projectId: params.id,
+          projectId: id,
           userId: session.user.id,
           status: "ACCEPTED",
           canEditProject: true,
@@ -396,7 +398,7 @@ export async function PATCH(
     // For launched projects, require chargeback card before allowing any edits
     if (isLaunched) {
       const chargebackCard = await db.creatorChargebackCard.findUnique({
-        where: { projectId: params.id },
+        where: { projectId: id },
         select: { id: true },
       });
 
@@ -440,7 +442,7 @@ export async function PATCH(
         const existingProject = await db.project.findFirst({
           where: {
             slug: projectData.slug,
-            id: { not: params.id } // Exclude current project
+            id: { not: id } // Exclude current project
           },
           select: { id: true },
         });
@@ -499,7 +501,7 @@ export async function PATCH(
               success: true,
               requiresApproval: true,
               message: "Your pre-launch page is already submitted and pending review.",
-              project: { id: params.id, prelaunchStatus: "SUBMITTED" },
+              project: { id: id, prelaunchStatus: "SUBMITTED" },
             });
           }
 
@@ -510,20 +512,20 @@ export async function PATCH(
 
             // Get the full project data to include in review
             const fullProject = await db.project.findUnique({
-              where: { id: params.id },
+              where: { id: id },
               select: { title: true, creatorId: true, creator: { select: { name: true, email: true } } },
             });
 
             // Update the project FIRST to save prelaunchStatus and any other data
             await db.project.update({
-              where: { id: params.id },
+              where: { id: id },
               data: updateData,
             });
 
             // Create a project review record for prelaunch review
             await db.projectReview.create({
               data: {
-                projectId: params.id,
+                projectId: id,
                 action: "SUBMITTED",
                 previousStatus: project.status,
                 newStatus: project.status, // Keep project status unchanged
@@ -550,7 +552,7 @@ export async function PATCH(
               success: true,
               requiresApproval: true,
               message: "Your pre-launch page has been submitted for review. Once approved, you can activate it.",
-              project: { id: params.id, prelaunchStatus: "SUBMITTED" },
+              project: { id: id, prelaunchStatus: "SUBMITTED" },
             });
           }
           // Prelaunch is approved, allow activation
@@ -578,13 +580,13 @@ export async function PATCH(
       const updated = await db.$transaction(async (tx) => {
         // Update project (only allowed fields based on isLaunched)
         const updatedProject = await tx.project.update({
-          where: { id: params.id },
+          where: { id: id },
           data: updateData,
         });
 
         // Get existing rewards with backer counts (only COMPLETED pledges count)
         const existingRewards = await tx.reward.findMany({
-          where: { projectId: params.id },
+          where: { projectId: id },
           include: {
             _count: {
               select: {
@@ -679,7 +681,7 @@ export async function PATCH(
           // Upsert rewards
           for (const reward of rewards) {
             const rewardData = {
-              projectId: params.id,
+              projectId: id,
               type: reward.type,
               title: reward.title,
               description: reward.description,
@@ -741,20 +743,20 @@ export async function PATCH(
 
       // Handle collaborators if provided
       if (collaborators && collaborators.length > 0) {
-        await handleCollaborators(params.id, collaborators, session.user.id, session.user.name || "Project Creator");
+        await handleCollaborators(id, collaborators, session.user.id, session.user.name || "Project Creator");
       }
 
       return NextResponse.json({ project: updated });
     } else {
       // No rewards to handle, just update project
       const updated = await db.project.update({
-        where: { id: params.id },
+        where: { id: id },
         data: updateData,
       });
 
       // Handle collaborators if provided
       if (collaborators && collaborators.length > 0) {
-        await handleCollaborators(params.id, collaborators, session.user.id, session.user.name || "Project Creator");
+        await handleCollaborators(id, collaborators, session.user.id, session.user.name || "Project Creator");
       }
 
       return NextResponse.json({ project: updated });
@@ -774,15 +776,14 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: projectId } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const projectId = params.id;
 
     const project = await db.project.findUnique({
       where: { id: projectId },

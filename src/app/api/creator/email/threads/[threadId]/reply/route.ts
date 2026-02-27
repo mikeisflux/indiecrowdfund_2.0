@@ -10,16 +10,17 @@ const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 // POST - Send a reply to a thread
 export async function POST(
   request: NextRequest,
-  { params }: { params: { threadId: string } }
+  { params }: { params: Promise<{ threadId: string }> }
 ) {
   try {
+    const { threadId } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Thread ID format: senderId-projectId (projectId may be "null" or empty for direct messages)
-    const [recipientId, projectId] = params.threadId.split("-");
+    const [recipientId, projectId] = threadId.split("-");
 
     if (!recipientId) {
       return NextResponse.json({ error: "Invalid thread ID" }, { status: 400 });
@@ -198,7 +199,7 @@ export async function POST(
     return NextResponse.json({
       message: {
         id: message.id,
-        threadId: params.threadId,
+        threadId,
         content: message.content,
         sender: {
           id: message.sender.id,

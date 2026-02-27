@@ -3,12 +3,14 @@ import { db } from "@/lib/db";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { vanityname: string; slug: string } }
+  { params }: { params: Promise<{ vanityname: string; slug: string }> }
 ) {
   try {
+    const { vanityname, slug } = await params;
+
     // First, find the creator by vanity URL
     const creator = await db.user.findUnique({
-      where: { vanityUrl: params.vanityname },
+      where: { vanityUrl: vanityname },
       select: { id: true },
     });
 
@@ -18,7 +20,7 @@ export async function GET(
 
     const project = await db.project.findFirst({
       where: {
-        slug: params.slug,
+        slug: slug,
         creatorId: creator.id,
       },
       select: {

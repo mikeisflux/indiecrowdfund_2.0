@@ -15,15 +15,16 @@ const promotionSchema = z.object({
 // POST - Update promotion settings
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const projectId = id;
     const permissionCheck = await checkProjectEditPermission(projectId, session.user.id);
 
     if (!permissionCheck.allowed) {
@@ -80,15 +81,16 @@ export async function POST(
 // GET - Get promotion settings
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const projectId = id;
     const permissionCheck = await checkProjectEditPermission(projectId, session.user.id);
 
     if (!permissionCheck.allowed) {

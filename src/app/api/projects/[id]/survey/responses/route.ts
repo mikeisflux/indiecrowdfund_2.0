@@ -5,15 +5,16 @@ import { db } from "@/lib/db";
 // GET - Get all survey responses for a project (creator view)
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const projectId = id;
 
     // Verify project ownership or collaborator access
     const project = await db.project.findUnique({
@@ -154,15 +155,16 @@ export async function GET(
 // GET export data (CSV format)
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const projectId = id;
     const body = await req.json();
     const { format = "json" } = body;
 

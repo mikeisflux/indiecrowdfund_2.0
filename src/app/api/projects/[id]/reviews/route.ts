@@ -5,16 +5,17 @@ import { db } from "@/lib/db";
 // GET - Get review history for a project
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const projectId = id;
 
     // Get the project to verify ownership
     const project = await db.project.findUnique({

@@ -6,15 +6,16 @@ import { z } from "zod";
 // GET - Get survey for a project (creator view)
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const projectId = id;
 
     // Verify project ownership or collaborator access
     const project = await db.project.findUnique({
@@ -110,15 +111,16 @@ const surveySchema = z.object({
 // POST - Create survey for a project
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const projectId = id;
     const body = await req.json();
 
     // Verify project ownership
@@ -186,15 +188,16 @@ export async function POST(
 // PUT - Update survey intro and settings
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const projectId = id;
     const body = await req.json();
 
     // Verify project ownership

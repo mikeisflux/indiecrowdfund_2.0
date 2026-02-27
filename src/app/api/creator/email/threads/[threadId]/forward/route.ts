@@ -10,16 +10,17 @@ const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 // POST - Forward a thread to another user
 export async function POST(
   request: NextRequest,
-  { params }: { params: { threadId: string } }
+  { params }: { params: Promise<{ threadId: string }> }
 ) {
   try {
+    const { threadId } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Thread ID format: senderId-projectId
-    const [originalSenderId, projectId] = params.threadId.split("-");
+    const [originalSenderId, projectId] = threadId.split("-");
 
     if (!originalSenderId || !projectId) {
       return NextResponse.json({ error: "Invalid thread ID" }, { status: 400 });

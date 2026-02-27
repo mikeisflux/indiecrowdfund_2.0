@@ -2,6 +2,7 @@
  * Custom Error Page for Pages Router fallback
  * This handles errors from older deployments and stale browser caches
  */
+import Link from 'next/link';
 
 function Error({ statusCode }) {
   return (
@@ -29,7 +30,7 @@ function Error({ statusCode }) {
         This may happen if your browser cached an older version of the site.
       </p>
       <div style={{ display: 'flex', gap: '16px' }}>
-        <a
+        <Link
           href="/"
           style={{
             padding: '12px 24px',
@@ -41,7 +42,7 @@ function Error({ statusCode }) {
           }}
         >
           Go Home
-        </a>
+        </Link>
         <button
           onClick={() => {
             // Force refresh to get latest version

@@ -8,16 +8,17 @@ export const dynamic = "force-dynamic";
 // For now, this is a placeholder that acknowledges the request
 export async function POST(
   request: NextRequest,
-  { params }: { params: { threadId: string } }
+  { params }: { params: Promise<{ threadId: string }> }
 ) {
   try {
+    const { threadId } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Thread ID format: senderId-projectId
-    const [senderId, projectId] = params.threadId.split("-");
+    const [senderId, projectId] = threadId.split("-");
 
     if (!senderId || !projectId) {
       return NextResponse.json({ error: "Invalid thread ID" }, { status: 400 });
