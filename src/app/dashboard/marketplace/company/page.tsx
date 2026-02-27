@@ -29,9 +29,9 @@ import { getCSRFHeaders } from "@/lib/csrf";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 
-// Dynamic import for TipTap editor to avoid SSR issues
-const TipTapEditor = dynamic(
-  () => import("@/components/tiptap-editor").then((mod) => mod.TipTapEditor),
+// Dynamic import for Block editor to avoid SSR issues
+const BlockEditorDynamic = dynamic(
+  () => import("@/components/ui/block-editor").then((mod) => ({ default: mod.BlockEditor })),
   { ssr: false, loading: () => <div className="h-64 bg-muted rounded-lg animate-pulse" /> }
 );
 
@@ -460,13 +460,11 @@ export default function CompanyProfilePage() {
 
               <div className="space-y-2">
                 <Label>About</Label>
-                <div className="rounded-lg overflow-hidden border border-border">
-                  <TipTapEditor
-                    content={formData.about}
-                    onChange={(html) => updateForm("about", html)}
-                    placeholder="Tell your story..."
-                  />
-                </div>
+                <BlockEditorDynamic
+                  value={formData.about}
+                  onChange={(html) => updateForm("about", html)}
+                  placeholder="Tell your story..."
+                />
               </div>
             </CardContent>
           </Card>

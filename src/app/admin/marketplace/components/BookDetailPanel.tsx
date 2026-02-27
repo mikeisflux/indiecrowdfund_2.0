@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -126,9 +127,14 @@ export function BookDetailPanel({
       {/* Description */}
       <div className="p-4 rounded-xl bg-muted/50 border border-border">
         <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
-        <p className="text-sm text-foreground whitespace-pre-wrap">
-          {book.description || "No description provided"}
-        </p>
+        {book.description ? (
+          <div
+            className="prose prose-sm max-w-none dark:prose-invert text-sm text-foreground"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(book.description) }}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">No description provided</p>
+        )}
       </div>
 
       {/* Creator Info */}

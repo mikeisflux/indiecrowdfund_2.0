@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { BlockEditor } from "@/components/ui/block-editor";
 import { Plus, Trash2, AlertTriangle, HelpCircle } from "lucide-react";
 
 export function StoryStep() {
@@ -45,9 +45,9 @@ export function StoryStep() {
           Tell potential backers about your project. What are you making? Why does it matter?
           Copy and paste content from other websites - formatting and images will be preserved.
         </p>
-        <RichTextEditor
+        <BlockEditor
           value={story.description || ""}
-          onChange={(value) => updateStory({ description: value })}
+          onChange={(val) => updateStory({ description: val })}
           placeholder="Describe your project in detail. Include what you're creating, why it matters, and what makes it unique..."
           projectId={projectId || undefined}
         />

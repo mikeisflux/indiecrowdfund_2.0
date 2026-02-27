@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { BlockEditor } from "@/components/ui/block-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -915,15 +915,13 @@ export default function EditBookPage() {
 
               <div className="space-y-2">
                 <Label>Description *</Label>
-                <Textarea
-                  placeholder="Describe your book (minimum 100 characters recommended)"
+                <BlockEditor
+                  placeholder="Describe your book in detail..."
                   value={formData.description}
-                  onChange={(e) => updateForm("description", e.target.value)}
-                  disabled={!canEdit && !isLive}
-                  className="min-h-32"
+                  onChange={(val) => updateForm("description", val)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {formData.description.length} characters
+                  {formData.description.replace(/<[^>]*>/g, "").length} characters
                 </p>
               </div>
 

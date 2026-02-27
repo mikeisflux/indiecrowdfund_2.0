@@ -7,7 +7,7 @@ import { useProjectStore } from "@/lib/stores/project-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { BlockEditor } from "@/components/ui/block-editor";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -421,10 +421,10 @@ export function PromotionStep() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>More About This Project</Label>
-              <RichTextEditor
+              <BlockEditor
                 value={promotion.prelaunchDescription || ""}
-                onChange={(value) =>
-                  updatePromotion({ prelaunchDescription: value })
+                onChange={(val) =>
+                  updatePromotion({ prelaunchDescription: val })
                 }
                 placeholder="Give potential backers a sneak peek of what you're creating..."
                 projectId={projectId || undefined}
