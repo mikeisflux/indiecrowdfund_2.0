@@ -117,7 +117,7 @@ export default function AdminDashboard() {
       const response = await fetch("/api/health");
       if (response.ok) {
         const data = await response.json();
-        setHealthData(data);
+        setHealthData({ ...data, checks: data.checks || [] });
       }
     } catch {
       // Health check failed
@@ -231,8 +231,9 @@ export default function AdminDashboard() {
       return { text: "Loading...", percentage: "—", color: "zinc", icon: Loader2 };
     }
 
-    const healthyChecks = healthData.checks.filter((c) => c.status === "healthy").length;
-    const totalChecks = healthData.checks.length;
+    const checks = healthData.checks || [];
+    const healthyChecks = checks.filter((c) => c.status === "healthy").length;
+    const totalChecks = checks.length;
     const percentage = totalChecks > 0 ? Math.round((healthyChecks / totalChecks) * 100) : 0;
 
     switch (healthData.status) {
@@ -571,10 +572,10 @@ export default function AdminDashboard() {
                 <Button size="sm" variant="secondary">Details</Button>
               </Link>
             </div>
-            {healthData && healthData.checks.some(c => c.status !== "healthy") && (
+            {healthData && healthData.checks?.some(c => c.status !== "healthy") && (
               <div className="mt-3 pt-3 border-t border-white/20">
                 <div className="flex flex-wrap gap-2">
-                  {healthData.checks.filter(c => c.status !== "healthy").map((check) => (
+                  {(healthData.checks || []).filter(c => c.status !== "healthy").map((check) => (
                     <Badge
                       key={check.name}
                       variant="secondary"
