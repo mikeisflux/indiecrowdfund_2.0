@@ -63,12 +63,12 @@ export async function GET(req: NextRequest) {
 
     // Map backer questions to frontend format (General Questions only)
     // Item questions (per-reward) are fetched separately via /api/projects/:id/survey/item-questions
-    type BackerQuestionType = { id: string; questionType: string; question: string; isRequired: boolean; description: string | null; options: string[]; sortOrder: number };
+    type BackerQuestionType = { id: string; questionType: string; displayType: string | null; question: string; isRequired: boolean; description: string | null; options: string[]; sortOrder: number };
     type QuestionFormat = { id: string; type: string; label: string; required: boolean; helpText: string | undefined; options: string[] | undefined; sortOrder: number };
 
     const questions: QuestionFormat[] = survey.backerQuestions.map((q: BackerQuestionType) => ({
       id: q.id,
-      type: mapQuestionType(q.questionType),
+      type: q.displayType || mapQuestionType(q.questionType),
       label: q.question,
       required: q.isRequired,
       helpText: q.description || undefined,
@@ -167,6 +167,7 @@ export async function POST(req: NextRequest) {
           question: q.label,
           description: q.helpText || null,
           questionType: mapToDbQuestionType(q.type),
+          displayType: q.type || null,
           options: q.options || [],
           isRequired: q.required || false,
           sortOrder: i,

@@ -113,6 +113,7 @@ interface SurveyData {
     question: string;
     description?: string;
     questionType: string;
+    displayType?: string | null;
     options: string[];
     isRequired: boolean;
   }[];
@@ -187,7 +188,16 @@ export default function BackerSurveyPage() {
         // Initialize form state from existing response
         if (surveyData.response) {
           setItemResponses(surveyData.response.itemResponses || {});
-          setBackerResponses(surveyData.response.backerResponses || {});
+          // Default address/email type questions to "No change needed" if not yet answered
+          const existingResponses = surveyData.response.backerResponses || {};
+          if (surveyData.backerQuestions) {
+            for (const q of surveyData.backerQuestions) {
+              if ((q.displayType === "address" || q.displayType === "email") && !existingResponses[q.id]) {
+                existingResponses[q.id] = "No change needed";
+              }
+            }
+          }
+          setBackerResponses(existingResponses);
           if (surveyData.response.shippingAddress) {
             setShippingAddress({
               name: surveyData.response.shippingAddress.name || "",
@@ -756,7 +766,9 @@ export default function BackerSurveyPage() {
                   <p className="text-sm text-zinc-500">{q.description}</p>
                 )}
                 <QuestionInput
+                  questionId={q.id}
                   type={q.questionType}
+                  displayType={q.displayType}
                   options={q.options}
                   value={backerResponses[q.id]}
                   onChange={(value) =>
@@ -1390,16 +1402,71 @@ function SurveyPaymentForm({
 
 // Question Input Component
 function QuestionInput({
+  questionId,
   type,
+  displayType,
   options,
   value,
   onChange,
 }: {
+  questionId?: string;
   type: string;
+  displayType?: string | null;
   options: string[];
   value?: string | string[];
   onChange: (value: string | string[]) => void;
 }) {
+  // Address and email types get a Yes/No toggle instead of a bare text field
+  if (displayType === "address" || displayType === "email") {
+    const strValue = (value as string) || "";
+    const isYes = strValue !== "" && strValue !== "No change needed";
+    const placeholderText = displayType === "address"
+      ? "Enter your new address..."
+      : "Enter your new email...";
+    const noId = `${questionId || displayType}-no`;
+    const yesId = `${questionId || displayType}-yes`;
+
+    return (
+      <div className="space-y-3">
+        <RadioGroup
+          value={isYes ? "yes" : "no"}
+          onValueChange={(v) => {
+            if (v === "no") {
+              onChange("No change needed");
+            } else {
+              onChange("");
+            }
+          }}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="no" id={noId} />
+            <Label htmlFor={noId}>No, keep my current {displayType}</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="yes" id={yesId} />
+            <Label htmlFor={yesId}>Yes, I have a new {displayType}</Label>
+          </div>
+        </RadioGroup>
+        {isYes && (
+          displayType === "email" ? (
+            <Input
+              type="email"
+              value={strValue}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={placeholderText}
+            />
+          ) : (
+            <Textarea
+              value={strValue}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={placeholderText}
+            />
+          )
+        )}
+      </div>
+    );
+  }
+
   if (type === "OPEN_TEXT") {
     return (
       <Textarea

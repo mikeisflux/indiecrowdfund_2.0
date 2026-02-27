@@ -111,6 +111,7 @@ model SurveyBackerQuestion {
   question        String
   description     String?            @db.Text
   questionType    SurveyQuestionType @default(OPEN_TEXT)
+  displayType     String?            // Original frontend type (address, email, phone, etc.)
   options         String[]           // For multiple/single selection
 
   // Targeting

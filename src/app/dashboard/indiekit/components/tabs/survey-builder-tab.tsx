@@ -226,11 +226,17 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
   };
 
   const handleAddQuestion = (type: string) => {
+    // Generate user-friendly default labels
+    const defaultLabels: Record<string, string> = {
+      address: "Updated Shipping Address",
+      email: "Updated Email Address",
+    };
     const newQuestion: SurveyQuestion = {
       id: String(Date.now()),
       type,
-      label: `New ${questionTypes.find((q) => q.id === type)?.label || "Question"}`,
+      label: defaultLabels[type] || `New ${questionTypes.find((q) => q.id === type)?.label || "Question"}`,
       required: false,
+      helpText: type === "address" ? "Only fill this in if your address has changed since you pledged." : type === "email" ? "Only fill this in if your email has changed since you pledged." : undefined,
     };
     setSurveyQuestions([...surveyQuestions, newQuestion]);
     setEditingQuestion(newQuestion);
