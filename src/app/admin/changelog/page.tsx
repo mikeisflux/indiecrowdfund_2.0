@@ -422,9 +422,10 @@ export default function AdminChangelogPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(entry.publishedAt || entry.createdAt).toLocaleDateString()}
-                        </span>
+                        <div className="text-sm text-muted-foreground">
+                          <div>{new Date(entry.createdAt).toLocaleDateString()}</div>
+                          <div className="text-xs">{new Date(entry.createdAt).toLocaleTimeString()}</div>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
