@@ -304,6 +304,25 @@ model PromoPopup {
 }
 
 // ============================================
+// CONSENT BANNER (TOS, Cookies, Privacy, AI Tracking)
+// ============================================
+
+model ConsentBanner {
+  id              String    @id @default(cuid())
+
+  // Settings
+  isActive        Boolean   @default(true)
+  showFrequency   String    @default("once_per_login") // once_per_session, once_per_login, once_per_day, every_visit
+
+  // Content stored as JSON
+  // { heading, message, acceptButtonText, links: [{ label, url }] }
+  content         Json      @default("{}")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
 // WEBHOOK EVENT DEDUPLICATION
 // ============================================
 

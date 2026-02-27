@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { TrackingProvider } from "@/components/tracking-provider";
 import { AnnouncementBar } from "@/components/announcement-bar";
 import { PromoPopup } from "@/components/promo-popup";
+import { ConsentBanner } from "@/components/consent-banner";
 import { SiteHeader } from "@/components/site-header";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -87,6 +88,7 @@ export default async function RootLayout({
             <TrackingProvider>
               <AnnouncementBar initialAnnouncements={announcements} />
               <PromoPopup />
+              <ConsentBanner />
               <SiteHeader />
               {children}
             </TrackingProvider>

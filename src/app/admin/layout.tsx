@@ -143,6 +143,7 @@ const navigation: NavSection[] = [
       { name: "Hero Slider", href: "/admin/hero-slider", icon: SlidersHorizontal },
       { name: "Announcement Bar", href: "/admin/announcement-bar", icon: Megaphone },
       { name: "Promo Popup", href: "/admin/promo-popup", icon: Sparkles },
+      { name: "Consent Banner", href: "/admin/consent-banner", icon: Shield },
       { name: "Media Library", href: "/admin/media", icon: Image, badgeKey: "media" },
     ],
   },
