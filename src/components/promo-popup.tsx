@@ -26,6 +26,7 @@ interface PromoSlide {
 
 const PROMO_DISMISSED_KEY = "promo_popup_dismissed";
 const PROMO_SESSION_KEY = "promo_popup_shown_session";
+const PROMO_LOGIN_KEY = "promo_popup_login_dismissed";
 
 // Map icon names to components
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -55,6 +56,10 @@ export function PromoPopup() {
 
     if (showFrequency === "once_per_session") {
       return !sessionStorage.getItem(PROMO_SESSION_KEY);
+    }
+
+    if (showFrequency === "once_per_login") {
+      return !localStorage.getItem(PROMO_LOGIN_KEY);
     }
 
     if (showFrequency === "once_per_day") {
@@ -102,6 +107,9 @@ export function PromoPopup() {
     setIsOpen(false);
     sessionStorage.setItem(PROMO_SESSION_KEY, Date.now().toString());
     localStorage.setItem(PROMO_DISMISSED_KEY, Date.now().toString());
+    if (showFrequency === "once_per_login") {
+      localStorage.setItem(PROMO_LOGIN_KEY, Date.now().toString());
+    }
   };
 
   const nextSlide = () => {

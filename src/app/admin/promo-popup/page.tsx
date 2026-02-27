@@ -345,6 +345,7 @@ export default function PromoPopupPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="once_per_session">Once per session</SelectItem>
+                <SelectItem value="once_per_login">Once per login session</SelectItem>
                 <SelectItem value="once_per_day">Once per day</SelectItem>
                 <SelectItem value="every_visit">Every page load</SelectItem>
               </SelectContent>

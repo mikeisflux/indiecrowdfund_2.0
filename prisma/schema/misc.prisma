@@ -293,7 +293,7 @@ model PromoPopup {
 
   // Settings
   isActive        Boolean   @default(true)
-  showFrequency   String    @default("once_per_session") // once_per_session, once_per_day, every_visit
+  showFrequency   String    @default("once_per_session") // once_per_session, once_per_login, once_per_day, every_visit
 
   // Slides stored as JSON array
   // Each slide: { title, subtitle, features[], iconName, gradientFrom, gradientTo }

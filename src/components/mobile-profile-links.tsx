@@ -24,6 +24,8 @@ export function MobileProfileLinks() {
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST", headers: getCSRFHeaders() });
+      // Clear promo popup login-session dismiss so it shows again on next login
+      localStorage.removeItem("promo_popup_login_dismissed");
       window.location.href = "/";
     } catch (error) {
       console.error("Logout failed:", error);
