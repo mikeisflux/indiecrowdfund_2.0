@@ -78,10 +78,14 @@ export function TransactionTable({
           Settlements
           {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.SETTLEMENT}</Badge>}
         </TabsTrigger>
+        <TabsTrigger value="indiekit_aftersale" className="gap-1">
+          IndieKit
+          {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.INDIEKIT_AFTERSALE}</Badge>}
+        </TabsTrigger>
       </TabsList>
 
       {/* All tabs share the same table content */}
-      {["all", "pledge", "marketplace", "dc_transaction", "dc_redemption", "payout", "settlement"].map((tab) => (
+      {["all", "pledge", "marketplace", "dc_transaction", "dc_redemption", "payout", "settlement", "indiekit_aftersale"].map((tab) => (
         <TabsContent key={tab} value={tab} className="mt-4">
           {isLoading ? (
             <Card>

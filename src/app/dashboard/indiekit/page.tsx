@@ -120,6 +120,7 @@ import {
   UpdatesTab,
   InboxTab,
   SkuMappingTab,
+  TransactionHistoryTab,
 } from "./components/tabs";
 import { WhatsNextBanner } from "./components/whats-next-banner";
 
@@ -755,6 +756,10 @@ export default function IndieKitPage() {
                   <ClipboardList className="h-4 w-4 mr-2" />
                   Manage Survey
                 </TabsTrigger>
+                <TabsTrigger value="transaction-history">
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Transaction History
+                </TabsTrigger>
                 <TabsTrigger value="settings">
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
@@ -914,6 +919,10 @@ export default function IndieKitPage() {
 
               <TabsContent value="manage-survey">
                 <ManageSurveyTab projectId={selectedProjectId} />
+              </TabsContent>
+
+              <TabsContent value="transaction-history">
+                <TransactionHistoryTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="settings">

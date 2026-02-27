@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 // Unified transaction type for the admin diagnostic view
 interface UnifiedTransaction {
   id: string;
-  type: "PLEDGE" | "MARKETPLACE" | "DC_TRANSACTION" | "DC_REDEMPTION" | "PAYOUT" | "SETTLEMENT";
+  type: "PLEDGE" | "MARKETPLACE" | "DC_TRANSACTION" | "DC_REDEMPTION" | "PAYOUT" | "SETTLEMENT" | "INDIEKIT_AFTERSALE";
   userId: string;
   userName: string | null;
   userEmail: string;
@@ -155,6 +155,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 7. INDIEKIT AFTERSALES (post-campaign add-on purchases via surveys)
+    if (shouldQuery("indiekit_aftersale")) {
+      try {
+        const aftersales = await queryIndieKitAftersales(search, processor, dateFilter);
+        results.push(...aftersales);
+      } catch (err) {
+        console.error("Error querying IndieKit aftersales:", err);
+        queryErrors.push("indiekit_aftersales");
+      }
+    }
+
     // Sort by date descending
     results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -228,6 +239,7 @@ function computeStats(transactions: UnifiedTransaction[]): Record<string, any> {
       DC_REDEMPTION: transactions.filter(t => t.type === "DC_REDEMPTION").length,
       PAYOUT: transactions.filter(t => t.type === "PAYOUT").length,
       SETTLEMENT: transactions.filter(t => t.type === "SETTLEMENT").length,
+      INDIEKIT_AFTERSALE: transactions.filter(t => t.type === "INDIEKIT_AFTERSALE").length,
     },
 
     byStatus: {
@@ -675,4 +687,109 @@ async function querySettlements(
     refundedAt: null,
     metadata: s.adminNotes ? { adminNotes: s.adminNotes, processedBy: s.processedBy } : null,
   }));
+}
+
+async function queryIndieKitAftersales(
+  search: string,
+  processor: string,
+  dateFilter: { gte?: Date; lte?: Date }
+): Promise<UnifiedTransaction[]> {
+  // Query pledges that have completedAdditionalItems in metadata
+  // These are post-campaign add-on purchases made through IndieKit surveys
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = {
+    deletedAt: null,
+    status: "COMPLETED",
+    metadata: {
+      path: ["completedAdditionalItems"],
+      not: { equals: null },
+    },
+  };
+
+  if (processor === "STRIPE") where.paymentProcessor = "STRIPE";
+  if (processor === "DIVINITYCOIN") where.paymentProcessor = "DIVINITYCOIN";
+
+  if (search) {
+    where.OR = [
+      { user: { name: { contains: search, mode: "insensitive" } } },
+      { user: { email: { contains: search, mode: "insensitive" } } },
+      { project: { title: { contains: search, mode: "insensitive" } } },
+      { id: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const pledges = await db.pledge.findMany({
+    where,
+    include: {
+      user: { select: { id: true, name: true, email: true, image: true } },
+      project: { select: { id: true, title: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 500,
+  });
+
+  const results: UnifiedTransaction[] = [];
+
+  for (const p of pledges) {
+    const meta = p.metadata as Record<string, unknown> | null;
+    const completedItems = (meta?.completedAdditionalItems as Array<{
+      paymentIntentId?: string;
+      addons?: Array<{ title?: string; quantity?: number }>;
+      amount?: number;
+      completedAt?: string;
+    }>) || [];
+
+    for (let i = 0; i < completedItems.length; i++) {
+      const item = completedItems[i];
+      const amount = Number(item.amount || 0);
+      if (amount <= 0) continue;
+
+      const completedAt = item.completedAt ? new Date(item.completedAt) : p.updatedAt;
+
+      // Apply date filter on the individual aftersale completion date
+      if (dateFilter.gte && completedAt < dateFilter.gte) continue;
+      if (dateFilter.lte && completedAt > dateFilter.lte) continue;
+
+      const addonNames = item.addons
+        ?.map((a) => a.title || "Add-on")
+        .join(", ") || "Add-ons";
+
+      results.push({
+        id: `${p.id}-aftersale-${i}`,
+        type: "INDIEKIT_AFTERSALE" as const,
+        userId: p.userId,
+        userName: p.user.name,
+        userEmail: p.user.email,
+        userImage: p.user.image,
+        projectId: p.projectId,
+        projectName: p.project.title,
+        itemDescription: `Post-Campaign: ${addonNames}`,
+        amount,
+        currency: "USD",
+        processorFees: 0,
+        platformFees: 0,
+        paymentProcessor: p.paymentProcessor,
+        stripePaymentIntentId: item.paymentIntentId || null,
+        stripeSetupIntentId: null,
+        stripeCheckoutSessionId: null,
+        divinityCoinPaymentId: null,
+        externalTransactionId: item.paymentIntentId || null,
+        status: "COMPLETED",
+        failureReason: null,
+        retryCount: 0,
+        nextRetryAt: null,
+        chargedImmediately: null,
+        createdAt: completedAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+        refundedAt: null,
+        metadata: {
+          pledgeId: p.id,
+          addons: item.addons,
+          aftersaleIndex: i,
+        },
+      });
+    }
+  }
+
+  return results;
 }

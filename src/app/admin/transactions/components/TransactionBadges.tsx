@@ -14,6 +14,7 @@ export const getTypeBadge = (type: string) => {
     DC_REDEMPTION: { label: "DC Redemption", variant: "outline" },
     PAYOUT: { label: "Payout", variant: "secondary" },
     SETTLEMENT: { label: "Settlement", variant: "secondary" },
+    INDIEKIT_AFTERSALE: { label: "IndieKit", variant: "default" },
   };
   const c = config[type] || { label: type, variant: "outline" as const };
   return <Badge variant={c.variant}>{c.label}</Badge>;

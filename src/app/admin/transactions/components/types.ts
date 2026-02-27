@@ -1,7 +1,7 @@
 // Types
 export interface UnifiedTransaction {
   id: string;
-  type: "PLEDGE" | "MARKETPLACE" | "DC_TRANSACTION" | "DC_REDEMPTION" | "PAYOUT" | "SETTLEMENT";
+  type: "PLEDGE" | "MARKETPLACE" | "DC_TRANSACTION" | "DC_REDEMPTION" | "PAYOUT" | "SETTLEMENT" | "INDIEKIT_AFTERSALE";
   userId: string;
   userName: string | null;
   userEmail: string;
