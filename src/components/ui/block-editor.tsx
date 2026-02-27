@@ -228,25 +228,44 @@ export function BlockEditor({
 
   // Track active block position for + button
   const updateActiveBlockPosition = useCallback(() => {
-    if (!editor || !containerRef.current) {
+    if (!editor || !containerRef.current || !editor.view) {
       setActiveBlockTop(null);
       return;
     }
 
     try {
-      const { $from } = editor.state.selection;
+      const { from } = editor.state.selection;
 
-      if ($from.depth === 0) {
-        setActiveBlockTop(null);
-        return;
+      // Find the DOM node at the cursor position
+      const domAtPos = editor.view.domAtPos(from);
+      const node: Node | null = domAtPos.node;
+
+      // Walk up to find a direct child of the ProseMirror container (top-level block)
+      const proseMirror = editor.view.dom;
+      let blockElement: HTMLElement | null = null;
+
+      if (node instanceof HTMLElement) {
+        blockElement = node;
+      } else if (node?.parentElement) {
+        blockElement = node.parentElement;
       }
 
-      // Get position before the top-level block
-      const blockStart = $from.before(1);
-      const coords = editor.view.coordsAtPos(blockStart);
-      const containerRect = containerRef.current.getBoundingClientRect();
+      while (blockElement && blockElement.parentElement !== proseMirror) {
+        blockElement = blockElement.parentElement;
+      }
 
-      setActiveBlockTop(coords.top - containerRect.top);
+      // Fallback: use first child of editor
+      if (!blockElement) {
+        blockElement = proseMirror.firstElementChild as HTMLElement | null;
+      }
+
+      if (blockElement) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const blockRect = blockElement.getBoundingClientRect();
+        setActiveBlockTop(blockRect.top - containerRect.top);
+      } else {
+        setActiveBlockTop(null);
+      }
     } catch {
       setActiveBlockTop(null);
     }
@@ -255,12 +274,22 @@ export function BlockEditor({
   useEffect(() => {
     if (!editor) return;
 
+    const onFocus = () => {
+      setEditorFocused(true);
+      // Small delay to ensure DOM is painted before measuring
+      requestAnimationFrame(() => {
+        updateActiveBlockPosition();
+      });
+    };
+
     editor.on("selectionUpdate", updateActiveBlockPosition);
     editor.on("update", updateActiveBlockPosition);
+    editor.on("focus", onFocus);
 
     return () => {
       editor.off("selectionUpdate", updateActiveBlockPosition);
       editor.off("update", updateActiveBlockPosition);
+      editor.off("focus", onFocus);
     };
   }, [editor, updateActiveBlockPosition]);
 
