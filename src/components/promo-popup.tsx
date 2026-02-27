@@ -127,19 +127,19 @@ export function PromoPopup() {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
-        {/* Close button */}
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-2rem)] flex flex-col rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+        {/* Close button - positioned on modal frame, always visible */}
         <button
           onClick={handleDismiss}
-          className="absolute top-4 right-4 z-10 rounded-full p-1.5 bg-white/10 hover:bg-white/20 text-white transition-colors"
+          className="absolute top-3 right-3 z-10 rounded-full p-2 bg-black/30 hover:bg-black/50 text-white transition-colors"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
         </button>
 
-        {/* Slide content */}
+        {/* Slide content - scrollable */}
         <div
-          className="relative p-8 pb-6 text-white min-h-[480px] flex flex-col"
+          className="relative p-8 pb-6 text-white flex flex-col overflow-y-auto"
           style={{
             background: `linear-gradient(135deg, ${slide.gradientFrom} 0%, ${slide.gradientTo} 100%)`,
           }}
