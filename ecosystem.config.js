@@ -9,7 +9,7 @@ module.exports = {
       exec_mode: 'cluster',
       autorestart: true,
       watch: false,
-      max_memory_restart: '1536M',
+      max_memory_restart: '3072M',
       kill_timeout: 5000,
       listen_timeout: 10000,
       env: {
