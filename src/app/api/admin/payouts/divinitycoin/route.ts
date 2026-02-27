@@ -114,23 +114,158 @@ export async function GET(request: NextRequest) {
       orderBy: { fundedAt: "desc" },
     });
 
+    // Fetch refund data for all projects in batch
+    const projectIds = projects.map((p) => p.id);
+
+    // Get fully refunded pledges per project
+    const refundedPledges = await db.pledge.findMany({
+      where: {
+        projectId: { in: projectIds },
+        status: "REFUNDED",
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        projectId: true,
+        amount: true,
+        lastFailureReason: true,
+        updatedAt: true,
+        user: { select: { name: true, email: true } },
+      },
+    });
+
+    // Get all refund activities (both full and partial) per project
+    const refundActivities = await db.fulfillmentActivity.findMany({
+      where: {
+        projectId: { in: projectIds },
+        type: "REFUND_ISSUED",
+      },
+      select: {
+        id: true,
+        projectId: true,
+        title: true,
+        description: true,
+        metadata: true,
+        pledgeId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Group refund data by project
+    const refundsByProject = new Map<string, {
+      fullRefundTotal: number;
+      fullRefundCount: number;
+      partialRefundTotal: number;
+      partialRefundCount: number;
+      totalRefunded: number;
+      refunds: Array<{
+        id: string;
+        type: "full" | "partial";
+        amount: number;
+        backerName: string | null;
+        backerEmail: string;
+        reason: string | null;
+        date: string;
+      }>;
+    }>();
+
+    for (const projectId of projectIds) {
+      const projectRefundedPledges = refundedPledges.filter((p) => p.projectId === projectId);
+      const projectRefundActivities = refundActivities.filter((a: { projectId: string }) => a.projectId === projectId);
+
+      let fullRefundTotal = 0;
+      let partialRefundTotal = 0;
+      const refunds: Array<{
+        id: string;
+        type: "full" | "partial";
+        amount: number;
+        backerName: string | null;
+        backerEmail: string;
+        reason: string | null;
+        date: string;
+      }> = [];
+
+      // Track full refunds from REFUNDED pledges
+      for (const pledge of projectRefundedPledges) {
+        const amount = Number(pledge.amount);
+        fullRefundTotal += amount;
+        refunds.push({
+          id: pledge.id,
+          type: "full",
+          amount,
+          backerName: pledge.user.name,
+          backerEmail: pledge.user.email,
+          reason: pledge.lastFailureReason,
+          date: pledge.updatedAt.toISOString(),
+        });
+      }
+
+      // Track partial refunds from FulfillmentActivity
+      for (const activity of projectRefundActivities) {
+        const meta = activity.metadata as Record<string, unknown> | null;
+        if (meta?.isPartialRefund) {
+          const amount = Number(meta.refundAmount || 0);
+          if (amount > 0) {
+            partialRefundTotal += amount;
+            refunds.push({
+              id: activity.id,
+              type: "partial",
+              amount,
+              backerName: null,
+              backerEmail: "",
+              reason: activity.description || null,
+              date: activity.createdAt.toISOString(),
+            });
+          }
+        }
+      }
+
+      // Sort refunds by date descending
+      refunds.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      refundsByProject.set(projectId, {
+        fullRefundTotal,
+        fullRefundCount: projectRefundedPledges.length,
+        partialRefundTotal,
+        partialRefundCount: refunds.filter((r) => r.type === "partial").length,
+        totalRefunded: fullRefundTotal + partialRefundTotal,
+        refunds,
+      });
+    }
+
     // Calculate stats and format the response
     const formattedProjects = projects.map((project) => {
       // Calculate total raised from completed pledges
+      // Note: Full refunds (REFUNDED status) are already excluded from this query
       const totalRaised = project.pledges.reduce(
         (sum: number, pledge: { id: string; amount: unknown }) => sum + Number(pledge.amount),
         0
       );
+
+      // Get refund data for this project
+      const projectRefunds = refundsByProject.get(project.id) || {
+        fullRefundTotal: 0,
+        fullRefundCount: 0,
+        partialRefundTotal: 0,
+        partialRefundCount: 0,
+        totalRefunded: 0,
+        refunds: [],
+      };
+
+      // Partial refunds need to be deducted from effective revenue
+      // (Full refunds are already excluded since pledge status is REFUNDED)
+      const effectiveRevenue = Math.round((totalRaised - projectRefunds.partialRefundTotal) * 100) / 100;
 
       // DivinityCoin Partner Fee: 6% (DC's processing fee)
       // IndieCrowdfund Platform Fee: 3%
       // Total: 9% (creators receive 91%)
       const partnerFeeRate = 0.06;
       const platformFeeRate = 0.03;
-      const partnerFee = Math.round(totalRaised * partnerFeeRate * 100) / 100;
-      const platformFee = Math.round(totalRaised * platformFeeRate * 100) / 100;
+      const partnerFee = Math.round(effectiveRevenue * partnerFeeRate * 100) / 100;
+      const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
       const totalFees = Math.round((partnerFee + platformFee) * 100) / 100;
-      const amountOwed = Math.round((totalRaised - totalFees) * 100) / 100;
+      const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
 
       const settlements = project.divinityCoinSettlements || [];
 
@@ -149,7 +284,8 @@ export async function GET(request: NextRequest) {
       );
       const hasPendingSettlement = pendingSettlements.length > 0;
 
-      const remainingAmount = amountOwed - amountSettled;
+      // Remaining can be negative if creator was already paid and then refunds occurred
+      const remainingAmount = Math.round((amountOwed - amountSettled) * 100) / 100;
 
       const bankAccount = project.creator.divinityCoinBankAccount;
 
@@ -162,6 +298,7 @@ export async function GET(request: NextRequest) {
         paymentProcessor: "DIVINITYCOIN",
         fundedAt: project.fundedAt,
         totalRaised,
+        effectiveRevenue,
         partnerFee,
         platformFee,
         totalFees,
@@ -172,8 +309,18 @@ export async function GET(request: NextRequest) {
         hasBank: !!bankAccount,
         bankVerified: bankAccount?.isVerified || false,
         hasPendingSettlement,
+        // Refund tracking
+        totalRefunded: projectRefunds.totalRefunded,
+        fullRefundTotal: projectRefunds.fullRefundTotal,
+        fullRefundCount: projectRefunds.fullRefundCount,
+        partialRefundTotal: projectRefunds.partialRefundTotal,
+        partialRefundCount: projectRefunds.partialRefundCount,
+        refunds: projectRefunds.refunds,
+        // Settlement status: negative remaining means creator was overpaid
         settlementStatus: hasPendingSettlement
           ? "processing"
+          : remainingAmount < 0
+          ? "overpaid"
           : remainingAmount <= 0
           ? "settled"
           : "pending",
@@ -210,17 +357,25 @@ export async function GET(request: NextRequest) {
       filteredProjects = formattedProjects.filter((p) => p.settlementStatus === "settled");
     } else if (status === "processing") {
       filteredProjects = formattedProjects.filter((p) => p.settlementStatus === "processing");
+    } else if (status === "overpaid") {
+      filteredProjects = formattedProjects.filter((p) => p.settlementStatus === "overpaid");
     }
 
     // Calculate summary stats
+    const totalRefundedAll = filteredProjects.reduce((sum, p) => sum + p.totalRefunded, 0);
+    const overpaidProjects = filteredProjects.filter((p) => p.settlementStatus === "overpaid");
+
     const stats = {
       totalProjects: filteredProjects.length,
       pendingPayouts: filteredProjects.filter((p) => p.settlementStatus === "pending").length,
       processingPayouts: filteredProjects.filter((p) => p.settlementStatus === "processing").length,
       settledPayouts: filteredProjects.filter((p) => p.settlementStatus === "settled").length,
+      overpaidPayouts: overpaidProjects.length,
       totalAmountOwed: filteredProjects.reduce((sum, p) => sum + p.amountOwed, 0),
       totalAmountSettled: filteredProjects.reduce((sum, p) => sum + p.amountSettled, 0),
       totalRemaining: filteredProjects.reduce((sum, p) => sum + p.remainingAmount, 0),
+      totalRefunded: totalRefundedAll,
+      totalOverpaid: Math.abs(overpaidProjects.reduce((sum, p) => sum + p.remainingAmount, 0)),
       projectsWithoutBank: filteredProjects.filter((p) => !p.hasBank).length,
     };
 

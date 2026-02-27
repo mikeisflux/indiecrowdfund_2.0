@@ -48,11 +48,24 @@ import {
   Building,
   Eye,
   Banknote,
+  RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
+
+// Refund entry for display
+interface RefundEntry {
+  id: string;
+  type: "full" | "partial";
+  amount: number;
+  backerName: string | null;
+  backerEmail: string;
+  reason: string | null;
+  date: string;
+}
 
 // Creator project payout interface
 interface CreatorProject {
@@ -64,6 +77,7 @@ interface CreatorProject {
   paymentProcessor?: string;
   fundedAt: string | null;
   totalRaised: number;
+  effectiveRevenue: number;
   partnerFee: number;
   platformFee: number;
   totalFees: number;
@@ -74,7 +88,14 @@ interface CreatorProject {
   hasBank: boolean;
   bankVerified: boolean;
   hasPendingSettlement: boolean;
-  settlementStatus: "pending" | "processing" | "settled";
+  // Refund tracking
+  totalRefunded: number;
+  fullRefundTotal: number;
+  fullRefundCount: number;
+  partialRefundTotal: number;
+  partialRefundCount: number;
+  refunds: RefundEntry[];
+  settlementStatus: "pending" | "processing" | "settled" | "overpaid";
   creator: {
     id: string;
     name: string | null;
@@ -102,9 +123,12 @@ interface PayoutStats {
   pendingPayouts: number;
   processingPayouts: number;
   settledPayouts: number;
+  overpaidPayouts: number;
   totalAmountOwed: number;
   totalAmountSettled: number;
   totalRemaining: number;
+  totalRefunded: number;
+  totalOverpaid: number;
   projectsWithoutBank: number;
 }
 
@@ -174,9 +198,12 @@ export default function PayoutsPage() {
     pendingPayouts: 0,
     processingPayouts: 0,
     settledPayouts: 0,
+    overpaidPayouts: 0,
     totalAmountOwed: 0,
     totalAmountSettled: 0,
     totalRemaining: 0,
+    totalRefunded: 0,
+    totalOverpaid: 0,
     projectsWithoutBank: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -226,9 +253,12 @@ export default function PayoutsPage() {
         pendingPayouts: 0,
         processingPayouts: 0,
         settledPayouts: 0,
+        overpaidPayouts: 0,
         totalAmountOwed: 0,
         totalAmountSettled: 0,
         totalRemaining: 0,
+        totalRefunded: 0,
+        totalOverpaid: 0,
         projectsWithoutBank: 0,
       });
       // Set creator balances from marketplace/indiekit earnings
@@ -280,6 +310,13 @@ export default function PayoutsPage() {
           <Badge variant="outline" className="text-emerald-600 border-emerald-600">
             <CheckCircle className="w-3 h-3 mr-1" />
             Settled
+          </Badge>
+        );
+      case "overpaid":
+        return (
+          <Badge variant="outline" className="text-red-600 border-red-600">
+            <AlertTriangle className="w-3 h-3 mr-1" />
+            Overpaid
           </Badge>
         );
       default:
@@ -386,13 +423,15 @@ export default function PayoutsPage() {
   // Export as CSV
   const exportCSV = () => {
     const csv = [
-      ["Project", "Creator", "Email", "Total Raised", "DC Partner Fee (6%)", "Platform Fee (3%)", "Total Fees", "Amount Owed", "Amount Settled", "Remaining", "Has Bank", "Status"].join(","),
+      ["Project", "Creator", "Email", "Total Raised", "Total Refunded", "Effective Revenue", "DC Partner Fee (6%)", "Platform Fee (3%)", "Total Fees", "Amount Owed", "Amount Settled", "Remaining", "Has Bank", "Status"].join(","),
       ...projects.map((p) =>
         [
           `"${p.title}"`,
           `"${p.creator.name || "Unknown"}"`,
           p.creator.email,
           p.totalRaised,
+          p.totalRefunded,
+          p.effectiveRevenue,
           p.partnerFee,
           p.platformFee,
           p.totalFees,
@@ -487,6 +526,20 @@ export default function PayoutsPage() {
         </Card>
       </div>
 
+      {/* Refund/Overpaid Alert */}
+      {(stats.totalRefunded > 0 || stats.overpaidPayouts > 0) && (
+        <Alert className="border-red-200 bg-red-50">
+          <RotateCcw className="h-4 w-4 text-red-600" />
+          <AlertTitle className="text-red-800">Refunds Detected</AlertTitle>
+          <AlertDescription className="text-red-700">
+            {formatCurrency(stats.totalRefunded)} in total refunds issued across campaigns.
+            {stats.overpaidPayouts > 0 && (
+              <span className="font-medium"> {stats.overpaidPayouts} project(s) overpaid by {formatCurrency(stats.totalOverpaid)} — creator(s) owe money back.</span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Creator Balances Alert (from Marketplace/IndieKit) */}
       {balanceStats.totalCreatorsWithBalance > 0 && (
         <Alert className="border-teal-200 bg-teal-50">
@@ -550,6 +603,7 @@ export default function PayoutsPage() {
                     <SelectItem value="pending">Pending Payout</SelectItem>
                     <SelectItem value="processing">Processing</SelectItem>
                     <SelectItem value="settled">Settled</SelectItem>
+                    <SelectItem value="overpaid">Overpaid (Refunds)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -577,6 +631,7 @@ export default function PayoutsPage() {
                       <TableHead>Creator</TableHead>
                       <TableHead>Bank Status</TableHead>
                       <TableHead className="text-right">Total Raised</TableHead>
+                      <TableHead className="text-right">Refunds</TableHead>
                       <TableHead className="text-right">Amount Owed</TableHead>
                       <TableHead className="text-right">Remaining</TableHead>
                       <TableHead>Status</TableHead>
@@ -648,13 +703,28 @@ export default function PayoutsPage() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
+                          {project.totalRefunded > 0 ? (
+                            <span className="text-red-600 font-medium">
+                              -{formatCurrency(project.totalRefunded)}
+                            </span>
+                          ) : (
+                            <span className="text-zinc-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
                           <span className="font-medium">
                             {formatCurrency(project.amountOwed)}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={`font-bold ${project.remainingAmount > 0 ? "text-yellow-600" : "text-emerald-600"}`}>
-                            {formatCurrency(project.remainingAmount)}
+                          <span className={`font-bold ${
+                            project.remainingAmount < 0 ? "text-red-600" :
+                            project.remainingAmount > 0 ? "text-yellow-600" : "text-emerald-600"
+                          }`}>
+                            {project.remainingAmount < 0
+                              ? `-${formatCurrency(Math.abs(project.remainingAmount))}`
+                              : formatCurrency(project.remainingAmount)
+                            }
                           </span>
                         </TableCell>
                         <TableCell>{getSettlementBadge(project.settlementStatus)}</TableCell>
@@ -906,12 +976,32 @@ export default function PayoutsPage() {
                     <div className="mt-1">{getSettlementBadge(selectedProject.settlementStatus)}</div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-zinc-500">Remaining to Pay</p>
-                    <p className={`text-2xl font-bold ${selectedProject.remainingAmount > 0 ? "text-yellow-600" : "text-emerald-600"}`}>
-                      {formatCurrency(selectedProject.remainingAmount)}
+                    <p className="text-sm text-zinc-500">
+                      {selectedProject.remainingAmount < 0 ? "Creator Owes Back" : "Remaining to Pay"}
+                    </p>
+                    <p className={`text-2xl font-bold ${
+                      selectedProject.remainingAmount < 0 ? "text-red-600" :
+                      selectedProject.remainingAmount > 0 ? "text-yellow-600" : "text-emerald-600"
+                    }`}>
+                      {selectedProject.remainingAmount < 0
+                        ? `-${formatCurrency(Math.abs(selectedProject.remainingAmount))}`
+                        : formatCurrency(selectedProject.remainingAmount)
+                      }
                     </p>
                   </div>
                 </div>
+
+                {/* Overpaid Warning */}
+                {selectedProject.remainingAmount < 0 && (
+                  <Alert className="border-red-200 bg-red-50">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <AlertTitle className="text-red-800">Creator Overpaid</AlertTitle>
+                    <AlertDescription className="text-red-700">
+                      This creator has been paid {formatCurrency(Math.abs(selectedProject.remainingAmount))} more than owed due to refunds issued after settlement.
+                      This amount should be recovered from the creator or deducted from future payouts.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {/* No Bank Warning */}
                 {!selectedProject.hasBank && (
@@ -929,9 +1019,29 @@ export default function PayoutsPage() {
                   <h4 className="font-medium mb-3">Financial Summary</h4>
                   <div className="space-y-2 text-sm bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
                     <div className="flex justify-between">
-                      <span>Total Raised</span>
+                      <span>Total Raised (Completed Pledges)</span>
                       <span className="font-medium">{formatCurrency(selectedProject.totalRaised)}</span>
                     </div>
+                    {selectedProject.totalRefunded > 0 && (
+                      <>
+                        {selectedProject.fullRefundTotal > 0 && (
+                          <div className="flex justify-between text-red-500">
+                            <span>Full Refunds ({selectedProject.fullRefundCount} pledge{selectedProject.fullRefundCount !== 1 ? "s" : ""})</span>
+                            <span>already excluded</span>
+                          </div>
+                        )}
+                        {selectedProject.partialRefundTotal > 0 && (
+                          <div className="flex justify-between text-red-500">
+                            <span>Partial Refunds ({selectedProject.partialRefundCount})</span>
+                            <span>-{formatCurrency(selectedProject.partialRefundTotal)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-medium">
+                          <span>Effective Revenue</span>
+                          <span>{formatCurrency(selectedProject.effectiveRevenue)}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between text-zinc-500">
                       <span>DivinityCoin Partner Fee (6%)</span>
                       <span className="text-red-500">-{formatCurrency(selectedProject.partnerFee)}</span>
@@ -949,13 +1059,63 @@ export default function PayoutsPage() {
                       <span>-{formatCurrency(selectedProject.amountSettled)}</span>
                     </div>
                     <div className="border-t pt-2 flex justify-between font-bold text-lg">
-                      <span>Remaining</span>
-                      <span className={selectedProject.remainingAmount > 0 ? "text-yellow-600" : "text-emerald-600"}>
-                        {formatCurrency(selectedProject.remainingAmount)}
+                      <span>{selectedProject.remainingAmount < 0 ? "Creator Owes Back" : "Remaining"}</span>
+                      <span className={
+                        selectedProject.remainingAmount < 0 ? "text-red-600" :
+                        selectedProject.remainingAmount > 0 ? "text-yellow-600" : "text-emerald-600"
+                      }>
+                        {selectedProject.remainingAmount < 0
+                          ? `-${formatCurrency(Math.abs(selectedProject.remainingAmount))}`
+                          : formatCurrency(selectedProject.remainingAmount)
+                        }
                       </span>
                     </div>
                   </div>
                 </div>
+
+                {/* Refund History */}
+                {selectedProject.refunds.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                      <RotateCcw className="w-4 h-4 text-red-500" />
+                      Refund History ({selectedProject.refunds.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedProject.refunds.map((refund) => (
+                        <div key={refund.id} className="flex items-center justify-between p-3 rounded-lg border border-red-100 bg-red-50/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100">
+                              <RotateCcw className="w-4 h-4 text-red-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {refund.type === "full" ? "Full Refund" : "Partial Refund"}: {formatCurrency(refund.amount)}
+                              </p>
+                              <p className="text-xs text-zinc-500">
+                                {refund.backerName || refund.backerEmail || "Unknown backer"}
+                                {refund.reason && ` — ${refund.reason}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline" className="text-red-600 border-red-300 text-xs">
+                              {refund.type === "full" ? "Full" : "Partial"}
+                            </Badge>
+                            <p className="text-xs text-zinc-500 mt-1">
+                              {format(new Date(refund.date), "MMM d, yyyy")}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="pt-2 border-t border-red-200">
+                        <div className="flex justify-between text-sm font-bold text-red-600">
+                          <span>Total Refunded</span>
+                          <span>{formatCurrency(selectedProject.totalRefunded)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Creator & Bank Info */}
                 <div>
