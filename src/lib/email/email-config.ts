@@ -595,8 +595,8 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
       console.log(`[Email Queue] Successfully sent queued email: ${queueEntry.id}`);
       processed = 1;
     } else {
-      // If the email is permanently blocked (espblock, bounce, etc.), fail immediately - no retries
-      const isPermanentFailure = "blocked" in result && result.blocked === true;
+      // If the email is permanently blocked or skipped (unsubscribed), fail immediately - no retries
+      const isPermanentFailure = ("blocked" in result && result.blocked === true) || ("skipped" in result && result.skipped === true);
       const newAttempts = queueEntry.attempts + 1;
       const shouldFail = isPermanentFailure || newAttempts >= queueEntry.maxAttempts;
       await db.emailQueue.update({
