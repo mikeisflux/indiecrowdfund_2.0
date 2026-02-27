@@ -1,6 +1,9 @@
 // Behavior Tracking Library (Client-side only)
 // Captures user interactions for analytics and personalization
 // NOTE: Server-side tracking functions are in @/lib/tracking/index.ts
+// Respects user consent preferences from the consent banner
+
+import { getConsentPreferences } from "@/lib/consent";
 
 type EventType =
   | "PAGE_VIEW"
@@ -20,6 +23,35 @@ type EventType =
   | "SCROLL_DEPTH"
   | "HOVER"
   | "CREATOR_VIEW";
+
+// Map event types to consent categories
+// "analytics" = basic usage tracking; "aiTracking" = personalization/recommendation data
+const eventConsentCategory: Record<EventType, "analytics" | "aiTracking"> = {
+  PAGE_VIEW: "analytics",
+  PAGE_EXIT: "analytics",
+  SCROLL_DEPTH: "analytics",
+  VIDEO_PLAY: "analytics",
+  VIDEO_COMPLETE: "analytics",
+  SEARCH: "analytics",
+  FILTER_APPLY: "analytics",
+  COMMENT_POST: "analytics",
+  PLEDGE_START: "analytics",
+  PLEDGE_COMPLETE: "analytics",
+  // AI/personalization events — used for recommendations, behavioral profiling
+  PROJECT_VIEW: "aiTracking",
+  PROJECT_CLICK: "aiTracking",
+  REWARD_CLICK: "aiTracking",
+  PROJECT_SAVE: "aiTracking",
+  PROJECT_SHARE: "aiTracking",
+  HOVER: "aiTracking",
+  CREATOR_VIEW: "aiTracking",
+};
+
+function isEventAllowed(eventType: EventType): boolean {
+  const prefs = getConsentPreferences();
+  const category = eventConsentCategory[eventType];
+  return prefs[category] === true;
+}
 
 interface TrackingEvent {
   eventType: EventType;
@@ -44,9 +76,12 @@ function getSessionId(): string {
   return sessionId;
 }
 
-// Track an event
+// Track an event (respects user consent preferences)
 export async function trackEvent(event: TrackingEvent): Promise<void> {
   if (typeof window === "undefined") return;
+
+  // Check consent before tracking
+  if (!isEventAllowed(event.eventType)) return;
 
   try {
     const sessionId = getSessionId();

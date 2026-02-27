@@ -21,6 +21,10 @@ import {
   RefreshCw,
   Loader2,
   RotateCcw,
+  ShieldCheck,
+  BarChart3,
+  Brain,
+  Megaphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -340,6 +344,48 @@ export default function ConsentBannerPage() {
                 </Button>
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Consent Categories Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Consent Categories</CardTitle>
+          <CardDescription>
+            Users can opt in/out of these categories via &quot;Manage Preferences&quot; on the banner. Tracking and AI features respect these choices in real time.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-start gap-3 p-3 rounded-lg border">
+              <ShieldCheck className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Essential</p>
+                <p className="text-xs text-muted-foreground">Always enabled. Session cookies, CSRF protection, authentication. Cannot be disabled.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border">
+              <BarChart3 className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Analytics</p>
+                <p className="text-xs text-muted-foreground">Page views, scroll depth, time on page, search queries, video plays, pledge events. Feeds admin metrics.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border">
+              <Brain className="h-5 w-5 text-purple-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">AI & Personalization</p>
+                <p className="text-xs text-muted-foreground">Project views, clicks, saves, shares, hovers, creator views. Powers recommendations and behavioral profiling.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border">
+              <Megaphone className="h-5 w-5 text-pink-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Marketing</p>
+                <p className="text-xs text-muted-foreground">Promotional communications, retargeting, email campaigns. Reserved for future marketing features.</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

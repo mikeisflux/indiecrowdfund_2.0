@@ -27,6 +27,8 @@ export function MobileProfileLinks() {
       // Clear login-session dismiss flags so popups/banners show again on next login
       localStorage.removeItem("promo_popup_login_dismissed");
       localStorage.removeItem("consent_banner_login_dismissed");
+      // Clear consent preferences so user re-consents on next login
+      localStorage.removeItem("consent_preferences");
       window.location.href = "/";
     } catch (error) {
       console.error("Logout failed:", error);
