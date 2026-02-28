@@ -498,26 +498,26 @@ export async function GET() {
       );
     }
 
-    // Check if OpenAI is configured (from database or env)
+    // Check if Anthropic is configured (from database or env)
     const settings = await db.platformSettings.findFirst({
-      select: { openaiApiKey: true },
+      select: { anthropicApiKey: true },
     });
-    const openaiConfigured = !!(settings?.openaiApiKey || process.env.OPENAI_API_KEY);
+    const aiConfigured = !!(settings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY);
 
     return NextResponse.json({
-      status: openaiConfigured ? "operational" : "not_configured",
+      status: aiConfigured ? "operational" : "not_configured",
       services: {
         emailPersonalization: {
           name: "Email Personalization",
           description: "Personalize email content per user based on behavior and preferences",
           endpoints: ["personalizeEmail", "personalizeEmailBatch"],
-          status: openaiConfigured ? "available" : "unavailable",
+          status: aiConfigured ? "available" : "unavailable",
         },
         predictiveAnalytics: {
           name: "Predictive Analytics",
           description: "Predict user behavior, conversion likelihood, and churn risk",
           endpoints: ["predictUser", "predictUsersBatch", "getHighValueProspects", "getAtRiskUsers"],
-          status: "available", // Works without OpenAI
+          status: "available",
         },
         smartSegmentation: {
           name: "Smart Segmentation",
@@ -535,7 +535,7 @@ export async function GET() {
           name: "Content Optimization",
           description: "Generate A/B test variants for email content",
           endpoints: ["generateVariants", "optimizeSubjectLine"],
-          status: openaiConfigured ? "available" : "unavailable",
+          status: aiConfigured ? "available" : "unavailable",
         },
         abTesting: {
           name: "A/B Testing",

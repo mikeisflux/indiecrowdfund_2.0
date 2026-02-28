@@ -1,27 +1,51 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
 
 // Lazy initialization to avoid build-time errors
-let openaiClient: OpenAI | null = null;
+let anthropicClient: Anthropic | null = null;
 let cachedApiKey: string | null = null;
 
-async function getOpenAI(): Promise<OpenAI> {
-  // Try to get key from database first, fall back to env
+async function getAnthropic(): Promise<Anthropic> {
   const settings = await db.platformSettings.findFirst({
-    select: { openaiApiKey: true },
+    select: { anthropicApiKey: true },
   });
-  const apiKey = settings?.openaiApiKey || process.env.OPENAI_API_KEY;
+  const apiKey = settings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
-    throw new Error("OpenAI API key not configured. Set it in Admin Settings > AI.");
+    throw new Error("Anthropic API key not configured. Set it in Admin Settings > AI.");
   }
 
-  // Re-create client if key changed
-  if (!openaiClient || cachedApiKey !== apiKey) {
-    openaiClient = new OpenAI({ apiKey });
+  if (!anthropicClient || cachedApiKey !== apiKey) {
+    anthropicClient = new Anthropic({ apiKey });
     cachedApiKey = apiKey;
   }
-  return openaiClient;
+  return anthropicClient;
+}
+
+/** Call Claude and parse JSON from the response */
+async function claudeJSON<T>(
+  systemPrompt: string,
+  userPrompt: string,
+  options?: { model?: string; maxTokens?: number; temperature?: number }
+): Promise<T> {
+  const anthropic = await getAnthropic();
+  const response = await anthropic.messages.create({
+    model: options?.model || "claude-sonnet-4-20250514",
+    max_tokens: options?.maxTokens || 1024,
+    ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  const textContent = response.content.find((c) => c.type === "text");
+  const responseText = textContent?.type === "text" ? textContent.text : "";
+
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No JSON found in Claude response");
+  }
+
+  return JSON.parse(jsonMatch[0]) as T;
 }
 
 // ============================================
@@ -103,21 +127,11 @@ Respond in JSON:
 }`;
 
   try {
-    const openai = await getOpenAI();
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert at writing personalized emails that feel genuine and human, not like marketing automation. Each email should feel like it was written specifically for this person.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.8,
-    });
-
-    const result = JSON.parse(response.choices[0].message.content || "{}");
+    const result = await claudeJSON<PersonalizedEmailContent>(
+      "You are an expert at writing personalized emails that feel genuine and human, not like marketing automation. Each email should feel like it was written specifically for this person. Respond only with valid JSON.",
+      prompt,
+      { temperature: 0.8 }
+    );
 
     return {
       subject: result.subject || "Projects picked just for you",
@@ -509,31 +523,23 @@ Respond in JSON:
 }`;
 
   try {
-    const openai = await getOpenAI();
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a data analyst specializing in user segmentation for crowdfunding platforms. Identify actionable segments based on behavioral patterns.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.5,
-    });
+    const result = await claudeJSON<{
+      segments: Array<{
+        id: string;
+        name: string;
+        description: string;
+        criteria: Record<string, unknown>;
+        characteristics: string[];
+      }>;
+    }>(
+      "You are a data analyst specializing in user segmentation for crowdfunding platforms. Identify actionable segments based on behavioral patterns. Respond only with valid JSON.",
+      prompt,
+      { model: "claude-haiku-4-5-20251001", temperature: 0.5 }
+    );
 
-    const result = JSON.parse(response.choices[0].message.content || "{}");
-
-    return (result.segments || []).map((s: {
-      id: string;
-      name: string;
-      description: string;
-      criteria: Record<string, unknown>;
-      characteristics: string[];
-    }) => ({
+    return (result.segments || []).map((s) => ({
       ...s,
-      userCount: 0, // Would need to calculate
+      userCount: 0,
       avgValue: 0,
     }));
   } catch (error) {
@@ -696,21 +702,11 @@ Respond in JSON:
 }`;
 
   try {
-    const openai = await getOpenAI();
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert email marketing optimizer. Create compelling A/B test variants that feel authentic, not manipulative.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.8,
-    });
-
-    const result = JSON.parse(response.choices[0].message.content || "{}");
+    const result = await claudeJSON<ContentOptimizationResult>(
+      "You are an expert email marketing optimizer. Create compelling A/B test variants that feel authentic, not manipulative. Respond only with valid JSON.",
+      prompt,
+      { temperature: 0.8 }
+    );
 
     return {
       originalContent: content,

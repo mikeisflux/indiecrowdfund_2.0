@@ -24,9 +24,6 @@ import {
 
 interface AiSettingsProps {
   settings: {
-    openaiEnabled: boolean;
-    openaiApiKey: string;
-    openaiModel: string;
     anthropicEnabled: boolean;
     anthropicApiKey: string;
     anthropicModel: string;
@@ -37,12 +34,10 @@ interface AiSettingsProps {
     moderationThreshold: string;
   };
   testResults: {
-    openai: "idle" | "testing" | "success" | "error";
     anthropic: "idle" | "testing" | "success" | "error";
   };
   onSettingsChange: (settings: AiSettingsProps["settings"]) => void;
   onSave: () => void;
-  onTestOpenAI: () => void;
   onTestAnthropic: () => void;
 }
 
@@ -51,156 +46,24 @@ export function AiSettings({
   testResults,
   onSettingsChange,
   onSave,
-  onTestOpenAI,
   onTestAnthropic,
 }: AiSettingsProps) {
   return (
     <TabsContent value="ai" className="mt-6 space-y-6">
       {/* AI Status Overview */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className={settings.openaiEnabled && settings.openaiApiKey ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20" : ""}>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className={`rounded-full p-3 ${settings.openaiEnabled && settings.openaiApiKey ? "bg-emerald-100" : "bg-zinc-100"}`}>
-                <Sparkles className={`h-6 w-6 ${settings.openaiEnabled && settings.openaiApiKey ? "text-emerald-600" : "text-zinc-400"}`} />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">OpenAI</p>
-                <p className="text-sm text-zinc-500">Auto-tagging, Marketing Copy</p>
-              </div>
-              <Badge variant={settings.openaiEnabled && settings.openaiApiKey ? "default" : "secondary"}>
-                {settings.openaiEnabled && settings.openaiApiKey ? "Connected" : "Not Configured"}
-              </Badge>
+      <Card className={settings.anthropicEnabled && settings.anthropicApiKey ? "border-violet-200 bg-violet-50/50 dark:border-violet-800 dark:bg-violet-950/20" : ""}>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-4">
+            <div className={`rounded-full p-3 ${settings.anthropicEnabled && settings.anthropicApiKey ? "bg-violet-100" : "bg-zinc-100"}`}>
+              <Sparkles className={`h-6 w-6 ${settings.anthropicEnabled && settings.anthropicApiKey ? "text-violet-600" : "text-zinc-400"}`} />
             </div>
-          </CardContent>
-        </Card>
-        <Card className={settings.anthropicEnabled && settings.anthropicApiKey ? "border-violet-200 bg-violet-50/50 dark:border-violet-800 dark:bg-violet-950/20" : ""}>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className={`rounded-full p-3 ${settings.anthropicEnabled && settings.anthropicApiKey ? "bg-violet-100" : "bg-zinc-100"}`}>
-                <ShieldCheck className={`h-6 w-6 ${settings.anthropicEnabled && settings.anthropicApiKey ? "text-violet-600" : "text-zinc-400"}`} />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">Anthropic Claude</p>
-                <p className="text-sm text-zinc-500">Moderation, Fraud Detection</p>
-              </div>
-              <Badge variant={settings.anthropicEnabled && settings.anthropicApiKey ? "default" : "secondary"}>
-                {settings.anthropicEnabled && settings.anthropicApiKey ? "Connected" : "Not Configured"}
-              </Badge>
+            <div className="flex-1">
+              <p className="font-semibold">Anthropic Claude</p>
+              <p className="text-sm text-zinc-500">Powers all AI features: auto-tagging, marketing copy, moderation, fraud detection</p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* OpenAI Configuration */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-emerald-600" />
-                OpenAI Configuration
-              </CardTitle>
-              <CardDescription>Powers auto-tagging and marketing copy generation</CardDescription>
-            </div>
-            <Badge variant={settings.openaiEnabled ? "default" : "secondary"}>
-              {settings.openaiEnabled ? "Enabled" : "Disabled"}
+            <Badge variant={settings.anthropicEnabled && settings.anthropicApiKey ? "default" : "secondary"}>
+              {settings.anthropicEnabled && settings.anthropicApiKey ? "Connected" : "Not Configured"}
             </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label>Enable OpenAI</Label>
-              <p className="text-sm text-zinc-500">Use OpenAI for content generation features</p>
-            </div>
-            <Switch
-              checked={settings.openaiEnabled}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, openaiEnabled: checked })
-              }
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>API Key</Label>
-              <SecureKeyInput
-                value={settings.openaiApiKey}
-                onChange={(value) => onSettingsChange({ ...settings, openaiApiKey: value })}
-                onSave={onSave}
-                hasExistingValue={settings.openaiApiKey === "••••••••"}
-                placeholder="sk-..."
-              />
-              <div className="flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onTestOpenAI}
-                  disabled={testResults.openai === "testing"}
-                >
-                  {testResults.openai === "testing" ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  ) : testResults.openai === "success" ? (
-                    <CheckCircle className="h-4 w-4 text-emerald-600 mr-2" />
-                  ) : testResults.openai === "error" ? (
-                    <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
-                  ) : (
-                    <TestTube className="h-4 w-4 mr-2" />
-                  )}
-                  Test
-                </Button>
-              </div>
-              <p className="text-xs text-zinc-500">
-                Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">platform.openai.com</a>
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Model</Label>
-              <Select
-                value={settings.openaiModel}
-                onValueChange={(v) => onSettingsChange({ ...settings, openaiModel: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gpt-4o">GPT-4o (Recommended)</SelectItem>
-                  <SelectItem value="gpt-4o-mini">GPT-4o Mini (Faster/Cheaper)</SelectItem>
-                  <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <Label className="text-base font-medium">OpenAI Features</Label>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label>Auto-Tagging</Label>
-                  <p className="text-sm text-zinc-500">Automatically suggest categories and tags for projects</p>
-                </div>
-                <Switch
-                  checked={settings.autoTagging}
-                  onCheckedChange={(checked) =>
-                    onSettingsChange({ ...settings, autoTagging: checked })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label>Marketing Copy</Label>
-                  <p className="text-sm text-zinc-500">Generate social posts and promotional content</p>
-                </div>
-                <Switch
-                  checked={settings.marketingCopy}
-                  onCheckedChange={(checked) =>
-                    onSettingsChange({ ...settings, marketingCopy: checked })
-                  }
-                />
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -214,7 +77,7 @@ export function AiSettings({
                 <ShieldCheck className="h-5 w-5 text-violet-600" />
                 Anthropic Claude Configuration
               </CardTitle>
-              <CardDescription>Powers content moderation and fraud detection</CardDescription>
+              <CardDescription>Powers all AI features across the platform</CardDescription>
             </div>
             <Badge variant={settings.anthropicEnabled ? "default" : "secondary"}>
               {settings.anthropicEnabled ? "Enabled" : "Disabled"}
@@ -224,8 +87,8 @@ export function AiSettings({
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label>Enable Anthropic</Label>
-              <p className="text-sm text-zinc-500">Use Claude for moderation and safety features</p>
+              <Label>Enable AI Features</Label>
+              <p className="text-sm text-zinc-500">Use Anthropic Claude for all AI-powered features</p>
             </div>
             <Switch
               checked={settings.anthropicEnabled}
@@ -287,8 +150,32 @@ export function AiSettings({
           </div>
 
           <div className="space-y-4">
-            <Label className="text-base font-medium">Anthropic Features</Label>
+            <Label className="text-base font-medium">AI Features</Label>
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>Auto-Tagging</Label>
+                  <p className="text-sm text-zinc-500">Automatically suggest categories and tags for projects</p>
+                </div>
+                <Switch
+                  checked={settings.autoTagging}
+                  onCheckedChange={(checked) =>
+                    onSettingsChange({ ...settings, autoTagging: checked })
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label>Marketing Copy</Label>
+                  <p className="text-sm text-zinc-500">Generate social posts and promotional content</p>
+                </div>
+                <Switch
+                  checked={settings.marketingCopy}
+                  onCheckedChange={(checked) =>
+                    onSettingsChange({ ...settings, marketingCopy: checked })
+                  }
+                />
+              </div>
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label>Content Moderation</Label>
@@ -347,15 +234,12 @@ export function AiSettings({
         <CardHeader>
           <CardTitle>Environment Variables</CardTitle>
           <CardDescription>
-            For production deployments, set these environment variables on your server
+            For production deployments, set this environment variable on your server
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-100">
-            <div className="space-y-1">
-              <p><span className="text-emerald-400">OPENAI_API_KEY</span>=<span className="text-zinc-400">your-openai-api-key</span></p>
-              <p><span className="text-violet-400">ANTHROPIC_API_KEY</span>=<span className="text-zinc-400">your-anthropic-api-key</span></p>
-            </div>
+            <p><span className="text-violet-400">ANTHROPIC_API_KEY</span>=<span className="text-zinc-400">your-anthropic-api-key</span></p>
           </div>
           <p className="mt-3 text-sm text-zinc-500">
             API keys entered in this admin panel are stored in the database and will override environment variables.

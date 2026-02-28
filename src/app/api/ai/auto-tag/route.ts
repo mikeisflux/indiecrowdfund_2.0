@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { autoTagProject } from "@/lib/ai/openai";
+import { autoTagProject } from "@/lib/ai/anthropic";
 
 // POST - Auto-tag a project
 export async function POST(req: NextRequest) {

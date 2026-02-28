@@ -146,7 +146,7 @@ RETAILER_JWT_SECRET=your-retailer-jwt-secret-min-32-chars
 # ===================
 # AI Features (Optional)
 # ===================
-OPENAI_API_KEY=sk-xxx
+ANTHROPIC_API_KEY=sk-ant-xxx
 ```
 
 ### Important Security Notes

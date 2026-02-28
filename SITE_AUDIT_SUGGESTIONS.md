@@ -833,7 +833,6 @@ module.exports = {
 - `RETAILER_JWT_SECRET`
 - `BANK_ACCOUNT_ENCRYPTION_KEY`
 - `ANTHROPIC_API_KEY`
-- `OPENAI_API_KEY`
 - `SENTRY_DSN`
 - `LOG_LEVEL`
 - Rate limiting configuration

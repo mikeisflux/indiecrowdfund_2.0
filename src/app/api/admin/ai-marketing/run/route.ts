@@ -6,7 +6,7 @@ import {
   batchPredictUsers,
   batchOptimalSendTimes,
 } from "@/lib/ai/marketing-services";
-import { autoTagProject } from "@/lib/ai/openai";
+import { autoTagProject } from "@/lib/ai/anthropic";
 import { getAISettings, clearSettingsCache } from "@/lib/ai/settings-integration";
 import { batchUpdateUserInterests } from "@/lib/ai/user-interests";
 

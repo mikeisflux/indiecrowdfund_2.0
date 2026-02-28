@@ -35,8 +35,6 @@ interface SocialSettingsProps {
     twitterBearerToken: string;
     twitterAccessToken: string;
     twitterAccessSecret: string;
-    dalleEnabled: boolean;
-    dalleApiKey: string;
     stabilityEnabled: boolean;
     stabilityApiKey: string;
     autoPostEnabled: boolean;
@@ -407,62 +405,34 @@ export function SocialSettings({
           <CardDescription>Enable AI-powered image creation for social media posts</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>DALL-E (OpenAI)</Label>
-                  <p className="text-sm text-zinc-500">Generate images with DALL-E 3</p>
-                </div>
-                <Switch
-                  checked={settings.dalleEnabled}
-                  onCheckedChange={(checked) =>
-                    onSettingsChange({ ...settings, dalleEnabled: checked })
-                  }
-                />
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Stability AI</Label>
+                <p className="text-sm text-zinc-500">Generate images with Stable Diffusion</p>
               </div>
-              {settings.dalleEnabled && (
-                <div className="space-y-2">
-                  <Label className="text-xs">API Key (uses OpenAI key from AI settings if empty)</Label>
-                  <SecureKeyInput
-                    value={settings.dalleApiKey}
-                    onChange={(value) => onSettingsChange({ ...settings, dalleApiKey: value })}
-                    onSave={onSave}
-                    hasExistingValue={settings.dalleApiKey === "••••••••"}
-                    placeholder="Optional separate key"
-                  />
-                </div>
-              )}
+              <Switch
+                checked={settings.stabilityEnabled}
+                onCheckedChange={(checked) =>
+                  onSettingsChange({ ...settings, stabilityEnabled: checked })
+                }
+              />
             </div>
-            <div className="rounded-lg border p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Stability AI</Label>
-                  <p className="text-sm text-zinc-500">Generate images with Stable Diffusion</p>
-                </div>
-                <Switch
-                  checked={settings.stabilityEnabled}
-                  onCheckedChange={(checked) =>
-                    onSettingsChange({ ...settings, stabilityEnabled: checked })
-                  }
+            {settings.stabilityEnabled && (
+              <div className="space-y-2">
+                <Label className="text-xs">API Key</Label>
+                <SecureKeyInput
+                  value={settings.stabilityApiKey}
+                  onChange={(value) => onSettingsChange({ ...settings, stabilityApiKey: value })}
+                  onSave={onSave}
+                  hasExistingValue={settings.stabilityApiKey === "••••••••"}
+                  placeholder="Your Stability AI API key"
                 />
+                <p className="text-xs text-zinc-500">
+                  Get your key from <a href="https://platform.stability.ai" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">platform.stability.ai</a>
+                </p>
               </div>
-              {settings.stabilityEnabled && (
-                <div className="space-y-2">
-                  <Label className="text-xs">API Key</Label>
-                  <SecureKeyInput
-                    value={settings.stabilityApiKey}
-                    onChange={(value) => onSettingsChange({ ...settings, stabilityApiKey: value })}
-                    onSave={onSave}
-                    hasExistingValue={settings.stabilityApiKey === "••••••••"}
-                    placeholder="Your Stability AI API key"
-                  />
-                  <p className="text-xs text-zinc-500">
-                    Get your key from <a href="https://platform.stability.ai" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">platform.stability.ai</a>
-                  </p>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>

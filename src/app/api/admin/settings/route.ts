@@ -88,7 +88,6 @@ export async function GET() {
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
       mailgunApiKey: settings.mailgunApiKey ? "••••••••" : null,
       mailgunWebhookSigningKey: settings.mailgunWebhookSigningKey ? "••••••••" : null,
-      openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,
       facebookAppSecret: settings.facebookAppSecret ? "••••••••" : null,
@@ -100,7 +99,6 @@ export async function GET() {
       twitterBearerToken: settings.twitterBearerToken ? "••••••••" : null,
       twitterAccessToken: settings.twitterAccessToken ? "••••••••" : null,
       twitterAccessSecret: settings.twitterAccessSecret ? "••••••••" : null,
-      dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
       stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
       shuftiSecretKey: settings.shuftiSecretKey ? "••••••••" : null,
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
@@ -162,12 +160,12 @@ export async function PATCH(req: NextRequest) {
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret', 'stripeConnectWebhookSecret',
       'divinityCoinApiKey', 'divinityCoinWebhookSecret', 'divinityCoinStripePublishableKey',
       'smtpPassword', 'sendgridApiKey', 'sendgridWebhookVerificationKey', 'mailgunApiKey', 'mailgunWebhookSigningKey',
-      'openaiApiKey', 'anthropicApiKey', 'googlePlacesApiKey',
+      'anthropicApiKey', 'googlePlacesApiKey',
       'facebookAppSecret', 'facebookPageAccessToken',
       'youtubeClientSecret', 'youtubeApiKey',
       'twitterApiKey', 'twitterApiSecret', 'twitterBearerToken',
       'twitterAccessToken', 'twitterAccessSecret',
-      'dalleApiKey', 'stabilityApiKey', 'shuftiSecretKey',
+      'stabilityApiKey', 'shuftiSecretKey',
       'r2AccessKeyId', 'r2SecretAccessKey',
       'recaptchaSiteKey', 'recaptchaSecretKey'
     ];
@@ -209,11 +207,11 @@ export async function PATCH(req: NextRequest) {
         "facebookAppId", "facebookAppSecret", "facebookPageAccessToken",
         "youtubeClientId", "youtubeClientSecret", "youtubeApiKey",
         "twitterApiKey", "twitterApiSecret", "twitterBearerToken", "twitterAccessToken", "twitterAccessSecret",
-        "dalleApiKey", "stabilityApiKey",
+        "stabilityApiKey",
         "autoPostEnabled", "postApprovalRequired"
       ],
       ai: [
-        "aiProvider", "openaiApiKey", "anthropicApiKey",
+        "aiProvider", "anthropicApiKey",
         "aiAutoModeration", "aiAutoTagging", "aiContentGeneration", "aiFraudDetection"
       ],
       aiMarketing: [
@@ -305,7 +303,6 @@ export async function PATCH(req: NextRequest) {
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
       mailgunApiKey: settings.mailgunApiKey ? "••••••••" : null,
       mailgunWebhookSigningKey: settings.mailgunWebhookSigningKey ? "••••••••" : null,
-      openaiApiKey: settings.openaiApiKey ? "••••••••" : null,
       anthropicApiKey: settings.anthropicApiKey ? "••••••••" : null,
       googlePlacesApiKey: settings.googlePlacesApiKey ? "••••••••" : null,
       facebookAppSecret: settings.facebookAppSecret ? "••••••••" : null,
@@ -317,7 +314,6 @@ export async function PATCH(req: NextRequest) {
       twitterBearerToken: settings.twitterBearerToken ? "••••••••" : null,
       twitterAccessToken: settings.twitterAccessToken ? "••••••••" : null,
       twitterAccessSecret: settings.twitterAccessSecret ? "••••••••" : null,
-      dalleApiKey: settings.dalleApiKey ? "••••••••" : null,
       stabilityApiKey: settings.stabilityApiKey ? "••••••••" : null,
       shuftiSecretKey: settings.shuftiSecretKey ? "••••••••" : null,
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,

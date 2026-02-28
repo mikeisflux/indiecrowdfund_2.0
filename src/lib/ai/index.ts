@@ -1,16 +1,13 @@
-// AI Services Index
-// OpenAI - Used for content generation tasks
+// AI Services Index - All powered by Anthropic Claude
 export {
+  // Content Generation
   autoTagProject,
   generateMarketingCopy,
   improveDescription,
   generateCampaignContent,
   PROJECT_CATEGORIES,
   type ProjectCategory,
-} from "./openai";
-
-// Anthropic Claude - Used for moderation and safety
-export {
+  // Moderation & Safety
   moderateContent,
   analyzeFraud,
   safetyReview,
@@ -44,23 +41,20 @@ export {
   type ABTest,
 } from "./marketing-services";
 
-// Configuration check - reads from database first, falls back to env
+// Configuration check
 export async function checkAIConfiguration(): Promise<{
-  openai: boolean;
   anthropic: boolean;
   fullyConfigured: boolean;
 }> {
   const { db } = await import("@/lib/db");
   const settings = await db.platformSettings.findFirst({
-    select: { openaiApiKey: true, anthropicApiKey: true },
+    select: { anthropicApiKey: true },
   });
 
-  const openai = !!(settings?.openaiApiKey || process.env.OPENAI_API_KEY);
   const anthropic = !!(settings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY);
 
   return {
-    openai,
     anthropic,
-    fullyConfigured: openai && anthropic,
+    fullyConfigured: anthropic,
   };
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { generateMarketingCopy, improveDescription } from "@/lib/ai/openai";
+import { generateMarketingCopy, improveDescription } from "@/lib/ai/anthropic";
 
 // POST - Generate marketing copy for a project
 export async function POST(req: NextRequest) {

@@ -81,7 +81,6 @@ model PlatformSettings {
   twitterAccessSecret   String?
 
   // Image Generation API Keys
-  dalleApiKey           String?
   stabilityApiKey       String?
 
   // Social Auto-Posting Settings
@@ -89,8 +88,7 @@ model PlatformSettings {
   postApprovalRequired  Boolean  @default(true)
 
   // AI Settings
-  aiProvider            String   @default("openai")
-  openaiApiKey          String?
+  aiProvider            String   @default("anthropic")
   anthropicApiKey       String?
   aiAutoModeration      Boolean  @default(false)
   aiAutoTagging         Boolean  @default(false)

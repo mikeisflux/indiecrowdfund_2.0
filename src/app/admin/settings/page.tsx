@@ -85,11 +85,9 @@ interface PlatformSettings {
   twitterAccessToken: string | null;
   twitterAccessSecret: string | null;
   // Image generation API keys
-  dalleApiKey: string | null;
   stabilityApiKey: string | null;
   // AI settings
   aiProvider: string;
-  openaiApiKey: string | null;
   anthropicApiKey: string | null;
   aiAutoModeration: boolean;
   aiAutoTagging: boolean;
@@ -263,9 +261,6 @@ export default function SettingsPage() {
   });
 
   const [aiSettings, setAiSettings] = useState({
-    openaiEnabled: false,
-    openaiApiKey: "",
-    openaiModel: "gpt-4o",
     anthropicEnabled: false,
     anthropicApiKey: "",
     anthropicModel: "claude-sonnet-4-20250514",
@@ -296,8 +291,6 @@ export default function SettingsPage() {
     twitterAccessToken: "",
     twitterAccessSecret: "",
     // Content Generation
-    dalleEnabled: false,
-    dalleApiKey: "",
     stabilityEnabled: false,
     stabilityApiKey: "",
     // General Settings
@@ -430,14 +423,12 @@ export default function SettingsPage() {
 
       setAiSettings((prev) => ({
         ...prev,
-        openaiEnabled: !!settings.openaiApiKey,
-        openaiApiKey: settings.openaiApiKey || "",
         anthropicEnabled: !!settings.anthropicApiKey,
         anthropicApiKey: settings.anthropicApiKey || "",
         autoTagging: settings.aiAutoTagging || false,
         contentModeration: settings.aiAutoModeration || false,
         marketingCopy: settings.aiContentGeneration || false,
-        fraudDetection: settings.aiFraudDetection !== false, // Default to true if not set
+        fraudDetection: settings.aiFraudDetection !== false,
       }));
 
       // Set enabled flags based on whether API keys exist
@@ -445,7 +436,6 @@ export default function SettingsPage() {
       const hasFacebookKeys = !!settings.facebookAppId && settings.facebookAppId !== "";
       const hasYoutubeKeys = !!settings.youtubeClientId && settings.youtubeClientId !== "";
       const hasTwitterKeys = !!settings.twitterApiKey && settings.twitterApiKey !== "";
-      const hasDalleKey = !!settings.dalleApiKey && settings.dalleApiKey !== "";
       const hasStabilityKey = !!settings.stabilityApiKey && settings.stabilityApiKey !== "";
 
       setSocialSettings((prev) => ({
@@ -455,7 +445,6 @@ export default function SettingsPage() {
         instagramEnabled: hasFacebookKeys, // Instagram uses same Facebook OAuth
         youtubeEnabled: hasYoutubeKeys,
         twitterEnabled: hasTwitterKeys,
-        dalleEnabled: hasDalleKey,
         stabilityEnabled: hasStabilityKey,
         // API keys (may be masked with "••••••••")
         facebookAppId: settings.facebookAppId || "",
@@ -469,7 +458,6 @@ export default function SettingsPage() {
         twitterBearerToken: settings.twitterBearerToken || "",
         twitterAccessToken: settings.twitterAccessToken || "",
         twitterAccessSecret: settings.twitterAccessSecret || "",
-        dalleApiKey: settings.dalleApiKey || "",
         stabilityApiKey: settings.stabilityApiKey || "",
         // Auto-posting settings
         autoPostEnabled: settings.autoPostEnabled || false,
@@ -552,22 +540,10 @@ export default function SettingsPage() {
   };
 
   const [aiTestResults, setAiTestResults] = useState<{
-    openai: "idle" | "testing" | "success" | "error";
     anthropic: "idle" | "testing" | "success" | "error";
   }>({
-    openai: "idle",
     anthropic: "idle",
   });
-
-  const testOpenAI = async () => {
-    setAiTestResults((prev) => ({ ...prev, openai: "testing" }));
-    // Simulate API test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setAiTestResults((prev) => ({
-      ...prev,
-      openai: aiSettings.openaiApiKey ? "success" : "error",
-    }));
-  };
 
   const testAnthropic = async () => {
     setAiTestResults((prev) => ({ ...prev, anthropic: "testing" }));
@@ -686,7 +662,6 @@ export default function SettingsPage() {
             twitterBearerToken: socialSettings.twitterBearerToken,
             twitterAccessToken: socialSettings.twitterAccessToken,
             twitterAccessSecret: socialSettings.twitterAccessSecret,
-            dalleApiKey: socialSettings.dalleApiKey,
             stabilityApiKey: socialSettings.stabilityApiKey,
             autoPostEnabled: socialSettings.autoPostEnabled,
             postApprovalRequired: socialSettings.postApprovalRequired,
@@ -695,8 +670,7 @@ export default function SettingsPage() {
         case "ai":
           section = "ai";
           data = {
-            aiProvider: aiSettings.openaiEnabled ? "openai" : aiSettings.anthropicEnabled ? "anthropic" : "openai",
-            openaiApiKey: aiSettings.openaiApiKey,
+            aiProvider: "anthropic",
             anthropicApiKey: aiSettings.anthropicApiKey,
             aiAutoModeration: aiSettings.contentModeration,
             aiAutoTagging: aiSettings.autoTagging,
@@ -916,7 +890,6 @@ export default function SettingsPage() {
           testResults={aiTestResults}
           onSettingsChange={setAiSettings}
           onSave={handleSave}
-          onTestOpenAI={testOpenAI}
           onTestAnthropic={testAnthropic}
         />
 
