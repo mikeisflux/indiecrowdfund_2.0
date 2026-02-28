@@ -58,6 +58,7 @@ export function BlockEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const blockMenuRef = useRef<HTMLDivElement>(null);
   const plusButtonRef = useRef<HTMLButtonElement>(null);
+  const isInternalUpdate = useRef(false);
 
   // Image upload function
   const uploadImage = useCallback(
@@ -98,6 +99,7 @@ export function BlockEditor({
   );
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: {
@@ -199,6 +201,7 @@ export function BlockEditor({
       },
     },
     onUpdate: ({ editor: ed }) => {
+      isInternalUpdate.current = true;
       onChange(ed.getHTML());
     },
     onFocus: () => setEditorFocused(true),
@@ -219,8 +222,12 @@ export function BlockEditor({
     },
   });
 
-  // Update content if value changes externally
+  // Update content if value changes externally (not from the editor's own onUpdate)
   useEffect(() => {
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
     if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value);
     }
