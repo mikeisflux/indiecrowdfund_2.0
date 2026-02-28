@@ -55,7 +55,17 @@ export interface SendEmailOptions {
   fromName?: string; // Custom from name
   isCreatorEmail?: boolean; // True when sending from a creator's email handle
   attachments?: EmailAttachment[]; // Optional attachments
+  _fromQueue?: boolean; // Internal: skip auto-queue when called from queue processor
 }
+
+// Microsoft/Outlook domains that commonly block emails due to IP reputation
+const MICROSOFT_DOMAINS = new Set([
+  "outlook.com", "hotmail.com", "live.com", "msn.com",
+  "hotmail.co.uk", "hotmail.fr", "hotmail.de", "hotmail.it",
+  "hotmail.es", "hotmail.co.jp", "outlook.co.uk", "outlook.fr",
+  "outlook.de", "outlook.it", "outlook.es", "outlook.co.jp",
+  "live.co.uk", "live.fr", "live.de", "live.it",
+]);
 
 // Get email settings from database
 async function getEmailSettings() {
@@ -358,8 +368,8 @@ async function sendViaMailgun(
   }
 }
 
-export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName, isCreatorEmail, attachments }: SendEmailOptions) {
-  console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}`);
+export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName, isCreatorEmail, attachments, _fromQueue }: SendEmailOptions) {
+  console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}${_fromQueue ? " (from queue)" : ""}`);
 
   // Check if email is on the blocklist (bounced, spam reported, etc.)
   // This check applies to ALL emails including transactional ones
@@ -494,6 +504,38 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
     } catch (saveError) {
       console.error("Failed to save email to admin sent folder:", saveError);
     }
+  } else if (!_fromQueue) {
+    // Send failed and this was a direct call (not from the queue processor).
+    // Auto-queue the email for retry in the secondary queue instead of dropping it.
+    const recipientDomain = to.split("@")[1]?.toLowerCase();
+    const isMicrosoftDomain = recipientDomain ? MICROSOFT_DOMAINS.has(recipientDomain) : false;
+
+    console.warn(
+      `[Email] Direct send failed to ${to}${isMicrosoftDomain ? " (Microsoft domain)" : ""} — auto-queuing for retry. Error: ${result.error}`
+    );
+
+    try {
+      const queueEntry = await db.emailQueue.create({
+        data: {
+          toEmail: to,
+          subject,
+          bodyHtml: html, // Use original HTML (queue processor's sendEmail will re-add banners/footers)
+          bodyText: text || null,
+          fromEmail: customFromEmail || null,
+          fromName: customFromName || null,
+          replyTo: replyTo || null,
+          isCreatorEmail: isCreatorEmail || false,
+          priority: EMAIL_PRIORITY.RETRY,
+          status: "PENDING",
+          error: `Auto-queued after direct send failure: ${result.error}`,
+        },
+      });
+      console.log(`[Email] Auto-queued failed email as ${queueEntry.id} for retry to ${to}`);
+      // Return success:false but include the queueId so callers know it wasn't dropped
+      return { success: false, error: result.error, queued: true, queueId: queueEntry.id };
+    } catch (queueError) {
+      console.error(`[Email] Failed to auto-queue email for ${to}:`, queueError);
+    }
   }
 
   return result;
@@ -573,7 +615,7 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
 
     const queueEntry = claimed[0];
 
-    // Send the email
+    // Send the email (_fromQueue prevents auto-requeue loops — queue handles its own retries)
     const result = await sendEmail({
       to: queueEntry.toEmail,
       subject: queueEntry.subject,
@@ -583,6 +625,7 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
       fromName: queueEntry.fromName || undefined,
       replyTo: queueEntry.replyTo || undefined,
       isCreatorEmail: queueEntry.isCreatorEmail,
+      _fromQueue: true,
     });
 
     if (result.success) {
