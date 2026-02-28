@@ -24,6 +24,7 @@ export const EMAIL_PRIORITY = {
   SYSTEM: 10,    // Account creation, payment receipts, password reset - highest priority
   CREATOR: 5,    // Creator emails, campaigns to backers - medium priority
   AI_MARKETING: 1, // AI-generated marketing campaigns - lowest priority
+  RETRY: -1,     // Demoted emails (ratelimited/temp failures) - processed last, won't block main queue
 } as const;
 
 // Secret key for signing unsubscribe tokens - requires proper secret in production
@@ -599,11 +600,19 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
       const isPermanentFailure = ("blocked" in result && result.blocked === true) || ("skipped" in result && result.skipped === true);
       const newAttempts = queueEntry.attempts + 1;
       const shouldFail = isPermanentFailure || newAttempts >= queueEntry.maxAttempts;
+
+      // Demote retryable failures to RETRY priority (-1) so they don't block the main queue
+      // This creates a "secondary queue" effect - fresh emails always process first
+      const isRateLimited = result.error?.toLowerCase().includes("ratelimit") || result.error?.toLowerCase().includes("rate limit");
+      const demotePriority = !shouldFail && (isRateLimited || newAttempts > 1);
+
       await db.emailQueue.update({
         where: { id: queueEntry.id },
         data: {
           status: shouldFail ? "FAILED" : "PENDING",
           error: result.error || "Unknown error",
+          // Demote to RETRY priority so new emails always go first
+          ...(demotePriority ? { priority: EMAIL_PRIORITY.RETRY } : {}),
         },
       });
 

@@ -54,6 +54,7 @@ import {
   MapPin,
   ArrowLeftRight,
   Sparkles,
+  ListOrdered,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -131,6 +132,7 @@ const navigation: NavSection[] = [
     title: "Communication",
     items: [
       { name: "Email Center", href: "/admin/email", icon: Mail },
+      { name: "Email Queue", href: "/admin/email-queue", icon: ListOrdered },
       { name: "Notifications", href: "/admin/notifications", icon: Bell, badgeKey: "notifications" },
       { name: "Blocklist", href: "/admin/settings?tab=communication", icon: Shield },
     ],
