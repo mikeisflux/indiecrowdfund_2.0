@@ -53,6 +53,7 @@ export function BlockEditor({
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [editorFocused, setEditorFocused] = useState(false);
+  const [isEditorReady, setIsEditorReady] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -200,6 +201,12 @@ export function BlockEditor({
         return true;
       },
     },
+    onCreate: () => {
+      // Delay setting ready until the next frame so the editor DOM is fully attached
+      requestAnimationFrame(() => {
+        setIsEditorReady(true);
+      });
+    },
     onUpdate: ({ editor: ed }) => {
       isInternalUpdate.current = true;
       onChange(ed.getHTML());
@@ -228,14 +235,14 @@ export function BlockEditor({
       isInternalUpdate.current = false;
       return;
     }
-    if (editor && value !== editor.getHTML()) {
+    if (editor && isEditorReady && !editor.isDestroyed && value !== editor.getHTML()) {
       editor.commands.setContent(value);
     }
-  }, [value, editor]);
+  }, [value, editor, isEditorReady]);
 
   // Track active block position for + button
   const updateActiveBlockPosition = useCallback(() => {
-    if (!editor || !containerRef.current || !editor.view) {
+    if (!editor || editor.isDestroyed || !containerRef.current || !editor.view) {
       setActiveBlockTop(null);
       return;
     }
@@ -737,10 +744,16 @@ export function BlockEditor({
       )}
 
       {/* Bubble Menu for inline text formatting */}
-      {editor && (
+      {editor && isEditorReady && !editor.isDestroyed && (
         <BubbleMenu
           editor={editor}
           tippyOptions={{ duration: 100 }}
+          shouldShow={({ editor: e }) => {
+            // Only show when there's a text selection and the editor view is attached
+            if (e.isDestroyed || !e.view?.dom?.parentNode) return false;
+            const { from, to } = e.state.selection;
+            return from !== to;
+          }}
           className="flex items-center gap-0.5 p-1 bg-popover border rounded-lg shadow-lg"
         >
           <button
