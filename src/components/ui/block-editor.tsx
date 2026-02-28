@@ -60,6 +60,7 @@ export function BlockEditor({
   const blockMenuRef = useRef<HTMLDivElement>(null);
   const plusButtonRef = useRef<HTMLButtonElement>(null);
   const isInternalUpdate = useRef(false);
+  const hasInitialized = useRef(false);
 
   // Image upload function
   const uploadImage = useCallback(
@@ -235,7 +236,18 @@ export function BlockEditor({
       isInternalUpdate.current = false;
       return;
     }
-    if (editor && isEditorReady && !editor.isDestroyed && value !== editor.getHTML()) {
+    if (!editor || !isEditorReady || editor.isDestroyed) return;
+
+    // Skip the first sync — editor was already created with content: value.
+    // TipTap normalizes HTML, so value !== editor.getHTML() is almost always
+    // true on first check, but calling setContent again reconstructs the DOM
+    // and causes insertBefore crashes when BubbleMenu is attaching.
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      return;
+    }
+
+    if (value !== editor.getHTML()) {
       editor.commands.setContent(value);
     }
   }, [value, editor, isEditorReady]);
@@ -743,13 +755,14 @@ export function BlockEditor({
         </div>
       )}
 
-      {/* Bubble Menu for inline text formatting */}
-      {editor && isEditorReady && !editor.isDestroyed && (
+      {/* Bubble Menu for inline text formatting — only mount after user
+          focuses the editor so the DOM is fully stable and the BubbleMenu
+          plugin registration doesn't race with initial DOM construction */}
+      {editor && isEditorReady && editorFocused && !editor.isDestroyed && (
         <BubbleMenu
           editor={editor}
           tippyOptions={{ duration: 100 }}
           shouldShow={({ editor: e }) => {
-            // Only show when there's a text selection and the editor view is attached
             if (e.isDestroyed || !e.view?.dom?.parentNode) return false;
             const { from, to } = e.state.selection;
             return from !== to;
