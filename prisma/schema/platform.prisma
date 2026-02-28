@@ -81,6 +81,7 @@ model PlatformSettings {
   twitterAccessSecret   String?
 
   // Image Generation API Keys
+  dalleApiKey           String?  // Deprecated - kept for DB compatibility
   stabilityApiKey       String?
 
   // Social Auto-Posting Settings
@@ -89,6 +90,7 @@ model PlatformSettings {
 
   // AI Settings
   aiProvider            String   @default("anthropic")
+  openaiApiKey          String?  // Deprecated - kept for DB compatibility
   anthropicApiKey       String?
   aiAutoModeration      Boolean  @default(false)
   aiAutoTagging         Boolean  @default(false)
