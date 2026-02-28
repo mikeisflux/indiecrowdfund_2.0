@@ -755,70 +755,70 @@ export function BlockEditor({
         </div>
       )}
 
-      {/* Bubble Menu for inline text formatting — only mount after user
-          focuses the editor so the DOM is fully stable and the BubbleMenu
-          plugin registration doesn't race with initial DOM construction */}
-      {editor && isEditorReady && editorFocused && !editor.isDestroyed && (
-        <BubbleMenu
-          editor={editor}
-          tippyOptions={{ duration: 100 }}
-          shouldShow={({ editor: e }) => {
-            if (e.isDestroyed || !e.view?.dom?.parentNode) return false;
-            const { from, to } = e.state.selection;
-            return from !== to;
-          }}
-          className="flex items-center gap-0.5 p-1 bg-popover border rounded-lg shadow-lg"
-        >
-          <button
-            type="button"
-            onMouseDown={preventFocusLoss}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            className={cn(
-              "p-1.5 rounded-md transition-colors hover:bg-muted",
-              editor.isActive("bold") && "bg-muted text-foreground"
-            )}
-          >
-            <Bold className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onMouseDown={preventFocusLoss}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={cn(
-              "p-1.5 rounded-md transition-colors hover:bg-muted",
-              editor.isActive("italic") && "bg-muted text-foreground"
-            )}
-          >
-            <Italic className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onMouseDown={preventFocusLoss}
-            onClick={() => editor.chain().focus().toggleCode().run()}
-            className={cn(
-              "p-1.5 rounded-md transition-colors hover:bg-muted",
-              editor.isActive("code") && "bg-muted text-foreground"
-            )}
-          >
-            <Code className="h-4 w-4" />
-          </button>
-          <div className="w-px h-5 bg-border mx-0.5" />
-          <button
-            type="button"
-            onMouseDown={preventFocusLoss}
-            onClick={addLink}
-            className={cn(
-              "p-1.5 rounded-md transition-colors hover:bg-muted",
-              editor.isActive("link") && "bg-muted text-foreground"
-            )}
-          >
-            <LinkIcon className="h-4 w-4" />
-          </button>
-        </BubbleMenu>
-      )}
-
-      {/* Editor Content */}
+      {/* BubbleMenu + EditorContent wrapped together in a div (not fragment).
+          BubbleMenu is ALWAYS rendered (never conditionally mounted/unmounted)
+          to avoid React reconciliation conflicts with ProseMirror's DOM.
+          Visibility is controlled via shouldShow instead.
+          See: https://github.com/ueberdosis/tiptap/issues/4619 */}
       <div className="relative">
+        {editor && (
+          <BubbleMenu
+            editor={editor}
+            tippyOptions={{ duration: 100 }}
+            shouldShow={({ editor: e }) => {
+              if (e.isDestroyed || !e.view?.dom?.parentNode) return false;
+              const { from, to } = e.state.selection;
+              return from !== to;
+            }}
+            className="flex items-center gap-0.5 p-1 bg-popover border rounded-lg shadow-lg"
+          >
+            <button
+              type="button"
+              onMouseDown={preventFocusLoss}
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              className={cn(
+                "p-1.5 rounded-md transition-colors hover:bg-muted",
+                editor.isActive("bold") && "bg-muted text-foreground"
+              )}
+            >
+              <Bold className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onMouseDown={preventFocusLoss}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              className={cn(
+                "p-1.5 rounded-md transition-colors hover:bg-muted",
+                editor.isActive("italic") && "bg-muted text-foreground"
+              )}
+            >
+              <Italic className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onMouseDown={preventFocusLoss}
+              onClick={() => editor.chain().focus().toggleCode().run()}
+              className={cn(
+                "p-1.5 rounded-md transition-colors hover:bg-muted",
+                editor.isActive("code") && "bg-muted text-foreground"
+              )}
+            >
+              <Code className="h-4 w-4" />
+            </button>
+            <div className="w-px h-5 bg-border mx-0.5" />
+            <button
+              type="button"
+              onMouseDown={preventFocusLoss}
+              onClick={addLink}
+              className={cn(
+                "p-1.5 rounded-md transition-colors hover:bg-muted",
+                editor.isActive("link") && "bg-muted text-foreground"
+              )}
+            >
+              <LinkIcon className="h-4 w-4" />
+            </button>
+          </BubbleMenu>
+        )}
         <EditorContent editor={editor} />
         {isUploading && (
           <div className="absolute inset-0 bg-white/80 dark:bg-zinc-900/80 flex items-center justify-center">
