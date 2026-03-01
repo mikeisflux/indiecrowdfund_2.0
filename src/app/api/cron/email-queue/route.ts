@@ -51,7 +51,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Auto-recover any emails stuck in PROCESSING for over 5 minutes
+    // Auto-recover any emails stuck in PROCESSING for over 5 seconds
+    // (sending takes <1s; anything beyond 5s means the process crashed or timed out)
     await recoverStuckProcessingEmails();
 
     // Get initial queue stats

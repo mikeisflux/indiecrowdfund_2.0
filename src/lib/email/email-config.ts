@@ -617,8 +617,10 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
     const queueEntry = claimed[0];
     claimedId = queueEntry.id;
 
-    // Send the email (_fromQueue prevents auto-requeue loops — queue handles its own retries)
-    const result = await sendEmail({
+    // Send the email with a 10-second timeout
+    // If sendEmail hangs (network issue to Mailgun/SendGrid), this prevents the email
+    // from being stuck in PROCESSING forever. The catch block will reset it to PENDING.
+    const sendPromise = sendEmail({
       to: queueEntry.toEmail,
       subject: queueEntry.subject,
       html: queueEntry.bodyHtml,
@@ -629,6 +631,10 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
       isCreatorEmail: queueEntry.isCreatorEmail,
       _fromQueue: true,
     });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Email send timed out after 10 seconds")), 10000)
+    );
+    const result = await Promise.race([sendPromise, timeoutPromise]);
 
     if (result.success) {
       await db.emailQueue.update({
