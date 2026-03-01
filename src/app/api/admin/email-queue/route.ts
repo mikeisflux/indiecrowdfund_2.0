@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status"); // PENDING, PROCESSING, SENT, FAILED, or "all"
+    const queue = searchParams.get("queue"); // "microsoft" to filter to MS domains only
     const page = parseInt(searchParams.get("page") || "1");
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 200);
     const search = searchParams.get("search") || "";
@@ -46,12 +47,37 @@ export async function GET(req: NextRequest) {
       where: { status: "PENDING", priority: { lt: 0 } },
     });
 
+    // Microsoft domain email counts (outlook, hotmail, live, msn)
+    const microsoftDomainFilter = {
+      OR: [
+        { toEmail: { contains: "@outlook.", mode: "insensitive" as const } },
+        { toEmail: { contains: "@hotmail.", mode: "insensitive" as const } },
+        { toEmail: { contains: "@live.", mode: "insensitive" as const } },
+        { toEmail: { contains: "@msn.", mode: "insensitive" as const } },
+      ],
+    };
+
+    const [msPending, msProcessing, msSent, msFailed] = await Promise.all([
+      db.emailQueue.count({ where: { status: "PENDING", ...microsoftDomainFilter } }),
+      db.emailQueue.count({ where: { status: "PROCESSING", ...microsoftDomainFilter } }),
+      db.emailQueue.count({ where: { status: "SENT", ...microsoftDomainFilter } }),
+      db.emailQueue.count({ where: { status: "FAILED", ...microsoftDomainFilter } }),
+    ]);
+
     // Build where clause for filtered list
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
 
     if (status && status !== "all") {
       where.status = status;
+    }
+
+    // Filter to Microsoft domains only
+    if (queue === "microsoft") {
+      where.AND = [
+        ...(where.AND || []),
+        microsoftDomainFilter,
+      ];
     }
 
     if (search) {
@@ -95,6 +121,13 @@ export async function GET(req: NextRequest) {
       stats: {
         ...stats,
         demoted: demotedCount,
+      },
+      microsoftStats: {
+        pending: msPending,
+        processing: msProcessing,
+        sent: msSent,
+        failed: msFailed,
+        total: msPending + msProcessing + msSent + msFailed,
       },
       emails,
       pagination: {
@@ -195,6 +228,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: `Cleared ${result.count} old sent emails`,
+        count: result.count,
+      });
+    } else if (action === "unstick-processing") {
+      // Reset all PROCESSING emails back to PENDING (for manually fixing stuck emails)
+      const result = await db.emailQueue.updateMany({
+        where: { status: "PROCESSING" },
+        data: { status: "PENDING", error: "Manually reset from PROCESSING by admin" },
+      });
+      return NextResponse.json({
+        success: true,
+        message: `Reset ${result.count} stuck processing email(s) back to pending`,
         count: result.count,
       });
     } else if (action === "clear-all-sent") {

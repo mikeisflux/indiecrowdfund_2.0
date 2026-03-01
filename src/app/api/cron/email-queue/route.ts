@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { processEmailQueue, getEmailQueueStats, isEmailQueueEnabled } from "@/lib/email";
+import { processEmailQueue, getEmailQueueStats, isEmailQueueEnabled, recoverStuckProcessingEmails } from "@/lib/email";
 
 // Cron job endpoint for processing the email queue
 //
@@ -50,6 +50,9 @@ export async function GET(req: NextRequest) {
         timestamp: new Date().toISOString(),
       });
     }
+
+    // Auto-recover any emails stuck in PROCESSING for over 5 minutes
+    await recoverStuckProcessingEmails();
 
     // Get initial queue stats
     const initialStats = await getEmailQueueStats();

@@ -52,6 +52,14 @@ interface QueueStats {
   pausedAt: string | null;
 }
 
+interface MicrosoftStats {
+  pending: number;
+  processing: number;
+  sent: number;
+  failed: number;
+  total: number;
+}
+
 interface Pagination {
   page: number;
   limit: number;
@@ -103,20 +111,24 @@ function getStatusBadgeVariant(status: string): "default" | "secondary" | "destr
 
 export default function EmailQueuePage() {
   const [stats, setStats] = useState<QueueStats | null>(null);
+  const [microsoftStats, setMicrosoftStats] = useState<MicrosoftStats | null>(null);
   const [emails, setEmails] = useState<QueueEmail[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [queueFilter, setQueueFilter] = useState<"all" | "microsoft">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isActioning, setIsActioning] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchQueue = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (queueFilter === "microsoft") params.set("queue", "microsoft");
       if (searchQuery) params.set("search", searchQuery);
       params.set("page", page.toString());
       params.set("limit", "50");
@@ -125,23 +137,25 @@ export default function EmailQueuePage() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setStats(data.stats);
+      setMicrosoftStats(data.microsoftStats);
       setEmails(data.emails);
       setPagination(data.pagination);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error("Failed to fetch email queue:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, searchQuery, page]);
+  }, [statusFilter, queueFilter, searchQuery, page]);
 
   useEffect(() => {
     fetchQueue();
   }, [fetchQueue]);
 
-  // Auto-refresh every 5 seconds
+  // Auto-refresh every 3 seconds for near real-time updates
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(fetchQueue, 5000);
+    const interval = setInterval(fetchQueue, 3000);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchQueue]);
 
@@ -208,6 +222,11 @@ export default function EmailQueuePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {lastUpdated && (
+            <span className="text-xs text-muted-foreground">
+              Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+            </span>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -215,7 +234,7 @@ export default function EmailQueuePage() {
             className={autoRefresh ? "border-green-500 text-green-600" : ""}
           >
             <RefreshCw className={`h-4 w-4 mr-1 ${autoRefresh ? "animate-spin" : ""}`} />
-            {autoRefresh ? "Live" : "Paused"}
+            {autoRefresh ? "Live (3s)" : "Paused"}
           </Button>
           <Button variant="outline" size="sm" onClick={fetchQueue}>
             <RefreshCw className="h-4 w-4 mr-1" />
@@ -223,6 +242,60 @@ export default function EmailQueuePage() {
           </Button>
         </div>
       </div>
+
+      {/* Queue Selector */}
+      <div className="flex gap-2">
+        <Button
+          variant={queueFilter === "all" ? "default" : "outline"}
+          size="sm"
+          onClick={() => { setQueueFilter("all"); setPage(1); }}
+        >
+          <Mail className="h-4 w-4 mr-1" />
+          Main Queue
+        </Button>
+        <Button
+          variant={queueFilter === "microsoft" ? "default" : "outline"}
+          size="sm"
+          onClick={() => { setQueueFilter("microsoft"); setPage(1); }}
+          className={queueFilter === "microsoft" ? "" : "border-blue-300 text-blue-600 hover:bg-blue-50"}
+        >
+          <AlertTriangle className="h-4 w-4 mr-1" />
+          Microsoft Queue
+          {microsoftStats && microsoftStats.total > 0 && (
+            <Badge variant="secondary" className="ml-1.5 text-xs">{microsoftStats.total}</Badge>
+          )}
+        </Button>
+      </div>
+
+      {/* Microsoft Queue Stats (shown when Microsoft filter is active) */}
+      {queueFilter === "microsoft" && microsoftStats && (
+        <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-900">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-blue-500" />
+              <p className="text-sm font-medium">Microsoft Domain Emails (Outlook, Hotmail, Live, MSN)</p>
+            </div>
+            <div className="grid grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-lg font-bold">{microsoftStats.pending}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Processing</p>
+                <p className="text-lg font-bold">{microsoftStats.processing}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Sent</p>
+                <p className="text-lg font-bold text-green-600">{microsoftStats.sent}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Failed</p>
+                <p className="text-lg font-bold text-red-600">{microsoftStats.failed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -324,6 +397,19 @@ export default function EmailQueuePage() {
               >
                 <Play className="h-4 w-4 mr-1" />
                 Resume Queue
+              </Button>
+            )}
+
+            {(stats?.processing ?? 0) > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => doAction("unstick-processing")}
+                disabled={isActioning}
+                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Reset Stuck ({stats?.processing})
               </Button>
             )}
 
@@ -497,7 +583,7 @@ export default function EmailQueuePage() {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-1">
-                          {(email.status === "FAILED" || email.status === "PENDING") && (
+                          {(email.status === "FAILED" || email.status === "PENDING" || email.status === "PROCESSING") && (
                             <Button
                               variant="ghost"
                               size="icon"

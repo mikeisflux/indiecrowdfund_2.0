@@ -574,6 +574,7 @@ export async function queueEmail(options: SendEmailOptions & { priority?: number
 export async function processEmailQueue(): Promise<{ processed: number; errors: number }> {
   let processed = 0;
   let errors = 0;
+  let claimedId: string | null = null;
 
   try {
     // Atomically claim the next pending email to prevent race conditions
@@ -614,6 +615,7 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
     }
 
     const queueEntry = claimed[0];
+    claimedId = queueEntry.id;
 
     // Send the email (_fromQueue prevents auto-requeue loops — queue handles its own retries)
     const result = await sendEmail({
@@ -679,6 +681,19 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
   } catch (error) {
     console.error("[Email Queue] Error processing email:", error);
     errors = 1;
+
+    // Reset the claimed email back to PENDING so it doesn't get stuck in PROCESSING
+    if (claimedId) {
+      try {
+        await db.emailQueue.update({
+          where: { id: claimedId },
+          data: { status: "PENDING", error: `Processing error: ${String(error)}` },
+        });
+        console.log(`[Email Queue] Reset stuck email ${claimedId} back to PENDING`);
+      } catch (resetError) {
+        console.error(`[Email Queue] Failed to reset email ${claimedId}:`, resetError);
+      }
+    }
   }
 
   return { processed, errors };
@@ -709,6 +724,31 @@ export async function getEmailQueueStats(): Promise<{
     enabled: settings?.emailQueueEnabled ?? true,
     pausedAt: settings?.emailQueuePausedAt ?? null,
   };
+}
+
+// Auto-recover emails stuck in PROCESSING for more than 5 minutes
+// This handles edge cases where a process crashes mid-send or the catch block reset fails
+export async function recoverStuckProcessingEmails(): Promise<number> {
+  try {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const result = await db.emailQueue.updateMany({
+      where: {
+        status: "PROCESSING",
+        processedAt: { lt: fiveMinutesAgo },
+      },
+      data: {
+        status: "PENDING",
+        error: "Auto-recovered: stuck in PROCESSING for over 5 minutes",
+      },
+    });
+    if (result.count > 0) {
+      console.log(`[Email Queue] Auto-recovered ${result.count} stuck PROCESSING email(s)`);
+    }
+    return result.count;
+  } catch (error) {
+    console.error("[Email Queue] Error recovering stuck emails:", error);
+    return 0;
+  }
 }
 
 // Check if email queue is enabled
