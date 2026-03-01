@@ -45,12 +45,23 @@ export async function GET() {
 
     // Get default email preferences if none set
     const defaultEmailPreferences = {
-      projectUpdates: true,
+      // Backer notifications
       backedProjectUpdates: true,
+      projectFunded: true,
+      commentReplies: true,
+      surveyReminders: true,
+      // Creator messages
+      creatorMessages: true,
+      // Following
+      projectUpdates: true,
+      creatorLaunches: true,
+      // Discovery
       newProjects: true,
+      endingSoon: false,
+      fundingMilestones: false,
+      // Digest & Marketing
       weeklyDigest: false,
       marketingEmails: false,
-      creatorMessages: true,
     };
 
     return NextResponse.json({

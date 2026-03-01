@@ -47,8 +47,34 @@ import {
   ExternalLink,
   Pencil,
   ArrowLeft,
+  Heart,
+  MessageSquare,
+  Users,
+  Search,
+  Megaphone,
+  Lock,
 } from "lucide-react";
 import { useSession } from "@/components/providers/auth-provider";
+
+interface EmailPreferences {
+  // Backer notifications
+  backedProjectUpdates: boolean;
+  projectFunded: boolean;
+  commentReplies: boolean;
+  surveyReminders: boolean;
+  // Creator messages
+  creatorMessages: boolean;
+  // Following
+  projectUpdates: boolean;
+  creatorLaunches: boolean;
+  // Discovery
+  newProjects: boolean;
+  endingSoon: boolean;
+  fundingMilestones: boolean;
+  // Digest & Marketing
+  weeklyDigest: boolean;
+  marketingEmails: boolean;
+}
 
 interface UserSettings {
   id: string;
@@ -64,14 +90,7 @@ interface UserSettings {
   emailVerified: Date | null;
   createdAt: string;
   connectedAccounts: string[];
-  emailPreferences: {
-    projectUpdates: boolean;
-    backedProjectUpdates: boolean;
-    newProjects: boolean;
-    weeklyDigest: boolean;
-    marketingEmails: boolean;
-    creatorMessages: boolean;
-  };
+  emailPreferences: EmailPreferences;
 }
 
 interface EmailChangeState {
@@ -677,69 +696,261 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Email Preferences */}
+          {/* Subscriptions */}
           <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '200ms' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5 text-amber-500" />
-                Email Preferences
+                Subscriptions
               </CardTitle>
               <CardDescription>
-                Control what emails you receive from us
+                Granular control over every type of email we send you
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                {
-                  key: "backedProjectUpdates" as const,
-                  title: "Backed project updates",
-                  description: "Updates from projects you've backed",
-                },
-                {
-                  key: "creatorMessages" as const,
-                  title: "Creator messages",
-                  description: "Direct messages from project creators",
-                },
-                {
-                  key: "projectUpdates" as const,
-                  title: "Following updates",
-                  description: "Updates from projects and creators you follow",
-                },
-                {
-                  key: "newProjects" as const,
-                  title: "New projects",
-                  description: "New projects in categories you're interested in",
-                },
-                {
-                  key: "weeklyDigest" as const,
-                  title: "Weekly digest",
-                  description: "A weekly summary of interesting projects",
-                },
-                {
-                  key: "marketingEmails" as const,
-                  title: "Marketing emails",
-                  description: "Promotional content and special offers",
-                },
-              ].map((pref) => (
-                <div key={pref.key} className="flex items-center justify-between rounded-lg border p-4">
-                  <div>
-                    <p className="font-medium">{pref.title}</p>
-                    <p className="text-sm text-muted-foreground">{pref.description}</p>
-                  </div>
-                  <Switch
-                    checked={settings.emailPreferences[pref.key]}
-                    onCheckedChange={(checked) =>
-                      setSettings({
-                        ...settings,
-                        emailPreferences: {
-                          ...settings.emailPreferences,
-                          [pref.key]: checked,
-                        },
-                      })
-                    }
-                  />
+            <CardContent className="space-y-6">
+              {/* Backer Notifications */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  <Heart className="h-4 w-4 text-pink-500" />
+                  Backer Notifications
                 </div>
-              ))}
+                {([
+                  {
+                    key: "backedProjectUpdates" as const,
+                    title: "Project updates",
+                    description: "Updates and news from projects you've backed",
+                  },
+                  {
+                    key: "projectFunded" as const,
+                    title: "Project funded",
+                    description: "When a project you backed reaches its funding goal",
+                  },
+                  {
+                    key: "commentReplies" as const,
+                    title: "Comment replies",
+                    description: "When someone replies to your comments on a project",
+                  },
+                  {
+                    key: "surveyReminders" as const,
+                    title: "Survey reminders",
+                    description: "Reminders to complete backer surveys for fulfillment",
+                  },
+                ] as const).map((pref) => (
+                  <div key={pref.key} className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">{pref.title}</p>
+                      <p className="text-sm text-muted-foreground">{pref.description}</p>
+                    </div>
+                    <Switch
+                      checked={settings.emailPreferences[pref.key]}
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          emailPreferences: {
+                            ...settings.emailPreferences,
+                            [pref.key]: checked,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* Creator Messages */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  <MessageSquare className="h-4 w-4 text-blue-500" />
+                  Messages
+                </div>
+                {([
+                  {
+                    key: "creatorMessages" as const,
+                    title: "Creator messages",
+                    description: "Direct messages and emails from project creators",
+                  },
+                ] as const).map((pref) => (
+                  <div key={pref.key} className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">{pref.title}</p>
+                      <p className="text-sm text-muted-foreground">{pref.description}</p>
+                    </div>
+                    <Switch
+                      checked={settings.emailPreferences[pref.key]}
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          emailPreferences: {
+                            ...settings.emailPreferences,
+                            [pref.key]: checked,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* Following */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  <Users className="h-4 w-4 text-violet-500" />
+                  Following
+                </div>
+                {([
+                  {
+                    key: "projectUpdates" as const,
+                    title: "Followed project updates",
+                    description: "Updates from projects and creators you follow",
+                  },
+                  {
+                    key: "creatorLaunches" as const,
+                    title: "New campaign launches",
+                    description: "When a creator you follow launches a new campaign",
+                  },
+                ] as const).map((pref) => (
+                  <div key={pref.key} className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">{pref.title}</p>
+                      <p className="text-sm text-muted-foreground">{pref.description}</p>
+                    </div>
+                    <Switch
+                      checked={settings.emailPreferences[pref.key]}
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          emailPreferences: {
+                            ...settings.emailPreferences,
+                            [pref.key]: checked,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* Discovery & Recommendations */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  <Search className="h-4 w-4 text-emerald-500" />
+                  Discovery & Recommendations
+                </div>
+                {([
+                  {
+                    key: "newProjects" as const,
+                    title: "New projects",
+                    description: "New projects in categories you're interested in",
+                  },
+                  {
+                    key: "endingSoon" as const,
+                    title: "Ending soon",
+                    description: "Projects ending soon that match your interests",
+                  },
+                  {
+                    key: "fundingMilestones" as const,
+                    title: "Funding milestones",
+                    description: "Notable funding milestones on trending projects",
+                  },
+                ] as const).map((pref) => (
+                  <div key={pref.key} className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">{pref.title}</p>
+                      <p className="text-sm text-muted-foreground">{pref.description}</p>
+                    </div>
+                    <Switch
+                      checked={settings.emailPreferences[pref.key]}
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          emailPreferences: {
+                            ...settings.emailPreferences,
+                            [pref.key]: checked,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* Digest & Marketing */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  <Megaphone className="h-4 w-4 text-orange-500" />
+                  Digest & Marketing
+                </div>
+                {([
+                  {
+                    key: "weeklyDigest" as const,
+                    title: "Weekly digest",
+                    description: "A weekly summary of interesting projects and activity",
+                  },
+                  {
+                    key: "marketingEmails" as const,
+                    title: "Marketing & promotions",
+                    description: "Promotional content, special offers, and platform news",
+                  },
+                ] as const).map((pref) => (
+                  <div key={pref.key} className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">{pref.title}</p>
+                      <p className="text-sm text-muted-foreground">{pref.description}</p>
+                    </div>
+                    <Switch
+                      checked={settings.emailPreferences[pref.key]}
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          emailPreferences: {
+                            ...settings.emailPreferences,
+                            [pref.key]: checked,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* Transactional Emails - informational only */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  <Lock className="h-4 w-4 text-gray-500" />
+                  Always Sent (Transactional)
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  These emails are essential to your account and cannot be turned off.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {[
+                    "Password reset",
+                    "Email verification",
+                    "Pledge confirmations",
+                    "Pledge modifications & cancellations",
+                    "Balance due notices",
+                    "Survey completion confirmations",
+                    "Marketplace purchase receipts",
+                    "Marketplace sale notifications",
+                    "Payout notifications",
+                  ].map((label) => (
+                    <div key={label} className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                      <Check className="h-3.5 w-3.5 shrink-0" />
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
