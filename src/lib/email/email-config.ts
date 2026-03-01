@@ -726,19 +726,19 @@ export async function getEmailQueueStats(): Promise<{
   };
 }
 
-// Auto-recover emails stuck in PROCESSING for more than 5 minutes
-// This handles edge cases where a process crashes mid-send or the catch block reset fails
+// Auto-recover emails stuck in PROCESSING for more than 5 seconds
+// Sending an email takes under a second — anything beyond 5s is stuck
 export async function recoverStuckProcessingEmails(): Promise<number> {
   try {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const fiveSecondsAgo = new Date(Date.now() - 5 * 1000);
     const result = await db.emailQueue.updateMany({
       where: {
         status: "PROCESSING",
-        processedAt: { lt: fiveMinutesAgo },
+        processedAt: { lt: fiveSecondsAgo },
       },
       data: {
         status: "PENDING",
-        error: "Auto-recovered: stuck in PROCESSING for over 5 minutes",
+        error: "Auto-recovered: stuck in PROCESSING for over 5 seconds",
       },
     });
     if (result.count > 0) {
