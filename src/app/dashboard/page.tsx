@@ -39,6 +39,11 @@ import { RewardStats } from "./components/RewardStats";
 import { BackersList } from "./components/BackersList";
 import { FulfillmentView } from "./components/FulfillmentView";
 import { CollaborationsTab } from "./components/CollaborationsTab";
+import { PostUpdatesTab } from "./components/PostUpdatesTab";
+import { SocialHubTab } from "./components/SocialHubTab";
+import { IndieKitTab } from "./components/IndieKitTab";
+import { IndieKitV2Tab } from "./components/IndieKitV2Tab";
+import { MarketplaceTab } from "./components/MarketplaceTab";
 
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
@@ -301,48 +306,28 @@ export default function CreatorDashboard() {
                     <Truck className="mr-2 h-4 w-4" />
                     Fulfillment
                   </TabsTrigger>
-                  <Link href={`/dashboard/updates?project=${selectedProjectId}`}>
-                    <TabsTrigger value="updates" asChild>
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Post Updates
-                      </div>
-                    </TabsTrigger>
-                  </Link>
-                  <Link href={`/dashboard/social?project=${selectedProjectId}`}>
-                    <TabsTrigger value="social" asChild>
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Social Hub
-                      </div>
-                    </TabsTrigger>
-                  </Link>
+                  <TabsTrigger value="updates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Post Updates
+                  </TabsTrigger>
+                  <TabsTrigger value="social" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Social Hub
+                  </TabsTrigger>
                   {data?.userRole === "SUPER_ADMIN" && (
-                    <Link href={`/dashboard/indiekit?project=${selectedProjectId}`}>
-                      <TabsTrigger value="indiekit" asChild>
-                        <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
-                          <Package className="mr-2 h-4 w-4" />
-                          IndieKit
-                        </div>
-                      </TabsTrigger>
-                    </Link>
+                    <TabsTrigger value="indiekit" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                      <Package className="mr-2 h-4 w-4" />
+                      IndieKit
+                    </TabsTrigger>
                   )}
-                  <Link href={`/dashboard/indiekit-v2?project=${selectedProjectId}`}>
-                    <TabsTrigger value="indiekit-v2" asChild>
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
-                        <Sparkles className="mr-2 h-4 w-4 text-teal-500" />
-                        IndieKit 2.0
-                      </div>
-                    </TabsTrigger>
-                  </Link>
-                  <Link href={`/dashboard/marketplace?project=${selectedProjectId}`}>
-                    <TabsTrigger value="marketplace" asChild>
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted/50 hover:text-foreground">
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        Marketplace
-                      </div>
-                    </TabsTrigger>
-                  </Link>
+                  <TabsTrigger value="indiekit-v2" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                    <Sparkles className="mr-2 h-4 w-4 text-teal-500" />
+                    IndieKit 2.0
+                  </TabsTrigger>
+                  <TabsTrigger value="marketplace" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Marketplace
+                  </TabsTrigger>
                   <TabsTrigger value="collaborations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <Handshake className="mr-2 h-4 w-4" />
                     Collaborations
@@ -400,6 +385,28 @@ export default function CreatorDashboard() {
 
               <TabsContent value="fulfillment" className="space-y-6">
                 <FulfillmentView fulfillmentStats={data.fulfillmentStats} />
+              </TabsContent>
+
+              <TabsContent value="updates" className="space-y-6">
+                <PostUpdatesTab projectId={selectedProjectId} />
+              </TabsContent>
+
+              <TabsContent value="social" className="space-y-6">
+                <SocialHubTab />
+              </TabsContent>
+
+              {data?.userRole === "SUPER_ADMIN" && (
+                <TabsContent value="indiekit" className="space-y-6">
+                  <IndieKitTab projectId={selectedProjectId} />
+                </TabsContent>
+              )}
+
+              <TabsContent value="indiekit-v2" className="space-y-6">
+                <IndieKitV2Tab projectId={selectedProjectId} />
+              </TabsContent>
+
+              <TabsContent value="marketplace" className="space-y-6">
+                <MarketplaceTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="collaborations" className="space-y-6">
