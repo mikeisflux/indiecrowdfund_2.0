@@ -98,6 +98,13 @@ export async function POST(req: NextRequest) {
     // Use the new addons format if provided, otherwise convert legacy addonIds
     const addonsWithQuantity = data.addons || data.addonIds.map(id => ({ id, quantity: 1 }));
 
+    // Clean up stale abandoned carts for this project (older than 1 hour, no payment evidence)
+    // This runs in the background and doesn't block pledge creation
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    cleanupAbandonedCarts(data.projectId, oneHourAgo).catch((err) => {
+      console.warn("[Pledge] Background abandoned cart cleanup failed:", err);
+    });
+
     // Check for campaign attribution cookie
     let sourceCampaignId: string | undefined;
     try {
@@ -392,4 +399,45 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Permanently delete stale abandoned cart pledges for a project.
+ * Only deletes PENDING pledges older than the cutoff that have no payment evidence.
+ */
+async function cleanupAbandonedCarts(projectId: string, olderThan: Date) {
+  // Find stale PENDING pledges with no payment evidence
+  const stalePledges = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      deletedAt: null,
+      createdAt: { lt: olderThan },
+      // No payment evidence
+      stripePaymentMethodId: null,
+      divinityCoinPaymentId: null,
+      confirmationEmailSent: false,
+    },
+    select: { id: true },
+  });
+
+  if (stalePledges.length === 0) return;
+
+  const ids = stalePledges.map((p) => p.id);
+
+  // Verify none of them have DivinityCoinTransaction records
+  const dcTransactions = await db.divinityCoinTransaction.findMany({
+    where: { pledgeId: { in: ids }, type: "PAYMENT" },
+    select: { pledgeId: true },
+  });
+  const dcPaidIds = new Set(dcTransactions.map((t: { pledgeId: string | null }) => t.pledgeId));
+  const toDelete = ids.filter((id) => !dcPaidIds.has(id));
+
+  if (toDelete.length === 0) return;
+
+  // Delete related records then pledges
+  await db.emailLog.deleteMany({ where: { pledgeId: { in: toDelete } } });
+  await db.pledge.deleteMany({ where: { id: { in: toDelete } } });
+
+  console.log(`[Pledge] Auto-cleaned ${toDelete.length} abandoned cart(s) for project ${projectId}`);
 }

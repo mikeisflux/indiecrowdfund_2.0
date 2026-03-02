@@ -25,6 +25,7 @@ import {
   Hash,
   Link2,
   CalendarClock,
+  Trash2,
 } from "lucide-react";
 import { Project } from "./types";
 import { formatDuration } from "./utils";
@@ -53,6 +54,8 @@ export function ActiveProjectPanel({
   const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
   const [isReconciling, setIsReconciling] = useState(false);
   const [reconcileMessage, setReconcileMessage] = useState<string | null>(null);
+  const [isDeletingAbandoned, setIsDeletingAbandoned] = useState(false);
+  const [deleteAbandonedMessage, setDeleteAbandonedMessage] = useState<string | null>(null);
   const [showVanityUrlDialog, setShowVanityUrlDialog] = useState(false);
   const [showEndDateDialog, setShowEndDateDialog] = useState(false);
   const [currentVanityUrl, setCurrentVanityUrl] = useState<string | null>(null);
@@ -65,6 +68,7 @@ export function ActiveProjectPanel({
     setVerifyMessage(null);
     setBackfillMessage(null);
     setReconcileMessage(null);
+    setDeleteAbandonedMessage(null);
     setCurrentVanityUrl(project?.creator?.vanityUrl || null);
     setCurrentEndDate(project?.endDate || null);
   }, [project?.id, project?.creator?.vanityUrl, project?.endDate]);
@@ -244,6 +248,43 @@ export function ActiveProjectPanel({
       setReconcileMessage("Error: Network request failed");
     } finally {
       setIsReconciling(false);
+    }
+  };
+
+  const handleDeleteAbandonedCarts = async () => {
+    if (!project) return;
+
+    if (!confirm(`Are you sure you want to permanently delete all abandoned cart pledges for "${project.title}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeletingAbandoned(true);
+    setDeleteAbandonedMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/projects/${project.id}/process-pledges`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ action: "delete-abandoned" }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.results.total === 0) {
+          setDeleteAbandonedMessage("No pending pledges found to clean up");
+        } else {
+          setDeleteAbandonedMessage(
+            `Permanently deleted ${data.results.deleted} abandoned carts${data.results.skipped > 0 ? `, skipped ${data.results.skipped} with payment evidence` : ""}`
+          );
+        }
+      } else {
+        setDeleteAbandonedMessage(`Error: ${data.error || "Failed to delete abandoned carts"}`);
+      }
+    } catch {
+      setDeleteAbandonedMessage("Error: Network request failed");
+    } finally {
+      setIsDeletingAbandoned(false);
     }
   };
 
@@ -469,6 +510,28 @@ export function ActiveProjectPanel({
               )}
             </div>
           )}
+
+          {/* Delete Abandoned Carts Button */}
+          <div className="mb-4">
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAbandonedCarts}
+              disabled={isDeletingAbandoned}
+              className="w-full"
+            >
+              {isDeletingAbandoned ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              {isDeletingAbandoned ? "Deleting..." : "Delete Abandoned Carts"}
+            </Button>
+            {deleteAbandonedMessage && (
+              <p className={`text-sm mt-2 ${deleteAbandonedMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
+                {deleteAbandonedMessage}
+              </p>
+            )}
+          </div>
 
           {(project.status === "LIVE" || project.status === "APPROVED") && (
             <div className="flex items-center gap-2">

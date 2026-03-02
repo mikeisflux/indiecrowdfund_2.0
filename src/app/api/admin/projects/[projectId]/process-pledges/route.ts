@@ -289,6 +289,11 @@ export async function POST(
       return await verifyPaymentIntents(projectId);
     }
 
+    // Special action: delete abandoned carts (soft delete PENDING pledges with no payment)
+    if (action === "delete-abandoned") {
+      return await deleteAbandonedCarts(projectId);
+    }
+
     // DivinityCoin projects: reconcile PENDING pledges against DC transaction records
     if (isDivinityCoin) {
       return await processDivinityCoinPendingPledges(projectId, pledgeId);
@@ -652,6 +657,121 @@ async function verifyPaymentIntents(projectId: string) {
   return NextResponse.json({
     success: true,
     message: `Verified ${results.verified} of ${results.total} pledges`,
+    results,
+  });
+}
+
+/**
+ * Permanently delete abandoned cart pledges for a project.
+ * Abandoned = PENDING status with no payment record (no stripePaymentMethodId,
+ * no divinityCoinPaymentId, no DivinityCoinTransaction, and no confirmation email sent).
+ * Pledges with any payment evidence are skipped to prevent data loss.
+ */
+async function deleteAbandonedCarts(projectId: string) {
+  // Find all PENDING pledges that haven't been soft-deleted
+  const pendingPledges = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      amount: true,
+      stripePaymentMethodId: true,
+      stripePaymentIntentId: true,
+      stripeSetupIntentId: true,
+      divinityCoinPaymentId: true,
+      chargedImmediately: true,
+      confirmationEmailSent: true,
+      createdAt: true,
+      user: {
+        select: { name: true, email: true },
+      },
+    },
+  });
+
+  if (pendingPledges.length === 0) {
+    return NextResponse.json({
+      success: true,
+      message: "No pending pledges found",
+      results: { total: 0, deleted: 0, skipped: 0, details: [] },
+    });
+  }
+
+  // Check for DivinityCoinTransaction records for these pledges
+  const pledgeIds = pendingPledges.map((p) => p.id);
+  const dcTransactions = await db.divinityCoinTransaction.findMany({
+    where: {
+      pledgeId: { in: pledgeIds },
+      type: "PAYMENT",
+    },
+    select: { pledgeId: true },
+  });
+  const dcPaidPledgeIds = new Set(
+    dcTransactions.map((t: { pledgeId: string | null }) => t.pledgeId)
+  );
+
+  const results = {
+    total: pendingPledges.length,
+    deleted: 0,
+    skipped: 0,
+    details: [] as Array<{
+      pledgeId: string;
+      user: string;
+      amount: number;
+      action: string;
+    }>,
+  };
+
+  const toDelete: string[] = [];
+
+  for (const pledge of pendingPledges) {
+    const detail = {
+      pledgeId: pledge.id,
+      user: pledge.user.name || pledge.user.email || "Unknown",
+      amount: Number(pledge.amount),
+      action: "",
+    };
+
+    // Skip pledges that have any evidence of payment
+    const hasPaymentEvidence =
+      !!pledge.stripePaymentMethodId ||
+      !!pledge.divinityCoinPaymentId ||
+      dcPaidPledgeIds.has(pledge.id) ||
+      pledge.confirmationEmailSent;
+
+    if (hasPaymentEvidence) {
+      results.skipped++;
+      detail.action = "Skipped - has payment evidence";
+      results.details.push(detail);
+      continue;
+    }
+
+    toDelete.push(pledge.id);
+    results.deleted++;
+    detail.action = "Soft-deleted (abandoned cart)";
+    results.details.push(detail);
+  }
+
+  // Permanently delete all abandoned pledges (cascades to PledgeAddon, PledgeModifierAssignment)
+  if (toDelete.length > 0) {
+    // Delete related records first that don't have onDelete: Cascade
+    await db.emailLog.deleteMany({
+      where: { pledgeId: { in: toDelete } },
+    });
+
+    // Now delete the pledges themselves (PledgeAddon and PledgeModifierAssignment cascade)
+    await db.pledge.deleteMany({
+      where: { id: { in: toDelete } },
+    });
+
+    console.log(`[Admin] Permanently deleted ${toDelete.length} abandoned cart pledges for project ${projectId}`);
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: `Permanently deleted ${results.deleted} abandoned carts, skipped ${results.skipped} with payment evidence`,
     results,
   });
 }
