@@ -202,6 +202,8 @@ export async function GET(req: NextRequest) {
               id: true,
               title: true,
               amount: true,
+              shippingType: true,
+              shippingCost: true,
             },
           },
           addons: {
@@ -212,6 +214,8 @@ export async function GET(req: NextRequest) {
                   title: true,
                   amount: true,
                   isModifier: true,
+                  shippingType: true,
+                  shippingCost: true,
                 },
               },
             },
@@ -438,24 +442,41 @@ export async function GET(req: NextRequest) {
 
     // Calculate balance due per pledge for post-campaign charge tracking
     // Balance due is stored in metadata.balanceDue when orders are edited via IndieKit
-    // Falls back to items-vs-charged comparison for pledges that haven't been edited
+    // Falls back to computed values from related reward/addon data
     const pledgesWithBalance = pledges.map(p => {
       const meta = (p.metadata as Record<string, unknown>) || {};
       const storedBalanceDue = meta.balanceDue != null ? Number(meta.balanceDue) : null;
       if (storedBalanceDue !== null) {
-        return { ...p, balanceDue: Math.max(0, Math.round(storedBalanceDue * 100) / 100) };
+        return { ...p, balanceDue: Math.round(storedBalanceDue * 100) / 100 };
       }
-      // Fallback for pledges never edited via IndieKit
+      // Compute from actual related data
       const pledgeTotal = Number(p.amount);
-      const expectedTotal = Number(p.rewardAmount) + Number(p.addonsAmount) + Number(p.shippingAmount);
-      const balanceDue = Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
+      const computedRewardAmt = p.reward ? Number(p.reward.amount) : 0;
+      const computedAddonsAmt = p.addons.reduce((sum: number, a: { amount: unknown }) => sum + Number(a.amount || 0), 0);
+      // Shipping from reward + addon per-country rates
+      const sr = surveyResponseMap.get(p.id);
+      const country = (sr?.shippingAddress as Record<string, string> | null)?.country || "";
+      let computedShipping = 0;
+      if (p.reward && (p.reward as { shippingType?: string }).shippingType !== "NO_SHIPPING" && country) {
+        const rates = ((p.reward as { shippingCost?: unknown }).shippingCost as Record<string, number>) || {};
+        computedShipping += Number(rates[country] || 0);
+      }
+      for (const pa of p.addons) {
+        const addonRec = pa as { addon: { shippingType?: string; shippingCost?: unknown }; quantity: number };
+        if (addonRec.addon.shippingType && addonRec.addon.shippingType !== "NO_SHIPPING" && country) {
+          const rates = (addonRec.addon.shippingCost as Record<string, number>) || {};
+          computedShipping += Number(rates[country] || 0) * addonRec.quantity;
+        }
+      }
+      const expectedTotal = computedRewardAmt + computedAddonsAmt + computedShipping;
+      const balanceDue = Math.round((expectedTotal - pledgeTotal) * 100) / 100;
       return { ...p, balanceDue };
     });
 
-    // Post-survey addon revenue = sum of all balance due amounts
+    // Post-survey addon revenue = sum of positive balance due amounts only
     // This represents money owed from post-campaign order edits (addon additions, shipping changes)
-    const postSurveyAddonRevenue = pledgesWithBalance.reduce((sum, p) => sum + p.balanceDue, 0);
     const backersWithBalanceDue = pledgesWithBalance.filter(p => p.balanceDue > 0);
+    const postSurveyAddonRevenue = backersWithBalanceDue.reduce((sum, p) => sum + p.balanceDue, 0);
 
     // Calculate charge stats for workflow
     // "Charge Cards" is for ADDITIONAL charges (add-ons added via survey, shipping upgrades, etc.)
@@ -557,17 +578,38 @@ export async function GET(req: NextRequest) {
       });
       const needsModifierAssignment = hasModifierAddons && modifierAssignments.length < pledge.addons.filter((a: { addon: { isModifier?: boolean } }) => a.addon.isModifier).length;
 
-      // Calculate balance fields
+      // Calculate balance fields from actual related data (not stored pledge fields which may be stale)
       const pledgeTotal = Number(pledge.amount);
-      const rewardAmt = Number(pledge.rewardAmount) || 0;
-      const addonsAmt = Number(pledge.addonsAmount) || 0;
-      const shippingAmt = Number(pledge.shippingAmount) || 0;
+
+      // Pledge level = the reward tier's price
+      const rewardAmt = pledge.reward ? Number(pledge.reward.amount) : 0;
+
+      // Addons = sum of each PledgeAddon line total (price × quantity, stored on PledgeAddon.amount)
+      const addonsAmt = pledge.addons.reduce((sum: number, a: { amount: unknown }) => {
+        return sum + Number(a.amount || 0);
+      }, 0);
+
+      // Shipping = reward shipping + addon shipping based on backer's country
+      const backerCountry = shippingAddress?.country || "";
+      let shippingAmt = 0;
+      if (pledge.reward && pledge.reward.shippingType !== "NO_SHIPPING" && backerCountry) {
+        const rewardShipRates = (pledge.reward.shippingCost as Record<string, number>) || {};
+        shippingAmt += Number(rewardShipRates[backerCountry] || 0);
+      }
+      for (const pa of pledge.addons) {
+        const addonRec = pa as { addon: { shippingType?: string; shippingCost?: unknown }; quantity: number };
+        if (addonRec.addon.shippingType && addonRec.addon.shippingType !== "NO_SHIPPING" && backerCountry) {
+          const addonShipRates = (addonRec.addon.shippingCost as Record<string, number>) || {};
+          shippingAmt += Number(addonShipRates[backerCountry] || 0) * addonRec.quantity;
+        }
+      }
+
       // Use stored balanceDue from metadata if available (set by order edits)
       const pledgeMeta = (pledge.metadata as Record<string, unknown>) || {};
       const storedBalance = pledgeMeta.balanceDue != null ? Number(pledgeMeta.balanceDue) : null;
       const balanceDue = storedBalance !== null
-        ? Math.max(0, storedBalance)
-        : Math.max(0, (rewardAmt + addonsAmt + shippingAmt) - pledgeTotal);
+        ? storedBalance
+        : (rewardAmt + addonsAmt + shippingAmt) - pledgeTotal;
 
       // Determine charge status
       let chargeStatus: "not_charged" | "errored" | "charged" | "paypal_collected" = "not_charged";
