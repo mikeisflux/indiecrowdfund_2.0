@@ -453,19 +453,30 @@ export async function GET(req: NextRequest) {
       const pledgeTotal = Number(p.amount);
       const computedRewardAmt = p.reward ? Number(p.reward.amount) : 0;
       const computedAddonsAmt = p.addons.reduce((sum: number, a: { amount: unknown }) => sum + Number(a.amount || 0), 0);
-      // Shipping from reward + addon per-country rates
+      // Shipping: use stored pledge.shippingAmount, fallback to computed rates
       const sr = surveyResponseMap.get(p.id);
       const country = (sr?.shippingAddress as Record<string, string> | null)?.country || "";
-      let computedShipping = 0;
-      if (p.reward && (p.reward as { shippingType?: string }).shippingType !== "NO_SHIPPING" && country) {
-        const rates = ((p.reward as { shippingCost?: unknown }).shippingCost as Record<string, number>) || {};
-        computedShipping += Number(rates[country] || 0);
-      }
-      for (const pa of p.addons) {
-        const addonRec = pa as { addon: { shippingType?: string; shippingCost?: unknown }; quantity: number };
-        if (addonRec.addon.shippingType && addonRec.addon.shippingType !== "NO_SHIPPING" && country) {
-          const rates = (addonRec.addon.shippingCost as Record<string, number>) || {};
-          computedShipping += Number(rates[country] || 0) * addonRec.quantity;
+      const storedShip = Number(p.shippingAmount) || 0;
+      let computedShipping = storedShip;
+      if (computedShipping === 0) {
+        const getShipCost = (shipType: string, shipCost: unknown) => {
+          if (shipType === "NO_SHIPPING") return 0;
+          const rates = (shipCost as Record<string, number>) || {};
+          if (typeof shipCost === "number") return shipCost;
+          if (shipType === "WORLDWIDE") return Number(rates["WORLDWIDE"] || 0);
+          if (country && rates[country] !== undefined) return Number(rates[country]);
+          if (rates["WW"] !== undefined) return Number(rates["WW"]);
+          return 0;
+        };
+        if (p.reward) {
+          const rw = p.reward as { shippingType?: string; shippingCost?: unknown };
+          if (rw.shippingType) computedShipping += getShipCost(rw.shippingType, rw.shippingCost);
+        }
+        for (const pa of p.addons) {
+          const addonRec = pa as { addon: { shippingType?: string; shippingCost?: unknown }; quantity: number };
+          if (addonRec.addon.shippingType) {
+            computedShipping += getShipCost(addonRec.addon.shippingType, addonRec.addon.shippingCost) * addonRec.quantity;
+          }
         }
       }
       const expectedTotal = computedRewardAmt + computedAddonsAmt + computedShipping;
@@ -589,18 +600,33 @@ export async function GET(req: NextRequest) {
         return sum + Number(a.amount || 0);
       }, 0);
 
-      // Shipping = reward shipping + addon shipping based on backer's country
-      const backerCountry = shippingAddress?.country || "";
-      let shippingAmt = 0;
-      if (pledge.reward && pledge.reward.shippingType !== "NO_SHIPPING" && backerCountry) {
-        const rewardShipRates = (pledge.reward.shippingCost as Record<string, number>) || {};
-        shippingAmt += Number(rewardShipRates[backerCountry] || 0);
-      }
-      for (const pa of pledge.addons) {
-        const addonRec = pa as { addon: { shippingType?: string; shippingCost?: unknown }; quantity: number };
-        if (addonRec.addon.shippingType && addonRec.addon.shippingType !== "NO_SHIPPING" && backerCountry) {
-          const addonShipRates = (addonRec.addon.shippingCost as Record<string, number>) || {};
-          shippingAmt += Number(addonShipRates[backerCountry] || 0) * addonRec.quantity;
+      // Shipping: use stored pledge.shippingAmount (set during checkout) as primary source
+      // If it's 0, try computing from reward/addon shippingCost rates as fallback
+      const storedShipping = Number(pledge.shippingAmount) || 0;
+      let shippingAmt = storedShipping;
+      if (shippingAmt === 0) {
+        // Fallback: compute from reward/addon shipping rates
+        const backerCountry = shippingAddress?.country || "";
+        const getShipCost = (shipType: string, shipCost: unknown) => {
+          if (shipType === "NO_SHIPPING") return 0;
+          const rates = (shipCost as Record<string, number>) || {};
+          if (typeof shipCost === "number") return shipCost;
+          if (shipType === "WORLDWIDE") return Number(rates["WORLDWIDE"] || 0);
+          if (backerCountry && rates[backerCountry] !== undefined) return Number(rates[backerCountry]);
+          if (rates["WW"] !== undefined) return Number(rates["WW"]);
+          return 0;
+        };
+        if (pledge.reward) {
+          shippingAmt += getShipCost(
+            pledge.reward.shippingType,
+            pledge.reward.shippingCost
+          );
+        }
+        for (const pa of pledge.addons) {
+          const addonRec = pa as { addon: { shippingType?: string; shippingCost?: unknown }; quantity: number };
+          if (addonRec.addon.shippingType) {
+            shippingAmt += getShipCost(addonRec.addon.shippingType, addonRec.addon.shippingCost) * addonRec.quantity;
+          }
         }
       }
 
