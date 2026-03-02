@@ -86,6 +86,9 @@ export function ActiveProjectPanel({
       if (response.ok) {
         if (data.results.total === 0) {
           setProcessMessage("No pending pledges to process");
+        } else if (data.results.reconciled !== undefined) {
+          // DivinityCoin response format
+          setProcessMessage(`Processed ${data.results.total} pledges: ${data.results.reconciled} reconciled to COMPLETED, ${data.results.abandoned} abandoned carts`);
         } else {
           setProcessMessage(`Processed ${data.results.successful}/${data.results.total} pledges successfully`);
         }
@@ -144,6 +147,14 @@ export function ActiveProjectPanel({
       if (response.ok) {
         if (data.results.total === 0) {
           setVerifyMessage("No pending immediate-charge pledges to verify");
+        } else if (data.results.abandoned !== undefined) {
+          // DivinityCoin response format
+          setVerifyMessage(
+            `Verified ${data.results.verified}/${data.results.total}: ${data.results.alreadySucceeded} completed, ${data.results.abandoned} abandoned carts`
+          );
+          if (data.results.alreadySucceeded > 0) {
+            handleSyncStats();
+          }
         } else {
           setVerifyMessage(
             `Verified ${data.results.verified}/${data.results.total}: ${data.results.alreadySucceeded} completed, ${data.results.failed} failed`
@@ -445,7 +456,11 @@ export function ActiveProjectPanel({
                 ) : (
                   <CreditCard className="mr-2 h-4 w-4" />
                 )}
-                {isProcessingPledges ? "Processing..." : "Process Pending Pledges"}
+                {isProcessingPledges
+                  ? "Processing..."
+                  : project.paymentProcessor === "DIVINITYCOIN"
+                    ? "Reconcile Pending DC Pledges"
+                    : "Process Pending Pledges"}
               </Button>
               {processMessage && (
                 <p className={`text-sm mt-2 ${processMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
