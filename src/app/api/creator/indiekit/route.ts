@@ -447,10 +447,7 @@ export async function GET(req: NextRequest) {
       }
       // Compute from actual related data
       const pledgeTotal = Number(p.amount);
-      const computedRewardAmt = p.reward ? Number(p.reward.amount) : 0;
-      const computedAddonsAmt = p.addons.reduce((sum: number, a: { amount: unknown }) => sum + Number(a.amount || 0), 0);
-      const computedShipping = Number(p.shippingAmount) || 0;
-      const expectedTotal = computedRewardAmt + computedAddonsAmt + computedShipping;
+      const expectedTotal = Number(p.rewardAmount) + Number(p.addonsAmount) + Number(p.shippingAmount);
       const balanceDue = Math.round((expectedTotal - pledgeTotal) * 100) / 100;
       return { ...p, balanceDue };
     });
@@ -560,18 +557,10 @@ export async function GET(req: NextRequest) {
       });
       const needsModifierAssignment = hasModifierAddons && modifierAssignments.length < pledge.addons.filter((a: { addon: { isModifier?: boolean } }) => a.addon.isModifier).length;
 
-      // Calculate balance fields from actual related data (not stored pledge fields which may be stale)
+      // Balance fields - all stored on the pledge at checkout
       const pledgeTotal = Number(pledge.amount);
-
-      // Pledge level = the reward tier's price
-      const rewardAmt = pledge.reward ? Number(pledge.reward.amount) : 0;
-
-      // Addons = sum of each PledgeAddon line total (price × quantity, stored on PledgeAddon.amount)
-      const addonsAmt = pledge.addons.reduce((sum: number, a: { amount: unknown }) => {
-        return sum + Number(a.amount || 0);
-      }, 0);
-
-      // Shipping = what the customer paid, stored on the pledge at checkout
+      const rewardAmt = Number(pledge.rewardAmount) || 0;
+      const addonsAmt = Number(pledge.addonsAmount) || 0;
       const shippingAmt = Number(pledge.shippingAmount) || 0;
 
       // Use stored balanceDue from metadata if available (set by order edits)
