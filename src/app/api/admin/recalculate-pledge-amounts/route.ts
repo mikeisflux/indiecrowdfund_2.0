@@ -124,10 +124,13 @@ export async function POST(req: NextRequest) {
 async function findMismatchedPledges(
   projectId: string | null
 ): Promise<PledgeFix[]> {
-  // Get all COMPLETED pledges with their reward and addon data
+  // Get all COMPLETED pledges that have a reward tier, with their addon data
+  // Skip no-reward pledges - they don't have a meaningful amount breakdown
+  // Skip PENDING pledges - those are likely abandoned carts
   const pledges = await db.pledge.findMany({
     where: {
       status: "COMPLETED",
+      rewardId: { not: null },
       ...(projectId ? { projectId } : {}),
     },
     include: {
