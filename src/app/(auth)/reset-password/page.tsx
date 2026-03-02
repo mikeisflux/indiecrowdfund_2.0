@@ -5,8 +5,8 @@ import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { Loader2, Sparkles, ShieldCheck } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Reset Password | IndieCrowdfund",
-  description: "Create a new password for your IndieCrowdfund account",
+  title: "Reset Password",
+  description: "Create a new password for your IndieCrowdfund account.",
 };
 
 function ResetPasswordFormFallback() {

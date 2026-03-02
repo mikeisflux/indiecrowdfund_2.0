@@ -1,0 +1,16 @@
+{
+  "name": "IndieCrowdfund - Crowdfunding for Independent Creators",
+  "short_name": "IndieCrowdfund",
+  "description": "The best Kickstarter alternative. Launch crowdfunding campaigns, fund creative projects, and join a community of independent creators.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

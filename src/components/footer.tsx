@@ -8,7 +8,7 @@ export function Footer() {
           <div>
             <h4 className="mb-4 font-semibold">IndieCrowdfund</h4>
             <p className="text-sm text-muted-foreground">
-              Empowering creators to bring their ideas to life through community funding.
+              The best Kickstarter alternative for independent creators. Crowdfund your creative projects with lower fees, better tools, and a passionate backer community.
             </p>
           </div>
           <div>
@@ -52,6 +52,7 @@ export function Footer() {
               <li><Link href="/about-us" className="hover:text-foreground">About Us</Link></li>
               <li><Link href="/terms" className="hover:text-foreground">Terms of Service</Link></li>
               <li><Link href="/privacy" className="hover:text-foreground">Privacy Policy</Link></li>
+              <li><Link href="/trust-safety" className="hover:text-foreground">Trust & Safety</Link></li>
             </ul>
           </div>
         </div>

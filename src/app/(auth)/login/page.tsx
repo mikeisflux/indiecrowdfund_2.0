@@ -5,8 +5,8 @@ import { LoginForm } from "@/components/auth/login-form";
 import { Loader2, Sparkles } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Sign In | IndieCrowdfund",
-  description: "Sign in to your IndieCrowdfund account",
+  title: "Sign In to Your Account",
+  description: "Sign in to your IndieCrowdfund account to manage campaigns, back projects, and track your crowdfunding activity.",
 };
 
 function LoginFormFallback() {

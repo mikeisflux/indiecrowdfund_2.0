@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -23,11 +24,23 @@ import {
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { HeroSlider } from "@/components/hero-slider";
+import { JsonLd } from "@/components/json-ld";
 import { getPlatformStats, getRetailerStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
 import { formatTimeRemaining } from "@/lib/utils";
 import { auth } from "@/lib/auth";
+
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.com";
+
+export const metadata: Metadata = {
+  title: "IndieCrowdfund - The #1 Kickstarter Alternative | Crowdfunding for Creators",
+  description:
+    "IndieCrowdfund is the best Kickstarter alternative for crowdfunding creative projects. Lower fees, better tools, and a passionate backer community. Launch your campaign today and bring your idea to life.",
+  alternates: {
+    canonical: SITE_URL,
+  },
+};
 
 // Revalidate homepage every 60 seconds.
 // Note: auth() uses cookies() which opts into dynamic rendering at request time.
@@ -314,7 +327,47 @@ export default async function HomePage() {
   ]);
 
   return (
-    <div className="min-h-screen relative">
+    <main className="min-h-screen relative">
+      <h1 className="sr-only">IndieCrowdfund - The Best Kickstarter Alternative for Crowdfunding Creative Projects</h1>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "IndieCrowdfund",
+          url: SITE_URL,
+          logo: `${SITE_URL}/favicon.ico`,
+          description:
+            "IndieCrowdfund is the best Kickstarter alternative — a crowdfunding platform built for independent creators with lower fees and better tools.",
+          sameAs: [],
+          foundingDate: "2024",
+          knowsAbout: [
+            "Crowdfunding",
+            "Creative Projects",
+            "Independent Creators",
+            "Comic Book Funding",
+            "Kickstarter Alternative",
+          ],
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "IndieCrowdfund",
+          url: SITE_URL,
+          description:
+            "The best Kickstarter alternative for crowdfunding creative projects. Launch campaigns, fund ideas, and join a community of independent creators.",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: {
+              "@type": "EntryPoint",
+              urlTemplate: `${SITE_URL}/discover?q={search_term_string}`,
+            },
+            "query-input": "required name=search_term_string",
+          },
+        }}
+      />
+
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/20" />
@@ -787,6 +840,6 @@ export default async function HomePage() {
       </section>
 
       <Footer />
-    </div>
+    </main>
   );
 }

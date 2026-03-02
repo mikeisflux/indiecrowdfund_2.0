@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,6 +26,17 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
+
+export const metadata: Metadata = {
+  title: "Help Center - Support for Creators & Backers",
+  description:
+    "Get help with IndieCrowdfund. Find answers about crowdfunding campaigns, backing projects, payments, rewards, and more. 24/7 creator and backer support.",
+  openGraph: {
+    title: "IndieCrowdfund Help Center",
+    description:
+      "Find answers and get support for your crowdfunding experience on IndieCrowdfund.",
+  },
+};
 
 const categories = [
   {

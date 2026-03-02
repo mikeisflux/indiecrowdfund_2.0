@@ -4,8 +4,9 @@ import { auth } from "@/lib/auth";
 import { NewProjectWrapper } from "@/components/project/builder/new-project-wrapper";
 
 export const metadata: Metadata = {
-  title: "Create Project | IndieCrowdfund",
-  description: "Start your crowdfunding campaign and bring your creative project to life",
+  title: "Start a Crowdfunding Campaign - Create Your Project",
+  description:
+    "Launch your crowdfunding campaign on IndieCrowdfund, the best Kickstarter alternative. Set your funding goal, create reward tiers, and bring your creative project to life.",
 };
 
 export default async function NewProjectPage() {

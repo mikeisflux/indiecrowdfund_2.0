@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,17 @@ import {
 import { getRetailerStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { Footer } from "@/components/footer";
+
+export const metadata: Metadata = {
+  title: "Retailer Program - Partner with IndieCrowdfund",
+  description:
+    "Join the IndieCrowdfund retailer program. Local comic shops and retailers can partner with us to stock indie creator products, earn commissions, and grow their business.",
+  openGraph: {
+    title: "IndieCrowdfund Retailer Program",
+    description:
+      "Partner with IndieCrowdfund as a certified retailer. Stock indie creator products and grow your business.",
+  },
+};
 
 const features = [
   {

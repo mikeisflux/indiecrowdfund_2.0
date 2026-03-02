@@ -25,10 +25,83 @@ const geistMono = localFont({
   display: "swap",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.com";
+
 export const metadata: Metadata = {
-  title: "IndieCrowdfund - Fund Creative Projects",
-  description: "A modern crowdfunding platform for creative projects. Back innovative ideas or launch your own campaign.",
-  keywords: ["crowdfunding", "creative projects", "funding", "backing", "campaigns"],
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "IndieCrowdfund - The Best Kickstarter Alternative for Independent Creators",
+    template: "%s | IndieCrowdfund",
+  },
+  description:
+    "IndieCrowdfund is the best Kickstarter alternative for crowdfunding creative projects. Launch your campaign, fund innovative ideas, and join a community of independent creators and backers. Better than Kickstarter with lower fees and more flexibility.",
+  keywords: [
+    "crowdfunding",
+    "Kickstarter alternative",
+    "better than Kickstarter",
+    "crowdfunding platform",
+    "fund creative projects",
+    "independent creators",
+    "crowdfunding for creators",
+    "back projects online",
+    "crowdfunding campaigns",
+    "IndieCrowdfund",
+    "indie crowdfunding",
+    "creative project funding",
+    "crowdfunding website",
+    "launch a campaign",
+    "backer community",
+    "alternative to Kickstarter",
+    "alternative to Indiegogo",
+    "crowdfund your idea",
+    "comic book crowdfunding",
+    "indie comics funding",
+  ],
+  authors: [{ name: "IndieCrowdfund" }],
+  creator: "IndieCrowdfund",
+  publisher: "IndieCrowdfund",
+  formatDetection: {
+    email: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: SITE_URL,
+    siteName: "IndieCrowdfund",
+    title: "IndieCrowdfund - The Best Kickstarter Alternative for Independent Creators",
+    description:
+      "The crowdfunding platform built for independent creators. Launch your campaign with lower fees, better tools, and a supportive community. Better than Kickstarter.",
+    images: [
+      {
+        url: "/og-default.png",
+        width: 1200,
+        height: 630,
+        alt: "IndieCrowdfund - Crowdfunding for Independent Creators",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "IndieCrowdfund - The Best Kickstarter Alternative",
+    description:
+      "The crowdfunding platform built for independent creators. Launch your campaign with lower fees, better tools, and a supportive community.",
+    images: ["/og-default.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
 };
 
 export default async function RootLayout({
@@ -75,6 +148,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >

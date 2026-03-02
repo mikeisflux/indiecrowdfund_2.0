@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,17 @@ import {
 import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
+
+export const metadata: Metadata = {
+  title: "Success Stories - Funded Crowdfunding Campaigns",
+  description:
+    "See real success stories from creators who funded their projects on IndieCrowdfund. Discover how independent creators brought their ideas to life with crowdfunding. Better results than Kickstarter.",
+  openGraph: {
+    title: "IndieCrowdfund Success Stories",
+    description:
+      "Real creators, real projects, real funding success. See why IndieCrowdfund is the best Kickstarter alternative for independent creators.",
+  },
+};
 
 // Force dynamic rendering to ensure database is available
 export const dynamic = "force-dynamic";

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +18,12 @@ import {
   Calendar,
   GitCommit,
 } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Changelog - Platform Updates & New Features",
+  description:
+    "Stay up to date with the latest IndieCrowdfund platform updates, new features, bug fixes, and improvements.",
+};
 
 export const dynamic = "force-dynamic";
 

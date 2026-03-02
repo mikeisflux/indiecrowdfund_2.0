@@ -4,8 +4,8 @@ import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 import { Sparkles, ArrowLeft, KeyRound } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Forgot Password | IndieCrowdfund",
-  description: "Reset your IndieCrowdfund password",
+  title: "Forgot Password",
+  description: "Reset your IndieCrowdfund account password. Enter your email to receive a password reset link.",
 };
 
 export default function ForgotPasswordPage() {

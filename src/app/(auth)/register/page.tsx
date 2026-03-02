@@ -5,8 +5,8 @@ import { RegisterForm } from "@/components/auth/register-form";
 import { Loader2, Sparkles, Rocket, Users, Gift } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Create Account | IndieCrowdfund",
-  description: "Create your IndieCrowdfund account to start funding or backing creative projects",
+  title: "Create Your Free Account - Start Crowdfunding Today",
+  description: "Join IndieCrowdfund for free. Create your account to launch crowdfunding campaigns or back creative projects from independent creators. The best Kickstarter alternative.",
 };
 
 function RegisterFormFallback() {

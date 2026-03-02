@@ -96,10 +96,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : `${baseUrl}/og-default.png`;
 
   return {
-    title: `${project.title} | IndieCrowdfund`,
+    title: `${project.title} - Crowdfunding Campaign`,
     description: plainDescription,
+    alternates: {
+      canonical: projectUrl,
+    },
     openGraph: {
-      title: project.title,
+      title: `${project.title} - Back This Project on IndieCrowdfund`,
       description: plainDescription,
       url: projectUrl,
       siteName: "IndieCrowdfund",
@@ -115,7 +118,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: project.title,
+      title: `${project.title} - Back This Project on IndieCrowdfund`,
       description: plainDescription,
       images: [imageUrl],
     },
