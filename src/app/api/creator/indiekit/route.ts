@@ -202,8 +202,6 @@ export async function GET(req: NextRequest) {
               id: true,
               title: true,
               amount: true,
-              shippingType: true,
-              shippingCost: true,
             },
           },
           addons: {
@@ -214,8 +212,6 @@ export async function GET(req: NextRequest) {
                   title: true,
                   amount: true,
                   isModifier: true,
-                  shippingType: true,
-                  shippingCost: true,
                 },
               },
             },
@@ -453,32 +449,7 @@ export async function GET(req: NextRequest) {
       const pledgeTotal = Number(p.amount);
       const computedRewardAmt = p.reward ? Number(p.reward.amount) : 0;
       const computedAddonsAmt = p.addons.reduce((sum: number, a: { amount: unknown }) => sum + Number(a.amount || 0), 0);
-      // Shipping: use stored pledge.shippingAmount, fallback to computed rates
-      const sr = surveyResponseMap.get(p.id);
-      const country = (sr?.shippingAddress as Record<string, string> | null)?.country || "";
-      const storedShip = Number(p.shippingAmount) || 0;
-      let computedShipping = storedShip;
-      if (computedShipping === 0) {
-        const getShipCost = (shipType: string, shipCost: unknown) => {
-          if (shipType === "NO_SHIPPING") return 0;
-          const rates = (shipCost as Record<string, number>) || {};
-          if (typeof shipCost === "number") return shipCost;
-          if (shipType === "WORLDWIDE") return Number(rates["WORLDWIDE"] || 0);
-          if (country && rates[country] !== undefined) return Number(rates[country]);
-          if (rates["WW"] !== undefined) return Number(rates["WW"]);
-          return 0;
-        };
-        if (p.reward) {
-          const rw = p.reward as { shippingType?: string; shippingCost?: unknown };
-          if (rw.shippingType) computedShipping += getShipCost(rw.shippingType, rw.shippingCost);
-        }
-        for (const pa of p.addons) {
-          const addonRec = pa as { addon: { shippingType?: string; shippingCost?: unknown }; quantity: number };
-          if (addonRec.addon.shippingType) {
-            computedShipping += getShipCost(addonRec.addon.shippingType, addonRec.addon.shippingCost) * addonRec.quantity;
-          }
-        }
-      }
+      const computedShipping = Number(p.shippingAmount) || 0;
       const expectedTotal = computedRewardAmt + computedAddonsAmt + computedShipping;
       const balanceDue = Math.round((expectedTotal - pledgeTotal) * 100) / 100;
       return { ...p, balanceDue };
@@ -600,35 +571,8 @@ export async function GET(req: NextRequest) {
         return sum + Number(a.amount || 0);
       }, 0);
 
-      // Shipping: use stored pledge.shippingAmount (set during checkout) as primary source
-      // If it's 0, try computing from reward/addon shippingCost rates as fallback
-      const storedShipping = Number(pledge.shippingAmount) || 0;
-      let shippingAmt = storedShipping;
-      if (shippingAmt === 0) {
-        // Fallback: compute from reward/addon shipping rates
-        const backerCountry = shippingAddress?.country || "";
-        const getShipCost = (shipType: string, shipCost: unknown) => {
-          if (shipType === "NO_SHIPPING") return 0;
-          const rates = (shipCost as Record<string, number>) || {};
-          if (typeof shipCost === "number") return shipCost;
-          if (shipType === "WORLDWIDE") return Number(rates["WORLDWIDE"] || 0);
-          if (backerCountry && rates[backerCountry] !== undefined) return Number(rates[backerCountry]);
-          if (rates["WW"] !== undefined) return Number(rates["WW"]);
-          return 0;
-        };
-        if (pledge.reward) {
-          shippingAmt += getShipCost(
-            pledge.reward.shippingType,
-            pledge.reward.shippingCost
-          );
-        }
-        for (const pa of pledge.addons) {
-          const addonRec = pa as { addon: { shippingType?: string; shippingCost?: unknown }; quantity: number };
-          if (addonRec.addon.shippingType) {
-            shippingAmt += getShipCost(addonRec.addon.shippingType, addonRec.addon.shippingCost) * addonRec.quantity;
-          }
-        }
-      }
+      // Shipping = what the customer paid, stored on the pledge at checkout
+      const shippingAmt = Number(pledge.shippingAmount) || 0;
 
       // Use stored balanceDue from metadata if available (set by order edits)
       const pledgeMeta = (pledge.metadata as Record<string, unknown>) || {};
