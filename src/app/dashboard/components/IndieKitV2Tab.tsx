@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
+import { InitialProjectIdContext } from "@/app/dashboard/indiekit-v2/constants";
 
 // Lazy-load the full IndieKit V2 page component to keep the main dashboard bundle small
 const IndieKitV2Page = dynamic(
@@ -20,23 +21,25 @@ interface IndieKitV2TabProps {
 }
 
 export function IndieKitV2Tab({ projectId }: IndieKitV2TabProps) {
-  // The IndieKit V2 page reads projectId from URL params and localStorage.
-  // Since we're embedding it, ensure localStorage is set so it picks up the right project.
+  // Pass projectId via context so the embedded page uses the dashboard's
+  // selected project instead of relying on URL params or localStorage.
   if (typeof window !== "undefined" && projectId) {
     localStorage.setItem("indiecrowdfund_selected_project", projectId);
   }
 
   return (
-    <div className="indiekit-v2-embedded -mx-4 sm:-mx-6 lg:-mx-8">
-      <style jsx>{`
-        .indiekit-v2-embedded :global(header.sticky) {
-          display: none !important;
-        }
-        .indiekit-v2-embedded :global(.floating-orb) {
-          display: none !important;
-        }
-      `}</style>
-      <IndieKitV2Page />
-    </div>
+    <InitialProjectIdContext.Provider value={projectId}>
+      <div className="indiekit-v2-embedded -mx-4 sm:-mx-6 lg:-mx-8">
+        <style jsx>{`
+          .indiekit-v2-embedded :global(header.sticky) {
+            display: none !important;
+          }
+          .indiekit-v2-embedded :global(.floating-orb) {
+            display: none !important;
+          }
+        `}</style>
+        <IndieKitV2Page />
+      </div>
+    </InitialProjectIdContext.Provider>
   );
 }

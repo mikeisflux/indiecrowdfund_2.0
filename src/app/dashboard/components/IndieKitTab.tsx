@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
+import { InitialProjectIdContext } from "@/app/dashboard/indiekit-v2/constants";
 
 // Lazy-load the full IndieKit page component
 const IndieKitPage = dynamic(
@@ -25,16 +26,18 @@ export function IndieKitTab({ projectId }: IndieKitTabProps) {
   }
 
   return (
-    <div className="indiekit-embedded -mx-4 sm:-mx-6 lg:-mx-8">
-      <style jsx>{`
-        .indiekit-embedded :global(header.sticky) {
-          display: none !important;
-        }
-        .indiekit-embedded :global(.floating-orb) {
-          display: none !important;
-        }
-      `}</style>
-      <IndieKitPage />
-    </div>
+    <InitialProjectIdContext.Provider value={projectId}>
+      <div className="indiekit-embedded -mx-4 sm:-mx-6 lg:-mx-8">
+        <style jsx>{`
+          .indiekit-embedded :global(header.sticky) {
+            display: none !important;
+          }
+          .indiekit-embedded :global(.floating-orb) {
+            display: none !important;
+          }
+        `}</style>
+        <IndieKitPage />
+      </div>
+    </InitialProjectIdContext.Provider>
   );
 }

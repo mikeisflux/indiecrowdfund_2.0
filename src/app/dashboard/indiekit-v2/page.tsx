@@ -76,7 +76,7 @@ import type {
   PhaseTab,
 } from "./types";
 import { WORKFLOW_STEPS, SHIPPING_SERVICES } from "../indiekit/constants";
-import { SELECTED_PROJECT_KEY } from "./constants";
+import { SELECTED_PROJECT_KEY, useInitialProjectId } from "./constants";
 
 // Import dialogs directly from v1
 import {
@@ -151,6 +151,7 @@ const POST_FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementT
 
 export default function IndieKitV2Page() {
   const searchParams = useSearchParams();
+  const initialProjectId = useInitialProjectId();
   // Navigation state
   const [activeSection, setActiveSection] = useState<"always" | "phase">("always");
   const [activeAlwaysTab, setActiveAlwaysTab] = useState<AlwaysAvailableTab>("dashboard");
@@ -281,14 +282,15 @@ export default function IndieKitV2Page() {
   }, [selectedProjectId]);
 
   useEffect(() => {
+    // Priority: prop from parent (when embedded) > URL param > localStorage
     const urlProject = searchParams?.get("project");
-    const savedProjectId = urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
+    const savedProjectId = initialProjectId || urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
     if (savedProjectId) {
       setSelectedProjectId(savedProjectId);
       localStorage.setItem(SELECTED_PROJECT_KEY, savedProjectId);
     }
     setIsInitialized(true);
-  }, [searchParams]);
+  }, [searchParams, initialProjectId]);
 
   useEffect(() => {
     if (isInitialized) {

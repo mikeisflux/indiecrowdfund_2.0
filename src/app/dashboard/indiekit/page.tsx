@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { InitialProjectIdContext } from "@/app/dashboard/indiekit-v2/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -128,6 +129,7 @@ const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
 export default function IndieKitPage() {
   const searchParams = useSearchParams();
+  const initialProjectId = useContext(InitialProjectIdContext);
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -305,17 +307,17 @@ export default function IndieKitPage() {
     }
   }, [selectedProjectId]);
 
-  // Load selected project from URL param or localStorage on mount and mark as initialized
+  // Load selected project from prop (when embedded) > URL param > localStorage
   useEffect(() => {
     const urlProject = searchParams?.get("project");
-    const savedProjectId = urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
+    const savedProjectId = initialProjectId || urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
     if (savedProjectId) {
       setSelectedProjectId(savedProjectId);
       localStorage.setItem(SELECTED_PROJECT_KEY, savedProjectId);
     }
     // Mark as initialized after reading (even if no saved project)
     setIsInitialized(true);
-  }, [searchParams]);
+  }, [searchParams, initialProjectId]);
 
   // Only fetch data after initialization from localStorage is complete
   useEffect(() => {
