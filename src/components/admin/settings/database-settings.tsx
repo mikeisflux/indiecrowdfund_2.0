@@ -35,6 +35,7 @@ import {
   Trash2,
   Plus,
   HardDrive,
+  Calculator,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -90,6 +91,13 @@ export function DatabaseSettings() {
   const [buildBackups, setBuildBackups] = useState<BuildBackup[]>([]);
   const [isLoadingBuildBackups, setIsLoadingBuildBackups] = useState(false);
   const [deleteBuildConfirm, setDeleteBuildConfirm] = useState<string | null>(null);
+
+  // Recalculate pledge amounts state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [recalcResults, setRecalcResults] = useState<any>(null);
+  const [isRecalcScanning, setIsRecalcScanning] = useState(false);
+  const [isRecalcApplying, setIsRecalcApplying] = useState(false);
+  const [showRecalcConfirm, setShowRecalcConfirm] = useState(false);
 
   const fetchStatus = useCallback(async (showRefreshing = false) => {
     try {
@@ -296,6 +304,47 @@ export function DatabaseSettings() {
       toast.error(String(err));
     } finally {
       setDeleteBuildConfirm(null);
+    }
+  };
+
+  const recalcScan = async () => {
+    try {
+      setIsRecalcScanning(true);
+      setRecalcResults(null);
+      const response = await fetch("/api/admin/recalculate-pledge-amounts");
+      if (!response.ok) throw new Error("Failed to scan pledge amounts");
+      const result = await response.json();
+      setRecalcResults(result);
+      if (result.totalFound === 0) {
+        toast.success("All pledge amounts are correct!");
+      } else {
+        toast.info(`Found ${result.totalFound} pledges needing correction`);
+      }
+    } catch (err) {
+      console.error("Error scanning pledge amounts:", err);
+      toast.error(String(err));
+    } finally {
+      setIsRecalcScanning(false);
+    }
+  };
+
+  const recalcApply = async () => {
+    try {
+      setIsRecalcApplying(true);
+      setShowRecalcConfirm(false);
+      const response = await fetch("/api/admin/recalculate-pledge-amounts", {
+        method: "POST",
+        headers: getCSRFHeaders(),
+      });
+      if (!response.ok) throw new Error("Failed to apply pledge amount fixes");
+      const result = await response.json();
+      toast.success(result.message);
+      setRecalcResults(null);
+    } catch (err) {
+      console.error("Error applying pledge amount fixes:", err);
+      toast.error(String(err));
+    } finally {
+      setIsRecalcApplying(false);
     }
   };
 
@@ -638,6 +687,160 @@ export function DatabaseSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Recalculate Pledge Amounts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            Recalculate Pledge Amounts
+          </CardTitle>
+          <CardDescription>
+            Scan for pledges where rewardAmount, addonsAmount, or shippingAmount don&apos;t match
+            the actual reward tier price and addon records. Preview changes before applying.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={recalcScan}
+              disabled={isRecalcScanning || isRecalcApplying}
+            >
+              {isRecalcScanning ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Scanning...</>
+              ) : (
+                <><Calculator className="h-4 w-4 mr-2" /> Scan for Mismatches</>
+              )}
+            </Button>
+            {recalcResults && recalcResults.totalFound > 0 && (
+              <Button
+                variant="default"
+                onClick={() => setShowRecalcConfirm(true)}
+                disabled={isRecalcApplying}
+              >
+                {isRecalcApplying ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Applying...</>
+                ) : (
+                  <>Apply {recalcResults.fixes.filter((f: { warning?: string }) => !f.warning).length} Fixes</>
+                )}
+              </Button>
+            )}
+          </div>
+
+          {recalcResults && recalcResults.totalFound > 0 && (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted px-4 py-2 text-sm font-medium">
+                {recalcResults.totalFound} pledges with mismatched amounts
+                {recalcResults.fixes.some((f: { warning?: string }) => f.warning) && (
+                  <span className="text-amber-600 ml-2">
+                    ({recalcResults.fixes.filter((f: { warning?: string }) => f.warning).length} skipped with warnings)
+                  </span>
+                )}
+              </div>
+              <div className="max-h-96 overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Backer</th>
+                      <th className="px-3 py-2 text-left">Project</th>
+                      <th className="px-3 py-2 text-right">Total</th>
+                      <th className="px-3 py-2 text-right">Reward</th>
+                      <th className="px-3 py-2 text-right">Addons</th>
+                      <th className="px-3 py-2 text-right">Shipping</th>
+                      <th className="px-3 py-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {recalcResults.fixes.map((fix: {
+                      pledgeId: string;
+                      backerNumber: number | null;
+                      backerEmail: string;
+                      projectTitle: string;
+                      totalAmount: number;
+                      current: { rewardAmount: number; addonsAmount: number; shippingAmount: number };
+                      corrected: { rewardAmount: number; addonsAmount: number; shippingAmount: number };
+                      warning?: string;
+                    }) => (
+                      <tr key={fix.pledgeId} className={fix.warning ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
+                        <td className="px-3 py-2">
+                          <div className="font-medium">#{fix.backerNumber ?? "?"}</div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[150px]">{fix.backerEmail}</div>
+                        </td>
+                        <td className="px-3 py-2 truncate max-w-[150px]">{fix.projectTitle}</td>
+                        <td className="px-3 py-2 text-right font-mono">${fix.totalAmount.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-right font-mono">
+                          {fix.current.rewardAmount !== fix.corrected.rewardAmount ? (
+                            <><span className="line-through text-red-500">${fix.current.rewardAmount.toFixed(2)}</span> <span className="text-green-600">${fix.corrected.rewardAmount.toFixed(2)}</span></>
+                          ) : (
+                            <span>${fix.corrected.rewardAmount.toFixed(2)}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono">
+                          {fix.current.addonsAmount !== fix.corrected.addonsAmount ? (
+                            <><span className="line-through text-red-500">${fix.current.addonsAmount.toFixed(2)}</span> <span className="text-green-600">${fix.corrected.addonsAmount.toFixed(2)}</span></>
+                          ) : (
+                            <span>${fix.corrected.addonsAmount.toFixed(2)}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono">
+                          {fix.current.shippingAmount !== fix.corrected.shippingAmount ? (
+                            <><span className="line-through text-red-500">${fix.current.shippingAmount.toFixed(2)}</span> <span className="text-green-600">${fix.corrected.shippingAmount.toFixed(2)}</span></>
+                          ) : (
+                            <span>${fix.corrected.shippingAmount.toFixed(2)}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {fix.warning ? (
+                            <span className="text-amber-600 text-xs flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" /> Skip
+                            </span>
+                          ) : (
+                            <span className="text-green-600 text-xs flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" /> Fix
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {recalcResults && recalcResults.totalFound === 0 && (
+            <div className="flex items-center gap-2 text-green-600 text-sm">
+              <CheckCircle className="h-4 w-4" />
+              All pledge amounts are correct. Nothing to fix.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recalculate Confirmation Dialog */}
+      <AlertDialog open={showRecalcConfirm} onOpenChange={setShowRecalcConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apply Pledge Amount Fixes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will update <strong>{recalcResults?.fixes.filter((f: { warning?: string }) => !f.warning).length}</strong> pledge
+              records with corrected rewardAmount, addonsAmount, and shippingAmount values.
+              {recalcResults?.fixes.some((f: { warning?: string }) => f.warning) && (
+                <span className="block mt-1 text-amber-600">
+                  {recalcResults.fixes.filter((f: { warning?: string }) => f.warning).length} pledges with warnings will be skipped.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={recalcApply}>
+              Apply Fixes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>

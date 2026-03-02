@@ -73,7 +73,15 @@
   - `PledgeAddon` - join table between pledges and addon rewards
   - `DigitalFile` - digital download files
 
-## Database Commands
+## Database Access
+- **NO DIRECT DATABASE ACCESS** in this environment — there is no local database, no DATABASE_URL, and no psql connection available
+- **DO NOT** attempt to run psql commands, database scripts, or any direct database connections
+- **DO NOT** create standalone scripts that use PrismaClient directly — they will fail without DATABASE_URL
+- All database operations must go through the Next.js API routes (which have access to the database at runtime)
+- For admin data fixes, build authenticated API endpoints at `src/app/api/admin/...` with UI buttons to trigger them
+- The database credentials in this file are for reference when the **user** runs commands on the production server — not for Claude to use
+
+### Database Credentials (for user reference only)
 - **ALWAYS** use the full connection string with credentials in every command:
   ```
   PGPASSWORD='01JSN9vhvVTiMEU7odCpF6L3' psql -h localhost -U indieuser -d indiecrowdfund -c "..."
