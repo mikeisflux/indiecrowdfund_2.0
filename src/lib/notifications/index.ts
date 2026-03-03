@@ -16,7 +16,6 @@ export {
   notifyProjectLaunched,
   notifyProjectUpdate,
   notifyProjectEnded,
-  notifyFollowedProjectLaunched,
 } from "./project-notifications";
 
 // Export pledge notifications

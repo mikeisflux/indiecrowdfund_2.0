@@ -65,7 +65,7 @@ async function checkDependencies(): Promise<{ available: boolean; error?: string
  * @param outputKey - R2 key for the output cover image
  * @returns CoverExtractionResult
  */
-export async function extractPdfCover(
+async function extractPdfCover(
   pdfUrl: string,
   outputKey: string
 ): Promise<CoverExtractionResult> {
@@ -185,7 +185,7 @@ export async function extractPdfCover(
 /**
  * Generate a unique key for the cover image
  */
-export function generateCoverKey(fileId: string, type: "digital-file" | "marketplace-book"): string {
+function generateCoverKey(fileId: string, type: "digital-file" | "marketplace-book"): string {
   return `covers/${type}/${fileId}.webp`;
 }
 
@@ -251,27 +251,3 @@ export async function extractAndSaveCover(
   return result;
 }
 
-/**
- * Queue cover extraction for a batch of files
- * This can be used for backfilling existing PDFs
- */
-export async function queueCoverExtraction(
-  fileIds: string[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  type: "digital-file" | "marketplace-book"
-): Promise<{ queued: number; errors: string[] }> {
-  const errors: string[] = [];
-  let queued = 0;
-
-  for (const fileId of fileIds) {
-    try {
-      // In a production environment, this would add to a job queue
-      // For now, we'll just track what needs to be processed
-      queued++;
-    } catch (error) {
-      errors.push(`Failed to queue ${fileId}: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
-
-  return { queued, errors };
-}

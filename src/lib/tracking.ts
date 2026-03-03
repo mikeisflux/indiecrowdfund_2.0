@@ -255,33 +255,4 @@ export function setupTimeTracking(): () => void {
   };
 }
 
-// Video tracking utility
-export function setupVideoTracking(
-  videoElement: HTMLVideoElement,
-  projectId: string
-): () => void {
-  if (!videoElement) return () => {};
-
-  let hasStarted = false;
-
-  const handlePlay = () => {
-    if (!hasStarted) {
-      hasStarted = true;
-      tracking.videoPlay(projectId);
-    }
-  };
-
-  const handleEnded = () => {
-    tracking.videoComplete(projectId);
-  };
-
-  videoElement.addEventListener("play", handlePlay);
-  videoElement.addEventListener("ended", handleEnded);
-
-  return () => {
-    videoElement.removeEventListener("play", handlePlay);
-    videoElement.removeEventListener("ended", handleEnded);
-  };
-}
-
 export default tracking;

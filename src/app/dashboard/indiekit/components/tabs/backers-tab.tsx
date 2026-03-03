@@ -107,8 +107,6 @@ export function BackersTab({
   onToggleBackerSelection,
   onSelectAllBackers,
   onOpenBackerDetail,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onPushSelectedOrders,
   hasActiveCampaign = true,
   projectId,
   onRefresh,

@@ -4,17 +4,9 @@ import { db } from "@/lib/db";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { sendPledgeConfirmationEmail } from "@/lib/email";
+import { isAdmin } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
-
-// Helper to check admin status
-async function isAdmin(userId: string): Promise<boolean> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-  return user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
-}
 
 // GET - Get pledge details (admin)
 export async function GET(

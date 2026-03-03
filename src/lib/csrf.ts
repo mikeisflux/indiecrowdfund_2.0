@@ -54,45 +54,6 @@ export function getCSRFHeaders(): Record<string, string> {
   return { [CSRF_HEADER_NAME]: token };
 }
 
-/**
- * Wrapper around fetch that automatically includes CSRF token
- * for POST, PUT, PATCH, DELETE requests
- */
-export async function fetchWithCSRF(
-  url: string | URL,
-  options: RequestInit = {}
-): Promise<Response> {
-  const method = options.method?.toUpperCase() || "GET";
-  const isStateChanging = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
-
-  if (isStateChanging) {
-    const csrfHeaders = getCSRFHeaders();
-    options.headers = {
-      ...options.headers,
-      ...csrfHeaders,
-    };
-  }
-
-  return fetch(url, options);
-}
-
-/**
- * Create a Headers object with CSRF token included
- * Useful when you need to pass Headers to fetch
- */
-export function createHeadersWithCSRF(
-  existingHeaders?: HeadersInit
-): Headers {
-  const headers = new Headers(existingHeaders);
-  const token = getCSRFToken();
-
-  if (token) {
-    headers.set(CSRF_HEADER_NAME, token);
-  }
-
-  return headers;
-}
-
 // ============================================
 // SERVER-SIDE CSRF VALIDATION
 // ============================================
@@ -152,25 +113,6 @@ export function validateCSRFToken(token: string | null): boolean {
   }
 
   return false;
-}
-
-/**
- * Validate CSRF token and verify it belongs to the specified user
- */
-export function validateCSRFTokenForUser(token: string | null, userId: string): boolean {
-  if (!token) return false;
-
-  const storedToken = serverTokens.get(token);
-  if (!storedToken) return false;
-
-  // Check if token has expired
-  if (Date.now() > storedToken.expiresAt) {
-    serverTokens.delete(token);
-    return false;
-  }
-
-  // Verify token belongs to the user
-  return storedToken.userId === userId;
 }
 
 /**

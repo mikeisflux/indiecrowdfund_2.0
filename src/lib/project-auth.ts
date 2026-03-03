@@ -29,30 +29,3 @@ export async function canUserEditProject(
   return !!collaborator;
 }
 
-/**
- * Check if a user has any access to a project.
- * Returns true if the user is either:
- * 1. The project creator
- * 2. An accepted collaborator (regardless of specific permissions)
- */
-export async function canUserAccessProject(
-  projectId: string,
-  userId: string,
-  creatorId: string
-): Promise<boolean> {
-  // Check if user is the creator
-  if (creatorId === userId) {
-    return true;
-  }
-
-  // Check if user is an accepted collaborator
-  const collaborator = await db.projectCollaborator.findFirst({
-    where: {
-      projectId,
-      userId,
-      status: "ACCEPTED",
-    },
-  });
-
-  return !!collaborator;
-}

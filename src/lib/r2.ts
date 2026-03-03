@@ -432,7 +432,7 @@ export function generateMarketplaceFileKey(
 /**
  * Parse marketplace file key to extract components
  */
-export function parseMarketplaceFileKey(key: string): {
+function parseMarketplaceFileKey(key: string): {
   userId: string;
   fileId: string;
   filename: string;
@@ -468,7 +468,7 @@ export function generateEmailAttachmentKey(
 /**
  * Parse file key to extract components
  */
-export function parseFileKey(key: string): {
+function parseFileKey(key: string): {
   projectId: string;
   fileType: string;
   fileId: string;

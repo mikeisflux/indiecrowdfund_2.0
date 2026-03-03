@@ -351,13 +351,3 @@ export async function notifyProjectEnded(projectId: string) {
   });
 }
 
-/**
- * Notify followers when a project they follow launches
- * Note: This is an alias for notifyProjectLaunched which now handles both
- * in-app notifications and email notifications for all followers
- */
-export async function notifyFollowedProjectLaunched(projectId: string) {
-  // The main notifyProjectLaunched function now handles everything
-  // including email notifications for both logged-in and email-only followers
-  await notifyProjectLaunched(projectId);
-}

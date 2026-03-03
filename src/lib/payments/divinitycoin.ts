@@ -81,13 +81,6 @@ export async function getDivinityCoinWebhookSecret(): Promise<string | null> {
   return process.env.DIVINITYCOIN_WEBHOOK_SECRET || null;
 }
 
-/**
- * Clear cached config (call when settings are updated)
- */
-export function clearDivinityCoinConfigCache(): void {
-  cachedConfig = null;
-}
-
 // Webhook event types supported by DivinityCoin
 export type DivinityCoinEventType =
   | "test.ping"

@@ -69,17 +69,6 @@ export function decrypt(encryptedData: string): string {
 }
 
 /**
- * Masks a value for display purposes (e.g., "1234" -> "••••1234")
- */
-export function maskAccountNumber(accountNumber: string, visibleDigits: number = 4): string {
-  if (accountNumber.length <= visibleDigits) {
-    return accountNumber;
-  }
-  const masked = "•".repeat(accountNumber.length - visibleDigits);
-  return masked + accountNumber.slice(-visibleDigits);
-}
-
-/**
  * Gets the last N digits of an account number for display
  */
 export function getLastDigits(accountNumber: string, digits: number = 4): string {

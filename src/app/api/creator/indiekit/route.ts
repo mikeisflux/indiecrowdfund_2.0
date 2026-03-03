@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatFileSize } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -993,16 +994,6 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Helper to format file size
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return bytes + " B";
-  const kb = bytes / 1024;
-  if (kb < 1024) return kb.toFixed(1) + " KB";
-  const mb = kb / 1024;
-  if (mb < 1024) return mb.toFixed(1) + " MB";
-  return (mb / 1024).toFixed(1) + " GB";
 }
 
 // Helper to determine workflow state

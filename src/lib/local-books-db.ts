@@ -201,33 +201,6 @@ export const deleteLocalBook = async (id: string): Promise<boolean> => {
   }
 };
 
-// Update book name
-export const updateLocalBookName = async (id: string, newName: string): Promise<boolean> => {
-  try {
-    const db = await openDB();
-    const book = await getLocalBook(id);
-    if (!book) return false;
-
-    return new Promise((resolve, reject) => {
-      book.name = newName;
-      const transaction = db.transaction(STORE_NAME, "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(book);
-
-      request.onsuccess = () => {
-        db.close();
-        resolve(true);
-      };
-      request.onerror = () => {
-        db.close();
-        reject(request.error);
-      };
-    });
-  } catch {
-    return false;
-  }
-};
-
 // Check if IndexedDB is available
 export const isLocalBooksSupported = (): boolean => {
   return typeof window !== "undefined" && !!window.indexedDB;

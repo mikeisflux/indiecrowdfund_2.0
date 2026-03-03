@@ -37,20 +37,3 @@ export async function fetchWithRetry(
   throw lastError;
 }
 
-/**
- * Fetch JSON with automatic retry
- * Convenience wrapper that parses JSON response
- */
-export async function fetchJsonWithRetry<T>(
-  url: string,
-  options?: RequestInit,
-  maxRetries = 3
-): Promise<T> {
-  const response = await fetchWithRetry(url, options, maxRetries);
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
-}

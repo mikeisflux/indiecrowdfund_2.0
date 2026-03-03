@@ -2,17 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
+import { isAdmin } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
-
-// Helper to check admin status
-async function isAdmin(userId: string): Promise<boolean> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-  return user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
-}
 
 /**
  * GET - Find duplicate/problematic pledges that might cause double-charging

@@ -50,19 +50,3 @@ export function hasUserConsented(): boolean {
   return localStorage.getItem(CONSENT_PREFS_KEY) !== null;
 }
 
-export function clearConsentPreferences(): void {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(CONSENT_PREFS_KEY);
-}
-
-export function isAnalyticsAllowed(): boolean {
-  return getConsentPreferences().analytics;
-}
-
-export function isAiTrackingAllowed(): boolean {
-  return getConsentPreferences().aiTracking;
-}
-
-export function isMarketingAllowed(): boolean {
-  return getConsentPreferences().marketing;
-}

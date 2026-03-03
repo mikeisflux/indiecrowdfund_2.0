@@ -93,8 +93,7 @@ export function SegmentDialog({
     editingSegment?.rules || [{ id: "1", field: "", operator: "", value: "" }]
   );
   const [isSaving, setIsSaving] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [estimatedCount, setEstimatedCount] = useState(0);
+  const [, setEstimatedCount] = useState(0);
 
   const addRule = () => {
     setRules([...rules, { id: String(Date.now()), field: "", operator: "", value: "" }]);

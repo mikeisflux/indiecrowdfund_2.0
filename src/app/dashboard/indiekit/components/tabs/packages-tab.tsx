@@ -139,28 +139,6 @@ export function PackagesTab({
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleRefreshStatus = async () => {
-    if (!projectId) return;
-
-    try {
-      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=refresh`, {
-        headers: getCSRFHeaders(),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Refresh failed");
-      }
-
-      setLastRefreshed(new Date().toLocaleString());
-      toast.success("Order status updated");
-      onRefresh?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Refresh failed");
-    }
-  };
-
   const handleUpdateConnection = async (service: ConnectedService) => {
     if (!projectId) return;
 

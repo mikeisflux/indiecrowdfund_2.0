@@ -1,25 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-
-async function isAdmin() {
-  const session = await auth();
-  if (!session?.user?.id) return false;
-
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true },
-  });
-
-  return user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
-}
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+import { isAdmin } from "@/lib/auth-helpers";
+import { slugify } from "@/lib/utils";
 
 // GET - List all comic shops with pagination/search (admin)
 export async function GET(req: NextRequest) {

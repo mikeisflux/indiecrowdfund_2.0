@@ -18,11 +18,6 @@ export function formatNumber(num: number): string {
   return new Intl.NumberFormat("en-US").format(num);
 }
 
-export function formatPercentage(value: number, total: number): string {
-  if (total === 0) return "0%";
-  return `${Math.round((value / total) * 100)}%`;
-}
-
 export function calculateFundingPercentage(current: number, goal: number): number {
   if (goal === 0) return 0;
   return Math.round((current / goal) * 100);
@@ -34,7 +29,7 @@ export function getDaysRemaining(endDate: Date): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
-export function getHoursRemaining(endDate: Date): number {
+function getHoursRemaining(endDate: Date): number {
   const now = new Date();
   const diff = endDate.getTime() - now.getTime();
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60)));
@@ -171,4 +166,12 @@ export function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }

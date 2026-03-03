@@ -45,8 +45,6 @@ export function AddressValidationDialog({
   onConfirm,
 }: AddressValidationDialogProps) {
   const [selectedOption, setSelectedOption] = useState<"suggested" | "original" | "manual">("suggested");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isEditing, setIsEditing] = useState(false);
   const [editedAddress, setEditedAddress] = useState<Address | null>(originalAddress);
 
   // Demo suggested address (in real app, this would come from validation API)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getR2Storage, generateMarketplaceFileKey } from "@/lib/r2";
+import { formatFileSize } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -276,13 +277,3 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-/**
- * Format file size to human readable
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-}

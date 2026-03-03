@@ -105,8 +105,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { projectId, questions, settings } = body;
+    const { projectId, questions } = body;
 
     if (!projectId) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });

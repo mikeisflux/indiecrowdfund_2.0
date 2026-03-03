@@ -167,15 +167,13 @@ export default function IndieKitV2Page() {
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>(WORKFLOW_STEPS);
   const [backers, setBackers] = useState<Backer[]>([]);
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [shippingServices, setShippingServices] = useState<ShippingService[]>(SHIPPING_SERVICES);
+  const [, setShippingServices] = useState<ShippingService[]>(SHIPPING_SERVICES);
   const [digitalFiles, setDigitalFiles] = useState<DigitalFile[]>([]);
   const [distributionRules, setDistributionRules] = useState<DistributionRule[]>([]);
   const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>([]);
   const [emailMemberCount, setEmailMemberCount] = useState<number>(0);
   const [userEmail, setUserEmail] = useState<string>("");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [surveyAddons, setSurveyAddons] = useState<SurveyAddon[]>([]);
+  const [, setSurveyAddons] = useState<SurveyAddon[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [segments, setSegments] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
