@@ -302,9 +302,12 @@ export async function POST(
     }
 
     // Create the payment intent
+    const amountInCents = Math.round(amount * 100);
+
     const paymentIntentParams: {
       amount: number;
       currency: string;
+      automatic_payment_methods: { enabled: boolean };
       metadata: {
         pledgeId: string;
         userId: string;
@@ -315,8 +318,9 @@ export async function POST(
       application_fee_amount?: number;
       transfer_data?: { destination: string };
     } = {
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: amountInCents,
       currency: "usd",
+      automatic_payment_methods: { enabled: true },
       metadata: {
         pledgeId: pledge.id,
         userId: session.user.id,
@@ -339,7 +343,17 @@ export async function POST(
       };
     }
 
-    const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+    } catch (stripeError: unknown) {
+      const message = stripeError instanceof Error ? stripeError.message : "Unknown Stripe error";
+      console.error(`[AddItems] Stripe PaymentIntent creation failed for pledge ${pledgeId}:`, message);
+      return NextResponse.json(
+        { error: `Payment creation failed: ${message}` },
+        { status: 502 }
+      );
+    }
 
     // Store pending items in metadata for Stripe too (webhook uses PaymentIntent metadata)
     const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
@@ -369,9 +383,10 @@ export async function POST(
       paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
-    console.error("Error adding items to pledge:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error adding items to pledge:", message, error);
     return NextResponse.json(
-      { error: "Failed to add items to pledge" },
+      { error: `Failed to add items to pledge: ${message}` },
       { status: 500 }
     );
   }

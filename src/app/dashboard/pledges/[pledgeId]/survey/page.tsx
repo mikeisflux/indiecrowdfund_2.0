@@ -372,19 +372,27 @@ export default function BackerSurveyPage() {
       }
 
       // Load appropriate Stripe instance
+      let stripeLoaded = !!stripePromise;
       if (result.paymentMethod === "DIVINITYCOIN" && result.publishableKey) {
         setStripePromise(loadStripe(result.publishableKey));
+        stripeLoaded = true;
       } else if (!stripePromise) {
         // Load platform Stripe key
         const configRes = await fetch("/api/stripe/config");
         const configData = await configRes.json();
         if (configData.publishableKey) {
           setStripePromise(loadStripe(configData.publishableKey));
+          stripeLoaded = true;
         }
+      }
+
+      if (!stripeLoaded) {
+        throw new Error("Payment system is not configured. Please contact support.");
       }
 
       setClientSecret(result.clientSecret);
       setIsProcessingPayment(false);
+      creatingPaymentRef.current = false;
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create payment");
       setIsProcessingPayment(false);
