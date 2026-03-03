@@ -268,20 +268,6 @@ function EmptyState({ icon: Icon, title, description }: { icon: React.ElementTyp
   );
 }
 
-function LoadingSkeleton({ rows = 3 }: { rows?: number }) {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="animate-pulse flex gap-4 items-center">
-          <div className="h-4 bg-muted rounded w-1/4" />
-          <div className="h-4 bg-muted rounded w-1/3" />
-          <div className="h-4 bg-muted rounded w-1/6" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 
 // ─── Main Component ──────────────────────────────────────────────────
 

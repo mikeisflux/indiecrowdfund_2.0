@@ -318,6 +318,7 @@ export async function GET(req: NextRequest) {
         where: {
           projectId: selectedProjectId,
           status: "COMPLETED",
+          deletedAt: null,
         },
         select: {
           id: true,
@@ -330,6 +331,7 @@ export async function GET(req: NextRequest) {
                 select: {
                   id: true,
                   title: true,
+                  projectItemId: true,
                 },
               },
             },
@@ -458,40 +460,48 @@ export async function GET(req: NextRequest) {
     const fulfillmentPercentage = totalBackers > 0 ? Math.round((shippedBackers / totalBackers) * 100) : 0;
 
     // Count items needed for fulfillment (from rewards and addons)
+    // Key by projectItemId or item title to deduplicate items that appear in multiple reward tiers
     const itemCounts = new Map<string, { name: string; count: number; type: "reward" | "addon" }>();
 
     fulfillmentData.forEach((pledge) => {
-      // Count reward tier (1 per pledge)
       if (pledge.reward) {
-        const rewardKey = `reward_${pledge.reward.id}`;
-        const existing = itemCounts.get(rewardKey);
-        if (existing) {
-          existing.count += 1;
-        } else {
-          itemCounts.set(rewardKey, {
-            name: pledge.reward.title,
-            count: 1,
-            type: "reward",
-          });
-        }
+        const hasItems = pledge.reward.items && pledge.reward.items.length > 0;
 
-        // Count individual items within the reward
-        pledge.reward.items?.forEach((item: { id: string; title: string }) => {
-          const itemKey = `item_${item.id}`;
-          const existingItem = itemCounts.get(itemKey);
-          if (existingItem) {
-            existingItem.count += 1;
+        if (hasItems) {
+          // Count individual items within the reward (not the tier itself to avoid duplicates)
+          // Use projectItemId to deduplicate items shared across tiers, fallback to title
+          pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null }) => {
+            const itemKey = item.projectItemId
+              ? `projectItem_${item.projectItemId}`
+              : `itemTitle_${item.title}`;
+            const existingItem = itemCounts.get(itemKey);
+            if (existingItem) {
+              existingItem.count += 1;
+            } else {
+              itemCounts.set(itemKey, {
+                name: item.title,
+                count: 1,
+                type: "reward",
+              });
+            }
+          });
+        } else {
+          // No individual items defined - count the reward tier itself as the fulfillment item
+          const rewardKey = `reward_${pledge.reward.id}`;
+          const existing = itemCounts.get(rewardKey);
+          if (existing) {
+            existing.count += 1;
           } else {
-            itemCounts.set(itemKey, {
-              name: item.title,
+            itemCounts.set(rewardKey, {
+              name: pledge.reward.title,
               count: 1,
               type: "reward",
             });
           }
-        });
+        }
       }
 
-      // Count addons (with quantity)
+      // Count addons (with quantity) - includes survey addon purchases
       pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string } }) => {
         const addonKey = `addon_${pledgeAddon.addon.id}`;
         const existing = itemCounts.get(addonKey);
