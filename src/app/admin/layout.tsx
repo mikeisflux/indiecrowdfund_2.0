@@ -100,6 +100,7 @@ const navigation: NavSection[] = [
     items: [
       { name: "AI Control", href: "/admin/ai", icon: Brain, staticBadge: "NEW" },
       { name: "AI Marketing", href: "/admin/ai-marketing", icon: Zap, staticBadge: "AI" },
+      { name: "SEO Suite", href: "/admin/seo", icon: Search, staticBadge: "SEO" },
     ],
   },
   {
