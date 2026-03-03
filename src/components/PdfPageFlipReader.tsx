@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePdfAsImages } from "@/lib/usePdfAsImages";
 import { Loader2 } from "lucide-react";
