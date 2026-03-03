@@ -176,22 +176,26 @@ export function MessagesPanel({
         setSelectedConversation(conv);
         setNewConversation(null);
       } else {
-        // No existing conversation, fetch recipient and project info
+        // No existing conversation, fetch recipient user info and project info
         const fetchNewConversationInfo = async () => {
           try {
-            // Fetch project info to get title and creator name
-            const projectRes = await fetch(`/api/projects/${projectId}`);
-            if (projectRes.ok) {
-              const projectData = await projectRes.json();
-              setNewConversation({
-                recipientId,
-                recipientName: projectData.project?.creator?.name || "Creator",
-                recipientImage: projectData.project?.creator?.image || null,
-                projectId,
-                projectTitle: projectData.project?.title || "Project",
-              });
-              setSelectedConversation(null);
-            }
+            // Fetch both the recipient's user info and project info in parallel
+            const [userRes, projectRes] = await Promise.all([
+              fetch(`/api/messages/user-info?userId=${recipientId}`),
+              fetch(`/api/projects/${projectId}`),
+            ]);
+
+            const userData = userRes.ok ? await userRes.json() : null;
+            const projectData = projectRes.ok ? await projectRes.json() : null;
+
+            setNewConversation({
+              recipientId,
+              recipientName: userData?.user?.name || "User",
+              recipientImage: userData?.user?.image || null,
+              projectId,
+              projectTitle: projectData?.project?.title || "Project",
+            });
+            setSelectedConversation(null);
           } catch (error) {
             console.error("Failed to fetch new conversation info:", error);
           }
@@ -451,7 +455,7 @@ export function MessagesPanel({
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">
-                  {newConversation.recipientName || "Creator"}
+                  {newConversation.recipientName || "User"}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
                   Re: {newConversation.projectTitle}
@@ -470,7 +474,7 @@ export function MessagesPanel({
               </div>
               <h3 className="text-lg font-semibold mb-2">Start a Conversation</h3>
               <p className="text-sm text-muted-foreground max-w-xs mb-4">
-                Send a message to {newConversation.recipientName || "the creator"} about &quot;{newConversation.projectTitle}&quot;
+                Send a message to {newConversation.recipientName || "this user"} about &quot;{newConversation.projectTitle}&quot;
               </p>
             </div>
 
