@@ -373,11 +373,16 @@ export default function BackerSurveyPage() {
 
       // Load appropriate Stripe instance
       let stripeLoaded = !!stripePromise;
-      if (result.paymentMethod === "DIVINITYCOIN" && result.publishableKey) {
-        setStripePromise(loadStripe(result.publishableKey));
-        stripeLoaded = true;
+      if (result.paymentMethod === "DIVINITYCOIN") {
+        // DivinityCoin: must use DC's own publishable key
+        if (result.publishableKey) {
+          setStripePromise(loadStripe(result.publishableKey));
+          stripeLoaded = true;
+        } else {
+          throw new Error("DivinityCoin payment configuration is missing. Please contact support.");
+        }
       } else if (!stripePromise) {
-        // Load platform Stripe key
+        // Stripe: load platform Stripe key
         const configRes = await fetch("/api/stripe/config");
         const configData = await configRes.json();
         if (configData.publishableKey) {

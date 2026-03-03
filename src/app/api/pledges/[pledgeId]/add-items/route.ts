@@ -284,9 +284,10 @@ export async function POST(
           pledgeId: pledge.id,
         });
       } catch (dcError) {
-        console.error("[AddItems DC] API error:", dcError);
+        const message = dcError instanceof Error ? dcError.message : "Unknown error";
+        console.error("[AddItems DC] API error:", message, dcError);
         return NextResponse.json(
-          { error: "Failed to connect to payment processor" },
+          { error: `Failed to connect to payment processor: ${message}` },
           { status: 500 }
         );
       }
