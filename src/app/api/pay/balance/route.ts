@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe/config";
+import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 
 // GET - Fetch balance payment details by token
 export async function GET(req: NextRequest) {
@@ -163,6 +164,9 @@ export async function POST(req: NextRequest) {
       }
 
       const stripe = await getStripeInstance();
+      if (!stripe) {
+        return NextResponse.json({ error: "Payment system unavailable" }, { status: 500 });
+      }
       const amountInCents = Math.round(balanceDue * 100);
       const platformFee = Math.round(balanceDue * 0.03 * 100); // 3% platform fee
 
@@ -170,6 +174,7 @@ export async function POST(req: NextRequest) {
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amountInCents,
         currency: "usd",
+        automatic_payment_methods: { enabled: true },
         application_fee_amount: platformFee,
         transfer_data: {
           destination: stripeConfig.stripeAccountId,
@@ -200,20 +205,19 @@ export async function POST(req: NextRequest) {
       });
     } else if (pledge.project.paymentProcessor === "DIVINITYCOIN") {
       // For DivinityCoin, create payment through their API
-      const settings = await db.platformSettings.findFirst();
-      const dcApiKey = settings?.divinityCoinApiKey;
-      const dcBaseUrl = settings?.divinityCoinBaseUrl || "https://api.divinitycoin.com";
-
-      if (!dcApiKey) {
+      let dcConfig;
+      try {
+        dcConfig = await getDivinityCoinConfig();
+      } catch {
         return NextResponse.json({ error: "DivinityCoin not configured" }, { status: 500 });
       }
 
       const amountInCents = Math.round(balanceDue * 100);
 
-      const dcResponse = await fetch(`${dcBaseUrl}?action=create-payment-intent`, {
+      const dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${dcApiKey}`,
+          "Authorization": `Bearer ${dcConfig.apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -231,7 +235,8 @@ export async function POST(req: NextRequest) {
       });
 
       if (!dcResponse.ok) {
-        console.error("DivinityCoin API error:", await dcResponse.text());
+        const errorText = await dcResponse.text();
+        console.error("[Balance DC] API error:", errorText);
         return NextResponse.json({ error: "Payment processing failed" }, { status: 500 });
       }
 
@@ -258,7 +263,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown payment processor" }, { status: 400 });
   } catch (error) {
-    console.error("Error creating balance payment:", error);
-    return NextResponse.json({ error: "Failed to create payment" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error creating balance payment:", message, error);
+    return NextResponse.json({ error: `Failed to create payment: ${message}` }, { status: 500 });
   }
 }
