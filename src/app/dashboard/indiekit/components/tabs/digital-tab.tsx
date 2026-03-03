@@ -518,14 +518,30 @@ export function DigitalTab({
             {digitalFiles.map((file) => (
               <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-purple-600" />
+                  <div className="relative">
+                    <FileText className="h-5 w-5 text-purple-600" />
+                  </div>
                   <div>
                     <p className="font-medium">{file.name}</p>
                     <p className="text-xs text-muted-foreground">{file.size} · {file.type}</p>
                   </div>
                 </div>
-                <div className="text-right text-sm">
-                  <p>{file.distributedTo}/{file.totalEligible} distributed</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm">{file.distributedTo}/{file.totalEligible} distributed</p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    onClick={() => setConfirmDeleteFile(file)}
+                    disabled={deletingFileId === file.id}
+                    title={`Delete ${file.name}`}
+                  >
+                    {deletingFileId === file.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
               </div>
             ))}
