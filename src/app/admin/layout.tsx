@@ -302,6 +302,7 @@ export default function AdminLayout({
                       <Link
                         key={item.name}
                         href={item.href}
+                        prefetch={false}
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                           isActive
@@ -373,7 +374,7 @@ export default function AdminLayout({
 
           <div className="flex items-center gap-3">
             {/* Quick actions */}
-            <Link href="/" target="_blank">
+            <Link href="/" target="_blank" prefetch={false}>
               <Button variant="outline" size="sm" className="hidden md:flex gap-2">
                 <Globe className="h-4 w-4" />
                 View Site
@@ -381,7 +382,7 @@ export default function AdminLayout({
             </Link>
 
             {/* Notifications */}
-            <Link href="/admin/notifications">
+            <Link href="/admin/notifications" prefetch={false}>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 {stats?.notifications && stats.notifications > 0 && (
