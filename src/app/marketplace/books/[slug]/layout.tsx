@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
 
   const book = await db.marketplaceBook.findFirst({
-    where: { slug, status: "APPROVED" },
+    where: { slug, status: { in: ["LIVE", "APPROVED"] }, deletedAt: null },
     select: {
       title: true,
       description: true,
