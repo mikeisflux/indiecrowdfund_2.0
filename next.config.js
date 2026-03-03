@@ -9,12 +9,12 @@ const nextConfig = {
   experimental: {
     // Increase body size limit for server actions (default is 1MB)
     serverActions: {
-      bodySizeLimit: '100mb',
+      bodySizeLimit: '250mb',
     },
     // Increase body size limit for requests going through middleware (default is 10MB)
     // Without this, large file uploads (PDFs) get truncated and fail with
     // "Failed to parse body as FormData" because the multipart boundary is lost
-    middlewareClientMaxBodySize: 100 * 1024 * 1024, // 100MB
+    middlewareClientMaxBodySize: 250 * 1024 * 1024, // 250MB
   },
   // Image optimization settings
   images: {

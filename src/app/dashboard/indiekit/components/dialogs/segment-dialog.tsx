@@ -93,7 +93,7 @@ export function SegmentDialog({
     editingSegment?.rules || [{ id: "1", field: "", operator: "", value: "" }]
   );
   const [isSaving, setIsSaving] = useState(false);
-  const [, setEstimatedCount] = useState(0);
+  const [estimatedCount, setEstimatedCount] = useState(0);
 
   const addRule = () => {
     setRules([...rules, { id: String(Date.now()), field: "", operator: "", value: "" }]);

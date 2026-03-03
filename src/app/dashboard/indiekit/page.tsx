@@ -139,13 +139,13 @@ export default function IndieKitPage() {
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>(WORKFLOW_STEPS);
   const [backers, setBackers] = useState<Backer[]>([]);
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>([]);
-  const [, setShippingServices] = useState<ShippingService[]>(SHIPPING_SERVICES);
+  const [shippingServices, setShippingServices] = useState<ShippingService[]>(SHIPPING_SERVICES);
   const [digitalFiles, setDigitalFiles] = useState<DigitalFile[]>([]);
   const [distributionRules, setDistributionRules] = useState<DistributionRule[]>([]);
   const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>([]);
   const [emailMemberCount, setEmailMemberCount] = useState<number>(0);
   const [userEmail, setUserEmail] = useState<string>("");
-  const [, setSurveyAddons] = useState<SurveyAddon[]>([]);
+  const [surveyAddons, setSurveyAddons] = useState<SurveyAddon[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [segments, setSegments] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,7 +155,7 @@ export default function IndieKitPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [timeline, setTimeline] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [, setSurveyQuestions] = useState<any[]>([]);
+  const [surveyQuestions, setSurveyQuestions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBackers, setSelectedBackers] = useState<string[]>([]);
@@ -996,7 +996,7 @@ export default function IndieKitPage() {
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
         projectId={selectedProjectId}
-        existingAddonIds={surveyAddons.map((a) => a.id)}
+        existingAddonIds={surveyAddons.map((a: SurveyAddon) => a.id)}
         onImported={() => {
           fetchData();
           setIsImportDialogOpen(false);
