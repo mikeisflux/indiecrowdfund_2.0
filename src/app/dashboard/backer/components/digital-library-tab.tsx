@@ -374,15 +374,12 @@ export function DigitalLibraryTab() {
       sourceId: item.sourceId,
     });
 
-    setSelectedItem(item);
-    setPdfUrl(null);
-    setNumPages(0);
-    setBookmarks(getBookmarks(item.sourceId));
-
-    const saved = getReadingProgress(item.sourceId);
-    setCurrentPage(saved?.currentPage ?? 1);
+    // Clear previous error state
+    setError(null);
 
     try {
+      let url: string | null = null;
+
       if (item.source === "crowdfunding") {
         console.log("[openBook] Fetching crowdfunding file:", item.sourceId);
         const res = await fetch("/api/backer/digital-files", {
@@ -391,20 +388,21 @@ export function DigitalLibraryTab() {
           body: JSON.stringify({ fileId: item.sourceId }),
         });
         console.log("[openBook] Crowdfunding response status:", res.status);
-        if (!res.ok) throw new Error("Failed to get PDF URL");
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to get PDF URL");
+        }
         const { downloadUrl } = await res.json();
         console.log("[openBook] Got crowdfunding download URL");
-        setPdfUrl(downloadUrl);
+        url = downloadUrl;
       } else if (item.source === "local") {
         // Local book from IndexedDB
         console.log("[openBook] Loading local book:", item.sourceId);
-        const url = await getLocalBookUrl(item.sourceId);
-        if (url) {
-          console.log("[openBook] Got local book URL");
-          setPdfUrl(url);
-        } else {
+        url = await getLocalBookUrl(item.sourceId);
+        if (!url) {
           throw new Error("Failed to load local book");
         }
+        console.log("[openBook] Got local book URL");
       } else {
         // Marketplace purchase
         console.log("[openBook] Fetching marketplace purchase:", item.sourceId);
@@ -421,10 +419,21 @@ export function DigitalLibraryTab() {
         }
         const data = await res.json();
         console.log("[openBook] Got marketplace download URL:", data.downloadUrl ? "yes" : "no");
-        setPdfUrl(data.downloadUrl);
+        url = data.downloadUrl;
       }
+
+      // Only set selectedItem and pdfUrl after successful URL fetch
+      setSelectedItem(item);
+      setPdfUrl(url);
+      setNumPages(0);
+      setBookmarks(getBookmarks(item.sourceId));
+      const saved = getReadingProgress(item.sourceId);
+      setCurrentPage(saved?.currentPage ?? 1);
     } catch (err) {
       console.error("[openBook] Error:", err);
+      // Ensure selectedItem is null so the error state renders
+      setSelectedItem(null);
+      setPdfUrl(null);
       setError(err instanceof Error ? err.message : "Failed to load PDF");
     }
   };

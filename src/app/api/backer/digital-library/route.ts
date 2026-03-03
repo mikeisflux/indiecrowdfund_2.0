@@ -59,13 +59,14 @@ export async function GET(request: Request) {
         },
       });
 
-      // Create a map of projectId -> rewardId for quick lookup
+      // Create maps for quick lookup
       const pledgesByProject = new Map<string, string | null>();
       for (const pledge of userPledges) {
         pledgesByProject.set(pledge.projectId, pledge.rewardId);
       }
 
       const projectIds = userPledges.map(p => p.projectId);
+      const pledgeIds = userPledges.map(p => p.id);
 
       // Fetch all digital files from projects user has backed
       const digitalFiles = await prisma.digitalFile.findMany({
@@ -93,15 +94,34 @@ export async function GET(request: Request) {
         },
       });
 
-      // Filter files based on rewardIds restriction
+      // Get all explicit distributions for this backer's pledges
+      const explicitDistributions = await prisma.digitalDistribution.findMany({
+        where: {
+          pledgeId: { in: pledgeIds },
+          distributedAt: { not: null },
+        },
+        select: {
+          digitalFileId: true,
+        },
+      });
+      const explicitlyDistributedFileIds = new Set(
+        explicitDistributions.map((d: { digitalFileId: string }) => d.digitalFileId)
+      );
+
+      // Filter files based on explicit distribution OR rewardIds restriction
       for (const file of digitalFiles) {
+        // If the file was explicitly distributed to this backer, show it
+        const wasDistributed = explicitlyDistributedFileIds.has(file.id);
+
         const userRewardId = pledgesByProject.get(file.projectId);
         const fileRewardIds = (file.rewardIds as string[]) || [];
 
         // Show file if:
-        // 1. rewardIds is empty (available to all backers), OR
-        // 2. User's rewardId is in the file's rewardIds array
-        const hasAccess = fileRewardIds.length === 0 ||
+        // 1. It was explicitly distributed to this backer, OR
+        // 2. rewardIds is empty (available to all backers), OR
+        // 3. User's rewardId is in the file's rewardIds array
+        const hasAccess = wasDistributed ||
+          fileRewardIds.length === 0 ||
           (userRewardId && fileRewardIds.includes(userRewardId));
 
         if (hasAccess) {
