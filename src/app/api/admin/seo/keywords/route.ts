@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
         total,
         tracked: trackedCount,
         categories: categories.reduce(
-          (acc, item) => {
+          (acc: Record<string, number>, item: { category: string | null; _count: number }) => {
             acc[item.category || "uncategorized"] = item._count;
             return acc;
           },

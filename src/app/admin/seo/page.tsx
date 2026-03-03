@@ -1,26 +1,28 @@
 "use client";
 
+import { getCSRFHeaders } from "@/lib/csrf";
+import { fetchWithRetry } from "@/lib/fetch-utils";
+import { toast } from "sonner";
+
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -28,65 +30,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
-import { fetchWithRetry } from "@/lib/fetch-utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 import {
   Search,
-  Loader2,
-  Play,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  FileText,
   Globe,
-  Hash,
-  ArrowRight,
+  BarChart3,
+  Loader2,
+  RefreshCw,
   Plus,
   Pencil,
   Trash2,
-  Copy,
-  Clock,
-  Zap,
-  Eye,
-  BarChart3,
-  Sparkles,
-  Terminal,
+  AlertTriangle,
+  CheckCircle,
   ChevronDown,
   ChevronUp,
+  ArrowUpRight,
+  ArrowDownRight,
+  ExternalLink,
+  Copy,
+  Clock,
+  Sparkles,
+  Link2,
+  Tag,
+  FileText,
+  Activity,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Zap,
+  TrendingUp,
 } from "lucide-react";
 
-// ============================================
-// Types
-// ============================================
+// ─── Type Definitions ────────────────────────────────────────────────
 
-interface DashboardData {
-  latestAudit: AuditRecord | null;
-  totalPages: number;
-  totalKeywords: number;
-  trackedKeywords: number;
-  recentCronLogs: CronLog[];
-  lowScorePages: PageMeta[];
-  issueStats: { critical: number; warnings: number; passed: number; total: number };
-  overallScore: number | null;
-}
-
-interface AuditRecord {
+interface SeoAudit {
   id: string;
   runType: string;
   status: string;
   totalPages: number;
-  pagesAudited: number;
+  pagesAudited: number | null;
   overallScore: number | null;
-  issuesFound: number;
-  criticalIssues: number;
-  warnings: number;
-  passed: number;
+  issuesFound: number | null;
+  criticalIssues: number | null;
+  warnings: number | null;
+  passed: number | null;
   results: PageAuditResult[] | null;
   summary: string | null;
   duration: number | null;
@@ -111,7 +97,7 @@ interface PageAuditResult {
   issues: string[];
 }
 
-interface PageMeta {
+interface SeoPageMeta {
   id: string;
   path: string;
   title: string | null;
@@ -125,10 +111,9 @@ interface PageMeta {
   noIndex: boolean;
   noFollow: boolean;
   keywords: string[];
-  jsonLd: string | null;
   lastAuditScore: number | null;
-  updatedAt: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface SeoKeyword {
@@ -142,8 +127,8 @@ interface SeoKeyword {
   difficulty: number | null;
   isTracked: boolean;
   notes: string | null;
-  updatedAt: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface SeoRedirect {
@@ -153,12 +138,11 @@ interface SeoRedirect {
   statusCode: number;
   isActive: boolean;
   hitCount: number;
-  lastHitAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-interface CronLog {
+interface SeoCronLog {
   id: string;
   status: string;
   auditId: string | null;
@@ -166,1235 +150,2324 @@ interface CronLog {
   issuesFound: number;
   autoFixed: number;
   errors: string[];
-  duration: number | null;
+  duration: number;
   output: string | null;
   createdAt: string;
 }
 
-// ============================================
-// Helper Components
-// ============================================
+interface DashboardData {
+  latestAudit: SeoAudit | null;
+  totalPages: number;
+  totalKeywords: number;
+  trackedKeywords: number;
+  recentCronLogs: SeoCronLog[];
+  lowScorePages: SeoPageMeta[];
+  issueStats: {
+    critical: number;
+    warnings: number;
+    passed: number;
+    total: number;
+  };
+  overallScore: number | null;
+}
 
-function ScoreBadge({ score }: { score: number | null }) {
-  if (score === null || score === undefined) return <Badge variant="secondary">N/A</Badge>;
-  if (score >= 80) return <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">{score}</Badge>;
-  if (score >= 60) return <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30">{score}</Badge>;
-  return <Badge className="bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30">{score}</Badge>;
+interface AiSuggestion {
+  priority: "critical" | "important" | "nice-to-have";
+  page: string;
+  issue: string;
+  fix: string;
+}
+
+// ─── Helper Components ───────────────────────────────────────────────
+
+function ScoreGauge({ score, size = 120 }: { score: number; size?: number }) {
+  const radius = (size - 16) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (score / 100) * circumference;
+  const color =
+    score >= 80
+      ? "text-emerald-500"
+      : score >= 60
+        ? "text-yellow-500"
+        : "text-red-500";
+  const strokeColor =
+    score >= 80
+      ? "#10b981"
+      : score >= 60
+        ? "#eab308"
+        : "#ef4444";
+
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="8"
+          className="text-muted/20"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="8"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference - progress}
+          strokeLinecap="round"
+          className="transition-all duration-1000 ease-out"
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className={`text-2xl font-bold ${color}`}>{score}</span>
+        <span className="text-xs text-muted-foreground">/100</span>
+      </div>
+    </div>
+  );
+}
+
+function ScoreBadge({ score }: { score: number }) {
+  if (score >= 80) {
+    return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">{score}</Badge>;
+  }
+  if (score >= 60) {
+    return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">{score}</Badge>;
+  }
+  return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{score}</Badge>;
 }
 
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case "success":
     case "completed":
-      return <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"><CheckCircle className="w-3 h-3 mr-1" />{status}</Badge>;
-    case "error":
-    case "failed":
-      return <Badge className="bg-red-500/20 text-red-700 dark:text-red-400"><XCircle className="w-3 h-3 mr-1" />{status}</Badge>;
+      return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">{status}</Badge>;
     case "partial":
     case "running":
-      return <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400"><AlertTriangle className="w-3 h-3 mr-1" />{status}</Badge>;
+      return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">{status}</Badge>;
+    case "error":
+    case "failed":
+      return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{status}</Badge>;
     default:
-      return <Badge variant="secondary">{status}</Badge>;
+      return <Badge variant="outline">{status}</Badge>;
   }
 }
 
-function ScoreGauge({ score }: { score: number | null }) {
-  const val = score ?? 0;
-  const color = val >= 80 ? "text-emerald-500" : val >= 60 ? "text-amber-500" : "text-red-500";
-  const bgColor = val >= 80 ? "stroke-emerald-500" : val >= 60 ? "stroke-amber-500" : "stroke-red-500";
-  const circumference = 2 * Math.PI * 45;
-  const dashOffset = circumference - (val / 100) * circumference;
-
+function EmptyState({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) {
   return (
-    <div className="relative w-32 h-32 mx-auto">
-      <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
-        <circle cx="50" cy="50" r="45" fill="none" strokeWidth="8" strokeLinecap="round"
-          className={bgColor}
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          style={{ transition: "stroke-dashoffset 1s ease" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`text-3xl font-bold ${color}`}>{val}</span>
-        <span className="text-xs text-muted-foreground">/ 100</span>
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="rounded-full bg-muted/50 p-4 mb-4">
+        <Icon className="h-8 w-8 text-muted-foreground" />
       </div>
+      <h3 className="text-lg font-medium text-muted-foreground mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground/70 max-w-md">{description}</p>
     </div>
   );
 }
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "N/A";
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+function LoadingSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="animate-pulse flex gap-4 items-center">
+          <div className="h-4 bg-muted rounded w-1/4" />
+          <div className="h-4 bg-muted rounded w-1/3" />
+          <div className="h-4 bg-muted rounded w-1/6" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function formatDuration(ms: number | null) {
-  if (!ms) return "N/A";
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
 
-// ============================================
-// Main Page Component
-// ============================================
+// ─── Main Component ──────────────────────────────────────────────────
 
-export default function AdminSeoPage() {
+export default function SeoManagementPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Dashboard state
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-  const [auditHistory, setAuditHistory] = useState<AuditRecord[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [isRunningAudit, setIsRunningAudit] = useState(false);
+  const [auditHistory, setAuditHistory] = useState<SeoAudit[]>([]);
 
-  // Page audit state
+  // Page Audit state
   const [auditResults, setAuditResults] = useState<PageAuditResult[]>([]);
   const [auditSearch, setAuditSearch] = useState("");
-  const [expandedPath, setExpandedPath] = useState<string | null>(null);
+  const [expandedAuditRow, setExpandedAuditRow] = useState<string | null>(null);
 
-  // Meta tags state
-  const [pages, setPages] = useState<PageMeta[]>([]);
-  const [metaSearch, setMetaSearch] = useState("");
-  const [editingPage, setEditingPage] = useState<PageMeta | null>(null);
-  const [metaDialogOpen, setMetaDialogOpen] = useState(false);
+  // Meta Tags state
+  const [pages, setPages] = useState<SeoPageMeta[]>([]);
+  const [pageSearch, setPageSearch] = useState("");
+  const [showMetaDialog, setShowMetaDialog] = useState(false);
+  const [editingPage, setEditingPage] = useState<SeoPageMeta | null>(null);
   const [metaForm, setMetaForm] = useState({
-    path: "", title: "", description: "", ogTitle: "", ogDescription: "",
-    ogImage: "", twitterTitle: "", twitterDesc: "", canonicalUrl: "",
-    noIndex: false, noFollow: false, keywords: "",
+    path: "",
+    title: "",
+    description: "",
+    ogTitle: "",
+    ogDescription: "",
+    ogImage: "",
+    twitterTitle: "",
+    twitterDesc: "",
+    canonicalUrl: "",
+    noIndex: false,
+    noFollow: false,
+    keywords: "",
   });
+  const [isSavingMeta, setIsSavingMeta] = useState(false);
 
   // Keywords state
   const [keywords, setKeywords] = useState<SeoKeyword[]>([]);
-  const [keywordFilter, setKeywordFilter] = useState("all");
-  const [keywordDialogOpen, setKeywordDialogOpen] = useState(false);
+  const [keywordSearch, setKeywordSearch] = useState("");
+  const [keywordCategoryFilter, setKeywordCategoryFilter] = useState("all");
+  const [showKeywordDialog, setShowKeywordDialog] = useState(false);
   const [editingKeyword, setEditingKeyword] = useState<SeoKeyword | null>(null);
   const [keywordForm, setKeywordForm] = useState({
-    keyword: "", category: "primary", targetPages: "", searchVolume: "",
-    difficulty: "", currentRank: "", notes: "",
+    keyword: "",
+    category: "primary",
+    targetPages: "",
+    searchVolume: "",
+    difficulty: "",
+    currentRank: "",
+    notes: "",
   });
+  const [isSavingKeyword, setIsSavingKeyword] = useState(false);
 
   // Redirects state
   const [redirects, setRedirects] = useState<SeoRedirect[]>([]);
-  const [redirectDialogOpen, setRedirectDialogOpen] = useState(false);
+  const [showRedirectDialog, setShowRedirectDialog] = useState(false);
   const [editingRedirect, setEditingRedirect] = useState<SeoRedirect | null>(null);
   const [redirectForm, setRedirectForm] = useState({
-    fromPath: "", toPath: "", statusCode: "301",
+    fromPath: "",
+    toPath: "",
+    statusCode: "301",
+    isActive: true,
   });
+  const [isSavingRedirect, setIsSavingRedirect] = useState(false);
+  const [showDeleteRedirectDialog, setShowDeleteRedirectDialog] = useState(false);
+  const [redirectToDelete, setRedirectToDelete] = useState<SeoRedirect | null>(null);
 
   // Cron state
-  const [cronLogs, setCronLogs] = useState<CronLog[]>([]);
-  const [expandedCronId, setExpandedCronId] = useState<string | null>(null);
+  const [cronLogs, setCronLogs] = useState<SeoCronLog[]>([]);
+  const [isRunningCron, setIsRunningCron] = useState(false);
+  const [expandedCronRow, setExpandedCronRow] = useState<string | null>(null);
 
-  // AI state
-  const [aiSuggestions, setAiSuggestions] = useState<PageAuditResult[]>([]);
-  const [aiLoading, setAiLoading] = useState(false);
+  // AI Suggestions state
+  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
 
-  // ============================================
-  // Data Fetching
-  // ============================================
+  // ─── Data Fetching ───────────────────────────────────────────────
 
   const fetchDashboard = useCallback(async () => {
     try {
-      const res = await fetchWithRetry("/api/admin/seo");
-      if (res.ok) {
-        const json = await res.json();
-        setDashboard(json.data);
+      const response = await fetchWithRetry("/api/admin/seo");
+      if (response.ok) {
+        const json = await response.json();
+        setDashboardData(json.data);
+      } else {
+        toast.error("Failed to load SEO dashboard");
       }
-    } catch (error) {
-      console.error("Failed to fetch SEO dashboard:", error);
+    } catch {
+      toast.error("Network error loading SEO dashboard");
     }
   }, []);
 
   const fetchAuditHistory = useCallback(async () => {
     try {
-      const res = await fetchWithRetry("/api/admin/seo/audit?limit=10");
-      if (res.ok) {
-        const json = await res.json();
+      const response = await fetchWithRetry("/api/admin/seo/audit?limit=10");
+      if (response.ok) {
+        const json = await response.json();
         setAuditHistory(json.data || []);
+        // Use the latest completed audit's results for the page audit tab
+        const latestWithResults = (json.data || []).find(
+          (a: SeoAudit) => a.status === "completed" && a.results
+        );
+        if (latestWithResults?.results) {
+          setAuditResults(latestWithResults.results);
+        }
       }
-    } catch (error) {
-      console.error("Failed to fetch audit history:", error);
+    } catch {
+      console.error("Failed to fetch audit history");
     }
   }, []);
 
   const fetchPages = useCallback(async () => {
     try {
-      const url = metaSearch ? `/api/admin/seo/pages?query=${encodeURIComponent(metaSearch)}` : "/api/admin/seo/pages";
-      const res = await fetchWithRetry(url);
-      if (res.ok) {
-        const json = await res.json();
+      const params = new URLSearchParams();
+      if (pageSearch) params.set("query", pageSearch);
+      const response = await fetchWithRetry(`/api/admin/seo/pages?${params}`);
+      if (response.ok) {
+        const json = await response.json();
         setPages(json.data || []);
       }
-    } catch (error) {
-      console.error("Failed to fetch pages:", error);
+    } catch {
+      toast.error("Failed to load pages");
     }
-  }, [metaSearch]);
+  }, [pageSearch]);
 
   const fetchKeywords = useCallback(async () => {
     try {
-      const url = keywordFilter !== "all" ? `/api/admin/seo/keywords?category=${keywordFilter}` : "/api/admin/seo/keywords";
-      const res = await fetchWithRetry(url);
-      if (res.ok) {
-        const json = await res.json();
+      const params = new URLSearchParams();
+      if (keywordSearch) params.set("query", keywordSearch);
+      if (keywordCategoryFilter !== "all") params.set("category", keywordCategoryFilter);
+      const response = await fetchWithRetry(`/api/admin/seo/keywords?${params}`);
+      if (response.ok) {
+        const json = await response.json();
         setKeywords(json.data || []);
       }
-    } catch (error) {
-      console.error("Failed to fetch keywords:", error);
+    } catch {
+      toast.error("Failed to load keywords");
     }
-  }, [keywordFilter]);
+  }, [keywordSearch, keywordCategoryFilter]);
 
   const fetchRedirects = useCallback(async () => {
     try {
-      const res = await fetchWithRetry("/api/admin/seo/redirects");
-      if (res.ok) {
-        const json = await res.json();
+      const response = await fetchWithRetry("/api/admin/seo/redirects");
+      if (response.ok) {
+        const json = await response.json();
         setRedirects(json.data || []);
       }
-    } catch (error) {
-      console.error("Failed to fetch redirects:", error);
+    } catch {
+      toast.error("Failed to load redirects");
     }
   }, []);
 
   const fetchCronLogs = useCallback(async () => {
     try {
-      const res = await fetchWithRetry("/api/admin/seo");
-      if (res.ok) {
-        const json = await res.json();
+      const response = await fetchWithRetry("/api/admin/seo");
+      if (response.ok) {
+        const json = await response.json();
         setCronLogs(json.data?.recentCronLogs || []);
       }
-    } catch (error) {
-      console.error("Failed to fetch cron logs:", error);
+    } catch {
+      console.error("Failed to fetch cron logs");
     }
   }, []);
 
+  // ─── Initial Load ────────────────────────────────────────────────
+
   useEffect(() => {
-    const loadAll = async () => {
-      setLoading(true);
+    const loadInitialData = async () => {
+      setIsLoading(true);
       await Promise.all([fetchDashboard(), fetchAuditHistory()]);
-      setLoading(false);
+      setIsLoading(false);
     };
-    loadAll();
+    loadInitialData();
   }, [fetchDashboard, fetchAuditHistory]);
 
-  useEffect(() => {
-    if (activeTab === "meta") fetchPages();
-  }, [activeTab, fetchPages]);
+  // ─── Tab Change Handler ──────────────────────────────────────────
 
   useEffect(() => {
-    if (activeTab === "keywords") fetchKeywords();
-  }, [activeTab, fetchKeywords]);
+    switch (activeTab) {
+      case "meta":
+        fetchPages();
+        break;
+      case "keywords":
+        fetchKeywords();
+        break;
+      case "redirects":
+        fetchRedirects();
+        break;
+      case "cron":
+        fetchCronLogs();
+        break;
+    }
+  }, [activeTab, fetchPages, fetchKeywords, fetchRedirects, fetchCronLogs]);
 
-  useEffect(() => {
-    if (activeTab === "redirects") fetchRedirects();
-  }, [activeTab, fetchRedirects]);
 
-  useEffect(() => {
-    if (activeTab === "cron") fetchCronLogs();
-  }, [activeTab, fetchCronLogs]);
+  // ─── Action Handlers ─────────────────────────────────────────────
 
-  // ============================================
-  // Actions
-  // ============================================
-
-  const runAudit = async () => {
-    setActionLoading(true);
+  const handleRunAudit = async () => {
+    setIsRunningAudit(true);
     try {
-      const res = await fetchWithRetry("/api/admin/seo/audit", {
+      const response = await fetchWithRetry("/api/admin/seo/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
       });
-      if (res.ok) {
-        const json = await res.json();
-        toast.success(`Audit complete! Score: ${json.data.overallScore}/100`);
+      if (response.ok) {
+        const json = await response.json();
+        toast.success(`Audit complete! Overall score: ${json.data.overallScore}/100`);
         setAuditResults(json.data.results || []);
         await fetchDashboard();
         await fetchAuditHistory();
       } else {
-        const err = await res.json();
+        const err = await response.json();
         toast.error(err.error || "Audit failed");
       }
-    } catch (error) {
-      console.error("Audit error:", error);
-      toast.error("Failed to run audit");
+    } catch {
+      toast.error("Network error running audit");
     } finally {
-      setActionLoading(false);
+      setIsRunningAudit(false);
     }
   };
 
-  const runCron = async () => {
-    setActionLoading(true);
-    try {
-      const res = await fetchWithRetry("/api/admin/seo/cron", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        toast.success(`Cron completed! Score: ${json.data.auditScore}/100, Issues: ${json.data.projectIssuesFound}`);
-        await fetchDashboard();
-        await fetchCronLogs();
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Cron failed");
-      }
-    } catch (error) {
-      console.error("Cron error:", error);
-      toast.error("Failed to run cron");
-    } finally {
-      setActionLoading(false);
+  const handleSaveMeta = async () => {
+    if (!metaForm.path.trim()) {
+      toast.error("Page path is required");
+      return;
     }
-  };
-
-  const saveMeta = async () => {
-    setActionLoading(true);
+    setIsSavingMeta(true);
     try {
-      const res = await fetchWithRetry("/api/admin/seo/pages", {
+      const response = await fetchWithRetry("/api/admin/seo/pages", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
           ...metaForm,
-          keywords: metaForm.keywords.split(",").map(k => k.trim()).filter(Boolean),
+          keywords: metaForm.keywords
+            .split(",")
+            .map((k) => k.trim())
+            .filter(Boolean),
         }),
       });
-      if (res.ok) {
-        toast.success("Meta tags saved");
-        setMetaDialogOpen(false);
+      if (response.ok) {
+        const json = await response.json();
+        toast.success(`Page meta ${json.stats.action} for ${json.stats.path}`);
+        setShowMetaDialog(false);
+        resetMetaForm();
         await fetchPages();
       } else {
-        const err = await res.json();
-        toast.error(err.error || "Failed to save");
+        const err = await response.json();
+        toast.error(err.error || "Failed to save meta");
       }
-    } catch (error) {
-      console.error("Save meta error:", error);
-      toast.error("Failed to save meta tags");
+    } catch {
+      toast.error("Network error saving meta");
     } finally {
-      setActionLoading(false);
+      setIsSavingMeta(false);
     }
   };
 
-  const saveKeyword = async () => {
-    setActionLoading(true);
+  const handleSaveKeyword = async () => {
+    if (!keywordForm.keyword.trim()) {
+      toast.error("Keyword is required");
+      return;
+    }
+    setIsSavingKeyword(true);
     try {
-      const isEdit = !!editingKeyword;
+      const isEditing = !!editingKeyword;
       const body = {
-        ...(isEdit && { id: editingKeyword.id }),
+        ...(isEditing ? { id: editingKeyword.id } : {}),
         keyword: keywordForm.keyword,
         category: keywordForm.category || null,
-        targetPages: keywordForm.targetPages.split(",").map(p => p.trim()).filter(Boolean),
+        targetPages: keywordForm.targetPages
+          .split(",")
+          .map((p) => p.trim())
+          .filter(Boolean),
         searchVolume: keywordForm.searchVolume ? parseInt(keywordForm.searchVolume) : null,
         difficulty: keywordForm.difficulty ? parseInt(keywordForm.difficulty) : null,
         currentRank: keywordForm.currentRank ? parseInt(keywordForm.currentRank) : null,
         notes: keywordForm.notes || null,
       };
-      const res = await fetchWithRetry("/api/admin/seo/keywords", {
-        method: isEdit ? "PATCH" : "POST",
+
+      const response = await fetchWithRetry("/api/admin/seo/keywords", {
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify(body),
       });
-      if (res.ok) {
-        toast.success(isEdit ? "Keyword updated" : "Keyword added");
-        setKeywordDialogOpen(false);
-        setEditingKeyword(null);
+
+      if (response.ok) {
+        toast.success(isEditing ? "Keyword updated" : "Keyword added");
+        setShowKeywordDialog(false);
+        resetKeywordForm();
         await fetchKeywords();
       } else {
-        const err = await res.json();
+        const err = await response.json();
         toast.error(err.error || "Failed to save keyword");
       }
-    } catch (error) {
-      console.error("Save keyword error:", error);
-      toast.error("Failed to save keyword");
+    } catch {
+      toast.error("Network error saving keyword");
     } finally {
-      setActionLoading(false);
+      setIsSavingKeyword(false);
     }
   };
 
-  const deleteKeyword = async (id: string) => {
+  const handleDeleteKeyword = async (id: string) => {
     try {
-      const res = await fetchWithRetry(`/api/admin/seo/keywords?id=${id}`, {
+      const response = await fetchWithRetry(`/api/admin/seo/keywords?id=${id}`, {
         method: "DELETE",
-        headers: { ...getCSRFHeaders() },
+        headers: getCSRFHeaders(),
       });
-      if (res.ok) {
+      if (response.ok) {
         toast.success("Keyword deleted");
         await fetchKeywords();
       } else {
-        toast.error("Failed to delete keyword");
+        const err = await response.json();
+        toast.error(err.error || "Failed to delete keyword");
       }
-    } catch (error) {
-      console.error("Delete keyword error:", error);
-      toast.error("Failed to delete keyword");
+    } catch {
+      toast.error("Network error deleting keyword");
     }
   };
 
-  const saveRedirect = async () => {
-    setActionLoading(true);
+  const handleSaveRedirect = async () => {
+    if (!redirectForm.fromPath.trim() || !redirectForm.toPath.trim()) {
+      toast.error("Both paths are required");
+      return;
+    }
+    setIsSavingRedirect(true);
     try {
-      const isEdit = !!editingRedirect;
+      const isEditing = !!editingRedirect;
       const body = {
-        ...(isEdit && { id: editingRedirect.id }),
+        ...(isEditing ? { id: editingRedirect.id } : {}),
         fromPath: redirectForm.fromPath,
         toPath: redirectForm.toPath,
         statusCode: parseInt(redirectForm.statusCode),
+        isActive: redirectForm.isActive,
       };
-      const res = await fetchWithRetry("/api/admin/seo/redirects", {
-        method: isEdit ? "PATCH" : "POST",
+
+      const response = await fetchWithRetry("/api/admin/seo/redirects", {
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify(body),
       });
-      if (res.ok) {
-        toast.success(isEdit ? "Redirect updated" : "Redirect created");
-        setRedirectDialogOpen(false);
-        setEditingRedirect(null);
+
+      if (response.ok) {
+        toast.success(isEditing ? "Redirect updated" : "Redirect created");
+        setShowRedirectDialog(false);
+        resetRedirectForm();
         await fetchRedirects();
       } else {
-        const err = await res.json();
+        const err = await response.json();
         toast.error(err.error || "Failed to save redirect");
       }
-    } catch (error) {
-      console.error("Save redirect error:", error);
-      toast.error("Failed to save redirect");
+    } catch {
+      toast.error("Network error saving redirect");
     } finally {
-      setActionLoading(false);
+      setIsSavingRedirect(false);
     }
   };
 
-  const deleteRedirect = async (id: string) => {
+  const handleToggleRedirect = async (redirect: SeoRedirect) => {
     try {
-      const res = await fetchWithRetry(`/api/admin/seo/redirects?id=${id}`, {
-        method: "DELETE",
-        headers: { ...getCSRFHeaders() },
-      });
-      if (res.ok) {
-        toast.success("Redirect deleted");
-        await fetchRedirects();
-      } else {
-        toast.error("Failed to delete redirect");
-      }
-    } catch (error) {
-      console.error("Delete redirect error:", error);
-      toast.error("Failed to delete redirect");
-    }
-  };
-
-  const toggleRedirectActive = async (redirect: SeoRedirect) => {
-    try {
-      const res = await fetchWithRetry("/api/admin/seo/redirects", {
+      const response = await fetchWithRetry("/api/admin/seo/redirects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({ id: redirect.id, isActive: !redirect.isActive }),
       });
-      if (res.ok) {
-        toast.success(redirect.isActive ? "Redirect disabled" : "Redirect enabled");
+      if (response.ok) {
+        toast.success(`Redirect ${redirect.isActive ? "disabled" : "enabled"}`);
         await fetchRedirects();
+      } else {
+        const err = await response.json();
+        toast.error(err.error || "Failed to toggle redirect");
       }
-    } catch (error) {
-      console.error("Toggle redirect error:", error);
+    } catch {
+      toast.error("Network error toggling redirect");
     }
   };
 
-  const generateAiSuggestions = async () => {
-    setAiLoading(true);
+  const handleDeleteRedirect = async () => {
+    if (!redirectToDelete) return;
     try {
-      const res = await fetchWithRetry("/api/admin/seo/audit", {
+      const response = await fetchWithRetry(`/api/admin/seo/redirects?id=${redirectToDelete.id}`, {
+        method: "DELETE",
+        headers: getCSRFHeaders(),
+      });
+      if (response.ok) {
+        toast.success("Redirect deleted");
+        setShowDeleteRedirectDialog(false);
+        setRedirectToDelete(null);
+        await fetchRedirects();
+      } else {
+        const err = await response.json();
+        toast.error(err.error || "Failed to delete redirect");
+      }
+    } catch {
+      toast.error("Network error deleting redirect");
+    }
+  };
+
+  const handleRunCron = async () => {
+    setIsRunningCron(true);
+    try {
+      const response = await fetchWithRetry("/api/admin/seo/cron", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
       });
-      if (res.ok) {
-        const json = await res.json();
-        const results = (json.data.results || []) as PageAuditResult[];
-        setAiSuggestions(results.filter((r: PageAuditResult) => r.issues.length > 0).sort((a: PageAuditResult, b: PageAuditResult) => a.score - b.score));
-        toast.success("AI analysis complete");
+      if (response.ok) {
+        const json = await response.json();
+        toast.success(`Cron complete! Score: ${json.data.auditScore}/100, ${json.data.pagesProcessed} pages processed`);
+        await fetchCronLogs();
         await fetchDashboard();
       } else {
-        toast.error("Failed to generate suggestions");
+        const err = await response.json();
+        toast.error(err.error || "Cron job failed");
       }
-    } catch (error) {
-      console.error("AI suggestions error:", error);
-      toast.error("Failed to generate AI suggestions");
+    } catch {
+      toast.error("Network error running cron");
     } finally {
-      setAiLoading(false);
+      setIsRunningCron(false);
     }
   };
 
-  const openEditMeta = (page: PageMeta) => {
-    setEditingPage(page);
-    setMetaForm({
-      path: page.path, title: page.title || "", description: page.description || "",
-      ogTitle: page.ogTitle || "", ogDescription: page.ogDescription || "",
-      ogImage: page.ogImage || "", twitterTitle: page.twitterTitle || "",
-      twitterDesc: page.twitterDesc || "", canonicalUrl: page.canonicalUrl || "",
-      noIndex: page.noIndex, noFollow: page.noFollow, keywords: page.keywords.join(", "),
-    });
-    setMetaDialogOpen(true);
+  const handleGenerateAiSuggestions = async () => {
+    setIsGeneratingSuggestions(true);
+    try {
+      // First run a fresh audit to get latest data
+      const response = await fetchWithRetry("/api/admin/seo/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+      });
+      if (response.ok) {
+        const json = await response.json();
+        const results: PageAuditResult[] = json.data.results || [];
+        const suggestions: AiSuggestion[] = [];
+
+        results.forEach((page) => {
+          page.issues.forEach((issue) => {
+            let priority: AiSuggestion["priority"] = "nice-to-have";
+            let fix = "";
+
+            if (issue.includes("No SeoPageMeta")) {
+              priority = "critical";
+              fix = `Create a SeoPageMeta entry for ${page.path} with a descriptive title and meta description that includes relevant keywords.`;
+            } else if (issue.includes("Missing page title")) {
+              priority = "critical";
+              fix = `Add a compelling title tag (50-60 chars) for ${page.path} that includes your primary keyword for this page.`;
+            } else if (issue.includes("Missing meta description")) {
+              priority = "critical";
+              fix = `Write a meta description (120-155 chars) for ${page.path} that summarizes the page content and includes a call-to-action.`;
+            } else if (issue.includes("too short")) {
+              priority = "important";
+              fix = `Expand the meta description to at least 50 characters. Include relevant keywords and a compelling value proposition.`;
+            } else if (issue.includes("too long")) {
+              priority = "important";
+              fix = `Shorten the meta description to under 160 characters to prevent truncation in search results.`;
+            } else if (issue.includes("Open Graph title")) {
+              priority = "important";
+              fix = `Add an og:title tag to improve social media sharing appearance. Use the page title or a social-optimized variant.`;
+            } else if (issue.includes("Open Graph description")) {
+              priority = "important";
+              fix = `Add an og:description tag for better social media previews. Keep it engaging and under 200 characters.`;
+            } else if (issue.includes("Open Graph image")) {
+              priority = "important";
+              fix = `Add an og:image (1200x630px recommended) to make social shares more visually appealing and increase click-through rates.`;
+            } else if (issue.includes("No keywords")) {
+              priority = "nice-to-have";
+              fix = `Define 3-5 relevant keywords for ${page.path} that match user search intent.`;
+            } else if (issue.includes("noIndex")) {
+              priority = "nice-to-have";
+              fix = `This page is set to noIndex. Verify this is intentional -- if not, remove the noIndex flag to allow search engine indexing.`;
+            }
+
+            if (fix) {
+              suggestions.push({ priority, page: page.path, issue, fix });
+            }
+          });
+        });
+
+        // Sort by priority
+        const priorityOrder = { critical: 0, important: 1, "nice-to-have": 2 };
+        suggestions.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+        setAiSuggestions(suggestions);
+        setAuditResults(results);
+        await fetchDashboard();
+        toast.success(`Generated ${suggestions.length} AI suggestions`);
+      } else {
+        toast.error("Failed to run audit for AI suggestions");
+      }
+    } catch {
+      toast.error("Network error generating suggestions");
+    } finally {
+      setIsGeneratingSuggestions(false);
+    }
   };
 
-  const openNewMeta = () => {
+  // ─── Form Helpers ────────────────────────────────────────────────
+
+  const resetMetaForm = () => {
     setEditingPage(null);
     setMetaForm({
-      path: "", title: "", description: "", ogTitle: "", ogDescription: "",
-      ogImage: "", twitterTitle: "", twitterDesc: "", canonicalUrl: "",
-      noIndex: false, noFollow: false, keywords: "",
+      path: "",
+      title: "",
+      description: "",
+      ogTitle: "",
+      ogDescription: "",
+      ogImage: "",
+      twitterTitle: "",
+      twitterDesc: "",
+      canonicalUrl: "",
+      noIndex: false,
+      noFollow: false,
+      keywords: "",
     });
-    setMetaDialogOpen(true);
+  };
+
+  const openEditMeta = (page: SeoPageMeta) => {
+    setEditingPage(page);
+    setMetaForm({
+      path: page.path,
+      title: page.title || "",
+      description: page.description || "",
+      ogTitle: page.ogTitle || "",
+      ogDescription: page.ogDescription || "",
+      ogImage: page.ogImage || "",
+      twitterTitle: page.twitterTitle || "",
+      twitterDesc: page.twitterDesc || "",
+      canonicalUrl: page.canonicalUrl || "",
+      noIndex: page.noIndex,
+      noFollow: page.noFollow,
+      keywords: (page.keywords || []).join(", "),
+    });
+    setShowMetaDialog(true);
+  };
+
+  const resetKeywordForm = () => {
+    setEditingKeyword(null);
+    setKeywordForm({
+      keyword: "",
+      category: "primary",
+      targetPages: "",
+      searchVolume: "",
+      difficulty: "",
+      currentRank: "",
+      notes: "",
+    });
   };
 
   const openEditKeyword = (kw: SeoKeyword) => {
     setEditingKeyword(kw);
     setKeywordForm({
-      keyword: kw.keyword, category: kw.category || "primary",
-      targetPages: kw.targetPages.join(", "), searchVolume: kw.searchVolume?.toString() || "",
-      difficulty: kw.difficulty?.toString() || "", currentRank: kw.currentRank?.toString() || "",
+      keyword: kw.keyword,
+      category: kw.category || "primary",
+      targetPages: (kw.targetPages || []).join(", "),
+      searchVolume: kw.searchVolume?.toString() || "",
+      difficulty: kw.difficulty?.toString() || "",
+      currentRank: kw.currentRank?.toString() || "",
       notes: kw.notes || "",
     });
-    setKeywordDialogOpen(true);
+    setShowKeywordDialog(true);
   };
 
-  const openNewKeyword = () => {
-    setEditingKeyword(null);
-    setKeywordForm({ keyword: "", category: "primary", targetPages: "", searchVolume: "", difficulty: "", currentRank: "", notes: "" });
-    setKeywordDialogOpen(true);
+  const resetRedirectForm = () => {
+    setEditingRedirect(null);
+    setRedirectForm({
+      fromPath: "",
+      toPath: "",
+      statusCode: "301",
+      isActive: true,
+    });
   };
 
   const openEditRedirect = (r: SeoRedirect) => {
     setEditingRedirect(r);
-    setRedirectForm({ fromPath: r.fromPath, toPath: r.toPath, statusCode: r.statusCode.toString() });
-    setRedirectDialogOpen(true);
+    setRedirectForm({
+      fromPath: r.fromPath,
+      toPath: r.toPath,
+      statusCode: r.statusCode.toString(),
+      isActive: r.isActive,
+    });
+    setShowRedirectDialog(true);
   };
 
-  const openNewRedirect = () => {
-    setEditingRedirect(null);
-    setRedirectForm({ fromPath: "", toPath: "", statusCode: "301" });
-    setRedirectDialogOpen(true);
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  const filteredAuditResults = auditResults.filter(r => r.path.toLowerCase().includes(auditSearch.toLowerCase()));
+  const formatDuration = (ms: number) => {
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  };
 
-  // ============================================
-  // Loading State
-  // ============================================
+  // ─── Filtered Data ──────────────────────────────────────────────
 
-  if (loading) {
+  const filteredAuditResults = auditResults.filter((r) =>
+    r.path.toLowerCase().includes(auditSearch.toLowerCase())
+  );
+
+  const filteredPages = pages.filter(
+    (p) =>
+      p.path.toLowerCase().includes(pageSearch.toLowerCase()) ||
+      (p.title && p.title.toLowerCase().includes(pageSearch.toLowerCase()))
+  );
+
+
+  // ─── Render ─────────────────────────────────────────────────────
+
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading SEO Suite...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
       </div>
     );
   }
 
-  // ============================================
-  // Render
-  // ============================================
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20">
-              <Search className="h-6 w-6 text-emerald-500" />
-            </div>
-            SEO Suite
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+            SEO Management
           </h1>
-          <p className="text-muted-foreground mt-1">Comprehensive SEO management, auditing, and optimization</p>
+          <p className="text-muted-foreground mt-1">
+            Monitor, audit, and optimize your site&apos;s search engine performance
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { fetchDashboard(); fetchAuditHistory(); }} disabled={actionLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${actionLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Button onClick={runAudit} disabled={actionLoading} className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
-            {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-            Run Full Audit
-          </Button>
-        </div>
+        <Button
+          onClick={handleRunAudit}
+          disabled={isRunningAudit}
+          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+        >
+          {isRunningAudit ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
+          Run SEO Audit
+        </Button>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-7 w-full">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="audit">Page Audit</TabsTrigger>
-          <TabsTrigger value="meta">Meta Tags</TabsTrigger>
-          <TabsTrigger value="keywords">Keywords</TabsTrigger>
-          <TabsTrigger value="redirects">Redirects</TabsTrigger>
-          <TabsTrigger value="cron">Cron</TabsTrigger>
-          <TabsTrigger value="ai">AI</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 h-auto">
+          <TabsTrigger value="dashboard" className="text-xs sm:text-sm">
+            <BarChart3 className="h-3 w-3 mr-1 hidden sm:inline" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="text-xs sm:text-sm">
+            <Search className="h-3 w-3 mr-1 hidden sm:inline" />
+            Page Audit
+          </TabsTrigger>
+          <TabsTrigger value="meta" className="text-xs sm:text-sm">
+            <FileText className="h-3 w-3 mr-1 hidden sm:inline" />
+            Meta Tags
+          </TabsTrigger>
+          <TabsTrigger value="keywords" className="text-xs sm:text-sm">
+            <Tag className="h-3 w-3 mr-1 hidden sm:inline" />
+            Keywords
+          </TabsTrigger>
+          <TabsTrigger value="redirects" className="text-xs sm:text-sm">
+            <Link2 className="h-3 w-3 mr-1 hidden sm:inline" />
+            Redirects
+          </TabsTrigger>
+          <TabsTrigger value="cron" className="text-xs sm:text-sm">
+            <Clock className="h-3 w-3 mr-1 hidden sm:inline" />
+            Cron
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="text-xs sm:text-sm">
+            <Sparkles className="h-3 w-3 mr-1 hidden sm:inline" />
+            AI Suggestions
+          </TabsTrigger>
         </TabsList>
 
-        {/* ============================================ */}
-        {/* TAB: Dashboard */}
-        {/* ============================================ */}
+        {/* ═══════ Tab 1: Dashboard ═══════ */}
         <TabsContent value="dashboard" className="space-y-6">
-          {/* Score Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <Card className="md:col-span-1">
+          {/* Overview Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-emerald-500/20 bg-gradient-to-br from-background to-emerald-500/5">
               <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground text-center mb-2">SEO Score</p>
-                <ScoreGauge score={dashboard?.overallScore ?? null} />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Overall SEO Score</p>
+                    <p className="text-3xl font-bold text-emerald-500">
+                      {dashboardData?.overallScore ?? "--"}
+                    </p>
+                  </div>
+                  <ScoreGauge score={dashboardData?.overallScore ?? 0} size={80} />
+                </div>
               </CardContent>
             </Card>
+
             <Card>
-              <CardContent className="pt-6 text-center">
-                <FileText className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                <p className="text-3xl font-bold">{dashboard?.totalPages ?? 0}</p>
-                <p className="text-sm text-muted-foreground">Pages Tracked</p>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pages Tracked</p>
+                    <p className="text-3xl font-bold">{dashboardData?.totalPages ?? 0}</p>
+                  </div>
+                  <div className="rounded-full bg-blue-500/10 p-3">
+                    <Globe className="h-6 w-6 text-blue-500" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
+
             <Card>
-              <CardContent className="pt-6 text-center">
-                <Hash className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-                <p className="text-3xl font-bold">{dashboard?.totalKeywords ?? 0}</p>
-                <p className="text-sm text-muted-foreground">Keywords</p>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Keywords Tracked</p>
+                    <p className="text-3xl font-bold">{dashboardData?.trackedKeywords ?? 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      of {dashboardData?.totalKeywords ?? 0} total
+                    </p>
+                  </div>
+                  <div className="rounded-full bg-purple-500/10 p-3">
+                    <Tag className="h-6 w-6 text-purple-500" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
+
             <Card>
-              <CardContent className="pt-6 text-center">
-                <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                <p className="text-3xl font-bold">{dashboard?.issueStats.total ?? 0}</p>
-                <p className="text-sm text-muted-foreground">Total Issues</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                <p className="text-3xl font-bold">{dashboard?.issueStats.critical ?? 0}</p>
-                <p className="text-sm text-muted-foreground">Critical Issues</p>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Issues Found</p>
+                    <p className="text-3xl font-bold">{dashboardData?.issueStats.total ?? 0}</p>
+                    <p className="text-xs text-red-400 mt-1">
+                      {dashboardData?.issueStats.critical ?? 0} critical
+                    </p>
+                  </div>
+                  <div className="rounded-full bg-red-500/10 p-3">
+                    <AlertTriangle className="h-6 w-6 text-red-500" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Audit History Chart */}
+          {/* Latest Audit Summary + Score History */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Latest Audit Summary</CardTitle>
+                <CardDescription>
+                  {dashboardData?.latestAudit?.completedAt
+                    ? `Last run: ${formatDate(dashboardData.latestAudit.completedAt)}`
+                    : "No audits run yet"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {dashboardData?.latestAudit ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <StatusBadge status={dashboardData.latestAudit.status} />
+                      <span className="text-sm text-muted-foreground">
+                        {dashboardData.latestAudit.pagesAudited} pages audited
+                      </span>
+                      {dashboardData.latestAudit.duration && (
+                        <span className="text-sm text-muted-foreground">
+                          in {formatDuration(dashboardData.latestAudit.duration)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm">{dashboardData.latestAudit.summary}</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="text-center p-3 rounded-lg bg-red-500/10">
+                        <p className="text-2xl font-bold text-red-400">{dashboardData.issueStats.critical}</p>
+                        <p className="text-xs text-muted-foreground">Critical</p>
+                      </div>
+                      <div className="text-center p-3 rounded-lg bg-yellow-500/10">
+                        <p className="text-2xl font-bold text-yellow-400">{dashboardData.issueStats.warnings}</p>
+                        <p className="text-xs text-muted-foreground">Warnings</p>
+                      </div>
+                      <div className="text-center p-3 rounded-lg bg-emerald-500/10">
+                        <p className="text-2xl font-bold text-emerald-400">{dashboardData.issueStats.passed}</p>
+                        <p className="text-xs text-muted-foreground">Passed</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={BarChart3}
+                    title="No Audits Yet"
+                    description="Run your first SEO audit to see results here."
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Audit Score History</CardTitle>
+                <CardDescription>Last {auditHistory.length} audits</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {auditHistory.length > 0 ? (
+                  <div className="flex items-end gap-2 h-40">
+                    {auditHistory
+                      .filter((a) => a.status === "completed" && a.overallScore !== null)
+                      .reverse()
+                      .map((audit) => {
+                        const score = audit.overallScore ?? 0;
+                        const height = Math.max(score, 5);
+                        const color =
+                          score >= 80
+                            ? "bg-emerald-500"
+                            : score >= 60
+                              ? "bg-yellow-500"
+                              : "bg-red-500";
+                        return (
+                          <div key={audit.id} className="flex-1 flex flex-col items-center gap-1">
+                            <span className="text-xs text-muted-foreground">{score}</span>
+                            <div
+                              className={`w-full rounded-t-sm ${color} transition-all duration-500`}
+                              style={{ height: `${height}%` }}
+                              title={`Score: ${score} - ${formatDate(audit.createdAt)}`}
+                            />
+                            <span className="text-[10px] text-muted-foreground truncate max-w-full">
+                              {new Date(audit.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={BarChart3}
+                    title="No History"
+                    description="Run audits to see score trends over time."
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Cron Logs */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Audit Score History</CardTitle>
+              <CardTitle className="text-lg">Recent Cron Logs</CardTitle>
+              <CardDescription>Last 10 automated runs</CardDescription>
             </CardHeader>
             <CardContent>
-              {auditHistory.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No audits yet. Run your first audit to see the score history.</p>
-              ) : (
-                <div className="flex items-end gap-2 h-40">
-                  {auditHistory.slice().reverse().map((audit) => {
-                    const score = audit.overallScore ?? 0;
-                    const color = score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-amber-500" : "bg-red-500";
-                    return (
-                      <div key={audit.id} className="flex-1 flex flex-col items-center gap-1">
-                        <span className="text-xs font-medium">{score}</span>
-                        <div className={`w-full rounded-t ${color} transition-all`} style={{ height: `${Math.max(score, 5)}%` }} />
-                        <span className="text-[10px] text-muted-foreground">{new Date(audit.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                      </div>
-                    );
-                  })}
+              {dashboardData?.recentCronLogs && dashboardData.recentCronLogs.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Timestamp</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Status</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Pages</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Issues</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.recentCronLogs.map((log) => (
+                        <tr key={log.id} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="py-2 px-3">{formatDate(log.createdAt)}</td>
+                          <td className="py-2 px-3"><StatusBadge status={log.status} /></td>
+                          <td className="py-2 px-3">{log.pagesProcessed}</td>
+                          <td className="py-2 px-3">{log.issuesFound}</td>
+                          <td className="py-2 px-3">{formatDuration(log.duration)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
+              ) : (
+                <EmptyState
+                  icon={Clock}
+                  title="No Cron Logs"
+                  description="Cron jobs haven't been run yet. Use the Cron tab to set up automated audits."
+                />
               )}
             </CardContent>
           </Card>
 
-          {/* Low Score Pages & Latest Audit */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
+          {/* Low Score Pages */}
+          {dashboardData?.lowScorePages && dashboardData.lowScorePages.length > 0 && (
+            <Card className="border-red-500/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" /> Pages Needing Attention</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  Pages Needing Attention
+                </CardTitle>
+                <CardDescription>Pages with audit scores below 60</CardDescription>
               </CardHeader>
               <CardContent>
-                {(dashboard?.lowScorePages?.length ?? 0) === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">All pages are scoring well!</p>
-                ) : (
-                  <div className="space-y-2">
-                    {dashboard?.lowScorePages.map((page) => (
-                      <div key={page.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                        <span className="text-sm font-mono truncate flex-1">{page.path}</span>
-                        <ScoreBadge score={page.lastAuditScore} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" /> Latest Audit Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {dashboard?.latestAudit ? (
-                  <div className="space-y-3">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Status</span><StatusBadge status={dashboard.latestAudit.status} /></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Run Type</span><Badge variant="secondary">{dashboard.latestAudit.runType}</Badge></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Pages Audited</span><span className="font-medium">{dashboard.latestAudit.pagesAudited}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Duration</span><span className="font-medium">{formatDuration(dashboard.latestAudit.duration)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span className="text-sm">{formatDate(dashboard.latestAudit.completedAt)}</span></div>
-                    {dashboard.latestAudit.summary && (
-                      <p className="text-sm text-muted-foreground border-t pt-2 mt-2">{dashboard.latestAudit.summary}</p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-4">No audits yet</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* ============================================ */}
-        {/* TAB: Page Audit */}
-        {/* ============================================ */}
-        <TabsContent value="audit" className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Filter by path..." value={auditSearch} onChange={(e) => setAuditSearch(e.target.value)} className="pl-10" />
-            </div>
-            <Button onClick={runAudit} disabled={actionLoading}>
-              {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-              Run Audit
-            </Button>
-          </div>
-
-          {auditResults.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Search className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                <p className="text-lg font-medium">No Audit Results</p>
-                <p className="text-muted-foreground mt-1">Click &quot;Run Audit&quot; to scan all pages</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {filteredAuditResults.map((result) => (
-                <Card key={result.path} className="cursor-pointer" onClick={() => setExpandedPath(expandedPath === result.path ? null : result.path)}>
-                  <CardContent className="py-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {result.score >= 80 ? <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" /> :
-                         result.score >= 60 ? <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" /> :
-                         <XCircle className="h-5 w-5 text-red-500 shrink-0" />}
-                        <span className="font-mono text-sm truncate">{result.path}</span>
-                      </div>
+                <div className="space-y-2">
+                  {dashboardData.lowScorePages.map((page) => (
+                    <div
+                      key={page.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-red-500/5 hover:bg-red-500/10 transition-colors"
+                    >
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground">{result.issues.length} issues</span>
-                        <ScoreBadge score={result.score} />
-                        {expandedPath === result.path ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        <ScoreBadge score={page.lastAuditScore ?? 0} />
+                        <span className="font-mono text-sm">{page.path}</span>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          openEditMeta(page);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3 mr-1" />
+                        Fix
+                      </Button>
                     </div>
-                    {expandedPath === result.path && (
-                      <div className="mt-4 pt-4 border-t space-y-3">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                          <div className="flex items-center gap-1">{result.hasTitle ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <XCircle className="h-3 w-3 text-red-500" />} Title</div>
-                          <div className="flex items-center gap-1">{result.hasDescription ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <XCircle className="h-3 w-3 text-red-500" />} Description</div>
-                          <div className="flex items-center gap-1">{result.hasOgTitle ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <XCircle className="h-3 w-3 text-red-500" />} OG Title</div>
-                          <div className="flex items-center gap-1">{result.hasOgImage ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <XCircle className="h-3 w-3 text-red-500" />} OG Image</div>
-                          <div className="flex items-center gap-1">{result.hasKeywords ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <XCircle className="h-3 w-3 text-red-500" />} Keywords</div>
-                          <div className="flex items-center gap-1">{result.descriptionLengthOk ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <XCircle className="h-3 w-3 text-red-500" />} Desc Length{result.descriptionLength !== null && ` (${result.descriptionLength})`}</div>
-                          <div className="flex items-center gap-1">{!result.noIndex ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <AlertTriangle className="h-3 w-3 text-amber-500" />} Indexable</div>
-                          <div className="flex items-center gap-1">{result.hasPageMeta ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <XCircle className="h-3 w-3 text-red-500" />} Has Meta Record</div>
-                        </div>
-                        {result.issues.length > 0 && (
-                          <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-3">
-                            <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">Issues:</p>
-                            <ul className="space-y-1">
-                              {result.issues.map((issue, i) => (
-                                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                                  <XCircle className="h-3 w-3 text-red-500 mt-0.5 shrink-0" /> {issue}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
-        {/* ============================================ */}
-        {/* TAB: Meta Tags Manager */}
-        {/* ============================================ */}
-        <TabsContent value="meta" className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search pages..." value={metaSearch} onChange={(e) => setMetaSearch(e.target.value)} className="pl-10" />
-            </div>
-            <Button onClick={openNewMeta}><Plus className="h-4 w-4 mr-2" /> Add Page Meta</Button>
-          </div>
 
-          <div className="space-y-2">
-            {pages.map((page) => (
-              <Card key={page.id}>
-                <CardContent className="py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0 mr-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm">{page.path}</span>
-                        <ScoreBadge score={page.lastAuditScore} />
-                        {page.noIndex && <Badge variant="destructive" className="text-[10px]">noindex</Badge>}
-                      </div>
-                      {page.title && <p className="text-sm text-muted-foreground mt-1 truncate">{page.title}</p>}
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => openEditMeta(page)}><Pencil className="h-4 w-4" /></Button>
+        {/* ═══════ Tab 2: Page Audit ═══════ */}
+        <TabsContent value="audit" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle>Page Audit Results</CardTitle>
+                  <CardDescription>
+                    {auditResults.length} pages audited
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Filter by path..."
+                      value={auditSearch}
+                      onChange={(e) => setAuditSearch(e.target.value)}
+                      className="pl-9 w-60"
+                    />
                   </div>
-                  {/* Google Preview */}
-                  {page.title && (
-                    <div className="mt-3 p-3 rounded-lg bg-muted/50 border">
-                      <p className="text-xs text-muted-foreground mb-1">Google Preview:</p>
-                      <p className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline truncate">{page.title}</p>
-                      <p className="text-emerald-600 dark:text-emerald-400 text-xs">indiecrowdfund.com{page.path}</p>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{page.description || "No description set"}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-            {pages.length === 0 && (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">No pages found. Run an audit to populate page data.</CardContent></Card>
-            )}
-          </div>
+                  <Button onClick={handleRunAudit} disabled={isRunningAudit} size="sm" variant="outline">
+                    {isRunningAudit ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {filteredAuditResults.length > 0 ? (
+                <ScrollArea className="h-[600px]">
+                  <div className="space-y-2">
+                    {filteredAuditResults.map((result) => (
+                      <div key={result.path} className="border rounded-lg overflow-hidden">
+                        <button
+                          className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors text-left"
+                          onClick={() =>
+                            setExpandedAuditRow(expandedAuditRow === result.path ? null : result.path)
+                          }
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <ScoreBadge score={result.score} />
+                            <span className="font-mono text-sm truncate">{result.path}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {result.issues.length > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                {result.issues.length} issue{result.issues.length !== 1 ? "s" : ""}
+                              </Badge>
+                            )}
+                            {expandedAuditRow === result.path ? (
+                              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                        </button>
+
+                        {expandedAuditRow === result.path && (
+                          <div className="border-t p-4 bg-muted/10 space-y-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div className="flex items-center gap-2">
+                                {result.hasTitle ? (
+                                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                ) : (
+                                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                                )}
+                                <span className="text-sm">Title</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {result.hasDescription ? (
+                                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                ) : (
+                                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                                )}
+                                <span className="text-sm">Description</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {result.hasOgTitle && result.hasOgDescription ? (
+                                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                ) : (
+                                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                )}
+                                <span className="text-sm">OG Tags</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {result.hasOgImage ? (
+                                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                ) : (
+                                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                )}
+                                <span className="text-sm">OG Image</span>
+                              </div>
+                            </div>
+
+                            {result.descriptionLength !== null && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">
+                                  Description length: {result.descriptionLength} chars
+                                </span>
+                                {result.descriptionLengthOk ? (
+                                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs">
+                                    OK
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">
+                                    {result.descriptionLength < 50 ? "Too short" : "Too long"}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+
+                            {result.issues.length > 0 && (
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-red-400">Issues:</p>
+                                {result.issues.map((issue, i) => (
+                                  <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                    <AlertTriangle className="h-3 w-3 text-red-400 mt-0.5 shrink-0" />
+                                    <span>{issue}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-2 pt-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const existing = pages.find((p) => p.path === result.path);
+                                  if (existing) {
+                                    openEditMeta(existing);
+                                  } else {
+                                    resetMetaForm();
+                                    setMetaForm((prev) => ({ ...prev, path: result.path }));
+                                    setShowMetaDialog(true);
+                                  }
+                                  setActiveTab("meta");
+                                }}
+                              >
+                                <Pencil className="h-3 w-3 mr-1" />
+                                Edit Meta
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : auditResults.length === 0 ? (
+                <EmptyState
+                  icon={Search}
+                  title="No Audit Results"
+                  description="Run an SEO audit to analyze all pages on your site."
+                />
+              ) : (
+                <EmptyState
+                  icon={Search}
+                  title="No Matching Pages"
+                  description="Try adjusting your search filter."
+                />
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* ============================================ */}
-        {/* TAB: Keywords */}
-        {/* ============================================ */}
-        <TabsContent value="keywords" className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Select value={keywordFilter} onValueChange={setKeywordFilter}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="primary">Primary</SelectItem>
-                <SelectItem value="secondary">Secondary</SelectItem>
-                <SelectItem value="long-tail">Long-tail</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={openNewKeyword}><Plus className="h-4 w-4 mr-2" /> Add Keyword</Button>
-          </div>
 
+        {/* ═══════ Tab 3: Meta Tags Manager ═══════ */}
+        <TabsContent value="meta" className="space-y-4">
           <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-3 font-medium">Keyword</th>
-                      <th className="text-left p-3 font-medium">Category</th>
-                      <th className="text-center p-3 font-medium">Volume</th>
-                      <th className="text-center p-3 font-medium">Difficulty</th>
-                      <th className="text-center p-3 font-medium">Rank</th>
-                      <th className="text-center p-3 font-medium">Change</th>
-                      <th className="text-right p-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {keywords.map((kw) => {
-                      const rankChange = kw.previousRank && kw.currentRank ? kw.previousRank - kw.currentRank : null;
-                      return (
-                        <tr key={kw.id} className="border-b hover:bg-muted/50">
-                          <td className="p-3 font-medium">{kw.keyword}</td>
-                          <td className="p-3"><Badge variant="secondary">{kw.category || "uncategorized"}</Badge></td>
-                          <td className="p-3 text-center">{kw.searchVolume?.toLocaleString() ?? "-"}</td>
-                          <td className="p-3 text-center">
-                            {kw.difficulty !== null ? (
-                              <Badge className={kw.difficulty >= 70 ? "bg-red-500/20 text-red-600" : kw.difficulty >= 40 ? "bg-amber-500/20 text-amber-600" : "bg-emerald-500/20 text-emerald-600"}>
-                                {kw.difficulty}
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle>Meta Tags Manager</CardTitle>
+                  <CardDescription>Manage SEO meta tags for all pages</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search pages..."
+                      value={pageSearch}
+                      onChange={(e) => setPageSearch(e.target.value)}
+                      className="pl-9 w-60"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      resetMetaForm();
+                      setShowMetaDialog(true);
+                    }}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Page
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {filteredPages.length > 0 ? (
+                <ScrollArea className="h-[600px]">
+                  <div className="space-y-2">
+                    {filteredPages.map((page) => (
+                      <div
+                        key={page.id}
+                        className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            {page.lastAuditScore !== null && (
+                              <ScoreBadge score={page.lastAuditScore} />
+                            )}
+                            <span className="font-mono text-sm font-medium">{page.path}</span>
+                            {page.noIndex && (
+                              <Badge variant="outline" className="text-xs">
+                                <EyeOff className="h-3 w-3 mr-1" />
+                                noindex
                               </Badge>
-                            ) : "-"}
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditMeta(page)}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                        </div>
+
+                        {page.title && (
+                          <p className="text-sm truncate mb-1">
+                            <span className="text-muted-foreground">Title:</span>{" "}
+                            {page.title}
+                          </p>
+                        )}
+                        {page.description && (
+                          <p className="text-sm truncate text-muted-foreground">
+                            {page.description}
+                          </p>
+                        )}
+
+                        {/* Google Preview */}
+                        {(page.title || page.description) && (
+                          <div className="mt-3 p-3 rounded-lg bg-white/5 border border-border/50">
+                            <p className="text-xs text-muted-foreground mb-1">Google Preview:</p>
+                            <div>
+                              <p className="text-blue-400 text-sm hover:underline cursor-default truncate">
+                                {page.title || page.path} - IndieCrowdfund
+                              </p>
+                              <p className="text-emerald-500 text-xs truncate">
+                                www.indiecrowdfund.com{page.path}
+                              </p>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+                                {page.description || "No description set."}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {page.keywords && page.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {page.keywords.map((kw, i) => (
+                              <Badge key={i} variant="outline" className="text-xs">
+                                {kw}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <EmptyState
+                  icon={FileText}
+                  title="No Pages Found"
+                  description={pageSearch ? "Try adjusting your search." : "Add your first page meta tags to get started."}
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Meta Tags Dialog */}
+          <Dialog open={showMetaDialog} onOpenChange={(open) => { if (!open) { setShowMetaDialog(false); resetMetaForm(); } }}>
+            <DialogContent className="max-w-2xl max-h-[90vh]">
+              <DialogHeader>
+                <DialogTitle>{editingPage ? "Edit" : "Add"} Page Meta Tags</DialogTitle>
+                <DialogDescription>
+                  {editingPage
+                    ? `Editing meta tags for ${editingPage.path}`
+                    : "Create meta tags for a new page path"}
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[60vh] pr-4">
+                <div className="space-y-4 py-2">
+                  <div>
+                    <Label htmlFor="meta-path">Page Path</Label>
+                    <Input
+                      id="meta-path"
+                      placeholder="/about-us"
+                      value={metaForm.path}
+                      onChange={(e) => setMetaForm({ ...metaForm, path: e.target.value })}
+                      disabled={!!editingPage}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="meta-title">Title</Label>
+                    <Input
+                      id="meta-title"
+                      placeholder="Page Title - IndieCrowdfund"
+                      value={metaForm.title}
+                      onChange={(e) => setMetaForm({ ...metaForm, title: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {metaForm.title.length}/60 characters (recommended 50-60)
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="meta-description">Description</Label>
+                    <Textarea
+                      id="meta-description"
+                      placeholder="A compelling description of this page..."
+                      value={metaForm.description}
+                      onChange={(e) => setMetaForm({ ...metaForm, description: e.target.value })}
+                      rows={3}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {metaForm.description.length}/160 characters (recommended 120-155)
+                    </p>
+                    <Progress
+                      value={Math.min((metaForm.description.length / 160) * 100, 100)}
+                      className="h-1 mt-1"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="meta-og-title">OG Title</Label>
+                      <Input
+                        id="meta-og-title"
+                        placeholder="Social media title"
+                        value={metaForm.ogTitle}
+                        onChange={(e) => setMetaForm({ ...metaForm, ogTitle: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="meta-og-desc">OG Description</Label>
+                      <Input
+                        id="meta-og-desc"
+                        placeholder="Social media description"
+                        value={metaForm.ogDescription}
+                        onChange={(e) => setMetaForm({ ...metaForm, ogDescription: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="meta-og-image">OG Image URL</Label>
+                    <Input
+                      id="meta-og-image"
+                      placeholder="https://www.indiecrowdfund.com/og-image.jpg"
+                      value={metaForm.ogImage}
+                      onChange={(e) => setMetaForm({ ...metaForm, ogImage: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="meta-twitter-title">Twitter Title</Label>
+                      <Input
+                        id="meta-twitter-title"
+                        placeholder="Twitter card title"
+                        value={metaForm.twitterTitle}
+                        onChange={(e) => setMetaForm({ ...metaForm, twitterTitle: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="meta-twitter-desc">Twitter Description</Label>
+                      <Input
+                        id="meta-twitter-desc"
+                        placeholder="Twitter card description"
+                        value={metaForm.twitterDesc}
+                        onChange={(e) => setMetaForm({ ...metaForm, twitterDesc: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="meta-canonical">Canonical URL</Label>
+                    <Input
+                      id="meta-canonical"
+                      placeholder="https://www.indiecrowdfund.com/page"
+                      value={metaForm.canonicalUrl}
+                      onChange={(e) => setMetaForm({ ...metaForm, canonicalUrl: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="meta-keywords">Keywords (comma-separated)</Label>
+                    <Input
+                      id="meta-keywords"
+                      placeholder="crowdfunding, indie, creators"
+                      value={metaForm.keywords}
+                      onChange={(e) => setMetaForm({ ...metaForm, keywords: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={metaForm.noIndex}
+                        onCheckedChange={(checked) => setMetaForm({ ...metaForm, noIndex: checked })}
+                      />
+                      <Label>noIndex</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={metaForm.noFollow}
+                        onCheckedChange={(checked) => setMetaForm({ ...metaForm, noFollow: checked })}
+                      />
+                      <Label>noFollow</Label>
+                    </div>
+                  </div>
+
+                  {/* Live Google Preview */}
+                  {(metaForm.title || metaForm.description) && (
+                    <div className="p-4 rounded-lg bg-white/5 border border-border/50">
+                      <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                        <Eye className="h-3 w-3" /> Google Search Preview
+                      </p>
+                      <div>
+                        <p className="text-blue-400 text-sm hover:underline cursor-default truncate">
+                          {metaForm.title || metaForm.path || "Page Title"} - IndieCrowdfund
+                        </p>
+                        <p className="text-emerald-500 text-xs truncate">
+                          www.indiecrowdfund.com{metaForm.path || "/"}
+                        </p>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+                          {metaForm.description || "No description provided."}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setShowMetaDialog(false); resetMetaForm(); }}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveMeta}
+                  disabled={isSavingMeta}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                >
+                  {isSavingMeta && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {editingPage ? "Update" : "Create"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+
+        {/* ═══════ Tab 4: Keywords ═══════ */}
+        <TabsContent value="keywords" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle>Keyword Tracker</CardTitle>
+                  <CardDescription>Monitor keyword rankings and performance</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search keywords..."
+                      value={keywordSearch}
+                      onChange={(e) => setKeywordSearch(e.target.value)}
+                      className="pl-9 w-48"
+                    />
+                  </div>
+                  <Select value={keywordCategoryFilter} onValueChange={setKeywordCategoryFilter}>
+                    <SelectTrigger className="w-36">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="primary">Primary</SelectItem>
+                      <SelectItem value="secondary">Secondary</SelectItem>
+                      <SelectItem value="long-tail">Long-tail</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={() => {
+                      resetKeywordForm();
+                      setShowKeywordDialog(true);
+                    }}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Keyword
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {keywords.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Keyword</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Category</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Volume</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Difficulty</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Rank</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Change</th>
+                        <th className="text-right py-2 px-3 text-muted-foreground font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {keywords.map((kw) => {
+                        const rankChange =
+                          kw.previousRank !== null && kw.currentRank !== null
+                            ? kw.previousRank - kw.currentRank
+                            : null;
+                        return (
+                          <tr key={kw.id} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-2 px-3 font-medium">{kw.keyword}</td>
+                            <td className="py-2 px-3">
+                              {kw.category ? (
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    kw.category === "primary"
+                                      ? "border-emerald-500/50 text-emerald-400"
+                                      : kw.category === "secondary"
+                                        ? "border-blue-500/50 text-blue-400"
+                                        : "border-purple-500/50 text-purple-400"
+                                  }
+                                >
+                                  {kw.category}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">--</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3">
+                              {kw.searchVolume !== null ? kw.searchVolume.toLocaleString() : "--"}
+                            </td>
+                            <td className="py-2 px-3">
+                              {kw.difficulty !== null ? (
+                                <div className="flex items-center gap-2">
+                                  <Progress value={kw.difficulty} className="w-16 h-2" />
+                                  <span className="text-xs">{kw.difficulty}</span>
+                                </div>
+                              ) : (
+                                "--"
+                              )}
+                            </td>
+                            <td className="py-2 px-3 font-mono">
+                              {kw.currentRank !== null ? `#${kw.currentRank}` : "--"}
+                            </td>
+                            <td className="py-2 px-3">
+                              {rankChange !== null ? (
+                                <div
+                                  className={`flex items-center gap-1 text-sm ${
+                                    rankChange > 0
+                                      ? "text-emerald-500"
+                                      : rankChange < 0
+                                        ? "text-red-500"
+                                        : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {rankChange > 0 ? (
+                                    <ArrowUpRight className="h-3 w-3" />
+                                  ) : rankChange < 0 ? (
+                                    <ArrowDownRight className="h-3 w-3" />
+                                  ) : null}
+                                  <span>{rankChange > 0 ? `+${rankChange}` : rankChange === 0 ? "=" : rankChange}</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">--</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => openEditKeyword(kw)}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteKeyword(kw.id)}
+                                  className="text-red-400 hover:text-red-500"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Tag}
+                  title="No Keywords Tracked"
+                  description="Start tracking keywords to monitor your search engine rankings."
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Keyword Dialog */}
+          <Dialog open={showKeywordDialog} onOpenChange={(open) => { if (!open) { setShowKeywordDialog(false); resetKeywordForm(); } }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingKeyword ? "Edit" : "Add"} Keyword</DialogTitle>
+                <DialogDescription>
+                  {editingKeyword ? "Update keyword tracking details" : "Add a new keyword to track"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div>
+                  <Label htmlFor="kw-keyword">Keyword</Label>
+                  <Input
+                    id="kw-keyword"
+                    placeholder="crowdfunding platform"
+                    value={keywordForm.keyword}
+                    onChange={(e) => setKeywordForm({ ...keywordForm, keyword: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="kw-category">Category</Label>
+                  <Select
+                    value={keywordForm.category}
+                    onValueChange={(val) => setKeywordForm({ ...keywordForm, category: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="primary">Primary</SelectItem>
+                      <SelectItem value="secondary">Secondary</SelectItem>
+                      <SelectItem value="long-tail">Long-tail</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="kw-target">Target Pages (comma-separated)</Label>
+                  <Input
+                    id="kw-target"
+                    placeholder="/discover, /about-us"
+                    value={keywordForm.targetPages}
+                    onChange={(e) => setKeywordForm({ ...keywordForm, targetPages: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label htmlFor="kw-volume">Search Volume</Label>
+                    <Input
+                      id="kw-volume"
+                      type="number"
+                      placeholder="1000"
+                      value={keywordForm.searchVolume}
+                      onChange={(e) => setKeywordForm({ ...keywordForm, searchVolume: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="kw-difficulty">Difficulty (0-100)</Label>
+                    <Input
+                      id="kw-difficulty"
+                      type="number"
+                      placeholder="45"
+                      value={keywordForm.difficulty}
+                      onChange={(e) => setKeywordForm({ ...keywordForm, difficulty: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="kw-rank">Current Rank</Label>
+                    <Input
+                      id="kw-rank"
+                      type="number"
+                      placeholder="12"
+                      value={keywordForm.currentRank}
+                      onChange={(e) => setKeywordForm({ ...keywordForm, currentRank: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="kw-notes">Notes</Label>
+                  <Textarea
+                    id="kw-notes"
+                    placeholder="Optional notes about this keyword..."
+                    value={keywordForm.notes}
+                    onChange={(e) => setKeywordForm({ ...keywordForm, notes: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setShowKeywordDialog(false); resetKeywordForm(); }}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveKeyword}
+                  disabled={isSavingKeyword}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                >
+                  {isSavingKeyword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {editingKeyword ? "Update" : "Add"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+
+        {/* ═══════ Tab 5: Redirects ═══════ */}
+        <TabsContent value="redirects" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle>URL Redirects</CardTitle>
+                  <CardDescription>
+                    Manage 301/302 redirects for SEO and broken links
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => {
+                    resetRedirectForm();
+                    setShowRedirectDialog(true);
+                  }}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Redirect
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {redirects.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">From</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">To</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Status</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Active</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Hits</th>
+                        <th className="text-right py-2 px-3 text-muted-foreground font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {redirects.map((r) => (
+                        <tr key={r.id} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="py-2 px-3 font-mono text-sm">{r.fromPath}</td>
+                          <td className="py-2 px-3">
+                            <div className="flex items-center gap-1">
+                              <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <span className="font-mono text-sm truncate max-w-[200px]">{r.toPath}</span>
+                            </div>
                           </td>
-                          <td className="p-3 text-center font-mono">{kw.currentRank ?? "-"}</td>
-                          <td className="p-3 text-center">
-                            {rankChange !== null ? (
-                              <span className={`flex items-center justify-center gap-1 ${rankChange > 0 ? "text-emerald-500" : rankChange < 0 ? "text-red-500" : "text-muted-foreground"}`}>
-                                {rankChange > 0 ? <TrendingUp className="h-3 w-3" /> : rankChange < 0 ? <TrendingDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-                                {Math.abs(rankChange)}
-                              </span>
-                            ) : "-"}
+                          <td className="py-2 px-3">
+                            <Badge variant="outline">{r.statusCode}</Badge>
                           </td>
-                          <td className="p-3 text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => openEditKeyword(kw)}><Pencil className="h-3 w-3" /></Button>
-                              <Button variant="ghost" size="sm" onClick={() => deleteKeyword(kw.id)}><Trash2 className="h-3 w-3 text-red-500" /></Button>
+                          <td className="py-2 px-3">
+                            <Switch
+                              checked={r.isActive}
+                              onCheckedChange={() => handleToggleRedirect(r)}
+                            />
+                          </td>
+                          <td className="py-2 px-3 text-muted-foreground">{r.hitCount}</td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => openEditRedirect(r)}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-400 hover:text-red-500"
+                                onClick={() => {
+                                  setRedirectToDelete(r);
+                                  setShowDeleteRedirectDialog(true);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                {keywords.length === 0 && <p className="text-center py-8 text-muted-foreground">No keywords tracked yet</p>}
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Link2}
+                  title="No Redirects"
+                  description="Create redirects to handle moved or deleted pages and preserve SEO value."
+                />
+              )}
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* ============================================ */}
-        {/* TAB: Redirects */}
-        {/* ============================================ */}
-        <TabsContent value="redirects" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">{redirects.length} redirect{redirects.length !== 1 ? "s" : ""} configured</p>
-            <Button onClick={openNewRedirect}><Plus className="h-4 w-4 mr-2" /> Add Redirect</Button>
-          </div>
-
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-3 font-medium">From</th>
-                      <th className="text-left p-3 font-medium">To</th>
-                      <th className="text-center p-3 font-medium">Status</th>
-                      <th className="text-center p-3 font-medium">Hits</th>
-                      <th className="text-center p-3 font-medium">Active</th>
-                      <th className="text-right p-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {redirects.map((r) => (
-                      <tr key={r.id} className="border-b hover:bg-muted/50">
-                        <td className="p-3 font-mono text-xs">{r.fromPath}</td>
-                        <td className="p-3 font-mono text-xs flex items-center gap-1"><ArrowRight className="h-3 w-3 text-muted-foreground" /> {r.toPath}</td>
-                        <td className="p-3 text-center"><Badge variant="secondary">{r.statusCode}</Badge></td>
-                        <td className="p-3 text-center">{r.hitCount}</td>
-                        <td className="p-3 text-center"><Switch checked={r.isActive} onCheckedChange={() => toggleRedirectActive(r)} /></td>
-                        <td className="p-3 text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => openEditRedirect(r)}><Pencil className="h-3 w-3" /></Button>
-                            <Button variant="ghost" size="sm" onClick={() => deleteRedirect(r.id)}><Trash2 className="h-3 w-3 text-red-500" /></Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {redirects.length === 0 && <p className="text-center py-8 text-muted-foreground">No redirects configured</p>}
+          {/* Redirect Dialog */}
+          <Dialog open={showRedirectDialog} onOpenChange={(open) => { if (!open) { setShowRedirectDialog(false); resetRedirectForm(); } }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingRedirect ? "Edit" : "Add"} Redirect</DialogTitle>
+                <DialogDescription>
+                  {editingRedirect ? "Update redirect configuration" : "Create a new URL redirect"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div>
+                  <Label htmlFor="redir-from">From Path</Label>
+                  <Input
+                    id="redir-from"
+                    placeholder="/old-page"
+                    value={redirectForm.fromPath}
+                    onChange={(e) => setRedirectForm({ ...redirectForm, fromPath: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="redir-to">To Path</Label>
+                  <Input
+                    id="redir-to"
+                    placeholder="/new-page"
+                    value={redirectForm.toPath}
+                    onChange={(e) => setRedirectForm({ ...redirectForm, toPath: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="redir-status">Status Code</Label>
+                  <Select
+                    value={redirectForm.statusCode}
+                    onValueChange={(val) => setRedirectForm({ ...redirectForm, statusCode: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="301">301 - Permanent Redirect</SelectItem>
+                      <SelectItem value="302">302 - Temporary Redirect</SelectItem>
+                      <SelectItem value="307">307 - Temporary Redirect (Preserve Method)</SelectItem>
+                      <SelectItem value="308">308 - Permanent Redirect (Preserve Method)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={redirectForm.isActive}
+                    onCheckedChange={(checked) => setRedirectForm({ ...redirectForm, isActive: checked })}
+                  />
+                  <Label>Active</Label>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setShowRedirectDialog(false); resetRedirectForm(); }}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveRedirect}
+                  disabled={isSavingRedirect}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                >
+                  {isSavingRedirect && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {editingRedirect ? "Update" : "Create"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Redirect Confirmation */}
+          <Dialog open={showDeleteRedirectDialog} onOpenChange={setShowDeleteRedirectDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Redirect</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete the redirect from{" "}
+                  <span className="font-mono font-medium">{redirectToDelete?.fromPath}</span>?
+                  This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowDeleteRedirectDialog(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteRedirect}>
+                  Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
-        {/* ============================================ */}
-        {/* TAB: Cron & Automation */}
-        {/* ============================================ */}
+
+        {/* ═══════ Tab 6: Cron & Automation ═══════ */}
         <TabsContent value="cron" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Cron Status */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Terminal className="h-5 w-5" /> Cron Setup</CardTitle>
-                <CardDescription>Configure automated daily SEO audits</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-emerald-500" />
+                  Cron Job Status
+                </CardTitle>
+                <CardDescription>SEO automation runs daily at 3:00 AM</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium">1. Add to .env file:</Label>
-                  <div className="mt-1 p-3 rounded-lg bg-muted font-mono text-xs relative">
-                    <code>SEO_CRON_API_KEY=your-secret-key-here</code>
-                    <Button variant="ghost" size="sm" className="absolute top-1 right-1" onClick={() => { navigator.clipboard.writeText("SEO_CRON_API_KEY=your-secret-key-here"); toast.info("Copied!"); }}>
-                      <Copy className="h-3 w-3" />
-                    </Button>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
+                  <div>
+                    <p className="font-medium">Daily SEO Audit</p>
+                    <p className="text-sm text-muted-foreground">
+                      Audits all pages, checks project/book meta, logs results
+                    </p>
                   </div>
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                    Scheduled
+                  </Badge>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">2. Add to crontab (runs daily at 3 AM):</Label>
-                  <div className="mt-1 p-3 rounded-lg bg-muted font-mono text-xs relative break-all">
-                    <code>0 3 * * * curl -s &quot;https://www.indiecrowdfund.com/api/admin/seo/cron?apiKey=YOUR_API_KEY&quot; -X POST &gt; /dev/null 2&gt;&amp;1</code>
-                    <Button variant="ghost" size="sm" className="absolute top-1 right-1" onClick={() => { navigator.clipboard.writeText('0 3 * * * curl -s "https://www.indiecrowdfund.com/api/admin/seo/cron?apiKey=YOUR_API_KEY" -X POST > /dev/null 2>&1'); toast.info("Copied!"); }}>
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">3. Or use the shell script:</Label>
-                  <div className="mt-1 p-3 rounded-lg bg-muted font-mono text-xs relative">
-                    <code>0 3 * * * /path/to/scripts/seo-cron.sh &gt;&gt; /var/log/seo-cron.log 2&gt;&amp;1</code>
-                  </div>
-                </div>
-                <Button onClick={runCron} disabled={actionLoading} className="w-full">
-                  {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+
+                <Button
+                  onClick={handleRunCron}
+                  disabled={isRunningCron}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                >
+                  {isRunningCron ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2" />
+                  )}
                   Run Cron Now
                 </Button>
               </CardContent>
             </Card>
 
+            {/* Setup Instructions */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" /> Recent Cron Logs</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-blue-500" />
+                  Cron Setup
+                </CardTitle>
+                <CardDescription>Add this to your server crontab</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-80">
-                  {cronLogs.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-4">No cron logs yet</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {cronLogs.map((log) => (
-                        <div key={log.id} className="border rounded-lg p-3 cursor-pointer hover:bg-muted/50" onClick={() => setExpandedCronId(expandedCronId === log.id ? null : log.id)}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <StatusBadge status={log.status} />
-                              <span className="text-xs text-muted-foreground">{formatDate(log.createdAt)}</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span>{log.pagesProcessed} pages</span>
-                              <span>{log.issuesFound} issues</span>
-                              <span>{formatDuration(log.duration)}</span>
-                            </div>
-                          </div>
-                          {expandedCronId === log.id && log.output && (
-                            <div className="mt-2 p-2 rounded bg-muted text-xs font-mono whitespace-pre-wrap">{log.output}</div>
-                          )}
-                          {expandedCronId === log.id && log.errors.length > 0 && (
-                            <div className="mt-2 p-2 rounded bg-red-500/5 border border-red-500/20 text-xs">
-                              {log.errors.map((err, i) => <p key={i} className="text-red-600 dark:text-red-400">{err}</p>)}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <pre className="p-3 rounded-lg bg-muted/50 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
+                    {`0 3 * * * curl -s "https://www.indiecrowdfund.com/api/admin/seo/cron?apiKey=YOUR_API_KEY" -X POST > /dev/null 2>&1`}
+                  </pre>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-1 right-1"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        '0 3 * * * curl -s "https://www.indiecrowdfund.com/api/admin/seo/cron?apiKey=YOUR_API_KEY" -X POST > /dev/null 2>&1'
+                      );
+                      toast.info("Crontab command copied to clipboard");
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                  <p className="text-sm font-medium text-yellow-400 flex items-center gap-1">
+                    <AlertTriangle className="h-4 w-4" />
+                    Required .env variable
+                  </p>
+                  <div className="relative mt-2">
+                    <pre className="p-2 rounded bg-muted/30 text-xs font-mono">
+                      SEO_CRON_API_KEY=your_secure_api_key_here
+                    </pre>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-0 right-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText("SEO_CRON_API_KEY=your_secure_api_key_here");
+                        toast.info("Env variable copied to clipboard");
+                      }}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
 
-        {/* ============================================ */}
-        {/* TAB: AI Suggestions */}
-        {/* ============================================ */}
-        <TabsContent value="ai" className="space-y-4">
+          {/* Cron Logs Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-amber-500" /> AI-Powered SEO Suggestions</CardTitle>
-              <CardDescription>Run an audit and get prioritized recommendations for improving your site&apos;s SEO</CardDescription>
+              <CardTitle>Cron Run History</CardTitle>
+              <CardDescription>Recent automated and manual cron runs</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={generateAiSuggestions} disabled={aiLoading} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
-                {aiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                Generate AI Suggestions
-              </Button>
+              {cronLogs.length > 0 ? (
+                <div className="space-y-2">
+                  {cronLogs.map((log) => (
+                    <div key={log.id} className="border rounded-lg overflow-hidden">
+                      <button
+                        className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors text-left"
+                        onClick={() =>
+                          setExpandedCronRow(expandedCronRow === log.id ? null : log.id)
+                        }
+                      >
+                        <div className="flex items-center gap-3">
+                          <StatusBadge status={log.status} />
+                          <span className="text-sm">{formatDate(log.createdAt)}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{log.pagesProcessed} pages</span>
+                          <span>{log.issuesFound} issues</span>
+                          <span>{log.autoFixed} auto-fixed</span>
+                          <span>{formatDuration(log.duration)}</span>
+                          {expandedCronRow === log.id ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </button>
+
+                      {expandedCronRow === log.id && (
+                        <div className="border-t p-4 bg-muted/10 space-y-3">
+                          {log.output && (
+                            <div>
+                              <p className="text-sm font-medium mb-1">Output:</p>
+                              <pre className="text-xs text-muted-foreground p-2 rounded bg-muted/30 whitespace-pre-wrap">
+                                {log.output}
+                              </pre>
+                            </div>
+                          )}
+                          {log.errors && log.errors.length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium text-red-400 mb-1">
+                                Errors ({log.errors.length}):
+                              </p>
+                              <div className="space-y-1">
+                                {log.errors.map((err, i) => (
+                                  <div key={i} className="flex items-start gap-2 text-sm text-red-300">
+                                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                                    <span>{err}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Activity}
+                  title="No Cron Logs"
+                  description="Run the cron job manually or set up automated scheduling to see logs here."
+                />
+              )}
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {aiSuggestions.length > 0 && (
+
+        {/* ═══════ Tab 7: AI Suggestions ═══════ */}
+        <TabsContent value="ai" className="space-y-4">
+          <Card className="border-purple-500/20 bg-gradient-to-br from-background to-purple-500/5">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-purple-500" />
+                    AI-Powered SEO Suggestions
+                  </CardTitle>
+                  <CardDescription>
+                    Generate intelligent improvement recommendations based on your latest audit data
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={handleGenerateAiSuggestions}
+                  disabled={isGeneratingSuggestions}
+                  className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+                >
+                  {isGeneratingSuggestions ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
+                  Generate Suggestions
+                </Button>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {aiSuggestions.length > 0 ? (
             <>
               {/* Critical */}
-              {aiSuggestions.filter(s => s.score < 30).length > 0 && (
-                <Card className="border-red-500/30">
+              {aiSuggestions.filter((s) => s.priority === "critical").length > 0 && (
+                <Card className="border-red-500/20">
                   <CardHeader>
-                    <CardTitle className="text-red-600 dark:text-red-400 flex items-center gap-2"><XCircle className="h-5 w-5" /> Critical - Immediate Action Required</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2 text-red-400">
+                      <AlertTriangle className="h-5 w-5" />
+                      Critical Issues ({aiSuggestions.filter((s) => s.priority === "critical").length})
+                    </CardTitle>
+                    <CardDescription>These issues significantly impact your SEO performance</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {aiSuggestions.filter(s => s.score < 30).map((s) => (
-                      <div key={s.path} className="p-3 rounded-lg bg-red-500/5 border border-red-500/20">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-mono text-sm font-medium">{s.path}</span>
-                          <ScoreBadge score={s.score} />
-                        </div>
-                        <ul className="space-y-1">
-                          {s.issues.map((issue, i) => (
-                            <li key={i} className="text-sm flex items-start gap-2"><ArrowRight className="h-3 w-3 mt-1 text-red-500 shrink-0" /> {issue}</li>
-                          ))}
-                        </ul>
-                        <Button variant="outline" size="sm" className="mt-2" onClick={() => { setActiveTab("meta"); setMetaSearch(s.path); }}>
-                          <Pencil className="h-3 w-3 mr-1" /> Fix Meta Tags
-                        </Button>
-                      </div>
-                    ))}
+                  <CardContent>
+                    <div className="space-y-3">
+                      {aiSuggestions
+                        .filter((s) => s.priority === "critical")
+                        .map((suggestion, i) => (
+                          <div
+                            key={i}
+                            className="p-4 rounded-lg border border-red-500/20 bg-red-500/5"
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Critical</Badge>
+                              <span className="font-mono text-sm text-muted-foreground">{suggestion.page}</span>
+                            </div>
+                            <p className="text-sm font-medium mb-1">{suggestion.issue}</p>
+                            <div className="flex items-start gap-2 mt-2 p-2 rounded bg-muted/20">
+                              <TrendingUp className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                              <p className="text-sm text-muted-foreground">{suggestion.fix}</p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
                   </CardContent>
                 </Card>
               )}
 
               {/* Important */}
-              {aiSuggestions.filter(s => s.score >= 30 && s.score < 70).length > 0 && (
-                <Card className="border-amber-500/30">
+              {aiSuggestions.filter((s) => s.priority === "important").length > 0 && (
+                <Card className="border-yellow-500/20">
                   <CardHeader>
-                    <CardTitle className="text-amber-600 dark:text-amber-400 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Important - Should Fix Soon</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2 text-yellow-400">
+                      <ExternalLink className="h-5 w-5" />
+                      Important Improvements ({aiSuggestions.filter((s) => s.priority === "important").length})
+                    </CardTitle>
+                    <CardDescription>Addressing these will noticeably improve your SEO</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {aiSuggestions.filter(s => s.score >= 30 && s.score < 70).map((s) => (
-                      <div key={s.path} className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-mono text-sm font-medium">{s.path}</span>
-                          <ScoreBadge score={s.score} />
-                        </div>
-                        <ul className="space-y-1">
-                          {s.issues.map((issue, i) => (
-                            <li key={i} className="text-sm flex items-start gap-2"><ArrowRight className="h-3 w-3 mt-1 text-amber-500 shrink-0" /> {issue}</li>
+                  <CardContent>
+                    <ScrollArea className="max-h-[400px]">
+                      <div className="space-y-3">
+                        {aiSuggestions
+                          .filter((s) => s.priority === "important")
+                          .map((suggestion, i) => (
+                            <div
+                              key={i}
+                              className="p-4 rounded-lg border border-yellow-500/20 bg-yellow-500/5"
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Important</Badge>
+                                <span className="font-mono text-sm text-muted-foreground">{suggestion.page}</span>
+                              </div>
+                              <p className="text-sm font-medium mb-1">{suggestion.issue}</p>
+                              <div className="flex items-start gap-2 mt-2 p-2 rounded bg-muted/20">
+                                <TrendingUp className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                                <p className="text-sm text-muted-foreground">{suggestion.fix}</p>
+                              </div>
+                            </div>
                           ))}
-                        </ul>
                       </div>
-                    ))}
+                    </ScrollArea>
                   </CardContent>
                 </Card>
               )}
 
               {/* Nice-to-have */}
-              {aiSuggestions.filter(s => s.score >= 70).length > 0 && (
-                <Card className="border-emerald-500/30">
+              {aiSuggestions.filter((s) => s.priority === "nice-to-have").length > 0 && (
+                <Card>
                   <CardHeader>
-                    <CardTitle className="text-emerald-600 dark:text-emerald-400 flex items-center gap-2"><Eye className="h-5 w-5" /> Nice-to-Have - Minor Improvements</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2 text-blue-400">
+                      <Sparkles className="h-5 w-5" />
+                      Nice-to-Have ({aiSuggestions.filter((s) => s.priority === "nice-to-have").length})
+                    </CardTitle>
+                    <CardDescription>Optional enhancements for the best possible SEO</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {aiSuggestions.filter(s => s.score >= 70).map((s) => (
-                      <div key={s.path} className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-mono text-sm font-medium">{s.path}</span>
-                          <ScoreBadge score={s.score} />
-                        </div>
-                        <ul className="space-y-1">
-                          {s.issues.map((issue, i) => (
-                            <li key={i} className="text-sm flex items-start gap-2"><ArrowRight className="h-3 w-3 mt-1 text-emerald-500 shrink-0" /> {issue}</li>
+                  <CardContent>
+                    <ScrollArea className="max-h-[300px]">
+                      <div className="space-y-3">
+                        {aiSuggestions
+                          .filter((s) => s.priority === "nice-to-have")
+                          .map((suggestion, i) => (
+                            <div
+                              key={i}
+                              className="p-4 rounded-lg border border-border/50 bg-muted/5"
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline">Nice-to-have</Badge>
+                                <span className="font-mono text-sm text-muted-foreground">{suggestion.page}</span>
+                              </div>
+                              <p className="text-sm font-medium mb-1">{suggestion.issue}</p>
+                              <div className="flex items-start gap-2 mt-2 p-2 rounded bg-muted/20">
+                                <TrendingUp className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                                <p className="text-sm text-muted-foreground">{suggestion.fix}</p>
+                              </div>
+                            </div>
                           ))}
-                        </ul>
                       </div>
-                    ))}
+                    </ScrollArea>
                   </CardContent>
                 </Card>
               )}
 
-              {/* General Recommendations */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5" /> General SEO Recommendations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-3 rounded-lg bg-muted/50 border">
-                      <p className="font-medium text-sm mb-1">Internal Linking</p>
-                      <p className="text-xs text-muted-foreground">Ensure all pages link to at least 2-3 other pages. Use keyword-rich anchor text for internal links.</p>
+              {/* Summary */}
+              <Card className="border-emerald-500/20">
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="p-4 rounded-lg bg-red-500/10">
+                      <p className="text-2xl font-bold text-red-400">
+                        {aiSuggestions.filter((s) => s.priority === "critical").length}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Critical</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-muted/50 border">
-                      <p className="font-medium text-sm mb-1">Keyword Density</p>
-                      <p className="text-xs text-muted-foreground">Target keywords like &quot;Kickstarter alternative&quot;, &quot;crowdfunding&quot;, &quot;better than Kickstarter&quot; should appear in titles, descriptions, and H1/H2 tags.</p>
+                    <div className="p-4 rounded-lg bg-yellow-500/10">
+                      <p className="text-2xl font-bold text-yellow-400">
+                        {aiSuggestions.filter((s) => s.priority === "important").length}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Important</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-muted/50 border">
-                      <p className="font-medium text-sm mb-1">Content Freshness</p>
-                      <p className="text-xs text-muted-foreground">Update key pages regularly. Add blog posts, success stories, and case studies to improve content freshness signals.</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-muted/50 border">
-                      <p className="font-medium text-sm mb-1">Structured Data</p>
-                      <p className="text-xs text-muted-foreground">Add JSON-LD for Organization, FAQ, BreadcrumbList, and Product schemas where appropriate.</p>
+                    <div className="p-4 rounded-lg bg-blue-500/10">
+                      <p className="text-2xl font-bold text-blue-400">
+                        {aiSuggestions.filter((s) => s.priority === "nice-to-have").length}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Nice-to-have</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <EmptyState
+                  icon={Sparkles}
+                  title="No Suggestions Generated Yet"
+                  description="Click 'Generate Suggestions' to run an audit and get AI-powered SEO improvement recommendations."
+                />
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       </Tabs>
-
-      {/* ============================================ */}
-      {/* Dialogs */}
-      {/* ============================================ */}
-
-      {/* Meta Tags Dialog */}
-      <Dialog open={metaDialogOpen} onOpenChange={setMetaDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingPage ? "Edit Meta Tags" : "Add Page Meta Tags"}</DialogTitle>
-            <DialogDescription>Configure SEO meta tags for a page</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div><Label>Page Path</Label><Input value={metaForm.path} onChange={(e) => setMetaForm({ ...metaForm, path: e.target.value })} placeholder="/about-us" disabled={!!editingPage} /></div>
-            <div><Label>Title</Label><Input value={metaForm.title} onChange={(e) => setMetaForm({ ...metaForm, title: e.target.value })} placeholder="Page Title | IndieCrowdfund" /><p className="text-xs text-muted-foreground mt-1">{metaForm.title.length} chars (50-60 recommended)</p></div>
-            <div><Label>Description</Label><Textarea value={metaForm.description} onChange={(e) => setMetaForm({ ...metaForm, description: e.target.value })} placeholder="SEO description..." rows={3} /><p className="text-xs text-muted-foreground mt-1">{metaForm.description.length} chars (50-160 recommended)</p></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>OG Title</Label><Input value={metaForm.ogTitle} onChange={(e) => setMetaForm({ ...metaForm, ogTitle: e.target.value })} /></div>
-              <div><Label>OG Image URL</Label><Input value={metaForm.ogImage} onChange={(e) => setMetaForm({ ...metaForm, ogImage: e.target.value })} /></div>
-            </div>
-            <div><Label>OG Description</Label><Textarea value={metaForm.ogDescription} onChange={(e) => setMetaForm({ ...metaForm, ogDescription: e.target.value })} rows={2} /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>Twitter Title</Label><Input value={metaForm.twitterTitle} onChange={(e) => setMetaForm({ ...metaForm, twitterTitle: e.target.value })} /></div>
-              <div><Label>Canonical URL</Label><Input value={metaForm.canonicalUrl} onChange={(e) => setMetaForm({ ...metaForm, canonicalUrl: e.target.value })} /></div>
-            </div>
-            <div><Label>Twitter Description</Label><Textarea value={metaForm.twitterDesc} onChange={(e) => setMetaForm({ ...metaForm, twitterDesc: e.target.value })} rows={2} /></div>
-            <div><Label>Keywords (comma-separated)</Label><Input value={metaForm.keywords} onChange={(e) => setMetaForm({ ...metaForm, keywords: e.target.value })} placeholder="crowdfunding, Kickstarter alternative" /></div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2"><Switch checked={metaForm.noIndex} onCheckedChange={(v) => setMetaForm({ ...metaForm, noIndex: v })} /><Label>noindex</Label></div>
-              <div className="flex items-center gap-2"><Switch checked={metaForm.noFollow} onCheckedChange={(v) => setMetaForm({ ...metaForm, noFollow: v })} /><Label>nofollow</Label></div>
-            </div>
-
-            {/* Google Preview */}
-            <div className="p-3 rounded-lg bg-muted/50 border">
-              <p className="text-xs text-muted-foreground mb-2">Google Search Preview:</p>
-              <p className="text-blue-600 dark:text-blue-400 text-base font-medium truncate">{metaForm.title || "Page Title"}</p>
-              <p className="text-emerald-600 dark:text-emerald-400 text-xs">indiecrowdfund.com{metaForm.path || "/page"}</p>
-              <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{metaForm.description || "Meta description will appear here..."}</p>
-            </div>
-
-            <Button onClick={saveMeta} disabled={actionLoading} className="w-full">
-              {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-              Save Meta Tags
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Keyword Dialog */}
-      <Dialog open={keywordDialogOpen} onOpenChange={setKeywordDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingKeyword ? "Edit Keyword" : "Add Keyword"}</DialogTitle>
-            <DialogDescription>Track and manage SEO keywords</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div><Label>Keyword</Label><Input value={keywordForm.keyword} onChange={(e) => setKeywordForm({ ...keywordForm, keyword: e.target.value })} placeholder="kickstarter alternative" /></div>
-            <div><Label>Category</Label>
-              <Select value={keywordForm.category} onValueChange={(v) => setKeywordForm({ ...keywordForm, category: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="primary">Primary</SelectItem>
-                  <SelectItem value="secondary">Secondary</SelectItem>
-                  <SelectItem value="long-tail">Long-tail</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div><Label>Search Volume</Label><Input type="number" value={keywordForm.searchVolume} onChange={(e) => setKeywordForm({ ...keywordForm, searchVolume: e.target.value })} /></div>
-              <div><Label>Difficulty (0-100)</Label><Input type="number" value={keywordForm.difficulty} onChange={(e) => setKeywordForm({ ...keywordForm, difficulty: e.target.value })} /></div>
-              <div><Label>Current Rank</Label><Input type="number" value={keywordForm.currentRank} onChange={(e) => setKeywordForm({ ...keywordForm, currentRank: e.target.value })} /></div>
-            </div>
-            <div><Label>Target Pages (comma-separated)</Label><Input value={keywordForm.targetPages} onChange={(e) => setKeywordForm({ ...keywordForm, targetPages: e.target.value })} placeholder="/, /discover, /about-us" /></div>
-            <div><Label>Notes</Label><Textarea value={keywordForm.notes} onChange={(e) => setKeywordForm({ ...keywordForm, notes: e.target.value })} rows={2} /></div>
-            <Button onClick={saveKeyword} disabled={actionLoading} className="w-full">
-              {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-              {editingKeyword ? "Update Keyword" : "Add Keyword"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Redirect Dialog */}
-      <Dialog open={redirectDialogOpen} onOpenChange={setRedirectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingRedirect ? "Edit Redirect" : "Add Redirect"}</DialogTitle>
-            <DialogDescription>Configure URL redirects for SEO</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div><Label>From Path</Label><Input value={redirectForm.fromPath} onChange={(e) => setRedirectForm({ ...redirectForm, fromPath: e.target.value })} placeholder="/old-page" /></div>
-            <div><Label>To Path</Label><Input value={redirectForm.toPath} onChange={(e) => setRedirectForm({ ...redirectForm, toPath: e.target.value })} placeholder="/new-page" /></div>
-            <div><Label>Status Code</Label>
-              <Select value={redirectForm.statusCode} onValueChange={(v) => setRedirectForm({ ...redirectForm, statusCode: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="301">301 - Permanent</SelectItem>
-                  <SelectItem value="302">302 - Temporary</SelectItem>
-                  <SelectItem value="307">307 - Temporary (Strict)</SelectItem>
-                  <SelectItem value="308">308 - Permanent (Strict)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={saveRedirect} disabled={actionLoading} className="w-full">
-              {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-              {editingRedirect ? "Update Redirect" : "Create Redirect"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

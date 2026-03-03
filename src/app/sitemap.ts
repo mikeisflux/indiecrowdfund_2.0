@@ -220,7 +220,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     });
 
-    bookPages = books.map((book) => ({
+    bookPages = books.map((book: { slug: string; updatedAt: Date }) => ({
       url: `${SITE_URL}/marketplace/books/${book.slug}`,
       lastModified: book.updatedAt,
       changeFrequency: "weekly" as const,

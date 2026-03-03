@@ -37,10 +37,10 @@ export async function GET(req: NextRequest) {
       data: pages,
       stats: {
         total,
-        withTitle: pages.filter((p) => p.title).length,
-        withDescription: pages.filter((p) => p.description).length,
-        withOgTags: pages.filter((p) => p.ogTitle && p.ogDescription).length,
-        noIndexCount: pages.filter((p) => p.noIndex).length,
+        withTitle: pages.filter((p: { title: string | null }) => p.title).length,
+        withDescription: pages.filter((p: { description: string | null }) => p.description).length,
+        withOgTags: pages.filter((p: { ogTitle: string | null; ogDescription: string | null }) => p.ogTitle && p.ogDescription).length,
+        noIndexCount: pages.filter((p: { noIndex: boolean }) => p.noIndex).length,
       },
     });
   } catch (error) {

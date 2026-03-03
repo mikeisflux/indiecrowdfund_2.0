@@ -26,7 +26,7 @@ export async function GET() {
         total,
         active: activeCount,
         inactive: total - activeCount,
-        totalHits: redirects.reduce((sum, r) => sum + r.hitCount, 0),
+        totalHits: redirects.reduce((sum: number, r: { hitCount: number }) => sum + r.hitCount, 0),
       },
     });
   } catch (error) {

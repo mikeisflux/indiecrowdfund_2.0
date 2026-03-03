@@ -202,11 +202,24 @@ export async function runSeoAudit(
       where: { path: { in: STATIC_PAGES } },
     });
 
-    const metaMap = new Map(existingMetas.map((m) => [m.path, m]));
+    type PageMeta = {
+      path: string;
+      title: string | null;
+      description: string | null;
+      ogTitle: string | null;
+      ogDescription: string | null;
+      ogImage: string | null;
+      keywords: string[];
+      noIndex: boolean;
+    };
+
+    const metaMap = new Map<string, PageMeta>(
+      existingMetas.map((m: PageMeta) => [m.path, m])
+    );
 
     // Score each page
     const results: PageAuditResult[] = STATIC_PAGES.map((path) => {
-      const meta = metaMap.get(path) ?? null;
+      const meta: PageMeta | null = metaMap.get(path) ?? null;
       return scorePage(path, meta);
     });
 
