@@ -58,6 +58,7 @@ import {
   ArrowRight,
   Zap,
   TrendingUp,
+  Wrench,
 } from "lucide-react";
 
 // ─── Type Definitions ────────────────────────────────────────────────
@@ -345,6 +346,10 @@ export default function SeoManagementPage() {
   // AI Suggestions state
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
+
+  // Fix All state
+  const [isFixingAll, setIsFixingAll] = useState(false);
+  const [isFixingPage, setIsFixingPage] = useState<string | null>(null);
 
   // ─── Data Fetching ───────────────────────────────────────────────
 
@@ -763,6 +768,66 @@ export default function SeoManagementPage() {
     }
   };
 
+  // ─── Fix All / Fix Page Handlers ─────────────────────────────────
+
+  const handleFixAll = async (overwriteExisting = false) => {
+    setIsFixingAll(true);
+    try {
+      const response = await fetchWithRetry("/api/admin/seo/fix-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ fixMissing: true, overwriteExisting }),
+      });
+      if (response.ok) {
+        const json = await response.json();
+        const { summary } = json.data;
+        toast.success(
+          `Fixed ${summary.totalFieldsFixed} fields across ${summary.created + summary.updated} pages (${summary.created} created, ${summary.updated} updated, ${summary.skipped} already good)`
+        );
+        // Re-run audit to update scores
+        await handleRunAudit();
+        await fetchPages();
+      } else {
+        const err = await response.json();
+        toast.error(err.error || "Failed to apply fixes");
+      }
+    } catch {
+      toast.error("Network error applying fixes");
+    } finally {
+      setIsFixingAll(false);
+    }
+  };
+
+  const handleFixPage = async (path: string) => {
+    setIsFixingPage(path);
+    try {
+      const response = await fetchWithRetry("/api/admin/seo/fix-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ paths: [path], fixMissing: true, overwriteExisting: false }),
+      });
+      if (response.ok) {
+        const json = await response.json();
+        const result = json.data.results[0];
+        if (result.fieldsFixed.length > 0) {
+          toast.success(`Fixed ${result.fieldsFixed.length} fields for ${path}: ${result.fieldsFixed.join(", ")}`);
+        } else {
+          toast.info(`No missing fields to fix for ${path}`);
+        }
+        // Re-run audit to update scores
+        await handleRunAudit();
+        await fetchPages();
+      } else {
+        const err = await response.json();
+        toast.error(err.error || "Failed to fix page");
+      }
+    } catch {
+      toast.error("Network error fixing page");
+    } finally {
+      setIsFixingPage(null);
+    }
+  };
+
   // ─── Form Helpers ────────────────────────────────────────────────
 
   const resetMetaForm = () => {
@@ -1175,16 +1240,29 @@ export default function SeoManagementPage() {
                         <ScoreBadge score={page.lastAuditScore ?? 0} />
                         <span className="font-mono text-sm">{page.path}</span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          openEditMeta(page);
-                        }}
-                      >
-                        <Pencil className="h-3 w-3 mr-1" />
-                        Fix
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleFixPage(page.path)}
+                          disabled={isFixingPage === page.path || isFixingAll}
+                          className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+                        >
+                          {isFixingPage === page.path ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <Wrench className="h-3 w-3 mr-1" />
+                          )}
+                          Fix
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditMeta(page)}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1215,6 +1293,19 @@ export default function SeoManagementPage() {
                       className="pl-9 w-60"
                     />
                   </div>
+                  <Button
+                    onClick={() => handleFixAll(false)}
+                    disabled={isFixingAll || isRunningAudit}
+                    size="sm"
+                    className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+                  >
+                    {isFixingAll ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Wrench className="h-4 w-4 mr-1" />
+                    )}
+                    Fix All Issues
+                  </Button>
                   <Button onClick={handleRunAudit} disabled={isRunningAudit} size="sm" variant="outline">
                     {isRunningAudit ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   </Button>
@@ -1318,6 +1409,21 @@ export default function SeoManagementPage() {
                             )}
 
                             <div className="flex items-center gap-2 pt-2">
+                              {result.issues.length > 0 && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleFixPage(result.path)}
+                                  disabled={isFixingPage === result.path || isFixingAll}
+                                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+                                >
+                                  {isFixingPage === result.path ? (
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Wrench className="h-3 w-3 mr-1" />
+                                  )}
+                                  Auto-Fix
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -2288,18 +2394,34 @@ export default function SeoManagementPage() {
                     Generate intelligent improvement recommendations based on your latest audit data
                   </CardDescription>
                 </div>
-                <Button
-                  onClick={handleGenerateAiSuggestions}
-                  disabled={isGeneratingSuggestions}
-                  className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
-                >
-                  {isGeneratingSuggestions ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4 mr-2" />
+                <div className="flex items-center gap-2">
+                  {aiSuggestions.length > 0 && (
+                    <Button
+                      onClick={() => handleFixAll(false)}
+                      disabled={isFixingAll || isRunningAudit}
+                      className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+                    >
+                      {isFixingAll ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Wrench className="h-4 w-4 mr-2" />
+                      )}
+                      Fix All Issues
+                    </Button>
                   )}
-                  Generate Suggestions
-                </Button>
+                  <Button
+                    onClick={handleGenerateAiSuggestions}
+                    disabled={isGeneratingSuggestions}
+                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+                  >
+                    {isGeneratingSuggestions ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-2" />
+                    )}
+                    Generate Suggestions
+                  </Button>
+                </div>
               </div>
             </CardHeader>
           </Card>
@@ -2325,9 +2447,24 @@ export default function SeoManagementPage() {
                             key={i}
                             className="p-4 rounded-lg border border-red-500/20 bg-red-500/5"
                           >
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Critical</Badge>
-                              <span className="font-mono text-sm text-muted-foreground">{suggestion.page}</span>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Critical</Badge>
+                                <span className="font-mono text-sm text-muted-foreground">{suggestion.page}</span>
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={() => handleFixPage(suggestion.page)}
+                                disabled={isFixingPage === suggestion.page || isFixingAll}
+                                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+                              >
+                                {isFixingPage === suggestion.page ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Wrench className="h-3 w-3 mr-1" />
+                                )}
+                                Fix
+                              </Button>
                             </div>
                             <p className="text-sm font-medium mb-1">{suggestion.issue}</p>
                             <div className="flex items-start gap-2 mt-2 p-2 rounded bg-muted/20">
@@ -2361,9 +2498,24 @@ export default function SeoManagementPage() {
                               key={i}
                               className="p-4 rounded-lg border border-yellow-500/20 bg-yellow-500/5"
                             >
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Important</Badge>
-                                <span className="font-mono text-sm text-muted-foreground">{suggestion.page}</span>
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Important</Badge>
+                                  <span className="font-mono text-sm text-muted-foreground">{suggestion.page}</span>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleFixPage(suggestion.page)}
+                                  disabled={isFixingPage === suggestion.page || isFixingAll}
+                                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+                                >
+                                  {isFixingPage === suggestion.page ? (
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Wrench className="h-3 w-3 mr-1" />
+                                  )}
+                                  Fix
+                                </Button>
                               </div>
                               <p className="text-sm font-medium mb-1">{suggestion.issue}</p>
                               <div className="flex items-start gap-2 mt-2 p-2 rounded bg-muted/20">
@@ -2398,9 +2550,24 @@ export default function SeoManagementPage() {
                               key={i}
                               className="p-4 rounded-lg border border-border/50 bg-muted/5"
                             >
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline">Nice-to-have</Badge>
-                                <span className="font-mono text-sm text-muted-foreground">{suggestion.page}</span>
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline">Nice-to-have</Badge>
+                                  <span className="font-mono text-sm text-muted-foreground">{suggestion.page}</span>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleFixPage(suggestion.page)}
+                                  disabled={isFixingPage === suggestion.page || isFixingAll}
+                                >
+                                  {isFixingPage === suggestion.page ? (
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Wrench className="h-3 w-3 mr-1" />
+                                  )}
+                                  Fix
+                                </Button>
                               </div>
                               <p className="text-sm font-medium mb-1">{suggestion.issue}</p>
                               <div className="flex items-start gap-2 mt-2 p-2 rounded bg-muted/20">
