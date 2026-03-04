@@ -77,13 +77,16 @@ export function SecureKeyInput({
               onChange(pasted);
             }}
             placeholder={placeholder}
-            autoComplete="new-password"
+            autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
             data-lpignore="true"
             data-1p-ignore="true"
             data-form-type="other"
+            name={`key-${Math.random().toString(36).slice(2)}`}
+            readOnly
+            onFocus={(e) => e.currentTarget.removeAttribute("readonly")}
           />
           <Button
             type="button"
