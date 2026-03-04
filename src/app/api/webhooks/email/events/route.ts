@@ -190,20 +190,8 @@ async function handleBounce(email: string, reason?: string, source?: string) {
     });
   }
 
-  // 2. Update EmailListSubscriber status to "bounced" for all creators
-  const updatedSubscribers = await db.emailListSubscriber.updateMany({
-    where: {
-      email: normalizedEmail,
-      status: { not: "bounced" },
-    },
-    data: {
-      status: "bounced",
-    },
-  });
-
-  if (updatedSubscribers.count > 0) {
-    console.log(`[Bounce] Updated ${updatedSubscribers.count} subscriber records to bounced`);
-  }
+  // 2. Full removal from all lists + cancel pending queue emails
+  await removeFromAllLists(normalizedEmail, "bounce", "bounced");
 
   return { blockedEmail: normalizedEmail };
 }
@@ -248,16 +236,16 @@ async function handleSpamComplaint(email: string) {
 }
 
 // Remove an email from all subscriber lists, newsletter, project followers, and cancel pending queue emails
-async function removeFromAllLists(email: string, reason: string) {
+async function removeFromAllLists(email: string, reason: string, subscriberStatus: "unsubscribed" | "bounced" = "unsubscribed") {
   const normalizedEmail = email.toLowerCase().trim();
 
   // 1. Update EmailListSubscriber status for all creators
   const updatedSubs = await db.emailListSubscriber.updateMany({
     where: { email: normalizedEmail },
-    data: { status: "unsubscribed" },
+    data: { status: subscriberStatus },
   });
   if (updatedSubs.count > 0) {
-    console.log(`[${reason}] Unsubscribed ${updatedSubs.count} EmailListSubscriber record(s) for ${normalizedEmail}`);
+    console.log(`[${reason}] Set ${updatedSubs.count} EmailListSubscriber record(s) to ${subscriberStatus} for ${normalizedEmail}`);
   }
 
   // 2. Set User.emailUnsubscribedAt if user exists
