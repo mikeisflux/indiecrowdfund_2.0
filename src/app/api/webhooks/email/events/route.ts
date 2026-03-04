@@ -48,12 +48,17 @@ async function verifySendGridSignature(
     const timestampPayload = timestamp + payload;
     const decodedSignature = Buffer.from(signature, "base64");
 
-    // Import the ECDSA public key properly - SendGrid provides a base64-encoded DER key
-    const keyObject = crypto.createPublicKey({
-      key: Buffer.from(publicKey, "base64"),
-      format: "der",
-      type: "spki",
-    });
+    // Import the ECDSA public key - try PEM first, then DER
+    let keyObject: crypto.KeyObject;
+    const trimmedKey = publicKey.trim();
+    if (trimmedKey.startsWith("-----BEGIN")) {
+      // Already PEM formatted
+      keyObject = crypto.createPublicKey(trimmedKey);
+    } else {
+      // SendGrid provides a base64-encoded key - wrap it as PEM
+      const pemKey = `-----BEGIN PUBLIC KEY-----\n${trimmedKey}\n-----END PUBLIC KEY-----`;
+      keyObject = crypto.createPublicKey(pemKey);
+    }
 
     const verifier = crypto.createVerify("sha256");
     verifier.update(timestampPayload);

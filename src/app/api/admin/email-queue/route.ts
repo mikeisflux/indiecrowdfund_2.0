@@ -202,7 +202,10 @@ export async function POST(request: NextRequest) {
       if (!emailId) {
         return NextResponse.json({ error: "emailId required" }, { status: 400 });
       }
-      await db.emailQueue.delete({ where: { id: emailId } });
+      const deleted = await db.emailQueue.deleteMany({ where: { id: emailId } });
+      if (deleted.count === 0) {
+        return NextResponse.json({ success: true, message: "Email already removed from queue" });
+      }
       return NextResponse.json({ success: true, message: "Email removed from queue" });
     } else if (action === "promote-demoted") {
       // Promote all demoted (retry priority) emails back to AI_MARKETING priority
