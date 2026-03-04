@@ -41,8 +41,12 @@ export function verifySendGridSignature(
   publicKey: string
 ): boolean {
   try {
-    // Convert the public key from base64 to PEM format
-    const pemKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
+    // Import the ECDSA public key properly - SendGrid provides a base64-encoded DER key
+    const keyObject = crypto.createPublicKey({
+      key: Buffer.from(publicKey, "base64"),
+      format: "der",
+      type: "spki",
+    });
 
     // Create the signed payload (timestamp + payload)
     const signedPayload = timestamp + payload;
@@ -56,7 +60,7 @@ export function verifySendGridSignature(
     verifier.end();
 
     // Verify the signature
-    return verifier.verify(pemKey, signatureBuffer);
+    return verifier.verify(keyObject, signatureBuffer);
   } catch (error) {
     console.error("Error verifying SendGrid signature:", error);
     return false;

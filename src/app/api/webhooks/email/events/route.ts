@@ -48,14 +48,18 @@ async function verifySendGridSignature(
     const timestampPayload = timestamp + payload;
     const decodedSignature = Buffer.from(signature, "base64");
 
+    // Import the ECDSA public key properly - SendGrid provides a base64-encoded DER key
+    const keyObject = crypto.createPublicKey({
+      key: Buffer.from(publicKey, "base64"),
+      format: "der",
+      type: "spki",
+    });
+
     const verifier = crypto.createVerify("sha256");
     verifier.update(timestampPayload);
     verifier.end();
 
-    return verifier.verify(
-      `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`,
-      decodedSignature
-    );
+    return verifier.verify(keyObject, decodedSignature);
   } catch (error) {
     console.error("[Webhook] Error verifying SendGrid signature:", error);
     return false;
