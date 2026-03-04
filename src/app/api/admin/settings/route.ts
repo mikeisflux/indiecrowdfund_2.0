@@ -264,6 +264,27 @@ export async function PATCH(req: NextRequest) {
       Object.entries(filteredData).filter(([key]) => allowed.includes(key))
     );
 
+    // Trim whitespace from all string values and sanitize base64 keys
+    for (const [key, value] of Object.entries(updateData)) {
+      if (typeof value === "string") {
+        updateData[key] = value.trim();
+      }
+    }
+
+    // Sanitize base64 keys - strip any non-base64 characters that may have been
+    // injected by password managers or browser extensions during paste
+    const base64Fields = ["sendgridWebhookVerificationKey"];
+    for (const field of base64Fields) {
+      if (typeof updateData[field] === "string" && updateData[field]) {
+        // Extract the valid base64 portion (starts with MF for SPKI ECDSA keys)
+        const raw = updateData[field] as string;
+        const base64Match = raw.match(/[A-Za-z0-9+/]+=*$/);
+        if (base64Match) {
+          updateData[field] = base64Match[0];
+        }
+      }
+    }
+
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
         { error: "No valid fields to update" },

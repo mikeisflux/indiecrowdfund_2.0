@@ -213,7 +213,7 @@ function addWhitelistBanner(html: string, fromEmail: string): string {
         <tr>
           <td style="vertical-align: middle;">
             <strong style="color: #15803d;">Ensure delivery:</strong> Add <span style="font-family: monospace; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${fromEmail}</span> to your contacts or safe sender list.
-            <a href="${whitelistGuideUrl}" style="color: #16a34a; text-decoration: underline; margin-left: 8px;">How to whitelist</a>
+            <a href="${whitelistGuideUrl}" style="color: #16a34a; text-decoration: underline; margin-left: 8px;" clicktracking="off">How to whitelist</a>
           </td>
         </tr>
       </table>
@@ -240,7 +240,7 @@ function addUnsubscribeFooter(html: string, email: string): string {
       <p style="margin: 0;">
         You're receiving this email because you have an account on ${APP_NAME}.
         <br>
-        <a href="${unsubscribeUrl}" style="color: #999; text-decoration: underline;">Unsubscribe from all emails</a>
+        <a href="${unsubscribeUrl}" style="color: #999; text-decoration: underline;" clicktracking="off">Unsubscribe from all emails</a>
       </p>
     </div>
   `;

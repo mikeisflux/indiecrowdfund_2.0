@@ -71,10 +71,19 @@ export function SecureKeyInput({
             type={showValue ? "text" : "password"}
             value={value === "••••••••" ? "" : value}
             onChange={(e) => onChange(e.target.value)}
+            onPaste={(e) => {
+              e.preventDefault();
+              const pasted = e.clipboardData.getData("text").trim();
+              onChange(pasted);
+            }}
             placeholder={placeholder}
-            autoComplete="off"
+            autoComplete="new-password"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             data-lpignore="true"
             data-1p-ignore="true"
+            data-form-type="other"
           />
           <Button
             type="button"
