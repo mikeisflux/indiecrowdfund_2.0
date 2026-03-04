@@ -62,6 +62,7 @@ async function verifySendGridSignature(
     return verifier.verify(keyObject, decodedSignature);
   } catch (error) {
     console.error("[Webhook] Error verifying SendGrid signature:", error);
+    console.error("[Webhook] Key length:", publicKey.length, "Key starts with:", publicKey.substring(0, 20));
     return false;
   }
 }
@@ -274,8 +275,13 @@ export async function POST(request: NextRequest) {
           });
 
           if (settings?.sendgridWebhookVerificationKey) {
+            const key = settings.sendgridWebhookVerificationKey;
+            console.log(`[Webhook] Verifying SendGrid signature - key length: ${key.length}, key prefix: ${key.substring(0, 20)}...`);
+            console.log(`[Webhook] Signature: ${sgSignature.substring(0, 30)}..., Timestamp: ${sgTimestamp}`);
+            console.log(`[Webhook] Raw body length: ${rawBody.length}, body prefix: ${rawBody.substring(0, 80)}`);
+
             const isValid = await verifySendGridSignature(
-              settings.sendgridWebhookVerificationKey,
+              key,
               rawBody,
               sgSignature,
               sgTimestamp
@@ -283,8 +289,12 @@ export async function POST(request: NextRequest) {
 
             if (!isValid) {
               console.error("[Webhook] SendGrid signature verification failed");
+              console.error("[Webhook] Key used (first 30 chars):", key.substring(0, 30));
               return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
             }
+            console.log("[Webhook] SendGrid signature verification passed!");
+          } else {
+            console.warn("[Webhook] No sendgridWebhookVerificationKey in DB, skipping verification");
           }
         }
 
