@@ -243,11 +243,70 @@ async function handleSpamComplaint(email: string) {
     });
   }
 
-  // Update subscriber status
-  await db.emailListSubscriber.updateMany({
+  // Full removal from all lists + cancel pending queue emails
+  await removeFromAllLists(normalizedEmail, "spam complaint");
+}
+
+// Remove an email from all subscriber lists, newsletter, project followers, and cancel pending queue emails
+async function removeFromAllLists(email: string, reason: string) {
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // 1. Update EmailListSubscriber status for all creators
+  const updatedSubs = await db.emailListSubscriber.updateMany({
     where: { email: normalizedEmail },
     data: { status: "unsubscribed" },
   });
+  if (updatedSubs.count > 0) {
+    console.log(`[${reason}] Unsubscribed ${updatedSubs.count} EmailListSubscriber record(s) for ${normalizedEmail}`);
+  }
+
+  // 2. Set User.emailUnsubscribedAt if user exists
+  try {
+    await db.user.updateMany({
+      where: { email: normalizedEmail, emailUnsubscribedAt: null },
+      data: { emailUnsubscribedAt: new Date() },
+    });
+  } catch {
+    // User might not exist
+  }
+
+  // 3. Deactivate NewsletterSubscriber
+  try {
+    await db.newsletterSubscriber.updateMany({
+      where: { email: normalizedEmail, isActive: true },
+      data: { isActive: false, unsubscribedAt: new Date() },
+    });
+  } catch {
+    // Table might not exist
+  }
+
+  // 4. Delete ProjectFollower records
+  try {
+    await db.projectFollower.deleteMany({
+      where: { email: normalizedEmail },
+    });
+  } catch {
+    // Table might not exist
+  }
+
+  // 5. Cancel any pending emails in the queue
+  try {
+    const cancelled = await db.emailQueue.updateMany({
+      where: {
+        toEmail: normalizedEmail,
+        status: { in: ["PENDING", "PROCESSING"] },
+      },
+      data: {
+        status: "FAILED",
+        error: `Recipient removed: ${reason}`,
+      },
+    });
+    if (cancelled.count > 0) {
+      console.log(`[${reason}] Cancelled ${cancelled.count} pending queue email(s) for ${normalizedEmail}`);
+    }
+  } catch {
+    // Queue table might not exist
+  }
 }
 
 // POST - Handle Mailgun/SendGrid Event Webhook
@@ -404,10 +463,7 @@ export async function POST(request: NextRequest) {
             break;
           case "unsubscribe":
           case "group_unsubscribe":
-            await db.emailListSubscriber.updateMany({
-              where: { email },
-              data: { status: "unsubscribed" },
-            });
+            await removeFromAllLists(email, "unsubscribed via SendGrid");
             break;
         }
       }
@@ -449,10 +505,7 @@ export async function POST(request: NextRequest) {
         break;
       case "unsubscribed":
         if (email) {
-          await db.emailListSubscriber.updateMany({
-            where: { email },
-            data: { status: "unsubscribed" },
-          });
+          await removeFromAllLists(email, "unsubscribed via Mailgun");
         }
         break;
     }

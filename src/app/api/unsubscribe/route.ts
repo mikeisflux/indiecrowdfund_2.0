@@ -192,6 +192,25 @@ async function unsubscribeEmail(email: string): Promise<{ success: boolean; erro
       // Table might not exist or no record
     }
 
+    // 5. Cancel any pending emails in the queue for this address
+    try {
+      const cancelled = await db.emailQueue.updateMany({
+        where: {
+          toEmail: normalizedEmail,
+          status: { in: ["PENDING", "PROCESSING"] },
+        },
+        data: {
+          status: "FAILED",
+          error: "Recipient unsubscribed",
+        },
+      });
+      if (cancelled.count > 0) {
+        console.log(`[Unsubscribe] Cancelled ${cancelled.count} pending queue email(s) for ${normalizedEmail}`);
+      }
+    } catch {
+      // Queue table might not exist
+    }
+
     console.log(`[Unsubscribe] Successfully unsubscribed from all lists: ${normalizedEmail}`);
     return { success: true };
   } catch (error) {
