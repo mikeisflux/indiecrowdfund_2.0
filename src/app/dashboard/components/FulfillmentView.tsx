@@ -4,51 +4,69 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Truck, CheckCircle, Package, Gift, Box, Sparkles, Download, Loader2 } from "lucide-react";
+import { Truck, CheckCircle, Package, Gift, Box, Sparkles, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CircularProgress } from "./CircularProgress";
-import { useState } from "react";
 import { toast } from "sonner";
 import type { FulfillmentStats } from "../types";
 
 interface FulfillmentViewProps {
   fulfillmentStats: FulfillmentStats | null;
-  projectId: string;
 }
 
-export function FulfillmentView({ fulfillmentStats, projectId }: FulfillmentViewProps) {
-  const [isExporting, setIsExporting] = useState(false);
+function escapeCSV(value: string): string {
+  if (!value) return "";
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
 
-  const handleExportCSV = async () => {
-    if (!projectId) {
-      toast.error("No project selected");
+export function FulfillmentView({ fulfillmentStats }: FulfillmentViewProps) {
+  const handleExportCSV = () => {
+    if (!fulfillmentStats || fulfillmentStats.items.length === 0) {
+      toast.error("No fulfillment data to export");
       return;
     }
-    setIsExporting(true);
-    try {
-      const response = await fetch(`/api/creator/indiekit/export?projectId=${projectId}&type=backers`);
-      if (!response.ok) {
-        const err = await response.json();
-        toast.error(err.error || "Failed to export");
-        return;
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const disposition = response.headers.get("Content-Disposition");
-      const filenameMatch = disposition?.match(/filename="(.+)"/);
-      a.download = filenameMatch?.[1] || `fulfillment-export-${new Date().toISOString().split("T")[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success("Fulfillment data exported successfully");
-    } catch {
-      toast.error("Network error exporting data");
-    } finally {
-      setIsExporting(false);
+
+    const lines: string[] = [];
+
+    // Summary section
+    lines.push("Fulfillment Summary");
+    lines.push(`Total Backers,${fulfillmentStats.totalBackers}`);
+    lines.push(`Shipped/Delivered,${fulfillmentStats.shippedBackers}`);
+    lines.push(`Fulfillment Progress,${fulfillmentStats.fulfillmentPercentage}%`);
+    lines.push("");
+
+    // Status breakdown
+    lines.push("Status Breakdown");
+    lines.push("Status,Count");
+    lines.push(`Not Started,${fulfillmentStats.statusBreakdown.notStarted}`);
+    lines.push(`In Progress,${fulfillmentStats.statusBreakdown.inProgress}`);
+    lines.push(`Shipped,${fulfillmentStats.statusBreakdown.shipped}`);
+    lines.push(`Delivered,${fulfillmentStats.statusBreakdown.delivered}`);
+    lines.push("");
+
+    // Items table
+    lines.push("Items to Fulfill");
+    lines.push("Type,Item Name,Quantity Needed");
+    for (const item of fulfillmentStats.items) {
+      lines.push(`${item.type === "reward" ? "Reward" : "Add-on"},${escapeCSV(item.name)},${item.count}`);
     }
+    const totalItems = fulfillmentStats.items.reduce((sum, item) => sum + item.count, 0);
+    lines.push(`Total,,${totalItems}`);
+
+    const csvContent = lines.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fulfillment-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    toast.success("Fulfillment data exported");
   };
 
   if (!fulfillmentStats || fulfillmentStats.totalBackers === 0) {
@@ -182,15 +200,10 @@ export function FulfillmentView({ fulfillmentStats, projectId }: FulfillmentView
             </div>
             <Button
               onClick={handleExportCSV}
-              disabled={isExporting}
               variant="outline"
               className="border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-500"
             >
-              {isExporting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
+              <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
           </div>
