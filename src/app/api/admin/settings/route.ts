@@ -271,17 +271,15 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    // Sanitize base64 keys - strip any non-base64 characters that may have been
-    // injected by password managers or browser extensions during paste
+    // Sanitize base64 keys - strip whitespace and non-base64 characters
     const base64Fields = ["sendgridWebhookVerificationKey"];
     for (const field of base64Fields) {
       if (typeof updateData[field] === "string" && updateData[field]) {
-        // Extract the valid base64 portion (starts with MF for SPKI ECDSA keys)
         const raw = updateData[field] as string;
-        const base64Match = raw.match(/[A-Za-z0-9+/]+=*$/);
-        if (base64Match) {
-          updateData[field] = base64Match[0];
-        }
+        // Remove all whitespace/newlines, then keep only valid base64 chars
+        const cleaned = raw.replace(/\s/g, "").replace(/[^A-Za-z0-9+/=]/g, "");
+        updateData[field] = cleaned;
+        console.log(`[Settings] Saved ${field}: length=${cleaned.length}, prefix=${cleaned.substring(0, 20)}, suffix=${cleaned.slice(-10)}`);
       }
     }
 
