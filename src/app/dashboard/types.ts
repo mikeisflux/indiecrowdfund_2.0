@@ -86,6 +86,8 @@ export interface Referrer {
 export interface FulfillmentItem {
   name: string;
   count: number;
+  projectItemId: string | null;
+  sku: string | null;
 }
 
 export interface FulfillmentStats {

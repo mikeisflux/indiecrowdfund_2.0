@@ -1,15 +1,19 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Truck, CheckCircle, Package, Sparkles, Download } from "lucide-react";
 import { CircularProgress } from "./CircularProgress";
 import { toast } from "sonner";
+import { getCSRFHeaders } from "@/lib/csrf";
 import type { FulfillmentStats } from "../types";
 
 interface FulfillmentViewProps {
   fulfillmentStats: FulfillmentStats | null;
+  projectId?: string;
 }
 
 function escapeCSV(value: string): string {
@@ -20,7 +24,59 @@ function escapeCSV(value: string): string {
   return value;
 }
 
-export function FulfillmentView({ fulfillmentStats }: FulfillmentViewProps) {
+export function FulfillmentView({ fulfillmentStats, projectId }: FulfillmentViewProps) {
+  // Track local SKU edits: keyed by projectItemId, value is the edited SKU string
+  const [skuEdits, setSkuEdits] = useState<Record<string, string>>({});
+  const [savingSkus, setSavingSkus] = useState<Record<string, boolean>>({});
+
+  const getDisplaySku = useCallback((item: { name: string; sku: string | null; projectItemId: string | null }) => {
+    if (item.projectItemId && skuEdits[item.projectItemId] !== undefined) {
+      return skuEdits[item.projectItemId];
+    }
+    return item.sku || item.name;
+  }, [skuEdits]);
+
+  const handleSkuChange = (projectItemId: string, value: string) => {
+    setSkuEdits((prev) => ({ ...prev, [projectItemId]: value }));
+  };
+
+  const handleSkuSave = async (item: { name: string; projectItemId: string | null }) => {
+    if (!item.projectItemId || !projectId) return;
+
+    const newSku = skuEdits[item.projectItemId];
+    if (newSku === undefined) return;
+
+    setSavingSkus((prev) => ({ ...prev, [item.projectItemId!]: true }));
+    try {
+      const response = await fetch(`/api/projects/${projectId}/items`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({
+          id: item.projectItemId,
+          title: item.name,
+          sku: newSku === item.name ? null : newSku || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to save SKU");
+      }
+
+      // Clear the edit state — the saved value is now the source of truth
+      setSkuEdits((prev) => {
+        const next = { ...prev };
+        delete next[item.projectItemId!];
+        return next;
+      });
+      toast.success(`SKU updated for ${item.name}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save SKU");
+    } finally {
+      setSavingSkus((prev) => ({ ...prev, [item.projectItemId!]: false }));
+    }
+  };
+
   const handleExportCSV = () => {
     if (!fulfillmentStats || fulfillmentStats.items.length === 0) {
       toast.error("No fulfillment data to export");
@@ -47,9 +103,10 @@ export function FulfillmentView({ fulfillmentStats }: FulfillmentViewProps) {
 
     // Items table
     lines.push("Items to Fulfill");
-    lines.push("Item Name,Quantity Needed");
+    lines.push("Item Name,SKU,Quantity Needed");
     for (const item of fulfillmentStats.items) {
-      lines.push(`${escapeCSV(item.name)},${item.count}`);
+      const sku = getDisplaySku(item);
+      lines.push(`${escapeCSV(item.name)},${escapeCSV(sku)},${item.count}`);
     }
 
     const csvContent = lines.join("\n");
@@ -208,23 +265,53 @@ export function FulfillmentView({ fulfillmentStats }: FulfillmentViewProps) {
           {fulfillmentStats.items.length > 0 ? (
             <div className="rounded-xl border border-border/50 overflow-hidden">
               <div className="grid grid-cols-12 gap-4 bg-muted/30 p-3 text-sm font-medium">
-                <div className="col-span-9">Item Name</div>
+                <div className="col-span-4">Item Name</div>
+                <div className="col-span-5">SKU</div>
                 <div className="col-span-3 text-right">Quantity Needed</div>
               </div>
-              {fulfillmentStats.items.map((item, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-12 gap-4 p-3 text-sm border-t border-border/50 items-center hover:bg-muted/20 transition-colors animate-in fade-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="col-span-9">
-                    <span className="font-medium">{item.name}</span>
+              {fulfillmentStats.items.map((item, index) => {
+                const displaySku = getDisplaySku(item);
+                const hasUnsavedEdit = item.projectItemId && skuEdits[item.projectItemId] !== undefined;
+                const isSaving = item.projectItemId ? savingSkus[item.projectItemId] : false;
+
+                return (
+                  <div
+                    key={item.projectItemId || index}
+                    className="grid grid-cols-12 gap-4 p-3 text-sm border-t border-border/50 items-center hover:bg-muted/20 transition-colors animate-in fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="col-span-4">
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                    <div className="col-span-5 flex items-center gap-2">
+                      {item.projectItemId ? (
+                        <>
+                          <Input
+                            value={displaySku}
+                            onChange={(e) => handleSkuChange(item.projectItemId!, e.target.value)}
+                            onBlur={() => {
+                              if (hasUnsavedEdit) handleSkuSave(item);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && hasUnsavedEdit) handleSkuSave(item);
+                            }}
+                            className="h-8 text-sm"
+                            disabled={isSaving}
+                          />
+                          {isSaving && (
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">Saving...</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">{item.name}</span>
+                      )}
+                    </div>
+                    <div className="col-span-3 text-right">
+                      <span className="text-lg font-bold">{item.count.toLocaleString()}</span>
+                    </div>
                   </div>
-                  <div className="col-span-3 text-right">
-                    <span className="text-lg font-bold">{item.count.toLocaleString()}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="py-8 text-center">

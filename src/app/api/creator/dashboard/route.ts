@@ -334,7 +334,7 @@ export async function GET(req: NextRequest) {
                   title: true,
                   projectItemId: true,
                   projectItem: {
-                    select: { title: true },
+                    select: { id: true, title: true, sku: true },
                   },
                 },
               },
@@ -490,13 +490,14 @@ export async function GET(req: NextRequest) {
 
     // Count items needed for fulfillment (from rewards and addons)
     // Key by projectItemId or item title to deduplicate items that appear in multiple reward tiers
-    const itemCounts = new Map<string, { name: string; count: number }>();
+    const itemCounts = new Map<string, { name: string; count: number; projectItemId: string | null; sku: string | null }>();
 
     fulfillmentData.forEach((pledge) => {
       // Count items from reward tiers
       if (pledge.reward?.items) {
-        pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { title: string } | null }) => {
+        pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }) => {
           const itemName = item.projectItem?.title || item.title;
+          const itemSku = item.projectItem?.sku || null;
           const itemKey = item.projectItemId
             ? `projectItem_${item.projectItemId}`
             : `itemTitle_${item.title}`;
@@ -504,15 +505,16 @@ export async function GET(req: NextRequest) {
           if (existingItem) {
             existingItem.count += 1;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: 1 });
+            itemCounts.set(itemKey, { name: itemName, count: 1, projectItemId: item.projectItemId, sku: itemSku });
           }
         });
       }
 
       // Count items from addons (with quantity multiplier)
-      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null; projectItem?: { title: string } | null }[] } }) => {
+      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }[] } }) => {
         pledgeAddon.addon.items?.forEach((item) => {
           const itemName = item.projectItem?.title || item.title;
+          const itemSku = item.projectItem?.sku || null;
           const itemKey = item.projectItemId
             ? `projectItem_${item.projectItemId}`
             : `itemTitle_${item.title}`;
@@ -520,7 +522,7 @@ export async function GET(req: NextRequest) {
           if (existingItem) {
             existingItem.count += pledgeAddon.quantity;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity });
+            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, projectItemId: item.projectItemId, sku: itemSku });
           }
         });
       });

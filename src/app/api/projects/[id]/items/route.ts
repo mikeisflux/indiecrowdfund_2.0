@@ -9,6 +9,7 @@ const itemSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional().nullable(),
   imageUrl: z.string().optional().nullable(),
+  sku: z.string().optional().nullable(),
 });
 
 // Create a new project item
@@ -103,13 +104,18 @@ export async function PATCH(
       return NextResponse.json({ error: "Item ID required for update" }, { status: 400 });
     }
 
+    const updateData: Record<string, unknown> = {
+      title: item.title,
+      description: item.description || null,
+      imageUrl: item.imageUrl || null,
+    };
+    if (item.sku !== undefined) {
+      updateData.sku = item.sku || null;
+    }
+
     const updated = await db.projectItem.update({
       where: { id: item.id },
-      data: {
-        title: item.title,
-        description: item.description || null,
-        imageUrl: item.imageUrl || null,
-      },
+      data: updateData,
     });
 
     return NextResponse.json({

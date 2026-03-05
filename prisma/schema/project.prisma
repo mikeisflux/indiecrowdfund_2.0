@@ -166,6 +166,7 @@ model ProjectItem {
   id          String  @id @default(cuid())
   projectId   String
   title       String
+  sku         String? // Editable SKU for fulfillment, defaults to item title in UI
   description String? @db.Text
   imageUrl    String?
   endedAt     DateTime? // If set, item is no longer available for new pledges

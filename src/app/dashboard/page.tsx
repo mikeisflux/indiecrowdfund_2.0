@@ -423,7 +423,7 @@ export default function CreatorDashboard() {
               </TabsContent>
 
               <TabsContent value="fulfillment" className="space-y-6">
-                <FulfillmentView fulfillmentStats={data.fulfillmentStats} />
+                <FulfillmentView fulfillmentStats={data.fulfillmentStats} projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="updates" className="space-y-6">
