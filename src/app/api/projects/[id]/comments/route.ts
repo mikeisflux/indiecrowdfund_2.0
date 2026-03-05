@@ -212,6 +212,16 @@ export async function POST(
 
     const isCreator = project.creatorId === session.user.id;
 
+    // Check if user is a collaborator on this project
+    const isCollaborator = !isCreator && await db.projectCollaborator.findFirst({
+      where: {
+        projectId,
+        userId: session.user.id,
+        status: "ACCEPTED",
+      },
+      select: { id: true },
+    }).then((c: { id: string } | null) => !!c);
+
     // Store parent comment for notification later
     let parentComment: { id: string; userId: string; parentId: string | null } | null = null;
     let rootCommentUserId: string | null = null;
@@ -261,9 +271,10 @@ export async function POST(
 
       // Permission check for replies:
       // - Creators can reply to any comment
+      // - Collaborators can reply to any comment
       // - Backers can reply if they are the original commenter (continuing conversation)
       // - Backers can reply if they have backed the project (joining discussion)
-      if (!isCreator) {
+      if (!isCreator && !isCollaborator) {
         const isOriginalCommenter = rootCommentUserId === session.user.id;
 
         if (!isOriginalCommenter) {
@@ -285,8 +296,8 @@ export async function POST(
         }
       }
     } else {
-      // For top-level comments, must be backer or creator
-      if (!isCreator) {
+      // For top-level comments, must be backer, creator, or collaborator
+      if (!isCreator && !isCollaborator) {
         const pledge = await db.pledge.findFirst({
           where: {
             userId: session.user.id,
