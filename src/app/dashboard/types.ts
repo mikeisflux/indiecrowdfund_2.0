@@ -88,12 +88,16 @@ export interface ProductionOrderItem {
   count: number;
   projectItemId: string | null;
   sku: string | null;
+  inStock: boolean;
 }
 
 export interface ProductionOrderStats {
   totalBackers: number;
   shippedBackers: number;
   fulfillmentPercentage: number;
+  productionPercentage: number;
+  inStockCount: number;
+  totalItemTypes: number;
   items: ProductionOrderItem[];
   statusBreakdown: {
     notStarted: number;

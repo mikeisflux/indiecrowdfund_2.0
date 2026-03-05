@@ -10,6 +10,7 @@ const itemSchema = z.object({
   description: z.string().optional().nullable(),
   imageUrl: z.string().optional().nullable(),
   sku: z.string().optional().nullable(),
+  inStock: z.boolean().optional(),
 });
 
 // Create a new project item
@@ -111,6 +112,9 @@ export async function PATCH(
     };
     if (item.sku !== undefined) {
       updateData.sku = item.sku || null;
+    }
+    if (item.inStock !== undefined) {
+      updateData.inStock = item.inStock;
     }
 
     const updated = await db.projectItem.update({

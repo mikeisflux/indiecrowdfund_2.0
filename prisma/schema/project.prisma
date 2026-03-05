@@ -167,6 +167,7 @@ model ProjectItem {
   projectId   String
   title       String
   sku         String? // Editable SKU for fulfillment, defaults to item title in UI
+  inStock     Boolean @default(false) // Whether this item has been produced/received
   description String? @db.Text
   imageUrl    String?
   endedAt     DateTime? // If set, item is no longer available for new pledges
