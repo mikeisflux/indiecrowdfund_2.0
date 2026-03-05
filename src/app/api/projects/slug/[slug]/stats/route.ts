@@ -51,20 +51,16 @@ export async function GET(
     let actualAmount = Number(completedStats._sum.amount || 0);
     let actualBackerCount = completedStats._count.id || 0;
 
-    // For LIVE projects that haven't met their goal, also include committed pending pledges
-    // (these are pledges where the backer completed checkout but payment hasn't been charged yet)
+    // For LIVE projects that haven't met their goal, also include confirmed pending pledges
+    // confirmationEmailSent = true means the backer completed checkout, card was saved,
+    // and they approved being charged when the campaign funds. This excludes abandoned carts.
     if (project.status === "LIVE" && actualAmount < goalAmount) {
       const pendingStats = await db.pledge.aggregate({
         where: {
           projectId: project.id,
           status: "PENDING",
           deletedAt: null,
-          OR: [
-            { stripePaymentMethodId: { not: null } },
-            { stripeSetupIntentId: { not: null } },
-            { confirmationEmailSent: true },
-            { divinityCoinPaymentId: { not: null } },
-          ],
+          confirmationEmailSent: true,
         },
         _sum: { amount: true },
         _count: { id: true },
