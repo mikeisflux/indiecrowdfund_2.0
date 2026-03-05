@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles,
@@ -48,45 +48,49 @@ export function PromoPopup() {
   const [slides, setSlides] = useState<PromoSlide[]>([]);
   const [showFrequency, setShowFrequency] = useState("once_per_session");
 
-  const shouldShow = useCallback(() => {
-    // Don't show on admin pages
-    if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
-      return false;
-    }
-
-    if (showFrequency === "once_per_session") {
-      return !sessionStorage.getItem(PROMO_SESSION_KEY);
-    }
-
-    if (showFrequency === "once_per_login") {
-      return !localStorage.getItem(PROMO_LOGIN_KEY);
-    }
-
-    if (showFrequency === "once_per_day") {
-      const lastDismissed = localStorage.getItem(PROMO_DISMISSED_KEY);
-      if (lastDismissed) {
-        const dismissedAt = parseInt(lastDismissed, 10);
-        const twentyFourHours = 24 * 60 * 60 * 1000;
-        if (Date.now() - dismissedAt < twentyFourHours) return false;
-      }
-      return true;
-    }
-
-    // every_visit
-    return true;
-  }, [showFrequency]);
-
   useEffect(() => {
     async function fetchPopup() {
       try {
+        // Don't show on admin pages
+        if (window.location.pathname.startsWith("/admin")) return;
+
         const response = await fetch("/api/promo-popup");
         if (!response.ok) return;
 
         const data = await response.json();
         if (!data.popup || !Array.isArray(data.popup.slides) || data.popup.slides.length === 0) return;
 
+        const frequency = data.popup.showFrequency || "once_per_session";
+
+        // Check if we should show based on frequency BEFORE opening
+        let show = true;
+
+        if (frequency === "once_per_session") {
+          show = !sessionStorage.getItem(PROMO_SESSION_KEY);
+        } else if (frequency === "once_per_login") {
+          show = !localStorage.getItem(PROMO_LOGIN_KEY);
+        } else if (frequency === "once_per_day") {
+          const lastDismissed = localStorage.getItem(PROMO_DISMISSED_KEY);
+          if (lastDismissed) {
+            const dismissedAt = parseInt(lastDismissed, 10);
+            const twentyFourHours = 24 * 60 * 60 * 1000;
+            if (Date.now() - dismissedAt < twentyFourHours) show = false;
+          }
+        }
+        // every_visit: show = true (default)
+
+        if (!show) return;
+
+        // Mark as shown immediately so navigating away still counts
+        if (frequency === "once_per_session") {
+          sessionStorage.setItem(PROMO_SESSION_KEY, Date.now().toString());
+        }
+
         setSlides(data.popup.slides);
-        setShowFrequency(data.popup.showFrequency || "once_per_session");
+        setShowFrequency(frequency);
+
+        // Small delay so the page renders first
+        setTimeout(() => setIsOpen(true), 800);
       } catch {
         // Silently fail
       }
@@ -95,16 +99,9 @@ export function PromoPopup() {
     fetchPopup();
   }, []);
 
-  useEffect(() => {
-    if (slides.length > 0 && shouldShow()) {
-      // Small delay so the page renders first
-      const timer = setTimeout(() => setIsOpen(true), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [slides, shouldShow]);
-
   const handleDismiss = () => {
     setIsOpen(false);
+    // Always mark session + day keys on dismiss
     sessionStorage.setItem(PROMO_SESSION_KEY, Date.now().toString());
     localStorage.setItem(PROMO_DISMISSED_KEY, Date.now().toString());
     if (showFrequency === "once_per_login") {
@@ -135,19 +132,19 @@ export function PromoPopup() {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-2rem)] flex flex-col rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
         {/* Close button - positioned on modal frame, always visible */}
         <button
           onClick={handleDismiss}
-          className="absolute top-3 right-3 z-10 rounded-full p-2 bg-black/30 hover:bg-black/50 text-white transition-colors"
+          className="absolute top-2 right-2 z-10 rounded-full p-3 bg-black/40 hover:bg-black/60 text-white transition-colors"
           aria-label="Close"
         >
-          <X className="h-5 w-5" />
+          <X className="h-6 w-6" />
         </button>
 
-        {/* Slide content - scrollable */}
+        {/* Slide content */}
         <div
-          className="relative p-8 pb-6 text-white flex flex-col overflow-y-auto"
+          className="relative p-8 pb-6 text-white flex flex-col"
           style={{
             background: `linear-gradient(135deg, ${slide.gradientFrom} 0%, ${slide.gradientTo} 100%)`,
           }}
