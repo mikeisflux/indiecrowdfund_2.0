@@ -62,29 +62,23 @@ export function PromoPopup() {
 
         const frequency = data.popup.showFrequency || "once_per_session";
 
-        // Check if we should show based on frequency BEFORE opening
-        let show = true;
+        // Always check login key first — popup should show at most once per login session
+        // regardless of frequency setting. This survives refreshes and rebuilds.
+        if (localStorage.getItem(PROMO_LOGIN_KEY)) return;
 
-        if (frequency === "once_per_session") {
-          show = !sessionStorage.getItem(PROMO_SESSION_KEY);
-        } else if (frequency === "once_per_login") {
-          show = !localStorage.getItem(PROMO_LOGIN_KEY);
-        } else if (frequency === "once_per_day") {
+        // Additional frequency-based checks
+        if (frequency === "once_per_day") {
           const lastDismissed = localStorage.getItem(PROMO_DISMISSED_KEY);
           if (lastDismissed) {
             const dismissedAt = parseInt(lastDismissed, 10);
             const twentyFourHours = 24 * 60 * 60 * 1000;
-            if (Date.now() - dismissedAt < twentyFourHours) show = false;
+            if (Date.now() - dismissedAt < twentyFourHours) return;
           }
         }
-        // every_visit: show = true (default)
 
-        if (!show) return;
-
-        // Mark as shown immediately so navigating away still counts
-        if (frequency === "once_per_session") {
-          sessionStorage.setItem(PROMO_SESSION_KEY, Date.now().toString());
-        }
+        // Mark as shown immediately so refreshes / rebuilds / navigations don't re-trigger
+        localStorage.setItem(PROMO_LOGIN_KEY, Date.now().toString());
+        sessionStorage.setItem(PROMO_SESSION_KEY, Date.now().toString());
 
         setSlides(data.popup.slides);
         setShowFrequency(frequency);
