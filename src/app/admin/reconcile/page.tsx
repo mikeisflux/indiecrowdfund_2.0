@@ -370,13 +370,13 @@ export default function ReconcilePage() {
                             <Database className="h-4 w-4" /> Database
                           </div>
                           <div className="font-medium flex items-center gap-1">
-                            <CreditCard className="h-4 w-4" /> Stripe
+                            <CreditCard className="h-4 w-4" /> {result.paymentProcessor === "DIVINITYCOIN" ? "Verified (DC)" : "Stripe"}
                           </div>
 
                           <div>Current Amount</div>
                           <div>{formatCurrency(result.database.currentAmount)}</div>
                           <div className={getDiscrepancyColor(result.discrepancy.amountDiff)}>
-                            {formatCurrency(result.stripe.totalAmount)}
+                            {formatCurrency(result.verified.totalAmount)}
                             {result.discrepancy.amountDiff !== 0 && (
                               <span className="ml-2 text-xs">
                                 ({result.discrepancy.amountDiff > 0 ? "+" : ""}
@@ -388,7 +388,7 @@ export default function ReconcilePage() {
                           <div>Backer Count</div>
                           <div>{result.database.backerCount}</div>
                           <div className={getDiscrepancyColor(result.discrepancy.backerDiff)}>
-                            {result.stripe.successfulPayments + result.stripe.pendingSetupIntents}
+                            {result.verified.successfulPayments + result.verified.pendingSetupIntents}
                             {result.discrepancy.backerDiff !== 0 && (
                               <span className="ml-2 text-xs">
                                 ({result.discrepancy.backerDiff > 0 ? "+" : ""}
@@ -400,7 +400,7 @@ export default function ReconcilePage() {
                           <div>Pledge Records</div>
                           <div>{result.database.pledgeCount}</div>
                           <div>
-                            {result.stripe.successfulPayments} paid + {result.stripe.pendingSetupIntents} pending
+                            {result.verified.successfulPayments} paid + {result.verified.pendingSetupIntents} pending
                           </div>
                         </div>
                         </div>
@@ -408,7 +408,8 @@ export default function ReconcilePage() {
                         {/* Issues Details */}
                         {(result.details.missingInDb.length > 0 ||
                           result.details.statusMismatch.length > 0 ||
-                          result.details.amountMismatch.length > 0) && (
+                          result.details.amountMismatch.length > 0 ||
+                          result.details.downgraded?.length > 0) && (
                           <div className="border-t pt-4 space-y-3">
                             <p className="font-medium text-sm">Issues Found:</p>
 
@@ -445,6 +446,19 @@ export default function ReconcilePage() {
                                 </p>
                                 <ul className="list-disc list-inside text-xs text-muted-foreground">
                                   {result.details.amountMismatch.map((item, i) => (
+                                    <li key={i}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {result.details.downgraded?.length > 0 && (
+                              <div className="text-sm">
+                                <p className="text-red-600 font-medium">
+                                  Downgraded — No Verified Payment ({result.details.downgraded.length}):
+                                </p>
+                                <ul className="list-disc list-inside text-xs text-muted-foreground">
+                                  {result.details.downgraded.map((item: string, i: number) => (
                                     <li key={i}>{item}</li>
                                   ))}
                                 </ul>

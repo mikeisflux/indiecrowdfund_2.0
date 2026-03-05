@@ -491,15 +491,18 @@ async function processDivinityCoinPendingPledges(projectId: string, specificPled
  * pledges marked as chargedImmediately that are still PENDING.
  */
 async function verifyDivinityCoinPledges(projectId: string) {
-  // Find all PENDING pledges for this DC project
-  const pendingPledges = await db.pledge.findMany({
+  // Find ALL pledges for this DC project (PENDING and COMPLETED)
+  // We need to audit COMPLETED ones too — they may have been incorrectly marked
+  const allPledges = await db.pledge.findMany({
     where: {
       projectId,
-      status: "PENDING",
+      status: { in: ["PENDING", "COMPLETED"] },
+      deletedAt: null,
     },
     select: {
       id: true,
       amount: true,
+      status: true,
       chargedImmediately: true,
       divinityCoinPaymentId: true,
       stripePaymentIntentId: true,
@@ -510,8 +513,8 @@ async function verifyDivinityCoinPledges(projectId: string) {
     },
   });
 
-  // Check for DC transaction records
-  const pledgeIds = pendingPledges.map((p) => p.id);
+  // Check for DC transaction records for ALL pledges
+  const pledgeIds = allPledges.map((p) => p.id);
   const dcTransactions = await db.divinityCoinTransaction.findMany({
     where: {
       pledgeId: { in: pledgeIds },
@@ -525,31 +528,35 @@ async function verifyDivinityCoinPledges(projectId: string) {
   );
 
   const results = {
-    total: pendingPledges.length,
+    total: allPledges.length,
     verified: 0,
     alreadySucceeded: 0,
+    upgraded: 0,
+    downgraded: 0,
     abandoned: 0,
     errors: [] as string[],
     details: [] as Array<{
       pledgeId: string;
       user: string;
       amount: number;
+      previousStatus: string;
       paymentIntentId: string;
       stripeStatus: string;
       action: string;
     }>,
   };
 
-  let totalNewlyCompleted = 0;
-  let totalNewlyCompletedAmount = 0;
+  let verifiedTotal = 0;
+  let verifiedCount = 0;
 
-  for (const pledge of pendingPledges) {
+  for (const pledge of allPledges) {
     const hasDcTransaction = dcTransactionMap.has(pledge.id);
 
     const detail = {
       pledgeId: pledge.id,
       user: pledge.user.name || pledge.user.email || "Unknown",
       amount: Number(pledge.amount),
+      previousStatus: pledge.status,
       paymentIntentId: pledge.divinityCoinPaymentId || pledge.stripePaymentIntentId || "none",
       stripeStatus: hasDcTransaction ? "succeeded (DC transaction verified)" : "no verified payment",
       action: "",
@@ -557,21 +564,43 @@ async function verifyDivinityCoinPledges(projectId: string) {
 
     if (hasDcTransaction) {
       // Verified DC transaction record exists — payment actually went through
+      verifiedTotal += Number(pledge.amount);
+      verifiedCount++;
+
+      if (pledge.status === "PENDING") {
+        // Upgrade: PENDING → COMPLETED (missed webhook)
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            status: "COMPLETED",
+            chargedImmediately: true,
+            confirmationEmailSent: true,
+          },
+        });
+        results.upgraded++;
+        detail.action = "Upgraded PENDING → COMPLETED (verified DC transaction record)";
+      } else {
+        // Already COMPLETED with verified transaction — correct state
+        results.alreadySucceeded++;
+        detail.action = "Already COMPLETED with verified DC transaction — no change needed";
+      }
+    } else if (pledge.status === "COMPLETED") {
+      // COMPLETED in DB but NO verified transaction — incorrectly marked!
+      // divinityCoinPaymentId alone is NOT proof of payment
       await db.pledge.update({
         where: { id: pledge.id },
         data: {
-          status: "COMPLETED",
-          chargedImmediately: true,
-          confirmationEmailSent: true,
+          status: "PENDING",
+          confirmationEmailSent: false,
         },
       });
-      results.alreadySucceeded++;
-      totalNewlyCompleted++;
-      totalNewlyCompletedAmount += Number(pledge.amount);
-      detail.action = "Updated to COMPLETED (verified DC transaction record)";
+      results.downgraded++;
+      detail.action = pledge.divinityCoinPaymentId
+        ? "Downgraded COMPLETED → PENDING (DC payment intent created but no transaction record — payment never completed)"
+        : "Downgraded COMPLETED → PENDING (no DC payment record)";
+      console.log(`[Admin DC Verify] Downgraded pledge ${pledge.id} from COMPLETED to PENDING (no transaction record)`);
     } else {
-      // No verified transaction — divinityCoinPaymentId alone is NOT proof of payment
-      // (it's set when PaymentIntent is created, before user pays)
+      // PENDING without transaction — normal incomplete/abandoned
       results.abandoned++;
       detail.action = pledge.divinityCoinPaymentId
         ? "DC payment intent created but no transaction record - payment never completed"
@@ -582,22 +611,20 @@ async function verifyDivinityCoinPledges(projectId: string) {
     results.verified++;
   }
 
-  // Update project stats for all newly completed pledges
-  if (totalNewlyCompleted > 0) {
-    await db.project.update({
-      where: { id: projectId },
-      data: {
-        currentAmount: { increment: totalNewlyCompletedAmount },
-        backerCount: { increment: totalNewlyCompleted },
-      },
-    });
+  // Recalculate project stats from verified pledges only
+  await db.project.update({
+    where: { id: projectId },
+    data: {
+      currentAmount: verifiedTotal,
+      backerCount: verifiedCount,
+    },
+  });
 
-    console.log(`[Admin DC Verify] Updated project stats: +$${totalNewlyCompletedAmount}, +${totalNewlyCompleted} backers`);
-  }
+  console.log(`[Admin DC Verify] Set project stats: $${verifiedTotal}, ${verifiedCount} backers (upgraded: ${results.upgraded}, downgraded: ${results.downgraded})`);
 
   return NextResponse.json({
     success: true,
-    message: `Verified ${results.verified} of ${results.total} pledges: ${results.alreadySucceeded} completed, ${results.abandoned} abandoned`,
+    message: `Verified ${results.verified} of ${results.total} pledges: ${results.alreadySucceeded} already correct, ${results.upgraded} upgraded, ${results.downgraded} downgraded, ${results.abandoned} abandoned`,
     results,
   });
 }
