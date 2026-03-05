@@ -1,0 +1,14 @@
+[Unit]
+Description=BotBlock Watcher - Instant firewall blocking for detected bots
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /root/indiecrowdfund_2.0/scripts/botblock-watcher.sh
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/botblock-watcher.log
+StandardError=append:/var/log/botblock-watcher.log
+
+[Install]
+WantedBy=multi-user.target

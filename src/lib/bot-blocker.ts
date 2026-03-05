@@ -3,9 +3,11 @@
  *
  * Uses database for persistence with in-memory caching for performance.
  * Tracks suspicious activity and auto-blocks repeat offenders.
+ * Writes blocked IPs to a pending file for near-instant firewall application.
  */
 
 import { db } from "@/lib/db";
+import { appendFile } from "fs/promises";
 
 // Configuration
 const BOT_BLOCK_THRESHOLD = 3; // Block after this many violations
@@ -151,6 +153,15 @@ export async function blockIP(
 
     // Update cache
     blockedIPCache.set(ip, { expiresAt, checkedAt: Date.now() });
+
+    // Write to pending file for immediate firewall application
+    // The botblock-watcher service picks this up within seconds and adds iptables DROP rule
+    try {
+      await appendFile("/tmp/botblock-pending", `${ip}\n`);
+    } catch {
+      // Non-fatal — the 5-minute cron sync is the safety net
+      console.error(`[Bot Blocker] Could not write to pending file for ${ip}`);
+    }
 
     console.log(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} - Expires: ${expiresAt.toISOString()}`);
     return true;

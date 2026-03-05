@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { appendFile } from "fs/promises";
 
 export const dynamic = "force-dynamic";
 
@@ -120,6 +121,13 @@ export async function POST(req: NextRequest) {
           lastActionId: actionId,
         },
       });
+
+      // Write to pending file for immediate firewall application
+      try {
+        await appendFile("/tmp/botblock-pending", `${ip}\n`);
+      } catch {
+        // Non-fatal
+      }
 
       console.log(`[Bot Blocker API] IP blocked: ${ip} - ${reason} (${durationHours}h, violation #${violations})`);
     }
