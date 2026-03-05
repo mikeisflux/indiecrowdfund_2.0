@@ -343,6 +343,13 @@ export async function GET(req: NextRequest) {
                 select: {
                   id: true,
                   title: true,
+                  items: {
+                    select: {
+                      id: true,
+                      title: true,
+                      projectItemId: true,
+                    },
+                  },
                 },
               },
             },
@@ -501,18 +508,41 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Count addons (with quantity) - includes survey addon purchases
-      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string } }) => {
-        const addonKey = `addon_${pledgeAddon.addon.id}`;
-        const existing = itemCounts.get(addonKey);
-        if (existing) {
-          existing.count += pledgeAddon.quantity;
-        } else {
-          itemCounts.set(addonKey, {
-            name: pledgeAddon.addon.title,
-            count: pledgeAddon.quantity,
-            type: "addon",
+      // Count addon items (with quantity multiplier)
+      // Expand each addon to its linked items, same as rewards
+      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null }[] } }) => {
+        const hasItems = pledgeAddon.addon.items && pledgeAddon.addon.items.length > 0;
+
+        if (hasItems) {
+          // Count individual items within the addon, multiplied by addon quantity
+          pledgeAddon.addon.items!.forEach((item) => {
+            const itemKey = item.projectItemId
+              ? `projectItem_${item.projectItemId}`
+              : `itemTitle_${item.title}`;
+            const existingItem = itemCounts.get(itemKey);
+            if (existingItem) {
+              existingItem.count += pledgeAddon.quantity;
+            } else {
+              itemCounts.set(itemKey, {
+                name: item.title,
+                count: pledgeAddon.quantity,
+                type: "addon",
+              });
+            }
           });
+        } else {
+          // No individual items defined - count the addon itself as the fulfillment item
+          const addonKey = `addon_${pledgeAddon.addon.id}`;
+          const existing = itemCounts.get(addonKey);
+          if (existing) {
+            existing.count += pledgeAddon.quantity;
+          } else {
+            itemCounts.set(addonKey, {
+              name: pledgeAddon.addon.title,
+              count: pledgeAddon.quantity,
+              type: "addon",
+            });
+          }
         }
       });
     });
