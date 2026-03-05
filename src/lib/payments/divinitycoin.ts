@@ -745,23 +745,14 @@ export async function handlePaymentSucceeded(
       return { success: true, message: `Pledge already ${pledge.status}` };
     }
 
+    // Mark pledge as completed and record transaction
     await db.$transaction(async (tx) => {
-      // Mark pledge as completed (use best available payment reference)
       await tx.pledge.update({
         where: { id: pledgeId },
         data: {
           status: "COMPLETED",
           divinityCoinPaymentId: paymentId || stripePI || holdId || null,
           chargedImmediately: true,
-        },
-      });
-
-      // Update project stats
-      await tx.project.update({
-        where: { id: pledge.projectId },
-        data: {
-          currentAmount: { increment: pledge.amount },
-          backerCount: { increment: 1 },
         },
       });
 
@@ -788,6 +779,27 @@ export async function handlePaymentSucceeded(
     });
 
     console.log(`[DivinityCoin] Pledge ${pledgeId} marked as COMPLETED via payment webhook`);
+
+    // Atomically claim the right to update project stats using confirmationEmailSent.
+    // This prevents double-counting between this webhook and the /confirm endpoint.
+    const statsClaimResult = await db.pledge.updateMany({
+      where: { id: pledgeId, confirmationEmailSent: false },
+      data: { confirmationEmailSent: true },
+    });
+
+    if (statsClaimResult.count > 0) {
+      // We won the race — update project stats
+      await db.project.update({
+        where: { id: pledge.projectId },
+        data: {
+          currentAmount: { increment: pledge.amount },
+          backerCount: { increment: 1 },
+        },
+      });
+      console.log(`[DivinityCoin] Updated project stats for pledge ${pledgeId}: +$${pledge.amount}`);
+    } else {
+      console.log(`[DivinityCoin] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);
+    }
 
     // Notify creator of new pledge (non-blocking)
     try {

@@ -108,61 +108,87 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     }
   }
 
-  // Only update project funding if this was an immediate charge (chargedImmediately = true)
-  // Pledges made via SetupIntent (chargedImmediately = false) were already counted
-  // when the SetupIntent succeeded, so we don't double-count them here
+  // Update project stats using atomic confirmationEmailSent flag to prevent
+  // double-counting between this webhook and the /confirm endpoint.
+  // Both paths use this flag: whoever sets it first gets to update stats.
   let updatedProject = pledge.project;
 
   if (pledge.chargedImmediately) {
-    // This was a direct PaymentIntent charge (campaign was already funded)
-    updatedProject = await db.project.update({
-      where: { id: pledge.projectId },
-      data: {
-        currentAmount: { increment: pledge.amount },
-        backerCount: { increment: 1 },
-      },
+    // Atomically claim the right to update stats — only one of webhook or /confirm will succeed
+    const statsClaimResult = await db.pledge.updateMany({
+      where: { id: pledgeId, confirmationEmailSent: false },
+      data: { confirmationEmailSent: true },
     });
 
-    // Atomically claim reward slot if pledge has a reward (prevents overselling)
-    if (pledge.rewardId) {
-      const claimed = await claimRewardSlot(pledge.rewardId);
-      if (!claimed) {
-        // Reward is sold out - log the issue but don't fail the payment
-        // The pledge is still valid, just without the specific reward
-        console.warn(`[Webhook] Reward ${pledge.rewardId} sold out for pledge ${pledgeId} - payment completed but reward unavailable`);
+    if (statsClaimResult.count > 0) {
+      // We won the race — update project stats
+      updatedProject = await db.project.update({
+        where: { id: pledge.projectId },
+        data: {
+          currentAmount: { increment: pledge.amount },
+          backerCount: { increment: 1 },
+        },
+      });
+
+      // Atomically claim reward slot if pledge has a reward (prevents overselling)
+      if (pledge.rewardId) {
+        const claimed = await claimRewardSlot(pledge.rewardId);
+        if (!claimed) {
+          console.warn(`[Webhook] Reward ${pledge.rewardId} sold out for pledge ${pledgeId} - payment completed but reward unavailable`);
+        }
+      }
+
+      // Notify creator of new pledge (non-blocking)
+      try {
+        await notifyPledgeReceived(
+          pledge.projectId,
+          pledge.project.creatorId,
+          pledge.user.name || "A backer",
+          Number(pledge.amount)
+        );
+      } catch (notifyError) {
+        console.error(`[Webhook] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
+      }
+
+      // Send confirmation email to backer (non-blocking)
+      try {
+        await notifyBackerPledgeConfirmed(pledge.id, true);
+      } catch (emailError) {
+        console.error(`[Webhook] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+      }
+
+      console.log(`[Webhook] Updated project stats for pledge ${pledgeId}: +$${pledge.amount}`);
+    } else {
+      // /confirm endpoint already updated stats — just re-read project for funding check
+      console.log(`[Webhook] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);
+      const freshProject = await db.project.findUnique({
+        where: { id: pledge.projectId },
+        select: { currentAmount: true, goalAmount: true },
+      });
+      if (freshProject) {
+        updatedProject = { ...updatedProject, ...freshProject };
       }
     }
-
-    // Notify creator of new pledge (non-blocking - don't fail webhook if notification fails)
-    try {
-      await notifyPledgeReceived(
-        pledge.projectId,
-        pledge.project.creatorId,
-        pledge.user.name || "A backer",
-        Number(pledge.amount)
-      );
-    } catch (notifyError) {
-      console.error(`[Webhook] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
-    }
-
-    // Send confirmation email to backer (non-blocking)
-    try {
-      await notifyBackerPledgeConfirmed(pledge.id, true);
-    } catch (emailError) {
-      console.error(`[Webhook] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+  } else {
+    // SetupIntent pledge — stats were already counted when SetupIntent was confirmed.
+    // Don't double-count. Just check if stats need a funding check.
+    const freshProject = await db.project.findUnique({
+      where: { id: pledge.projectId },
+      select: { currentAmount: true, goalAmount: true },
+    });
+    if (freshProject) {
+      updatedProject = { ...updatedProject, ...freshProject };
     }
   }
 
-  // Check if project is now funded (only relevant for immediate charges on funded campaigns)
+  // Check if project is now funded
   if (pledge.chargedImmediately) {
     const projectIsFunded = Number(updatedProject.currentAmount) >= Number(updatedProject.goalAmount);
 
-    // Check if this pledge pushed it over the goal (for notification)
     const justReachedGoal = projectIsFunded &&
       Number(updatedProject.currentAmount) - Number(pledge.amount) < Number(updatedProject.goalAmount);
 
     if (justReachedGoal) {
-      // Project just reached its goal! Send notification (non-blocking)
       try {
         await notifyProjectFunded(pledge.projectId);
       } catch (fundedError) {
@@ -170,7 +196,6 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       }
     }
 
-    // Always check for and process pending pledges if project is funded
     if (projectIsFunded) {
       const pendingPledgeCount = await db.pledge.count({
         where: {
@@ -257,32 +282,33 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     return;
   }
 
-  // Determine what needs to be updated
-  const needsConfirmation = !existingPledge.confirmationEmailSent;
-
   // Assign backer number atomically if not already assigned
   let backerNumber = existingPledge.backerNumber;
   if (!backerNumber) {
     backerNumber = await assignBackerNumber(existingPledge.projectId, pledgeId);
   }
 
-  // Save the payment method and mark as confirmed
+  // Save the payment method to the pledge (always do this, even if /confirm already ran)
   await db.pledge.update({
     where: { id: pledgeId },
     data: {
       stripePaymentMethodId: paymentMethodId,
-      confirmationEmailSent: true,
     },
   });
 
-  console.log(`[SetupIntent] Payment method saved and confirmed for pledge ${pledgeId}, backer #${backerNumber}`);
+  console.log(`[SetupIntent] Payment method saved for pledge ${pledgeId}, backer #${backerNumber}`);
 
-  // Track current project amount for funding check
+  // Atomically claim the right to update stats using confirmationEmailSent flag.
+  // This prevents double-counting between this webhook and the /confirm endpoint.
+  const statsClaimResult = await db.pledge.updateMany({
+    where: { id: pledgeId, confirmationEmailSent: false },
+    data: { confirmationEmailSent: true },
+  });
+
   let currentProjectAmount = existingPledge.project.currentAmount;
 
-  // Update project stats if not already counted
-  // (Only if pledge wasn't already confirmed by the confirm endpoint)
-  if (needsConfirmation && !existingPledge.chargedImmediately) {
+  if (statsClaimResult.count > 0 && !existingPledge.chargedImmediately) {
+    // We won the race — update project stats
     const updatedProject = await db.project.update({
       where: { id: existingPledge.projectId },
       data: {
@@ -293,16 +319,15 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
 
     currentProjectAmount = updatedProject.currentAmount;
 
-    // Atomically claim reward slot if pledge has a reward (prevents overselling)
+    // Atomically claim reward slot if pledge has a reward
     if (existingPledge.rewardId) {
       const claimed = await claimRewardSlot(existingPledge.rewardId);
       if (!claimed) {
-        // Reward is sold out - log the issue but don't fail the payment
         console.warn(`[SetupIntent] Reward ${existingPledge.rewardId} sold out for pledge ${pledgeId} - payment completed but reward unavailable`);
       }
     }
 
-    // Notify creator of new pledge (non-blocking - don't fail webhook if notification fails)
+    // Notify creator of new pledge (non-blocking)
     try {
       await notifyPledgeReceived(
         existingPledge.projectId,
@@ -332,6 +357,16 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
       await notifyBackerPledgeConfirmed(pledgeId, false);
     } catch (emailError) {
       console.error(`[SetupIntent] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+    }
+  } else if (statsClaimResult.count === 0) {
+    // /confirm endpoint already handled stats — re-read current project amount for funding check
+    console.log(`[SetupIntent] Stats already updated by /confirm for pledge ${pledgeId}`);
+    const freshProject = await db.project.findUnique({
+      where: { id: existingPledge.projectId },
+      select: { currentAmount: true },
+    });
+    if (freshProject) {
+      currentProjectAmount = freshProject.currentAmount;
     }
   }
 

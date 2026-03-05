@@ -406,16 +406,18 @@ export async function GET(req: NextRequest) {
  * Only deletes PENDING pledges older than the cutoff that have no payment evidence.
  */
 async function cleanupAbandonedCarts(projectId: string, olderThan: Date) {
-  // Find stale PENDING pledges with no payment evidence
+  // Find stale PENDING pledges with no payment evidence.
+  // NOTE: divinityCoinPaymentId is NOT payment evidence — it's set when the
+  // PaymentIntent is created (before user pays). We check DivinityCoinTransaction
+  // records below for actual payment proof.
   const stalePledges = await db.pledge.findMany({
     where: {
       projectId,
       status: "PENDING",
       deletedAt: null,
       createdAt: { lt: olderThan },
-      // No payment evidence
+      // No payment evidence (stripePaymentMethodId = card saved)
       stripePaymentMethodId: null,
-      divinityCoinPaymentId: null,
       confirmationEmailSent: false,
     },
     select: { id: true },

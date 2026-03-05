@@ -129,9 +129,13 @@ export async function GET(
         // DivinityCoin projects: payments are always charged immediately by DC
         // PENDING pledges are either abandoned carts or missed webhooks
         if (pledge.status === "PENDING") {
-          if (pledge.divinityCoinPaymentId || dcTransactionsByPledge[pledge.id]) {
-            issues.push("Has DC payment record but still PENDING - webhook may have partially failed");
+          if (dcTransactionsByPledge[pledge.id]) {
+            // Has a verified DC transaction — webhook likely failed to update status
+            issues.push("Has verified DC transaction but still PENDING - webhook may have partially failed");
             canBeReconciled = true;
+          } else if (pledge.divinityCoinPaymentId) {
+            // Has a DC payment intent ID but NO transaction — payment was never completed
+            issues.push("DC payment intent created but no transaction record - payment never completed (abandoned cart)");
           } else {
             issues.push("No DC payment record - likely abandoned cart");
           }
@@ -417,6 +421,8 @@ async function processDivinityCoinPendingPledges(projectId: string, specificPled
     }>,
   };
 
+  let totalReconciled = 0;
+
   for (const pledge of pendingPledges) {
     const detail = {
       pledgeId: pledge.id,
@@ -425,32 +431,51 @@ async function processDivinityCoinPendingPledges(projectId: string, specificPled
       action: "",
     };
 
-    const hasDcPaymentId = !!pledge.divinityCoinPaymentId;
     const hasDcTransaction = dcTransactionMap.has(pledge.id);
 
-    if (hasDcPaymentId || hasDcTransaction) {
-      // This pledge was paid — fix the status
+    if (hasDcTransaction) {
+      // This pledge has a verified DC transaction record — payment actually went through
       await db.pledge.update({
         where: { id: pledge.id },
         data: {
           status: "COMPLETED",
           chargedImmediately: true,
+          confirmationEmailSent: true,
         },
       });
 
+      totalReconciled++;
       results.reconciled++;
-      detail.action = hasDcPaymentId
-        ? `Reconciled to COMPLETED (had divinityCoinPaymentId: ${pledge.divinityCoinPaymentId})`
-        : "Reconciled to COMPLETED (found DivinityCoinTransaction record)";
+      detail.action = "Reconciled to COMPLETED (verified DivinityCoinTransaction record found)";
 
       console.log(`[Admin DC] Reconciled pledge ${pledge.id} to COMPLETED`);
     } else {
-      // No payment record — abandoned cart
+      // No verified transaction record — divinityCoinPaymentId alone is NOT proof of payment
+      // (it's set at pledge creation before user pays). This is an abandoned cart.
       results.abandoned++;
-      detail.action = "No payment record found - abandoned cart (no changes made)";
+      detail.action = pledge.divinityCoinPaymentId
+        ? "No DC transaction record - payment intent created but never completed (abandoned cart)"
+        : "No payment record found - abandoned cart (no changes made)";
     }
 
     results.details.push(detail);
+  }
+
+  // Update project stats for all reconciled pledges in one shot
+  if (totalReconciled > 0) {
+    const reconciledAmount = results.details
+      .filter(d => d.action.startsWith("Reconciled"))
+      .reduce((sum, d) => sum + d.amount, 0);
+
+    await db.project.update({
+      where: { id: projectId },
+      data: {
+        currentAmount: { increment: reconciledAmount },
+        backerCount: { increment: totalReconciled },
+      },
+    });
+
+    console.log(`[Admin DC] Updated project stats: +$${reconciledAmount}, +${totalReconciled} backers`);
   }
 
   return NextResponse.json({
@@ -515,8 +540,10 @@ async function verifyDivinityCoinPledges(projectId: string) {
     }>,
   };
 
+  let totalNewlyCompleted = 0;
+  let totalNewlyCompletedAmount = 0;
+
   for (const pledge of pendingPledges) {
-    const hasDcPaymentId = !!pledge.divinityCoinPaymentId;
     const hasDcTransaction = dcTransactionMap.has(pledge.id);
 
     const detail = {
@@ -524,28 +551,48 @@ async function verifyDivinityCoinPledges(projectId: string) {
       user: pledge.user.name || pledge.user.email || "Unknown",
       amount: Number(pledge.amount),
       paymentIntentId: pledge.divinityCoinPaymentId || pledge.stripePaymentIntentId || "none",
-      stripeStatus: hasDcPaymentId || hasDcTransaction ? "succeeded (DC)" : "no payment found",
+      stripeStatus: hasDcTransaction ? "succeeded (DC transaction verified)" : "no verified payment",
       action: "",
     };
 
-    if (hasDcPaymentId || hasDcTransaction) {
-      // Payment was recorded — update pledge to COMPLETED
+    if (hasDcTransaction) {
+      // Verified DC transaction record exists — payment actually went through
       await db.pledge.update({
         where: { id: pledge.id },
         data: {
           status: "COMPLETED",
           chargedImmediately: true,
+          confirmationEmailSent: true,
         },
       });
       results.alreadySucceeded++;
-      detail.action = "Updated to COMPLETED (DC payment verified)";
+      totalNewlyCompleted++;
+      totalNewlyCompletedAmount += Number(pledge.amount);
+      detail.action = "Updated to COMPLETED (verified DC transaction record)";
     } else {
+      // No verified transaction — divinityCoinPaymentId alone is NOT proof of payment
+      // (it's set when PaymentIntent is created, before user pays)
       results.abandoned++;
-      detail.action = "No DC payment record - abandoned cart";
+      detail.action = pledge.divinityCoinPaymentId
+        ? "DC payment intent created but no transaction record - payment never completed"
+        : "No DC payment record - abandoned cart";
     }
 
     results.details.push(detail);
     results.verified++;
+  }
+
+  // Update project stats for all newly completed pledges
+  if (totalNewlyCompleted > 0) {
+    await db.project.update({
+      where: { id: projectId },
+      data: {
+        currentAmount: { increment: totalNewlyCompletedAmount },
+        backerCount: { increment: totalNewlyCompleted },
+      },
+    });
+
+    console.log(`[Admin DC Verify] Updated project stats: +$${totalNewlyCompletedAmount}, +${totalNewlyCompleted} backers`);
   }
 
   return NextResponse.json({
@@ -598,6 +645,9 @@ async function verifyPaymentIntents(projectId: string) {
     }>,
   };
 
+  let totalNewlyCompleted = 0;
+  let totalNewlyCompletedAmount = 0;
+
   for (const pledge of pendingPledges) {
     try {
       // Retrieve PaymentIntent from Stripe
@@ -620,12 +670,15 @@ async function verifyPaymentIntents(projectId: string) {
           where: { id: pledge.id },
           data: {
             status: "COMPLETED",
+            confirmationEmailSent: true,
             stripePaymentMethodId: typeof paymentIntent.payment_method === "string"
               ? paymentIntent.payment_method
               : paymentIntent.payment_method?.id || pledge.stripePaymentMethodId,
           },
         });
         results.alreadySucceeded++;
+        totalNewlyCompleted++;
+        totalNewlyCompletedAmount += Number(pledge.amount);
         detail.action = "Updated to COMPLETED";
       } else if (paymentIntent.status === "processing") {
         results.stillProcessing++;
@@ -652,6 +705,19 @@ async function verifyPaymentIntents(projectId: string) {
         `Pledge ${pledge.id}: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     }
+  }
+
+  // Update project stats for all newly completed pledges
+  if (totalNewlyCompleted > 0) {
+    await db.project.update({
+      where: { id: projectId },
+      data: {
+        currentAmount: { increment: totalNewlyCompletedAmount },
+        backerCount: { increment: totalNewlyCompleted },
+      },
+    });
+
+    console.log(`[Admin Verify] Updated project stats: +$${totalNewlyCompletedAmount}, +${totalNewlyCompleted} backers`);
   }
 
   return NextResponse.json({
@@ -734,10 +800,12 @@ async function deleteAbandonedCarts(projectId: string) {
       action: "",
     };
 
-    // Skip pledges that have any evidence of payment
+    // Skip pledges that have actual evidence of payment completion.
+    // NOTE: divinityCoinPaymentId is NOT payment evidence — it's set when the
+    // PaymentIntent is created (before user pays). Only DivinityCoinTransaction
+    // records prove payment actually went through.
     const hasPaymentEvidence =
       !!pledge.stripePaymentMethodId ||
-      !!pledge.divinityCoinPaymentId ||
       dcPaidPledgeIds.has(pledge.id) ||
       pledge.confirmationEmailSent;
 
