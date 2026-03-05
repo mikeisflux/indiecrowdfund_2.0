@@ -66,6 +66,15 @@ export async function GET(req: NextRequest) {
       // Show prelaunch projects (coming soon)
       where.prelaunchActive = true;
       where.status = { notIn: ["LIVE", "FUNDED"] }; // Exclude projects that are already live or funded
+    } else if (status === "past" || status === "closed") {
+      // Past/closed projects: FUNDED or LIVE with ended date
+      const now = new Date();
+      andConditions.push({
+        OR: [
+          { status: "FUNDED" },
+          { status: "LIVE", endDate: { lte: now } },
+        ],
+      });
     } else if (status) {
       where.status = status;
     } else {

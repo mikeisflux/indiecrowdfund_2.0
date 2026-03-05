@@ -82,6 +82,7 @@ const SORT_OPTIONS = [
 const PROJECT_TYPE_OPTIONS = [
   { value: "all", label: "All Projects" },
   { value: "live", label: "Live Projects" },
+  { value: "past", label: "Past Projects" },
   { value: "upcoming", label: "Upcoming Projects" },
 ];
 
@@ -130,6 +131,7 @@ function DiscoverContent() {
   const [sort, setSort] = useState(searchParams?.get("sort") || "trending");
   const [projectType, setProjectType] = useState(
     searchParams?.get("scope") === "all" ? "all" :
+    searchParams?.get("status") === "past" || searchParams?.get("status") === "closed" ? "past" :
     searchParams?.get("prelaunch") === "true" ? "upcoming" : "live"
   );
   const [showStaffPicks, setShowStaffPicks] = useState(
@@ -153,6 +155,7 @@ function DiscoverContent() {
       if (category) params.set("category", category);
       if (sort) params.set("sort", sort);
       if (projectType === "all") params.set("scope", "all");
+      else if (projectType === "past") params.set("status", "past");
       else if (projectType === "upcoming") params.set("prelaunch", "true");
       if (showStaffPicks) params.set("staffPicks", "true");
       params.set("limit", "12");

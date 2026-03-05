@@ -589,7 +589,7 @@ export default async function HomePage() {
                 </div>
                 <p className="text-muted-foreground">Recently completed campaigns</p>
               </div>
-              <Link href="/discover?status=closed">
+              <Link href="/discover?status=past">
                 <Button variant="ghost" className="group">
                   View all
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
