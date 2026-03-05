@@ -343,7 +343,7 @@ export default function CreatorDashboard() {
                   </TabsTrigger>
                   <TabsTrigger value="fulfillment" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <Truck className="mr-2 h-4 w-4" />
-                    Fulfillment
+                    Production Order
                   </TabsTrigger>
                   <TabsTrigger value="updates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <FileText className="mr-2 h-4 w-4" />
