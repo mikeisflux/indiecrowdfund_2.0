@@ -40,12 +40,13 @@ import {
 interface ReconciliationResult {
   projectId: string;
   projectTitle: string;
+  paymentProcessor?: string;
   database: {
     currentAmount: number;
     backerCount: number;
     pledgeCount: number;
   };
-  stripe: {
+  verified: {
     totalAmount: number;
     successfulPayments: number;
     pendingSetupIntents: number;
@@ -59,6 +60,7 @@ interface ReconciliationResult {
     missingInDb: string[];
     statusMismatch: string[];
     amountMismatch: string[];
+    downgraded?: string[];
   };
 }
 
