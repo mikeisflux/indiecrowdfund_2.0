@@ -59,6 +59,11 @@ export async function GET(
             status: "PENDING",
             confirmationEmailSent: true,
           },
+          {
+            // Pending DivinityCoin payment
+            status: "PENDING",
+            divinityCoinPaymentId: { not: null },
+          },
         ],
       },
       _sum: { amount: true },

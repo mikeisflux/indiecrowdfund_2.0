@@ -55,6 +55,7 @@ export async function GET() {
         { status: "PENDING" as const, stripePaymentMethodId: { not: null } },
         { status: "PENDING" as const, stripeSetupIntentId: { not: null } },
         { status: "PENDING" as const, confirmationEmailSent: true },
+        { status: "PENDING" as const, divinityCoinPaymentId: { not: null } },
       ],
     };
 

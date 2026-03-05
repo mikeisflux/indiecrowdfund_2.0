@@ -97,6 +97,7 @@ export async function GET(req: NextRequest) {
               { status: "PENDING", stripePaymentMethodId: { not: null } },
               { status: "PENDING", stripeSetupIntentId: { not: null } },
               { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", divinityCoinPaymentId: { not: null } },
             ],
           },
           _sum: { amount: true },
@@ -113,6 +114,7 @@ export async function GET(req: NextRequest) {
               { status: "PENDING", stripePaymentMethodId: { not: null } },
               { status: "PENDING", stripeSetupIntentId: { not: null } },
               { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", divinityCoinPaymentId: { not: null } },
             ],
           },
           _sum: { amount: true },
@@ -200,6 +202,7 @@ export async function GET(req: NextRequest) {
               { status: "PENDING", stripePaymentMethodId: { not: null } },
               { status: "PENDING", stripeSetupIntentId: { not: null } },
               { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", divinityCoinPaymentId: { not: null } },
             ],
           },
           select: {

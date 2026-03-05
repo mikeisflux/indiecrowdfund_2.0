@@ -57,6 +57,11 @@ export async function GET() {
               status: "PENDING",
               stripePaymentIntentId: { not: null },
             },
+            {
+              // Pending DivinityCoin payment
+              status: "PENDING",
+              divinityCoinPaymentId: { not: null },
+            },
           ],
         },
         include: {
@@ -162,6 +167,10 @@ export async function GET() {
             {
               status: "PENDING",
               stripePaymentIntentId: { not: null },
+            },
+            {
+              status: "PENDING",
+              divinityCoinPaymentId: { not: null },
             },
           ],
         },

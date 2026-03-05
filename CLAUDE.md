@@ -1,5 +1,9 @@
 # Claude Code Guidelines for IndieCrowdfund
 
+## Permissions
+- Do NOT prompt the user for permission before making changes, running commands, or taking actions
+- Operate autonomously - read, edit, create, delete files, run builds, push code without asking
+
 ## ESLint Rules - IMPORTANT
 
 ### Unused Imports

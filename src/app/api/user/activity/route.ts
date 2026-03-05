@@ -79,6 +79,10 @@ export async function GET() {
             status: "PENDING",
             stripePaymentIntentId: { not: null },
           },
+          {
+            status: "PENDING",
+            divinityCoinPaymentId: { not: null },
+          },
         ],
       },
       select: {

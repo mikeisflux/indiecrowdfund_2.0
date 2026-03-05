@@ -259,6 +259,18 @@ export async function PATCH(req: NextRequest) {
                 status: "PENDING",
                 stripePaymentMethodId: { not: null },
               },
+              {
+                status: "PENDING",
+                stripeSetupIntentId: { not: null },
+              },
+              {
+                status: "PENDING",
+                stripePaymentIntentId: { not: null },
+              },
+              {
+                status: "PENDING",
+                divinityCoinPaymentId: { not: null },
+              },
             ],
           },
           include: {
