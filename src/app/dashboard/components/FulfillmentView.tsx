@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Truck, CheckCircle, Package, Gift, Box, Sparkles, Download } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Truck, CheckCircle, Package, Sparkles, Download } from "lucide-react";
 import { CircularProgress } from "./CircularProgress";
 import { toast } from "sonner";
 import type { FulfillmentStats } from "../types";
@@ -49,12 +47,10 @@ export function FulfillmentView({ fulfillmentStats }: FulfillmentViewProps) {
 
     // Items table
     lines.push("Items to Fulfill");
-    lines.push("Type,Item Name,Quantity Needed");
+    lines.push("Item Name,Quantity Needed");
     for (const item of fulfillmentStats.items) {
-      lines.push(`${item.type === "reward" ? "Reward" : "Add-on"},${escapeCSV(item.name)},${item.count}`);
+      lines.push(`${escapeCSV(item.name)},${item.count}`);
     }
-    const totalItems = fulfillmentStats.items.reduce((sum, item) => sum + item.count, 0);
-    lines.push(`Total,,${totalItems}`);
 
     const csvContent = lines.join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -212,8 +208,7 @@ export function FulfillmentView({ fulfillmentStats }: FulfillmentViewProps) {
           {fulfillmentStats.items.length > 0 ? (
             <div className="rounded-xl border border-border/50 overflow-hidden">
               <div className="grid grid-cols-12 gap-4 bg-muted/30 p-3 text-sm font-medium">
-                <div className="col-span-1">Type</div>
-                <div className="col-span-8">Item Name</div>
+                <div className="col-span-9">Item Name</div>
                 <div className="col-span-3 text-right">Quantity Needed</div>
               </div>
               {fulfillmentStats.items.map((item, index) => (
@@ -222,38 +217,14 @@ export function FulfillmentView({ fulfillmentStats }: FulfillmentViewProps) {
                   className="grid grid-cols-12 gap-4 p-3 text-sm border-t border-border/50 items-center hover:bg-muted/20 transition-colors animate-in fade-in"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="col-span-1">
-                    {item.type === "reward" ? (
-                      <div className="p-1.5 rounded-lg bg-primary/20 inline-block">
-                        <Gift className="h-4 w-4 text-primary" />
-                      </div>
-                    ) : (
-                      <div className="p-1.5 rounded-lg bg-amber-500/20 inline-block">
-                        <Box className="h-4 w-4 text-amber-500" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="col-span-8 flex items-center gap-2">
+                  <div className="col-span-9">
                     <span className="font-medium">{item.name}</span>
-                    <Badge
-                      className={cn(
-                        item.type === "reward" ? "bg-primary/20 text-primary border-primary/30" : "bg-amber-500/20 text-amber-500 border-amber-500/30"
-                      )}
-                    >
-                      {item.type === "reward" ? "Reward" : "Add-on"}
-                    </Badge>
                   </div>
                   <div className="col-span-3 text-right">
                     <span className="text-lg font-bold">{item.count.toLocaleString()}</span>
                   </div>
                 </div>
               ))}
-              <div className="grid grid-cols-12 gap-4 p-3 bg-muted/30 border-t border-border/50 font-medium">
-                <div className="col-span-9">Total Items</div>
-                <div className="col-span-3 text-right text-lg text-primary">
-                  {fulfillmentStats.items.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
-                </div>
-              </div>
             </div>
           ) : (
             <div className="py-8 text-center">

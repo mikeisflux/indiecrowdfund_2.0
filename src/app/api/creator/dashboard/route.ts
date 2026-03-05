@@ -490,84 +490,39 @@ export async function GET(req: NextRequest) {
 
     // Count items needed for fulfillment (from rewards and addons)
     // Key by projectItemId or item title to deduplicate items that appear in multiple reward tiers
-    const itemCounts = new Map<string, { name: string; count: number; type: "reward" | "addon" }>();
+    const itemCounts = new Map<string, { name: string; count: number }>();
 
     fulfillmentData.forEach((pledge) => {
-      if (pledge.reward) {
-        const hasItems = pledge.reward.items && pledge.reward.items.length > 0;
-
-        if (hasItems) {
-          // Count individual items within the reward (not the tier itself to avoid duplicates)
-          // Use projectItemId to deduplicate items shared across tiers, fallback to title
-          pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { title: string } | null }) => {
-            const itemName = item.projectItem?.title || item.title;
-            const itemKey = item.projectItemId
-              ? `projectItem_${item.projectItemId}`
-              : `itemTitle_${item.title}`;
-            const existingItem = itemCounts.get(itemKey);
-            if (existingItem) {
-              existingItem.count += 1;
-            } else {
-              itemCounts.set(itemKey, {
-                name: itemName,
-                count: 1,
-                type: "reward",
-              });
-            }
-          });
-        } else {
-          // No individual items defined - count the reward tier itself as the fulfillment item
-          const rewardKey = `reward_${pledge.reward.id}`;
-          const existing = itemCounts.get(rewardKey);
-          if (existing) {
-            existing.count += 1;
+      // Count items from reward tiers
+      if (pledge.reward?.items) {
+        pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { title: string } | null }) => {
+          const itemName = item.projectItem?.title || item.title;
+          const itemKey = item.projectItemId
+            ? `projectItem_${item.projectItemId}`
+            : `itemTitle_${item.title}`;
+          const existingItem = itemCounts.get(itemKey);
+          if (existingItem) {
+            existingItem.count += 1;
           } else {
-            itemCounts.set(rewardKey, {
-              name: pledge.reward.title,
-              count: 1,
-              type: "reward",
-            });
+            itemCounts.set(itemKey, { name: itemName, count: 1 });
           }
-        }
+        });
       }
 
-      // Count addon items (with quantity multiplier)
-      // Expand each addon to its linked items, same as rewards
+      // Count items from addons (with quantity multiplier)
       pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null; projectItem?: { title: string } | null }[] } }) => {
-        const hasItems = pledgeAddon.addon.items && pledgeAddon.addon.items.length > 0;
-
-        if (hasItems) {
-          // Count individual items within the addon, multiplied by addon quantity
-          pledgeAddon.addon.items!.forEach((item) => {
-            const itemName = item.projectItem?.title || item.title;
-            const itemKey = item.projectItemId
-              ? `projectItem_${item.projectItemId}`
-              : `itemTitle_${item.title}`;
-            const existingItem = itemCounts.get(itemKey);
-            if (existingItem) {
-              existingItem.count += pledgeAddon.quantity;
-            } else {
-              itemCounts.set(itemKey, {
-                name: itemName,
-                count: pledgeAddon.quantity,
-                type: "addon",
-              });
-            }
-          });
-        } else {
-          // No individual items defined - count the addon itself as the fulfillment item
-          const addonKey = `addon_${pledgeAddon.addon.id}`;
-          const existing = itemCounts.get(addonKey);
-          if (existing) {
-            existing.count += pledgeAddon.quantity;
+        pledgeAddon.addon.items?.forEach((item) => {
+          const itemName = item.projectItem?.title || item.title;
+          const itemKey = item.projectItemId
+            ? `projectItem_${item.projectItemId}`
+            : `itemTitle_${item.title}`;
+          const existingItem = itemCounts.get(itemKey);
+          if (existingItem) {
+            existingItem.count += pledgeAddon.quantity;
           } else {
-            itemCounts.set(addonKey, {
-              name: pledgeAddon.addon.title,
-              count: pledgeAddon.quantity,
-              type: "addon",
-            });
+            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity });
           }
-        }
+        });
       });
     });
 

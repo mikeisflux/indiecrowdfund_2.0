@@ -86,7 +86,6 @@ export interface Referrer {
 export interface FulfillmentItem {
   name: string;
   count: number;
-  type: "reward" | "addon";
 }
 
 export interface FulfillmentStats {
