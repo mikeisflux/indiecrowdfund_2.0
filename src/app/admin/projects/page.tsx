@@ -72,6 +72,7 @@ export default function ProjectsPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncingStats, setIsSyncingStats] = useState(false);
 
   // Prelaunch vanity URL state
   const [showPrelaunchVanityDialog, setShowPrelaunchVanityDialog] = useState(false);
@@ -242,6 +243,34 @@ export default function ProjectsPage() {
       console.error("Error fetching review history after retries:", error);
     }
   }, []);
+
+  const syncAllProjectStats = async () => {
+    setIsSyncingStats(true);
+    try {
+      const response = await fetch("/api/admin/sync-all-project-stats", {
+        method: "POST",
+        headers: getCSRFHeaders(),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(`Synced ${data.updated} of ${data.total} projects`);
+        if (data.changes?.length > 0) {
+          data.changes.forEach((c: { title: string; oldAmount: number; newAmount: number; oldBackers: number; newBackers: number }) => {
+            toast.info(`${c.title}: $${c.oldAmount} → $${c.newAmount}, ${c.oldBackers} → ${c.newBackers} backers`);
+          });
+        }
+        // Refresh active projects to show updated stats
+        fetchActiveProjects();
+      } else {
+        toast.error(data.error || "Failed to sync stats");
+      }
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast.error("Failed to sync project stats");
+    } finally {
+      setIsSyncingStats(false);
+    }
+  };
 
   useEffect(() => {
     fetchProjects();
@@ -507,6 +536,19 @@ export default function ProjectsPage() {
           <p className="text-zinc-500">Review and approve project submissions</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            variant="outline"
+            onClick={syncAllProjectStats}
+            disabled={isSyncingStats}
+            className="flex-1 sm:flex-none"
+          >
+            {isSyncingStats ? (
+              <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 sm:mr-2" />
+            )}
+            <span className="hidden sm:inline">{isSyncingStats ? "Syncing..." : "Sync All Stats"}</span>
+          </Button>
           <Button variant="outline" onClick={() => setActiveTab("history")} className="flex-1 sm:flex-none">
             <History className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Review History</span>
