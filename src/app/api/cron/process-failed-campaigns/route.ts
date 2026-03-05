@@ -85,6 +85,10 @@ export async function GET(req: NextRequest) {
           data: {
             status: "FUNDED",
             ...(project.fundedAt ? {} : { fundedAt: now }),
+            // Clear prelaunch data - no longer needed once funded
+            prelaunchActive: false,
+            prelaunchDescription: null,
+            prelaunchStatus: "DRAFT",
           },
         });
 

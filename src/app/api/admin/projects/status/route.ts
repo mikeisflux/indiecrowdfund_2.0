@@ -136,12 +136,17 @@ export async function POST(request: Request) {
         );
     }
 
-    // Update the project status
+    // Update the project status (and clear prelaunch data when going live)
+    const updateData: Record<string, unknown> = { status: newStatus };
+    if (newStatus === "LIVE") {
+      updateData.prelaunchActive = false;
+      updateData.prelaunchDescription = null;
+      updateData.prelaunchStatus = "DRAFT";
+    }
+
     const updatedProject = await db.project.update({
       where: { id: projectId },
-      data: {
-        status: newStatus,
-      },
+      data: updateData,
     });
 
     // Create a review history entry

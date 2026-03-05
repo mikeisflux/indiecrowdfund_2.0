@@ -49,7 +49,11 @@ const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
 export default function CreatorDashboard() {
   const searchParams = useSearchParams();
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  // Initialize from URL param or localStorage so the first fetch uses the correct project
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return searchParams?.get("project") || localStorage.getItem(SELECTED_PROJECT_KEY) || "";
+  });
   const [timeRange, setTimeRange] = useState("30");
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,14 +92,14 @@ export default function CreatorDashboard() {
     }
   }, [selectedProjectId, timeRange]);
 
+  // Handle URL param changes (e.g. navigating to /dashboard?project=xyz)
   useEffect(() => {
     const urlProject = searchParams?.get("project");
-    const savedProjectId = urlProject || localStorage.getItem(SELECTED_PROJECT_KEY);
-    if (savedProjectId) {
-      setSelectedProjectId(savedProjectId);
-      localStorage.setItem(SELECTED_PROJECT_KEY, savedProjectId);
+    if (urlProject && urlProject !== selectedProjectId) {
+      setSelectedProjectId(urlProject);
+      localStorage.setItem(SELECTED_PROJECT_KEY, urlProject);
     }
-  }, [searchParams]);
+  }, [searchParams, selectedProjectId]);
 
   useEffect(() => {
     fetchDashboardData();

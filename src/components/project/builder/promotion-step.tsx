@@ -17,7 +17,7 @@ import { Plus, Trash2, Copy, Link2, BarChart3, Share2, Rocket, Loader2, CheckCir
 import { toast } from "sonner";
 
 export function PromotionStep() {
-  const { promotion, updatePromotion, basics, projectId, setProjectId, projectSlug, setProjectSlug, items, rewards, story, payment, people } = useProjectStore();
+  const { promotion, updatePromotion, basics, projectId, setProjectId, projectSlug, setProjectSlug, items, rewards, story, payment, people, projectStatus } = useProjectStore();
   const [newTag, setNewTag] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
@@ -397,6 +397,19 @@ export function PromotionStep() {
       <Separator />
 
       {/* Pre-launch Page */}
+      {projectStatus && ["LIVE", "FUNDED", "FAILED", "CANCELLED"].includes(projectStatus) ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5" />
+              Pre-launch Page
+            </CardTitle>
+            <CardDescription>
+              Pre-launch pages are no longer available after a campaign has launched. Visitors to the old pre-launch URL are automatically redirected to your campaign page.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : (
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -622,6 +635,7 @@ export function PromotionStep() {
           </CardContent>
         )}
       </Card>
+      )}
 
       <Separator />
 
