@@ -218,6 +218,37 @@ export default function BackerDashboard() {
     fetchDashboardData();
   }, []);
 
+  // Poll for updated stats every 30 seconds
+  useEffect(() => {
+    if (!data) return;
+
+    const pollStats = async () => {
+      try {
+        const response = await fetch("/api/backer/dashboard", { cache: "no-store" });
+        if (response.ok) {
+          const freshData = await response.json();
+          setData(freshData);
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+
+    const intervalId = setInterval(pollStats, 30000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        pollStats();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [data]);
+
   // Fetch unread messages count
   useEffect(() => {
     async function fetchUnreadMessages() {

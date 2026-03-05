@@ -51,10 +51,9 @@ export async function GET() {
       pendingProjects,
       projectsThisMonth,
 
-      // Revenue stats - sum project currentAmounts for accurate totals
-      // (COMPLETED pledge sums can include pledges from cancelled projects)
+      // Revenue stats - from COMPLETED pledges only
       totalPledges,
-      activeProjects,
+      totalRevenueAgg,
       pledgesThisMonth,
       pledgesPrevMonth,
 
@@ -76,58 +75,41 @@ export async function GET() {
       db.project.count({ where: { deletedAt: null, status: "SUBMITTED" } }),
       db.project.count({ where: { deletedAt: null, createdAt: { gte: thirtyDaysAgo } } }),
 
-      // Pledges - count committed pledges only
+      // Pledges - count COMPLETED only
       db.pledge.count({
         where: {
           deletedAt: null,
+          status: "COMPLETED",
           project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
-          OR: [
-            { status: "COMPLETED" },
-            { status: "PENDING", stripePaymentMethodId: { not: null } },
-            { status: "PENDING", stripeSetupIntentId: { not: null } },
-            { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", divinityCoinPaymentId: { not: null } },
-          ],
         },
       }),
-      // Total revenue from active project currentAmounts
-      db.project.findMany({
-        where: {
-          status: { in: ["LIVE", "FUNDED", "FAILED"] },
-          deletedAt: null,
-        },
-        select: { currentAmount: true },
-      }),
-      // Revenue this month - committed pledges from active projects
+      // Total revenue from COMPLETED pledges
       db.pledge.aggregate({
         where: {
           deletedAt: null,
+          status: "COMPLETED",
+          project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+        },
+        _sum: { amount: true },
+      }),
+      // Revenue this month - COMPLETED pledges only
+      db.pledge.aggregate({
+        where: {
+          deletedAt: null,
+          status: "COMPLETED",
           createdAt: { gte: thirtyDaysAgo },
           project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
-          OR: [
-            { status: "COMPLETED" },
-            { status: "PENDING", stripePaymentMethodId: { not: null } },
-            { status: "PENDING", stripeSetupIntentId: { not: null } },
-            { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", divinityCoinPaymentId: { not: null } },
-          ],
         },
         _sum: { amount: true },
         _count: true
       }),
-      // Revenue previous month - committed pledges from active projects
+      // Revenue previous month - COMPLETED pledges only
       db.pledge.aggregate({
         where: {
           deletedAt: null,
+          status: "COMPLETED",
           createdAt: { gte: previousThirtyDays, lt: thirtyDaysAgo },
           project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
-          OR: [
-            { status: "COMPLETED" },
-            { status: "PENDING", stripePaymentMethodId: { not: null } },
-            { status: "PENDING", stripeSetupIntentId: { not: null } },
-            { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", divinityCoinPaymentId: { not: null } },
-          ],
         },
         _sum: { amount: true },
         _count: true
@@ -213,7 +195,7 @@ export async function GET() {
         projectsThisMonth,
         totalPledges,
         completedPledgeCount: totalPledges,
-        totalRevenue: activeProjects.reduce((sum: number, p: { currentAmount: unknown }) => sum + Number(p.currentAmount), 0),
+        totalRevenue: Number(totalRevenueAgg._sum.amount || 0),
         revenueThisMonth,
         revenueGrowth: Number(revenueGrowth),
         pendingReports,

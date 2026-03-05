@@ -101,6 +101,41 @@ export default function CreatorDashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  // Poll for updated stats every 15 seconds (lightweight re-fetch)
+  useEffect(() => {
+    if (!data?.selectedProject) return;
+
+    const pollStats = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (selectedProjectId) params.set("projectId", selectedProjectId);
+        params.set("days", timeRange);
+
+        const res = await fetch(`/api/creator/dashboard?${params}`, { cache: "no-store" });
+        if (res.ok) {
+          const freshData = await res.json();
+          setData(freshData);
+        }
+      } catch {
+        // Silently fail - don't interrupt user experience for polling errors
+      }
+    };
+
+    const intervalId = setInterval(pollStats, 15000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        pollStats();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [data?.selectedProject, selectedProjectId, timeRange]);
+
   const handleProjectChange = (projectId: string) => {
     setSelectedProjectId(projectId);
     localStorage.setItem(SELECTED_PROJECT_KEY, projectId);

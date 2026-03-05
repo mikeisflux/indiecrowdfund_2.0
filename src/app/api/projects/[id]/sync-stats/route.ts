@@ -7,8 +7,9 @@ import { db } from "@/lib/db";
  * Manually sync project stats based on actual pledge data.
  * This is a fallback for when webhooks fail or are delayed.
  *
- * Recalculates currentAmount and backerCount from actual COMPLETED pledges
- * and PENDING pledges that have saved payment methods (committed backers).
+ * Counting rules:
+ * - LIVE + not met goal: COMPLETED + committed pending
+ * - LIVE + met goal, FUNDED, FAILED: COMPLETED only
  */
 export async function POST(
   req: NextRequest,
@@ -17,60 +18,56 @@ export async function POST(
   try {
     const { id: projectId } = await params;
 
-    // Get the project
     const project = await db.project.findUnique({
       where: { id: projectId },
-      select: { id: true, currentAmount: true, backerCount: true },
+      select: { id: true, currentAmount: true, backerCount: true, goalAmount: true, status: true },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Calculate actual stats from pledges
-    // Count COMPLETED pledges + PENDING pledges that completed checkout
-    // A pledge counts if:
-    // - Status is COMPLETED (already charged)
-    // - Status is PENDING with saved payment method (ready to charge when funded)
-    // - Status is PENDING with SetupIntent (user completed checkout flow)
-    // - Status is PENDING with confirmationEmailSent (explicitly confirmed)
-    const pledgeStats = await db.pledge.aggregate({
+    const goalAmount = Number(project.goalAmount);
+
+    // Always get COMPLETED pledge totals
+    const completedStats = await db.pledge.aggregate({
       where: {
         projectId,
-        OR: [
-          { status: "COMPLETED" },
-          {
-            // Pending pledges with saved payment method
-            status: "PENDING",
-            stripePaymentMethodId: { not: null },
-          },
-          {
-            // Pending pledges with SetupIntent (user completed checkout)
-            status: "PENDING",
-            stripeSetupIntentId: { not: null },
-          },
-          {
-            // Explicitly confirmed pending pledges
-            status: "PENDING",
-            confirmationEmailSent: true,
-          },
-          {
-            // Pending DivinityCoin payment
-            status: "PENDING",
-            divinityCoinPaymentId: { not: null },
-          },
-        ],
+        status: "COMPLETED",
+        deletedAt: null,
       },
       _sum: { amount: true },
       _count: { id: true },
     });
 
-    const actualAmount = pledgeStats._sum.amount || 0;
-    const actualBackerCount = pledgeStats._count.id || 0;
+    let actualAmount = Number(completedStats._sum.amount || 0);
+    let actualBackerCount = completedStats._count.id || 0;
+
+    // For LIVE projects that haven't met goal, also count committed pending
+    if (project.status === "LIVE" && actualAmount < goalAmount) {
+      const pendingStats = await db.pledge.aggregate({
+        where: {
+          projectId,
+          status: "PENDING",
+          deletedAt: null,
+          OR: [
+            { stripePaymentMethodId: { not: null } },
+            { stripeSetupIntentId: { not: null } },
+            { confirmationEmailSent: true },
+            { divinityCoinPaymentId: { not: null } },
+          ],
+        },
+        _sum: { amount: true },
+        _count: { id: true },
+      });
+
+      actualAmount += Number(pendingStats._sum.amount || 0);
+      actualBackerCount += (pendingStats._count.id || 0);
+    }
 
     // Check if update is needed
     if (
-      project.currentAmount === actualAmount &&
+      Number(project.currentAmount) === actualAmount &&
       project.backerCount === actualBackerCount
     ) {
       return NextResponse.json({

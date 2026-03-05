@@ -25,44 +25,13 @@ export async function GET() {
       savedProjects,
       monthlyPledges,
     ] = await Promise.all([
-      // Get user's pledges with full project and reward info
-      // Include COMPLETED pledges and PENDING pledges that went through checkout
-      // A pledge is considered valid if:
-      // 1. Status is COMPLETED, OR
-      // 2. Status is PENDING and has any Stripe reference (indicates checkout was attempted)
-      // Exclude deleted pledges
+      // Get user's COMPLETED pledges only
+      // Pending pledges are not counted in backer totals
       db.pledge.findMany({
         where: {
           userId,
           deletedAt: null,
-          OR: [
-            { status: "COMPLETED" },
-            {
-              // Pending with saved payment method
-              status: "PENDING",
-              stripePaymentMethodId: { not: null },
-            },
-            {
-              // Pending with confirmation (checkout completed successfully)
-              status: "PENDING",
-              confirmationEmailSent: true,
-            },
-            {
-              // Pending with SetupIntent (save card for later flow)
-              status: "PENDING",
-              stripeSetupIntentId: { not: null },
-            },
-            {
-              // Pending with PaymentIntent (immediate payment flow)
-              status: "PENDING",
-              stripePaymentIntentId: { not: null },
-            },
-            {
-              // Pending DivinityCoin payment
-              status: "PENDING",
-              divinityCoinPaymentId: { not: null },
-            },
-          ],
+          status: "COMPLETED",
         },
         include: {
           project: {
@@ -141,38 +110,15 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
       }),
 
-      // Get monthly spending data (last 6 months)
-      // Include both COMPLETED and valid PENDING pledges (exclude deleted)
+      // Get monthly spending data (last 6 months) - COMPLETED only
       db.pledge.findMany({
         where: {
           userId,
           deletedAt: null,
+          status: "COMPLETED",
           createdAt: {
             gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000),
           },
-          OR: [
-            { status: "COMPLETED" },
-            {
-              status: "PENDING",
-              stripePaymentMethodId: { not: null },
-            },
-            {
-              status: "PENDING",
-              confirmationEmailSent: true,
-            },
-            {
-              status: "PENDING",
-              stripeSetupIntentId: { not: null },
-            },
-            {
-              status: "PENDING",
-              stripePaymentIntentId: { not: null },
-            },
-            {
-              status: "PENDING",
-              divinityCoinPaymentId: { not: null },
-            },
-          ],
         },
         select: {
           amount: true,

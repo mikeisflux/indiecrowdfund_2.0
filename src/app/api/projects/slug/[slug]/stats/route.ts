@@ -6,7 +6,9 @@ import { db } from "@/lib/db";
  * Lightweight endpoint to fetch just funding stats for real-time updates
  * Returns only currentAmount and backerCount to minimize data transfer
  *
- * Also auto-syncs stats if they appear to be stale (self-healing)
+ * Counting rules:
+ * - LIVE + not met goal: Count COMPLETED + committed pending (payments not yet charged)
+ * - LIVE + met goal, FUNDED, FAILED: Count only COMPLETED pledges
  */
 export async function GET(
   req: NextRequest,
@@ -33,77 +35,63 @@ export async function GET(
       );
     }
 
-    // Auto-sync: Check if stats match actual pledge data
-    // This self-heals when webhooks fail or are delayed
-    //
-    // Stats should count:
-    // - COMPLETED pledges (already charged)
-    // - PENDING pledges that completed checkout (have SetupIntent, payment method, or confirmation)
-    const pledgeStats = await db.pledge.aggregate({
+    const goalAmount = Number(project.goalAmount);
+
+    // First, always get COMPLETED pledge totals
+    const completedStats = await db.pledge.aggregate({
       where: {
         projectId: project.id,
-        OR: [
-          { status: "COMPLETED" },
-          {
-            // Pending pledges with saved payment method
-            status: "PENDING",
-            stripePaymentMethodId: { not: null },
-          },
-          {
-            // Pending pledges with SetupIntent (user completed checkout)
-            status: "PENDING",
-            stripeSetupIntentId: { not: null },
-          },
-          {
-            // Explicitly confirmed pending pledges
-            status: "PENDING",
-            confirmationEmailSent: true,
-          },
-          {
-            // Pending DivinityCoin payment
-            status: "PENDING",
-            divinityCoinPaymentId: { not: null },
-          },
-        ],
+        status: "COMPLETED",
+        deletedAt: null,
       },
       _sum: { amount: true },
       _count: { id: true },
     });
 
-    const actualAmount = pledgeStats._sum.amount || 0;
-    const actualBackerCount = pledgeStats._count.id || 0;
+    let actualAmount = Number(completedStats._sum.amount || 0);
+    let actualBackerCount = completedStats._count.id || 0;
 
-    // If stats are out of sync, update them
-    let currentAmount = project.currentAmount;
-    let backerCount = project.backerCount;
+    // For LIVE projects that haven't met their goal, also include committed pending pledges
+    // (these are pledges where the backer completed checkout but payment hasn't been charged yet)
+    if (project.status === "LIVE" && actualAmount < goalAmount) {
+      const pendingStats = await db.pledge.aggregate({
+        where: {
+          projectId: project.id,
+          status: "PENDING",
+          deletedAt: null,
+          OR: [
+            { stripePaymentMethodId: { not: null } },
+            { stripeSetupIntentId: { not: null } },
+            { confirmationEmailSent: true },
+            { divinityCoinPaymentId: { not: null } },
+          ],
+        },
+        _sum: { amount: true },
+        _count: { id: true },
+      });
 
-    if (project.currentAmount !== actualAmount || project.backerCount !== actualBackerCount) {
-      const updated = await db.project.update({
+      actualAmount += Number(pendingStats._sum.amount || 0);
+      actualBackerCount += (pendingStats._count.id || 0);
+    }
+
+    // Sync stored project fields if they differ
+    if (Number(project.currentAmount) !== actualAmount || project.backerCount !== actualBackerCount) {
+      await db.project.update({
         where: { id: project.id },
         data: {
           currentAmount: actualAmount,
           backerCount: actualBackerCount,
         },
-        select: {
-          currentAmount: true,
-          backerCount: true,
-        },
       });
-      currentAmount = updated.currentAmount;
-      backerCount = updated.backerCount;
       console.log(`[Auto-sync] Project ${project.id} stats corrected: $${actualAmount} from ${actualBackerCount} backers`);
     }
 
-    // No caching - always return fresh data
-    // Convert Decimal fields to numbers for JSON serialization
-    const currentAmountNum = Number(currentAmount);
-    const goalAmountNum = Number(project.goalAmount);
     return NextResponse.json(
       {
-        currentAmount: currentAmountNum,
-        backerCount,
-        goalAmount: goalAmountNum,
-        fundingPercentage: (currentAmountNum / goalAmountNum) * 100,
+        currentAmount: actualAmount,
+        backerCount: actualBackerCount,
+        goalAmount,
+        fundingPercentage: (actualAmount / goalAmount) * 100,
         status: project.status,
       },
       {
