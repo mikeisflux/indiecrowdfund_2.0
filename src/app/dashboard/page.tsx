@@ -37,7 +37,7 @@ import { TrafficSources } from "./components/TrafficSources";
 import { QuickStats } from "./components/QuickStats";
 import { RewardStats } from "./components/RewardStats";
 import { BackersList } from "./components/BackersList";
-import { FulfillmentView } from "./components/FulfillmentView";
+import { ProductionOrderView } from "./components/ProductionOrderView";
 import { CollaborationsTab } from "./components/CollaborationsTab";
 import { PostUpdatesTab } from "./components/PostUpdatesTab";
 import { SocialHubTab } from "./components/SocialHubTab";
@@ -341,7 +341,7 @@ export default function CreatorDashboard() {
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Messages
                   </TabsTrigger>
-                  <TabsTrigger value="fulfillment" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                  <TabsTrigger value="production-order" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <Truck className="mr-2 h-4 w-4" />
                     Production Order
                   </TabsTrigger>
@@ -422,8 +422,8 @@ export default function CreatorDashboard() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="fulfillment" className="space-y-6">
-                <FulfillmentView fulfillmentStats={data.fulfillmentStats} projectId={selectedProjectId} />
+              <TabsContent value="production-order" className="space-y-6">
+                <ProductionOrderView productionOrderStats={data.productionOrderStats} projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="updates" className="space-y-6">

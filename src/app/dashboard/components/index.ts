@@ -10,4 +10,4 @@ export { TrafficSources } from "./TrafficSources";
 export { QuickStats } from "./QuickStats";
 export { RewardStats } from "./RewardStats";
 export { BackersList } from "./BackersList";
-export { FulfillmentView } from "./FulfillmentView";
+export { ProductionOrderView } from "./ProductionOrderView";

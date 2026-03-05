@@ -83,18 +83,18 @@ export interface Referrer {
   percentage: number;
 }
 
-export interface FulfillmentItem {
+export interface ProductionOrderItem {
   name: string;
   count: number;
   projectItemId: string | null;
   sku: string | null;
 }
 
-export interface FulfillmentStats {
+export interface ProductionOrderStats {
   totalBackers: number;
   shippedBackers: number;
   fulfillmentPercentage: number;
-  items: FulfillmentItem[];
+  items: ProductionOrderItem[];
   statusBreakdown: {
     notStarted: number;
     inProgress: number;
@@ -113,6 +113,6 @@ export interface DashboardData {
   allRewards: RewardAddonItem[];
   allAddons: RewardAddonItem[];
   referrers: Referrer[];
-  fulfillmentStats: FulfillmentStats | null;
+  productionOrderStats: ProductionOrderStats | null;
   userRole?: string;
 }

@@ -648,7 +648,7 @@ export async function GET(req: NextRequest) {
       // All addons for CSV column headers
       allAddons: addonsList.map((a) => ({ id: a.id, title: a.title })),
       referrers: processedReferrers,
-      fulfillmentStats,
+      productionOrderStats: fulfillmentStats,
       userRole,
     });
   } catch (error) {
