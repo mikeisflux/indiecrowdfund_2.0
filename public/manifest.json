@@ -3,7 +3,7 @@
   "short_name": "IndieCrowdfund",
   "description": "The best Kickstarter alternative. Launch crowdfunding campaigns, fund creative projects, and join a community of independent creators.",
   "start_url": "/",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#000000",
   "theme_color": "#10b981",
   "icons": [
