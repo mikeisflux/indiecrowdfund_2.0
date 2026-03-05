@@ -143,6 +143,7 @@ export async function GET(req: NextRequest) {
       dailyFunding,
       referrerData,
       fulfillmentData,
+      actualPledgeTotals,
     ] = await Promise.all([
       // Today's pledges amount
       db.pledge.aggregate({
@@ -362,7 +363,22 @@ export async function GET(req: NextRequest) {
           },
         },
       }),
+
+      // Actual totals from COMPLETED pledges only (not stored project fields which may include pending)
+      db.pledge.aggregate({
+        where: {
+          projectId: selectedProjectId,
+          status: "COMPLETED",
+          deletedAt: null,
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
     ]);
+
+    // Use actual completed pledge totals instead of stored project fields
+    const actualCurrentAmount = Number(actualPledgeTotals._sum.amount || 0);
+    const actualBackerCount = actualPledgeTotals._count;
 
     // Calculate days remaining
     let daysRemaining = 0;
@@ -379,12 +395,12 @@ export async function GET(req: NextRequest) {
 
     // Calculate conversion rate
     const conversionRate = totalViews > 0
-      ? (selectedProject.backerCount / totalViews) * 100
+      ? (actualBackerCount / totalViews) * 100
       : 0;
 
     // Calculate average pledge
-    const avgPledge = selectedProject.backerCount > 0
-      ? Number(selectedProject.currentAmount) / selectedProject.backerCount
+    const avgPledge = actualBackerCount > 0
+      ? actualCurrentAmount / actualBackerCount
       : 0;
 
     // Calculate today vs yesterday change
@@ -651,8 +667,8 @@ export async function GET(req: NextRequest) {
         status: selectedProject.status,
         imageUrl: selectedProject.imageUrl,
         goalAmount: Number(selectedProject.goalAmount),
-        currentAmount: Number(selectedProject.currentAmount),
-        backerCount: selectedProject.backerCount,
+        currentAmount: actualCurrentAmount,
+        backerCount: actualBackerCount,
         daysRemaining,
         endDate: selectedProject.endDate,
         launchedAt: selectedProject.launchedAt,
