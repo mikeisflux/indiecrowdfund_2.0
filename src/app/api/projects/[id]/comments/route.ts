@@ -169,7 +169,7 @@ export async function GET(
       select: { userId: true },
     });
     const collaboratorIds = new Set<string>(
-      collaborators.map((c: { userId: string | null }) => c.userId).filter((id): id is string => id !== null)
+      collaborators.map((c: { userId: string | null }) => c.userId).filter((id: string | null): id is string => id !== null)
     );
 
     // Format all comments with their replies
