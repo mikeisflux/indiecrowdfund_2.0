@@ -122,6 +122,32 @@ export async function POST() {
             </td>
           </tr>
 
+          <!-- Whitelist Instructions -->
+          <tr>
+            <td style="padding: 20px 40px;">
+              <div style="background: linear-gradient(90deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px 20px;">
+                <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #15803d;">
+                  Important: Whitelist Our Emails
+                </p>
+                <p style="margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: #166534;">
+                  To make sure you receive pledge receipts, shipping updates, project notifications, and other important account emails, please add our email address to your contacts or safe sender list.
+                </p>
+                <p style="margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: #166534;">
+                  <strong>How to whitelist:</strong>
+                </p>
+                <ul style="margin: 0 0 10px; padding-left: 20px; font-size: 13px; line-height: 1.8; color: #166534;">
+                  <li><strong>Gmail:</strong> Move this email to your Primary tab, or add our address to your Contacts</li>
+                  <li><strong>Outlook/Hotmail:</strong> Right-click this email → "Never block sender" or add to Safe Senders list</li>
+                  <li><strong>Yahoo:</strong> Add our email address to your Contacts</li>
+                  <li><strong>Apple Mail:</strong> Add our email address to your Contacts or VIPs</li>
+                </ul>
+                <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #166534;">
+                  Without whitelisting, important emails like pledge receipts and project updates may end up in your spam or promotions folder.
+                </p>
+              </div>
+            </td>
+          </tr>
+
           <!-- Footer -->
           <tr>
             <td style="padding: 30px 40px; background-color: #f8f8f8; border-radius: 0 0 16px 16px;">
@@ -213,9 +239,21 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Verify the user's email
+    // Verify the user's email (use case-insensitive match for safety)
+    const userToVerify = await db.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!userToVerify) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     await db.user.update({
-      where: { email },
+      where: { id: userToVerify.id },
       data: { emailVerified: new Date() },
     });
 

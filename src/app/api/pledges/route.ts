@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { createStripePayment, checkAndUpdateStripeOnboarding } from "@/lib/payments/stripe";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import { isEmailVerificationRequired } from "@/lib/email";
 import { cookies } from "next/headers";
 
 // Cookie name for campaign attribution (must match click tracking)
@@ -41,6 +42,22 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if email verification is required before pledging
+    const verificationRequired = await isEmailVerificationRequired();
+    if (verificationRequired) {
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { emailVerified: true },
+      });
+
+      if (!user?.emailVerified) {
+        return NextResponse.json(
+          { error: "Please verify your email address before pledging. Check your inbox for a verification link." },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await req.json();

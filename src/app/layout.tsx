@@ -8,6 +8,7 @@ import { AnnouncementBar } from "@/components/announcement-bar";
 import { PromoPopup } from "@/components/promo-popup";
 import { ConsentBanner } from "@/components/consent-banner";
 import { SiteHeader } from "@/components/site-header";
+import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import "./globals.css";
@@ -166,6 +167,7 @@ export default async function RootLayout({
               <PromoPopup />
               <ConsentBanner />
               <SiteHeader />
+              <EmailVerificationBanner />
               {children}
             </TrackingProvider>
             <Toaster />

@@ -10,16 +10,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email } = body;
+    const { name, email: rawEmail } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
+    const email = rawEmail?.toLowerCase().trim();
+
     // Check if email is being changed and if it's already taken
-    if (email && email !== session.user.email) {
-      const existingUser = await db.user.findUnique({
-        where: { email },
+    if (email && email !== session.user.email?.toLowerCase()) {
+      const existingUser = await db.user.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
       });
 
       if (existingUser && existingUser.id !== session.user.id) {
