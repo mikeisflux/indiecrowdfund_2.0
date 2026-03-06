@@ -103,7 +103,8 @@ export function CommentsTab({
 
       const reply = await response.json();
       if (onReplyAdded) {
-        onReplyAdded(parentId, reply);
+        // Use the parentId from the API response (which may be flattened to root comment)
+        onReplyAdded(reply.parentId || parentId, reply);
       }
       setReplyContent("");
       setReplyingTo(null);
