@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Store, RefreshCw, Download, UserPlus } from "lucide-react";
+import { Users, Store, RefreshCw, Download, UserPlus, Merge } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -98,6 +98,11 @@ export default function UsersPage() {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Merge duplicates state
+  const [isMerging, setIsMerging] = useState(false);
+  const [showMergeConfirm, setShowMergeConfirm] = useState(false);
+  const [duplicateInfo, setDuplicateInfo] = useState<{ totalGroups: number; duplicates: Array<{ email: string; count: number; keeper: { id: string; email: string; name: string | null }; duplicates: Array<{ id: string; email: string; name: string | null }> }> } | null>(null);
 
   // Retailer state
   const [retailers, setRetailers] = useState<Retailer[]>([]);
@@ -825,6 +830,47 @@ export default function UsersPage() {
     }
   };
 
+  const checkDuplicates = async () => {
+    try {
+      setIsMerging(true);
+      const response = await fetch("/api/admin/users/merge-duplicates");
+      if (!response.ok) throw new Error("Failed to check duplicates");
+      const data = await response.json();
+      setDuplicateInfo(data);
+      if (data.totalGroups === 0) {
+        toast.info("No duplicate accounts found");
+      } else {
+        setShowMergeConfirm(true);
+      }
+    } catch (error) {
+      console.error("Error checking duplicates:", error);
+      toast.error("Failed to check for duplicate accounts");
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
+  const mergeDuplicates = async () => {
+    try {
+      setIsMerging(true);
+      const response = await fetch("/api/admin/users/merge-duplicates", {
+        method: "POST",
+        headers: getCSRFHeaders(),
+      });
+      if (!response.ok) throw new Error("Failed to merge duplicates");
+      const data = await response.json();
+      toast.success(data.message);
+      setShowMergeConfirm(false);
+      setDuplicateInfo(null);
+      fetchUsers();
+    } catch (error) {
+      console.error("Error merging duplicates:", error);
+      toast.error("Failed to merge duplicate accounts");
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -834,6 +880,10 @@ export default function UsersPage() {
           <p className="text-zinc-500">Manage platform users and retailer applications</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Button variant="outline" onClick={checkDuplicates} disabled={isMerging} className="flex-1 sm:flex-none">
+            <Merge className={`h-4 w-4 sm:mr-2 ${isMerging ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Merge Duplicates</span>
+          </Button>
           <Button variant="outline" onClick={() => { fetchUsers(); if (activeTab === "retailers") fetchRetailers(); }} disabled={isLoading || isLoadingRetailers} className="flex-1 sm:flex-none">
             <RefreshCw className={`h-4 w-4 sm:mr-2 ${isLoading || isLoadingRetailers ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">Refresh</span>
@@ -1071,6 +1121,24 @@ export default function UsersPage() {
         confirmText="Send Receipt"
         onConfirm={handleResendReceipt}
         loading={resendingReceipt === resendReceiptConfirm.pledgeId}
+      />
+
+      <ConfirmDialog
+        open={showMergeConfirm}
+        onOpenChange={setShowMergeConfirm}
+        title="Merge Duplicate Accounts?"
+        description={
+          duplicateInfo
+            ? `Found ${duplicateInfo.totalGroups} group(s) of duplicate accounts (same email, different case):\n\n${duplicateInfo.duplicates.map(
+                (g) =>
+                  `• ${g.email} (${g.count} accounts) — keeping "${g.keeper.email}" (${g.keeper.name || "no name"}), merging ${g.duplicates.map((d) => `"${d.email}"`).join(", ")}`
+              ).join("\n")}\n\nAll pledges, projects, and data from duplicate accounts will be transferred to the keeper account. Duplicate accounts will be soft-deleted.`
+            : "Checking for duplicates..."
+        }
+        confirmText="Merge All Duplicates"
+        variant="destructive"
+        onConfirm={mergeDuplicates}
+        loading={isMerging}
       />
     </div>
   );

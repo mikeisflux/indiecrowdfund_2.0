@@ -85,7 +85,8 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
       return { error: validatedFields.error.flatten().fieldErrors };
     }
 
-    const { name, email, password } = validatedFields.data;
+    const { name, email: rawEmail, password } = validatedFields.data;
+    const email = rawEmail.toLowerCase();
 
     // Validate name is not gibberish (bot detection)
     const nameValidation = validateNameNotGibberish(name);
@@ -201,7 +202,8 @@ export async function login(formData: FormData, callbackUrl?: string) {
     return { error: validatedFields.error.flatten().fieldErrors };
   }
 
-  const { email, password } = validatedFields.data;
+  const { email: rawEmail, password } = validatedFields.data;
+  const email = rawEmail.toLowerCase();
 
   // Check rate limit before attempting login
   const clientIP = await getClientIP();
@@ -289,7 +291,8 @@ export async function requestPasswordReset(formData: FormData) {
     return { error: validatedFields.error.flatten().fieldErrors };
   }
 
-  const { email } = validatedFields.data;
+  const { email: rawEmail } = validatedFields.data;
+  const email = rawEmail.toLowerCase();
 
   // Check rate limit before processing reset request
   const clientIP = await getClientIP();
