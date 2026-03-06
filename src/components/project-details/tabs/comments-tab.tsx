@@ -21,6 +21,7 @@ interface CommentsTabProps {
   isLoggedIn: boolean;
   isBacker: boolean;
   isCreator: boolean;
+  isCollaborator: boolean;
   currentUserId?: string;
   currentUserName?: string;
   currentUserAvatar?: string;
@@ -36,6 +37,7 @@ export function CommentsTab({
   isLoggedIn,
   isBacker,
   isCreator,
+  isCollaborator,
   currentUserId,
   currentUserName,
   currentUserAvatar,
@@ -50,7 +52,8 @@ export function CommentsTab({
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
 
-  const canComment = isLoggedIn && (isBacker || isCreator);
+  const canComment = isLoggedIn && (isBacker || isCreator || isCollaborator);
+  const canReplyToAll = isCreator || isCollaborator;
 
   const handleSubmitComment = async () => {
     if (!newComment.trim() || isSubmitting) return;
@@ -189,6 +192,11 @@ export function CommentsTab({
                             Creator
                           </Badge>
                         )}
+                        {comment.isCollaborator && !comment.isCreator && (
+                          <Badge className="bg-[#3b82f6] hover:bg-[#3b82f6] text-white text-xs px-2 py-0">
+                            Collaborator
+                          </Badge>
+                        )}
                         {comment.isSuperbacker && (
                           <span className="text-[#e85b46] text-sm font-medium">Superbacker</span>
                         )}
@@ -214,8 +222,8 @@ export function CommentsTab({
                     </p>
                   ))}
 
-                  {/* Reply Button - Only creators can reply to backer comments */}
-                  {isCreator && !comment.isCreator && (
+                  {/* Reply Button - Creators and collaborators can reply to backer comments */}
+                  {canReplyToAll && !comment.isCreator && (
                     <div className="mt-3">
                       {replyingTo === comment.id ? (
                         <div className="space-y-3 mt-3">
@@ -295,6 +303,11 @@ export function CommentsTab({
                                 Creator
                               </Badge>
                             )}
+                            {reply.isCollaborator && !reply.isCreator && (
+                              <Badge className="bg-[#3b82f6] hover:bg-[#3b82f6] text-white text-[10px] px-1.5 py-0">
+                                Collaborator
+                              </Badge>
+                            )}
                             {reply.isSuperbacker && (
                               <span className="text-[#e85b46] text-xs font-medium">Superbacker</span>
                             )}
@@ -308,8 +321,8 @@ export function CommentsTab({
                             </p>
                           ))}
 
-                          {/* Reply button on replies - only the original commenter can reply to creator replies */}
-                          {reply.isCreator && currentUserId && currentUserId === comment.userId && (
+                          {/* Reply button on replies - creators/collaborators can reply to any, original commenter can reply to creator/collaborator replies */}
+                          {(canReplyToAll || ((reply.isCreator || reply.isCollaborator) && currentUserId && currentUserId === comment.userId)) && (
                             <div className="ml-8 mt-2">
                               {replyingTo === reply.id ? (
                                 <div className="space-y-2">

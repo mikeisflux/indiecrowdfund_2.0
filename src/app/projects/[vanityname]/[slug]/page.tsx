@@ -266,6 +266,28 @@ export default function ProjectPage() {
     fetchCurrentUser();
   }, []);
 
+  // Check if user is a collaborator on this project
+  useEffect(() => {
+    async function checkCollaboratorStatus() {
+      if (!project.id || project.id === "" || !currentUser) return;
+
+      // No need to check if already the creator
+      if (currentUser.id === project.creatorId) return;
+
+      try {
+        const response = await fetch(`/api/projects/${project.id}/collaborators/me`);
+        if (response.ok) {
+          const data = await response.json();
+          setIsCollaborator(data.isCollaborator === true);
+        }
+      } catch (err) {
+        console.debug("Error checking collaborator status:", err);
+      }
+    }
+
+    checkCollaboratorStatus();
+  }, [project.id, project.creatorId, currentUser]);
+
   // Poll for real-time funding stats updates every 10 seconds
   useEffect(() => {
     if (!slug || !vanityname || loading || error) return;
@@ -347,6 +369,9 @@ export default function ProjectPage() {
 
   // TODO: Fetch similar projects from API
   const similarProjects: SimilarProject[] = [];
+
+  // Collaborator state
+  const [isCollaborator, setIsCollaborator] = useState(false);
 
   // Derived states for comments
   const isLoggedIn = currentUser !== null;
@@ -831,6 +856,7 @@ export default function ProjectPage() {
             isLoggedIn={isLoggedIn}
             isBacker={isBacker}
             isCreator={isCreator}
+            isCollaborator={isCollaborator}
             currentUserId={currentUser?.id}
             currentUserName={currentUser?.name}
             currentUserAvatar={currentUser?.image}

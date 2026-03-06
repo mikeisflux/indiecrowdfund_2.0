@@ -105,6 +105,7 @@ export interface CommentReply {
   author: string;
   avatarUrl: string | null;
   isCreator: boolean;
+  isCollaborator: boolean;
   isSuperbacker: boolean;
   createdAt: Date | string;
   content: string;
@@ -116,6 +117,7 @@ export interface CommentData {
   author: string;
   avatarUrl: string | null;
   isCreator: boolean;
+  isCollaborator: boolean;
   isSuperbacker: boolean;
   isPinned: boolean;
   createdAt: Date | string;

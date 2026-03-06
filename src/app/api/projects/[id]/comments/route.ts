@@ -45,7 +45,8 @@ async function getSuperbakerStatus(userIds: string[]): Promise<Map<string, boole
 function formatComment(
   comment: CommentWithUser,
   creatorId: string,
-  superbackerMap: Map<string, boolean>
+  superbackerMap: Map<string, boolean>,
+  collaboratorIds: Set<string>
 ) {
   const formatted: {
     id: string;
@@ -55,6 +56,7 @@ function formatComment(
     content: string;
     createdAt: string;
     isCreator: boolean;
+    isCollaborator: boolean;
     isSuperbacker: boolean;
     isPinned: boolean;
     replies?: Array<{
@@ -65,6 +67,7 @@ function formatComment(
       content: string;
       createdAt: string;
       isCreator: boolean;
+      isCollaborator: boolean;
       isSuperbacker: boolean;
     }>;
   } = {
@@ -75,6 +78,7 @@ function formatComment(
     content: comment.content,
     createdAt: comment.createdAt.toISOString(),
     isCreator: comment.userId === creatorId,
+    isCollaborator: collaboratorIds.has(comment.userId),
     isSuperbacker: superbackerMap.get(comment.userId) || false,
     isPinned: false,
   };
@@ -89,6 +93,7 @@ function formatComment(
       content: reply.content,
       createdAt: reply.createdAt.toISOString(),
       isCreator: reply.userId === creatorId,
+      isCollaborator: collaboratorIds.has(reply.userId),
       isSuperbacker: superbackerMap.get(reply.userId) || false,
     }));
   }
@@ -158,9 +163,18 @@ export async function GET(
     // Batch fetch superbacker status (single query instead of N+1)
     const superbackerMap = await getSuperbakerStatus(allUserIds);
 
+    // Fetch accepted collaborator user IDs for this project
+    const collaborators = await db.projectCollaborator.findMany({
+      where: { projectId, status: "ACCEPTED", userId: { not: null } },
+      select: { userId: true },
+    });
+    const collaboratorIds = new Set(
+      collaborators.map((c) => c.userId).filter((id): id is string => id !== null)
+    );
+
     // Format all comments with their replies
     const formattedComments = comments.map((comment) =>
-      formatComment(comment, project.creatorId, superbackerMap)
+      formatComment(comment, project.creatorId, superbackerMap, collaboratorIds)
     );
 
     return NextResponse.json(formattedComments);
@@ -391,6 +405,7 @@ export async function POST(
       content: comment.content,
       createdAt: comment.createdAt.toISOString(),
       isCreator,
+      isCollaborator,
       isSuperbacker: backedProjectsCount >= 25,
       isPinned: false,
       parentId: comment.parentId,
