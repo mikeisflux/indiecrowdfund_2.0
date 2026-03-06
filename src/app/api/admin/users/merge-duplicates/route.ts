@@ -242,8 +242,8 @@ async function mergeUser(oldUserId: string, keeperUserId: string) {
 
     // Media files
     await tx.mediaFile.updateMany({
-      where: { userId: oldUserId },
-      data: { userId: keeperUserId },
+      where: { uploaderId: oldUserId },
+      data: { uploaderId: keeperUserId },
     });
 
     // Achievements
@@ -278,8 +278,8 @@ async function mergeUser(oldUserId: string, keeperUserId: string) {
 
     // Backer notes
     await tx.backerNote.updateMany({
-      where: { userId: oldUserId },
-      data: { userId: keeperUserId },
+      where: { createdById: oldUserId },
+      data: { createdById: keeperUserId },
     });
 
     // Email campaign clicks
@@ -336,8 +336,8 @@ async function mergeUser(oldUserId: string, keeperUserId: string) {
 
     // API Keys
     await tx.apiKey.updateMany({
-      where: { userId: oldUserId },
-      data: { userId: keeperUserId },
+      where: { createdById: oldUserId },
+      data: { createdById: keeperUserId },
     });
 
     // Projects (created by user)

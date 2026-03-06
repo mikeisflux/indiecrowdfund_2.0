@@ -168,8 +168,8 @@ export async function GET(
       where: { projectId, status: "ACCEPTED", userId: { not: null } },
       select: { userId: true },
     });
-    const collaboratorIds = new Set(
-      collaborators.map((c) => c.userId).filter((id): id is string => id !== null)
+    const collaboratorIds = new Set<string>(
+      collaborators.map((c: { userId: string | null }) => c.userId).filter((id): id is string => id !== null)
     );
 
     // Format all comments with their replies
