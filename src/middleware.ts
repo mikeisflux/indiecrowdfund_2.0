@@ -59,6 +59,7 @@ const SERVER_ACTION_RATE_LIMIT = 30; // max server actions per IP per minute
 let lastDbSync = 0;
 let isInitialized = false;
 let lastRateLimitCleanup = 0;
+let initPromise: Promise<void> | null = null;
 
 /**
  * Get internal API URL - use localhost to bypass reverse proxy SSL issues
@@ -281,15 +282,23 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
   return directives.join("; ");
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const clientIP = getClientIP(req);
   const userAgent = req.headers.get("user-agent") || "none";
 
-  // Sync blocked IPs from database (background, non-blocking)
-  // Skip sync for the internal API to avoid recursion
+  // On first request after PM2 restart, BLOCK until we've loaded blocked IPs
+  // from the database. This prevents the race condition where requests slip
+  // through before the cache is populated. Subsequent syncs are non-blocking.
   if (!pathname.startsWith("/api/internal/")) {
-    syncBlockedIPsFromDb().catch(() => {});
+    if (!isInitialized) {
+      if (!initPromise) {
+        initPromise = syncBlockedIPsFromDb().catch(() => {});
+      }
+      await initPromise;
+    } else {
+      syncBlockedIPsFromDb().catch(() => {});
+    }
   }
 
   // Helper: rewrite bot/blocked requests to /api/blocked to prevent Next.js from

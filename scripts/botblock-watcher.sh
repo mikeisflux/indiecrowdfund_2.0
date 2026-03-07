@@ -45,6 +45,40 @@ if ! iptables -C INPUT -j "$CHAIN" 2>/dev/null; then
   iptables -I INPUT -j "$CHAIN"
 fi
 
+# ---- On startup, restore all blocked IPs from database into iptables ----
+# This ensures blocked IPs persist across system reboots and PM2 restarts
+DB_HOST="localhost"
+DB_USER="indieuser"
+DB_PASS="01JSN9vhvVTiMEU7odCpF6L3"
+DB_NAME="indiecrowdfund"
+
+log "Restoring blocked IPs from database on startup..."
+RESTORE_IPS=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -t -A -c \
+  "SELECT \"ipAddress\" FROM \"BlockedIP\" WHERE \"expiresAt\" > NOW();" 2>/dev/null) || {
+  log "Warning: failed to query database for startup restore"
+  RESTORE_IPS=""
+}
+
+restored=0
+while IFS= read -r ip; do
+  [ -z "$ip" ] && continue
+  if [[ ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    continue
+  fi
+  # Skip if rule already exists
+  if iptables -C "$CHAIN" -s "$ip/32" -j DROP 2>/dev/null; then
+    continue
+  fi
+  iptables -A "$CHAIN" -s "$ip/32" -j DROP
+  ((restored++))
+done <<< "$RESTORE_IPS"
+
+if [ "$restored" -gt 0 ]; then
+  log "Restored $restored blocked IPs from database"
+else
+  log "No blocked IPs to restore (or already in iptables)"
+fi
+
 log "Watcher started — monitoring $PENDING_FILE every ${INTERVAL}s"
 
 while true; do

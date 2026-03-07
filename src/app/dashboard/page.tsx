@@ -42,7 +42,6 @@ import { ProductionOrderView } from "./components/ProductionOrderView";
 import { CollaborationsTab } from "./components/CollaborationsTab";
 import { PostUpdatesTab } from "./components/PostUpdatesTab";
 import { SocialHubTab } from "./components/SocialHubTab";
-import { IndieKitTab } from "./components/IndieKitTab";
 import { IndieKitV2Tab } from "./components/IndieKitV2Tab";
 import { MarketplaceTab } from "./components/MarketplaceTab";
 import { EmailTab } from "./components/EmailTab";
@@ -384,12 +383,6 @@ export default function CreatorDashboard() {
                     <Sparkles className="mr-2 h-4 w-4" />
                     Social Hub
                   </TabsTrigger>
-                  {data?.userRole === "SUPER_ADMIN" && (
-                    <TabsTrigger value="indiekit" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                      <Package className="mr-2 h-4 w-4" />
-                      IndieKit
-                    </TabsTrigger>
-                  )}
                   <TabsTrigger value="indiekit-v2" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <Sparkles className="mr-2 h-4 w-4 text-teal-500" />
                     IndieKit 2.0
@@ -468,12 +461,6 @@ export default function CreatorDashboard() {
               <TabsContent value="social" className="space-y-6">
                 <SocialHubTab />
               </TabsContent>
-
-              {data?.userRole === "SUPER_ADMIN" && (
-                <TabsContent value="indiekit" className="space-y-6">
-                  <IndieKitTab projectId={selectedProjectId} />
-                </TabsContent>
-              )}
 
               <TabsContent value="indiekit-v2" className="space-y-6">
                 <IndieKitV2Tab projectId={selectedProjectId} />
