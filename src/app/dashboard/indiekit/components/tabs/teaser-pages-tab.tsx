@@ -160,7 +160,6 @@ export function TeaserPagesTab({ hasActiveCampaign = false }: TeaserPagesTabProp
     try {
       const res = await apiFetch(`/api/projects/${pageToDelete.id}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) {

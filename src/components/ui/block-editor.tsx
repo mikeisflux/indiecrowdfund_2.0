@@ -77,7 +77,6 @@ export function BlockEditor({
 
         const response = await apiFetch("/api/upload", {
           method: "POST",
-,
           body: formData,
         });
 

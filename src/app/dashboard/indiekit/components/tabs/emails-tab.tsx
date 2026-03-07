@@ -447,7 +447,6 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
     try {
       const res = await apiFetch(`/api/creator/indiekit/campaigns?campaignId=${campaign.id}&projectId=${projectId}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) {

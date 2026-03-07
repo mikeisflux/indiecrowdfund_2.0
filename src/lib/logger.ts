@@ -55,7 +55,7 @@ function createLogger(bindings: Record<string, unknown> = {}): Logger {
         msg = (args[1] as string) || "";
       }
 
-      const entry = {
+      const entry: Record<string, unknown> = {
         level,
         time: new Date().toISOString(),
         ...bindings,

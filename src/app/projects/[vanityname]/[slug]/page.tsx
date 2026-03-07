@@ -208,7 +208,6 @@ export default function ProjectPage() {
         // Unfollow
         const response = await apiFetch(`/api/user/following?projectId=${project.id}`, {
           method: "DELETE",
-,
         });
         if (response.ok) {
           setIsFollowing(false);

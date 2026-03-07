@@ -141,9 +141,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
         limit: "50",
       });
 
-      const response = await fetch(`/api/admin/ai-marketing/subscribers?${params}`, {
-,
-      });
+      const response = await fetch(`/api/admin/ai-marketing/subscribers?${params}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -170,7 +168,6 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
         `/api/admin/ai-marketing/subscribers?id=${id}&category=${category}`,
         {
           method: "DELETE",
-,
         }
       );
 
@@ -273,7 +270,6 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
         `/api/admin/ai-marketing/subscribers?action=remove-duplicates&category=${selectedCategory}`,
         {
           method: "DELETE",
-,
         }
       );
 

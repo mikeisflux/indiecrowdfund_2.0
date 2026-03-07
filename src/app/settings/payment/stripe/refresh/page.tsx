@@ -19,7 +19,6 @@ export default function StripeRefreshPage() {
     try {
       const res = await apiFetch("/api/stripe/connect/refresh", {
         method: "POST",
-,
       });
       const data = await res.json();
 

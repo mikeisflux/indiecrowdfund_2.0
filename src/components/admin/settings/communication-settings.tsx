@@ -632,7 +632,6 @@ export function CommunicationSettings() {
     try {
       const response = await apiFetch(`/api/admin/mailboxes/${deletingMailbox.id}`, {
         method: "DELETE",
-,
       });
 
       if (!response.ok) throw new Error("Failed to delete mailbox");
@@ -652,7 +651,6 @@ export function CommunicationSettings() {
     try {
       const response = await apiFetch(`/api/admin/email-blocklist/${deletingEntry.id}`, {
         method: "DELETE",
-,
       });
 
       if (!response.ok) throw new Error("Failed to delete entry");
@@ -671,7 +669,6 @@ export function CommunicationSettings() {
     try {
       const response = await apiFetch("/api/admin/email-blocklist/purge", {
         method: "DELETE",
-,
       });
 
       if (!response.ok) {

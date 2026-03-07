@@ -172,7 +172,6 @@ export function DatabaseSettings() {
 
       const response = await apiFetch("/api/admin/database/backup", {
         method: "POST",
-,
       });
 
       const result = await response.json();
@@ -199,7 +198,6 @@ export function DatabaseSettings() {
     try {
       const response = await apiFetch(`/api/admin/database/backup?filename=${encodeURIComponent(filename)}`, {
         method: "DELETE",
-,
       });
 
       if (!response.ok) {
@@ -253,7 +251,6 @@ export function DatabaseSettings() {
 
       const response = await apiFetch("/api/admin/database/backup/restore", {
         method: "PUT",
-,
         body: formData,
       });
 
@@ -290,7 +287,6 @@ export function DatabaseSettings() {
     try {
       const response = await apiFetch(`/api/admin/build-backup?name=${encodeURIComponent(name)}`, {
         method: "DELETE",
-,
       });
 
       if (!response.ok) {
@@ -335,7 +331,6 @@ export function DatabaseSettings() {
       setShowRecalcConfirm(false);
       const response = await apiFetch("/api/admin/recalculate-pledge-amounts", {
         method: "POST",
-,
       });
       if (!response.ok) throw new Error("Failed to apply pledge amount fixes");
       const result = await response.json();

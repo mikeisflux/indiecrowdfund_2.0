@@ -142,9 +142,7 @@ export function DigitalTab({
 
     setRefreshingRuleId(ruleId);
     try {
-      const res = await fetch(`/api/creator/indiekit/digital?projectId=${projectId}&ruleId=${ruleId}`, {
-,
-      });
+      const res = await fetch(`/api/creator/indiekit/digital?projectId=${projectId}&ruleId=${ruleId}`);
 
       const data = await res.json();
       if (!res.ok) {
@@ -167,7 +165,6 @@ export function DigitalTab({
     try {
       const res = await apiFetch(`/api/creator/indiekit/digital?projectId=${projectId}&ruleId=${rule.id}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) {
@@ -224,7 +221,6 @@ export function DigitalTab({
     try {
       const res = await apiFetch(`/api/creator/digital-files?fileId=${file.id}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) {

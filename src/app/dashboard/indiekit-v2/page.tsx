@@ -75,6 +75,10 @@ import type {
   FulfillmentPhase,
   AlwaysAvailableTab,
   PhaseTab,
+  TimelineEntry,
+  Segment,
+  Product,
+  SurveyQuestion,
 } from "./types";
 import { WORKFLOW_STEPS, SHIPPING_SERVICES } from "../indiekit/constants";
 import { SELECTED_PROJECT_KEY, useInitialProjectId } from "./constants";
@@ -173,12 +177,12 @@ export default function IndieKitV2Page() {
   const [emailMemberCount, setEmailMemberCount] = useState<number>(0);
   const [userEmail, setUserEmail] = useState<string>("");
   const [surveyAddons, setSurveyAddons] = useState<SurveyAddon[]>([]);
-  const [segments, setSegments] = useState<{ id: string; name: string; count: number; filters?: Record<string, string> }[]>([]);
-  const [products, setProducts] = useState<{ id: string; title: string; shopifyProductId?: string; variants?: { id: string; title: string }[] }[]>([]);
+  const [segments, setSegments] = useState<Segment[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [rewards, setRewards] = useState<{ id: string; name: string; amount: number }[]>([]);
   const [addons, setAddons] = useState<{ id: string; name: string; price: number }[]>([]);
-  const [timeline, setTimeline] = useState<{ id: string; type: string; title: string; createdAt: string; affectedCount?: number }[]>([]);
-  const [surveyQuestions, setSurveyQuestions] = useState<{ id: string; type: string; label: string; required: boolean; helpText?: string; options?: string[]; sortOrder: number }[]>([]);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [surveyQuestions, setSurveyQuestions] = useState<SurveyQuestion[]>([]);
   const [userRole, setUserRole] = useState<string>("USER");
   const [hasApprovedProject, setHasApprovedProject] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");

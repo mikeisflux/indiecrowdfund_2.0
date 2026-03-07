@@ -4,8 +4,6 @@ import { logger } from "@/lib/logger";
 const marketplaceCompaniesLogger = logger.child({ module: "marketplace-companies" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
-import { Prisma } from "@prisma/client";
-
 export const dynamic = "force-dynamic";
 
 /**
@@ -23,7 +21,8 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: Prisma.CompanyProfileWhereInput = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {
       isActive: true,
       books: {
         some: {

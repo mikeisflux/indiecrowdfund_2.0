@@ -288,7 +288,7 @@ export async function POST(
         });
       } catch (dcError) {
         const message = dcError instanceof Error ? dcError.message : "Unknown error";
-        pledgesAddItemsLogger.error({ err: String(message, dcError) }, "[AddItems DC] API error:");
+        pledgesAddItemsLogger.error({ err: `${message}: ${dcError}` }, "[AddItems DC] API error:");
         return NextResponse.json(
           { error: `Failed to connect to payment processor: ${message}` },
           { status: 500 }
@@ -388,7 +388,7 @@ export async function POST(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    pledgesAddItemsLogger.error({ err: String(message, error) }, "Error adding items to pledge:");
+    pledgesAddItemsLogger.error({ err: `${message}: ${error}` }, "Error adding items to pledge:");
     return NextResponse.json(
       { error: `Failed to add items to pledge: ${message}` },
       { status: 500 }

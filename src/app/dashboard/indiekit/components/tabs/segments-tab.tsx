@@ -153,7 +153,6 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
     try {
       const res = await apiFetch(`/api/creator/indiekit/segments?segmentId=${segmentId}&projectId=${projectId}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) {
@@ -174,9 +173,7 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
     setViewingSegment(segment);
     setIsLoadingBackers(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/segments/backers?segmentId=${segment.id}&projectId=${projectId}`, {
-,
-      });
+      const res = await fetch(`/api/creator/indiekit/segments/backers?segmentId=${segment.id}&projectId=${projectId}`);
 
       if (!res.ok) {
         const data = await res.json();

@@ -124,9 +124,7 @@ export default function PromoPopupPage() {
   const fetchPopup = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/admin/promo-popup", {
-,
-      });
+      const response = await fetch("/api/admin/promo-popup");
 
       if (!response.ok) throw new Error("Failed to fetch");
 

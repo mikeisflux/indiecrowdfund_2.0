@@ -439,9 +439,7 @@ export function BackersTab({
     }
 
     try {
-      const res = await fetch(`/api/creator/indiekit/export?projectId=${projectId}&type=backers`, {
-,
-      });
+      const res = await fetch(`/api/creator/indiekit/export?projectId=${projectId}&type=backers`);
 
       if (!res.ok) {
         throw new Error("Export failed");

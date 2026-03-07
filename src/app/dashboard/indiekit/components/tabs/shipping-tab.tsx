@@ -165,7 +165,6 @@ export function ShippingTab({ shippingServices, projectId, onRefresh }: Shipping
     try {
       const res = await apiFetch(`/api/creator/indiekit/shipping?projectId=${projectId}&serviceId=${service.id}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) {

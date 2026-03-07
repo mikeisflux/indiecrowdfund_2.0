@@ -83,9 +83,7 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
 
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/updates?projectId=${projectId}`, {
-,
-      });
+      const res = await fetch(`/api/creator/indiekit/updates?projectId=${projectId}`);
 
       if (!res.ok) {
         const data = await res.json();
@@ -249,7 +247,6 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
         `/api/creator/indiekit/updates?projectId=${projectId}&updateId=${confirmDeleteUpdate.id}`,
         {
           method: "DELETE",
-,
         }
       );
 

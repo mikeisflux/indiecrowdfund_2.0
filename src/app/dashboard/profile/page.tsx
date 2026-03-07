@@ -166,7 +166,6 @@ export default function ProfilePage() {
 
       const res = await apiFetch("/api/upload", {
         method: "POST",
-,
         body: formData,
       });
 

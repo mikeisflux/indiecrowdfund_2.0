@@ -149,9 +149,7 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
     if (!projectId) return;
     setLoadingSurvey(true);
     try {
-      const response = await fetch(`/api/creator/indiekit/surveys?projectId=${projectId}`, {
-,
-      });
+      const response = await fetch(`/api/creator/indiekit/surveys?projectId=${projectId}`);
       if (response.ok) {
         const data = await response.json();
         if (data.questions && data.questions.length > 0) {
@@ -406,7 +404,6 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
         try {
           await apiFetch(`/api/projects/${projectId}/survey/item-questions?questionId=${itemQuestion.id}`, {
             method: "DELETE",
-,
           });
           const newMap = new Map(itemQuestions);
           newMap.delete(rewardId);

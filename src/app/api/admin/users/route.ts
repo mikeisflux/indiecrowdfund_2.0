@@ -5,7 +5,6 @@ import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 const adminUsersLogger = logger.child({ module: "admin-users" });
 import { auth, BCRYPT_COST } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { auditLog } from "@/lib/audit";
@@ -60,7 +59,8 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause (always exclude deleted users)
-    const where: Prisma.UserWhereInput = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {
       deletedAt: null,
     };
 

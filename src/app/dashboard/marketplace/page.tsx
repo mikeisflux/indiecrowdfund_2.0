@@ -434,7 +434,6 @@ export default function CreatorMarketplaceDashboard() {
     try {
       const res = await apiFetch(`/api/creator/marketplace/discount-codes?codeId=${codeId}`, {
         method: "DELETE",
-,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -496,7 +495,6 @@ export default function CreatorMarketplaceDashboard() {
     try {
       const res = await apiFetch(`/api/creator/marketplace/books/${bookId}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) {
@@ -516,7 +514,6 @@ export default function CreatorMarketplaceDashboard() {
     try {
       const res = await apiFetch(`/api/creator/marketplace/books/${bookId}/submit`, {
         method: "POST",
-,
       });
 
       if (!res.ok) {

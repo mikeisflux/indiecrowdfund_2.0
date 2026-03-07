@@ -40,7 +40,6 @@ export function EmailVerificationBanner() {
     try {
       const res = await apiFetch("/api/user/verify-email", {
         method: "POST",
-,
       });
       const data = await res.json();
       if (data.success) {

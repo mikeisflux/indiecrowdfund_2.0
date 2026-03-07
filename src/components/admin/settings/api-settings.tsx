@@ -140,7 +140,6 @@ export function ApiSettings() {
     try {
       const response = await apiFetch(`/api/admin/api-keys?id=${keyId}`, {
         method: "DELETE",
-,
       });
 
       if (!response.ok) {

@@ -432,7 +432,6 @@ export default function MediaPage() {
     try {
       const response = await apiFetch(`/api/admin/media/scan?source=${source}`, {
         method: "POST",
-,
       });
       if (response.ok) {
         const data = await response.json();

@@ -254,7 +254,6 @@ export function ChatRoom() {
     try {
       await apiFetch("/api/chat/presence", {
         method: "POST",
-,
       });
     } catch (err) {
       console.error("Error sending heartbeat:", err);
@@ -266,7 +265,6 @@ export function ChatRoom() {
     try {
       await apiFetch("/api/chat/presence", {
         method: "DELETE",
-,
       });
     } catch {
       // Ignore errors on leave
@@ -340,7 +338,6 @@ export function ChatRoom() {
     try {
       const response = await apiFetch(`/api/chat/admin/delete?messageId=${messageId}`, {
         method: "DELETE",
-,
       });
 
       if (!response.ok) {

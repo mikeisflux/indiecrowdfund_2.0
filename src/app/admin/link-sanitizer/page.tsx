@@ -184,7 +184,6 @@ export default function LinkSanitizerPage() {
     try {
       const response = await apiFetch("/api/cron/cleanup-projects", {
         method: "POST",
-,
       });
       if (response.ok) {
         const data = await response.json();

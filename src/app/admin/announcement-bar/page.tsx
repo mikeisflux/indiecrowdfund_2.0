@@ -144,7 +144,6 @@ export default function AnnouncementBarPage() {
     try {
       const response = await apiFetch(`/api/admin/announcement-bar?id=${id}`, {
         method: "DELETE",
-,
       });
 
       if (response.ok) {

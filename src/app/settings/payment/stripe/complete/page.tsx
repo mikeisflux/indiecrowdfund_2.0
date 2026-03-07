@@ -104,7 +104,6 @@ export default function StripeCompletePage() {
               try {
                 const res = await apiFetch("/api/stripe/connect/refresh", {
                   method: "POST",
-,
                 });
                 const data = await res.json();
                 if (data.onboardingUrl) {

@@ -98,9 +98,7 @@ export default function UpdatesPage() {
   // Fetch projects
   const fetchProjects = useCallback(async () => {
     try {
-      const res = await fetch("/api/creator/dashboard?days=30", {
-,
-      });
+      const res = await fetch("/api/creator/dashboard?days=30");
       if (res.ok) {
         const data = await res.json();
         setProjects(data.projects || []);
@@ -129,9 +127,7 @@ export default function UpdatesPage() {
 
     setIsLoadingUpdates(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/updates?projectId=${selectedProjectId}`, {
-,
-      });
+      const res = await fetch(`/api/creator/indiekit/updates?projectId=${selectedProjectId}`);
 
       if (!res.ok) {
         const data = await res.json();
@@ -273,7 +269,6 @@ export default function UpdatesPage() {
     try {
       const res = await apiFetch(`/api/creator/indiekit/updates?projectId=${selectedProjectId}&updateId=${confirmDeleteUpdate.id}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) {

@@ -409,9 +409,7 @@ export function DigitalLibraryTab() {
         console.log("[openBook] Fetching marketplace purchase:", item.sourceId);
         const apiUrl = `/api/backer/marketplace-purchases/${item.sourceId}/download`;
         console.log("[openBook] API URL:", apiUrl);
-        const res = await fetch(apiUrl, {
-,
-        });
+        const res = await fetch(apiUrl);
         console.log("[openBook] Marketplace response status:", res.status);
         if (!res.ok) {
           const errorText = await res.text();

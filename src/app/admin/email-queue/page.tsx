@@ -185,7 +185,6 @@ export default function EmailQueuePage() {
     try {
       const res = await apiFetch("/api/admin/email-queue", {
         method: "DELETE",
-,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);

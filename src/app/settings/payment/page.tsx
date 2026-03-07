@@ -55,7 +55,6 @@ export default function PaymentSettingsPage() {
     try {
       const res = await apiFetch("/api/stripe/connect", {
         method: "POST",
-,
       });
       const data = await res.json();
 
@@ -79,7 +78,6 @@ export default function PaymentSettingsPage() {
     try {
       const res = await apiFetch("/api/stripe/connect/refresh", {
         method: "POST",
-,
       });
       const data = await res.json();
 

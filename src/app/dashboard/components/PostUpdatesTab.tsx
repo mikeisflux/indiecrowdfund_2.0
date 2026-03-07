@@ -77,9 +77,7 @@ export function PostUpdatesTab({ projectId }: PostUpdatesTabProps) {
 
     setIsLoadingUpdates(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/updates?projectId=${projectId}`, {
-,
-      });
+      const res = await fetch(`/api/creator/indiekit/updates?projectId=${projectId}`);
 
       if (!res.ok) {
         const data = await res.json();
@@ -216,7 +214,6 @@ export function PostUpdatesTab({ projectId }: PostUpdatesTabProps) {
     try {
       const res = await apiFetch(`/api/creator/indiekit/updates?projectId=${projectId}&updateId=${confirmDeleteUpdate.id}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) {

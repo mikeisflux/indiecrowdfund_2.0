@@ -177,7 +177,6 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
     try {
       const response = await apiFetch(`/api/projects/${projectId}/members?memberId=${memberId}`, {
         method: "DELETE",
-,
       });
 
       if (response.ok) {
@@ -203,7 +202,6 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
     try {
       const response = await apiFetch(`/api/projects/${projectId}/members?deleteAll=true`, {
         method: "DELETE",
-,
       });
 
       if (response.ok) {

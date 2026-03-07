@@ -51,7 +51,6 @@ export function DragDropImageCell({
 
       const response = await apiFetch("/api/upload", {
         method: "POST",
-,
         body: formData,
       });
 

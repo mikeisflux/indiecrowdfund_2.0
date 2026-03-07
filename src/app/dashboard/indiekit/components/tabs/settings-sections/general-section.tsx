@@ -51,7 +51,6 @@ export function GeneralSection({
 
       const res = await apiFetch("/api/creator/indiekit/settings/image", {
         method: "POST",
-,
         body: formData,
       });
 

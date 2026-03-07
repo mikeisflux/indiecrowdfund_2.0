@@ -288,7 +288,6 @@ export function InboxTab({ projectId }: InboxTabProps) {
       if (selectedThread?.status === "unread") {
         await apiFetch(`/api/creator/email/threads/${threadId}/read`, {
           method: "POST",
-,
         });
         setThreads((prev) =>
           prev.map((t) =>
@@ -350,7 +349,6 @@ export function InboxTab({ projectId }: InboxTabProps) {
     try {
       await apiFetch(`/api/creator/email/threads/${threadId}/star`, {
         method: "POST",
-,
       });
       setThreads((prev) =>
         prev.map((t) =>
@@ -367,7 +365,6 @@ export function InboxTab({ projectId }: InboxTabProps) {
     try {
       await apiFetch(`/api/creator/email/threads/${threadId}/archive`, {
         method: "POST",
-,
       });
       setThreads((prev) =>
         prev.map((t) =>
@@ -391,7 +388,6 @@ export function InboxTab({ projectId }: InboxTabProps) {
     try {
       const res = await apiFetch(`/api/creator/email/threads/${threadId}/delete`, {
         method: "DELETE",
-,
       });
       if (!res.ok) throw new Error("Failed to delete");
       setThreads((prev) => prev.filter((t) => t.id !== threadId));

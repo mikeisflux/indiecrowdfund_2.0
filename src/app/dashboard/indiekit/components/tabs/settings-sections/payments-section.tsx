@@ -171,7 +171,6 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     try {
       const response = await apiFetch("/api/stripe/connect/reset", {
         method: "DELETE",
-,
       });
 
       const data = await response.json();

@@ -4,7 +4,6 @@ import { logger } from "@/lib/logger";
 const bugReportsLogger = logger.child({ module: "bug-reports" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 // Force dynamic - this route uses auth/headers
@@ -114,7 +113,8 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    const where: Prisma.BugReportWhereInput = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
 
     if (status && status !== "all") {
       where.status = status;
@@ -197,7 +197,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Bug report ID required" }, { status: 400 });
     }
 
-    const updateData: Prisma.BugReportUpdateInput = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: Record<string, any> = {};
 
     if (status) updateData.status = status;
     if (priority) updateData.priority = priority;

@@ -34,7 +34,7 @@ export async function GET(
 
   // Check for errors from provider
   if (error) {
-    authSocialCallbackLogger.error({ err: String(error, errorDescription) }, `OAuth error from ${provider}:`);
+    authSocialCallbackLogger.error({ err: `${error}: ${errorDescription}` }, `OAuth error from ${provider}:`);
     return NextResponse.redirect(
       `${dashboardUrl}?error=${encodeURIComponent(errorDescription || error)}`
     );

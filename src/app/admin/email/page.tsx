@@ -195,7 +195,6 @@ export default function EmailPage() {
     try {
       const response = await apiFetch(`/api/admin/mailboxes/${mailbox.id}?force=true`, {
         method: "DELETE",
-,
       });
       if (response.ok) {
         await fetchMailboxes();
@@ -231,7 +230,6 @@ export default function EmailPage() {
     try {
       await apiFetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`, {
         method: "DELETE",
-,
       });
       setEmails(emails.filter(e => e.id !== email.id));
       if (selectedEmail?.id === email.id) {

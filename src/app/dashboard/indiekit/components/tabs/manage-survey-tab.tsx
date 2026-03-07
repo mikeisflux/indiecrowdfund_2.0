@@ -126,7 +126,6 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
         `/api/projects/${projectId}/survey/item-questions?questionId=${questionId}`,
         {
           method: "DELETE",
-,
         }
       );
 
@@ -156,7 +155,6 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
         `/api/projects/${projectId}/survey/backer-questions?questionId=${questionId}`,
         {
           method: "DELETE",
-,
         }
       );
 
@@ -209,7 +207,6 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
     try {
       const response = await apiFetch(`/api/projects/${projectId}/survey/lock`, {
         method: "POST",
-,
       });
 
       if (response.ok) {

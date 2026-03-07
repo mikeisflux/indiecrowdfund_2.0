@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown payment processor" }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    payBalanceLogger.error({ err: String(message, error) }, "Error creating balance payment:");
+    payBalanceLogger.error({ err: `${message}: ${error}` }, "Error creating balance payment:");
     return NextResponse.json({ error: `Failed to create payment: ${message}` }, { status: 500 });
   }
 }

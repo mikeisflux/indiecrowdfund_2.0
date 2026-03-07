@@ -78,7 +78,6 @@ function FileUpload({
 
       const res = await apiFetch("/api/upload", {
         method: "POST",
-,
         body: formData,
       });
 

@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     const error = searchParams.get("error");
     if (error) {
       const errorDesc = searchParams.get("error_description") || "Authorization failed";
-      creatorIndiekitShopifyOauthCallbackLogger.error({ err: String(error, errorDesc) }, "Shopify OAuth error:");
+      creatorIndiekitShopifyOauthCallbackLogger.error({ err: `${error}: ${errorDesc}` }, "Shopify OAuth error:");
       return NextResponse.redirect(
         new URL(`/dashboard/indiekit?error=${encodeURIComponent(errorDesc)}`, req.url)
       );
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
 
     // Verify shop matches
     if (shop !== shopDomain) {
-      creatorIndiekitShopifyOauthCallbackLogger.error({ err: String(shop, "vs", shopDomain) }, "Shop mismatch in OAuth callback:");
+      creatorIndiekitShopifyOauthCallbackLogger.error({ err: `${shop} vs ${shopDomain}` }, "Shop mismatch in OAuth callback:");
       return NextResponse.redirect(
         new URL("/dashboard/indiekit?error=Shop mismatch", req.url)
       );

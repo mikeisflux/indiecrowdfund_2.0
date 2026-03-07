@@ -150,7 +150,6 @@ export function NotesDialog({
     try {
       const res = await apiFetch(`/api/creator/indiekit/notes?noteId=${noteId}`, {
         method: "DELETE",
-,
       });
 
       if (!res.ok) throw new Error("Failed to delete note");

@@ -144,7 +144,6 @@ export default function HeroSliderPage() {
     try {
       const response = await apiFetch("/api/admin/hero-slides/migrate", {
         method: "POST",
-,
       });
       const data = await response.json();
       if (response.ok) {
@@ -233,7 +232,6 @@ export default function HeroSliderPage() {
     try {
       const response = await apiFetch(`/api/admin/hero-slides?id=${id}`, {
         method: "DELETE",
-,
       });
 
       if (response.ok) {

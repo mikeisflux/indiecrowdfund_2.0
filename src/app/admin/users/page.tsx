@@ -328,7 +328,6 @@ export default function UsersPage() {
     try {
       const response = await apiFetch(`/api/admin/pledges/${pledgeId}`, {
         method: "DELETE",
-,
       });
 
       if (response.ok) {
@@ -611,7 +610,6 @@ export default function UsersPage() {
     try {
       const response = await apiFetch(`/api/admin/users?userId=${selectedUser.id}`, {
         method: "DELETE",
-,
       });
 
       if (response.ok) {

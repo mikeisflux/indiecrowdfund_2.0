@@ -3,7 +3,6 @@ import { logger } from "@/lib/logger";
 
 const retailersProjectsLogger = logger.child({ module: "retailers-projects" });
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 import { authenticateRetailerRequest } from "@/lib/retailer-auth";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +29,8 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: Prisma.ProjectWhereInput = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {
       status: "LIVE",
       allowRetailerPledges: true,
     };
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Build orderBy clause
-    let orderBy: Prisma.ProjectOrderByWithRelationInput;
+    let orderBy: Record<string, string>;
     switch (sort) {
       case "ending_soon":
         orderBy = { endDate: "asc" };

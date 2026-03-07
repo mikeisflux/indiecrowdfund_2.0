@@ -144,9 +144,7 @@ export function PackagesTab({
     if (!projectId) return;
 
     try {
-      const res = await fetch(`/api/creator/indiekit/integrations?projectId=${projectId}&serviceId=${service.id}`, {
-,
-      });
+      const res = await fetch(`/api/creator/indiekit/integrations?projectId=${projectId}&serviceId=${service.id}`);
 
       if (!res.ok) {
         const data = await res.json();
@@ -200,9 +198,7 @@ export function PackagesTab({
 
     setIsRefreshing(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=refresh_groups`, {
-,
-      });
+      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=refresh_groups`);
 
       if (!res.ok) {
         const data = await res.json();
@@ -227,9 +223,7 @@ export function PackagesTab({
 
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=get_group&groupId=${searchGroupId}`, {
-,
-      });
+      const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=get_group&groupId=${searchGroupId}`);
 
       if (!res.ok) {
         const data = await res.json();

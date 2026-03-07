@@ -121,7 +121,6 @@ export default function NotificationsPage() {
     try {
       await apiFetch(`/api/user/notifications?id=${id}`, {
         method: "DELETE",
-,
       });
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       setPagination((prev) => ({ ...prev, total: prev.total - 1 }));

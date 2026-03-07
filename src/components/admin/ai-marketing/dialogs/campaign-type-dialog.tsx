@@ -91,9 +91,7 @@ export function CampaignTypeDialog({
     setError(null);
 
     try {
-      const response = await fetch(`/api/admin/ai-marketing/campaigns/${campaignType}`, {
-,
-      });
+      const response = await fetch(`/api/admin/ai-marketing/campaigns/${campaignType}`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch campaign configuration");

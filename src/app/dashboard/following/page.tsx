@@ -107,7 +107,6 @@ export default function FollowingPage() {
     try {
       const res = await apiFetch(`/api/user/following?projectId=${projectId}`, {
         method: "DELETE",
-,
       });
       if (res.ok && data) {
         setData({
@@ -127,7 +126,6 @@ export default function FollowingPage() {
     try {
       const res = await apiFetch(`/api/user/following?creatorId=${creatorId}`, {
         method: "DELETE",
-,
       });
       if (res.ok && data) {
         setData({

@@ -88,7 +88,6 @@ export function CollaborationsTab() {
     try {
       const res = await apiFetch(`/api/collaborations/${collaborationId}`, {
         method: "DELETE",
-,
       });
 
       if (res.ok) {

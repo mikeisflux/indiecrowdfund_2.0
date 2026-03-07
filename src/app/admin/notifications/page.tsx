@@ -63,9 +63,7 @@ export default function NotificationsPage() {
   const loadNotifications = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/admin/notifications", {
-,
-      });
+      const response = await fetch("/api/admin/notifications");
 
       if (!response.ok) {
         throw new Error("Failed to fetch notifications");

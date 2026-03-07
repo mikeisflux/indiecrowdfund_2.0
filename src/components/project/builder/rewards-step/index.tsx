@@ -495,7 +495,6 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     try {
       const res = await apiFetch(`/api/rewards/${reward.id}/end`, {
         method: "POST",
-,
       });
 
       if (!res.ok) {

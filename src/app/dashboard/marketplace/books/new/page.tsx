@@ -204,7 +204,6 @@ function PDFFilePicker({
 
       const uploadRes = await apiFetch("/api/creator/marketplace/files/upload", {
         method: "POST",
-,
         body: formData,
       });
 
@@ -268,7 +267,6 @@ function PDFFilePicker({
         `/api/creator/marketplace/files?key=${encodeURIComponent(currentStorageKey)}`,
         {
           method: "DELETE",
-,
         }
       );
 
@@ -491,7 +489,6 @@ function FileUpload({
 
       const res = await apiFetch("/api/upload", {
         method: "POST",
-,
         body: formData,
       });
 

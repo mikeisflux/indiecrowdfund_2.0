@@ -158,9 +158,7 @@ export function PdfThumbnail({
             const { downloadUrl } = await res.json();
             pdfUrl = downloadUrl;
           } else if (source === "marketplace") {
-            const res = await fetch(`/api/backer/marketplace-purchases/${fileId}/download`, {
-,
-            });
+            const res = await fetch(`/api/backer/marketplace-purchases/${fileId}/download`);
             if (!res.ok) throw new Error("Failed to get PDF URL");
             const { downloadUrl } = await res.json();
             pdfUrl = downloadUrl;

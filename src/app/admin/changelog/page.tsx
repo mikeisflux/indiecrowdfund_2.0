@@ -205,7 +205,6 @@ export default function AdminChangelogPage() {
     try {
       const response = await apiFetch(`/api/admin/changelog?id=${id}`, {
         method: "DELETE",
-,
       });
 
       if (response.ok) {

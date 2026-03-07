@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
-
-const creatorIndiekitShippoLogger = logger.child({ module: "creator-indiekit-shippo" });
 import type { NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
+import { auth } from "@/lib/auth";
 
 const creatorIndiekitShippoLogger = logger.child({ module: "creator-indiekit-shippo" });
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { circuitBreaker } from "@/lib/circuit-breaker";

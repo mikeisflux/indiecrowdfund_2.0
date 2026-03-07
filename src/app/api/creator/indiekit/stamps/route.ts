@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
-
-const creatorIndiekitStampsLogger = logger.child({ module: "creator-indiekit-stamps" });
 import type { NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
+import { auth } from "@/lib/auth";
 
 const creatorIndiekitStampsLogger = logger.child({ module: "creator-indiekit-stamps" });
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 

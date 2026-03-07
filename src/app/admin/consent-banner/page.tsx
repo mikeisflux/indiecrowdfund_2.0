@@ -58,9 +58,7 @@ export default function ConsentBannerPage() {
   const fetchBanner = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/admin/consent-banner", {
-,
-      });
+      const response = await fetch("/api/admin/consent-banner");
 
       if (!response.ok) throw new Error("Failed to fetch");
 

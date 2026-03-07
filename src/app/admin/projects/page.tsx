@@ -255,7 +255,6 @@ export default function ProjectsPage() {
     try {
       const response = await apiFetch("/api/admin/sync-all-project-stats", {
         method: "POST",
-,
       });
       const data = await response.json();
       if (response.ok) {
