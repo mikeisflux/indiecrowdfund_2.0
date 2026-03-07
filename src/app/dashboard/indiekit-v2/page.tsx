@@ -187,6 +187,9 @@ export default function IndieKitV2Page() {
   const [selectedBackers, setSelectedBackers] = useState<string[]>([]);
   const [packageGroupFilter, setPackageGroupFilter] = useState<string>("all");
   const [workflowActionLoading, setWorkflowActionLoading] = useState<string | null>(null);
+  const [backersPage, setBackersPage] = useState(1);
+  const [backersTotalPages, setBackersTotalPages] = useState(1);
+  const [backersTotalCount, setBackersTotalCount] = useState(0);
 
   // Dialog state
   const [isBackerDialogOpen, setIsBackerDialogOpen] = useState(false);
@@ -234,6 +237,8 @@ export default function IndieKitV2Page() {
       setLoading(true);
       const params = new URLSearchParams();
       if (selectedProjectId) params.set("projectId", selectedProjectId);
+      params.set("backersPage", String(backersPage));
+      params.set("backersLimit", "50");
 
       const res = await fetch(`/api/creator/indiekit?${params}`);
       if (!res.ok) {
@@ -248,6 +253,10 @@ export default function IndieKitV2Page() {
       setProjects(data.projects || []);
       setStats(data.stats || null);
       setBackers(data.backers || []);
+      if (data.backersPagination) {
+        setBackersTotalPages(data.backersPagination.totalPages);
+        setBackersTotalCount(data.backersPagination.total);
+      }
       setPackageGroups(data.packageGroups || []);
       setDigitalFiles(data.digitalFiles || []);
       setDistributionRules(data.distributionRules || []);
@@ -283,7 +292,7 @@ export default function IndieKitV2Page() {
     } finally {
       setLoading(false);
     }
-  }, [selectedProjectId]);
+  }, [selectedProjectId, backersPage]);
 
   useEffect(() => {
     // Priority: prop from parent (when embedded) > URL param > localStorage
@@ -641,6 +650,10 @@ export default function IndieKitV2Page() {
                   hasActiveCampaign={hasActiveCampaign}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}
+                  currentPage={backersPage}
+                  totalPages={backersTotalPages}
+                  totalCount={backersTotalCount}
+                  onPageChange={setBackersPage}
                 />
               )}
 

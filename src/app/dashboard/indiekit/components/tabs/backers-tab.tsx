@@ -96,6 +96,11 @@ interface BackersTabProps {
   hasActiveCampaign?: boolean;
   projectId?: string;
   onRefresh?: () => void;
+  // Pagination
+  currentPage?: number;
+  totalPages?: number;
+  totalCount?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export function BackersTab({
@@ -111,6 +116,10 @@ export function BackersTab({
   hasActiveCampaign = true,
   projectId,
   onRefresh,
+  currentPage = 1,
+  totalPages = 1,
+  totalCount,
+  onPageChange,
 }: BackersTabProps) {
   const [showChargeDialog, setShowChargeDialog] = useState(false);
   const [isCharging, setIsCharging] = useState(false);
@@ -882,9 +891,36 @@ export function BackersTab({
 
         {/* Results count */}
         <div className="ml-auto text-sm text-muted-foreground">
-          Showing {filteredBackers.length} of {backers.length} backers
+          Showing {filteredBackers.length} of {totalCount ?? backers.length} backers
         </div>
       </div>
+
+      {/* Pagination controls */}
+      {totalPages > 1 && onPageChange && (
+        <div className="flex items-center justify-between px-2 py-2">
+          <div className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => onPageChange(currentPage - 1)}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => onPageChange(currentPage + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Card Charging Dialog */}
       <Dialog open={showChargeDialog} onOpenChange={setShowChargeDialog}>

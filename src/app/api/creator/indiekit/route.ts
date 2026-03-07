@@ -17,6 +17,9 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
+    const backersPage = parseInt(searchParams.get("backersPage") || "1", 10);
+    const backersLimit = Math.min(parseInt(searchParams.get("backersLimit") || "50", 10), 200);
+    const backersOffset = (backersPage - 1) * backersLimit;
 
     // Get user role and check if they have at least one approved prelaunch page or campaign
     const user = await db.user.findUnique({
@@ -172,6 +175,7 @@ export async function GET(req: NextRequest) {
     // Fetch all IndieKit data in parallel
     const [
       pledges,
+      totalBackersCount,
       survey,
       surveyResponses,
       addOnSales,
@@ -185,8 +189,7 @@ export async function GET(req: NextRequest) {
       projectRewards,
       projectAddons,
     ] = await Promise.all([
-      // Get all COMPLETED pledges for the project with user info
-      // Only show completed pledges - pending ones are incomplete transactions
+      // Get paginated COMPLETED pledges for the project with user info
       db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
@@ -230,6 +233,16 @@ export async function GET(req: NextRequest) {
           },
         },
         orderBy: { createdAt: "desc" },
+        skip: backersOffset,
+        take: backersLimit,
+      }),
+
+      // Count total backers for pagination metadata
+      db.pledge.count({
+        where: {
+          projectId: selectedProjectId,
+          status: "COMPLETED",
+        },
       }),
 
       // Get survey for this project
@@ -965,6 +978,12 @@ export async function GET(req: NextRequest) {
       })),
       stats,
       backers: processedBackers,
+      backersPagination: {
+        page: backersPage,
+        limit: backersLimit,
+        total: totalBackersCount,
+        totalPages: Math.ceil(totalBackersCount / backersLimit),
+      },
       packageGroups,
       segments: formattedSegments,
       products: formattedProducts,
