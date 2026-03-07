@@ -197,6 +197,14 @@ async function handleCollaborators(
     return;
   }
 
+  // Get creator's email handle for sending from their address
+  const creator = await db.user.findUnique({
+    where: { id: creatorId },
+    select: { creatorEmailHandle: true },
+  });
+  const creatorEmailHandle = creator?.creatorEmailHandle;
+  const creatorEmail = creatorEmailHandle ? `${creatorEmailHandle}@indiecrowdfund.com` : undefined;
+
   // Get existing collaborators
   const existingCollaborators = await db.projectCollaborator.findMany({
     where: { projectId },
@@ -249,13 +257,26 @@ async function handleCollaborators(
           },
         });
 
-        // Send email notification with accept/decline link
-        await sendCollaboratorInviteEmail(
+        // Send email notification from creator's email address
+        const emailResult = await sendCollaboratorInviteEmail(
           collab.email,
           creatorName,
           project.title,
-          collaboratorRecord.id
+          collaboratorRecord.id,
+          creatorEmail ? { fromEmail: creatorEmail, fromName: creatorName, replyTo: creatorEmail } : undefined
         );
+
+        // Create a Message record so it appears in the creator's inbox
+        await db.message.create({
+          data: {
+            senderId: creatorId,
+            recipientId: user.id,
+            projectId,
+            subject: emailResult.subject,
+            content: emailResult.plainTextContent,
+            read: true,
+          },
+        });
       } else {
 
         // User doesn't exist yet - create a pending collaborator entry without userId
@@ -278,7 +299,8 @@ async function handleCollaborators(
           collab.email,
           creatorName,
           project.title,
-          collaboratorRecord.id
+          collaboratorRecord.id,
+          creatorEmail ? { fromEmail: creatorEmail, fromName: creatorName, replyTo: creatorEmail } : undefined
         );
       }
     } catch (error) {

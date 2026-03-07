@@ -48,6 +48,8 @@ import {
   Forward,
   Trash2,
   MoreHorizontal,
+  Paperclip,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -124,6 +126,8 @@ export function InboxTab({ projectId }: InboxTabProps) {
   const [composeSubject, setComposeSubject] = useState("");
   const [composeContent, setComposeContent] = useState("");
   const [isComposing, setIsComposing] = useState(false);
+  const [composeAttachments, setComposeAttachments] = useState<File[]>([]);
+  const [replyAttachments, setReplyAttachments] = useState<File[]>([]);
 
   // Project state for email association
   const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
@@ -311,10 +315,12 @@ export function InboxTab({ projectId }: InboxTabProps) {
 
     setIsSending(true);
     try {
+      const attachments = replyAttachments.length > 0 ? await filesToAttachments(replyAttachments) : undefined;
+
       const res = await fetch(`/api/creator/email/threads/${selectedThread.id}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({ content: replyContent }),
+        body: JSON.stringify({ content: replyContent, attachments }),
       });
 
       if (!res.ok) throw new Error("Failed to send reply");
@@ -322,6 +328,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
       const data = await res.json();
       setMessages((prev) => [...prev, data.message]);
       setReplyContent("");
+      setReplyAttachments([]);
       setThreads((prev) =>
         prev.map((t) =>
           t.id === selectedThread.id ? { ...t, status: "replied" as const } : t
@@ -406,6 +413,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
     setComposeTo("");
     setComposeSubject("");
     setComposeContent("");
+    setComposeAttachments([]);
     setShowComposeDialog(true);
   };
 
@@ -416,6 +424,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
     setComposeTo(selectedThread.from.email);
     setComposeSubject(`Re: ${selectedThread.subject}`);
     setComposeContent("");
+    setComposeAttachments([]);
     setShowComposeDialog(true);
   };
 
@@ -426,6 +435,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
     setComposeTo(selectedThread.from.email);
     setComposeSubject(`Re: ${selectedThread.subject}`);
     setComposeContent("");
+    setComposeAttachments([]);
     setShowComposeDialog(true);
   };
 
@@ -435,6 +445,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
     setComposeMode("forward");
     setComposeTo("");
     setComposeSubject(`Fwd: ${selectedThread.subject}`);
+    setComposeAttachments([]);
     // Build forwarded content from messages
     const forwardedContent = messages
       .map((msg) => {
@@ -444,6 +455,52 @@ export function InboxTab({ projectId }: InboxTabProps) {
       .join("\n\n");
     setComposeContent(`\n\n---------- Forwarded message ----------\n${forwardedContent}`);
     setShowComposeDialog(true);
+  };
+
+  // Convert files to base64 for API submission
+  const filesToAttachments = async (files: File[]) => {
+    return Promise.all(
+      files.map(
+        (file) =>
+          new Promise<{ filename: string; data: string; contentType: string }>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const dataUrl = reader.result as string;
+              const base64 = dataUrl.split(",")[1] || "";
+              resolve({ filename: file.name, data: base64, contentType: file.type });
+            };
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+  };
+
+  const handleComposeFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const maxSize = 10 * 1024 * 1024; // 10MB per file
+    const validFiles = files.filter((f) => {
+      if (f.size > maxSize) {
+        toast.error(`${f.name} exceeds 10MB limit`);
+        return false;
+      }
+      return true;
+    });
+    setComposeAttachments((prev) => [...prev, ...validFiles]);
+    e.target.value = "";
+  };
+
+  const handleReplyFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const maxSize = 10 * 1024 * 1024;
+    const validFiles = files.filter((f) => {
+      if (f.size > maxSize) {
+        toast.error(`${f.name} exceeds 10MB limit`);
+        return false;
+      }
+      return true;
+    });
+    setReplyAttachments((prev) => [...prev, ...validFiles]);
+    e.target.value = "";
   };
 
   // Send composed email
@@ -464,6 +521,8 @@ export function InboxTab({ projectId }: InboxTabProps) {
 
     setIsComposing(true);
     try {
+      const attachments = composeAttachments.length > 0 ? await filesToAttachments(composeAttachments) : undefined;
+
       let res;
       if (composeMode === "forward" && selectedThread) {
         // Use forward endpoint
@@ -473,6 +532,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
           body: JSON.stringify({
             to: composeTo,
             additionalMessage: composeContent.split("---------- Forwarded message ----------")[0].trim(),
+            attachments,
           }),
         });
       } else if ((composeMode === "reply" || composeMode === "replyAll") && selectedThread) {
@@ -480,7 +540,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
         res = await fetch(`/api/creator/email/threads/${selectedThread.id}/reply`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-          body: JSON.stringify({ content: composeContent }),
+          body: JSON.stringify({ content: composeContent, attachments }),
         });
       } else {
         // Use compose endpoint for new emails
@@ -492,6 +552,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
             subject: composeSubject,
             content: composeContent,
             projectId: selectedProjectId || undefined,
+            attachments,
           }),
         });
       }
@@ -523,6 +584,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
       setComposeTo("");
       setComposeSubject("");
       setComposeContent("");
+      setComposeAttachments([]);
     } catch (error) {
       console.error("Error sending email:", error);
       toast.error(error instanceof Error ? error.message : "Failed to send email");
@@ -666,7 +728,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
       </div>
 
       {/* Email Interface */}
-      <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-300px)] min-h-[500px]">
+      <div className="grid lg:grid-cols-3 gap-6 h-[600px] lg:h-[calc(100vh-320px)] min-h-[500px] max-h-[800px]">
         {/* Thread List */}
         <Card className="lg:col-span-1 flex flex-col">
           <CardHeader className="pb-3 flex-shrink-0">
@@ -895,7 +957,27 @@ export function InboxTab({ projectId }: InboxTabProps) {
                       className="min-h-[100px]"
                     />
                   </div>
-                  <div className="flex justify-end mt-3">
+                  {replyAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {replyAttachments.map((file, i) => (
+                        <div key={i} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-xs">
+                          <Paperclip className="h-3 w-3" />
+                          <span className="max-w-[150px] truncate">{file.name}</span>
+                          <span className="text-muted-foreground">({(file.size / 1024).toFixed(0)}KB)</span>
+                          <button onClick={() => setReplyAttachments((prev) => prev.filter((_, idx) => idx !== i))} className="ml-1 hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-between mt-3">
+                    <label className="cursor-pointer">
+                      <input type="file" multiple className="hidden" onChange={handleReplyFileSelect} />
+                      <Button type="button" variant="ghost" size="sm" asChild>
+                        <span><Paperclip className="h-4 w-4 mr-1" />Attach</span>
+                      </Button>
+                    </label>
                     <Button onClick={handleSendReply} disabled={isSending || !replyContent.trim()} className="bg-teal-600 hover:bg-teal-700">
                       {isSending ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -1002,6 +1084,33 @@ export function InboxTab({ projectId }: InboxTabProps) {
                 rows={10}
                 className="font-mono text-sm"
               />
+            </div>
+
+            {/* Attachments */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Attachments</Label>
+                <label className="cursor-pointer">
+                  <input type="file" multiple className="hidden" onChange={handleComposeFileSelect} />
+                  <Button type="button" variant="outline" size="sm" asChild>
+                    <span><Paperclip className="h-4 w-4 mr-1" />Add Files</span>
+                  </Button>
+                </label>
+              </div>
+              {composeAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {composeAttachments.map((file, i) => (
+                    <div key={i} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-xs">
+                      <Paperclip className="h-3 w-3" />
+                      <span className="max-w-[200px] truncate">{file.name}</span>
+                      <span className="text-muted-foreground">({(file.size / 1024).toFixed(0)}KB)</span>
+                      <button onClick={() => setComposeAttachments((prev) => prev.filter((_, idx) => idx !== i))} className="ml-1 hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

@@ -60,6 +60,7 @@ export default function CreatorDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unreadEmailCount, setUnreadEmailCount] = useState(0);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -141,6 +142,25 @@ export default function CreatorDashboard() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [data?.selectedProject, selectedProjectId, timeRange]);
+
+  // Fetch unread email count and poll every 30 seconds
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await fetch("/api/creator/email/threads?filter=unread");
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadEmailCount(data.threads?.length || 0);
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+
+    fetchUnreadCount();
+    const intervalId = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const handleProjectChange = (projectId: string) => {
     setSelectedProjectId(projectId);
@@ -339,9 +359,14 @@ export default function CreatorDashboard() {
                     <Package className="mr-2 h-4 w-4" />
                     Rewards
                   </TabsTrigger>
-                  <TabsTrigger value="email" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                  <TabsTrigger value="email" className="relative data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <Mail className="mr-2 h-4 w-4" />
                     Email
+                    {unreadEmailCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-lg animate-pulse">
+                        {unreadEmailCount > 99 ? "99+" : unreadEmailCount}
+                      </span>
+                    )}
                   </TabsTrigger>
                   <TabsTrigger value="messages" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <MessageSquare className="mr-2 h-4 w-4" />

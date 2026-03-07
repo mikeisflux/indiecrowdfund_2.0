@@ -67,6 +67,14 @@ export async function POST(
 
     const creatorName = session.user.name || project.creator.name || "Project Creator";
 
+    // Get creator's email handle for sending from their address
+    const creator = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { creatorEmailHandle: true },
+    });
+    const creatorEmailHandle = creator?.creatorEmailHandle;
+    const creatorEmail = creatorEmailHandle ? `${creatorEmailHandle}@indiecrowdfund.com` : undefined;
+
     // Find user by email
     const user = await db.user.findUnique({
       where: { email: emailLower },
@@ -103,13 +111,28 @@ export async function POST(
       });
     }
 
-    // Send email notification
+    // Send email notification from creator's email address
     const emailResult = await sendCollaboratorInviteEmail(
       collab.email,
       creatorName,
       project.title,
-      collaboratorRecord.id
+      collaboratorRecord.id,
+      creatorEmail ? { fromEmail: creatorEmail, fromName: creatorName, replyTo: creatorEmail } : undefined
     );
+
+    // Create a Message record so it appears in the creator's inbox
+    if (user) {
+      await db.message.create({
+        data: {
+          senderId: session.user.id,
+          recipientId: user.id,
+          projectId,
+          subject: emailResult.subject,
+          content: emailResult.plainTextContent,
+          read: true,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

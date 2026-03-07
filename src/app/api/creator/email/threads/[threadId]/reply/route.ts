@@ -30,7 +30,7 @@ export async function POST(
     const hasProject = projectId && projectId !== "null" && projectId !== "undefined";
 
     const body = await request.json();
-    const { content } = body;
+    const { content, attachments } = body;
 
     if (!content?.trim()) {
       return NextResponse.json({ error: "Content is required" }, { status: 400 });
@@ -164,6 +164,7 @@ export async function POST(
       fromName: creatorName,
       replyTo: creatorEmail,
       isCreatorEmail: true, // Mark as creator email for mailbox filtering
+      attachments: attachments || undefined,
     });
 
     if (!emailResult.success) {

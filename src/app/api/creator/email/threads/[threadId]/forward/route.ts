@@ -27,7 +27,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { to, additionalMessage } = body;
+    const { to, additionalMessage, attachments } = body;
 
     if (!to?.trim()) {
       return NextResponse.json({ error: "Recipient email is required" }, { status: 400 });
@@ -151,6 +151,7 @@ export async function POST(
       fromName: creatorName,
       replyTo: creatorEmail,
       isCreatorEmail: true, // Mark as creator email for mailbox filtering
+      attachments: attachments || undefined,
     });
 
     if (!emailResult.success) {

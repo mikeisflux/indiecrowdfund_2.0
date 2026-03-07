@@ -277,9 +277,12 @@ export async function sendCollaboratorInviteEmail(
   email: string,
   inviterName: string,
   projectTitle: string,
-  collaboratorId: string
+  collaboratorId: string,
+  options?: { fromEmail?: string; fromName?: string; replyTo?: string }
 ) {
   const respondUrl = `${APP_URL}/collaborate/${collaboratorId}`;
+
+  const plainTextContent = `You've Been Invited to Collaborate!\n\n${inviterName} has invited you to collaborate on the project "${projectTitle}".\n\nAs a collaborator, you'll be able to help manage this project based on the permissions granted to you.\n\nAccept or view the invitation: ${respondUrl}\n\nYou'll need to log in to your ${APP_NAME} account to accept or decline this invitation.`;
 
   const html = `
     <!DOCTYPE html>
@@ -325,9 +328,20 @@ export async function sendCollaboratorInviteEmail(
     </html>
   `;
 
-  return sendEmail({
+  const subject = `${inviterName} invited you to collaborate on "${projectTitle}"`;
+
+  const result = await sendEmail({
     to: email,
-    subject: `${inviterName} invited you to collaborate on "${projectTitle}"`,
+    subject,
     html,
+    text: plainTextContent,
+    ...(options?.fromEmail && {
+      fromEmail: options.fromEmail,
+      fromName: options.fromName,
+      replyTo: options.replyTo || options.fromEmail,
+      isCreatorEmail: true,
+    }),
   });
+
+  return { ...result, subject, plainTextContent };
 }
