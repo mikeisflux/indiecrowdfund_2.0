@@ -618,3 +618,100 @@ enum IDVerificationStatus {
   EXPIRED
   CANCELLED
 }
+
+// ============================================
+// FEATURE FLAGS
+// ============================================
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  enabled     Boolean  @default(false)
+  description String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
+// ============================================
+// GDPR DATA EXPORT REQUESTS
+// ============================================
+
+model DataExportRequest {
+  id          String              @id @default(cuid())
+  userId      String
+  status      DataExportStatus    @default(PENDING)
+  format      String              @default("json") // "json" or "csv"
+  downloadUrl String?             // Signed URL to download the export
+  expiresAt   DateTime?           // When the download link expires
+  completedAt DateTime?
+  error       String?
+
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum DataExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+// ============================================
+// GDPR DELETION REQUESTS (Right to be Forgotten)
+// ============================================
+
+model DataDeletionRequest {
+  id              String                @id @default(cuid())
+  userId          String
+  userEmail       String                // Preserved for audit even after user deletion
+  status          DataDeletionStatus    @default(PENDING)
+  reason          String?
+  scheduledFor    DateTime              // When the deletion will be executed (grace period)
+  executedAt      DateTime?
+  cancelledAt     DateTime?
+  auditLog        Json?                 // Summary of what was deleted
+
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+enum DataDeletionStatus {
+  PENDING
+  SCHEDULED
+  EXECUTING
+  COMPLETED
+  CANCELLED
+}
+
+// ============================================
+// CCPA OPT-OUT RECORDS
+// ============================================
+
+model CcpaOptOut {
+  id          String   @id @default(cuid())
+  userId      String?  // Null for anonymous opt-outs
+  email       String?  // For verification
+  ipAddress   String?  // For anonymous opt-outs
+  optOutType  String   @default("analytics") // "analytics", "sale", "all"
+  optedOutAt  DateTime @default(now())
+  reinstatedAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([email])
+  @@index([ipAddress])
+}

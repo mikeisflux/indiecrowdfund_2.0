@@ -1,11 +1,15 @@
 /**
  * Rate limiting for brute force protection
- * Uses in-memory storage with sliding window algorithm
- * Reads configuration from database with caching
- * For production with multiple instances, consider using Redis
+ * Uses Redis (via @/lib/rate-limiter) when available for multi-instance scaling,
+ * falls back to in-memory storage with sliding window algorithm.
+ * Reads configuration from database with caching.
  */
 
 import { db } from "@/lib/db";
+import { rateLimiter as redisRateLimiter } from "@/lib/rate-limiter";
+import { logger } from "@/lib/logger";
+
+const rateLimitLogger = logger.child({ module: "rate-limit" });
 
 interface RateLimitEntry {
   attempts: number;
@@ -72,7 +76,8 @@ async function getSettings() {
       return settings;
     }
   } catch (error) {
-    console.error("Error loading rate limit settings:", error);
+    rateLimitLogger.error({ err: error instanceof Error ? error.message : String(error) },
+      "Error loading rate limit settings");
   }
 
   // Return defaults if database query fails

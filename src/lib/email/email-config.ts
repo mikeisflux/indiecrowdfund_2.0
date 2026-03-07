@@ -4,6 +4,9 @@ import type { MailgunMessageData } from "mailgun.js/definitions";
 import formData from "form-data";
 import crypto from "crypto";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
+
+const emailLogger = logger.child({ module: "email" });
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";

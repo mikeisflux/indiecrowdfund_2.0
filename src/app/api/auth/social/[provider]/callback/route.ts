@@ -48,7 +48,7 @@ export async function GET(
   const session = await validateSession();
   if (!session) {
     return NextResponse.redirect(
-      `${baseUrl}/login?redirect=${encodeURIComponent(dashboardUrl)}`
+      `${baseUrl}/login?callbackUrl=${encodeURIComponent(dashboardUrl)}`
     );
   }
 

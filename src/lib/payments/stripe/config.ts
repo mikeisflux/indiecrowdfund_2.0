@@ -1,5 +1,7 @@
 import Stripe from "stripe";
 import { db } from "@/lib/db";
+import { getSecret } from "@/lib/vault";
+import { logger } from "@/lib/logger";
 
 let stripeInstance: Stripe | null = null;
 let cachedSecretKey: string | null = null;
@@ -20,9 +22,9 @@ export function getSecureAppUrl(): string {
   return appUrl;
 }
 
-// Get Stripe secret key from database settings or fall back to env var
+// Get Stripe secret key from database settings (vault-decrypted) or fall back to env var
 async function getStripeSecretKey(): Promise<string> {
-  // Try to get from database settings first
+  // Try to get from database settings first (vault-backed)
   try {
     const settings = await db.platformSettings.findUnique({
       where: { id: "default" },
@@ -30,10 +32,12 @@ async function getStripeSecretKey(): Promise<string> {
     });
 
     if (settings?.stripeSecretKey && settings.stripeEnabled) {
-      return settings.stripeSecretKey;
+      const decrypted = getSecret("stripe_secret_key", settings.stripeSecretKey);
+      if (decrypted) return decrypted;
     }
   } catch (error) {
-    console.warn("Could not fetch Stripe settings from database:", error);
+    logger.warn({ err: error instanceof Error ? error.message : String(error) },
+      "Could not fetch Stripe settings from database");
   }
 
   // Fall back to environment variable
@@ -44,7 +48,7 @@ async function getStripeSecretKey(): Promise<string> {
   throw new Error("Stripe secret key not configured. Please set it in Admin Settings > Payments or via STRIPE_SECRET_KEY environment variable.");
 }
 
-// Get Stripe publishable key from database settings or fall back to env var
+// Get Stripe publishable key from database settings (vault-decrypted) or fall back to env var
 export async function getStripePublishableKey(): Promise<string | null> {
   try {
     const settings = await db.platformSettings.findUnique({
@@ -53,16 +57,17 @@ export async function getStripePublishableKey(): Promise<string | null> {
     });
 
     if (settings?.stripePublishableKey && settings.stripeEnabled) {
-      return settings.stripePublishableKey;
+      return getSecret("stripe_publishable_key", settings.stripePublishableKey);
     }
   } catch (error) {
-    console.warn("Could not fetch Stripe settings from database:", error);
+    logger.warn({ err: error instanceof Error ? error.message : String(error) },
+      "Could not fetch Stripe settings from database");
   }
 
   return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || null;
 }
 
-// Get Stripe webhook secret from database settings or fall back to env var
+// Get Stripe webhook secret from database settings (vault-decrypted) or fall back to env var
 export async function getStripeWebhookSecret(): Promise<string | null> {
   try {
     const settings = await db.platformSettings.findUnique({
@@ -71,10 +76,11 @@ export async function getStripeWebhookSecret(): Promise<string | null> {
     });
 
     if (settings?.stripeWebhookSecret && settings.stripeEnabled) {
-      return settings.stripeWebhookSecret;
+      return getSecret("stripe_webhook_secret", settings.stripeWebhookSecret);
     }
   } catch (error) {
-    console.warn("Could not fetch Stripe settings from database:", error);
+    logger.warn({ err: error instanceof Error ? error.message : String(error) },
+      "Could not fetch Stripe settings from database");
   }
 
   return process.env.STRIPE_WEBHOOK_SECRET || null;

@@ -1,4 +1,7 @@
 import { PrismaClient, PrismaClientKnownRequestError, PrismaClientInitializationError } from "@prisma/client";
+import { logger } from "@/lib/logger";
+
+const dbLogger = logger.child({ module: "prisma" });
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -62,9 +65,9 @@ function getPrismaClient(): PrismaClient {
       const now = Date.now();
       if (now - lastInitErrorTime > INIT_ERROR_COOLDOWN_MS) {
         lastInitErrorTime = now;
-        console.error(
-          "[Prisma] Failed to initialize PrismaClient. Run 'npx prisma generate' and restart PM2.",
-          error instanceof Error ? error.message : error
+        dbLogger.error(
+          { err: error instanceof Error ? error.message : String(error) },
+          "Failed to initialize PrismaClient. Run 'npx prisma generate' and restart PM2."
         );
       }
       throw new Error("Database client not available. Please try again later.");
@@ -80,9 +83,9 @@ function getPrismaClient(): PrismaClient {
               return await query(args);
             } catch (error) {
               if (attempt < MAX_RETRIES && isTransientError(error)) {
-                console.warn(
-                  `[Prisma] Transient error (attempt ${attempt + 1}/${MAX_RETRIES + 1}), retrying in ${RETRY_DELAY_MS}ms...`,
-                  error instanceof Error ? error.message : error
+                dbLogger.warn(
+                  { attempt: attempt + 1, maxRetries: MAX_RETRIES + 1, err: error instanceof Error ? error.message : String(error) },
+                  "Transient error, retrying"
                 );
                 // On connection errors, disconnect to force pool refresh before retry
                 if (attempt === 0) {

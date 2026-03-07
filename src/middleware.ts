@@ -472,6 +472,13 @@ export async function middleware(req: NextRequest) {
   // Create response with security headers (applies to all routes)
   const response = NextResponse.next();
 
+  // Add correlation ID for request tracing across services
+  const incomingCorrelationId = req.headers.get("x-correlation-id") || req.headers.get("x-request-id");
+  const correlationId = incomingCorrelationId || crypto.randomUUID();
+  response.headers.set("x-correlation-id", correlationId);
+  // Forward the correlation ID to downstream services via request headers
+  response.headers.set("x-request-id", correlationId);
+
   // Check if this is a Shopify iframe route
   const isShopifyIframeRoute = shopifyIframeRoutes.some((route) =>
     pathname.startsWith(route)

@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import {
   notifyPledgeReceived,
   notifyProjectFunded,
@@ -10,6 +11,8 @@ import {
 import { addToCreatorEmailList } from "@/lib/email";
 import { trackCampaignConversion, claimRewardSlot, assignBackerNumber } from "./rewards";
 import { processPendingPledgesForProject, schedulePaymentRetry } from "./charges";
+
+const webhookLogger = logger.child({ module: "stripe-webhook" });
 
 export async function handleStripeWebhook(
   event: Stripe.Event

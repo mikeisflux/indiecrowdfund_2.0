@@ -1,11 +1,15 @@
 import Stripe from "stripe";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 import {
   notifyPledgeFailed,
   notifyBackerPledgeConfirmed,
 } from "@/lib/notifications";
 import { getStripeInstance } from "./config";
 import { trackCampaignConversion, assignBackerNumber } from "./rewards";
+
+const stripeLogger = logger.child({ module: "stripe-charges" });
 
 // Retry configuration: 3 attempts, every 3 days
 const MAX_RETRY_ATTEMPTS = 3;
