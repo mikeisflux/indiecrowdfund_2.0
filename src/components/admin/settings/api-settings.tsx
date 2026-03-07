@@ -221,6 +221,7 @@ export function ApiSettings() {
                             variant="outline"
                             size="icon"
                             onClick={() => copyToClipboard(newlyCreatedKey, "new")}
+                            aria-label="Copy API key"
                           >
                             {copiedKey === "new" ? (
                               <CheckCircle className="h-4 w-4 text-green-500" />
@@ -367,6 +368,7 @@ export function ApiSettings() {
                     size="icon"
                     className="text-red-500 hover:text-red-700"
                     onClick={() => setDeleteKeyId(key.id)}
+                    aria-label="Delete API key"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -435,6 +437,7 @@ export function ApiSettings() {
                         navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe`);
                       }
                     }}
+                    aria-label="Copy Stripe webhook URL"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -476,6 +479,7 @@ export function ApiSettings() {
                         navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe_connect`);
                       }
                     }}
+                    aria-label="Copy Stripe Connect webhook URL"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -516,6 +520,7 @@ export function ApiSettings() {
                         navigator.clipboard.writeText(`${window.location.origin}/api/verify-id/callback`);
                       }
                     }}
+                    aria-label="Copy verification webhook URL"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>

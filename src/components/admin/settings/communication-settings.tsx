@@ -761,6 +761,7 @@ export function CommunicationSettings() {
                         <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: mailbox.color || "#3B82F6" }}
+                          aria-hidden="true"
                         />
                         <span className="font-medium">{mailbox.name}</span>
                         {mailbox.isDefault && (
@@ -797,6 +798,7 @@ export function CommunicationSettings() {
                             setEditingMailbox(mailbox);
                             setMailboxDialogOpen(true);
                           }}
+                          aria-label="Edit mailbox"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -805,6 +807,7 @@ export function CommunicationSettings() {
                           size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => setDeletingMailbox(mailbox)}
+                          aria-label="Delete mailbox"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -912,6 +915,7 @@ export function CommunicationSettings() {
                             setEditingEntry(entry);
                             setBlocklistDialogOpen(true);
                           }}
+                          aria-label="Edit blocklist entry"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -920,6 +924,7 @@ export function CommunicationSettings() {
                           size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => setDeletingEntry(entry)}
+                          aria-label="Delete blocklist entry"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

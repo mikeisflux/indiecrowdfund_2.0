@@ -81,10 +81,10 @@ export function EditableInput({
           autoFocus
           className="flex-1"
         />
-        <Button type="button" size="icon" variant="outline" onClick={handleSave}>
+        <Button type="button" size="icon" variant="outline" onClick={handleSave} aria-label="Save">
           <Check className="h-4 w-4" />
         </Button>
-        <Button type="button" size="icon" variant="ghost" onClick={handleCancel}>
+        <Button type="button" size="icon" variant="ghost" onClick={handleCancel} aria-label="Cancel">
           <X className="h-4 w-4" />
         </Button>
       </div>

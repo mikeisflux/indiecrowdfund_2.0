@@ -176,7 +176,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
                   <Webhook className="h-4 w-4 text-muted-foreground mr-2" />
                   <code className="text-sm flex-1 truncate">{webhookUrl}</code>
                 </div>
-                <Button variant="outline" size="icon" onClick={copyWebhookUrl}>
+                <Button variant="outline" size="icon" onClick={copyWebhookUrl} aria-label="Copy webhook URL">
                   {copiedWebhook ? (
                     <CheckCircle className="h-4 w-4 text-green-500" />
                   ) : (
@@ -261,7 +261,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
                   <Webhook className="h-4 w-4 text-muted-foreground mr-2" />
                   <code className="text-sm flex-1 truncate">{webhookUrl}</code>
                 </div>
-                <Button variant="outline" size="icon" onClick={copyWebhookUrl}>
+                <Button variant="outline" size="icon" onClick={copyWebhookUrl} aria-label="Copy webhook URL">
                   {copiedWebhook ? (
                     <CheckCircle className="h-4 w-4 text-green-500" />
                   ) : (

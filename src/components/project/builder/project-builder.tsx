@@ -501,7 +501,7 @@ export function ProjectBuilder() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Link href="/dashboard">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label="Back to dashboard">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               </Link>

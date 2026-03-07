@@ -384,6 +384,7 @@ export function PromotionStep() {
               navigator.clipboard.writeText(getFullUrl(projectUrl));
               toast.success("URL copied");
             }}
+            aria-label="Copy project URL"
           >
             <Copy className="h-4 w-4" />
           </Button>
@@ -466,6 +467,7 @@ export function PromotionStep() {
                       navigator.clipboard.writeText(getFullUrl(prelaunchUrl));
                       toast.success("URL copied!");
                     }}
+                    aria-label="Copy pre-launch URL"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -473,6 +475,7 @@ export function PromotionStep() {
                     variant="outline"
                     size="icon"
                     onClick={() => window.open(prelaunchUrl, "_blank")}
+                    aria-label="Open pre-launch page"
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
@@ -670,6 +673,7 @@ export function PromotionStep() {
                     variant="ghost"
                     size="icon"
                     onClick={() => copyTagUrl(tag)}
+                    aria-label="Copy tag URL"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -677,6 +681,7 @@ export function PromotionStep() {
                     variant="ghost"
                     size="icon"
                     onClick={() => removeTag(tag)}
+                    aria-label="Remove tag"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

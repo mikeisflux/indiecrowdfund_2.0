@@ -619,6 +619,7 @@ export function EmailCampaignsTab({
                               size="icon"
                               className="h-8 w-8"
                               disabled={actionLoading === campaign.id}
+                              aria-label="Campaign options"
                             >
                               {actionLoading === campaign.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />

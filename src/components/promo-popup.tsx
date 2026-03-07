@@ -205,6 +205,7 @@ export function PromoPopup() {
                 onClick={prevSlide}
                 disabled={currentSlide === 0}
                 className="h-9 w-9 rounded-full text-white hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent"
+                aria-label="Previous slide"
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
@@ -222,6 +223,7 @@ export function PromoPopup() {
                   size="icon"
                   onClick={nextSlide}
                   className="h-9 w-9 rounded-full text-white hover:bg-white/20"
+                  aria-label="Next slide"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Button>

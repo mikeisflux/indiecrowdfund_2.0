@@ -9,6 +9,7 @@ import { PromoPopup } from "@/components/promo-popup";
 import { ConsentBanner } from "@/components/consent-banner";
 import { SiteHeader } from "@/components/site-header";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
+import { ScreenReaderAnnouncer } from "@/components/ui/screen-reader-announcer";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import "./globals.css";
@@ -162,14 +163,24 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <ScreenReaderAnnouncer>
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:text-sm focus:font-medium"
+            >
+              Skip to main content
+            </a>
             <TrackingProvider>
               <AnnouncementBar initialAnnouncements={announcements} />
               <PromoPopup />
               <ConsentBanner />
               <SiteHeader />
               <EmailVerificationBanner />
-              {children}
+              <main id="main-content">
+                {children}
+              </main>
             </TrackingProvider>
+            </ScreenReaderAnnouncer>
             <Toaster />
           </ThemeProvider>
         </AuthProvider>

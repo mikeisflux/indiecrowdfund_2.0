@@ -510,6 +510,7 @@ export function BasicsStep() {
                   variant="ghost"
                   size="icon"
                   onClick={() => updateBasics({ videoUrl: "" })}
+                  aria-label="Remove video"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -540,6 +541,7 @@ export function BasicsStep() {
                       updateBasics({ videoUrl: url });
                     }
                   }}
+                  aria-label="Change video URL"
                 >
                   <Link className="h-4 w-4" />
                 </Button>
@@ -547,6 +549,7 @@ export function BasicsStep() {
                   variant="ghost"
                   size="icon"
                   onClick={() => updateBasics({ videoUrl: "" })}
+                  aria-label="Remove video"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

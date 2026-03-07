@@ -531,7 +531,7 @@ export function ChatRoom() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
-                      <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" aria-hidden="true" />
                       <Users className="h-4 w-4 text-green-600" />
                       <span className="text-sm font-medium text-green-600">{activeCount}</span>
                     </div>
@@ -546,6 +546,7 @@ export function ChatRoom() {
                 size="icon"
                 onClick={() => fetchMessages()}
                 className="text-muted-foreground hover:text-primary"
+                aria-label="Refresh messages"
               >
                 <RefreshCw className="h-4 w-4" />
               </Button>
@@ -657,6 +658,7 @@ export function ChatRoom() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    aria-label="Message options"
                                   >
                                     <MoreVertical className="h-3 w-3" />
                                   </Button>
@@ -729,6 +731,7 @@ export function ChatRoom() {
                       variant="ghost"
                       size="icon"
                       className="shrink-0 text-muted-foreground hover:text-primary"
+                      aria-label="Emoji picker"
                     >
                       <Smile className="h-5 w-5" />
                     </Button>
@@ -761,6 +764,7 @@ export function ChatRoom() {
                       variant="ghost"
                       size="icon"
                       className="shrink-0 text-muted-foreground hover:text-primary"
+                      aria-label="Sticker picker"
                     >
                       <Sticker className="h-5 w-5" />
                     </Button>
@@ -833,6 +837,7 @@ export function ChatRoom() {
                   size="icon"
                   disabled={!newMessage.trim() || isSending}
                   className="shrink-0 bg-primary hover:bg-primary/90"
+                  aria-label="Send message"
                 >
                   {isSending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

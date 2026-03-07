@@ -340,6 +340,7 @@ export function RewardForm({
                         size="icon"
                         className="shrink-0"
                         onClick={handleCopySecretLink}
+                        aria-label="Copy secret link"
                       >
                         {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                       </Button>

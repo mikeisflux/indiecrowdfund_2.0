@@ -170,9 +170,10 @@ export function UserProfileDropdown() {
               {/* Activity link with indicator - separate on mobile */}
               <Link href="/dashboard/activity" className="flex items-center gap-2 text-sm text-primary transition-colors mt-3 p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
                 <Activity className="h-4 w-4 md:hidden" />
-                <span className="hidden md:inline h-2 w-2 rounded-full bg-green-500" />
+                <span className="hidden md:inline h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
                 <span>Activity</span>
-                <span className="md:hidden h-2 w-2 rounded-full bg-green-500" />
+                <span className="sr-only">(new)</span>
+                <span className="md:hidden h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
               </Link>
             </div>
 

@@ -94,14 +94,15 @@ export function SecureKeyInput({
             size="icon"
             className="absolute right-8 top-0 h-full px-2"
             onClick={() => setShowValue(!showValue)}
+            aria-label={showValue ? "Hide value" : "Show value"}
           >
             {showValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </Button>
         </div>
-        <Button type="button" size="icon" variant="outline" onClick={handleSave}>
+        <Button type="button" size="icon" variant="outline" onClick={handleSave} aria-label="Save">
           <Check className="h-4 w-4" />
         </Button>
-        <Button type="button" size="icon" variant="ghost" onClick={handleCancel}>
+        <Button type="button" size="icon" variant="ghost" onClick={handleCancel} aria-label="Cancel">
           <X className="h-4 w-4" />
         </Button>
       </div>

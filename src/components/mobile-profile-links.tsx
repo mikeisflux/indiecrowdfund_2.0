@@ -101,7 +101,8 @@ export function MobileProfileLinks() {
         <Link href="/dashboard/activity" className="flex items-center gap-3 text-sm py-2 text-primary">
           <Activity className="h-4 w-4" />
           Activity
-          <span className="h-2 w-2 rounded-full bg-green-500" />
+          <span className="sr-only">(new)</span>
+          <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
         </Link>
       </div>
 

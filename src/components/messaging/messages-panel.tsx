@@ -444,6 +444,7 @@ export function MessagesPanel({
                   variant="ghost"
                   size="icon"
                   onClick={() => setNewConversation(null)}
+                  aria-label="Back to conversations"
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
@@ -518,6 +519,7 @@ export function MessagesPanel({
                   variant="ghost"
                   size="icon"
                   onClick={() => setSelectedConversation(null)}
+                  aria-label="Back to conversations"
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
