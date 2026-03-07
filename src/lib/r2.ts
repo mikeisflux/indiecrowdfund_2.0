@@ -429,24 +429,6 @@ export function generateMarketplaceFileKey(
   return `marketplace/${userId}/pdfs/${id}_${sanitizedName}`;
 }
 
-/**
- * Parse marketplace file key to extract components
- */
-function parseMarketplaceFileKey(key: string): {
-  userId: string;
-  fileId: string;
-  filename: string;
-} | null {
-  const match = key.match(/^marketplace\/([^/]+)\/pdfs\/([^_]+)_(.+)$/);
-  if (match) {
-    return {
-      userId: match[1],
-      fileId: match[2],
-      filename: match[3],
-    };
-  }
-  return null;
-}
 
 /**
  * Generate a unique file key for email attachments
@@ -465,36 +447,3 @@ export function generateEmailAttachmentKey(
   return `email-attachments/${mailboxId}/${emailId}/${id}_${sanitizedName}`;
 }
 
-/**
- * Parse file key to extract components
- */
-function parseFileKey(key: string): {
-  projectId: string;
-  fileType: string;
-  fileId: string;
-  filename: string;
-} | null {
-  // New format: digital-rewards/{projectId}/{fileType}/{fileId}_{filename}
-  const newMatch = key.match(/^digital-rewards\/([^/]+)\/([^/]+)\/([^_]+)_(.+)$/);
-  if (newMatch) {
-    return {
-      projectId: newMatch[1],
-      fileType: newMatch[2],
-      fileId: newMatch[3],
-      filename: newMatch[4],
-    };
-  }
-
-  // Legacy format: digital-rewards/{projectId}/{fileId}_{filename}
-  const legacyMatch = key.match(/^digital-rewards\/([^/]+)\/([^_]+)_(.+)$/);
-  if (legacyMatch) {
-    return {
-      projectId: legacyMatch[1],
-      fileType: "other",
-      fileId: legacyMatch[2],
-      filename: legacyMatch[3],
-    };
-  }
-
-  return null;
-}
