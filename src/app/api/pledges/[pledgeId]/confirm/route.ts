@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { withCorrelation } from "@/lib/correlation";
 
 const pledgesConfirmLogger = logger.child({ module: "pledges-confirm" });
 import { auth } from "@/lib/auth";
@@ -30,7 +31,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ pledgeId: string }> }
 ) {
+  return withCorrelation(req, async (correlationId) => {
   try {
+    pledgesConfirmLogger.info({ correlationId }, "Pledge confirmation request");
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -381,10 +384,11 @@ export async function POST(
       message: "Pledge confirmed successfully",
     });
   } catch (error) {
-    pledgesConfirmLogger.error({ err: String(error) }, "Failed to confirm pledge:");
+    pledgesConfirmLogger.error({ err: String(error), correlationId }, "Failed to confirm pledge:");
     return NextResponse.json(
       { error: "Failed to confirm pledge" },
       { status: 500 }
     );
   }
+  });
 }

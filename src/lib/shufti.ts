@@ -4,7 +4,7 @@
  */
 
 import { db } from "@/lib/db";
-
+import { circuitBreaker } from "@/lib/circuit-breaker";
 import { logger } from "@/lib/logger";
 
 const shuftiLogger = logger.child({ module: "shufti" });
@@ -166,14 +166,16 @@ export class ShuftiService {
     };
 
     try {
-      const response = await fetch(`${this.baseUrl}/`, {
-        method: "POST",
-        headers: {
-          "Authorization": this.getAuthHeader(),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await circuitBreaker.execute("shufti", () =>
+        fetch(`${this.baseUrl}/`, {
+          method: "POST",
+          headers: {
+            "Authorization": this.getAuthHeader(),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        })
+      );
 
       if (!response.ok) {
         shuftiLogger.error({ status: response.status, statusText: response.statusText }, "Shufti API error");
@@ -222,14 +224,16 @@ export class ShuftiService {
    */
   async getStatus(reference: string): Promise<{ success: boolean; status?: string; data?: ShuftiResponse; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/status`, {
-        method: "POST",
-        headers: {
-          "Authorization": this.getAuthHeader(),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ reference }),
-      });
+      const response = await circuitBreaker.execute("shufti", () =>
+        fetch(`${this.baseUrl}/status`, {
+          method: "POST",
+          headers: {
+            "Authorization": this.getAuthHeader(),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reference }),
+        })
+      );
 
       if (!response.ok) {
         shuftiLogger.error({ status: response.status, statusText: response.statusText }, "Shufti status API error");
@@ -353,14 +357,16 @@ export class ShuftiService {
    */
   async deleteVerification(reference: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/delete`, {
-        method: "POST",
-        headers: {
-          "Authorization": this.getAuthHeader(),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ reference }),
-      });
+      const response = await circuitBreaker.execute("shufti", () =>
+        fetch(`${this.baseUrl}/delete`, {
+          method: "POST",
+          headers: {
+            "Authorization": this.getAuthHeader(),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reference }),
+        })
+      );
 
       if (!response.ok) {
         shuftiLogger.error({ status: response.status, statusText: response.statusText }, "Shufti delete API error");

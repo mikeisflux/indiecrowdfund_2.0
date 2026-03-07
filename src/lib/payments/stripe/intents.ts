@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 // Statuses that allow cancellation
 const CANCELABLE_SETUP_INTENT_STATUSES = ["requires_payment_method", "requires_confirmation", "requires_action"];
@@ -10,9 +11,13 @@ const CANCELABLE_PAYMENT_INTENT_STATUSES = ["requires_payment_method", "requires
  */
 export async function safeCancelSetupIntent(stripeClient: Stripe, setupIntentId: string): Promise<boolean> {
   try {
-    const setupIntent = await stripeClient.setupIntents.retrieve(setupIntentId);
+    const setupIntent = await circuitBreaker.execute("stripe", () =>
+      stripeClient.setupIntents.retrieve(setupIntentId)
+    );
     if (CANCELABLE_SETUP_INTENT_STATUSES.includes(setupIntent.status)) {
-      await stripeClient.setupIntents.cancel(setupIntentId);
+      await circuitBreaker.execute("stripe", () =>
+        stripeClient.setupIntents.cancel(setupIntentId)
+      );
       return true;
     }
     // Already succeeded, canceled, or in terminal state - nothing to do
@@ -29,9 +34,13 @@ export async function safeCancelSetupIntent(stripeClient: Stripe, setupIntentId:
  */
 export async function safeCancelPaymentIntent(stripeClient: Stripe, paymentIntentId: string): Promise<boolean> {
   try {
-    const paymentIntent = await stripeClient.paymentIntents.retrieve(paymentIntentId);
+    const paymentIntent = await circuitBreaker.execute("stripe", () =>
+      stripeClient.paymentIntents.retrieve(paymentIntentId)
+    );
     if (CANCELABLE_PAYMENT_INTENT_STATUSES.includes(paymentIntent.status)) {
-      await stripeClient.paymentIntents.cancel(paymentIntentId);
+      await circuitBreaker.execute("stripe", () =>
+        stripeClient.paymentIntents.cancel(paymentIntentId)
+      );
       return true;
     }
     // Already succeeded, canceled, or in terminal state - nothing to do

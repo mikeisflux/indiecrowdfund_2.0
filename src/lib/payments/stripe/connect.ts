@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getStripeInstance, getSecureAppUrl } from "./config";
-
+import { circuitBreaker } from "@/lib/circuit-breaker";
 import { logger } from "@/lib/logger";
 
 const paymentsStripeConnectLogger = logger.child({ module: "payments-stripe-connect" });
@@ -19,7 +19,9 @@ export async function checkAndUpdateStripeOnboarding(stripeConfigId: string, str
   // Query Stripe directly to check current status
   try {
     const stripeClient = await getStripeInstance();
-    const account = await stripeClient.accounts.retrieve(stripeAccountId);
+    const account = await circuitBreaker.execute("stripe", () =>
+      stripeClient.accounts.retrieve(stripeAccountId)
+    );
 
     const isOnboarded = account.charges_enabled && account.payouts_enabled;
 
@@ -124,16 +126,18 @@ export async function createStripeConnectAccount({
   const stripeClient = await getStripeInstance();
 
   // Create Express account
-  const account = await stripeClient.accounts.create({
-    type: "express",
-    country: "US",
-    email,
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-    business_type: "individual",
-  });
+  const account = await circuitBreaker.execute("stripe", () =>
+    stripeClient.accounts.create({
+      type: "express",
+      country: "US",
+      email,
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+      business_type: "individual",
+    })
+  );
 
   // Save to database
   await db.stripeConfig.upsert({
@@ -152,12 +156,14 @@ export async function createStripeConnectAccount({
   // Create account link for onboarding
   // Use secure URL helper to ensure HTTPS for live mode
   const baseUrl = getSecureAppUrl();
-  const accountLink = await stripeClient.accountLinks.create({
-    account: account.id,
-    refresh_url: `${baseUrl}/settings/payment/stripe/refresh`,
-    return_url: `${baseUrl}/settings/payment/stripe/complete`,
-    type: "account_onboarding",
-  });
+  const accountLink = await circuitBreaker.execute("stripe", () =>
+    stripeClient.accountLinks.create({
+      account: account.id,
+      refresh_url: `${baseUrl}/settings/payment/stripe/refresh`,
+      return_url: `${baseUrl}/settings/payment/stripe/complete`,
+      type: "account_onboarding",
+    })
+  );
 
   return {
     accountId: account.id,
