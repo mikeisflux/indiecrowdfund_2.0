@@ -334,7 +334,7 @@ export async function GET(req: NextRequest) {
                   title: true,
                   projectItemId: true,
                   projectItem: {
-                    select: { id: true, title: true, sku: true, inStock: true },
+                    select: { id: true, title: true },
                   },
                 },
               },
@@ -495,10 +495,8 @@ export async function GET(req: NextRequest) {
     fulfillmentData.forEach((pledge) => {
       // Count items from reward tiers
       if (pledge.reward?.items) {
-        pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null; inStock: boolean } | null }) => {
+        pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string } | null }) => {
           const itemName = item.projectItem?.title || item.title;
-          const itemSku = item.projectItem?.sku || null;
-          const itemInStock = item.projectItem?.inStock ?? false;
           const itemKey = item.projectItemId
             ? `projectItem_${item.projectItemId}`
             : `itemTitle_${item.title}`;
@@ -506,17 +504,15 @@ export async function GET(req: NextRequest) {
           if (existingItem) {
             existingItem.count += 1;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: 1, projectItemId: item.projectItemId, sku: itemSku, inStock: itemInStock });
+            itemCounts.set(itemKey, { name: itemName, count: 1, projectItemId: item.projectItemId, sku: null, inStock: false });
           }
         });
       }
 
       // Count items from addons (with quantity multiplier)
-      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null; inStock: boolean } | null }[] } }) => {
+      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string } | null }[] } }) => {
         pledgeAddon.addon.items?.forEach((item) => {
           const itemName = item.projectItem?.title || item.title;
-          const itemSku = item.projectItem?.sku || null;
-          const itemInStock = item.projectItem?.inStock ?? false;
           const itemKey = item.projectItemId
             ? `projectItem_${item.projectItemId}`
             : `itemTitle_${item.title}`;
@@ -524,7 +520,7 @@ export async function GET(req: NextRequest) {
           if (existingItem) {
             existingItem.count += pledgeAddon.quantity;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, projectItemId: item.projectItemId, sku: itemSku, inStock: itemInStock });
+            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, projectItemId: item.projectItemId, sku: null, inStock: false });
           }
         });
       });
