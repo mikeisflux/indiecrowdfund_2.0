@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitShopifyLogger = logger.child({ module: "creator-indiekit-shopify" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 export const dynamic = "force-dynamic";
 
@@ -41,14 +42,16 @@ async function shopifyFetch<T>(
 ): Promise<T> {
   const url = `https://${shopDomain}/admin/api/2026-01/${endpoint}`;
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "X-Shopify-Access-Token": accessToken,
-      ...options.headers,
-    },
-  });
+  const response = await circuitBreaker.execute("shopify", () =>
+    fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+        ...options.headers,
+      },
+    })
+  );
 
   if (!response.ok) {
     const errorText = await response.text();

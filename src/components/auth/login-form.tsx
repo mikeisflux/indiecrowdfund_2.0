@@ -29,10 +29,24 @@ export function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
 
     const formData = new FormData(e.currentTarget);
+
+    // Client-side email validation
+    const email = formData.get("email") as string;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    const password = formData.get("password") as string;
+    if (!password) {
+      setError("Please enter your password.");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       const result = await login(formData, callbackUrl);

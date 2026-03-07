@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import crypto from "crypto";
 import { decryptCredential, encryptCredential } from "@/lib/encryption";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 export const dynamic = "force-dynamic";
 
@@ -124,17 +125,19 @@ export async function GET(req: NextRequest) {
     }
 
     // Exchange code for access token
-    const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        client_id: apiKey,
-        client_secret: apiSecret,
-        code,
-      }),
-    });
+    const tokenResponse = await circuitBreaker.execute("shopify", () =>
+      fetch(`https://${shop}/admin/oauth/access_token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_id: apiKey,
+          client_secret: apiSecret,
+          code,
+        }),
+      })
+    );
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
@@ -148,11 +151,13 @@ export async function GET(req: NextRequest) {
     const accessToken = tokenData.access_token;
 
     // Fetch shop info
-    const shopResponse = await fetch(`https://${shop}/admin/api/2026-01/shop.json`, {
-      headers: {
-        "X-Shopify-Access-Token": accessToken,
-      },
-    });
+    const shopResponse = await circuitBreaker.execute("shopify", () =>
+      fetch(`https://${shop}/admin/api/2026-01/shop.json`, {
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+        },
+      })
+    );
 
     let shopInfo = { name: shop, email: "" };
     if (shopResponse.ok) {

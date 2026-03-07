@@ -2,13 +2,13 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
+import { useUserDialog, useBanDialog, useEditUserDialog, useRoleDialog, usePasswordDialog } from "./hooks";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Users, Store, RefreshCw, Download, UserPlus, AlertTriangle, Loader2 } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
@@ -43,35 +43,22 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [retailerStatusFilter, setRetailerStatusFilter] = useState("all");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const { selectedUser, setSelectedUser, showUserDialog, setShowUserDialog, userDetailTab, setUserDetailTab } = useUserDialog();
+  const { showBanDialog, setShowBanDialog, banReason, setBanReason, banningUser, setBanningUser } = useBanDialog();
+  const { showEditUserDialog, setShowEditUserDialog, editUserData, setEditUserData, isUpdating, setIsUpdating } = useEditUserDialog();
+  const { showRoleDialog, setShowRoleDialog, selectedRole, setSelectedRole } = useRoleDialog();
+  const { showPasswordDialog, setShowPasswordDialog, newPassword, setNewPassword, confirmPassword, setConfirmPassword } = usePasswordDialog();
   const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
-  const [showUserDialog, setShowUserDialog] = useState(false);
   const [showRetailerDialog, setShowRetailerDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "request_info" | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
 
-  // Ban dialog state
-  const [showBanDialog, setShowBanDialog] = useState(false);
-  const [banReason, setBanReason] = useState("");
-  const [banningUser, setBanningUser] = useState<User | null>(null);
-
-  // User edit/action states
-  const [showEditUserDialog, setShowEditUserDialog] = useState(false);
-  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  // User edit/action states (remaining)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
-  const [editUserData, setEditUserData] = useState({ name: "", email: "" });
   const [newUserData, setNewUserData] = useState<NewUserData>({ name: "", email: "", password: "", confirmPassword: "", role: "USER", retailerAccess: false });
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-
-  // User details tabs state
-  const [userDetailTab, setUserDetailTab] = useState("overview");
   const [userPledges, setUserPledges] = useState<UserPledge[]>([]);
   const [userEmails, setUserEmails] = useState<EmailLogEntry[]>([]);
   const [loadingPledges, setLoadingPledges] = useState(false);

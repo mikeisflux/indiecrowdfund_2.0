@@ -5,6 +5,7 @@ import {
   notifyBackerPledgeConfirmed,
 } from "@/lib/notifications";
 import { logger } from "@/lib/logger";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 const paymentsDivinitycoinLogger = logger.child({ module: "payments-divinitycoin" });
 
@@ -559,25 +560,27 @@ async function notifyDivinityCoinRefundFailed(
   try {
     const config = await getDivinityCoinConfig();
 
-    const response = await fetch(`${config.baseUrl}/webhooks/refund-failed`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
-        "X-Partner-ID": config.partnerId,
-      },
-      body: JSON.stringify({
-        refundId,
-        platformUserId,
-        originalCardCode: originalCardCode ? `${originalCardCode.substring(0, 4)}****` : null,
-        originalTransactionId,
-        requestedAmount,
-        availableBalance,
-        shortfall: requestedAmount - availableBalance,
-        timestamp: new Date().toISOString(),
-        platform: "indiecrowdfund",
-      }),
-    });
+    const response = await circuitBreaker.execute("divinitycoin", () =>
+      fetch(`${config.baseUrl}/webhooks/refund-failed`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.apiKey}`,
+          "X-Partner-ID": config.partnerId,
+        },
+        body: JSON.stringify({
+          refundId,
+          platformUserId,
+          originalCardCode: originalCardCode ? `${originalCardCode.substring(0, 4)}****` : null,
+          originalTransactionId,
+          requestedAmount,
+          availableBalance,
+          shortfall: requestedAmount - availableBalance,
+          timestamp: new Date().toISOString(),
+          platform: "indiecrowdfund",
+        }),
+      })
+    );
 
     if (!response.ok) {
       paymentsDivinitycoinLogger.warn(`[DivinityCoin] Failed to notify about refund failure. ` +
@@ -1131,15 +1134,17 @@ export async function callDivinityCoinAPI(
   try {
     const config = await getDivinityCoinConfig();
 
-    const response = await fetch(`${config.baseUrl}?action=${action}`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${config.apiKey}`,
-        "Content-Type": "application/json",
-        "X-Partner-ID": config.partnerId,
-      },
-      body: JSON.stringify(payload),
-    });
+    const response = await circuitBreaker.execute("divinitycoin", () =>
+      fetch(`${config.baseUrl}?action=${action}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${config.apiKey}`,
+          "Content-Type": "application/json",
+          "X-Partner-ID": config.partnerId,
+        },
+        body: JSON.stringify(payload),
+      })
+    );
 
     const result = await response.json();
 

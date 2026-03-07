@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { decryptCredential } from "@/lib/encryption";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 import { logger } from "@/lib/logger";
 
@@ -42,17 +43,19 @@ async function findSkuInShopify(
   `;
 
   try {
-    const response = await fetch(`https://${shopDomain}/admin/api/2026-01/graphql.json`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": accessToken,
-      },
-      body: JSON.stringify({
-        query,
-        variables: { query: `sku:${sku}` },
-      }),
-    });
+    const response = await circuitBreaker.execute("shopify", () =>
+      fetch(`https://${shopDomain}/admin/api/2026-01/graphql.json`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": accessToken,
+        },
+        body: JSON.stringify({
+          query,
+          variables: { query: `sku:${sku}` },
+        }),
+      })
+    );
 
     if (!response.ok) {
       const errorText = await response.text();

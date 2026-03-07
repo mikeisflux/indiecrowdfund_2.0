@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
 const adminUsersLogger = logger.child({ module: "admin-users" });
 import { auth, BCRYPT_COST } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { auditLog } from "@/lib/audit";
@@ -33,6 +35,7 @@ async function requireAdmin() {
 
 // GET - Get users list
 export async function GET(req: NextRequest) {
+  return withCorrelation(req, async (correlationId) => {
   try {
     const authResult = await requireAdmin();
     if ('error' in authResult) {
@@ -57,7 +60,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause (always exclude deleted users)
-    const where: Record<string, unknown> = {
+    const where: Prisma.UserWhereInput = {
       deletedAt: null,
     };
 
@@ -142,18 +145,22 @@ export async function GET(req: NextRequest) {
         admins: roleCounts[2],
         superAdmins: roleCounts[3]
       }
+    }, {
+      headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminUsersLogger.error({ err: String(error) }, "Error fetching users:");
+    adminUsersLogger.error({ correlationId, err: String(error) }, "Error fetching users:");
     return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
+      { error: "Failed to fetch users", correlationId },
+      { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
     );
   }
+  });
 }
 
 // PATCH - Update user
 export async function PATCH(req: NextRequest) {
+  return withCorrelation(req, async (correlationId) => {
   try {
     const authResult = await requireAdmin();
     if ('error' in authResult) {
@@ -314,10 +321,10 @@ export async function PATCH(req: NextRequest) {
             message: `Password reset email sent to ${user.email}`,
           });
         } catch (error) {
-          adminUsersLogger.error({ err: String(error) }, "Error sending reset email:");
+          adminUsersLogger.error({ correlationId, err: String(error) }, "Error sending reset email:");
           return NextResponse.json(
-            { error: "Failed to send reset email" },
-            { status: 500 }
+            { error: "Failed to send reset email", correlationId },
+            { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
           );
         }
 
@@ -400,7 +407,7 @@ export async function PATCH(req: NextRequest) {
               },
             });
           } catch (ipError) {
-            adminUsersLogger.error({ err: String(ipError) }, "Error adding IP to blocklist:");
+            adminUsersLogger.error({ correlationId, err: String(ipError) }, "Error adding IP to blocklist:");
             // Continue with user ban even if IP block fails
           }
         }
@@ -411,7 +418,7 @@ export async function PATCH(req: NextRequest) {
             where: { userId: userId },
           });
         } catch (sessionError) {
-          adminUsersLogger.error({ err: String(sessionError) }, "Error deleting user sessions:");
+          adminUsersLogger.error({ correlationId, err: String(sessionError) }, "Error deleting user sessions:");
         }
         break;
 
@@ -434,7 +441,7 @@ export async function PATCH(req: NextRequest) {
               where: { ipAddress: user.lastKnownIP },
             });
           } catch (ipError) {
-            adminUsersLogger.error({ err: String(ipError) }, "Error removing IP from blocklist:");
+            adminUsersLogger.error({ correlationId, err: String(ipError) }, "Error removing IP from blocklist:");
           }
         }
         break;
@@ -487,18 +494,22 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       success: true,
       user: updatedUser
+    }, {
+      headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminUsersLogger.error({ err: String(error) }, "Error updating user:");
+    adminUsersLogger.error({ correlationId, err: String(error) }, "Error updating user:");
     return NextResponse.json(
-      { error: "Failed to update user" },
-      { status: 500 }
+      { error: "Failed to update user", correlationId },
+      { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
     );
   }
+  });
 }
 
 // POST - Create new user
 export async function POST(req: NextRequest) {
+  return withCorrelation(req, async (correlationId) => {
   try {
     const authResult = await requireAdmin();
     if ('error' in authResult) {
@@ -575,18 +586,22 @@ export async function POST(req: NextRequest) {
       success: true,
       user: newUser,
       message: "User created successfully"
+    }, {
+      headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminUsersLogger.error({ err: String(error) }, "Error creating user:");
+    adminUsersLogger.error({ correlationId, err: String(error) }, "Error creating user:");
     return NextResponse.json(
-      { error: "Failed to create user" },
-      { status: 500 }
+      { error: "Failed to create user", correlationId },
+      { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
     );
   }
+  });
 }
 
 // DELETE - Delete user and ALL associated data
 export async function DELETE(req: NextRequest) {
+  return withCorrelation(req, async (correlationId) => {
   try {
     const authResult = await requireAdmin();
     if ('error' in authResult) {
@@ -979,12 +994,15 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `User and all associated data deleted successfully (${projectIds.length} project(s), ${bookIds.length} marketplace book(s))`
+    }, {
+      headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminUsersLogger.error({ err: String(error) }, "Error deleting user:");
+    adminUsersLogger.error({ correlationId, err: String(error) }, "Error deleting user:");
     return NextResponse.json(
-      { error: "Failed to delete user. Please check server logs for details." },
-      { status: 500 }
+      { error: "Failed to delete user. Please check server logs for details.", correlationId },
+      { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
     );
   }
+  });
 }

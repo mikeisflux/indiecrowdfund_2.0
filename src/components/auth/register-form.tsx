@@ -8,12 +8,83 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Loader2, Check, X as XIcon } from "lucide-react";
 import { Recaptcha } from "./recaptcha";
+
+interface PasswordRequirement {
+  label: string;
+  met: boolean;
+}
+
+function PasswordStrengthIndicator({ password }: { password: string }) {
+  const requirements: PasswordRequirement[] = [
+    { label: "At least 8 characters", met: password.length >= 8 },
+    { label: "At least one uppercase letter", met: /[A-Z]/.test(password) },
+    { label: "At least one number", met: /[0-9]/.test(password) },
+  ];
+
+  const metCount = requirements.filter((r) => r.met).length;
+  const strengthPercent = (metCount / requirements.length) * 100;
+
+  if (!password) return null;
+
+  return (
+    <div className="space-y-2 mt-2">
+      <div className="flex gap-1">
+        {requirements.map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "h-1.5 flex-1 rounded-full transition-colors",
+              i < metCount
+                ? metCount === requirements.length
+                  ? "bg-green-500"
+                  : metCount >= 2
+                    ? "bg-yellow-500"
+                    : "bg-red-500"
+                : "bg-muted"
+            )}
+          />
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Password strength:{" "}
+        <span
+          className={cn(
+            "font-medium",
+            strengthPercent === 100
+              ? "text-green-600 dark:text-green-400"
+              : strengthPercent >= 67
+                ? "text-yellow-600 dark:text-yellow-400"
+                : "text-red-600 dark:text-red-400"
+          )}
+        >
+          {strengthPercent === 100 ? "Strong" : strengthPercent >= 67 ? "Medium" : "Weak"}
+        </span>
+      </p>
+      <ul className="space-y-1">
+        {requirements.map((req, i) => (
+          <li key={i} className="flex items-center gap-1.5 text-xs">
+            {req.met ? (
+              <Check className="h-3 w-3 text-green-500 shrink-0" />
+            ) : (
+              <XIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+            )}
+            <span className={req.met ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+              {req.label}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [password, setPassword] = useState("");
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [recaptchaSiteKey, setRecaptchaSiteKey] = useState<string | null>(null);
   const [isRecaptchaEnabled, setIsRecaptchaEnabled] = useState(false);
@@ -69,6 +140,29 @@ export function RegisterForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    // Client-side email validation
+    const formData = new FormData(e.currentTarget);
+    const emailValue = formData.get("email") as string;
+    if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    // Client-side password strength validation
+    const passwordValue = formData.get("password") as string;
+    if (!passwordValue || passwordValue.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (!/[A-Z]/.test(passwordValue)) {
+      setError("Password must contain at least one uppercase letter.");
+      return;
+    }
+    if (!/[0-9]/.test(passwordValue)) {
+      setError("Password must contain at least one number.");
+      return;
+    }
+
     // Check reCAPTCHA if enabled (but allow if reCAPTCHA failed to load - honeypot will protect)
     if (isRecaptchaEnabled && !recaptchaToken && !recaptchaFailed) {
       setError("Please complete the CAPTCHA");
@@ -77,8 +171,6 @@ export function RegisterForm() {
 
     setIsLoading(true);
     setError(null);
-
-    const formData = new FormData(e.currentTarget);
 
     // Add reCAPTCHA token if available
     if (recaptchaToken) {
@@ -161,7 +253,10 @@ export function RegisterForm() {
             required
             minLength={8}
             disabled={isLoading}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
+          <PasswordStrengthIndicator password={password} />
         </div>
 
         {/* Honeypot field - hidden from users, bots will fill it */}

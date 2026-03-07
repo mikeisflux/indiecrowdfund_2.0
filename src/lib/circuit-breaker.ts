@@ -47,6 +47,12 @@ const SERVICE_CONFIGS: Record<string, Partial<CircuitConfig>> = {
   sendgrid: { failureThreshold: 3, cooldownMs: 60_000 },
   mailgun: { failureThreshold: 3, cooldownMs: 60_000 },
   r2: { failureThreshold: 5, cooldownMs: 15_000 },
+  shipstation: { failureThreshold: 5, cooldownMs: 30_000 },
+  easypost: { failureThreshold: 5, cooldownMs: 30_000 },
+  shippo: { failureThreshold: 5, cooldownMs: 30_000 },
+  shopify: { failureThreshold: 5, cooldownMs: 30_000 },
+  divinitycoin: { failureThreshold: 5, cooldownMs: 30_000 },
+  "ip-geo": { failureThreshold: 10, cooldownMs: 60_000 },
 };
 
 class CircuitBreaker {

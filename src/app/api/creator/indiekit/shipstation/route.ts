@@ -3,12 +3,11 @@ import { logger } from "@/lib/logger";
 
 const creatorIndiekitShipstationLogger = logger.child({ module: "creator-indiekit-shipstation" });
 import type { NextRequest } from "next/server";
-import { logger } from "@/lib/logger";
 
-const creatorIndiekitShipstationLogger = logger.child({ module: "creator-indiekit-shipstation" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 const actionSchema = z.object({
   projectId: z.string(),
@@ -179,14 +178,16 @@ export async function POST(req: NextRequest) {
               internalNotes: `IndieKit pledge from ${project.title}`,
             };
 
-            const response = await fetch("https://ssapi.shipstation.com/orders/createorder", {
-              method: "POST",
-              headers: {
-                "Authorization": authHeader,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(orderData),
-            });
+            const response = await circuitBreaker.execute("shipstation", () =>
+              fetch("https://ssapi.shipstation.com/orders/createorder", {
+                method: "POST",
+                headers: {
+                  "Authorization": authHeader,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(orderData),
+              })
+            );
 
             if (response.ok) {
               const result = await response.json();
@@ -228,11 +229,13 @@ export async function POST(req: NextRequest) {
         const updated = [];
         for (const pledge of pledgesWithOrders) {
           try {
-            const response = await fetch(
-              `https://ssapi.shipstation.com/orders/${pledge.externalOrderId}`,
-              {
-                headers: { Authorization: authHeader },
-              }
+            const response = await circuitBreaker.execute("shipstation", () =>
+              fetch(
+                `https://ssapi.shipstation.com/orders/${pledge.externalOrderId}`,
+                {
+                  headers: { Authorization: authHeader },
+                }
+              )
             );
 
             if (response.ok) {

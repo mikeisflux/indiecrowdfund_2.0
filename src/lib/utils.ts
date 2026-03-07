@@ -175,3 +175,29 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }
+
+/**
+ * Parse pagination parameters from URL search params with safe defaults.
+ * Clamps page to >= 1 and limit to [1, maxLimit].
+ */
+export function parsePagination(
+  searchParams: URLSearchParams,
+  defaults: { page?: number; limit?: number; maxLimit?: number } = {}
+): { page: number; limit: number; skip: number } {
+  const { page: defaultPage = 1, limit: defaultLimit = 20, maxLimit = 100 } = defaults;
+  const page = Math.max(1, parseInt(searchParams.get("page") || String(defaultPage)) || defaultPage);
+  const limit = Math.min(maxLimit, Math.max(1, parseInt(searchParams.get("limit") || String(defaultLimit)) || defaultLimit));
+  return { page, limit, skip: (page - 1) * limit };
+}
+
+/**
+ * Build a standard pagination response object.
+ */
+export function paginationMeta(page: number, limit: number, total: number) {
+  return {
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+  };
+}

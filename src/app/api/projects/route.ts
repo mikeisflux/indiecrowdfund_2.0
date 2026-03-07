@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
 const projectsLogger = logger.child({ module: "projects" });
 import { auth } from "@/lib/auth";
@@ -27,6 +28,7 @@ const createProjectSchema = z.object({
 
 // GET /api/projects - List projects
 export async function GET(req: NextRequest) {
+  return withCorrelation(req, async (correlationId) => {
   try {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
@@ -213,18 +215,22 @@ export async function GET(req: NextRequest) {
         offset,
         hasMore: offset + limit < total,
       },
+    }, {
+      headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    projectsLogger.error({ err: String(error) }, "Failed to fetch projects:");
+    projectsLogger.error({ correlationId, err: String(error) }, "Failed to fetch projects:");
     return NextResponse.json(
-      { error: "Failed to fetch projects" },
-      { status: 500 }
+      { error: "Failed to fetch projects", correlationId },
+      { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
     );
   }
+  });
 }
 
 // POST /api/projects - Create a new project
 export async function POST(req: NextRequest) {
+  return withCorrelation(req, async (correlationId) => {
   try {
     const session = await auth();
 
@@ -312,17 +318,24 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ project }, { status: 201 });
+    return NextResponse.json({ project }, {
+      status: 201,
+      headers: { [CORRELATION_HEADER]: correlationId },
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
-      return NextResponse.json({ error: errorMessage }, { status: 400 });
+      return NextResponse.json({ error: errorMessage, correlationId }, {
+        status: 400,
+        headers: { [CORRELATION_HEADER]: correlationId },
+      });
     }
 
-    projectsLogger.error({ err: String(error) }, "Failed to create project:");
+    projectsLogger.error({ correlationId, err: String(error) }, "Failed to create project:");
     return NextResponse.json(
-      { error: "Failed to create project" },
-      { status: 500 }
+      { error: "Failed to create project", correlationId },
+      { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
     );
   }
+  });
 }

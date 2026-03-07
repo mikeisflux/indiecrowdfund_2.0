@@ -9,6 +9,7 @@ const creatorIndiekitEasypostLogger = logger.child({ module: "creator-indiekit-e
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 const actionSchema = z.object({
   projectId: z.string(),
@@ -140,11 +141,13 @@ export async function POST(req: NextRequest) {
               },
             };
 
-            const response = await fetch("https://api.easypost.com/v2/addresses", {
-              method: "POST",
-              headers: easypostHeaders,
-              body: JSON.stringify(addressData),
-            });
+            const response = await circuitBreaker.execute("easypost", () =>
+              fetch("https://api.easypost.com/v2/addresses", {
+                method: "POST",
+                headers: easypostHeaders,
+                body: JSON.stringify(addressData),
+              })
+            );
 
             if (response.ok) {
               const result = await response.json();
@@ -187,9 +190,11 @@ export async function POST(req: NextRequest) {
         for (const pledge of pledgesWithOrders) {
           try {
             // Get tracker for this tracking number
-            const response = await fetch(
-              `https://api.easypost.com/v2/trackers?tracking_code=${pledge.trackingNumber}`,
-              { headers: easypostHeaders }
+            const response = await circuitBreaker.execute("easypost", () =>
+              fetch(
+                `https://api.easypost.com/v2/trackers?tracking_code=${pledge.trackingNumber}`,
+                { headers: easypostHeaders }
+              )
             );
 
             if (response.ok) {

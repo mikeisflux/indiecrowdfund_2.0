@@ -74,15 +74,19 @@ export function ImageUpload({
 
   const processFile = useCallback(
     async (file: File) => {
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file");
+      // Validate file type against accepted types
+      const acceptedTypes = accept.split(",").map((t) => t.trim());
+      if (!file.type || !acceptedTypes.includes(file.type)) {
+        const friendlyTypes = acceptedTypes
+          .map((t) => t.replace("image/", "").toUpperCase())
+          .join(", ");
+        toast.error(`Invalid file type. Accepted types: ${friendlyTypes}`);
         return;
       }
 
       // Validate file size
       if (file.size > maxSizeBytes) {
-        toast.error(`File size must be less than ${maxSizeMB}MB`);
+        toast.error(`File size must be less than ${maxSizeMB}MB. Your file is ${(file.size / (1024 * 1024)).toFixed(1)}MB.`);
         return;
       }
 
@@ -100,7 +104,7 @@ export function ImageUpload({
         setIsLoading(false);
       }
     },
-    [maxSizeBytes, maxSizeMB, onChange, uploadToServer]
+    [accept, maxSizeBytes, maxSizeMB, onChange, uploadToServer]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -213,7 +217,7 @@ export function ImageUpload({
               Recommended: {recommendedSize}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Max size: {maxSizeMB}MB (JPG, PNG, GIF, WEBP)
+              Max size: {maxSizeMB}MB ({accept.split(",").map((t) => t.trim().replace("image/", "").toUpperCase()).join(", ")})
             </p>
           </>
         )}

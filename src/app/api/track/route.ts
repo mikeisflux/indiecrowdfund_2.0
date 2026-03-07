@@ -5,6 +5,7 @@ const trackLogger = logger.child({ module: "track" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 // Simple in-memory cache to avoid hitting IP-API rate limits (45 req/min)
 const geoCache = new Map<string, { country: string; timestamp: number }>();
@@ -20,9 +21,11 @@ async function lookupCountryFromIP(ip: string): Promise<string | null> {
   }
 
   try {
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
-      signal: AbortSignal.timeout(2000),
-    });
+    const response = await circuitBreaker.execute("ip-geo", () =>
+      fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
+        signal: AbortSignal.timeout(2000),
+      })
+    );
 
     if (response.ok) {
       const data = await response.json();

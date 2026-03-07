@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
 const creatorIndiekitLogger = logger.child({ module: "creator-indiekit" });
 import { auth } from "@/lib/auth";
@@ -9,6 +10,7 @@ import { formatFileSize } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  return withCorrelation(req, async (correlationId) => {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -20,6 +22,13 @@ export async function GET(req: NextRequest) {
     const backersPage = parseInt(searchParams.get("backersPage") || "1", 10);
     const backersLimit = Math.min(parseInt(searchParams.get("backersLimit") || "50", 10), 200);
     const backersOffset = (backersPage - 1) * backersLimit;
+    // Field selection: comma-separated list of sections to include
+    // e.g. ?fields=backers,stats,emails — if omitted, all sections are returned
+    const fieldsParam = searchParams.get("fields");
+    const requestedFields = fieldsParam
+      ? new Set(fieldsParam.split(",").map((f) => f.trim()))
+      : null; // null = return all
+    const shouldInclude = (field: string) => !requestedFields || requestedFields.has(field);
 
     // Get user role and check if they have at least one approved prelaunch page or campaign
     const user = await db.user.findUnique({
@@ -115,6 +124,8 @@ export async function GET(req: NextRequest) {
         distributionRules: [],
         emailCampaigns: [],
         workflowState: null,
+      }, {
+        headers: { [CORRELATION_HEADER]: correlationId },
       });
     }
 
@@ -173,6 +184,7 @@ export async function GET(req: NextRequest) {
       .filter(p => p.amount > 0);
 
     // Fetch all IndieKit data in parallel
+    // Each section is conditionally loaded based on ?fields= parameter
     const [
       pledges,
       totalBackersCount,
@@ -190,7 +202,7 @@ export async function GET(req: NextRequest) {
       projectAddons,
     ] = await Promise.all([
       // Get paginated COMPLETED pledges for the project with user info
-      db.pledge.findMany({
+      shouldInclude("backers") || shouldInclude("stats") ? db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
           status: "COMPLETED",
@@ -235,18 +247,18 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         skip: backersOffset,
         take: backersLimit,
-      }),
+      }) : Promise.resolve([]),
 
       // Count total backers for pagination metadata
-      db.pledge.count({
+      shouldInclude("backers") ? db.pledge.count({
         where: {
           projectId: selectedProjectId,
           status: "COMPLETED",
         },
-      }),
+      }) : Promise.resolve(0),
 
       // Get survey for this project
-      db.survey.findUnique({
+      shouldInclude("survey") || shouldInclude("stats") ? db.survey.findUnique({
         where: { projectId: selectedProjectId },
         include: {
           itemQuestions: {
@@ -257,10 +269,10 @@ export async function GET(req: NextRequest) {
           },
           backerQuestions: true,
         },
-      }),
+      }) : Promise.resolve(null),
 
       // Get survey responses
-      db.surveyResponse.findMany({
+      shouldInclude("survey") || shouldInclude("stats") || shouldInclude("backers") ? db.surveyResponse.findMany({
         where: {
           survey: {
             projectId: selectedProjectId,
@@ -269,10 +281,10 @@ export async function GET(req: NextRequest) {
         include: {
           survey: true,
         },
-      }),
+      }) : Promise.resolve([]),
 
       // Calculate add-on sales total and counts
-      db.pledgeAddon.aggregate({
+      shouldInclude("stats") ? db.pledgeAddon.aggregate({
         where: {
           pledge: {
             projectId: selectedProjectId,
@@ -281,38 +293,38 @@ export async function GET(req: NextRequest) {
         },
         _sum: { amount: true, quantity: true },
         _count: true,
-      }),
+      }) : Promise.resolve({ _sum: { amount: null, quantity: null }, _count: 0 }),
 
       // Get segments for this project
-      db.backerSegment.findMany({
+      shouldInclude("segments") ? db.backerSegment.findMany({
         where: { projectId: selectedProjectId },
         orderBy: { createdAt: "desc" },
-      }),
+      }) : Promise.resolve([]),
 
       // Get products for this project
-      db.fulfillmentProduct.findMany({
+      shouldInclude("products") ? db.fulfillmentProduct.findMany({
         where: { projectId: selectedProjectId },
         orderBy: { createdAt: "desc" },
-      }),
+      }) : Promise.resolve([]),
 
       // Get recent activity
-      db.fulfillmentActivity.findMany({
+      shouldInclude("timeline") ? db.fulfillmentActivity.findMany({
         where: { projectId: selectedProjectId },
         orderBy: { createdAt: "desc" },
         take: 50,
-      }),
+      }) : Promise.resolve([]),
 
       // Get digital files
-      db.digitalFile.findMany({
+      shouldInclude("digital_files") ? db.digitalFile.findMany({
         where: { projectId: selectedProjectId },
         include: {
           distributions: true,
         },
         orderBy: { createdAt: "desc" },
-      }),
+      }) : Promise.resolve([]),
 
       // Get distribution rules (wrapped in catch to handle missing table before migration)
-      db.distributionRule.findMany({
+      shouldInclude("distribution_rules") ? db.distributionRule.findMany({
         where: { projectId: selectedProjectId },
         include: {
           digitalFile: {
@@ -320,10 +332,10 @@ export async function GET(req: NextRequest) {
           },
         },
         orderBy: { createdAt: "desc" },
-      }).catch(() => []),
+      }).catch(() => []) : Promise.resolve([]),
 
       // Get email campaigns - either created by this user OR associated with the selected project
-      db.emailCampaign.findMany({
+      shouldInclude("emails") || shouldInclude("timeline") ? db.emailCampaign.findMany({
         where: {
           OR: [
             { createdBy: session.user.id },
@@ -337,25 +349,25 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: "desc" },
         take: 50,
-      }),
+      }) : Promise.resolve([]),
 
       // Get email list member count for this creator (using EmailListSubscriber table)
-      db.emailListSubscriber.count({
+      shouldInclude("emails") ? db.emailListSubscriber.count({
         where: {
           creatorId: session.user.id,
           status: "subscribed",
         },
-      }),
+      }) : Promise.resolve(0),
 
       // Get rewards for this project (type: TIER)
-      db.reward.findMany({
+      shouldInclude("rewards") || shouldInclude("backers") ? db.reward.findMany({
         where: { projectId: selectedProjectId, type: "TIER" },
         select: { id: true, title: true, amount: true },
         orderBy: { amount: "asc" },
-      }),
+      }) : Promise.resolve([]),
 
       // Get addons for this project (type: ADDON) - include all for admin view
-      db.reward.findMany({
+      shouldInclude("addons") || shouldInclude("backers") ? db.reward.findMany({
         where: { projectId: selectedProjectId, type: "ADDON" },
         select: {
           id: true,
@@ -370,7 +382,7 @@ export async function GET(req: NextRequest) {
           showInSurvey: true,
         },
         orderBy: { amount: "asc" },
-      }),
+      }) : Promise.resolve([]),
     ]);
 
     // Build survey response map for quick lookup
@@ -1008,14 +1020,17 @@ export async function GET(req: NextRequest) {
         quantityLimit: a.quantityAvailable || undefined,
         purchasedCount: a.quantityClaimed || 0,
       })),
+    }, {
+      headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    creatorIndiekitLogger.error({ err: String(error) }, "IndieKit API error:");
+    creatorIndiekitLogger.error({ correlationId, err: String(error) }, "IndieKit API error:");
     return NextResponse.json(
-      { error: "Failed to fetch IndieKit data" },
-      { status: 500 }
+      { error: "Failed to fetch IndieKit data", correlationId },
+      { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
     );
   }
+  });
 }
 
 // Helper to determine workflow state

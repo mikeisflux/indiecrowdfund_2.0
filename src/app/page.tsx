@@ -36,6 +36,27 @@ export const metadata: Metadata = {
   alternates: {
     canonical: SITE_URL,
   },
+  openGraph: {
+    title: "IndieCrowdfund - The #1 Kickstarter Alternative | Crowdfunding for Creators",
+    description:
+      "The crowdfunding platform built for independent creators. Lower fees, better tools, and a passionate backer community. Launch your campaign today.",
+    url: SITE_URL,
+    images: [
+      {
+        url: "/og-default.png",
+        width: 1200,
+        height: 630,
+        alt: "IndieCrowdfund - Crowdfunding for Independent Creators",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "IndieCrowdfund - The #1 Kickstarter Alternative",
+    description:
+      "The crowdfunding platform built for independent creators. Lower fees, better tools, and a passionate backer community.",
+    images: ["/og-default.png"],
+  },
 };
 
 // Revalidate homepage every 60 seconds.

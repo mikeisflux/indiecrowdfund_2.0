@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
 const adminProjectsReviewLogger = logger.child({ module: "admin-projects-review" });
 import { auth } from "@/lib/auth";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 // POST - Submit a project review (approve, reject, request changes)
 export async function POST(req: NextRequest) {
+  return withCorrelation(req, async (correlationId) => {
   try {
     const session = await auth();
 
@@ -255,14 +257,17 @@ export async function POST(req: NextRequest) {
       success: true,
       project: updatedProject,
       review,
+    }, {
+      headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminProjectsReviewLogger.error({ err: String(error) }, "Error reviewing project:");
+    adminProjectsReviewLogger.error({ correlationId, err: String(error) }, "Error reviewing project:");
     return NextResponse.json(
-      { error: "Failed to review project" },
-      { status: 500 }
+      { error: "Failed to review project", correlationId },
+      { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
     );
   }
+  });
 }
 
 // GET - Get pending projects for review

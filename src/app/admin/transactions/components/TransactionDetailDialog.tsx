@@ -408,8 +408,7 @@ export function TransactionDetailDialog({
                   {transactionDetail.addons && transactionDetail.addons.length > 0 && (
                     <div className="mt-3 border-t pt-3">
                       <p className="text-sm font-medium mb-2">Add-ons:</p>
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      {transactionDetail.addons.map((addon: any) => (
+                      {transactionDetail.addons.map((addon: { id: string; addon: { title: string }; quantity: number; amount: number }) => (
                         <div key={addon.id} className="flex justify-between text-sm">
                           <span>{addon.addon.title} x{addon.quantity}</span>
                           <span>{formatCurrency(addon.amount)}</span>
@@ -429,8 +428,7 @@ export function TransactionDetailDialog({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {transactionDetail.timeline.map((event: any, idx: number) => (
+                    {transactionDetail.timeline.map((event: { event: string; detail?: string; date: string }, idx: number) => (
                       <div key={idx} className="flex gap-3 text-sm">
                         <div className="flex-shrink-0 w-2 h-2 rounded-full bg-emerald-500 mt-1.5" />
                         <div>

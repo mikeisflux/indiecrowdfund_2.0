@@ -5,6 +5,7 @@ import formData from "form-data";
 import crypto from "crypto";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 const emailLogger = logger.child({ module: "email" });
 
@@ -289,18 +290,20 @@ async function sendViaSendGrid(
       headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
     }
 
-    const response = await sgMail.send({
-      to,
-      from: {
-        email: fromEmail,
-        name: fromName,
-      },
-      replyTo: replyTo || fromEmail,
-      subject,
-      html,
-      text,
-      headers: Object.keys(headers).length > 0 ? headers : undefined,
-    });
+    const response = await circuitBreaker.execute("sendgrid", () =>
+      sgMail.send({
+        to,
+        from: {
+          email: fromEmail,
+          name: fromName,
+        },
+        replyTo: replyTo || fromEmail,
+        subject,
+        html,
+        text,
+        headers: Object.keys(headers).length > 0 ? headers : undefined,
+      })
+    );
 
     emailLogger.info({ data: response[0]?.statusCode }, "Email sent via SendGrid, status:");
     return { success: true };
@@ -361,7 +364,9 @@ async function sendViaMailgun(
       }));
     }
 
-    const response = await mg.messages.create(domain, messageData);
+    const response = await circuitBreaker.execute("mailgun", () =>
+      mg.messages.create(domain, messageData)
+    );
 
     emailLogger.info({ data: response.id }, "Email sent via Mailgun, id:");
     return { success: true };

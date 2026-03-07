@@ -9,6 +9,7 @@ const creatorIndiekitShippoLogger = logger.child({ module: "creator-indiekit-shi
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { circuitBreaker } from "@/lib/circuit-breaker";
 
 const actionSchema = z.object({
   projectId: z.string(),
@@ -167,11 +168,13 @@ export async function POST(req: NextRequest) {
               notes: `IndieKit pledge from ${project.title}`,
             };
 
-            const response = await fetch("https://api.goshippo.com/orders/", {
-              method: "POST",
-              headers: shippoHeaders,
-              body: JSON.stringify(orderData),
-            });
+            const response = await circuitBreaker.execute("shippo", () =>
+              fetch("https://api.goshippo.com/orders/", {
+                method: "POST",
+                headers: shippoHeaders,
+                body: JSON.stringify(orderData),
+              })
+            );
 
             if (response.ok) {
               const result = await response.json();
@@ -214,9 +217,11 @@ export async function POST(req: NextRequest) {
         for (const pledge of pledgesWithOrders) {
           try {
             // Get transactions (shipments) for this order
-            const response = await fetch(
-              `https://api.goshippo.com/orders/${pledge.externalOrderId}/`,
-              { headers: shippoHeaders }
+            const response = await circuitBreaker.execute("shippo", () =>
+              fetch(
+                `https://api.goshippo.com/orders/${pledge.externalOrderId}/`,
+                { headers: shippoHeaders }
+              )
             );
 
             if (response.ok) {
@@ -224,9 +229,11 @@ export async function POST(req: NextRequest) {
               if (order.transactions && order.transactions.length > 0) {
                 // Get first transaction's tracking info
                 const transactionId = order.transactions[0];
-                const txResponse = await fetch(
-                  `https://api.goshippo.com/transactions/${transactionId}/`,
-                  { headers: shippoHeaders }
+                const txResponse = await circuitBreaker.execute("shippo", () =>
+                  fetch(
+                    `https://api.goshippo.com/transactions/${transactionId}/`,
+                    { headers: shippoHeaders }
+                  )
                 );
 
                 if (txResponse.ok) {
