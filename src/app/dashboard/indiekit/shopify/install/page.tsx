@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import crypto from "crypto";
+import { decryptCredential } from "@/lib/encryption";
 
 // Required Shopify scopes for IndieKit fulfillment
 const SHOPIFY_SCOPES = [
@@ -103,7 +104,14 @@ export default async function ShopifyInstallPage({ searchParams }: PageProps) {
   const redirectUri = `${appUrl}/api/creator/indiekit/shopify/oauth/callback`;
 
   const authUrl = new URL(`https://${shopHost}/admin/oauth/authorize`);
-  authUrl.searchParams.set("client_id", user.shopifyApiKey);
+  // Decrypt API key (backwards compatible with legacy unencrypted values)
+  let apiKey: string;
+  try {
+    apiKey = decryptCredential(user.shopifyApiKey);
+  } catch {
+    apiKey = user.shopifyApiKey;
+  }
+  authUrl.searchParams.set("client_id", apiKey);
   authUrl.searchParams.set("scope", SHOPIFY_SCOPES);
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", state);

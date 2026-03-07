@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { decryptCredential } from "@/lib/encryption";
 
 export const dynamic = "force-dynamic";
 
@@ -278,13 +279,21 @@ export async function POST(req: NextRequest) {
 
     // Get PROJECT CREATOR's Shopify credentials for validation
     // Collaborators use the creator's connection, not their own
-    const creator = await db.user.findUnique({
+    const creatorRaw = await db.user.findUnique({
       where: { id: project.creatorId },
       select: {
         shopifyAccessToken: true,
         shopifyShopDomain: true,
       },
     });
+
+    // Decrypt access token (backwards compatible with legacy unencrypted values)
+    const creator = creatorRaw ? {
+      ...creatorRaw,
+      shopifyAccessToken: creatorRaw.shopifyAccessToken ? (() => {
+        try { return decryptCredential(creatorRaw.shopifyAccessToken); } catch { return creatorRaw.shopifyAccessToken; }
+      })() : null,
+    } : null;
 
     // CREATE or UPDATE mapping
     if (action === "save" || action === "create" || action === "update") {

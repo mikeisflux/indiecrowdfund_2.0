@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import crypto from "crypto";
+import { decryptCredential } from "@/lib/encryption";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,14 @@ export async function GET(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Decrypt credentials (with backwards compatibility for unencrypted values)
+    let apiKey: string;
+    try {
+      apiKey = decryptCredential(user.shopifyApiKey);
+    } catch {
+      apiKey = user.shopifyApiKey; // Legacy unencrypted value
+    }
+
     // Clean up shop domain - handle various input formats
     let cleanShop = shopDomain
       .toLowerCase()
@@ -91,7 +100,7 @@ export async function GET(req: NextRequest) {
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/creator/indiekit/shopify/oauth/callback`;
 
     const authUrl = new URL(`https://${shopHost}/admin/oauth/authorize`);
-    authUrl.searchParams.set("client_id", user.shopifyApiKey);
+    authUrl.searchParams.set("client_id", apiKey);
     authUrl.searchParams.set("scope", SHOPIFY_SCOPES);
     authUrl.searchParams.set("redirect_uri", redirectUri);
     authUrl.searchParams.set("state", state);

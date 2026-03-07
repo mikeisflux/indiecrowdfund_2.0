@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import crypto from "crypto";
 import { pushOrdersToShopify } from "@/lib/shopify-push";
+import { decryptCredential } from "@/lib/encryption";
 
 export const dynamic = "force-dynamic";
 
@@ -215,6 +216,13 @@ export async function POST(req: NextRequest) {
           const creator = projectWithCreator?.creator;
           console.log("[push_to_fulfillment] Creator has Shopify credentials:", !!creator?.shopifyAccessToken, !!creator?.shopifyShopDomain);
           if (creator?.shopifyAccessToken && creator?.shopifyShopDomain) {
+            // Decrypt access token (backwards compatible with legacy unencrypted values)
+            let decryptedToken: string;
+            try {
+              decryptedToken = decryptCredential(creator.shopifyAccessToken);
+            } catch {
+              decryptedToken = creator.shopifyAccessToken;
+            }
             // Auto-create FulfillmentIntegration for this project using creator's credentials
             const integration = await db.fulfillmentIntegration.upsert({
               where: {
@@ -229,14 +237,14 @@ export async function POST(req: NextRequest) {
                 status: "CONNECTED",
                 credentials: {
                   shopDomain: creator.shopifyShopDomain,
-                  accessToken: creator.shopifyAccessToken,
+                  accessToken: decryptedToken,
                 },
               },
               update: {
                 status: "CONNECTED",
                 credentials: {
                   shopDomain: creator.shopifyShopDomain,
-                  accessToken: creator.shopifyAccessToken,
+                  accessToken: decryptedToken,
                 },
               },
             });

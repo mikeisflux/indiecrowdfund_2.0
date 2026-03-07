@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { encryptCredential, decryptCredential } from "@/lib/encryption";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,16 @@ export async function GET() {
 
     // Only return existence status and a preview of the API key (first 8 chars)
     const hasCredentials = !!(user?.shopifyApiKey && user?.shopifyApiSecret);
-    const apiKeyPreview = user?.shopifyApiKey
-      ? `${user.shopifyApiKey.substring(0, 8)}••••••••`
-      : null;
+    let apiKeyPreview: string | null = null;
+    if (user?.shopifyApiKey) {
+      try {
+        const decrypted = decryptCredential(user.shopifyApiKey);
+        apiKeyPreview = `${decrypted.substring(0, 8)}••••••••`;
+      } catch {
+        // Key may be stored unencrypted (legacy) - show preview directly
+        apiKeyPreview = `${user.shopifyApiKey.substring(0, 8)}••••••••`;
+      }
+    }
 
     // Also indicate if they have a connected store
     const hasConnectedStore = !!(user?.shopifyAccessToken && user?.shopifyShopDomain);
@@ -60,10 +68,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "API Key or API Secret required" }, { status: 400 });
     }
 
-    // Build update object with only provided values
+    // Build update object with encrypted values
     const updateData: { shopifyApiKey?: string; shopifyApiSecret?: string } = {};
-    if (apiKey) updateData.shopifyApiKey = apiKey;
-    if (apiSecret) updateData.shopifyApiSecret = apiSecret;
+    if (apiKey) updateData.shopifyApiKey = encryptCredential(apiKey);
+    if (apiSecret) updateData.shopifyApiSecret = encryptCredential(apiSecret);
 
     // Update the user's Shopify credentials
     const updatedUser = await db.user.update({
@@ -72,8 +80,9 @@ export async function POST(req: NextRequest) {
       select: { shopifyApiKey: true },
     });
 
-    const apiKeyPreview = updatedUser.shopifyApiKey
-      ? `${updatedUser.shopifyApiKey.substring(0, 8)}••••••••`
+    // Show preview of the original (unencrypted) key
+    const apiKeyPreview = apiKey
+      ? `${apiKey.substring(0, 8)}••••••••`
       : null;
 
     return NextResponse.json({

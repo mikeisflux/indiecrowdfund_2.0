@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Package,
   Loader2,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -86,6 +87,7 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
   // Lock survey
   const [lockConfirm, setLockConfirm] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
 
   const fetchSurvey = useCallback(async () => {
     if (!projectId) return;
@@ -170,6 +172,32 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
     } finally {
       setIsDeletingBacker(false);
       setDeleteBackerConfirm({ open: false, questionId: "" });
+    }
+  };
+
+  const backfillSurvey = async () => {
+    if (!projectId) return;
+    setIsBackfilling(true);
+    try {
+      const response = await fetch("/api/creator/indiekit/surveys", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        body: JSON.stringify({ projectId, action: "backfill" }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.emailsSent > 0
+          ? `Survey sent to ${data.emailsSent} new backers`
+          : "All backers already have the survey");
+        fetchSurvey();
+      } else {
+        toast.error(data.error || "Failed to backfill survey");
+      }
+    } catch (error) {
+      console.error("Error backfilling survey:", error);
+      toast.error("Failed to backfill survey");
+    } finally {
+      setIsBackfilling(false);
     }
   };
 
@@ -306,14 +334,28 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
               Refresh
             </Button>
             {survey.status === "SENT" && (
-              <Button
-                variant="outline"
-                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
-                onClick={() => setLockConfirm(true)}
-              >
-                <Lock className="h-4 w-4 mr-2" />
-                Lock Survey
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={backfillSurvey}
+                  disabled={isBackfilling}
+                >
+                  {isBackfilling ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  Send to New Backers
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                  onClick={() => setLockConfirm(true)}
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Lock Survey
+                </Button>
+              </>
             )}
           </div>
         </CardContent>

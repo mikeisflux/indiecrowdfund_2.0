@@ -4,7 +4,7 @@ import { getCSRFHeaders } from "@/lib/csrf";
 import { fetchWithRetry } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,12 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSyncingStats, setIsSyncingStats] = useState(false);
+  const [activePage, setActivePage] = useState(1);
+  const [closedPage, setClosedPage] = useState(1);
+  const PROJECTS_PER_PAGE = 20;
+
+  // Reset pagination when search or filters change
+  useEffect(() => { setActivePage(1); setClosedPage(1); }, [searchQuery, categoryFilter]);
 
   // Prelaunch vanity URL state
   const [showPrelaunchVanityDialog, setShowPrelaunchVanityDialog] = useState(false);
@@ -484,6 +490,18 @@ export default function ProjectsPage() {
     );
   });
 
+  // Paginated active/closed projects
+  const activePageCount = Math.ceil(filteredActiveProjects.length / PROJECTS_PER_PAGE);
+  const paginatedActiveProjects = useMemo(() =>
+    filteredActiveProjects.slice((activePage - 1) * PROJECTS_PER_PAGE, activePage * PROJECTS_PER_PAGE),
+    [filteredActiveProjects, activePage]
+  );
+  const closedPageCount = Math.ceil(filteredClosedProjects.length / PROJECTS_PER_PAGE);
+  const paginatedClosedProjects = useMemo(() =>
+    filteredClosedProjects.slice((closedPage - 1) * PROJECTS_PER_PAGE, closedPage * PROJECTS_PER_PAGE),
+    [filteredClosedProjects, closedPage]
+  );
+
   const filteredPrelaunchProjects = prelaunchProjects.filter((project) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -726,7 +744,7 @@ export default function ProjectsPage() {
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-4">
-                {filteredActiveProjects.map((project) => (
+                {paginatedActiveProjects.map((project) => (
                   <ProjectListItem
                     key={project.id}
                     project={project}
@@ -736,6 +754,17 @@ export default function ProjectsPage() {
                     showFunding
                   />
                 ))}
+                {activePageCount > 1 && (
+                  <div className="flex items-center justify-between pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {(activePage - 1) * PROJECTS_PER_PAGE + 1}-{Math.min(activePage * PROJECTS_PER_PAGE, filteredActiveProjects.length)} of {filteredActiveProjects.length}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" disabled={activePage <= 1} onClick={() => setActivePage(p => p - 1)}>Previous</Button>
+                      <Button variant="outline" size="sm" disabled={activePage >= activePageCount} onClick={() => setActivePage(p => p + 1)}>Next</Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <ActiveProjectPanel
@@ -1055,7 +1084,7 @@ export default function ProjectsPage() {
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-4">
-                {filteredClosedProjects.map((project) => (
+                {paginatedClosedProjects.map((project) => (
                   <ProjectListItem
                     key={project.id}
                     project={project}
@@ -1066,6 +1095,17 @@ export default function ProjectsPage() {
                     badge={<Badge variant="secondary" className="text-xs">Ended</Badge>}
                   />
                 ))}
+                {closedPageCount > 1 && (
+                  <div className="flex items-center justify-between pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {(closedPage - 1) * PROJECTS_PER_PAGE + 1}-{Math.min(closedPage * PROJECTS_PER_PAGE, filteredClosedProjects.length)} of {filteredClosedProjects.length}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" disabled={closedPage <= 1} onClick={() => setClosedPage(p => p - 1)}>Previous</Button>
+                      <Button variant="outline" size="sm" disabled={closedPage >= closedPageCount} onClick={() => setClosedPage(p => p + 1)}>Next</Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <ActiveProjectPanel

@@ -340,6 +340,70 @@ export async function PATCH(req: NextRequest) {
           },
         });
         break;
+
+      case "backfill": {
+        // Find backers who don't have a survey response yet
+        if (survey.status !== "SENT") {
+          return NextResponse.json(
+            { error: "Survey must be in SENT status to backfill" },
+            { status: 400 }
+          );
+        }
+
+        // Get all valid pledges that don't have a response
+        const existingResponsePledgeIds = await db.surveyResponse.findMany({
+          where: { surveyId: survey.id },
+          select: { pledgeId: true },
+        });
+        const respondedIds = new Set(existingResponsePledgeIds.map(r => r.pledgeId));
+
+        const newBackers = await db.pledge.findMany({
+          where: {
+            projectId,
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", stripePaymentMethodId: { not: null } },
+              { status: "PENDING", stripeSetupIntentId: { not: null } },
+              { status: "PENDING", stripePaymentIntentId: { not: null } },
+              { status: "PENDING", divinityCoinPaymentId: { not: null } },
+            ],
+          },
+          include: {
+            user: { select: { email: true, name: true } },
+          },
+        });
+
+        const unnotifiedBackers = newBackers.filter(b => !respondedIds.has(b.id));
+
+        for (const pledge of unnotifiedBackers) {
+          if (pledge.user?.email) {
+            try {
+              await sendSurveyAvailableEmail(
+                pledge.user.email,
+                pledge.user.name || "Backer",
+                project.title,
+                session.user.name || "The Creator",
+                pledge.id
+              );
+              emailsSent++;
+            } catch (emailError) {
+              console.error(`Failed to send backfill survey email to ${pledge.user.email}:`, emailError);
+            }
+          }
+        }
+
+        if (emailsSent > 0) {
+          await db.fulfillmentActivity.create({
+            data: {
+              projectId,
+              type: "SURVEY_REMINDER",
+              title: `Survey backfill: sent to ${emailsSent} new backers`,
+            },
+          });
+        }
+        break;
+      }
     }
 
     return NextResponse.json({ success: true, emailsSent });

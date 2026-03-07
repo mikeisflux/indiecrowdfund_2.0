@@ -16,13 +16,50 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { subject, content, projectId, senderName, replyTo } = body;
+    const { subject, content, projectId, senderName, replyTo, scheduledFor } = body;
 
     if (!subject?.trim() || !content?.trim()) {
       return NextResponse.json(
         { error: "Subject and content are required" },
         { status: 400 }
       );
+    }
+
+    // Handle scheduled campaigns - save without sending
+    if (scheduledFor) {
+      const scheduledDate = new Date(scheduledFor);
+      if (scheduledDate <= new Date()) {
+        return NextResponse.json(
+          { error: "Scheduled date must be in the future" },
+          { status: 400 }
+        );
+      }
+
+      const campaign = await db.emailCampaign.create({
+        data: {
+          name: subject.trim(),
+          subject: subject.trim(),
+          htmlContent: content.trim(),
+          status: "SCHEDULED",
+          scheduledFor: scheduledDate,
+          recipientCount: 0,
+          sentCount: 0,
+          openCount: 0,
+          clickCount: 0,
+          createdBy: session.user.id,
+          filters: {
+            projectId: projectId || undefined,
+            senderName: senderName || undefined,
+            replyTo: replyTo || undefined,
+          },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Campaign scheduled for ${scheduledDate.toLocaleString()}`,
+        campaign,
+      });
     }
 
     // Get creator info
@@ -58,6 +95,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve personalization variables
+    let projectName = "";
+    let projectUrl = "";
+    if (projectId) {
+      const project = await db.project.findUnique({
+        where: { id: projectId },
+        select: { title: true, slug: true, creator: { select: { vanityUrl: true } } },
+      });
+      if (project) {
+        projectName = project.title;
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        projectUrl = `${appUrl}/projects/${project.creator?.vanityUrl || "creator"}/${project.slug}`;
+      }
+    }
+
+    const resolveVars = (text: string) =>
+      text
+        .replace(/\{\{PROJECT_NAME\}\}/g, escapeHtml(projectName))
+        .replace(/\{\{CREATOR_NAME\}\}/g, escapeHtml(fromName))
+        .replace(/\{\{PROJECT_URL\}\}/g, projectUrl);
+
+    const resolvedSubject = subject.trim().replace(/\{\{PROJECT_NAME\}\}/g, projectName).replace(/\{\{CREATOR_NAME\}\}/g, fromName);
+    const resolvedContent = resolveVars(content.trim());
+
     // Build email HTML
     const htmlBody = `
       <!DOCTYPE html>
@@ -77,10 +138,10 @@ export async function POST(request: NextRequest) {
             </p>
           </div>
 
-          <h2 style="color: #333; margin-bottom: 20px;">${escapeHtml(subject.trim())}</h2>
+          <h2 style="color: #333; margin-bottom: 20px;">${escapeHtml(resolvedSubject)}</h2>
 
           <div style="padding: 20px 0;">
-            ${content.trim()}
+            ${resolvedContent}
           </div>
 
           <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: center; color: #999; font-size: 12px;">
@@ -103,9 +164,9 @@ export async function POST(request: NextRequest) {
       try {
         const result = await queueEmail({
           to: recipientEmail,
-          subject: subject.trim(),
+          subject: resolvedSubject,
           html: htmlBody,
-          text: content.trim(),
+          text: resolvedContent,
           fromEmail,
           fromName,
           replyTo: replyToEmail,
@@ -127,9 +188,9 @@ export async function POST(request: NextRequest) {
     // Create EmailCampaign record to track this campaign
     const campaign = await db.emailCampaign.create({
       data: {
-        name: subject.trim(),
-        subject: subject.trim(),
-        htmlContent: content.trim(),
+        name: resolvedSubject,
+        subject: resolvedSubject,
+        htmlContent: resolvedContent,
         status: "SENT",
         sentAt: new Date(),
         recipientCount: uniqueEmails.length,

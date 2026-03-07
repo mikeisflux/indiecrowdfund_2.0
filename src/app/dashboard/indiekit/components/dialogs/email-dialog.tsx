@@ -196,6 +196,7 @@ export function EmailDialog({
           projectId: currentProjectId,
           senderName: senderName || undefined,
           replyTo: replyToEmail || undefined,
+          ...(scheduledDate && { scheduledFor: new Date(scheduledDate).toISOString() }),
         }),
       });
 
@@ -205,7 +206,9 @@ export function EmailDialog({
         throw new Error(data.error || "Failed to send campaign");
       }
 
-      toast.success(data.message || `Campaign sent to ${data.campaign?.recipientCount || memberCount} members`);
+      toast.success(data.message || (scheduledDate
+        ? `Campaign scheduled for ${new Date(scheduledDate).toLocaleString()}`
+        : `Campaign sent to ${data.campaign?.recipientCount || memberCount} members`));
       setActiveStep("results");
     } catch (error) {
       console.error("Send campaign error:", error);
@@ -414,6 +417,25 @@ export function EmailDialog({
                       minHeight="250px"
                       uploadUrl="/api/creator/media/upload"
                     />
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p className="font-medium">Personalization variables:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {[
+                          { label: "Project Name", value: "{{PROJECT_NAME}}" },
+                          { label: "Creator Name", value: "{{CREATOR_NAME}}" },
+                          { label: "Project URL", value: "{{PROJECT_URL}}" },
+                        ].map((v) => (
+                          <button
+                            key={v.value}
+                            type="button"
+                            className="px-2 py-0.5 bg-muted rounded text-xs hover:bg-muted/80 font-mono"
+                            onClick={() => setEmailBody((prev) => prev + v.value)}
+                          >
+                            {v.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -510,12 +532,21 @@ export function EmailDialog({
                     {isSendingCampaign ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Sending Campaign...
+                        {scheduledDate ? "Scheduling..." : "Sending Campaign..."}
                       </>
                     ) : (
                       <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Send Email Campaign
+                        {scheduledDate ? (
+                          <>
+                            <Calendar className="h-4 w-4 mr-2" />
+                            Schedule Email Campaign
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Send Email Campaign
+                          </>
+                        )}
                       </>
                     )}
                   </Button>

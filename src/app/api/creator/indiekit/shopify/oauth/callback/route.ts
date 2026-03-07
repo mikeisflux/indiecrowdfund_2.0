@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import crypto from "crypto";
+import { decryptCredential, encryptCredential } from "@/lib/encryption";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,20 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Decrypt credentials (with backwards compatibility for unencrypted values)
+    let apiKey: string;
+    let apiSecret: string;
+    try {
+      apiKey = decryptCredential(user.shopifyApiKey);
+    } catch {
+      apiKey = user.shopifyApiKey;
+    }
+    try {
+      apiSecret = decryptCredential(user.shopifyApiSecret);
+    } catch {
+      apiSecret = user.shopifyApiSecret;
+    }
+
     // Exchange code for access token
     const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
       method: "POST",
@@ -112,8 +127,8 @@ export async function GET(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        client_id: user.shopifyApiKey,
-        client_secret: user.shopifyApiSecret,
+        client_id: apiKey,
+        client_secret: apiSecret,
         code,
       }),
     });
@@ -149,7 +164,7 @@ export async function GET(req: NextRequest) {
     await db.user.update({
       where: { id: session.user.id },
       data: {
-        shopifyAccessToken: accessToken,
+        shopifyAccessToken: encryptCredential(accessToken),
         shopifyShopDomain: shop,
       },
     });
