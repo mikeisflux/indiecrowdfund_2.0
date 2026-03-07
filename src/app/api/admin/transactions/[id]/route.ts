@@ -197,7 +197,6 @@ async function getPledgeDetail(id: string) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildPledgeTimeline(pledge: any) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const events: { date: string; event: string; detail?: string }[] = [];
 
   events.push({

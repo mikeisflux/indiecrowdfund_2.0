@@ -66,7 +66,6 @@ export async function GET(request: NextRequest) {
           description: paymentIntent.description,
           customer: paymentIntent.customer,
           payment_method: paymentIntent.payment_method,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           latest_charge: paymentIntent.latest_charge ? {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             id: (paymentIntent.latest_charge as any).id || paymentIntent.latest_charge,

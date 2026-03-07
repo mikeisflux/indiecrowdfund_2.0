@@ -60,7 +60,6 @@ export interface Pagination {
   totalPages: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface TransactionDetail {
   type: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,7 +68,6 @@ export interface TransactionDetail {
   [key: string]: any;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface StripeLookupResult {
   lookupType: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -526,7 +526,6 @@ export default function PledgePage() {
     } finally {
       setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, vanityname, isLegacyUrl, rewardId, modifyPledgeId]);
 
   useEffect(() => {
