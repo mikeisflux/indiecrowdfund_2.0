@@ -7,7 +7,6 @@ import {
   FolderKanban,
   FileText,
   Clock,
-  HeadphonesIcon,
   Link2,
   Box,
   BoxIcon,
@@ -15,7 +14,6 @@ import {
   Download,
   ShoppingCart,
   TrendingUp,
-  Inbox,
   Mail,
   UsersRound,
   Layers,
@@ -96,7 +94,6 @@ const sections: SectionGroup[] = [
       { id: 'projects', label: 'Projects', icon: FolderKanban },
       { id: 'updates', label: 'Updates', icon: FileText },
       { id: 'timeline', label: 'Timeline', icon: Clock },
-      { id: 'support', label: 'Support', icon: HeadphonesIcon },
     ],
   },
   {
@@ -116,7 +113,6 @@ const sections: SectionGroup[] = [
     id: 'communication-section',
     label: 'Communication & Marketing',
     tabs: [
-      { id: 'inbox', label: 'Inbox', icon: Inbox },
       { id: 'emails', label: 'Email Campaigns', icon: Mail },
       { id: 'email-list', label: 'Email List', icon: UsersRound },
       { id: 'teaser', label: 'Teaser Pages', icon: FileText },
@@ -162,7 +158,7 @@ const tabContent: Record<string, TabContent> = {
     howTo: [
       { step: 'Access IndieKit', detail: 'Log into your IndieCrowdfund account and go to your Creator Dashboard. Click "IndieKit" in the sidebar navigation. IndieKit becomes available once your campaign has reached its funding goal.' },
       { step: 'Select your project', detail: 'Use the project dropdown at the top of IndieKit to choose which campaign you want to manage. If you have multiple funded projects, you can switch between them at any time. Your last selected project is remembered.' },
-      { step: 'Understand the layout', detail: 'IndieKit is organized into four tab rows across the top: Row 1 is Dashboard & Core (Overview, Backers, Projects, Updates, Timeline, Support, SKU Mapping). Row 2 is Fulfillment & Products (Packages, Products, Shipping, Digital, Add-ons, Pre-Orders). Row 3 is Communication (Inbox, Email Campaigns, Email List, Teaser Pages, Segments). Row 4 is Data & Settings (Counts, Export, Survey Builder, Manage Survey, Transaction History, Settings, Account).' },
+      { step: 'Understand the layout', detail: 'IndieKit is organized into four tab rows across the top: Row 1 is Dashboard & Core (Overview, Backers, Projects, Updates, Timeline, SKU Mapping). Row 2 is Fulfillment & Products (Packages, Products, Shipping, Digital, Add-ons, Pre-Orders). Row 3 is Communication (Email Campaigns, Email List, Teaser Pages, Segments). Row 4 is Data & Settings (Counts, Export, Survey Builder, Manage Survey, Transaction History, Settings, Account). Note: The Inbox and Support Resources are now in the Creator Dashboard under the Email tab.' },
       { step: 'Check the Workflow sidebar', detail: 'On the left side of the dashboard you will see the Fulfillment Workflow — a step-by-step guide showing your progress: Send & Remind, Lock Orders, Charge Cards, Lock Addresses, Start Shipping, and Shipped. Steps unlock sequentially as you complete each one.' },
     ],
     tips: [
@@ -290,21 +286,6 @@ const tabContent: Record<string, TabContent> = {
       'The Timeline is read-only — it\'s a log of what happened, not a place to take actions.',
     ],
   },
-  'support': {
-    title: 'Support Tab',
-    description: 'Look up any backer and manage support interactions.',
-    howTo: [
-      { step: 'Search for a backer', detail: 'Use the search to find any backer by name or email. This is designed for when a backer contacts you and you need to quickly look up their information.' },
-      { step: 'View backer context', detail: 'See the backer\'s complete information: pledge amount, reward tier, survey status, shipping address, payment status, and order history — all in one place.' },
-      { step: 'Add internal notes', detail: 'Document the support interaction with internal notes. These are private — backers cannot see them. Notes help your team track what was discussed and any resolutions.' },
-      { step: 'Send a direct email', detail: 'Email the backer directly from IndieKit. Use templates for common questions like address changes, shipping delays, or refund requests.' },
-    ],
-    tips: [
-      'Keep the Support tab open in a separate browser tab when handling support emails for quick lookups.',
-      'Always add a note after resolving a support issue so your team has context for future interactions.',
-    ],
-  },
-
   // ---- Fulfillment & Products ----
   'packages': {
     title: 'Packages Tab',
@@ -429,24 +410,6 @@ const tabContent: Record<string, TabContent> = {
   },
 
   // ---- Communication & Marketing ----
-  'inbox': {
-    title: 'Inbox Tab',
-    description: 'Your central message hub for all backer communications.',
-    howTo: [
-      { step: 'View message threads', detail: 'The Inbox shows all email conversations with backers organized as threads. Each thread shows the backer\'s name, subject, and most recent message preview.' },
-      { step: 'Filter by status', detail: 'Filter threads by: Unread, Read, Replied, or Archived. Focus on Unread threads first to stay responsive.' },
-      { step: 'Search threads', detail: 'Use the search bar to find specific conversations by backer name, email, or message content.' },
-      { step: 'Star important messages', detail: 'Click the star icon on important threads to flag them for follow-up. Starred messages are easy to find later.' },
-      { step: 'Reply to messages', detail: 'Open a thread and use the composer at the bottom to reply. You can Reply, Reply All, or Forward messages.' },
-      { step: 'Compose a new email', detail: 'Click the compose button to start a new email to any backer.' },
-      { step: 'Set up your email handle', detail: 'Configure your creator email handle in Settings so backer replies come into your IndieKit Inbox.' },
-    ],
-    tips: [
-      'Check your Inbox daily during active fulfillment. Quick responses build trust with backers.',
-      'Archive threads only after the issue is fully resolved.',
-      'Star threads that need follow-up action so you don\'t lose track of them.',
-    ],
-  },
   'emails': {
     title: 'Email Campaigns Tab',
     description: 'Design, send, and track email campaigns to your backers and subscribers.',

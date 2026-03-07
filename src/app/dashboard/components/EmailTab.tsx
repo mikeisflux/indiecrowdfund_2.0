@@ -95,7 +95,7 @@ export function EmailTab({ projectId, onRefresh }: EmailTabProps) {
               </CardContent>
             </Card>
           ) : (
-            <InboxTab />
+            <InboxTab projectId={projectId} />
           )}
         </TabsContent>
 
