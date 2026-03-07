@@ -251,15 +251,11 @@ export async function POST(req: NextRequest) {
 
         console.log("[push_to_fulfillment] Total integrations to process:", connectedIntegrations.length);
 
-        // Push to each connected provider
+        // Push to each connected provider - continue on failure to handle partial success
         for (const integration of connectedIntegrations) {
-          console.log("[push_to_fulfillment] Processing integration:", integration.provider);
+          try {
           if (integration.provider === "SHOPIFY") {
-            // Push to Shopify - call function directly to avoid CSRF issues
-            console.log("[push_to_fulfillment] Calling Shopify push function directly");
-
             const shopifyResult = await pushOrdersToShopify(projectId, pledgeIds);
-            console.log("[push_to_fulfillment] Shopify result:", shopifyResult);
 
             if (shopifyResult.success) {
               totalPushed += shopifyResult.pushed || 0;
@@ -379,6 +375,13 @@ export async function POST(req: NextRequest) {
               const errorResult = await stampsResponse.json().catch(() => ({}));
               allErrors.push(`Stamps.com: ${errorResult.error || "Push failed"}`);
             }
+          }
+          } catch (providerError) {
+            // Catch individual provider failures so remaining providers still get processed
+            const providerName = integration.provider || "Unknown";
+            const errorMsg = providerError instanceof Error ? providerError.message : "Unknown error";
+            allErrors.push(`${providerName}: ${errorMsg}`);
+            console.error(`[push_to_fulfillment] Provider ${providerName} failed:`, providerError);
           }
         }
 

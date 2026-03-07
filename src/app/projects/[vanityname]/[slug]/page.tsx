@@ -222,7 +222,7 @@ export default function ProjectPage() {
           setIsFollowing(true);
         } else if (response.status === 401) {
           // User not logged in - redirect to sign in
-          window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(window.location.href)}`;
+          window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.href)}`;
           return;
         }
       }
@@ -453,16 +453,16 @@ export default function ProjectPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center relative">
+      <div className="min-h-screen bg-background flex items-center justify-center relative" role="status" aria-label="Loading project">
         {/* Background Effects */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
           <div className="floating-orb absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/10" />
           <div className="floating-orb absolute top-1/3 -left-40 w-[400px] h-[400px] bg-purple-500/10" style={{ animationDelay: '-5s' }} />
         </div>
         <div className="text-center space-y-6 relative">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card relative">
-            <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-ping" />
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-ping" aria-hidden="true" />
+            <Loader2 className="h-10 w-10 animate-spin text-primary" aria-hidden="true" />
           </div>
           <p className="text-muted-foreground">Loading project...</p>
         </div>
@@ -739,20 +739,20 @@ export default function ProjectPage() {
                   <Bookmark className={`mr-2 h-4 w-4 ${isFollowing ? "fill-current" : ""}`} />
                   {isFollowing ? "Following" : "Follow"}
                 </Button>
-                <div className="flex items-center glass-card rounded-lg border border-border/50">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1877f2] hover:bg-[#1877f2]/10 rounded-lg" onClick={() => handleShare("facebook")}>
+                <div className="flex items-center glass-card rounded-lg border border-border/50" role="group" aria-label="Share project">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1877f2] hover:bg-[#1877f2]/10 rounded-lg" onClick={() => handleShare("facebook")} aria-label="Share on Facebook" title="Share on Facebook">
                     <FacebookIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1da1f2] hover:bg-[#1da1f2]/10 rounded-lg" onClick={() => handleShare("twitter")}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#1da1f2] hover:bg-[#1da1f2]/10 rounded-lg" onClick={() => handleShare("twitter")} aria-label="Share on X" title="Share on X">
                     <TwitterIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#0085ff] hover:bg-[#0085ff]/10 rounded-lg" onClick={() => handleShare("bluesky")}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-[#0085ff] hover:bg-[#0085ff]/10 rounded-lg" onClick={() => handleShare("bluesky")} aria-label="Share on Bluesky" title="Share on Bluesky">
                     <BlueskyIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg" onClick={() => handleShare("email")}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg" onClick={() => handleShare("email")} aria-label="Share via email" title="Share via email">
                     <EmailIcon />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg" onClick={() => handleShare("copy")}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg" onClick={() => handleShare("copy")} aria-label="Copy link" title="Copy link">
                     <LinkIcon />
                   </Button>
                 </div>

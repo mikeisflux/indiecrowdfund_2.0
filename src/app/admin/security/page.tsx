@@ -193,8 +193,24 @@ export default function SecurityPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+      <div className="space-y-6" role="status" aria-label="Loading security settings">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="h-7 w-32 bg-muted animate-pulse rounded" />
+            <div className="h-4 w-64 bg-muted animate-pulse rounded" />
+          </div>
+          <div className="h-10 w-32 bg-muted animate-pulse rounded" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}><CardContent className="p-6"><div className="flex items-center gap-4"><div className="h-12 w-12 rounded-full bg-muted animate-pulse" /><div className="space-y-2"><div className="h-3 w-20 bg-muted animate-pulse rounded" /><div className="h-6 w-10 bg-muted animate-pulse rounded" /></div></div></CardContent></Card>
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}><CardContent className="p-6 space-y-4"><div className="h-5 w-40 bg-muted animate-pulse rounded" /><div className="h-4 w-64 bg-muted animate-pulse rounded" /><div className="h-12 bg-muted animate-pulse rounded" /><div className="h-12 bg-muted animate-pulse rounded" /></CardContent></Card>
+          ))}
+        </div>
       </div>
     );
   }

@@ -108,8 +108,17 @@ export async function GET(
 ) {
   try {
     const { id: projectId } = await params;
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")));
+    const skip = (page - 1) * limit;
 
-    // Fetch only top-level comments (no parentId), include replies
+    // Get total count for pagination metadata
+    const totalCount = await db.comment.count({
+      where: { projectId, parentId: null },
+    });
+
+    // Fetch only top-level comments (no parentId), include replies, with pagination
     const comments = await db.comment.findMany({
       where: {
         projectId,
@@ -137,6 +146,8 @@ export async function GET(
         },
       },
       orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
     });
 
     // Get project to check for creator
@@ -176,6 +187,21 @@ export async function GET(
     const formattedComments = comments.map((comment) =>
       formatComment(comment, project.creatorId, superbackerMap, collaboratorIds)
     );
+
+    // Return array directly for backwards compatibility when no pagination params provided
+    // Return paginated response when page param is explicitly set
+    if (searchParams.has("page")) {
+      return NextResponse.json({
+        comments: formattedComments,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+          hasMore: page * limit < totalCount,
+        },
+      });
+    }
 
     return NextResponse.json(formattedComments);
   } catch (error) {

@@ -137,6 +137,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
       }
 
+      // Validate email template before sending
+      if (!campaign.subject || campaign.subject.trim().length === 0) {
+        return NextResponse.json({ error: "Email subject is required" }, { status: 400 });
+      }
+      if (campaign.subject.length > 200) {
+        return NextResponse.json({ error: "Email subject must be under 200 characters" }, { status: 400 });
+      }
+      if (!campaign.htmlContent || campaign.htmlContent.trim().length === 0) {
+        return NextResponse.json({ error: "Email body is required" }, { status: 400 });
+      }
+      if (campaign.status === "SENDING" || campaign.status === "SENT") {
+        return NextResponse.json({ error: "Campaign has already been sent" }, { status: 400 });
+      }
+
       // Mark as sending (actual sending would be done via a background job)
       await db.emailCampaign.update({
         where: { id: campaignId },

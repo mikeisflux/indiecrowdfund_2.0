@@ -16,10 +16,10 @@
 set -euo pipefail
 
 CHAIN="BOTBLOCK"
-DB_HOST="localhost"
-DB_USER="indieuser"
-DB_PASS="01JSN9vhvVTiMEU7odCpF6L3"
-DB_NAME="indiecrowdfund"
+DB_HOST="${DB_HOST:-localhost}"
+DB_USER="${DB_USER:-indieuser}"
+DB_PASS="${DB_PASS:?DB_PASS environment variable is required}"
+DB_NAME="${DB_NAME:-indiecrowdfund}"
 LOG_PREFIX="[BotBlock]"
 
 log() {

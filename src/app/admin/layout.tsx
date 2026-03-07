@@ -210,13 +210,24 @@ export default function AdminLayout({
     }
   }, []);
 
-  // Fetch stats on mount and periodically refresh
+  // Fetch stats on mount and refresh every 5 minutes (reduced from 60s)
+  // Also refresh when page becomes visible after being hidden
   useEffect(() => {
     if (session?.user?.role === "SUPER_ADMIN") {
       fetchStats();
-      // Refresh stats every 60 seconds
-      const interval = setInterval(fetchStats, 60000);
-      return () => clearInterval(interval);
+      const interval = setInterval(fetchStats, 300000); // 5 minutes
+
+      const handleVisibility = () => {
+        if (document.visibilityState === "visible") {
+          fetchStats();
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibility);
+
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener("visibilitychange", handleVisibility);
+      };
     }
   }, [session, fetchStats]);
 

@@ -427,9 +427,9 @@ export default function IndieKitV2Page() {
 
   if (loading && !stats) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center" role="status" aria-label="Loading IndieKit">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
           <p className="text-muted-foreground">Loading IndieKit 2.0...</p>
         </div>
       </div>
@@ -472,10 +472,10 @@ export default function IndieKitV2Page() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={() => setIsNPSDialogOpen(true)}>
+            <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={() => setIsNPSDialogOpen(true)} aria-label="Give feedback" title="Give feedback">
               <Bell className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={() => handleSelectAlwaysTab("settings")}>
+            <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={() => handleSelectAlwaysTab("settings")} aria-label="Settings" title="Settings">
               <Settings className="h-5 w-5" />
             </Button>
           </div>

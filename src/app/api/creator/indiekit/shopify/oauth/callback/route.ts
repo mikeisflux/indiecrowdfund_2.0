@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.redirect(new URL("/auth/signin?error=unauthorized", req.url));
+      return NextResponse.redirect(new URL("/login?error=unauthorized", req.url));
     }
 
     const { searchParams } = new URL(req.url);

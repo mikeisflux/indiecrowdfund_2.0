@@ -47,10 +47,10 @@ fi
 
 # ---- On startup, restore all blocked IPs from database into iptables ----
 # This ensures blocked IPs persist across system reboots and PM2 restarts
-DB_HOST="localhost"
-DB_USER="indieuser"
-DB_PASS="01JSN9vhvVTiMEU7odCpF6L3"
-DB_NAME="indiecrowdfund"
+DB_HOST="${DB_HOST:-localhost}"
+DB_USER="${DB_USER:-indieuser}"
+DB_PASS="${DB_PASS:?DB_PASS environment variable is required}"
+DB_NAME="${DB_NAME:-indiecrowdfund}"
 
 log "Restoring blocked IPs from database on startup..."
 RESTORE_IPS=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -t -A -c \
