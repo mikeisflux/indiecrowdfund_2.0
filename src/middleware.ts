@@ -26,6 +26,7 @@ const csrfExemptRoutes = [
   "/api/health",
   "/api/track", // Analytics tracking endpoint
   "/api/blocked", // Bot/blocked request sink
+  "/api/internal", // Internal APIs called by middleware (bot blocker persistence)
   "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
   "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
@@ -123,7 +124,13 @@ function persistBlockedIP(
       block: true,
       ...metadata,
     }),
-  }).catch((err) => console.error("[Bot Blocker] Persist error:", err));
+  })
+    .then((res) => {
+      if (!res.ok) {
+        console.error(`[Bot Blocker] Persist failed for ${ip}: HTTP ${res.status}`);
+      }
+    })
+    .catch((err) => console.error("[Bot Blocker] Persist error:", err));
 }
 
 /**
