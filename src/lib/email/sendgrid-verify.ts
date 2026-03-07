@@ -1,6 +1,11 @@
 import crypto from "crypto";
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const emailSendgridVerifyLogger = logger.child({ module: "email-sendgrid-verify" });
+
+
 /**
  * Get the SendGrid webhook verification key from database or env
  */
@@ -19,7 +24,7 @@ async function getWebhookVerificationKey(): Promise<string | null> {
     // Fallback to environment variable
     return process.env.SENDGRID_WEBHOOK_PUBLIC_KEY || null;
   } catch (error) {
-    console.error("Error fetching webhook verification key:", error);
+    emailSendgridVerifyLogger.error({ err: error }, "Error fetching webhook verification key:");
     // Fallback to environment variable
     return process.env.SENDGRID_WEBHOOK_PUBLIC_KEY || null;
   }
@@ -62,7 +67,7 @@ export function verifySendGridSignature(
     // Verify the signature
     return verifier.verify(keyObject, signatureBuffer);
   } catch (error) {
-    console.error("Error verifying SendGrid signature:", error);
+    emailSendgridVerifyLogger.error({ err: error }, "Error verifying SendGrid signature:");
     return false;
   }
 }
@@ -88,7 +93,7 @@ export async function verifyAndParseSendGridWebhook(
   if (!signature || !timestamp) {
     // Allow requests without signature in development or if key not configured
     if (process.env.NODE_ENV === "development" || !publicKey) {
-      console.warn("SendGrid webhook signature verification skipped - headers missing or no key configured");
+      emailSendgridVerifyLogger.warn("SendGrid webhook signature verification skipped - headers missing or no key configured");
       return { valid: true };
     }
     return { valid: false, error: "Missing signature headers" };
@@ -96,7 +101,7 @@ export async function verifyAndParseSendGridWebhook(
 
   // If we have headers but no public key configured, we can't verify
   if (!publicKey) {
-    console.warn("SendGrid webhook signature verification skipped - no verification key configured");
+    emailSendgridVerifyLogger.warn("SendGrid webhook signature verification skipped - no verification key configured");
     // In production without a key, we should probably reject
     if (process.env.NODE_ENV === "production") {
       return { valid: false, error: "Webhook verification key not configured" };

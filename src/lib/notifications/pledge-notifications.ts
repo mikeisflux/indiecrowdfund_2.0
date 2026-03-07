@@ -3,6 +3,11 @@ import { sendPledgeConfirmationEmail, sendPledgeModificationEmail, sendPledgeCan
 import { createNotification } from "./core";
 import type { NotificationType } from "./types";
 
+import { logger } from "@/lib/logger";
+
+const notificationsPledgeNotificationsLogger = logger.child({ module: "notifications-pledge-notifications" });
+
+
 /**
  * Notify creator when they receive a pledge
  */
@@ -163,7 +168,7 @@ export async function notifyBackerPledgeConfirmed(
 
   // Check if confirmation email was already sent (prevent duplicates)
   if (pledge.confirmationEmailSent) {
-    console.log(`Confirmation email already sent for pledge ${pledgeId}`);
+    notificationsPledgeNotificationsLogger.info(`Confirmation email already sent for pledge ${pledgeId}`);
     return;
   }
 
@@ -225,17 +230,17 @@ export async function notifyBackerPledgeConfirmed(
         data: { confirmationEmailSent: true },
       });
 
-      console.log(`Sent pledge confirmation email to ${pledge.user.email} for pledge ${pledgeId}`);
+      notificationsPledgeNotificationsLogger.info(`Sent pledge confirmation email to ${pledge.user.email} for pledge ${pledgeId}`);
     } else if ("blocked" in result && result.blocked) {
       // Email address is on the blocklist - mark as sent to prevent infinite retry loop
       await db.pledge.update({
         where: { id: pledgeId },
         data: { confirmationEmailSent: true },
       });
-      console.log(`Pledge confirmation email blocked for ${pledge.user.email} (pledge ${pledgeId}) - address is on blocklist, marking as sent`);
+      notificationsPledgeNotificationsLogger.info(`Pledge confirmation email blocked for ${pledge.user.email} (pledge ${pledgeId}) - address is on blocklist, marking as sent`);
     }
   } catch (error) {
-    console.error(`Failed to send pledge confirmation email for pledge ${pledgeId}:`, error);
+    notificationsPledgeNotificationsLogger.error({ err: error }, `Failed to send pledge confirmation email for pledge ${pledgeId}:`);
   }
 }
 
@@ -451,7 +456,7 @@ export async function processUnsentConfirmationEmails() {
         });
 
         results.successful++;
-        console.log(`Retry: Sent pledge confirmation email for pledge ${pledge.id}`);
+        notificationsPledgeNotificationsLogger.info(`Retry: Sent pledge confirmation email for pledge ${pledge.id}`);
       } else if ("blocked" in emailResult && emailResult.blocked) {
         // Email address is on the blocklist (bounced, spam complaint, etc.)
         // Mark as sent to stop the retry loop - the email can't be delivered
@@ -461,13 +466,13 @@ export async function processUnsentConfirmationEmails() {
         });
 
         results.failed++;
-        console.log(`Retry: Email blocked for pledge ${pledge.id} (${pledge.user.email}) - marking as sent to stop retries`);
+        notificationsPledgeNotificationsLogger.info(`Retry: Email blocked for pledge ${pledge.id} (${pledge.user.email}) - marking as sent to stop retries`);
       } else {
         results.failed++;
       }
     } catch (error) {
       results.failed++;
-      console.error(`Retry: Failed to send pledge confirmation email for pledge ${pledge.id}:`, error);
+      notificationsPledgeNotificationsLogger.error({ err: error }, `Retry: Failed to send pledge confirmation email for pledge ${pledge.id}:`);
     }
   }
 
@@ -564,7 +569,7 @@ export async function notifyPledgeModified(
       });
     }
   } catch (error) {
-    console.error(`[notifyPledgeModified] Error for pledge ${pledgeId}:`, error);
+    notificationsPledgeNotificationsLogger.error({ err: error }, `[notifyPledgeModified] Error for pledge ${pledgeId}:`);
   }
 }
 
@@ -645,6 +650,6 @@ export async function notifyPledgeCancelled(
       });
     }
   } catch (error) {
-    console.error(`[notifyPledgeCancelled] Error for pledge ${pledgeId}:`, error);
+    notificationsPledgeNotificationsLogger.error({ err: error }, `[notifyPledgeCancelled] Error for pledge ${pledgeId}:`);
   }
 }

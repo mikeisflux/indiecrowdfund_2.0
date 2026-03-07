@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const payBalanceConfirmLogger = logger.child({ module: "pay-balance-confirm" });
 import { db } from "@/lib/db";
 
 // POST - Confirm balance payment was successful
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest) {
       amountPaid: balanceDue,
     });
   } catch (error) {
-    console.error("Error confirming balance payment:", error);
+    payBalanceConfirmLogger.error({ err: String(error) }, "Error confirming balance payment:");
     return NextResponse.json({ error: "Failed to confirm payment" }, { status: 500 });
   }
 }

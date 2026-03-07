@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorDigitalFilesLogger = logger.child({ module: "creator-digital-files" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getR2Storage, generateFileKey } from "@/lib/r2";
@@ -61,7 +64,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ files }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching digital files:", error);
+    creatorDigitalFilesLogger.error({ err: String(error) }, "Error fetching digital files:");
     return NextResponse.json(
       { error: "Failed to fetch digital files" },
       { status: 500, headers: corsHeaders }
@@ -192,7 +195,7 @@ export async function POST(request: NextRequest) {
       { headers: corsHeaders }
     );
   } catch (error) {
-    console.error("Error creating digital file:", error);
+    creatorDigitalFilesLogger.error({ err: String(error) }, "Error creating digital file:");
     return NextResponse.json(
       { error: "Failed to create digital file" },
       { status: 500, headers: corsHeaders }
@@ -254,7 +257,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error deleting digital file:", error);
+    creatorDigitalFilesLogger.error({ err: String(error) }, "Error deleting digital file:");
     return NextResponse.json(
       { error: "Failed to delete digital file" },
       { status: 500, headers: corsHeaders }

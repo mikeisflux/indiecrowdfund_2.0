@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorAccountAvatarLogger = logger.child({ module: "creator-account-avatar" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -40,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, avatarUrl: dataUrl });
   } catch (error) {
-    console.error("Avatar upload error:", error);
+    creatorAccountAvatarLogger.error({ err: String(error) }, "Avatar upload error:");
     return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 });
   }
 }

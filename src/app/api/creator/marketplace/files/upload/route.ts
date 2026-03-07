@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorMarketplaceFilesUploadLogger = logger.child({ module: "creator-marketplace-files-upload" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getR2Storage, generateMarketplaceFileKey } from "@/lib/r2";
@@ -26,7 +29,7 @@ async function calculateFileHash(buffer: Buffer): Promise<string> {
  * Includes duplicate detection - returns existing file if same content already uploaded
  */
 export async function POST(request: NextRequest) {
-  console.log("[Marketplace Upload] POST request received");
+  creatorMarketplaceFilesUploadLogger.info("[Marketplace Upload] POST request received");
 
   try {
     const session = await auth();
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest) {
     const fileSize = file.size;
     const mimeType = file.type;
 
-    console.log("[Marketplace Upload] File info:", { fileName, fileSize, mimeType });
+    creatorMarketplaceFilesUploadLogger.info({ data: { fileName, fileSize, mimeType } }, "[Marketplace Upload] File info:");
 
     // Validate file type (PDF only)
     if (mimeType !== "application/pdf" && !fileName.toLowerCase().endsWith(".pdf")) {
@@ -94,7 +97,7 @@ export async function POST(request: NextRequest) {
     // Generate storage key
     const fileId = crypto.randomUUID();
     const storageKey = generateMarketplaceFileKey(session.user.id, fileName, fileId);
-    console.log("[Marketplace Upload] Storage key:", storageKey);
+    creatorMarketplaceFilesUploadLogger.info({ data: storageKey }, "[Marketplace Upload] Storage key:");
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -102,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate file hash for duplicate detection
     const fileHash = await calculateFileHash(buffer);
-    console.log("[Marketplace Upload] File hash:", fileHash);
+    creatorMarketplaceFilesUploadLogger.info({ data: fileHash }, "[Marketplace Upload] File hash:");
 
     // Check if this exact file already exists in user's uploads
     // First filter by size (fast), then check hash in metadata
@@ -119,7 +122,7 @@ export async function POST(request: NextRequest) {
         const storedHash = metadata?.metadata?.filehash || metadata?.metadata?.fileHash;
 
         if (storedHash === fileHash) {
-          console.log("[Marketplace Upload] Duplicate file detected via hash:", existingFile.key);
+          creatorMarketplaceFilesUploadLogger.info({ data: existingFile.key }, "[Marketplace Upload] Duplicate file detected via hash:");
 
           // Extract original filename from key
           const keyParts = existingFile.key.split("/");
@@ -142,11 +145,11 @@ export async function POST(request: NextRequest) {
         }
       } catch (checkError) {
         // Skip files we can't check, continue with upload
-        console.log("[Marketplace Upload] Could not check existing file metadata:", existingFile.key, checkError);
+        creatorMarketplaceFilesUploadLogger.info({ data: existingFile.key, checkError }, "[Marketplace Upload] Could not check existing file metadata:");
       }
     }
 
-    console.log("[Marketplace Upload] Uploading to R2...");
+    creatorMarketplaceFilesUploadLogger.info("[Marketplace Upload] Uploading to R2...");
     await r2.uploadFile(storageKey, buffer, {
       contentType: "application/pdf",
       metadata: {
@@ -155,7 +158,7 @@ export async function POST(request: NextRequest) {
         filehash: fileHash, // lowercase for R2/S3 metadata compatibility
       },
     });
-    console.log("[Marketplace Upload] Upload successful");
+    creatorMarketplaceFilesUploadLogger.info("[Marketplace Upload] Upload successful");
 
     // Generate the public URL for the file
     // Don't encode the entire storageKey since it contains slashes that are part of the path
@@ -170,7 +173,7 @@ export async function POST(request: NextRequest) {
       fileSize,
     });
   } catch (error) {
-    console.error("[Marketplace Upload] Error:", error);
+    creatorMarketplaceFilesUploadLogger.error({ err: String(error) }, "[Marketplace Upload] Error:");
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Upload failed" },
       { status: 500 }

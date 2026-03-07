@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const userPublicProfileLogger = logger.child({ module: "user-public-profile" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -181,7 +184,7 @@ export async function GET(
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Public profile fetch error:", error);
+    userPublicProfileLogger.error({ err: String(error) }, "Public profile fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch profile" },
       { status: 500 }

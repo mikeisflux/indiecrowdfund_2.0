@@ -9,6 +9,11 @@
 import { db } from "@/lib/db";
 import { appendFile } from "fs/promises";
 
+import { logger } from "@/lib/logger";
+
+const botBlockerLogger = logger.child({ module: "bot-blocker" });
+
+
 // Configuration
 const BOT_BLOCK_THRESHOLD = 3; // Block after this many violations
 const SUSPICIOUS_WINDOW_MS = 60 * 60 * 1000; // 1 hour window for counting violations
@@ -58,7 +63,7 @@ export async function isIPBlocked(ip: string): Promise<boolean> {
 
     return false;
   } catch (error) {
-    console.error("[Bot Blocker] Database error checking blocked IP:", error);
+    botBlockerLogger.error({ err: error }, "[Bot Blocker] Database error checking blocked IP:");
     // On database error, fall back to cache or allow
     return false;
   }
@@ -100,7 +105,7 @@ export async function recordSuspiciousActivity(
       },
     });
 
-    console.log(`[Bot Blocker] Suspicious activity from ${ip}: ${reason} (${recentCount} recent violations)`);
+    botBlockerLogger.info(`[Bot Blocker] Suspicious activity from ${ip}: ${reason} (${recentCount} recent violations)`);
 
     // Block if threshold reached
     if (recentCount >= BOT_BLOCK_THRESHOLD) {
@@ -109,7 +114,7 @@ export async function recordSuspiciousActivity(
 
     return false;
   } catch (error) {
-    console.error("[Bot Blocker] Database error recording suspicious activity:", error);
+    botBlockerLogger.error({ err: error }, "[Bot Blocker] Database error recording suspicious activity:");
     return false;
   }
 }
@@ -160,13 +165,13 @@ export async function blockIP(
       await appendFile("/tmp/botblock-pending", `${ip}\n`);
     } catch {
       // Non-fatal — the 5-minute cron sync is the safety net
-      console.error(`[Bot Blocker] Could not write to pending file for ${ip}`);
+      botBlockerLogger.error(`[Bot Blocker] Could not write to pending file for ${ip}`);
     }
 
-    console.log(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} - Expires: ${expiresAt.toISOString()}`);
+    botBlockerLogger.info(`[Bot Blocker] IP BLOCKED: ${ip} - Reason: ${reason} - Expires: ${expiresAt.toISOString()}`);
     return true;
   } catch (error) {
-    console.error("[Bot Blocker] Database error blocking IP:", error);
+    botBlockerLogger.error({ err: error }, "[Bot Blocker] Database error blocking IP:");
     return false;
   }
 }
@@ -178,10 +183,10 @@ export async function unblockIP(ip: string): Promise<boolean> {
   try {
     await db.blockedIP.delete({ where: { ipAddress: ip } });
     blockedIPCache.delete(ip);
-    console.log(`[Bot Blocker] IP UNBLOCKED: ${ip}`);
+    botBlockerLogger.info(`[Bot Blocker] IP UNBLOCKED: ${ip}`);
     return true;
   } catch (error) {
-    console.error("[Bot Blocker] Error unblocking IP:", error);
+    botBlockerLogger.error({ err: error }, "[Bot Blocker] Error unblocking IP:");
     return false;
   }
 }
@@ -212,7 +217,7 @@ export async function getBlockedIPs(): Promise<
       orderBy: { blockedAt: "desc" },
     });
   } catch (error) {
-    console.error("[Bot Blocker] Error fetching blocked IPs:", error);
+    botBlockerLogger.error({ err: error }, "[Bot Blocker] Error fetching blocked IPs:");
     return [];
   }
 }
@@ -239,7 +244,7 @@ export async function getRecentSuspiciousActivity(
       take: limit,
     });
   } catch (error) {
-    console.error("[Bot Blocker] Error fetching suspicious activity:", error);
+    botBlockerLogger.error({ err: error }, "[Bot Blocker] Error fetching suspicious activity:");
     return [];
   }
 }
@@ -263,9 +268,7 @@ export async function cleanupExpiredData(): Promise<void> {
     });
 
     if (deletedBlocks.count > 0 || deletedActivity.count > 0) {
-      console.log(
-        `[Bot Blocker] Cleanup: removed ${deletedBlocks.count} expired blocks, ${deletedActivity.count} old activity logs`
-      );
+      botBlockerLogger.info(`[Bot Blocker] Cleanup: removed ${deletedBlocks.count} expired blocks, ${deletedActivity.count} old activity logs`);
     }
 
     // Clear cache for expired entries
@@ -275,7 +278,7 @@ export async function cleanupExpiredData(): Promise<void> {
       }
     });
   } catch (error) {
-    console.error("[Bot Blocker] Error during cleanup:", error);
+    botBlockerLogger.error({ err: error }, "[Bot Blocker] Error during cleanup:");
   }
 }
 

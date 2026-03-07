@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMarketplaceBooksFeatureLogger = logger.child({ module: "admin-marketplace-books-feature" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -59,7 +62,7 @@ export async function POST(
       message: featured ? "Book marked as featured" : "Book removed from featured",
     });
   } catch (error) {
-    console.error("Error updating featured status:", error);
+    adminMarketplaceBooksFeatureLogger.error({ err: String(error) }, "Error updating featured status:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

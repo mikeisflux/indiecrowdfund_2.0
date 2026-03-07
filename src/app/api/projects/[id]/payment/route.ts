@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsPaymentLogger = logger.child({ module: "projects-payment" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -119,14 +122,14 @@ export async function POST(
       },
     });
 
-    console.log(`Project payment settings updated for ${projectId}`);
+    projectsPaymentLogger.info(`Project payment settings updated for ${projectId}`);
 
     return NextResponse.json({
       success: true,
       project: updated,
     });
   } catch (error) {
-    console.error("Update payment error:", error);
+    projectsPaymentLogger.error({ err: String(error) }, "Update payment error:");
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -182,7 +185,7 @@ export async function GET(
 
     return NextResponse.json(project);
   } catch (error) {
-    console.error("Get payment error:", error);
+    projectsPaymentLogger.error({ err: String(error) }, "Get payment error:");
     return NextResponse.json(
       { error: "Failed to get payment settings" },
       { status: 500 }

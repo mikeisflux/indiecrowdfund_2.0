@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsEndLogger = logger.child({ module: "projects-end" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -81,7 +84,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Error ending item:", error);
+    projectsEndLogger.error({ err: String(error) }, "Error ending item:");
     return NextResponse.json(
       { error: "Failed to end item" },
       { status: 500 }

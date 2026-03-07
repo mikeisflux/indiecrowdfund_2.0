@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminDatabaseBackupLogger = logger.child({ module: "admin-database-backup" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { exec } from "child_process";
@@ -115,7 +118,7 @@ export async function GET() {
 
     return NextResponse.json({ backups });
   } catch (error) {
-    console.error("Error listing backups:", error);
+    adminDatabaseBackupLogger.error({ err: String(error) }, "Error listing backups:");
     return NextResponse.json(
       { error: "Failed to list backups", details: String(error) },
       { status: 500 }
@@ -195,7 +198,7 @@ export async function POST() {
             ? `${gzSizeInMB.toFixed(2)} MB`
             : `${(gzStats.size / 1024).toFixed(2)} KB`;
       } catch (gzipError) {
-        console.warn("Gzip compression failed, keeping uncompressed:", gzipError);
+        adminDatabaseBackupLogger.warn({ data: gzipError }, "Gzip compression failed, keeping uncompressed:");
       }
     }
 
@@ -210,7 +213,7 @@ export async function POST() {
       },
     });
   } catch (error) {
-    console.error("Error creating backup:", error);
+    adminDatabaseBackupLogger.error({ err: String(error) }, "Error creating backup:");
     return NextResponse.json(
       { error: "Failed to create backup", details: String(error) },
       { status: 500 }
@@ -255,7 +258,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true, deleted: sanitizedFilename });
   } catch (error) {
-    console.error("Error deleting backup:", error);
+    adminDatabaseBackupLogger.error({ err: String(error) }, "Error deleting backup:");
     return NextResponse.json(
       { error: "Failed to delete backup", details: String(error) },
       { status: 500 }

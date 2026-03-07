@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsLogger = logger.child({ module: "projects" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -193,7 +196,7 @@ async function handleCollaborators(
   });
 
   if (!project) {
-    console.error("Project not found when processing collaborators");
+    projectsLogger.error("Project not found when processing collaborators");
     return;
   }
 
@@ -304,7 +307,7 @@ async function handleCollaborators(
         );
       }
     } catch (error) {
-      console.error(`Error processing collaborator ${emailLower}:`, error);
+      projectsLogger.error({ err: String(error) }, `Error processing collaborator ${emailLower}:`);
       // Continue processing other collaborators even if one fails
     }
   }
@@ -365,7 +368,7 @@ export async function GET(
 
     return NextResponse.json({ project: serializedProject });
   } catch (error) {
-    console.error("Get project error:", error);
+    projectsLogger.error({ err: String(error) }, "Get project error:");
     return NextResponse.json(
       { error: "Failed to fetch project" },
       { status: 500 }
@@ -565,7 +568,7 @@ export async function PATCH(
                   fullProject.title
                 );
               } catch (emailError) {
-                console.error("Failed to send project submitted email:", emailError);
+                projectsLogger.error({ err: String(emailError) }, "Failed to send project submitted email:");
               }
             }
 
@@ -784,7 +787,7 @@ export async function PATCH(
       return NextResponse.json({ project: updated });
     }
   } catch (error) {
-    console.error("Update project error:", error);
+    projectsLogger.error({ err: String(error) }, "Update project error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -1045,7 +1048,7 @@ export async function DELETE(
       message: "Project deleted successfully",
     });
   } catch (error) {
-    console.error("Delete project error:", error);
+    projectsLogger.error({ err: String(error) }, "Delete project error:");
     return NextResponse.json(
       { error: "Failed to delete project" },
       { status: 500 }

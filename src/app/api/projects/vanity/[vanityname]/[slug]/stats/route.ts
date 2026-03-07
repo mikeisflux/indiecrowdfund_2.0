@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsVanityStatsLogger = logger.child({ module: "projects-vanity-stats" });
 import { db } from "@/lib/db";
 
 /**
@@ -85,7 +88,7 @@ export async function GET(
       status: project.status,
     });
   } catch (error) {
-    console.error("Get project stats error:", error);
+    projectsVanityStatsLogger.error({ err: String(error) }, "Get project stats error:");
     return NextResponse.json(
       { error: "Failed to fetch stats" },
       { status: 500 }

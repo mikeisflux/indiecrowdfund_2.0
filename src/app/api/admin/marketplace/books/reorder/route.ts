@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMarketplaceBooksReorderLogger = logger.child({ module: "admin-marketplace-books-reorder" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -61,7 +64,7 @@ export async function POST(request: Request) {
       message: `Updated ${category} order for ${bookIds.length} books`,
     });
   } catch (error) {
-    console.error("Error reordering books:", error);
+    adminMarketplaceBooksReorderLogger.error({ err: String(error) }, "Error reordering books:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

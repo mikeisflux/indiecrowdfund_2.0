@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const cronScheduledCampaignsLogger = logger.child({ module: "cron-scheduled-campaigns" });
 import { db } from "@/lib/db";
 import { queueEmail, EMAIL_PRIORITY, escapeHtmlForEmail as escapeHtml } from "@/lib/email";
 
@@ -130,7 +133,7 @@ export async function GET(req: NextRequest) {
 
         results.push({ id: campaign.id, status: "sent", queued: queuedCount, total: uniqueEmails.length });
       } catch (error) {
-        console.error(`Failed to process scheduled campaign ${campaign.id}:`, error);
+        cronScheduledCampaignsLogger.error({ err: String(error) }, `Failed to process scheduled campaign ${campaign.id}:`);
         // Reset to SCHEDULED so it can be retried
         await db.emailCampaign.update({
           where: { id: campaign.id },
@@ -142,7 +145,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ processed: results.length, results });
   } catch (error) {
-    console.error("Scheduled campaigns cron error:", error);
+    cronScheduledCampaignsLogger.error({ err: String(error) }, "Scheduled campaigns cron error:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

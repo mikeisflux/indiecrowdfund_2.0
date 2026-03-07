@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminRetailersLogger = logger.child({ module: "admin-retailers" });
 import { revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -114,7 +117,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching retailers:", error);
+    adminRetailersLogger.error({ err: String(error) }, "Error fetching retailers:");
     return NextResponse.json(
       { error: "Failed to fetch retailers" },
       { status: 500 }
@@ -234,7 +237,7 @@ export async function PATCH(req: NextRequest) {
             retailer.contactName,
             accessCode
           );
-          console.log(`[Admin] Sent retailer approval email to ${retailer.email}`);
+          adminRetailersLogger.info(`[Admin] Sent retailer approval email to ${retailer.email}`);
         }
       } else if (action === "REJECT") {
         await sendRetailerRejectionEmail(
@@ -243,11 +246,11 @@ export async function PATCH(req: NextRequest) {
           retailer.contactName,
           notes || undefined
         );
-        console.log(`[Admin] Sent retailer rejection email to ${retailer.email}`);
+        adminRetailersLogger.info(`[Admin] Sent retailer rejection email to ${retailer.email}`);
       }
     } catch (emailError) {
       // Don't fail the action if email fails, just log it
-      console.error("[Admin] Failed to send retailer notification email:", emailError);
+      adminRetailersLogger.error({ err: String(emailError) }, "[Admin] Failed to send retailer notification email:");
     }
 
     return NextResponse.json({
@@ -255,7 +258,7 @@ export async function PATCH(req: NextRequest) {
       retailer: updatedRetailer,
     });
   } catch (error) {
-    console.error("Error updating retailer:", error);
+    adminRetailersLogger.error({ err: String(error) }, "Error updating retailer:");
     return NextResponse.json(
       { error: "Failed to update retailer" },
       { status: 500 }

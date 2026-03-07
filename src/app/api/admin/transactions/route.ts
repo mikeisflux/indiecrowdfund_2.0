@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminTransactionsLogger = logger.child({ module: "admin-transactions" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -95,7 +98,7 @@ export async function GET(request: NextRequest) {
         const pledges = await queryPledges(search, status, processor, dateFilter);
         results.push(...pledges);
       } catch (err) {
-        console.error("Error querying pledges:", err);
+        adminTransactionsLogger.error({ err: String(err) }, "Error querying pledges:");
         queryErrors.push("pledges");
       }
     }
@@ -106,7 +109,7 @@ export async function GET(request: NextRequest) {
         const purchases = await queryMarketplacePurchases(search, status, processor, dateFilter);
         results.push(...purchases);
       } catch (err) {
-        console.error("Error querying marketplace purchases:", err);
+        adminTransactionsLogger.error({ err: String(err) }, "Error querying marketplace purchases:");
         queryErrors.push("marketplace");
       }
     }
@@ -117,7 +120,7 @@ export async function GET(request: NextRequest) {
         const dcTxns = await queryDCTransactions(search, dateFilter);
         results.push(...dcTxns);
       } catch (err) {
-        console.error("Error querying DC transactions:", err);
+        adminTransactionsLogger.error({ err: String(err) }, "Error querying DC transactions:");
         queryErrors.push("dc_transactions");
       }
     }
@@ -128,7 +131,7 @@ export async function GET(request: NextRequest) {
         const redemptions = await queryDCRedemptions(search, dateFilter);
         results.push(...redemptions);
       } catch (err) {
-        console.error("Error querying DC redemptions:", err);
+        adminTransactionsLogger.error({ err: String(err) }, "Error querying DC redemptions:");
         queryErrors.push("dc_redemptions");
       }
     }
@@ -139,7 +142,7 @@ export async function GET(request: NextRequest) {
         const payouts = await queryPayouts(search, status, dateFilter);
         results.push(...payouts);
       } catch (err) {
-        console.error("Error querying payouts:", err);
+        adminTransactionsLogger.error({ err: String(err) }, "Error querying payouts:");
         queryErrors.push("payouts");
       }
     }
@@ -150,7 +153,7 @@ export async function GET(request: NextRequest) {
         const settlements = await querySettlements(search, status, dateFilter);
         results.push(...settlements);
       } catch (err) {
-        console.error("Error querying settlements:", err);
+        adminTransactionsLogger.error({ err: String(err) }, "Error querying settlements:");
         queryErrors.push("settlements");
       }
     }
@@ -161,7 +164,7 @@ export async function GET(request: NextRequest) {
         const aftersales = await queryIndieKitAftersales(search, processor, dateFilter);
         results.push(...aftersales);
       } catch (err) {
-        console.error("Error querying IndieKit aftersales:", err);
+        adminTransactionsLogger.error({ err: String(err) }, "Error querying IndieKit aftersales:");
         queryErrors.push("indiekit_aftersales");
       }
     }
@@ -188,7 +191,7 @@ export async function GET(request: NextRequest) {
       ...(queryErrors.length > 0 ? { queryErrors } : {}),
     });
   } catch (error) {
-    console.error("Error fetching unified transactions:", error);
+    adminTransactionsLogger.error({ err: String(error) }, "Error fetching unified transactions:");
     return NextResponse.json(
       { error: "Failed to fetch transactions" },
       { status: 500 }

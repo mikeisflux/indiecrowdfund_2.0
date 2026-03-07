@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitLogger = logger.child({ module: "creator-indiekit" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatFileSize } from "@/lib/utils";
@@ -988,7 +991,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("IndieKit API error:", error);
+    creatorIndiekitLogger.error({ err: String(error) }, "IndieKit API error:");
     return NextResponse.json(
       { error: "Failed to fetch IndieKit data" },
       { status: 500 }

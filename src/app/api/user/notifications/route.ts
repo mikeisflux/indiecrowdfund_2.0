@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const userNotificationsLogger = logger.child({ module: "user-notifications" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { markAsRead, markAllAsRead } from "@/lib/notifications";
@@ -65,7 +68,7 @@ export async function GET(req: NextRequest) {
       unreadCount,
     });
   } catch (error) {
-    console.error("Error fetching notifications:", error);
+    userNotificationsLogger.error({ err: String(error) }, "Error fetching notifications:");
     return NextResponse.json(
       { error: "Failed to fetch notifications" },
       { status: 500 }
@@ -110,7 +113,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error("Error updating notifications:", error);
+    userNotificationsLogger.error({ err: String(error) }, "Error updating notifications:");
     return NextResponse.json(
       { error: "Failed to update notifications" },
       { status: 500 }
@@ -166,7 +169,7 @@ export async function DELETE(req: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Error deleting notification:", error);
+    userNotificationsLogger.error({ err: String(error) }, "Error deleting notification:");
     return NextResponse.json(
       { error: "Failed to delete notification" },
       { status: 500 }

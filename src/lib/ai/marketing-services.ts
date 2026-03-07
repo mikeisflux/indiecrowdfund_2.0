@@ -1,6 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const aiMarketingServicesLogger = logger.child({ module: "ai-marketing-services" });
+
+
 // Lazy initialization to avoid build-time errors
 let anthropicClient: Anthropic | null = null;
 let cachedApiKey: string | null = null;
@@ -142,7 +147,7 @@ Respond in JSON:
       signOff: result.signOff || "Happy backing!",
     };
   } catch (error) {
-    console.error("Email personalization error:", error);
+    aiMarketingServicesLogger.error({ err: error }, "Email personalization error:");
     throw new Error("Failed to personalize email");
   }
 }
@@ -543,7 +548,7 @@ Respond in JSON:
       avgValue: 0,
     }));
   } catch (error) {
-    console.error("AI segment identification error:", error);
+    aiMarketingServicesLogger.error({ err: error }, "AI segment identification error:");
     return [];
   }
 }
@@ -714,7 +719,7 @@ Respond in JSON:
       recommendation: result.recommendation || "Test variant 1 first",
     };
   } catch (error) {
-    console.error("Content optimization error:", error);
+    aiMarketingServicesLogger.error({ err: error }, "Content optimization error:");
     throw new Error("Failed to generate content variants");
   }
 }

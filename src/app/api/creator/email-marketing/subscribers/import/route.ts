@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorEmailMarketingSubscribersImportLogger = logger.child({ module: "creator-email-marketing-subscribers-import" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -161,7 +164,7 @@ export async function POST(request: NextRequest) {
       errors,
     });
   } catch (error) {
-    console.error("Error importing subscribers:", error);
+    creatorEmailMarketingSubscribersImportLogger.error({ err: String(error) }, "Error importing subscribers:");
     return NextResponse.json(
       { error: "Failed to import subscribers" },
       { status: 500 }

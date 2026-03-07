@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const collaborationsLogger = logger.child({ module: "collaborations" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -55,12 +58,12 @@ export async function DELETE(
         },
       });
     } catch (notifError) {
-      console.error("Failed to create notification:", notifError);
+      collaborationsLogger.error({ err: String(notifError) }, "Failed to create notification:");
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error removing collaboration:", error);
+    collaborationsLogger.error({ err: String(error) }, "Error removing collaboration:");
     return NextResponse.json(
       { error: "Failed to remove collaboration" },
       { status: 500 }

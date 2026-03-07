@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const stripeConfigLogger = logger.child({ module: "stripe-config" });
 import { getStripePublishableKey } from "@/lib/payments/stripe";
 import { db } from "@/lib/db";
 
@@ -37,7 +40,7 @@ export async function GET() {
       publishableKey,
     });
   } catch (error) {
-    console.error("Error getting Stripe config:", error);
+    stripeConfigLogger.error({ err: String(error) }, "Error getting Stripe config:");
     // Fall back to env var if database fails
     return NextResponse.json({
       enabled: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,

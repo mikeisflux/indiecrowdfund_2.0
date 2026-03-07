@@ -1,6 +1,11 @@
 import { db } from "@/lib/db";
 import { getStripeInstance, getSecureAppUrl } from "./config";
 
+import { logger } from "@/lib/logger";
+
+const paymentsStripeConnectLogger = logger.child({ module: "payments-stripe-connect" });
+
+
 /**
  * Check if a creator's Stripe account is onboarded, querying Stripe directly if needed.
  * This handles cases where the webhook might be delayed and updates the DB accordingly.
@@ -32,7 +37,7 @@ export async function checkAndUpdateStripeOnboarding(stripeConfigId: string, str
     // Handle revoked/invalid Stripe Connect accounts gracefully
     const stripeErr = error as { type?: string; code?: string; message?: string };
     if (stripeErr.type === "StripePermissionError" || stripeErr.code === "account_invalid") {
-      console.warn(`[Stripe Connect] Account ${stripeAccountId} access revoked or invalid, marking as inactive`);
+      paymentsStripeConnectLogger.warn(`[Stripe Connect] Account ${stripeAccountId} access revoked or invalid, marking as inactive`);
       try {
         await db.stripeConfig.update({
           where: { id: stripeConfigId },
@@ -41,7 +46,7 @@ export async function checkAndUpdateStripeOnboarding(stripeConfigId: string, str
       } catch { /* ignore update failure */ }
       return false;
     }
-    console.error("Error checking Stripe account status:", stripeErr.message || error);
+    paymentsStripeConnectLogger.error({ err: stripeErr.message || error }, "Error checking Stripe account status:");
     // Return DB value if Stripe check fails
     return currentOnboardedStatus;
   }
@@ -98,7 +103,7 @@ export async function validateStripeConnectAccount(userId: string): Promise<{ is
 
     return { isValid: true };
   } catch (error) {
-    console.error("Error validating Stripe Connect account:", error);
+    paymentsStripeConnectLogger.error({ err: error }, "Error validating Stripe Connect account:");
     return {
       isValid: false,
       error: "Unable to verify Stripe account status. Please try again.",

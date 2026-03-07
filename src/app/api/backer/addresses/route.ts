@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerAddressesLogger = logger.child({ module: "backer-addresses" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -27,7 +30,7 @@ export async function GET() {
 
     return NextResponse.json({ addresses }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching addresses:", error);
+    backerAddressesLogger.error({ err: String(error) }, "Error fetching addresses:");
     return NextResponse.json(
       { error: "Failed to fetch addresses" },
       { status: 500, headers: corsHeaders }
@@ -79,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ address }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error creating address:", error);
+    backerAddressesLogger.error({ err: String(error) }, "Error creating address:");
     return NextResponse.json(
       { error: "Failed to create address" },
       { status: 500, headers: corsHeaders }

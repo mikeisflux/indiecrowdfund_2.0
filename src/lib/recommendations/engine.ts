@@ -1,5 +1,10 @@
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const recommendationsEngineLogger = logger.child({ module: "recommendations-engine" });
+
+
 interface ProjectWithCount {
   id: string;
   category: string;
@@ -152,7 +157,7 @@ export class RecommendationEngine {
         project,
       }));
     } catch (error) {
-      console.error("Collaborative filtering error:", error);
+      recommendationsEngineLogger.error({ err: error }, "Collaborative filtering error:");
       return [];
     }
   }

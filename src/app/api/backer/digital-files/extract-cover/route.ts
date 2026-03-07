@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerDigitalFilesExtractCoverLogger = logger.child({ module: "backer-digital-files-extract-cover" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { extractAndSaveCover } from "@/lib/pdf-cover-extractor";
@@ -95,7 +98,7 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
   } catch (error) {
-    console.error("Cover extraction error:", error);
+    backerDigitalFilesExtractCoverLogger.error({ err: String(error) }, "Cover extraction error:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -142,7 +145,7 @@ export async function GET() {
       files: filesNeedingCovers,
     });
   } catch (error) {
-    console.error("Error fetching files needing covers:", error);
+    backerDigitalFilesExtractCoverLogger.error({ err: String(error) }, "Error fetching files needing covers:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

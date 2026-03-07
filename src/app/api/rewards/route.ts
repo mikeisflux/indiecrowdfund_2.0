@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const rewardsLogger = logger.child({ module: "rewards" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -89,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ reward }, { status: 201 });
   } catch (error) {
-    console.error("Create reward error:", error);
+    rewardsLogger.error({ err: String(error) }, "Create reward error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -168,7 +171,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ reward: updatedReward });
   } catch (error) {
-    console.error("Update reward error:", error);
+    rewardsLogger.error({ err: String(error) }, "Update reward error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -233,7 +236,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete reward error:", error);
+    rewardsLogger.error({ err: String(error) }, "Delete reward error:");
     return NextResponse.json(
       { error: "Failed to delete reward" },
       { status: 500 }
@@ -275,7 +278,7 @@ export async function GET(req: NextRequest) {
       isLive: project?.status === "LIVE" || project?.status === "FUNDED",
     });
   } catch (error) {
-    console.error("Get rewards error:", error);
+    rewardsLogger.error({ err: String(error) }, "Get rewards error:");
     return NextResponse.json(
       { error: "Failed to fetch rewards" },
       { status: 500 }

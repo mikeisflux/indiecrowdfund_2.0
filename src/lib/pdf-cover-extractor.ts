@@ -10,6 +10,11 @@
 
 import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
+import { logger } from "@/lib/logger";
+
+const pdfCoverExtractorLogger = logger.child({ module: "pdf-cover-extractor" });
+
+
 // R2 configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
@@ -174,7 +179,7 @@ async function extractPdfCover(
       totalPages,
     };
   } catch (error) {
-    console.error("PDF cover extraction failed:", error);
+    pdfCoverExtractorLogger.error({ err: error }, "PDF cover extraction failed:");
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

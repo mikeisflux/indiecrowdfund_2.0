@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMediaScanLogger = logger.child({ module: "admin-media-scan" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { readdir, stat } from "fs/promises";
@@ -90,7 +93,7 @@ async function scanDirectory(dir: string, baseDir: string): Promise<Array<{
       }
     }
   } catch (error) {
-    console.error(`Error scanning directory ${dir}:`, error);
+    adminMediaScanLogger.error({ err: String(error) }, `Error scanning directory ${dir}:`);
   }
 
   return results;
@@ -203,7 +206,7 @@ export async function GET(req: NextRequest) {
       untrackedFiles: action === "details" ? untracked : undefined
     });
   } catch (error) {
-    console.error("Error scanning for media:", error);
+    adminMediaScanLogger.error({ err: String(error) }, "Error scanning for media:");
     return NextResponse.json(
       { error: "Failed to scan for media" },
       { status: 500 }
@@ -352,7 +355,7 @@ export async function POST(req: NextRequest) {
       errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
-    console.error("Error importing media:", error);
+    adminMediaScanLogger.error({ err: String(error) }, "Error importing media:");
     return NextResponse.json(
       { error: "Failed to import media" },
       { status: 500 }

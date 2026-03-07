@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerAddressesLogger = logger.child({ module: "backer-addresses" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -61,7 +64,7 @@ export async function PATCH(
 
     return NextResponse.json({ address }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error updating address:", error);
+    backerAddressesLogger.error({ err: String(error) }, "Error updating address:");
     return NextResponse.json(
       { error: "Failed to update address" },
       { status: 500, headers: corsHeaders }
@@ -97,7 +100,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error deleting address:", error);
+    backerAddressesLogger.error({ err: String(error) }, "Error deleting address:");
     return NextResponse.json(
       { error: "Failed to delete address" },
       { status: 500, headers: corsHeaders }

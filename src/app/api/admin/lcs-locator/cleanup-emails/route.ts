@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminLcsLocatorCleanupEmailsLogger = logger.child({ module: "admin-lcs-locator-cleanup-emails" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -53,7 +56,7 @@ export async function GET() {
       message: `Found ${invalidEmailShops.length} shops with invalid emails (missing @). Use POST to clean up.`,
     });
   } catch (error) {
-    console.error("Error previewing invalid emails:", error);
+    adminLcsLocatorCleanupEmailsLogger.error({ err: String(error) }, "Error previewing invalid emails:");
     return NextResponse.json(
       { error: "Failed to preview invalid emails" },
       { status: 500 }
@@ -98,7 +101,7 @@ export async function POST() {
       message: `Successfully cleaned up ${result.count} invalid emails (set to null)`,
     });
   } catch (error) {
-    console.error("Error cleaning up invalid emails:", error);
+    adminLcsLocatorCleanupEmailsLogger.error({ err: String(error) }, "Error cleaning up invalid emails:");
     return NextResponse.json(
       { error: "Failed to clean up invalid emails" },
       { status: 500 }

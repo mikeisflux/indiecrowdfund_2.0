@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const marketplaceCheckoutLogger = logger.child({ module: "marketplace-checkout" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getStripeInstance, getSecureAppUrl, checkAndUpdateStripeOnboarding } from "@/lib/payments/stripe";
@@ -182,7 +185,7 @@ export async function POST(request: Request) {
       sessionId: checkoutSession.id,
     });
   } catch (error) {
-    console.error("Error creating checkout session:", error);
+    marketplaceCheckoutLogger.error({ err: String(error) }, "Error creating checkout session:");
     return NextResponse.json(
       { error: "Failed to create checkout session" },
       { status: 500 }

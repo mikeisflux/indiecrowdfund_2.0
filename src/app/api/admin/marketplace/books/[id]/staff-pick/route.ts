@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMarketplaceBooksStaffPickLogger = logger.child({ module: "admin-marketplace-books-staff-pick" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -59,7 +62,7 @@ export async function POST(
       message: staffPick ? "Book marked as staff pick" : "Book removed from staff picks",
     });
   } catch (error) {
-    console.error("Error updating staff pick status:", error);
+    adminMarketplaceBooksStaffPickLogger.error({ err: String(error) }, "Error updating staff pick status:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

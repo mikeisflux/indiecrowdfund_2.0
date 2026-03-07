@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const diagnosticsPaymentLogger = logger.child({ module: "diagnostics-payment" });
 
 /**
  * POST /api/diagnostics/payment
@@ -13,10 +16,7 @@ export async function POST(req: NextRequest) {
     const { event, data } = body;
 
     // Structured log that shows in PM2
-    console.log(
-      `[PaymentDiag] ${event}`,
-      JSON.stringify(data, null, 0)
-    );
+    diagnosticsPaymentLogger.info({ data: JSON.stringify(data, null, 0) }, `[PaymentDiag] ${event}`);
 
     return NextResponse.json({ ok: true });
   } catch {

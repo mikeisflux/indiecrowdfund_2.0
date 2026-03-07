@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const trackLogger = logger.child({ module: "track" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -163,7 +166,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error logging behavior:", error);
+    trackLogger.error({ err: String(error) }, "Error logging behavior:");
     return NextResponse.json(
       { error: "Failed to log behavior" },
       { status: 500 }

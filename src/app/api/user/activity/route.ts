@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const userActivityLogger = logger.child({ module: "user-activity" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -301,7 +304,7 @@ export async function GET() {
       stats,
     });
   } catch (error) {
-    console.error("Activity fetch error:", error);
+    userActivityLogger.error({ err: String(error) }, "Activity fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch activity" },
       { status: 500 }

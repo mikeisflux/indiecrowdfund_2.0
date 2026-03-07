@@ -19,6 +19,11 @@ import {
 import { verifyRecaptcha } from "./recaptcha";
 import { BCRYPT_COST } from "./constants";
 
+import { logger } from "@/lib/logger";
+
+const authActionsLogger = logger.child({ module: "auth-actions" });
+
+
 /**
  * Get client IP address from request headers
  */
@@ -53,7 +58,7 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
     const honeypotValue = formData.get("website") as string | null;
     if (!checkHoneypot(honeypotValue)) {
       // Bot detected - silently reject with generic error
-      console.log("[Register] Bot detected via honeypot from IP:", clientIP);
+      authActionsLogger.info({ data: clientIP }, "[Register] Bot detected via honeypot from IP:");
       return { error: { _form: ["Registration failed. Please try again."] } };
     }
 
@@ -61,7 +66,7 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
     const recaptchaToken = formData.get("recaptchaToken") as string | null;
     const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIP);
     if (!recaptchaResult.valid) {
-      console.log("[Register] reCAPTCHA failed from IP:", clientIP);
+      authActionsLogger.info({ data: clientIP }, "[Register] reCAPTCHA failed from IP:");
       return { error: { _form: [recaptchaResult.error || "CAPTCHA verification failed"] } };
     }
 
@@ -91,7 +96,7 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
     // Validate name is not gibberish (bot detection)
     const nameValidation = validateNameNotGibberish(name);
     if (!nameValidation.valid) {
-      console.log("[Register] Gibberish name rejected:", name, "IP:", clientIP);
+      authActionsLogger.info({ name, ip: clientIP }, "Gibberish name rejected");
       return { error: { name: [nameValidation.reason || "Please enter a valid name"] } };
     }
 
@@ -102,7 +107,7 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
         where: { email },
       });
     } catch (dbError) {
-      console.error("[Register] Database error checking existing user:", dbError);
+      authActionsLogger.error({ err: dbError }, "[Register] Database error checking existing user:");
       return { error: { _form: ["Unable to connect to database. Please try again."] } };
     }
 
@@ -115,7 +120,7 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
     try {
       hashedPassword = await bcrypt.hash(password, BCRYPT_COST);
     } catch (hashError) {
-      console.error("[Register] Password hashing error:", hashError);
+      authActionsLogger.error({ err: hashError }, "[Register] Password hashing error:");
       return { error: { _form: ["Something went wrong. Please try again."] } };
     }
 
@@ -133,7 +138,7 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
       // Record registration attempt for rate limiting
       await recordRegistrationAttempt(clientIP);
     } catch (createError) {
-      console.error("[Register] Error creating user:", createError);
+      authActionsLogger.error({ err: createError }, "[Register] Error creating user:");
       return { error: { _form: ["Something went wrong. Please try again."] } };
     }
 
@@ -167,14 +172,14 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
       }
     } catch (emailError) {
       // Don't fail registration if email fails
-      console.error("[Register] Failed to send welcome/verification email:", emailError);
+      authActionsLogger.error({ err: emailError }, "[Register] Failed to send welcome/verification email:");
     }
 
     // Create session
     try {
       await createSession(user.id);
     } catch (sessionError) {
-      console.error("[Register] Error creating session:", sessionError);
+      authActionsLogger.error({ err: sessionError }, "[Register] Error creating session:");
       return { error: { _form: ["Account created but failed to sign in. Please try logging in."] } };
     }
 
@@ -183,11 +188,11 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
 
     // Return success with redirect URL - let client handle navigation
     // This ensures the Set-Cookie header is properly sent before redirect
-    console.log("[Register] Success for email:", email);
+    authActionsLogger.info({ data: email }, "[Register] Success for email:");
     return { success: true, redirectTo };
   } catch (error) {
     // Catch-all for any unexpected errors
-    console.error("[Register] Unexpected error:", error);
+    authActionsLogger.error({ err: error }, "[Register] Unexpected error:");
     return { error: { _form: ["Something went wrong. Please try again."] } };
   }
 }
@@ -345,13 +350,13 @@ export async function requestPasswordReset(formData: FormData) {
     const emailResult = await sendPasswordResetEmail(email, token);
 
     if (!emailResult.success) {
-      console.error("Failed to send password reset email:", emailResult.error);
+      authActionsLogger.error({ err: emailResult.error }, "Failed to send password reset email:");
       // Still return success to prevent email enumeration, but log the error
     }
 
     return { success: true };
   } catch (error) {
-    console.error("Error requesting password reset:", error);
+    authActionsLogger.error({ err: error }, "Error requesting password reset:");
     return { error: { _form: ["Something went wrong. Please try again."] } };
   }
 }
@@ -418,7 +423,7 @@ export async function resetPassword(formData: FormData, token: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Error resetting password:", error);
+    authActionsLogger.error({ err: error }, "Error resetting password:");
     return { error: { _form: ["Something went wrong. Please try again."] } };
   }
 }

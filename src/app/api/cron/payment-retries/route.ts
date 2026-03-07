@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const cronPaymentRetriesLogger = logger.child({ module: "cron-payment-retries" });
 import { processPaymentRetries } from "@/lib/payments/stripe";
 
 /**
@@ -40,7 +43,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Payment retry cron error:", error);
+    cronPaymentRetriesLogger.error({ err: String(error) }, "Payment retry cron error:");
     return NextResponse.json(
       { error: "Failed to process payment retries" },
       { status: 500 }

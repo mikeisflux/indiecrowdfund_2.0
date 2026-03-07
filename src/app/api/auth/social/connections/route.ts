@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const authSocialConnectionsLogger = logger.child({ module: "auth-social-connections" });
 import { validateSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { OAuthProvider } from "@/lib/oauth/config";
@@ -56,7 +59,7 @@ export async function GET() {
 
     return NextResponse.json({ connections });
   } catch (error) {
-    console.error("Error fetching social connections:", error);
+    authSocialConnectionsLogger.error({ err: String(error) }, "Error fetching social connections:");
     return NextResponse.json(
       { error: "Failed to fetch social connections" },
       { status: 500 }
@@ -105,7 +108,7 @@ export async function DELETE(request: NextRequest) {
       deleted: result.count,
     });
   } catch (error) {
-    console.error("Error disconnecting social provider:", error);
+    authSocialConnectionsLogger.error({ err: String(error) }, "Error disconnecting social provider:");
     return NextResponse.json(
       { error: "Failed to disconnect social provider" },
       { status: 500 }

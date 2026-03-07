@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorPledgesBulkDeleteLogger = logger.child({ module: "creator-pledges-bulk-delete" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -107,7 +110,7 @@ export async function DELETE(req: Request) {
       message: `${deleteResult.count} pending pledge(s) deleted successfully`,
     });
   } catch (error) {
-    console.error("Bulk delete pledges error:", error);
+    creatorPledgesBulkDeleteLogger.error({ err: String(error) }, "Bulk delete pledges error:");
     return NextResponse.json(
       { error: "Failed to delete pledges" },
       { status: 500 }

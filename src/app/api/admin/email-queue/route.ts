@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminEmailQueueLogger = logger.child({ module: "admin-email-queue" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getEmailQueueStats, setEmailQueueEnabled, EMAIL_PRIORITY } from "@/lib/email";
@@ -138,7 +141,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching email queue:", error);
+    adminEmailQueueLogger.error({ err: String(error) }, "Error fetching email queue:");
     return NextResponse.json(
       { error: "Failed to fetch email queue status" },
       { status: 500 }
@@ -261,7 +264,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Error controlling email queue:", error);
+    adminEmailQueueLogger.error({ err: String(error) }, "Error controlling email queue:");
     return NextResponse.json(
       { error: "Failed to control email queue" },
       { status: 500 }
@@ -288,7 +291,7 @@ export async function DELETE() {
       count: result.count,
     });
   } catch (error) {
-    console.error("Error clearing email queue:", error);
+    adminEmailQueueLogger.error({ err: String(error) }, "Error clearing email queue:");
     return NextResponse.json(
       { error: "Failed to clear email queue" },
       { status: 500 }

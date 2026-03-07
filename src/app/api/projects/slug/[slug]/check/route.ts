@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsSlugCheckLogger = logger.child({ module: "projects-slug-check" });
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +52,7 @@ export async function GET(
       slug,
     });
   } catch (error) {
-    console.error("Error checking slug availability:", error);
+    projectsSlugCheckLogger.error({ err: String(error) }, "Error checking slug availability:");
     return NextResponse.json(
       { error: "Failed to check slug availability" },
       { status: 500 }

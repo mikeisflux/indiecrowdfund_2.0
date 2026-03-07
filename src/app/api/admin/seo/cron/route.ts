@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminSeoCronLogger = logger.child({ module: "admin-seo-cron" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { runSeoAudit } from "@/lib/seo-audit";
@@ -50,7 +53,7 @@ export async function POST(req: NextRequest) {
     } catch (auditError) {
       const msg = auditError instanceof Error ? auditError.message : "Unknown audit error";
       errors.push(`Audit failed: ${msg}`);
-      console.error("SEO cron audit error:", auditError);
+      adminSeoCronLogger.error({ err: String(auditError) }, "SEO cron audit error:");
     }
 
     // Step 2: Check all live projects have proper meta
@@ -92,7 +95,7 @@ export async function POST(req: NextRequest) {
     } catch (projectError) {
       const msg = projectError instanceof Error ? projectError.message : "Unknown project check error";
       errors.push(`Project meta check failed: ${msg}`);
-      console.error("SEO cron project check error:", projectError);
+      adminSeoCronLogger.error({ err: String(projectError) }, "SEO cron project check error:");
     }
 
     // Step 3: Check marketplace books have proper meta
@@ -133,7 +136,7 @@ export async function POST(req: NextRequest) {
     } catch (bookError) {
       const msg = bookError instanceof Error ? bookError.message : "Unknown book check error";
       errors.push(`Marketplace book check failed: ${msg}`);
-      console.error("SEO cron book check error:", bookError);
+      adminSeoCronLogger.error({ err: String(bookError) }, "SEO cron book check error:");
     }
 
     const duration = Date.now() - startTime;
@@ -188,7 +191,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error("Error running SEO cron job:", error);
+    adminSeoCronLogger.error({ err: String(error) }, "Error running SEO cron job:");
 
     // Attempt to log the failure
     try {
@@ -204,7 +207,7 @@ export async function POST(req: NextRequest) {
         },
       });
     } catch (logError) {
-      console.error("Failed to log SEO cron error:", logError);
+      adminSeoCronLogger.error({ err: String(logError) }, "Failed to log SEO cron error:");
     }
 
     return NextResponse.json(

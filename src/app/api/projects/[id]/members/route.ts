@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsMembersLogger = logger.child({ module: "projects-members" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -114,7 +117,7 @@ export async function GET(
       totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
-    console.error("Error fetching project members:", error);
+    projectsMembersLogger.error({ err: String(error) }, "Error fetching project members:");
     return NextResponse.json(
       { error: "Failed to fetch members" },
       { status: 500 }
@@ -188,7 +191,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Error adding project member:", error);
+    projectsMembersLogger.error({ err: String(error) }, "Error adding project member:");
     return NextResponse.json(
       { error: "Failed to add member" },
       { status: 500 }
@@ -253,7 +256,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting project member:", error);
+    projectsMembersLogger.error({ err: String(error) }, "Error deleting project member:");
     return NextResponse.json(
       { error: "Failed to delete member" },
       { status: 500 }

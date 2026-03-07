@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorMarketplaceBooksLogger = logger.child({ module: "creator-marketplace-books" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { validateStripeConnectAccount } from "@/lib/payments/stripe";
@@ -144,11 +147,11 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error creating marketplace book:", error);
+    creatorMarketplaceBooksLogger.error({ err: String(error) }, "Error creating marketplace book:");
     // Log more details for debugging
     if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+      creatorMarketplaceBooksLogger.error({ err: String(error.message) }, "Error message:");
+      creatorMarketplaceBooksLogger.error({ err: String(error.stack) }, "Error stack:");
       // Return more detail in development
       return NextResponse.json(
         {
@@ -225,7 +228,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("Error fetching creator books:", error);
+    creatorMarketplaceBooksLogger.error({ err: String(error) }, "Error fetching creator books:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsLaunchLogger = logger.child({ module: "projects-launch" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifyProjectLaunched } from "@/lib/notifications";
@@ -238,7 +241,7 @@ export async function POST(
         },
       });
     } catch (dbError) {
-      console.error("Failed to update project status:", dbError);
+      projectsLaunchLogger.error({ err: String(dbError) }, "Failed to update project status:");
       throw new Error(`Failed to update project: ${dbError instanceof Error ? dbError.message : "Unknown DB error"}`);
     }
 
@@ -254,7 +257,7 @@ export async function POST(
         },
       });
     } catch (reviewError) {
-      console.error("Failed to create review record:", reviewError);
+      projectsLaunchLogger.error({ err: String(reviewError) }, "Failed to create review record:");
       // Don't throw - review record is not critical
     }
 
@@ -262,7 +265,7 @@ export async function POST(
     try {
       await notifyProjectLaunched(projectId);
     } catch (notifyError) {
-      console.error("Failed to send launch notifications:", notifyError);
+      projectsLaunchLogger.error({ err: String(notifyError) }, "Failed to send launch notifications:");
       // Don't throw - notifications are not critical
     }
 
@@ -280,12 +283,12 @@ export async function POST(
       endDate: endDate.toISOString(),
     });
   } catch (error) {
-    console.error("Error launching project:", error);
+    projectsLaunchLogger.error({ err: String(error) }, "Error launching project:");
     // Log more details about the error
     if (error instanceof Error) {
-      console.error("Error name:", error.name);
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+      projectsLaunchLogger.error({ err: String(error.name) }, "Error name:");
+      projectsLaunchLogger.error({ err: String(error.message) }, "Error message:");
+      projectsLaunchLogger.error({ err: String(error.stack) }, "Error stack:");
     }
     return NextResponse.json(
       { error: "Failed to launch project", details: error instanceof Error ? error.message : "Unknown error" },

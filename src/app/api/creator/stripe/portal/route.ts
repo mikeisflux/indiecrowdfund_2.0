@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorStripePortalLogger = logger.child({ module: "creator-stripe-portal" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
@@ -34,7 +37,7 @@ export async function POST() {
 
     return NextResponse.json({ url: portalSession.url });
   } catch (error) {
-    console.error("Stripe portal error:", error);
+    creatorStripePortalLogger.error({ err: String(error) }, "Stripe portal error:");
     return NextResponse.json(
       { error: "Failed to create billing portal session" },
       { status: 500 }

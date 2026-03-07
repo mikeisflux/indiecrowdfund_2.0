@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const retailersInvoicesLogger = logger.child({ module: "retailers-invoices" });
 import { db } from "@/lib/db";
 import { authenticateRetailerRequest } from "@/lib/retailer-auth";
 
@@ -117,7 +120,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching retailer invoices:", error);
+    retailersInvoicesLogger.error({ err: String(error) }, "Error fetching retailer invoices:");
     return NextResponse.json(
       { error: "Failed to fetch invoices" },
       { status: 500 }

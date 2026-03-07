@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { auditLog, computeChanges } from "@/lib/audit";
+import { logger } from "@/lib/logger";
+
+const settingsLogger = logger.child({ module: "admin-settings" });
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -33,7 +37,7 @@ export async function GET() {
     try {
       authResult = await requireAdmin();
     } catch (authError) {
-      console.error("Auth error in settings:", authError);
+      settingsLogger.error({ err: String(authError) }, "Auth error in settings");
       return NextResponse.json(
         { error: "Authentication failed", details: String(authError) },
         { status: 500 }
@@ -51,7 +55,7 @@ export async function GET() {
         where: { id: "default" }
       });
     } catch (dbError) {
-      console.error("Database error fetching settings:", dbError);
+      settingsLogger.error({ err: String(dbError) }, "Database error fetching settings");
       return NextResponse.json(
         { error: "Database error fetching settings", details: String(dbError) },
         { status: 500 }
@@ -65,7 +69,7 @@ export async function GET() {
           data: { id: "default" }
         });
       } catch (createError) {
-        console.error("Error creating default settings:", createError);
+        settingsLogger.error({ err: String(createError) }, "Error creating default settings");
         return NextResponse.json(
           { error: "Failed to create default settings", details: String(createError) },
           { status: 500 }
@@ -108,7 +112,7 @@ export async function GET() {
 
     return NextResponse.json({ settings: maskedSettings });
   } catch (error) {
-    console.error("Unexpected error fetching settings:", error);
+    settingsLogger.error({ err: String(error) }, "Unexpected error fetching settings");
     return NextResponse.json(
       { error: "Failed to fetch settings", details: String(error) },
       { status: 500 }
@@ -124,7 +128,7 @@ export async function PATCH(req: NextRequest) {
     try {
       authResult = await requireAdmin();
     } catch (authError) {
-      console.error("Auth error in PATCH settings:", authError);
+      settingsLogger.error({ err: String(authError) }, "Auth error in PATCH settings");
       return NextResponse.json(
         { error: "Authentication failed", details: String(authError) },
         { status: 500 }
@@ -139,7 +143,7 @@ export async function PATCH(req: NextRequest) {
     try {
       body = await req.json();
     } catch (parseError) {
-      console.error("JSON parse error:", parseError);
+      settingsLogger.error({ err: String(parseError) }, "JSON parse error");
       return NextResponse.json(
         { error: "Invalid JSON body", details: String(parseError) },
         { status: 400 }
@@ -279,7 +283,7 @@ export async function PATCH(req: NextRequest) {
         // Remove all whitespace/newlines, then keep only valid base64 chars
         const cleaned = raw.replace(/\s/g, "").replace(/[^A-Za-z0-9+/=]/g, "");
         updateData[field] = cleaned;
-        console.log(`[Settings] Saved ${field}: length=${cleaned.length}, prefix=${cleaned.substring(0, 20)}, suffix=${cleaned.slice(-10)}`);
+        settingsLogger.info({ field, length: cleaned.length }, "Saved base64 field");
       }
     }
 
@@ -301,11 +305,33 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
+    // Capture old values for audit logging
+    const currentSettings = existing || await db.platformSettings.findUnique({ where: { id: "default" } });
+    const oldValues: Record<string, unknown> = {};
+    if (currentSettings) {
+      for (const key of Object.keys(updateData)) {
+        oldValues[key] = (currentSettings as Record<string, unknown>)[key];
+      }
+    }
+
     // Update settings
     const settings = await db.platformSettings.update({
       where: { id: "default" },
       data: updateData
     });
+
+    // Audit log the changes
+    const changes = computeChanges(oldValues, updateData);
+    if (Object.keys(changes).length > 0) {
+      auditLog({
+        action: "SETTINGS_CHANGE",
+        actorId: authResult.user.id,
+        targetType: "SETTINGS",
+        targetId: section,
+        changes,
+        details: { section, fieldCount: Object.keys(changes).length },
+      });
+    }
 
     // Mask sensitive fields in response
     const maskedSettings = {
@@ -345,7 +371,7 @@ export async function PATCH(req: NextRequest) {
       settings: maskedSettings
     });
   } catch (error) {
-    console.error("Error updating settings:", error);
+    settingsLogger.error({ err: String(error) }, "Error updating settings");
     return NextResponse.json(
       { error: "Failed to update settings", details: String(error) },
       { status: 500 }

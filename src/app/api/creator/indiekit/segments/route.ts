@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitSegmentsLogger = logger.child({ module: "creator-indiekit-segments" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -70,7 +73,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ segments: formattedSegments });
   } catch (error) {
-    console.error("IndieKit segments fetch error:", error);
+    creatorIndiekitSegmentsLogger.error({ err: String(error) }, "IndieKit segments fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch segments" },
       { status: 500 }
@@ -151,7 +154,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("IndieKit segment create error:", error);
+    creatorIndiekitSegmentsLogger.error({ err: String(error) }, "IndieKit segment create error:");
     return NextResponse.json(
       { error: "Failed to create segment" },
       { status: 500 }

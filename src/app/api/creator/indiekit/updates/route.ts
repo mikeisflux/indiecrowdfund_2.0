@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitUpdatesLogger = logger.child({ module: "creator-indiekit-updates" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -78,7 +81,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ updates: formattedUpdates });
   } catch (error) {
-    console.error("IndieKit updates fetch error:", error);
+    creatorIndiekitUpdatesLogger.error({ err: String(error) }, "IndieKit updates fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch updates" },
       { status: 500 }
@@ -137,7 +140,7 @@ export async function POST(req: NextRequest) {
       try {
         await notifyProjectUpdate(projectId, update.title, update.content, update.id);
       } catch (notifyError) {
-        console.error("Failed to send update notifications:", notifyError);
+        creatorIndiekitUpdatesLogger.error({ err: String(notifyError) }, "Failed to send update notifications:");
         // Don't fail the request if notifications fail
       }
 
@@ -174,7 +177,7 @@ export async function POST(req: NextRequest) {
       try {
         await notifyProjectUpdate(projectId, update.title, update.content, update.id);
       } catch (notifyError) {
-        console.error("Failed to send update notifications:", notifyError);
+        creatorIndiekitUpdatesLogger.error({ err: String(notifyError) }, "Failed to send update notifications:");
         // Don't fail the request if notifications fail
       }
     }
@@ -185,7 +188,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("IndieKit update create error:", error);
+    creatorIndiekitUpdatesLogger.error({ err: String(error) }, "IndieKit update create error:");
     return NextResponse.json(
       { error: "Failed to create update" },
       { status: 500 }
@@ -259,7 +262,7 @@ export async function PATCH(req: NextRequest) {
       try {
         await notifyProjectUpdate(projectId, update.title, update.content, update.id);
       } catch (notifyError) {
-        console.error("Failed to send update notifications:", notifyError);
+        creatorIndiekitUpdatesLogger.error({ err: String(notifyError) }, "Failed to send update notifications:");
         // Don't fail the request if notifications fail
       }
     }
@@ -270,7 +273,7 @@ export async function PATCH(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("IndieKit update patch error:", error);
+    creatorIndiekitUpdatesLogger.error({ err: String(error) }, "IndieKit update patch error:");
     return NextResponse.json(
       { error: "Failed to update" },
       { status: 500 }
@@ -322,7 +325,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("IndieKit update delete error:", error);
+    creatorIndiekitUpdatesLogger.error({ err: String(error) }, "IndieKit update delete error:");
     return NextResponse.json(
       { error: "Failed to delete update" },
       { status: 500 }

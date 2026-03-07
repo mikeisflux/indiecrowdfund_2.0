@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const authSocialCallbackLogger = logger.child({ module: "auth-social-callback" });
 import { cookies } from "next/headers";
 import { validateSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -31,7 +34,7 @@ export async function GET(
 
   // Check for errors from provider
   if (error) {
-    console.error(`OAuth error from ${provider}:`, error, errorDescription);
+    authSocialCallbackLogger.error({ err: String(error, errorDescription) }, `OAuth error from ${provider}:`);
     return NextResponse.redirect(
       `${dashboardUrl}?error=${encodeURIComponent(errorDescription || error)}`
     );
@@ -133,7 +136,7 @@ export async function GET(
       `${dashboardUrl}?success=${encodeURIComponent(`Successfully connected to ${provider}`)}`
     );
   } catch (dbError) {
-    console.error(`Database error storing ${provider} connection:`, dbError);
+    authSocialCallbackLogger.error({ err: String(dbError) }, `Database error storing ${provider} connection:`);
     return NextResponse.redirect(
       `${dashboardUrl}?error=${encodeURIComponent("Failed to save connection to database")}`
     );

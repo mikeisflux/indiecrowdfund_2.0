@@ -5,6 +5,10 @@ import { z } from "zod";
 import crypto from "crypto";
 import { pushOrdersToShopify } from "@/lib/shopify-push";
 import { decryptCredential } from "@/lib/encryption";
+import { logger } from "@/lib/logger";
+import { chargeSavedPledge } from "@/lib/payments/stripe/charges";
+
+const backersLogger = logger.child({ module: "indiekit-backers" });
 
 export const dynamic = "force-dynamic";
 
@@ -183,7 +187,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "push_to_fulfillment": {
-        console.log("[push_to_fulfillment] Starting for project:", projectId, "pledges:", pledgeIds);
+        backersLogger.info({ projectId, pledgeCount: pledgeIds.length }, "push_to_fulfillment starting");
 
         // Get ALL connected fulfillment integrations for this project
         let connectedIntegrations = await db.fulfillmentIntegration.findMany({
@@ -192,11 +196,11 @@ export async function POST(req: NextRequest) {
             status: "CONNECTED",
           },
         });
-        console.log("[push_to_fulfillment] Found integrations:", connectedIntegrations.length);
+        backersLogger.info({ count: connectedIntegrations.length }, "Found integrations");
 
         // Check if project has Shopify integration yet
         const hasShopifyIntegration = connectedIntegrations.some((i: { provider: string }) => i.provider === "SHOPIFY");
-        console.log("[push_to_fulfillment] Has Shopify integration:", hasShopifyIntegration);
+        backersLogger.info({ hasShopifyIntegration }, "Shopify integration check");
 
         if (!hasShopifyIntegration) {
           // Get the project creator's Shopify credentials (collaborators use creator's connection)
@@ -214,7 +218,7 @@ export async function POST(req: NextRequest) {
           });
 
           const creator = projectWithCreator?.creator;
-          console.log("[push_to_fulfillment] Creator has Shopify credentials:", !!creator?.shopifyAccessToken, !!creator?.shopifyShopDomain);
+          backersLogger.info({ hasToken: !!creator?.shopifyAccessToken, hasDomain: !!creator?.shopifyShopDomain }, "Creator Shopify credentials");
           if (creator?.shopifyAccessToken && creator?.shopifyShopDomain) {
             // Decrypt access token (backwards compatible with legacy unencrypted values)
             let decryptedToken: string;
@@ -257,7 +261,7 @@ export async function POST(req: NextRequest) {
         let totalFailed = 0;
         const allErrors: string[] = [];
 
-        console.log("[push_to_fulfillment] Total integrations to process:", connectedIntegrations.length);
+        backersLogger.info({ count: connectedIntegrations.length }, "Total integrations to process");
 
         // Push to each connected provider - continue on failure to handle partial success
         for (const integration of connectedIntegrations) {
@@ -389,7 +393,7 @@ export async function POST(req: NextRequest) {
             const providerName = integration.provider || "Unknown";
             const errorMsg = providerError instanceof Error ? providerError.message : "Unknown error";
             allErrors.push(`${providerName}: ${errorMsg}`);
-            console.error(`[push_to_fulfillment] Provider ${providerName} failed:`, providerError);
+            backersLogger.error({ provider: providerName, err: errorMsg }, "Fulfillment provider failed");
           }
         }
 
@@ -411,14 +415,24 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Log activity
+        // Log activity with partial-success details
         const providerList = pushedProviders.length > 0 ? ` to ${pushedProviders.join(", ")}` : "";
+        const pushTitle = results.failed > 0
+          ? `${results.success} orders pushed${providerList} (${results.failed} failed)`
+          : `${results.success} orders pushed${providerList}`;
         await db.fulfillmentActivity.create({
           data: {
             projectId,
             type: "ORDERS_PUSHED",
-            title: `${results.success} orders pushed${providerList}`,
+            title: pushTitle,
             affectedCount: results.success,
+            metadata: {
+              providers: pushedProviders,
+              successCount: results.success,
+              failedCount: results.failed,
+              errors: allErrors.slice(0, 20),
+              pledgeIds,
+            },
           },
         });
 
@@ -451,8 +465,8 @@ export async function POST(req: NextRequest) {
       case "charge_cards": {
         const chargeKey = idempotencyKey || crypto.randomUUID();
 
-        // Log activity with idempotency key to prevent duplicate charges
-        await db.fulfillmentActivity.create({
+        // Log activity BEFORE attempting charges (transaction logging for audit)
+        const chargeActivity = await db.fulfillmentActivity.create({
           data: {
             projectId,
             type: "CARDS_CHARGED",
@@ -463,11 +477,65 @@ export async function POST(req: NextRequest) {
               pledgeIds,
               initiatedBy: session.user.id,
               initiatedAt: new Date().toISOString(),
+              status: "IN_PROGRESS",
             },
           },
         });
 
-        results.success = pledgeIds.length;
+        backersLogger.info({
+          projectId,
+          pledgeCount: pledgeIds.length,
+          idempotencyKey: chargeKey,
+          initiatedBy: session.user.id,
+        }, "Bulk card charge initiated");
+
+        // Process each pledge individually with per-pledge error handling
+        const chargeErrors: string[] = [];
+        for (const pid of pledgeIds) {
+          try {
+            const success = await chargeSavedPledge(pid);
+            if (success) {
+              results.success++;
+            } else {
+              results.failed++;
+              chargeErrors.push(`Pledge ${pid}: charge returned false`);
+            }
+          } catch (chargeErr) {
+            results.failed++;
+            const errMsg = chargeErr instanceof Error ? chargeErr.message : "Unknown error";
+            chargeErrors.push(`Pledge ${pid}: ${errMsg}`);
+            backersLogger.error({ pledgeId: pid, err: errMsg }, "Individual pledge charge failed");
+          }
+        }
+
+        // Update the activity record with final results
+        await db.fulfillmentActivity.update({
+          where: { id: chargeActivity.id },
+          data: {
+            title: `Card charge completed: ${results.success} succeeded, ${results.failed} failed`,
+            metadata: {
+              idempotencyKey: chargeKey,
+              pledgeIds,
+              initiatedBy: session.user.id,
+              initiatedAt: new Date().toISOString(),
+              status: "COMPLETED",
+              successCount: results.success,
+              failedCount: results.failed,
+              errors: chargeErrors.slice(0, 20),
+            },
+          },
+        });
+
+        if (chargeErrors.length > 0) {
+          results.errors = chargeErrors.slice(0, 10);
+        }
+
+        backersLogger.info({
+          projectId,
+          success: results.success,
+          failed: results.failed,
+        }, "Bulk card charge completed");
+
         break;
       }
     }
@@ -482,7 +550,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("IndieKit backers bulk action error:", error);
+    backersLogger.error({ err: error instanceof Error ? error.message : String(error) }, "IndieKit backers bulk action error");
     return NextResponse.json(
       { error: "Failed to perform bulk action" },
       { status: 500 }

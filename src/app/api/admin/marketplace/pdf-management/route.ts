@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMarketplacePdfManagementLogger = logger.child({ module: "admin-marketplace-pdf-management" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getR2Storage } from "@/lib/r2";
@@ -164,7 +167,7 @@ export async function GET(request: NextRequest) {
           r2Status = Object.fromEntries(checks.map((c) => [c.id, c.exists]));
         }
       } catch (err) {
-        console.error("Error checking R2 files:", err);
+        adminMarketplacePdfManagementLogger.error({ err: String(err) }, "Error checking R2 files:");
       }
     }
 
@@ -247,7 +250,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching PDF management data:", error);
+    adminMarketplacePdfManagementLogger.error({ err: String(error) }, "Error fetching PDF management data:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -331,7 +334,7 @@ export async function PATCH() {
       });
     }
 
-    console.log(`[PDF Fix] Starting bulk fix for ${booksToFix.length} books`);
+    adminMarketplacePdfManagementLogger.info(`[PDF Fix] Starting bulk fix for ${booksToFix.length} books`);
 
     const r2 = await getR2Storage();
     if (!r2) {
@@ -353,7 +356,7 @@ export async function PATCH() {
         r2FilesByUuid[uuidMatch[1].toLowerCase()] = { key: file.key, size: file.size };
       }
     }
-    console.log(`[PDF Fix] Indexed ${Object.keys(r2FilesByUuid).length} R2 files by UUID from ${allR2Files.length} total files`);
+    adminMarketplacePdfManagementLogger.info(`[PDF Fix] Indexed ${Object.keys(r2FilesByUuid).length} R2 files by UUID from ${allR2Files.length} total files`);
 
     let fixed = 0;
     let failed = 0;
@@ -376,7 +379,7 @@ export async function PATCH() {
           }
 
           const r2Key = match[1];
-          console.log(`[PDF Fix] Checking R2 key: "${r2Key}" for book "${book.title}" (${book.id})`);
+          adminMarketplacePdfManagementLogger.info(`[PDF Fix] Checking R2 key: "${r2Key}" for book "${book.title}" (${book.id})`);
 
           // Try 1: Direct decoded key
           let metadata = await r2.getFileMetadata(r2Key);
@@ -386,7 +389,7 @@ export async function PATCH() {
           if (!metadata) {
             const originalMatch = (book.pdfFileUrl || "").match(/\/api\/r2\/serve\/(.+)$/);
             if (originalMatch && originalMatch[1] !== r2Key) {
-              console.log(`[PDF Fix] Try encoded key: "${originalMatch[1]}"`);
+              adminMarketplacePdfManagementLogger.info(`[PDF Fix] Try encoded key: "${originalMatch[1]}"`);
               metadata = await r2.getFileMetadata(originalMatch[1]);
               if (metadata) usedKey = originalMatch[1];
             }
@@ -396,7 +399,7 @@ export async function PATCH() {
           if (!metadata) {
             const filenameOnly = r2Key.split("/").pop() || r2Key;
             if (filenameOnly !== r2Key) {
-              console.log(`[PDF Fix] Try filename only: "${filenameOnly}"`);
+              adminMarketplacePdfManagementLogger.info(`[PDF Fix] Try filename only: "${filenameOnly}"`);
               metadata = await r2.getFileMetadata(filenameOnly);
               if (metadata) usedKey = filenameOnly;
             }
@@ -408,7 +411,7 @@ export async function PATCH() {
             if (uuidFromKey) {
               const indexedFile = r2FilesByUuid[uuidFromKey[1].toLowerCase()];
               if (indexedFile) {
-                console.log(`[PDF Fix] UUID match found: "${indexedFile.key}" (${formatFileSize(indexedFile.size)})`);
+                adminMarketplacePdfManagementLogger.info(`[PDF Fix] UUID match found: "${indexedFile.key}" (${formatFileSize(indexedFile.size)})`);
                 // Verify with HeadObject
                 metadata = await r2.getFileMetadata(indexedFile.key);
                 if (metadata) usedKey = indexedFile.key;
@@ -423,18 +426,18 @@ export async function PATCH() {
             };
             if (usedKey !== r2Key) {
               updateData.pdfFileUrl = `/api/r2/serve/${usedKey}`;
-              console.log(`[PDF Fix] Also updating URL to: /api/r2/serve/${usedKey}`);
+              adminMarketplacePdfManagementLogger.info(`[PDF Fix] Also updating URL to: /api/r2/serve/${usedKey}`);
             }
 
             await prisma.marketplaceBook.update({
               where: { id: book.id },
               data: updateData,
             });
-            console.log(`[PDF Fix] Fixed book "${book.title}" - size: ${formatFileSize(metadata.size)}`);
+            adminMarketplacePdfManagementLogger.info(`[PDF Fix] Fixed book "${book.title}" - size: ${formatFileSize(metadata.size)}`);
             return { id: book.id, title: book.title, status: "fixed", size: metadata.size, key: usedKey };
           }
 
-          console.log(`[PDF Fix] File not found in R2 for book "${book.title}" - tried key: "${r2Key}"`);
+          adminMarketplacePdfManagementLogger.info(`[PDF Fix] File not found in R2 for book "${book.title}" - tried key: "${r2Key}"`);
           return { id: book.id, title: book.title, status: "failed - file not found in R2", key: r2Key };
         })
       );
@@ -452,14 +455,14 @@ export async function PATCH() {
         } else {
           // Promise rejected - should be rare since we catch inside
           const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
-          console.error(`[PDF Fix] Unexpected error in batch:`, errorMsg);
+          adminMarketplacePdfManagementLogger.error({ err: String(errorMsg) }, `[PDF Fix] Unexpected error in batch:`);
           results.push({ id: "unknown", status: "error", error: errorMsg });
           failed++;
         }
       }
     }
 
-    console.log(`[PDF Fix] Completed: ${fixed} fixed, ${failed} failed out of ${booksToFix.length}`);
+    adminMarketplacePdfManagementLogger.info(`[PDF Fix] Completed: ${fixed} fixed, ${failed} failed out of ${booksToFix.length}`);
 
     return NextResponse.json({
       message: `Fixed ${fixed} of ${booksToFix.length} books`,
@@ -469,7 +472,7 @@ export async function PATCH() {
       results,
     });
   } catch (error) {
-    console.error("Error bulk-fixing PDF file sizes:", error);
+    adminMarketplacePdfManagementLogger.error({ err: String(error) }, "Error bulk-fixing PDF file sizes:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -511,7 +514,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[PDF Scan] Starting R2 scan (action: ${action})...`);
+    adminMarketplacePdfManagementLogger.info(`[PDF Scan] Starting R2 scan (action: ${action})...`);
 
     // List ALL files in R2 - search root level AND marketplace/ prefix
     const [rootFiles, prefixedFiles] = await Promise.all([
@@ -534,7 +537,7 @@ export async function POST(request: NextRequest) {
       (f) => f.key.toLowerCase().endsWith(".pdf") || f.size > 100000
     );
 
-    console.log(`[PDF Scan] Found ${allR2Files.length} total files in R2 (${rootFiles.length} root, ${prefixedFiles.length} prefixed), ${pdfFiles.length} likely PDFs`);
+    adminMarketplacePdfManagementLogger.info(`[PDF Scan] Found ${allR2Files.length} total files in R2 (${rootFiles.length} root, ${prefixedFiles.length} prefixed), ${pdfFiles.length} likely PDFs`);
 
     // Get all books that have missing file sizes
     const booksWithIssues = await prisma.marketplaceBook.findMany({
@@ -556,7 +559,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`[PDF Scan] Found ${booksWithIssues.length} books with missing file sizes`);
+    adminMarketplacePdfManagementLogger.info(`[PDF Scan] Found ${booksWithIssues.length} books with missing file sizes`);
 
     // Build indexes for matching
     // Index by UUID (first segment before underscore)
@@ -580,7 +583,7 @@ export async function POST(request: NextRequest) {
       r2FilesByName[filename.toLowerCase()] = file;
     }
 
-    console.log(`[PDF Scan] Indexed ${Object.keys(r2FilesByUuid).length} files by UUID, ${Object.keys(r2FilesByName).length} by name`);
+    adminMarketplacePdfManagementLogger.info(`[PDF Scan] Indexed ${Object.keys(r2FilesByUuid).length} files by UUID, ${Object.keys(r2FilesByName).length} by name`);
 
     // Try to match each book to an R2 file
     const matches: {
@@ -668,7 +671,7 @@ export async function POST(request: NextRequest) {
       }
 
       const logPrefix = matchedFile ? "MATCHED" : "NO MATCH";
-      console.log(`[PDF Scan] ${logPrefix}: "${book.title}" | currentKey: ${currentKey} | matchedKey: ${matchedFile?.key || "none"} (${matchType})`);
+      adminMarketplacePdfManagementLogger.info(`[PDF Scan] ${logPrefix}: "${book.title}" | currentKey: ${currentKey} | matchedKey: ${matchedFile?.key || "none"} (${matchType})`);
 
       matches.push({
         bookId: book.id,
@@ -685,7 +688,7 @@ export async function POST(request: NextRequest) {
     const matchedCount = matches.filter((m) => m.matchedKey).length;
     const unmatchedCount = matches.filter((m) => !m.matchedKey).length;
 
-    console.log(`[PDF Scan] Matched ${matchedCount} books, ${unmatchedCount} unmatched`);
+    adminMarketplacePdfManagementLogger.info(`[PDF Scan] Matched ${matchedCount} books, ${unmatchedCount} unmatched`);
 
     // If action is auto-fix, update the matched books
     let fixedCount = 0;
@@ -699,7 +702,7 @@ export async function POST(request: NextRequest) {
           const fileIdAndName = fullFilename.split("_");
           const originalName = fileIdAndName.slice(1).join("_");
 
-          console.log(`[PDF Scan] Auto-fixing book "${match.bookTitle}" - URL: ${newUrl}, Size: ${formatFileSize(match.matchedSize)}`);
+          adminMarketplacePdfManagementLogger.info(`[PDF Scan] Auto-fixing book "${match.bookTitle}" - URL: ${newUrl}, Size: ${formatFileSize(match.matchedSize)}`);
 
           await prisma.marketplaceBook.update({
             where: { id: match.bookId },
@@ -712,7 +715,7 @@ export async function POST(request: NextRequest) {
           fixedCount++;
         }
       }
-      console.log(`[PDF Scan] Auto-fixed ${fixedCount} books`);
+      adminMarketplacePdfManagementLogger.info(`[PDF Scan] Auto-fixed ${fixedCount} books`);
     }
 
     return NextResponse.json({
@@ -734,7 +737,7 @@ export async function POST(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Error scanning R2 files:", error);
+    adminMarketplacePdfManagementLogger.error({ err: String(error) }, "Error scanning R2 files:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

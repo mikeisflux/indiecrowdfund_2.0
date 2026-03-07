@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const marketplaceCheckoutVerifyLogger = logger.child({ module: "marketplace-checkout-verify" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
@@ -106,10 +109,10 @@ export async function GET(request: Request) {
 
     // Send notifications (don't await to avoid blocking the response)
     notifyMarketplacePurchase(purchase.id, "STRIPE").catch((err) =>
-      console.error(`[CheckoutVerify] Failed to notify purchase ${purchase.id}:`, err)
+      marketplaceCheckoutVerifyLogger.error({ err: String(err) }, `[CheckoutVerify] Failed to notify purchase ${purchase.id}:`)
     );
     notifyMarketplaceSale(purchase.id, "STRIPE").catch((err) =>
-      console.error(`[CheckoutVerify] Failed to notify sale ${purchase.id}:`, err)
+      marketplaceCheckoutVerifyLogger.error({ err: String(err) }, `[CheckoutVerify] Failed to notify sale ${purchase.id}:`)
     );
 
     return NextResponse.json({
@@ -119,7 +122,7 @@ export async function GET(request: Request) {
       redirectUrl: "/dashboard/backer?tab=digital-library",
     });
   } catch (error) {
-    console.error("Error verifying checkout session:", error);
+    marketplaceCheckoutVerifyLogger.error({ err: String(error) }, "Error verifying checkout session:");
     return NextResponse.json(
       { error: "Failed to verify purchase" },
       { status: 500 }

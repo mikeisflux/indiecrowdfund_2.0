@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerDigitalFilesProgressLogger = logger.child({ module: "backer-digital-files-progress" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -71,7 +74,7 @@ export async function GET() {
 
     return NextResponse.json({ progress: progressMap });
   } catch (error) {
-    console.error("Error fetching reading progress:", error);
+    backerDigitalFilesProgressLogger.error({ err: String(error) }, "Error fetching reading progress:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -125,7 +128,7 @@ export async function POST(request: Request) {
         });
       } catch {
         // MarketplacePurchase table might not exist yet
-        console.log("MarketplacePurchase update skipped - table may not exist");
+        backerDigitalFilesProgressLogger.info("MarketplacePurchase update skipped - table may not exist");
       }
     } else {
       // Find the user's pledge for this file
@@ -169,7 +172,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error saving reading progress:", error);
+    backerDigitalFilesProgressLogger.error({ err: String(error) }, "Error saving reading progress:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

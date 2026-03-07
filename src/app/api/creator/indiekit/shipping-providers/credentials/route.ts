@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitShippingProvidersCredentialsLogger = logger.child({ module: "creator-indiekit-shipping-providers-credentials" });
 import type { NextRequest } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitShippingProvidersCredentialsLogger = logger.child({ module: "creator-indiekit-shipping-providers-credentials" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -66,7 +72,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error getting shipping provider credentials:", error);
+    creatorIndiekitShippingProvidersCredentialsLogger.error({ err: String(error) }, "Error getting shipping provider credentials:");
     return NextResponse.json(
       { error: "Failed to get credentials" },
       { status: 500 }
@@ -161,7 +167,7 @@ export async function POST(req: NextRequest) {
       message: `${provider} credentials saved successfully`,
     });
   } catch (error) {
-    console.error("Error saving shipping provider credentials:", error);
+    creatorIndiekitShippingProvidersCredentialsLogger.error({ err: String(error) }, "Error saving shipping provider credentials:");
     return NextResponse.json(
       { error: "Failed to save credentials" },
       { status: 500 }
@@ -232,7 +238,7 @@ export async function DELETE(req: NextRequest) {
       message: `${provider} credentials cleared successfully`,
     });
   } catch (error) {
-    console.error("Error clearing shipping provider credentials:", error);
+    creatorIndiekitShippingProvidersCredentialsLogger.error({ err: String(error) }, "Error clearing shipping provider credentials:");
     return NextResponse.json(
       { error: "Failed to clear credentials" },
       { status: 500 }

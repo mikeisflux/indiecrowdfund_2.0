@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const emailTrackClickLogger = logger.child({ module: "email-track-click" });
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +50,7 @@ export async function GET(request: Request) {
 
     // Validate redirect URL to prevent open redirect / XSS via javascript: URLs
     if (!isAllowedRedirectUrl(decodedUrl)) {
-      console.warn(`[Click Track] Blocked unsafe redirect URL: ${decodedUrl}`);
+      emailTrackClickLogger.warn(`[Click Track] Blocked unsafe redirect URL: ${decodedUrl}`);
       return NextResponse.redirect(new URL("/", request.url));
     }
     let decodedEmail: string | null = null;
@@ -99,7 +102,7 @@ export async function GET(request: Request) {
         // EmailCampaignClick table may not exist yet, continue without detailed tracking
       }
 
-      console.log(`Email link clicked: campaign=${campaignId}, email=${decodedEmail || "unknown"}, url=${decodedUrl}`);
+      emailTrackClickLogger.info(`Email link clicked: campaign=${campaignId}, email=${decodedEmail || "unknown"}, url=${decodedUrl}`);
 
       // Set attribution cookie for conversion tracking
       // This cookie will be checked when a pledge is made
@@ -126,7 +129,7 @@ export async function GET(request: Request) {
     // No campaign tracking, just redirect
     return NextResponse.redirect(decodedUrl);
   } catch (error) {
-    console.error("Error tracking email click:", error);
+    emailTrackClickLogger.error({ err: String(error) }, "Error tracking email click:");
     // Redirect to homepage on error
     return NextResponse.redirect(new URL("/", request.url));
   }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminPledgesLogger = logger.child({ module: "admin-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
@@ -105,7 +108,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Admin get pledge error:", error);
+    adminPledgesLogger.error({ err: String(error) }, "Admin get pledge error:");
     return NextResponse.json(
       { error: "Failed to fetch pledge" },
       { status: 500 }
@@ -204,7 +207,7 @@ export async function PATCH(
           );
         }
       } catch (emailError) {
-        console.error("Error sending receipt email:", emailError);
+        adminPledgesLogger.error({ err: String(emailError) }, "Error sending receipt email:");
         return NextResponse.json(
           { error: "Failed to send receipt email" },
           { status: 500 }
@@ -237,10 +240,10 @@ export async function PATCH(
       if (pledge.stripePaymentMethodId) {
         try {
           await stripe.paymentMethods.detach(pledge.stripePaymentMethodId);
-          console.log(`[Admin Cancel] Detached payment method ${pledge.stripePaymentMethodId} for pledge ${pledgeId}`);
+          adminPledgesLogger.info(`[Admin Cancel] Detached payment method ${pledge.stripePaymentMethodId} for pledge ${pledgeId}`);
         } catch (detachError) {
           // Log but continue - payment method might already be detached or invalid
-          console.warn(`[Admin Cancel] Could not detach payment method: ${detachError}`);
+          adminPledgesLogger.warn(`[Admin Cancel] Could not detach payment method: ${detachError}`);
         }
       }
 
@@ -292,7 +295,7 @@ export async function PATCH(
           });
 
           if (!dcResult.success) {
-            console.error(`[Admin DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`, dcResult.error);
+            adminPledgesLogger.error({ err: String(dcResult.error) }, `[Admin DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`);
             return NextResponse.json(
               { error: dcResult.error || "DivinityCoin refund failed" },
               { status: 400 }
@@ -340,7 +343,7 @@ export async function PATCH(
             message: "DivinityCoin refund processed successfully",
           });
         } catch (dcError) {
-          console.error("DivinityCoin admin refund error:", dcError);
+          adminPledgesLogger.error({ err: String(dcError) }, "DivinityCoin admin refund error:");
           return NextResponse.json(
             { error: "Failed to process DivinityCoin refund" },
             { status: 500 }
@@ -377,10 +380,10 @@ export async function PATCH(
             },
           });
         } else {
-          console.log(`[Admin Refund] Pledge ${pledge.id} already has existing refund(s) in Stripe`);
+          adminPledgesLogger.info(`[Admin Refund] Pledge ${pledge.id} already has existing refund(s) in Stripe`);
         }
       } catch (stripeError) {
-        console.error("Stripe refund error:", stripeError);
+        adminPledgesLogger.error({ err: String(stripeError) }, "Stripe refund error:");
         return NextResponse.json(
           { error: "Failed to process refund with Stripe" },
           { status: 400 }
@@ -413,7 +416,7 @@ export async function PATCH(
 
     return NextResponse.json({ error: "Invalid action. Use 'cancel', 'refund', or 'resend_receipt'" }, { status: 400 });
   } catch (error) {
-    console.error("Admin update pledge error:", error);
+    adminPledgesLogger.error({ err: String(error) }, "Admin update pledge error:");
     return NextResponse.json(
       { error: "Failed to update pledge" },
       { status: 500 }
@@ -472,10 +475,10 @@ export async function DELETE(
     if (pledge.stripePaymentMethodId) {
       try {
         await stripeClient.paymentMethods.detach(pledge.stripePaymentMethodId);
-        console.log(`[Admin Delete] Detached payment method ${pledge.stripePaymentMethodId} for pledge ${pledgeId}`);
+        adminPledgesLogger.info(`[Admin Delete] Detached payment method ${pledge.stripePaymentMethodId} for pledge ${pledgeId}`);
       } catch (detachError) {
         // Log but continue - payment method might already be detached or invalid
-        console.warn(`[Admin Delete] Could not detach payment method: ${detachError}`);
+        adminPledgesLogger.warn(`[Admin Delete] Could not detach payment method: ${detachError}`);
       }
     }
 
@@ -508,7 +511,7 @@ export async function DELETE(
       message: "Pledge deleted successfully",
     });
   } catch (error) {
-    console.error("Admin delete pledge error:", error);
+    adminPledgesLogger.error({ err: String(error) }, "Admin delete pledge error:");
     return NextResponse.json(
       { error: "Failed to delete pledge" },
       { status: 500 }

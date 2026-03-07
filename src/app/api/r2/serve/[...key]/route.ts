@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const r2ServeLogger = logger.child({ module: "r2-serve" });
 import { auth } from "@/lib/auth";
 import { getR2Storage } from "@/lib/r2";
 
@@ -111,7 +114,7 @@ export async function GET(
 
     return NextResponse.json({ url: downloadUrl });
   } catch (error) {
-    console.error("Error serving R2 file:", error);
+    r2ServeLogger.error({ err: String(error) }, "Error serving R2 file:");
     return NextResponse.json(
       { error: "Failed to serve file" },
       { status: 500 }

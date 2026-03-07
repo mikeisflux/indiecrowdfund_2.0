@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsChargebackCardLogger = logger.child({ module: "projects-chargeback-card" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { encrypt, decrypt, getLastDigits } from "@/lib/encryption";
@@ -91,7 +94,7 @@ export async function GET(
       updatedAt: card.updatedAt,
     });
   } catch (error) {
-    console.error("Error fetching chargeback card:", error);
+    projectsChargebackCardLogger.error({ err: String(error) }, "Error fetching chargeback card:");
     return NextResponse.json(
       { error: "Failed to fetch chargeback card" },
       { status: 500 }
@@ -207,7 +210,7 @@ export async function POST(
     const lastFour = getLastDigits(cleanCardNumber, 4);
     const brand = detectCardBrand(cleanCardNumber);
 
-    console.log(`[Chargeback Card] Card saved for project ${projectId}: ${brand} ****${lastFour}`);
+    projectsChargebackCardLogger.info(`[Chargeback Card] Card saved for project ${projectId}: ${brand} ****${lastFour}`);
 
     // Upsert card for this project
     await db.creatorChargebackCard.upsert({
@@ -257,7 +260,7 @@ export async function POST(
       expYear: expYearNum,
     });
   } catch (error) {
-    console.error("Error saving chargeback card:", error);
+    projectsChargebackCardLogger.error({ err: String(error) }, "Error saving chargeback card:");
     if (error instanceof Error && error.message.includes("BANK_ACCOUNT_ENCRYPTION_KEY")) {
       return NextResponse.json(
         { error: "Server configuration error: encryption key not set" },
@@ -320,7 +323,7 @@ export async function PUT(
       brand: card.cardBrand,
     });
   } catch (error) {
-    console.error("Error fetching decrypted card:", error);
+    projectsChargebackCardLogger.error({ err: String(error) }, "Error fetching decrypted card:");
     return NextResponse.json(
       { error: "Failed to retrieve card details" },
       { status: 500 }

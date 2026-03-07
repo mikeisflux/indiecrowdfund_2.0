@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsVanityLogger = logger.child({ module: "projects-vanity" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -286,7 +289,7 @@ export async function GET(
       addons,
     });
   } catch (error) {
-    console.error("Get project by vanity URL error:", error);
+    projectsVanityLogger.error({ err: String(error) }, "Get project by vanity URL error:");
     return NextResponse.json(
       { error: "Failed to fetch project" },
       { status: 500 }

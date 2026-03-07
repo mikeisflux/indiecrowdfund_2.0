@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitExportLogger = logger.child({ module: "creator-indiekit-export" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -304,7 +307,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("IndieKit export error:", error);
+    creatorIndiekitExportLogger.error({ err: String(error) }, "IndieKit export error:");
     return NextResponse.json({ error: "Failed to export data" }, { status: 500 });
   }
 }

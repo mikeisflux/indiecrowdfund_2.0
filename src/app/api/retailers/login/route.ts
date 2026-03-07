@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const retailersLoginLogger = logger.child({ module: "retailers-login" });
 import { db } from "@/lib/db";
 import { compare } from "bcryptjs";
 import { cookies } from "next/headers";
@@ -220,7 +223,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error logging in retailer:", error);
+    retailersLoginLogger.error({ err: String(error) }, "Error logging in retailer:");
     return NextResponse.json(
       { error: "Failed to login" },
       { status: 500 }

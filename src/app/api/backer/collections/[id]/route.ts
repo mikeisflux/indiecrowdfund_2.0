@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerCollectionsLogger = logger.child({ module: "backer-collections" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -106,7 +109,7 @@ export async function GET(
       },
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching collection:", error);
+    backerCollectionsLogger.error({ err: String(error) }, "Error fetching collection:");
     return NextResponse.json(
       { error: "Failed to fetch collection" },
       { status: 500, headers: corsHeaders }
@@ -179,7 +182,7 @@ export async function PATCH(
       { status: 400, headers: corsHeaders }
     );
   } catch (error) {
-    console.error("Error updating collection:", error);
+    backerCollectionsLogger.error({ err: String(error) }, "Error updating collection:");
     return NextResponse.json(
       { error: "Failed to update collection" },
       { status: 500, headers: corsHeaders }
@@ -219,7 +222,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error deleting collection:", error);
+    backerCollectionsLogger.error({ err: String(error) }, "Error deleting collection:");
     return NextResponse.json(
       { error: "Failed to delete collection" },
       { status: 500, headers: corsHeaders }

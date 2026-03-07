@@ -1,5 +1,10 @@
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const trackingIndexLogger = logger.child({ module: "tracking-index" });
+
+
 interface ProjectViewResult {
   date: Date;
   views: number;
@@ -82,7 +87,7 @@ export async function trackEvent({
     });
   } catch (error) {
     // Don't throw - tracking should never break the user experience
-    console.error("Failed to track event:", error);
+    trackingIndexLogger.error({ err: error }, "Failed to track event:");
   }
 }
 
@@ -134,7 +139,7 @@ export async function trackProjectView(
       },
     });
   } catch (error) {
-    console.error("Failed to track project view:", error);
+    trackingIndexLogger.error({ err: error }, "Failed to track project view:");
   }
 }
 
@@ -176,7 +181,7 @@ export async function trackReferrer(
       },
     });
   } catch (error) {
-    console.error("Failed to track referrer:", error);
+    trackingIndexLogger.error({ err: error }, "Failed to track referrer:");
   }
 }
 
@@ -204,7 +209,7 @@ export async function trackReferrerConversion(
       },
     });
   } catch (error) {
-    console.error("Failed to track referrer conversion:", error);
+    trackingIndexLogger.error({ err: error }, "Failed to track referrer conversion:");
   }
 }
 

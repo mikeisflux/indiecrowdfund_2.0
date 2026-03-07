@@ -3,6 +3,11 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { decryptCredential } from "@/lib/encryption";
 
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitShopifySkuMappingLogger = logger.child({ module: "creator-indiekit-shopify-sku-mapping" });
+
+
 export const dynamic = "force-dynamic";
 
 // Helper to search for a SKU in Shopify
@@ -50,7 +55,8 @@ async function findSkuInShopify(
     });
 
     if (!response.ok) {
-      console.error("Shopify API error:", response.status, await response.text());
+      const errorText = await response.text();
+      creatorIndiekitShopifySkuMappingLogger.error({ err: errorText, status: response.status }, "Shopify API error");
       return { found: false };
     }
 
@@ -77,7 +83,7 @@ async function findSkuInShopify(
 
     return { found: false };
   } catch (error) {
-    console.error("Error searching Shopify SKU:", error);
+    creatorIndiekitShopifySkuMappingLogger.error({ err: error }, "Error searching Shopify SKU:");
     return { found: false };
   }
 }
@@ -228,7 +234,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("SKU mapping GET error:", error);
+    creatorIndiekitShopifySkuMappingLogger.error({ err: error }, "SKU mapping GET error:");
     return NextResponse.json({ error: "Failed to fetch SKU mappings" }, { status: 500 });
   }
 }
@@ -588,7 +594,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    console.error("SKU mapping POST error:", error);
+    creatorIndiekitShopifySkuMappingLogger.error({ err: error }, "SKU mapping POST error:");
     return NextResponse.json({ error: "Failed to save SKU mapping" }, { status: 500 });
   }
 }

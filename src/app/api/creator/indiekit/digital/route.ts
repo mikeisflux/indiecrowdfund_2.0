@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitDigitalLogger = logger.child({ module: "creator-indiekit-digital" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -127,7 +130,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ rules: formattedRules });
   } catch (error) {
-    console.error("IndieKit digital GET error:", error);
+    creatorIndiekitDigitalLogger.error({ err: String(error) }, "IndieKit digital GET error:");
     return NextResponse.json(
       { error: "Failed to fetch distribution rules" },
       { status: 500 }
@@ -359,7 +362,7 @@ export async function POST(req: NextRequest) {
           });
           createdCount++;
         } catch (e) {
-          console.error(`Failed to create distribution for pledge ${pledge.id}:`, e);
+          creatorIndiekitDigitalLogger.error({ err: String(e) }, `Failed to create distribution for pledge ${pledge.id}:`);
         }
       }
 
@@ -462,7 +465,7 @@ export async function POST(req: NextRequest) {
             });
             createdCount++;
           } catch (e) {
-            console.error(`Failed to create distribution for pledge ${pledge.id}:`, e);
+            creatorIndiekitDigitalLogger.error({ err: String(e) }, `Failed to create distribution for pledge ${pledge.id}:`);
           }
         }
 
@@ -585,7 +588,7 @@ export async function POST(req: NextRequest) {
           });
           createdCount++;
         } catch (e) {
-          console.error(`Failed to create distribution for pledge ${pledge.id}:`, e);
+          creatorIndiekitDigitalLogger.error({ err: String(e) }, `Failed to create distribution for pledge ${pledge.id}:`);
         }
       }
 
@@ -608,7 +611,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    console.error("IndieKit digital API error:", error);
+    creatorIndiekitDigitalLogger.error({ err: String(error) }, "IndieKit digital API error:");
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }
@@ -654,7 +657,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("IndieKit digital DELETE error:", error);
+    creatorIndiekitDigitalLogger.error({ err: String(error) }, "IndieKit digital DELETE error:");
     return NextResponse.json(
       { error: "Failed to delete distribution rule" },
       { status: 500 }

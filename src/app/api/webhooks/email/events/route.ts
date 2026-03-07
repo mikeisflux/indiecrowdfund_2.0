@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import crypto from "crypto";
 
+import { logger } from "@/lib/logger";
+
+const webhooksEmailEventsLogger = logger.child({ module: "webhooks-email-events" });
+
+
 export const dynamic = "force-dynamic";
 
 // Verify Mailgun webhook signature using HMAC-SHA256
@@ -20,7 +25,7 @@ async function verifyMailgunSignature(
     const signingKey = settings?.mailgunWebhookSigningKey;
     if (!signingKey) {
       // No signing key configured - allow through but log warning
-      console.warn("[Webhook] Mailgun webhook signing key not configured - skipping verification");
+      webhooksEmailEventsLogger.warn("[Webhook] Mailgun webhook signing key not configured - skipping verification");
       return true;
     }
 
@@ -31,7 +36,7 @@ async function verifyMailgunSignature(
 
     return encodedToken === signature;
   } catch (error) {
-    console.error("[Webhook] Error verifying Mailgun signature:", error);
+    webhooksEmailEventsLogger.error({ err: error }, "[Webhook] Error verifying Mailgun signature:");
     return false;
   }
 }
@@ -66,8 +71,8 @@ async function verifySendGridSignature(
 
     return verifier.verify(keyObject, decodedSignature);
   } catch (error) {
-    console.error("[Webhook] Error verifying SendGrid signature:", error);
-    console.error("[Webhook] Key length:", publicKey.length, "Key starts with:", publicKey.substring(0, 20));
+    webhooksEmailEventsLogger.error({ err: error }, "[Webhook] Error verifying SendGrid signature:");
+    webhooksEmailEventsLogger.error({ keyLength: publicKey.length, keyPrefix: publicKey.substring(0, 20) }, "SendGrid key details");
     return false;
   }
 }
@@ -162,7 +167,7 @@ function mapEventToStatus(event: MailgunEventType): string | null {
 async function handleBounce(email: string, reason?: string, source?: string) {
   const normalizedEmail = email.toLowerCase().trim();
 
-  console.log(`[Bounce] Processing bounce for: ${normalizedEmail}, reason: ${reason}`);
+  webhooksEmailEventsLogger.info(`[Bounce] Processing bounce for: ${normalizedEmail}, reason: ${reason}`);
 
   // 1. Add to EmailBlocklist if not already there
   const existingBlock = await db.emailBlocklist.findFirst({
@@ -182,7 +187,7 @@ async function handleBounce(email: string, reason?: string, source?: string) {
         isActive: true,
       },
     });
-    console.log(`[Bounce] Added ${normalizedEmail} to blocklist`);
+    webhooksEmailEventsLogger.info(`[Bounce] Added ${normalizedEmail} to blocklist`);
   } else {
     // Update existing blocklist entry
     await db.emailBlocklist.update({
@@ -205,7 +210,7 @@ async function handleBounce(email: string, reason?: string, source?: string) {
 async function handleSpamComplaint(email: string) {
   const normalizedEmail = email.toLowerCase().trim();
 
-  console.log(`[Spam] Processing spam complaint for: ${normalizedEmail}`);
+  webhooksEmailEventsLogger.info(`[Spam] Processing spam complaint for: ${normalizedEmail}`);
 
   // Add to blocklist with spam reason
   const existingBlock = await db.emailBlocklist.findFirst({
@@ -250,7 +255,7 @@ async function removeFromAllLists(email: string, reason: string, subscriberStatu
     data: { status: subscriberStatus },
   });
   if (updatedSubs.count > 0) {
-    console.log(`[${reason}] Set ${updatedSubs.count} EmailListSubscriber record(s) to ${subscriberStatus} for ${normalizedEmail}`);
+    webhooksEmailEventsLogger.info(`[${reason}] Set ${updatedSubs.count} EmailListSubscriber record(s) to ${subscriberStatus} for ${normalizedEmail}`);
   }
 
   // 2. Set User.emailUnsubscribedAt if user exists
@@ -295,7 +300,7 @@ async function removeFromAllLists(email: string, reason: string, subscriberStatu
       },
     });
     if (cancelled.count > 0) {
-      console.log(`[${reason}] Cancelled ${cancelled.count} pending queue email(s) for ${normalizedEmail}`);
+      webhooksEmailEventsLogger.info(`[${reason}] Cancelled ${cancelled.count} pending queue email(s) for ${normalizedEmail}`);
     }
   } catch {
     // Queue table might not exist
@@ -328,9 +333,9 @@ export async function POST(request: NextRequest) {
 
           if (settings?.sendgridWebhookVerificationKey) {
             const key = settings.sendgridWebhookVerificationKey;
-            console.log(`[Webhook] Verifying SendGrid signature - key length: ${key.length}, key prefix: ${key.substring(0, 20)}...`);
-            console.log(`[Webhook] Signature: ${sgSignature.substring(0, 30)}..., Timestamp: ${sgTimestamp}`);
-            console.log(`[Webhook] Raw body length: ${rawBody.length}, body prefix: ${rawBody.substring(0, 80)}`);
+            webhooksEmailEventsLogger.info(`[Webhook] Verifying SendGrid signature - key length: ${key.length}, key prefix: ${key.substring(0, 20)}...`);
+            webhooksEmailEventsLogger.info(`[Webhook] Signature: ${sgSignature.substring(0, 30)}..., Timestamp: ${sgTimestamp}`);
+            webhooksEmailEventsLogger.info(`[Webhook] Raw body length: ${rawBody.length}, body prefix: ${rawBody.substring(0, 80)}`);
 
             const isValid = await verifySendGridSignature(
               key,
@@ -340,13 +345,13 @@ export async function POST(request: NextRequest) {
             );
 
             if (!isValid) {
-              console.error("[Webhook] SendGrid signature verification failed");
-              console.error("[Webhook] Key used (first 30 chars):", key.substring(0, 30));
+              webhooksEmailEventsLogger.error("[Webhook] SendGrid signature verification failed");
+              webhooksEmailEventsLogger.error({ err: key.substring(0, 30) }, "[Webhook] Key used (first 30 chars):");
               return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
             }
-            console.log("[Webhook] SendGrid signature verification passed!");
+            webhooksEmailEventsLogger.info("[Webhook] SendGrid signature verification passed!");
           } else {
-            console.warn("[Webhook] No sendgridWebhookVerificationKey in DB, skipping verification");
+            webhooksEmailEventsLogger.warn("[Webhook] No sendgridWebhookVerificationKey in DB, skipping verification");
           }
         }
 
@@ -360,7 +365,7 @@ export async function POST(request: NextRequest) {
           if (timestamp && token && signature) {
             const isValid = await verifyMailgunSignature(timestamp, token, signature);
             if (!isValid) {
-              console.error("[Webhook] Mailgun signature verification failed");
+              webhooksEmailEventsLogger.error("[Webhook] Mailgun signature verification failed");
               return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
             }
           }
@@ -389,7 +394,7 @@ export async function POST(request: NextRequest) {
       if (mgTimestamp && mgToken && mgSignature) {
         const isValid = await verifyMailgunSignature(mgTimestamp, mgToken, mgSignature);
         if (!isValid) {
-          console.error("[Webhook] Mailgun form signature verification failed");
+          webhooksEmailEventsLogger.error("[Webhook] Mailgun form signature verification failed");
           return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
         }
       }
@@ -428,7 +433,7 @@ export async function POST(request: NextRequest) {
         const email = sgEvent.email?.toLowerCase();
         if (!email) continue;
 
-        console.log(`[SendGrid] Event ${sgEvent.event}: ${email}`);
+        webhooksEmailEventsLogger.info(`[SendGrid] Event ${sgEvent.event}: ${email}`);
 
         switch (sgEvent.event) {
           case "bounce":
@@ -437,7 +442,7 @@ export async function POST(request: NextRequest) {
             if (sgEvent.bounce_classification === "Reputable" || sgEvent.bounce_classification === "Content") {
               // "Reputable" = ISP reputation block (temporary), "Content" = content-based block
               // These are NOT invalid addresses - don't blocklist
-              console.log(`[SendGrid] Skipping blocklist for soft/reputation bounce: ${email} (${sgEvent.bounce_classification})`);
+              webhooksEmailEventsLogger.info(`[SendGrid] Skipping blocklist for soft/reputation bounce: ${email} (${sgEvent.bounce_classification})`);
             } else {
               await handleBounce(email, sgEvent.reason || sgEvent.bounce_classification, "sendgrid-bounce");
             }
@@ -445,11 +450,11 @@ export async function POST(request: NextRequest) {
           case "blocked":
             // "blocked" = ISP temporarily rejected (rate limiting, reputation throttling)
             // Very common with Hotmail/Outlook - NOT a permanent failure, do NOT blocklist
-            console.log(`[SendGrid] ISP block (temporary) for: ${email}, reason: ${sgEvent.reason} - NOT adding to blocklist`);
+            webhooksEmailEventsLogger.info(`[SendGrid] ISP block (temporary) for: ${email}, reason: ${sgEvent.reason} - NOT adding to blocklist`);
             break;
           case "dropped":
             // "dropped" = SendGrid's own suppression (previous bounce/spam) - already handled
-            console.log(`[SendGrid] Dropped by SendGrid for: ${email}, reason: ${sgEvent.reason} - NOT adding to blocklist`);
+            webhooksEmailEventsLogger.info(`[SendGrid] Dropped by SendGrid for: ${email}, reason: ${sgEvent.reason} - NOT adding to blocklist`);
             break;
           case "spamreport":
             await handleSpamComplaint(email);
@@ -466,14 +471,14 @@ export async function POST(request: NextRequest) {
 
     // Handle Mailgun events
     if (!eventData) {
-      console.error("Could not parse webhook payload");
+      webhooksEmailEventsLogger.error("Could not parse webhook payload");
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
     const email = eventData.recipient?.toLowerCase();
     const eventType = eventData.event;
 
-    console.log(`[Mailgun] Email ${eventType}: recipient=${email}`);
+    webhooksEmailEventsLogger.info(`[Mailgun] Email ${eventType}: recipient=${email}`);
 
     // Handle bounce and spam events globally (update blocklist and subscriber lists)
     switch (eventType) {
@@ -489,7 +494,7 @@ export async function POST(request: NextRequest) {
         break;
       case "failed":
         // Generic "failed" could be temporary - log but don't blocklist
-        console.log(`[Mailgun] Generic failure for: ${email}, reason: ${eventData.reason || eventData["delivery-status"]?.description} - NOT adding to blocklist`);
+        webhooksEmailEventsLogger.info(`[Mailgun] Generic failure for: ${email}, reason: ${eventData.reason || eventData["delivery-status"]?.description} - NOT adding to blocklist`);
         break;
       case "complained":
         if (email) {
@@ -505,7 +510,7 @@ export async function POST(request: NextRequest) {
 
     // Find recent emails sent to this recipient for AdminEmail tracking
     if (!email) {
-      console.log("[Mailgun] No recipient email in event data, skipping AdminEmail tracking");
+      webhooksEmailEventsLogger.info("[Mailgun] No recipient email in event data, skipping AdminEmail tracking");
       return NextResponse.json({ success: true, action: "no_recipient" });
     }
 
@@ -524,7 +529,7 @@ export async function POST(request: NextRequest) {
 
     if (recentEmails.length === 0) {
       // No matching email found - that's ok, we already processed bounce/spam
-      console.log(`No matching AdminEmail found for ${email} - event: ${eventType}`);
+      webhooksEmailEventsLogger.info(`No matching AdminEmail found for ${email} - event: ${eventType}`);
       return NextResponse.json({ success: true, action: "processed_globally" });
     }
 
@@ -601,7 +606,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, event: eventType, action: "no_update_needed" });
   } catch (error) {
-    console.error("Error processing email event webhook:", error);
+    webhooksEmailEventsLogger.error({ err: error }, "Error processing email event webhook:");
     // Return 200 to prevent retries
     return NextResponse.json({
       success: false,

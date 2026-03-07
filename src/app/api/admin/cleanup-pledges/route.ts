@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminCleanupPledgesLogger = logger.child({ module: "admin-cleanup-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
@@ -134,7 +137,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Admin cleanup pledges error:", error);
+    adminCleanupPledgesLogger.error({ err: String(error) }, "Admin cleanup pledges error:");
     return NextResponse.json(
       { error: "Failed to fetch pledges" },
       { status: 500 }
@@ -306,7 +309,7 @@ export async function POST(req: NextRequest) {
       actionsPerformed: actions,
     });
   } catch (error) {
-    console.error("Admin cleanup pledge error:", error);
+    adminCleanupPledgesLogger.error({ err: String(error) }, "Admin cleanup pledge error:");
     return NextResponse.json(
       { error: "Failed to cleanup pledge" },
       { status: 500 }

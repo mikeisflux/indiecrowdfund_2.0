@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminSeoPagesLogger = logger.child({ module: "admin-seo-pages" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -44,7 +47,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching SEO pages:", error);
+    adminSeoPagesLogger.error({ err: String(error) }, "Error fetching SEO pages:");
     return NextResponse.json(
       { error: "Failed to fetch SEO pages" },
       { status: 500 }
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error saving SEO page meta:", error);
+    adminSeoPagesLogger.error({ err: String(error) }, "Error saving SEO page meta:");
     return NextResponse.json(
       { error: "Failed to save SEO page meta" },
       { status: 500 }

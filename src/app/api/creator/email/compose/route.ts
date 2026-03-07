@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorEmailComposeLogger = logger.child({ module: "creator-email-compose" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
@@ -164,7 +167,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      console.error("Failed to send email:", result.error);
+      creatorEmailComposeLogger.error({ err: String(result.error) }, "Failed to send email:");
       return NextResponse.json(
         { error: result.error || "Failed to send email" },
         { status: 500 }
@@ -224,7 +227,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error composing email:", error);
+    creatorEmailComposeLogger.error({ err: String(error) }, "Error composing email:");
     return NextResponse.json(
       { error: "Failed to send email" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const marketplaceBooksLogger = logger.child({ module: "marketplace-books" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -115,7 +118,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       hasPurchased,
     });
   } catch (error) {
-    console.error("Error fetching book:", error);
+    marketplaceBooksLogger.error({ err: String(error) }, "Error fetching book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -221,7 +224,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ book: updatedBook });
   } catch (error) {
-    console.error("Error updating book:", error);
+    marketplaceBooksLogger.error({ err: String(error) }, "Error updating book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -275,7 +278,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting book:", error);
+    marketplaceBooksLogger.error({ err: String(error) }, "Error deleting book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

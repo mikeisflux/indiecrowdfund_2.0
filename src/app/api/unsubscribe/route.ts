@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const unsubscribeLogger = logger.child({ module: "unsubscribe" });
 import { db } from "@/lib/db";
 import crypto from "crypto";
 
@@ -73,7 +76,7 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error("Error in unsubscribe GET:", error);
+    unsubscribeLogger.error({ err: String(error) }, "Error in unsubscribe GET:");
     return new NextResponse(renderUnsubscribePage(false, "An error occurred. Please try again."), {
       status: 500,
       headers: { "Content-Type": "text/html" },
@@ -100,7 +103,7 @@ export async function POST(request: NextRequest) {
       // If this is a valid one-click unsubscribe, process it
       if (targetEmail) {
         const result = await unsubscribeEmail(targetEmail);
-        console.log(`[Unsubscribe] One-click unsubscribe for: ${targetEmail}, success: ${result.success}`);
+        unsubscribeLogger.info(`[Unsubscribe] One-click unsubscribe for: ${targetEmail}, success: ${result.success}`);
 
         if (result.success) {
           // Return 200 OK for successful one-click unsubscribe
@@ -133,7 +136,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
   } catch (error) {
-    console.error("Error in unsubscribe POST:", error);
+    unsubscribeLogger.error({ err: String(error) }, "Error in unsubscribe POST:");
     return NextResponse.json({ error: "Failed to process unsubscribe" }, { status: 500 });
   }
 }
@@ -205,16 +208,16 @@ async function unsubscribeEmail(email: string): Promise<{ success: boolean; erro
         },
       });
       if (cancelled.count > 0) {
-        console.log(`[Unsubscribe] Cancelled ${cancelled.count} pending queue email(s) for ${normalizedEmail}`);
+        unsubscribeLogger.info(`[Unsubscribe] Cancelled ${cancelled.count} pending queue email(s) for ${normalizedEmail}`);
       }
     } catch {
       // Queue table might not exist
     }
 
-    console.log(`[Unsubscribe] Successfully unsubscribed from all lists: ${normalizedEmail}`);
+    unsubscribeLogger.info(`[Unsubscribe] Successfully unsubscribed from all lists: ${normalizedEmail}`);
     return { success: true };
   } catch (error) {
-    console.error("[Unsubscribe] Error:", error);
+    unsubscribeLogger.error({ err: String(error) }, "[Unsubscribe] Error:");
     return { success: false, error: "Database error while unsubscribing" };
   }
 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitNotesLogger = logger.child({ module: "creator-indiekit-notes" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -82,7 +85,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ notes: formattedNotes });
   } catch (error) {
-    console.error("IndieKit notes fetch error:", error);
+    creatorIndiekitNotesLogger.error({ err: String(error) }, "IndieKit notes fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch notes" },
       { status: 500 }
@@ -175,7 +178,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("IndieKit note create error:", error);
+    creatorIndiekitNotesLogger.error({ err: String(error) }, "IndieKit note create error:");
     return NextResponse.json(
       { error: "Failed to create note" },
       { status: 500 }
@@ -217,7 +220,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("IndieKit note delete error:", error);
+    creatorIndiekitNotesLogger.error({ err: String(error) }, "IndieKit note delete error:");
     return NextResponse.json(
       { error: "Failed to delete note" },
       { status: 500 }

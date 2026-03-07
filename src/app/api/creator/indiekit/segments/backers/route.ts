@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitSegmentsBackersLogger = logger.child({ module: "creator-indiekit-segments-backers" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -126,7 +129,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ backers, total: backers.length });
   } catch (error) {
-    console.error("Segments backers fetch error:", error);
+    creatorIndiekitSegmentsBackersLogger.error({ err: String(error) }, "Segments backers fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch segment backers" },
       { status: 500 }

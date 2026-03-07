@@ -41,14 +41,14 @@ export async function handleStripeWebhook(
 }
 
 async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
-  console.log(`[Webhook] handlePaymentSuccess called for PaymentIntent ${paymentIntent.id}`);
+  webhookLogger.info(`[Webhook] handlePaymentSuccess called for PaymentIntent ${paymentIntent.id}`);
   const pledgeId = paymentIntent.metadata.pledgeId;
 
   if (!pledgeId) {
-    console.log(`[Webhook] No pledgeId in metadata for PaymentIntent ${paymentIntent.id}, skipping`);
+    webhookLogger.info(`[Webhook] No pledgeId in metadata for PaymentIntent ${paymentIntent.id}, skipping`);
     return;
   }
-  console.log(`[Webhook] Processing payment success for pledge ${pledgeId}`);
+  webhookLogger.info(`[Webhook] Processing payment success for pledge ${pledgeId}`);
 
   // Check if pledge is already completed (idempotency - webhook may fire after direct update)
   const existingPledge = await db.pledge.findUnique({
@@ -57,7 +57,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   });
 
   if (existingPledge?.status === "COMPLETED") {
-    console.log(`[Webhook] Pledge ${pledgeId} already COMPLETED, skipping`);
+    webhookLogger.info(`[Webhook] Pledge ${pledgeId} already COMPLETED, skipping`);
     return;
   }
 
@@ -107,7 +107,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         sourceProjectId: pledge.projectId,
       });
     } catch (emailListError) {
-      console.error(`[Webhook] Failed to add backer to email list:`, emailListError);
+      webhookLogger.error({ err: emailListError }, `[Webhook] Failed to add backer to email list:`);
     }
   }
 
@@ -137,7 +137,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       if (pledge.rewardId) {
         const claimed = await claimRewardSlot(pledge.rewardId);
         if (!claimed) {
-          console.warn(`[Webhook] Reward ${pledge.rewardId} sold out for pledge ${pledgeId} - payment completed but reward unavailable`);
+          webhookLogger.warn(`[Webhook] Reward ${pledge.rewardId} sold out for pledge ${pledgeId} - payment completed but reward unavailable`);
         }
       }
 
@@ -150,20 +150,20 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
           Number(pledge.amount)
         );
       } catch (notifyError) {
-        console.error(`[Webhook] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
+        webhookLogger.error({ err: notifyError }, `[Webhook] Failed to notify creator for pledge ${pledgeId}:`);
       }
 
       // Send confirmation email to backer (non-blocking)
       try {
         await notifyBackerPledgeConfirmed(pledge.id, true);
       } catch (emailError) {
-        console.error(`[Webhook] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+        webhookLogger.error({ err: emailError }, `[Webhook] Failed to send confirmation email for pledge ${pledgeId}:`);
       }
 
-      console.log(`[Webhook] Updated project stats for pledge ${pledgeId}: +$${pledge.amount}`);
+      webhookLogger.info(`[Webhook] Updated project stats for pledge ${pledgeId}: +$${pledge.amount}`);
     } else {
       // /confirm endpoint already updated stats — just re-read project for funding check
-      console.log(`[Webhook] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);
+      webhookLogger.info(`[Webhook] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);
       const freshProject = await db.project.findUnique({
         where: { id: pledge.projectId },
         select: { currentAmount: true, goalAmount: true },
@@ -195,7 +195,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       try {
         await notifyProjectFunded(pledge.projectId);
       } catch (fundedError) {
-        console.error(`[Webhook] Failed to notify project funded for ${pledge.projectId}:`, fundedError);
+        webhookLogger.error({ err: fundedError }, `[Webhook] Failed to notify project funded for ${pledge.projectId}:`);
       }
     }
 
@@ -273,14 +273,14 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
   // If already processed (payment method saved AND confirmed), still check for funded project
   // This acts as a failsafe - duplicate webhook calls can still trigger processing
   if (existingPledge.stripePaymentMethodId && existingPledge.confirmationEmailSent) {
-    console.log(`[SetupIntent] Pledge ${pledgeId} already processed, checking if project needs processing...`);
+    webhookLogger.info(`[SetupIntent] Pledge ${pledgeId} already processed, checking if project needs processing...`);
 
     // Still check if project is funded and process pending pledges as failsafe
     const projectIsFunded = Number(existingPledge.project.currentAmount) >= Number(existingPledge.project.goalAmount);
     if (projectIsFunded) {
-      console.log(`[SetupIntent] Project ${existingPledge.projectId} is funded, processing pending pledges as failsafe...`);
+      webhookLogger.info(`[SetupIntent] Project ${existingPledge.projectId} is funded, processing pending pledges as failsafe...`);
       const chargeResults = await processPendingPledgesForProject(existingPledge.projectId);
-      console.log(`[SetupIntent] Failsafe charged ${chargeResults.successful}/${chargeResults.total} pledges`);
+      webhookLogger.info(`[SetupIntent] Failsafe charged ${chargeResults.successful}/${chargeResults.total} pledges`);
     }
     return;
   }
@@ -299,7 +299,7 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     },
   });
 
-  console.log(`[SetupIntent] Payment method saved for pledge ${pledgeId}, backer #${backerNumber}`);
+  webhookLogger.info(`[SetupIntent] Payment method saved for pledge ${pledgeId}, backer #${backerNumber}`);
 
   // Atomically claim the right to update stats using confirmationEmailSent flag.
   // This prevents double-counting between this webhook and the /confirm endpoint.
@@ -326,7 +326,7 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     if (existingPledge.rewardId) {
       const claimed = await claimRewardSlot(existingPledge.rewardId);
       if (!claimed) {
-        console.warn(`[SetupIntent] Reward ${existingPledge.rewardId} sold out for pledge ${pledgeId} - payment completed but reward unavailable`);
+        webhookLogger.warn(`[SetupIntent] Reward ${existingPledge.rewardId} sold out for pledge ${pledgeId} - payment completed but reward unavailable`);
       }
     }
 
@@ -339,10 +339,10 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
         existingPledge.amount
       );
     } catch (notifyError) {
-      console.error(`[SetupIntent] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
+      webhookLogger.error({ err: notifyError }, `[SetupIntent] Failed to notify creator for pledge ${pledgeId}:`);
     }
 
-    console.log(`[SetupIntent] Updated project stats: +$${existingPledge.amount}`);
+    webhookLogger.info(`[SetupIntent] Updated project stats: +$${existingPledge.amount}`);
 
     // Notify that project was funded (if this pledge pushed it over)
     const justReachedGoal = currentProjectAmount >= existingPledge.project.goalAmount &&
@@ -351,7 +351,7 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
       try {
         await notifyProjectFunded(existingPledge.projectId);
       } catch (fundedError) {
-        console.error(`[SetupIntent] Failed to notify project funded for ${existingPledge.projectId}:`, fundedError);
+        webhookLogger.error({ err: fundedError }, `[SetupIntent] Failed to notify project funded for ${existingPledge.projectId}:`);
       }
     }
 
@@ -359,11 +359,11 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     try {
       await notifyBackerPledgeConfirmed(pledgeId, false);
     } catch (emailError) {
-      console.error(`[SetupIntent] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+      webhookLogger.error({ err: emailError }, `[SetupIntent] Failed to send confirmation email for pledge ${pledgeId}:`);
     }
   } else if (statsClaimResult.count === 0) {
     // /confirm endpoint already handled stats — re-read current project amount for funding check
-    console.log(`[SetupIntent] Stats already updated by /confirm for pledge ${pledgeId}`);
+    webhookLogger.info(`[SetupIntent] Stats already updated by /confirm for pledge ${pledgeId}`);
     const freshProject = await db.project.findUnique({
       where: { id: existingPledge.projectId },
       select: { currentAmount: true },
@@ -379,11 +379,11 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
   const projectIsFunded = currentProjectAmount >= existingPledge.project.goalAmount;
 
   if (projectIsFunded) {
-    console.log(`[SetupIntent] Project ${existingPledge.projectId} is funded (${currentProjectAmount}/${existingPledge.project.goalAmount}). Processing pending pledges...`);
+    webhookLogger.info(`[SetupIntent] Project ${existingPledge.projectId} is funded (${currentProjectAmount}/${existingPledge.project.goalAmount}). Processing pending pledges...`);
 
     // Process all pending pledges (charge saved cards)
     const chargeResults = await processPendingPledgesForProject(existingPledge.projectId);
-    console.log(`[SetupIntent] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
+    webhookLogger.info(`[SetupIntent] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
   }
 }
 
@@ -410,20 +410,20 @@ async function handleAccountUpdate(account: Stripe.Account) {
  * Used for marketplace purchases
  */
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-  console.log(`[Webhook] handleCheckoutSessionCompleted called for session ${session.id}`);
+  webhookLogger.info(`[Webhook] handleCheckoutSessionCompleted called for session ${session.id}`);
 
   // Check if this is a marketplace purchase
   const purchaseId = session.metadata?.purchaseId;
   const type = session.metadata?.type;
 
   if (type !== "marketplace_purchase" || !purchaseId) {
-    console.log(`[Webhook] Session ${session.id} is not a marketplace purchase, skipping`);
+    webhookLogger.info(`[Webhook] Session ${session.id} is not a marketplace purchase, skipping`);
     return;
   }
 
   // Verify payment was successful
   if (session.payment_status !== "paid") {
-    console.log(`[Webhook] Session ${session.id} payment status is ${session.payment_status}, skipping`);
+    webhookLogger.info(`[Webhook] Session ${session.id} payment status is ${session.payment_status}, skipping`);
     return;
   }
 
@@ -441,13 +441,13 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   });
 
   if (!purchase) {
-    console.log(`[Webhook] Purchase ${purchaseId} not found`);
+    webhookLogger.info(`[Webhook] Purchase ${purchaseId} not found`);
     return;
   }
 
   // Skip if already completed
   if (purchase.status === "COMPLETED") {
-    console.log(`[Webhook] Purchase ${purchaseId} already completed`);
+    webhookLogger.info(`[Webhook] Purchase ${purchaseId} already completed`);
     return;
   }
 
@@ -484,11 +484,11 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   // Send notifications (don't await to avoid blocking webhook response)
   notifyMarketplacePurchase(purchaseId, "STRIPE").catch((err) =>
-    console.error(`[Webhook] Failed to notify marketplace purchase ${purchaseId}:`, err)
+    webhookLogger.error({ err: err }, `[Webhook] Failed to notify marketplace purchase ${purchaseId}:`)
   );
   notifyMarketplaceSale(purchaseId, "STRIPE").catch((err) =>
-    console.error(`[Webhook] Failed to notify marketplace sale ${purchaseId}:`, err)
+    webhookLogger.error({ err: err }, `[Webhook] Failed to notify marketplace sale ${purchaseId}:`)
   );
 
-  console.log(`[Webhook] Marketplace purchase ${purchaseId} completed successfully`);
+  webhookLogger.info(`[Webhook] Marketplace purchase ${purchaseId} completed successfully`);
 }

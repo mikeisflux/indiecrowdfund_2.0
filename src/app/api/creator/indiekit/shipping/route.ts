@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitShippingLogger = logger.child({ module: "creator-indiekit-shipping" });
 import { auth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -22,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, message: "Shipping action processed" });
   } catch (error) {
-    console.error("Shipping API error:", error);
+    creatorIndiekitShippingLogger.error({ err: String(error) }, "Shipping API error:");
     return NextResponse.json({ error: "Failed to process shipping request" }, { status: 500 });
   }
 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitTimelineLogger = logger.child({ module: "creator-indiekit-timeline" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -157,7 +160,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ entries: formattedEntries });
   } catch (error) {
-    console.error("IndieKit timeline fetch error:", error);
+    creatorIndiekitTimelineLogger.error({ err: String(error) }, "IndieKit timeline fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch timeline" },
       { status: 500 }

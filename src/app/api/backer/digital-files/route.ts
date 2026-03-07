@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerDigitalFilesLogger = logger.child({ module: "backer-digital-files" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getR2Storage } from "@/lib/r2";
@@ -184,7 +187,7 @@ export async function GET(request: NextRequest) {
       { headers: corsHeaders }
     );
   } catch (error) {
-    console.error("Error fetching backer digital files:", error);
+    backerDigitalFilesLogger.error({ err: String(error) }, "Error fetching backer digital files:");
     return NextResponse.json(
       { error: "Failed to fetch digital files" },
       { status: 500, headers: corsHeaders }
@@ -356,7 +359,7 @@ export async function POST(request: NextRequest) {
       { headers: corsHeaders }
     );
   } catch (error) {
-    console.error("Error generating download URL:", error);
+    backerDigitalFilesLogger.error({ err: String(error) }, "Error generating download URL:");
     return NextResponse.json(
       { error: "Failed to generate download URL" },
       { status: 500, headers: corsHeaders }

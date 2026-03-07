@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorPledgesLogger = logger.child({ module: "creator-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
@@ -107,7 +110,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Creator get pledge error:", error);
+    creatorPledgesLogger.error({ err: String(error) }, "Creator get pledge error:");
     return NextResponse.json(
       { error: "Failed to fetch pledge" },
       { status: 500 }
@@ -229,7 +232,7 @@ export async function PATCH(
           });
 
           if (!dcResult.success) {
-            console.error(`[DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`, dcResult.error);
+            creatorPledgesLogger.error({ err: String(dcResult.error) }, `[DivinityCoin Refund] DC API refund failed for pledge ${pledgeId}:`);
             return NextResponse.json(
               { error: dcResult.error || "DivinityCoin refund failed" },
               { status: 400 }
@@ -306,7 +309,7 @@ export async function PATCH(
             }
           });
 
-          console.log(`[DivinityCoin Refund] Processed ${isPartialRefund ? "partial" : "full"} refund ($${refundAmount.toFixed(2)}) for pledge ${pledgeId} via DC API`);
+          creatorPledgesLogger.info(`[DivinityCoin Refund] Processed ${isPartialRefund ? "partial" : "full"} refund ($${refundAmount.toFixed(2)}) for pledge ${pledgeId} via DC API`);
 
           // Send refund notification email to backer
           if (typedPledge.user.email) {
@@ -336,7 +339,7 @@ export async function PATCH(
                 skipUnsubscribeCheck: true, // Transactional email
               });
             } catch (emailError) {
-              console.error("Failed to send refund email:", emailError);
+              creatorPledgesLogger.error({ err: String(emailError) }, "Failed to send refund email:");
               // Don't fail the refund if email fails
             }
           }
@@ -349,7 +352,7 @@ export async function PATCH(
             isPartialRefund,
           });
         } catch (divinityError) {
-          console.error("DivinityCoin refund error:", divinityError);
+          creatorPledgesLogger.error({ err: String(divinityError) }, "DivinityCoin refund error:");
           return NextResponse.json(
             { error: "Failed to process DivinityCoin refund" },
             { status: 500 }
@@ -398,7 +401,7 @@ export async function PATCH(
             },
           });
         } catch (stripeError) {
-          console.error("Stripe refund error:", stripeError);
+          creatorPledgesLogger.error({ err: String(stripeError) }, "Stripe refund error:");
           return NextResponse.json(
             { error: "Failed to process refund with Stripe" },
             { status: 400 }
@@ -478,7 +481,7 @@ export async function PATCH(
               skipUnsubscribeCheck: true, // Transactional email
             });
           } catch (emailError) {
-            console.error("Failed to send refund email:", emailError);
+            creatorPledgesLogger.error({ err: String(emailError) }, "Failed to send refund email:");
             // Don't fail the refund if email fails
           }
         }
@@ -495,7 +498,7 @@ export async function PATCH(
 
     return NextResponse.json({ error: "Invalid action. Use 'cancel' or 'refund'" }, { status: 400 });
   } catch (error) {
-    console.error("Creator update pledge error:", error);
+    creatorPledgesLogger.error({ err: String(error) }, "Creator update pledge error:");
     return NextResponse.json(
       { error: "Failed to update pledge" },
       { status: 500 }
@@ -536,67 +539,67 @@ export async function DELETE(
       );
     }
 
-    console.log(`[DELETE] Starting deletion of pledge ${pledgeId}, current status: ${typedPledge.status}`);
+    creatorPledgesLogger.info(`[DELETE] Starting deletion of pledge ${pledgeId}, current status: ${typedPledge.status}`);
 
     // Delete in a transaction to handle related records that don't have cascade delete
     await db.$transaction(async (tx) => {
-      console.log(`[DELETE] Step 1: Deleting DivinityCoinTransactions`);
+      creatorPledgesLogger.info(`[DELETE] Step 1: Deleting DivinityCoinTransactions`);
       await tx.divinityCoinTransaction.deleteMany({
         where: { pledgeId },
       });
 
-      console.log(`[DELETE] Step 2: Deleting EmailLogs`);
+      creatorPledgesLogger.info(`[DELETE] Step 2: Deleting EmailLogs`);
       await tx.emailLog.deleteMany({
         where: { pledgeId },
       });
 
-      console.log(`[DELETE] Step 3: Deleting SurveyResponses`);
+      creatorPledgesLogger.info(`[DELETE] Step 3: Deleting SurveyResponses`);
       await tx.surveyResponse.deleteMany({
         where: { pledgeId },
       });
 
-      console.log(`[DELETE] Step 4: Deleting DigitalDistributions`);
+      creatorPledgesLogger.info(`[DELETE] Step 4: Deleting DigitalDistributions`);
       await tx.digitalDistribution.deleteMany({
         where: { pledgeId },
       });
 
-      console.log(`[DELETE] Step 5: Deleting BackerNotes`);
+      creatorPledgesLogger.info(`[DELETE] Step 5: Deleting BackerNotes`);
       await tx.backerNote.deleteMany({
         where: { pledgeId },
       });
 
-      console.log(`[DELETE] Step 6: Unlinking EmailCampaignClicks`);
+      creatorPledgesLogger.info(`[DELETE] Step 6: Unlinking EmailCampaignClicks`);
       await tx.emailCampaignClick.updateMany({
         where: { pledgeId },
         data: { pledgeId: null },
       });
 
-      console.log(`[DELETE] Step 7: Deleting FulfillmentActivities`);
+      creatorPledgesLogger.info(`[DELETE] Step 7: Deleting FulfillmentActivities`);
       await tx.fulfillmentActivity.deleteMany({
         where: { pledgeId },
       });
 
-      console.log(`[DELETE] Step 8: Deleting PledgeAddons`);
+      creatorPledgesLogger.info(`[DELETE] Step 8: Deleting PledgeAddons`);
       await tx.pledgeAddon.deleteMany({
         where: { pledgeId },
       });
 
-      console.log(`[DELETE] Step 9: Deleting the Pledge itself`);
+      creatorPledgesLogger.info(`[DELETE] Step 9: Deleting the Pledge itself`);
       await tx.pledge.delete({
         where: { id: pledgeId },
       });
 
-      console.log(`[DELETE] Step 10: Transaction complete`);
+      creatorPledgesLogger.info(`[DELETE] Step 10: Transaction complete`);
     });
 
-    console.log(`[DELETE] Successfully deleted pledge ${pledgeId}`);
+    creatorPledgesLogger.info(`[DELETE] Successfully deleted pledge ${pledgeId}`);
 
     return NextResponse.json({
       success: true,
       message: "Pledge deleted successfully",
     });
   } catch (error) {
-    console.error("Creator delete pledge error:", error);
+    creatorPledgesLogger.error({ err: String(error) }, "Creator delete pledge error:");
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: "Failed to delete pledge", details: errorMessage },

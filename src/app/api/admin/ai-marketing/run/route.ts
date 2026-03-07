@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingRunLogger = logger.child({ module: "admin-ai-marketing-run" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -364,7 +367,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("AI run error:", error);
+    adminAiMarketingRunLogger.error({ err: String(error) }, "AI run error:");
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to run AI service" },
       { status: 500 }

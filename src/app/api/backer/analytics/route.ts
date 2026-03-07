@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerAnalyticsLogger = logger.child({ module: "backer-analytics" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -194,7 +197,7 @@ export async function GET(request: NextRequest) {
       { headers: corsHeaders }
     );
   } catch (error) {
-    console.error("Error fetching analytics:", error);
+    backerAnalyticsLogger.error({ err: String(error) }, "Error fetching analytics:");
     return NextResponse.json(
       { error: "Failed to fetch analytics" },
       { status: 500, headers: corsHeaders }

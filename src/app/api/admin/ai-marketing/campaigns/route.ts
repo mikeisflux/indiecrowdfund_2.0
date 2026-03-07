@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingCampaignsLogger = logger.child({ module: "admin-ai-marketing-campaigns" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateCampaignContent } from "@/lib/ai";
@@ -122,7 +125,7 @@ export async function GET() {
 
     return NextResponse.json({ campaigns: campaignsWithCounts });
   } catch (error) {
-    console.error("Error fetching campaigns:", error);
+    adminAiMarketingCampaignsLogger.error({ err: String(error) }, "Error fetching campaigns:");
     return NextResponse.json(
       { error: "Failed to fetch campaigns" },
       { status: 500 }
@@ -298,7 +301,7 @@ export async function POST(request: Request) {
         })),
       });
     } catch (aiError) {
-      console.error("AI content generation error:", aiError);
+      adminAiMarketingCampaignsLogger.error({ err: String(aiError) }, "AI content generation error:");
       // Fallback to template-based content if AI fails
       aiContent = {
         subject: subjectTemplate || `Check out these amazing ${projectCategory !== "all" ? projectCategory : ""} projects`,
@@ -405,7 +408,7 @@ export async function POST(request: Request) {
         : `Campaign created as draft.${featuresUsed.length > 0 ? ` AI features: ${featuresUsed.join(", ")}.` : ""} Review and send when ready.`,
     });
   } catch (error) {
-    console.error("Error creating campaign:", error);
+    adminAiMarketingCampaignsLogger.error({ err: String(error) }, "Error creating campaign:");
     return NextResponse.json(
       { error: "Failed to create campaign" },
       { status: 500 }

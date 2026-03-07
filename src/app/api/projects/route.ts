@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsLogger = logger.child({ module: "projects" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -212,7 +215,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Failed to fetch projects:", error);
+    projectsLogger.error({ err: String(error) }, "Failed to fetch projects:");
     return NextResponse.json(
       { error: "Failed to fetch projects" },
       { status: 500 }
@@ -316,7 +319,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    console.error("Failed to create project:", error);
+    projectsLogger.error({ err: String(error) }, "Failed to create project:");
     return NextResponse.json(
       { error: "Failed to create project" },
       { status: 500 }

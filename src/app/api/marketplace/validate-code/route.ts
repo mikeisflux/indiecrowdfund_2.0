@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const marketplaceValidateCodeLogger = logger.child({ module: "marketplace-validate-code" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -154,7 +157,7 @@ export async function POST(request: NextRequest) {
       expiresAt: discountCode.validUntil.toISOString(),
     });
   } catch (error) {
-    console.error("Error validating discount code:", error);
+    marketplaceValidateCodeLogger.error({ err: String(error) }, "Error validating discount code:");
     return NextResponse.json(
       { error: "Failed to validate promo code" },
       { status: 500 }

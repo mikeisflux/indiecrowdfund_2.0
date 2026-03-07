@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const marketplaceRedeemCodeLogger = logger.child({ module: "marketplace-redeem-code" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -187,7 +190,7 @@ export async function POST(request: NextRequest) {
       purchaseId: result.purchase.id,
     });
   } catch (error) {
-    console.error("Error redeeming promo code:", error);
+    marketplaceRedeemCodeLogger.error({ err: String(error) }, "Error redeeming promo code:");
     return NextResponse.json(
       { error: "Failed to redeem promo code" },
       { status: 500 }

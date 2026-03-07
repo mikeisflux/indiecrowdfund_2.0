@@ -12,6 +12,11 @@
 
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const authRecaptchaLogger = logger.child({ module: "auth-recaptcha" });
+
+
 const RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 
 // Cache for settings to avoid hitting DB on every request
@@ -66,7 +71,7 @@ async function getRecaptchaSettings(): Promise<{
       return settingsCache;
     }
   } catch (error) {
-    console.warn("[reCAPTCHA] Error fetching settings from DB:", error);
+    authRecaptchaLogger.warn({ data: error }, "[reCAPTCHA] Error fetching settings from DB:");
   }
 
   // Fall back to environment variables
@@ -132,7 +137,7 @@ export async function verifyRecaptcha(
   const secretKey = settings.secretKey;
   if (!secretKey) {
     // This shouldn't happen if enabled is true, but be safe
-    console.warn("[reCAPTCHA] Secret key missing");
+    authRecaptchaLogger.warn("[reCAPTCHA] Secret key missing");
     return { valid: true };
   }
 
@@ -153,7 +158,7 @@ export async function verifyRecaptcha(
     });
 
     if (!response.ok) {
-      console.error("[reCAPTCHA] Verification request failed:", response.status);
+      authRecaptchaLogger.error({ err: response.status }, "[reCAPTCHA] Verification request failed:");
       // Fail closed - security over availability, but with helpful message
       return {
         valid: false,
@@ -169,7 +174,7 @@ export async function verifyRecaptcha(
 
     // Log error codes for debugging
     if (result["error-codes"]) {
-      console.log("[reCAPTCHA] Verification failed:", result["error-codes"]);
+      authRecaptchaLogger.info({ data: result["error-codes"] }, "[reCAPTCHA] Verification failed:");
     }
 
     return {
@@ -177,7 +182,7 @@ export async function verifyRecaptcha(
       error: "CAPTCHA verification failed. Please try again."
     };
   } catch (error) {
-    console.error("[reCAPTCHA] Verification error:", error);
+    authRecaptchaLogger.error({ err: error }, "[reCAPTCHA] Verification error:");
     // Fail closed - security over availability
     return {
       valid: false,

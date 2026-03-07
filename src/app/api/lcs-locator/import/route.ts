@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const lcsLocatorImportLogger = logger.child({ module: "lcs-locator-import" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as fs from "fs";
@@ -138,7 +141,7 @@ export async function POST() {
         imported++;
       } catch (err) {
         errors++;
-        console.error(`Error importing "${row.name}":`, err);
+        lcsLocatorImportLogger.error({ err: String(err) }, `Error importing "${row.name}":`);
       }
     }
 
@@ -150,7 +153,7 @@ export async function POST() {
       errors,
     });
   } catch (error) {
-    console.error("Import failed:", error);
+    lcsLocatorImportLogger.error({ err: String(error) }, "Import failed:");
     return NextResponse.json(
       { error: "Import failed", details: String(error) },
       { status: 500 }

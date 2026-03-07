@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorMediaUploadLogger = logger.child({ module: "creator-media-upload" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
@@ -143,7 +146,7 @@ export async function POST(req: NextRequest) {
       file: mediaFile,
     });
   } catch (error) {
-    console.error("Error uploading file:", error);
+    creatorMediaUploadLogger.error({ err: String(error) }, "Error uploading file:");
     return NextResponse.json(
       { error: "Failed to upload file" },
       { status: 500 }

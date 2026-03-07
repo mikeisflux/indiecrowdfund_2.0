@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitShippoLogger = logger.child({ module: "creator-indiekit-shippo" });
 import type { NextRequest } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitShippoLogger = logger.child({ module: "creator-indiekit-shippo" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -258,7 +264,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Shippo API error:", error);
+    creatorIndiekitShippoLogger.error({ err: String(error) }, "Shippo API error:");
     return NextResponse.json({ error: "Failed to process Shippo request" }, { status: 500 });
   }
 }

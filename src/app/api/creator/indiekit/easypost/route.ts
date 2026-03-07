@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitEasypostLogger = logger.child({ module: "creator-indiekit-easypost" });
 import type { NextRequest } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitEasypostLogger = logger.child({ module: "creator-indiekit-easypost" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -221,7 +227,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("EasyPost API error:", error);
+    creatorIndiekitEasypostLogger.error({ err: String(error) }, "EasyPost API error:");
     return NextResponse.json({ error: "Failed to process EasyPost request" }, { status: 500 });
   }
 }

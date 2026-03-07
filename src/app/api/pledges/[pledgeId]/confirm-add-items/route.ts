@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const pledgesConfirmAddItemsLogger = logger.child({ module: "pledges-confirm-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
@@ -205,7 +208,7 @@ export async function POST(
               data: { quantityClaimed: { increment: quantity } },
             });
           } else {
-            console.warn(`[ConfirmAddItems] Addon ${addon.id} has only ${availableSlots} available but ${quantity} requested`);
+            pledgesConfirmAddItemsLogger.warn(`[ConfirmAddItems] Addon ${addon.id} has only ${availableSlots} available but ${quantity} requested`);
             throw new Error(`Not enough ${addon.title || 'addon'} available`);
           }
         }
@@ -243,7 +246,7 @@ export async function POST(
       });
     });
 
-    console.log(`[ConfirmAddItems] Successfully added ${totalQuantity} items (${addons.length} unique) to pledge ${pledgeId}, amount: $${pendingItems.amount}`);
+    pledgesConfirmAddItemsLogger.info(`[ConfirmAddItems] Successfully added ${totalQuantity} items (${addons.length} unique) to pledge ${pledgeId}, amount: $${pendingItems.amount}`);
 
     return NextResponse.json({
       success: true,
@@ -252,7 +255,7 @@ export async function POST(
       addedItems: addons.map((a: { title: string }) => a.title),
     });
   } catch (error) {
-    console.error("Failed to confirm additional items:", error);
+    pledgesConfirmAddItemsLogger.error({ err: String(error) }, "Failed to confirm additional items:");
     return NextResponse.json(
       { error: "Failed to confirm additional items" },
       { status: 500 }

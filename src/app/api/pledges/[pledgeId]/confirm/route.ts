@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const pledgesConfirmLogger = logger.child({ module: "pledges-confirm" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendPledgeConfirmationEmail, isEmailTypeEnabled } from "@/lib/email";
@@ -109,12 +112,12 @@ export async function POST(
       });
       if (dcTransaction) {
         paymentVerified = true;
-        console.log(`[Confirm] DC payment verified for pledge ${pledgeId}`);
+        pledgesConfirmLogger.info(`[Confirm] DC payment verified for pledge ${pledgeId}`);
       } else if (pledge.divinityCoinPaymentId) {
         // Has a DC payment ID but no transaction yet — DC webhook may still be in-flight
         // Give it the benefit of the doubt for now; the webhook will handle stats
         paymentVerified = true;
-        console.log(`[Confirm] DC payment ID present for pledge ${pledgeId}, assuming in-flight`);
+        pledgesConfirmLogger.info(`[Confirm] DC payment ID present for pledge ${pledgeId}, assuming in-flight`);
       } else {
         return NextResponse.json({
           success: false,
@@ -132,21 +135,21 @@ export async function POST(
           paymentMethodId = typeof paymentIntent.payment_method === "string"
             ? paymentIntent.payment_method
             : paymentIntent.payment_method?.id || paymentMethodId;
-          console.log(`[Confirm] Stripe PaymentIntent verified succeeded for pledge ${pledgeId}`);
+          pledgesConfirmLogger.info(`[Confirm] Stripe PaymentIntent verified succeeded for pledge ${pledgeId}`);
         } else if (paymentIntent.status === "processing") {
           // Still processing — let the webhook handle it when it completes
           paymentVerified = true;
-          console.log(`[Confirm] Stripe PaymentIntent processing for pledge ${pledgeId}, will be finalized by webhook`);
+          pledgesConfirmLogger.info(`[Confirm] Stripe PaymentIntent processing for pledge ${pledgeId}, will be finalized by webhook`);
         } else {
           // Payment is incomplete, requires_payment_method, canceled, etc.
-          console.warn(`[Confirm] Stripe PaymentIntent status is '${paymentIntent.status}' for pledge ${pledgeId} — NOT counting`);
+          pledgesConfirmLogger.warn(`[Confirm] Stripe PaymentIntent status is '${paymentIntent.status}' for pledge ${pledgeId} — NOT counting`);
           return NextResponse.json({
             success: false,
             error: "Payment not completed. Please try again.",
           }, { status: 400 });
         }
       } catch (err) {
-        console.error(`[Confirm] Failed to verify PaymentIntent for pledge ${pledgeId}:`, err);
+        pledgesConfirmLogger.error({ err: String(err) }, `[Confirm] Failed to verify PaymentIntent for pledge ${pledgeId}:`);
         return NextResponse.json({
           success: false,
           error: "Could not verify payment status. Please try again.",
@@ -154,7 +157,7 @@ export async function POST(
       }
     } else if (pledge.chargedImmediately) {
       // chargedImmediately but no PaymentIntent ID and no DC payment — incomplete
-      console.warn(`[Confirm] chargedImmediately pledge ${pledgeId} has no payment reference — NOT counting`);
+      pledgesConfirmLogger.warn(`[Confirm] chargedImmediately pledge ${pledgeId} has no payment reference — NOT counting`);
       return NextResponse.json({
         success: false,
         error: "Payment not completed. Please try again.",
@@ -177,10 +180,10 @@ export async function POST(
               data: { stripePaymentMethodId: paymentMethodId },
             });
 
-            console.log(`[Confirm] Fetched payment method from Stripe for pledge ${pledgeId}`);
+            pledgesConfirmLogger.info(`[Confirm] Fetched payment method from Stripe for pledge ${pledgeId}`);
           }
         } catch (err) {
-          console.error(`[Confirm] Failed to fetch SetupIntent from Stripe:`, err);
+          pledgesConfirmLogger.error({ err: String(err) }, `[Confirm] Failed to fetch SetupIntent from Stripe:`);
         }
       }
 
@@ -228,7 +231,7 @@ export async function POST(
       if (pledge.reward?.id) {
         const claimed = await claimRewardSlot(pledge.reward.id);
         if (!claimed) {
-          console.warn(`[Confirm] Reward ${pledge.reward.id} sold out for pledge ${pledgeId}`);
+          pledgesConfirmLogger.warn(`[Confirm] Reward ${pledge.reward.id} sold out for pledge ${pledgeId}`);
         }
       }
 
@@ -240,7 +243,7 @@ export async function POST(
         pledge.amount
       );
 
-      console.log(`[Confirm] Updated project stats for SetupIntent pledge ${pledgeId}: +$${pledge.amount}`);
+      pledgesConfirmLogger.info(`[Confirm] Updated project stats for SetupIntent pledge ${pledgeId}: +$${pledge.amount}`);
 
       // Check if project just reached funding goal
       const projectIsFunded = Number(updatedProject.currentAmount) >= Number(updatedProject.goalAmount);
@@ -253,9 +256,9 @@ export async function POST(
 
       // Process all pending pledges if project is funded (charge saved cards)
       if (projectIsFunded) {
-        console.log(`[Confirm] Project ${pledge.projectId} is funded, processing pending pledges...`);
+        pledgesConfirmLogger.info(`[Confirm] Project ${pledge.projectId} is funded, processing pending pledges...`);
         const chargeResults = await processPendingPledgesForProject(pledge.projectId);
-        console.log(`[Confirm] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
+        pledgesConfirmLogger.info(`[Confirm] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
       }
     } else if (paymentVerified) {
       // PaymentIntent or DC pledge — payment was verified above, update stats now.
@@ -285,7 +288,7 @@ export async function POST(
                   : pi.payment_method?.id || paymentMethodId,
               },
             });
-            console.log(`[Confirm] Marked PaymentIntent pledge ${pledgeId} as COMPLETED`);
+            pledgesConfirmLogger.info(`[Confirm] Marked PaymentIntent pledge ${pledgeId} as COMPLETED`);
           }
         } catch {
           // Non-critical — webhook will handle status update
@@ -296,7 +299,7 @@ export async function POST(
       if (pledge.reward?.id) {
         const claimed = await claimRewardSlot(pledge.reward.id);
         if (!claimed) {
-          console.warn(`[Confirm] Reward ${pledge.reward.id} sold out for pledge ${pledgeId}`);
+          pledgesConfirmLogger.warn(`[Confirm] Reward ${pledge.reward.id} sold out for pledge ${pledgeId}`);
         }
       }
 
@@ -309,10 +312,10 @@ export async function POST(
           pledge.amount
         );
       } catch (notifyError) {
-        console.error(`[Confirm] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
+        pledgesConfirmLogger.error({ err: String(notifyError) }, `[Confirm] Failed to notify creator for pledge ${pledgeId}:`);
       }
 
-      console.log(`[Confirm] Updated project stats for chargedImmediately pledge ${pledgeId}: +$${pledge.amount}`);
+      pledgesConfirmLogger.info(`[Confirm] Updated project stats for chargedImmediately pledge ${pledgeId}: +$${pledge.amount}`);
     }
 
     // Send confirmation email if user has email and feature is enabled
@@ -363,12 +366,12 @@ export async function POST(
       emailSent = emailResult.success;
 
       if (emailResult.success) {
-        console.log(`[Confirm] Sent confirmation email for pledge ${pledgeId} to ${pledge.user.email}`);
+        pledgesConfirmLogger.info(`[Confirm] Sent confirmation email for pledge ${pledgeId} to ${pledge.user.email}`);
       } else {
-        console.error(`[Confirm] Failed to send confirmation email for pledge ${pledgeId}:`, emailResult.error);
+        pledgesConfirmLogger.error({ err: String(emailResult.error) }, `[Confirm] Failed to send confirmation email for pledge ${pledgeId}:`);
       }
     } else if (!pledgeEmailEnabled) {
-      console.log(`[Confirm] Pledge confirmation emails are disabled in settings`);
+      pledgesConfirmLogger.info(`[Confirm] Pledge confirmation emails are disabled in settings`);
     }
 
     return NextResponse.json({
@@ -378,7 +381,7 @@ export async function POST(
       message: "Pledge confirmed successfully",
     });
   } catch (error) {
-    console.error("Failed to confirm pledge:", error);
+    pledgesConfirmLogger.error({ err: String(error) }, "Failed to confirm pledge:");
     return NextResponse.json(
       { error: "Failed to confirm pledge" },
       { status: 500 }

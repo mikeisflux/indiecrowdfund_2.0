@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const retailersForgotPasswordLogger = logger.child({ module: "retailers-forgot-password" });
 import { db } from "@/lib/db";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/email";
@@ -128,7 +131,7 @@ export async function POST(req: NextRequest) {
       message: "If an account exists with this email, you will receive a password reset link.",
     });
   } catch (error) {
-    console.error("Error requesting retailer password reset:", error);
+    retailersForgotPasswordLogger.error({ err: String(error) }, "Error requesting retailer password reset:");
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }

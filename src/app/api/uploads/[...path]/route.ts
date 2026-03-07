@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const uploadsLogger = logger.child({ module: "uploads" });
 import { readFile, stat } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -53,11 +56,11 @@ export async function GET(
           ext = ".webp";
           // Silent fallback - no logging needed for expected behavior
         } else {
-          console.warn(`[Uploads] File not found: ${relativePath} (no .webp fallback)`);
+          uploadsLogger.warn(`[Uploads] File not found: ${relativePath} (no .webp fallback)`);
           return NextResponse.json({ error: "File not found" }, { status: 404 });
         }
       } else {
-        console.warn(`[Uploads] File not found: ${relativePath}`);
+        uploadsLogger.warn(`[Uploads] File not found: ${relativePath}`);
         return NextResponse.json({ error: "File not found" }, { status: 404 });
       }
     }
@@ -112,7 +115,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error serving upload:", error);
+    uploadsLogger.error({ err: String(error) }, "Error serving upload:");
     return NextResponse.json({ error: "Failed to serve file" }, { status: 500 });
   }
 }

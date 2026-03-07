@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerSurveysLogger = logger.child({ module: "backer-surveys" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -176,7 +179,7 @@ export async function GET(request: NextRequest) {
       stats,
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching backer surveys:", error);
+    backerSurveysLogger.error({ err: String(error) }, "Error fetching backer surveys:");
     return NextResponse.json(
       { error: "Failed to fetch surveys" },
       { status: 500, headers: corsHeaders }
@@ -348,7 +351,7 @@ export async function POST(request: NextRequest) {
       questions: questions.sort((a, b) => a.sortOrder - b.sortOrder),
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching survey details:", error);
+    backerSurveysLogger.error({ err: String(error) }, "Error fetching survey details:");
     return NextResponse.json(
       { error: "Failed to fetch survey details" },
       { status: 500, headers: corsHeaders }

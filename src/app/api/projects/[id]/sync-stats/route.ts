@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsSyncStatsLogger = logger.child({ module: "projects-sync-stats" });
 import { db } from "@/lib/db";
 
 /**
@@ -89,9 +92,7 @@ export async function POST(
       },
     });
 
-    console.log(
-      `[Sync] Project ${projectId} stats synced: $${actualAmount} from ${actualBackerCount} backers (was $${project.currentAmount} from ${project.backerCount})`
-    );
+    projectsSyncStatsLogger.info(`[Sync] Project ${projectId} stats synced: $${actualAmount} from ${actualBackerCount} backers (was $${project.currentAmount} from ${project.backerCount})`);
 
     return NextResponse.json({
       message: "Stats synced successfully",
@@ -103,7 +104,7 @@ export async function POST(
       updated: true,
     });
   } catch (error) {
-    console.error("Failed to sync project stats:", error);
+    projectsSyncStatsLogger.error({ err: String(error) }, "Failed to sync project stats:");
     return NextResponse.json(
       { error: "Failed to sync project stats" },
       { status: 500 }

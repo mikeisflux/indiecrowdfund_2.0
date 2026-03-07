@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const chatAdminBanLogger = logger.child({ module: "chat-admin-ban" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -62,7 +65,7 @@ export async function POST(req: NextRequest) {
       message: `User ${targetUser.name || userId} has been banned from chat`,
     });
   } catch (error) {
-    console.error("Error banning user from chat:", error);
+    chatAdminBanLogger.error({ err: String(error) }, "Error banning user from chat:");
     return NextResponse.json(
       { error: "Failed to ban user" },
       { status: 500 }
@@ -109,7 +112,7 @@ export async function DELETE(req: NextRequest) {
       message: "User has been unbanned from chat",
     });
   } catch (error) {
-    console.error("Error unbanning user from chat:", error);
+    chatAdminBanLogger.error({ err: String(error) }, "Error unbanning user from chat:");
     return NextResponse.json(
       { error: "Failed to unban user" },
       { status: 500 }

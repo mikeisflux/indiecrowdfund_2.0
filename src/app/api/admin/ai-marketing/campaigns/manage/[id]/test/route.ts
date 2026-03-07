@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingCampaignsManageTestLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-test" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
@@ -109,7 +112,7 @@ export async function POST(
     // Convert relative URLs to absolute URLs for images
     personalizedHtml = convertRelativeUrls(personalizedHtml);
 
-    console.log(`Sending test email for campaign "${campaign.name}" to ${email}`);
+    adminAiMarketingCampaignsManageTestLogger.info(`Sending test email for campaign "${campaign.name}" to ${email}`);
 
     // Send the test email
     const result = await sendEmail({
@@ -130,7 +133,7 @@ export async function POST(
       message: `Test email sent to ${email}`,
     });
   } catch (error) {
-    console.error("Error sending test email:", error);
+    adminAiMarketingCampaignsManageTestLogger.error({ err: String(error) }, "Error sending test email:");
     return NextResponse.json(
       { error: "Failed to send test email" },
       { status: 500 }

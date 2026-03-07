@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const verifyIdCheckLogger = logger.child({ module: "verify-id-check" });
 import { auth } from "@/lib/auth";
 import { requiresIdVerification } from "@/lib/shufti";
 import { db } from "@/lib/db";
@@ -45,7 +48,7 @@ export async function GET(req: NextRequest) {
       loggedIn: !!session?.user?.id,
     });
   } catch (error) {
-    console.error("Error checking verification requirement:", error);
+    verifyIdCheckLogger.error({ err: String(error) }, "Error checking verification requirement:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

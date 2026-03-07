@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsPrelaunchLogger = logger.child({ module: "projects-prelaunch" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -112,7 +115,7 @@ export async function POST(
                 project.title
               );
             } catch (emailError) {
-              console.error("Failed to send project submitted email:", emailError);
+              projectsPrelaunchLogger.error({ err: String(emailError) }, "Failed to send project submitted email:");
             }
           }
 
@@ -148,14 +151,14 @@ export async function POST(
       },
     });
 
-    console.log(`Project prelaunch settings updated for ${projectId}`);
+    projectsPrelaunchLogger.info(`Project prelaunch settings updated for ${projectId}`);
 
     return NextResponse.json({
       success: true,
       project: updated,
     });
   } catch (error) {
-    console.error("Update prelaunch error:", error);
+    projectsPrelaunchLogger.error({ err: String(error) }, "Update prelaunch error:");
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -205,7 +208,7 @@ export async function GET(
 
     return NextResponse.json(project);
   } catch (error) {
-    console.error("Get prelaunch error:", error);
+    projectsPrelaunchLogger.error({ err: String(error) }, "Get prelaunch error:");
     return NextResponse.json(
       { error: "Failed to get prelaunch settings" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingCampaignsFixImagesLogger = logger.child({ module: "admin-ai-marketing-campaigns-fix-images" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
@@ -72,9 +75,9 @@ async function processBase64Images(html: string): Promise<{ processedHtml: strin
       processedHtml = processedHtml.replace(m.dataUrl, publicUrl);
       uploadedCount++;
 
-      console.log(`Uploaded image: ${filename} -> ${publicUrl}`);
+      adminAiMarketingCampaignsFixImagesLogger.info(`Uploaded image: ${filename} -> ${publicUrl}`);
     } catch (err) {
-      console.error(`Failed to process image:`, err);
+      adminAiMarketingCampaignsFixImagesLogger.error({ err: String(err) }, `Failed to process image:`);
     }
   }
 
@@ -110,7 +113,7 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log(`Found ${campaigns.length} campaigns with base64 images`);
+    adminAiMarketingCampaignsFixImagesLogger.info(`Found ${campaigns.length} campaigns with base64 images`);
 
     const results: { id: string; name: string; imagesFixed: number }[] = [];
 
@@ -130,7 +133,7 @@ export async function POST(request: Request) {
           imagesFixed: uploadedCount,
         });
 
-        console.log(`Fixed campaign "${campaign.name}": ${uploadedCount} images uploaded`);
+        adminAiMarketingCampaignsFixImagesLogger.info(`Fixed campaign "${campaign.name}": ${uploadedCount} images uploaded`);
       }
     }
 
@@ -141,7 +144,7 @@ export async function POST(request: Request) {
       totalImagesUploaded: results.reduce((sum, r) => sum + r.imagesFixed, 0),
     });
   } catch (error) {
-    console.error("Error fixing campaign images:", error);
+    adminAiMarketingCampaignsFixImagesLogger.error({ err: String(error) }, "Error fixing campaign images:");
     return NextResponse.json(
       { error: "Failed to fix campaign images" },
       { status: 500 }
@@ -177,7 +180,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("Error checking campaigns:", error);
+    adminAiMarketingCampaignsFixImagesLogger.error({ err: String(error) }, "Error checking campaigns:");
     return NextResponse.json(
       { error: "Failed to check campaigns" },
       { status: 500 }

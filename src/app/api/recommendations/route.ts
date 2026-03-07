@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const recommendationsLogger = logger.child({ module: "recommendations" });
 import { auth } from "@/lib/auth";
 import { recommendationEngine } from "@/lib/recommendations/engine";
 
@@ -31,7 +34,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Recommendations error:", error);
+    recommendationsLogger.error({ err: String(error) }, "Recommendations error:");
     return NextResponse.json(
       { error: "Failed to get recommendations" },
       { status: 500 }

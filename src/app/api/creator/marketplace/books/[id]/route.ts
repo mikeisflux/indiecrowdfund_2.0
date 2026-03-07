@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorMarketplaceBooksLogger = logger.child({ module: "creator-marketplace-books" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -58,7 +61,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching book:", error);
+    creatorMarketplaceBooksLogger.error({ err: String(error) }, "Error fetching book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -156,7 +159,7 @@ export async function PUT(
     const requiresReReview = existingBook.status === "LIVE" && (pdfChanged || coverImageChanged);
 
     // Debug logging
-    console.log("[Book Update Debug]", {
+    creatorMarketplaceBooksLogger.info({ data: {
       bookStatus: existingBook.status,
       promoImageUrl,
       existingCoverImageUrl: existingBook.coverImageUrl,
@@ -165,7 +168,7 @@ export async function PUT(
       pdfChanged,
       coverImageChanged,
       requiresReReview,
-    });
+    } }, "[Book Update Debug]");
 
     if (requiresReReview) {
       updateData.status = "PENDING_REVIEW";
@@ -210,7 +213,7 @@ export async function PUT(
       requiresReReview,
     });
   } catch (error) {
-    console.error("Error updating book:", error);
+    creatorMarketplaceBooksLogger.error({ err: String(error) }, "Error updating book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -262,7 +265,7 @@ export async function DELETE(
       message: "Book deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting book:", error);
+    creatorMarketplaceBooksLogger.error({ err: String(error) }, "Error deleting book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

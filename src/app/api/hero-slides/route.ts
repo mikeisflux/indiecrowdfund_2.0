@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const heroSlidesLogger = logger.child({ module: "hero-slides" });
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -110,7 +113,7 @@ export async function GET() {
 
     return NextResponse.json({ slides }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching hero slides:", error);
+    heroSlidesLogger.error({ err: String(error) }, "Error fetching hero slides:");
     return NextResponse.json({ slides: [] }, { headers: corsHeaders });
   }
 }

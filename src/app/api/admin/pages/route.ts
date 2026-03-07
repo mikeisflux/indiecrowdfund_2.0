@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminPagesLogger = logger.child({ module: "admin-pages" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -95,7 +98,7 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error) {
-    console.error("Error fetching pages:", error);
+    adminPagesLogger.error({ err: String(error) }, "Error fetching pages:");
     return NextResponse.json(
       { error: "Failed to fetch pages" },
       { status: 500 }
@@ -150,7 +153,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, page });
   } catch (error) {
-    console.error("Error creating page:", error);
+    adminPagesLogger.error({ err: String(error) }, "Error creating page:");
     return NextResponse.json(
       { error: "Failed to create page" },
       { status: 500 }
@@ -224,7 +227,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, page });
   } catch (error) {
-    console.error("Error updating page:", error);
+    adminPagesLogger.error({ err: String(error) }, "Error updating page:");
     return NextResponse.json(
       { error: "Failed to update page" },
       { status: 500 }
@@ -256,7 +259,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting page:", error);
+    adminPagesLogger.error({ err: String(error) }, "Error deleting page:");
     return NextResponse.json(
       { error: "Failed to delete page" },
       { status: 500 }

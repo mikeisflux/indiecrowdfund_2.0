@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const marketplacePurchaseLogger = logger.child({ module: "marketplace-purchase" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
@@ -111,7 +114,7 @@ export async function POST(request: Request) {
 
         const dcResult = await dcResponse.json();
         if (!dcResponse.ok || !dcResult.success) {
-          console.error("[Marketplace DC] Failed to create payment intent:", dcResult);
+          marketplacePurchaseLogger.error({ err: String(dcResult) }, "[Marketplace DC] Failed to create payment intent:");
           await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
           return NextResponse.json(
             { error: dcResult.error || "Failed to initialize payment" },
@@ -136,7 +139,7 @@ export async function POST(request: Request) {
           currency: book.currency,
         });
       } catch (dcError) {
-        console.error("[Marketplace DC] API error:", dcError);
+        marketplacePurchaseLogger.error({ err: String(dcError) }, "[Marketplace DC] API error:");
         await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
         return NextResponse.json(
           { error: "Failed to connect to payment processor" },
@@ -155,7 +158,7 @@ export async function POST(request: Request) {
       currency: book.currency,
     });
   } catch (error) {
-    console.error("Error processing purchase:", error);
+    marketplacePurchaseLogger.error({ err: String(error) }, "Error processing purchase:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -218,7 +221,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("Error fetching purchases:", error);
+    marketplacePurchaseLogger.error({ err: String(error) }, "Error fetching purchases:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

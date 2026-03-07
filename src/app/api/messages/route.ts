@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const messagesLogger = logger.child({ module: "messages" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -104,14 +107,14 @@ export async function POST(req: NextRequest) {
           skipUnsubscribeCheck: true, // Transactional email for direct messages
         });
       } catch (emailError) {
-        console.error("Failed to send message notification email:", emailError);
+        messagesLogger.error({ err: String(emailError) }, "Failed to send message notification email:");
         // Don't fail the message creation if email fails
       }
     }
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {
-    console.error("Create message error:", error);
+    messagesLogger.error({ err: String(error) }, "Create message error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -259,7 +262,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ messages, conversations, totalUnread });
   } catch (error) {
-    console.error("Get messages error:", error);
+    messagesLogger.error({ err: String(error) }, "Get messages error:");
     return NextResponse.json(
       { error: "Failed to fetch messages" },
       { status: 500 }
@@ -309,7 +312,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Mark messages read error:", error);
+    messagesLogger.error({ err: String(error) }, "Mark messages read error:");
     return NextResponse.json(
       { error: "Failed to mark messages as read" },
       { status: 500 }

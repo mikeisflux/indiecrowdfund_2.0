@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const verifyIdLogger = logger.child({ module: "verify-id" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getShuftiService } from "@/lib/shufti";
@@ -47,7 +50,7 @@ export async function GET() {
       latestVerification,
     });
   } catch (error) {
-    console.error("Error getting verification status:", error);
+    verifyIdLogger.error({ err: String(error) }, "Error getting verification status:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -140,7 +143,7 @@ export async function POST(req: NextRequest) {
       reference: result.reference,
     });
   } catch (error) {
-    console.error("Error starting verification:", error);
+    verifyIdLogger.error({ err: String(error) }, "Error starting verification:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

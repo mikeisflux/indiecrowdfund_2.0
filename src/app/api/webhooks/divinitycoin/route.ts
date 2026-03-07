@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const webhooksDivinitycoinLogger = logger.child({ module: "webhooks-divinitycoin" });
 import {
   constructWebhookEvent,
   handleDivinityCoinWebhook,
@@ -21,7 +24,7 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get("x-webhook-signature");
 
     if (!signature) {
-      console.error("[DivinityCoin Webhook] Missing signature header");
+      webhooksDivinitycoinLogger.error("[DivinityCoin Webhook] Missing signature header");
       return NextResponse.json(
         { error: "Missing signature" },
         { status: 400 }
@@ -31,7 +34,7 @@ export async function POST(req: NextRequest) {
     // Verify webhook secret is configured
     const webhookSecret = await getDivinityCoinWebhookSecret();
     if (!webhookSecret) {
-      console.error("[DivinityCoin Webhook] Webhook secret not configured");
+      webhooksDivinitycoinLogger.error("[DivinityCoin Webhook] Webhook secret not configured");
       return NextResponse.json(
         { error: "Webhook secret not configured" },
         { status: 500 }
@@ -43,22 +46,22 @@ export async function POST(req: NextRequest) {
     try {
       event = await constructWebhookEvent(body, signature);
     } catch (err) {
-      console.error("[DivinityCoin Webhook] Signature verification failed:", err);
+      webhooksDivinitycoinLogger.error({ err: String(err) }, "[DivinityCoin Webhook] Signature verification failed:");
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 400 }
       );
     }
 
-    console.log(`[DivinityCoin Webhook] Received event: ${event.event}`);
+    webhooksDivinitycoinLogger.info(`[DivinityCoin Webhook] Received event: ${event.event}`);
 
     // Handle the webhook event
     const response = await handleDivinityCoinWebhook(event);
 
-    console.log(`[DivinityCoin Webhook] Successfully processed: ${event.event}`);
+    webhooksDivinitycoinLogger.info(`[DivinityCoin Webhook] Successfully processed: ${event.event}`);
     return NextResponse.json(response);
   } catch (error) {
-    console.error("[DivinityCoin Webhook] Error:", error);
+    webhooksDivinitycoinLogger.error({ err: String(error) }, "[DivinityCoin Webhook] Error:");
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 }
@@ -161,7 +164,7 @@ export async function GET() {
       sandboxMode: process.env.NODE_ENV !== "production",
     });
   } catch (error) {
-    console.error("[DivinityCoin Webhook] GET Error:", error);
+    webhooksDivinitycoinLogger.error({ err: String(error) }, "[DivinityCoin Webhook] GET Error:");
     return NextResponse.json(
       { error: "Failed to get webhook info" },
       { status: 500 }

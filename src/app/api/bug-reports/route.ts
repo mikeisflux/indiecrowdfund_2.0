@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const bugReportsLogger = logger.child({ module: "bug-reports" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("Error creating bug report:", error);
+    bugReportsLogger.error({ err: String(error) }, "Error creating bug report:");
     return NextResponse.json(
       { error: "Failed to submit bug report" },
       { status: 500 }
@@ -159,7 +162,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching bug reports:", error);
+    bugReportsLogger.error({ err: String(error) }, "Error fetching bug reports:");
     return NextResponse.json(
       { error: "Failed to fetch bug reports" },
       { status: 500 }
@@ -212,7 +215,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, bugReport });
   } catch (error) {
-    console.error("Error updating bug report:", error);
+    bugReportsLogger.error({ err: String(error) }, "Error updating bug report:");
     return NextResponse.json(
       { error: "Failed to update bug report" },
       { status: 500 }

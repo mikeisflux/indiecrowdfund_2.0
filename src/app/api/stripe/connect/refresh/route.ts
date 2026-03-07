@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const stripeConnectRefreshLogger = logger.child({ module: "stripe-connect-refresh" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, getSecureAppUrl } from "@/lib/payments/stripe";
@@ -39,7 +42,7 @@ export async function POST() {
       onboardingUrl: accountLink.url,
     });
   } catch (error) {
-    console.error("Stripe refresh error:", error);
+    stripeConnectRefreshLogger.error({ err: String(error) }, "Stripe refresh error:");
     return NextResponse.json(
       { error: "Failed to refresh onboarding link" },
       { status: 500 }

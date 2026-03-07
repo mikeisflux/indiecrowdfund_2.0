@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminChangelogExtractLogger = logger.child({ module: "admin-changelog-extract" });
 import { auth } from "@/lib/auth";
 import { exec } from "child_process";
 import { promisify } from "util";
@@ -60,7 +63,7 @@ export async function POST(request: Request) {
       output: output.slice(-2000), // Last 2000 chars of output
     });
   } catch (error) {
-    console.error("Error running changelog extraction:", error);
+    adminChangelogExtractLogger.error({ err: String(error) }, "Error running changelog extraction:");
 
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorOutput = (error as { stdout?: string; stderr?: string })?.stdout ||

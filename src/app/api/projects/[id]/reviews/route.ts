@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsReviewsLogger = logger.child({ module: "projects-reviews" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -58,7 +61,7 @@ export async function GET(
       reviews,
     });
   } catch (error) {
-    console.error("Error fetching project reviews:", error);
+    projectsReviewsLogger.error({ err: String(error) }, "Error fetching project reviews:");
     return NextResponse.json(
       { error: "Failed to fetch review history" },
       { status: 500 }

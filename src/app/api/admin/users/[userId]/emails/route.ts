@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminUsersEmailsLogger = logger.child({ module: "admin-users-emails" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifyBackerPledgeConfirmed } from "@/lib/notifications";
@@ -49,7 +52,7 @@ export async function GET(
 
     return NextResponse.json({ emailLogs });
   } catch (error) {
-    console.error("Error fetching user emails:", error);
+    adminUsersEmailsLogger.error({ err: String(error) }, "Error fetching user emails:");
     return NextResponse.json(
       { error: "Failed to fetch user emails" },
       { status: 500 }
@@ -131,7 +134,7 @@ export async function POST(
       message: "Confirmation email sent successfully",
     });
   } catch (error) {
-    console.error("Error sending confirmation email:", error);
+    adminUsersEmailsLogger.error({ err: String(error) }, "Error sending confirmation email:");
     return NextResponse.json(
       { error: "Failed to send confirmation email" },
       { status: 500 }

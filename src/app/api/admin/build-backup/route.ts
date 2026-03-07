@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminBuildBackupLogger = logger.child({ module: "admin-build-backup" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import fs from "fs/promises";
@@ -56,7 +59,7 @@ export async function GET() {
     try {
       entries = await fs.readdir(BUILD_DIR, { withFileTypes: true });
     } catch (dirError) {
-      console.error(`Cannot read build directory: ${BUILD_DIR}`, dirError);
+      adminBuildBackupLogger.error({ err: String(dirError) }, `Cannot read build directory: ${BUILD_DIR}`);
       return NextResponse.json({
         backups: [],
         buildDir: BUILD_DIR,
@@ -105,7 +108,7 @@ export async function GET() {
       buildDir: BUILD_DIR,
     });
   } catch (error) {
-    console.error("Error listing build backups:", error);
+    adminBuildBackupLogger.error({ err: String(error) }, "Error listing build backups:");
     return NextResponse.json(
       { error: "Failed to list build backups" },
       { status: 500 }
@@ -162,7 +165,7 @@ export async function DELETE(req: NextRequest) {
       message: `Deleted backup: ${backupName}`,
     });
   } catch (error) {
-    console.error("Error deleting build backup:", error);
+    adminBuildBackupLogger.error({ err: String(error) }, "Error deleting build backup:");
     return NextResponse.json(
       { error: "Failed to delete build backup" },
       { status: 500 }

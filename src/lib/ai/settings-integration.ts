@@ -8,6 +8,9 @@ import {
   generateContentVariants,
   createABTest,
 } from "@/lib/ai/marketing-services";
+import { logger } from "@/lib/logger";
+
+const aiSettingsIntegrationLogger = logger.child({ module: "ai-settings-integration" });
 
 /**
  * AI Settings cache to avoid repeated DB calls
@@ -98,7 +101,7 @@ export async function applyEmailPersonalization(
   try {
     return await personalizeEmailForUser(userId, campaignType, projects);
   } catch (error) {
-    console.error("Email personalization failed:", error);
+    aiSettingsIntegrationLogger.error({ err: error }, "Email personalization failed:");
     return null; // Fallback to default content on error
   }
 }
@@ -116,7 +119,7 @@ export async function getOptimalTime(userId: string) {
   try {
     return await getOptimalSendTime(userId);
   } catch (error) {
-    console.error("Send time optimization failed:", error);
+    aiSettingsIntegrationLogger.error({ err: error }, "Send time optimization failed:");
     return null;
   }
 }
@@ -143,7 +146,7 @@ export async function scheduleWithOptimalTimes(
 
     return schedule;
   } catch (error) {
-    console.error("Batch send time optimization failed:", error);
+    aiSettingsIntegrationLogger.error({ err: error }, "Batch send time optimization failed:");
     return null;
   }
 }
@@ -165,7 +168,7 @@ export async function generateVariantsIfEnabled(
   try {
     return await generateContentVariants(content, contentType, context);
   } catch (error) {
-    console.error("Content optimization failed:", error);
+    aiSettingsIntegrationLogger.error({ err: error }, "Content optimization failed:");
     return null;
   }
 }
@@ -187,7 +190,7 @@ export async function createABTestIfEnabled(
   try {
     return await createABTest(campaignId, testName, variants);
   } catch (error) {
-    console.error("A/B test creation failed:", error);
+    aiSettingsIntegrationLogger.error({ err: error }, "A/B test creation failed:");
     return null;
   }
 }
@@ -205,7 +208,7 @@ export async function getPredictionsIfEnabled(userId: string) {
   try {
     return await predictUserBehavior(userId);
   } catch (error) {
-    console.error("Predictive analytics failed:", error);
+    aiSettingsIntegrationLogger.error({ err: error }, "Predictive analytics failed:");
     return null;
   }
 }
@@ -223,7 +226,7 @@ export async function generateSegmentsIfEnabled() {
   try {
     return await generateSmartSegments();
   } catch (error) {
-    console.error("Smart segmentation failed:", error);
+    aiSettingsIntegrationLogger.error({ err: error }, "Smart segmentation failed:");
     return null;
   }
 }

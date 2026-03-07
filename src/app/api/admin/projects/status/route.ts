@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminProjectsStatusLogger = logger.child({ module: "admin-projects-status" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { validateStripeConnectAccount } from "@/lib/payments/stripe";
@@ -168,7 +171,7 @@ export async function POST(request: Request) {
     // TODO: Send email notification if sendEmail is true
     if (sendEmail && project.creator.email) {
       // await sendStatusChangeEmail(project.creator.email, project.title, action, reason);
-      console.log(`Would send email to ${project.creator.email} about ${action}`);
+      adminProjectsStatusLogger.info(`Would send email to ${project.creator.email} about ${action}`);
     }
 
     const statusAuditMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {
@@ -197,7 +200,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error changing project status:", error);
+    adminProjectsStatusLogger.error({ err: String(error) }, "Error changing project status:");
     return NextResponse.json(
       { error: "Failed to change project status" },
       { status: 500 }

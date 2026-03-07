@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorMarketplaceBooksSubmitLogger = logger.child({ module: "creator-marketplace-books-submit" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { validateStripeConnectAccount } from "@/lib/payments/stripe";
@@ -108,7 +111,7 @@ export async function POST(
       message: "Book submitted for review",
     });
   } catch (error) {
-    console.error("Error submitting book for review:", error);
+    creatorMarketplaceBooksSubmitLogger.error({ err: String(error) }, "Error submitting book for review:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

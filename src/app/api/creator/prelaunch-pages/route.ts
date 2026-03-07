@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorPrelaunchPagesLogger = logger.child({ module: "creator-prelaunch-pages" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -70,7 +73,7 @@ export async function GET() {
 
     return NextResponse.json({ pages });
   } catch (error) {
-    console.error("Error fetching prelaunch pages:", error);
+    creatorPrelaunchPagesLogger.error({ err: String(error) }, "Error fetching prelaunch pages:");
     return NextResponse.json(
       { error: "Failed to fetch prelaunch pages" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitOrdersNotifyBalanceLogger = logger.child({ module: "creator-indiekit-orders-notify-balance" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendBalanceDueEmail } from "@/lib/email/email-templates-pledge";
@@ -139,7 +142,7 @@ export async function POST(req: NextRequest) {
     );
 
     if (!emailResult?.success) {
-      console.error("Balance notification email failed:", emailResult?.error);
+      creatorIndiekitOrdersNotifyBalanceLogger.error({ err: String(emailResult?.error) }, "Balance notification email failed:");
       return NextResponse.json(
         { error: emailResult?.error || "Email delivery failed" },
         { status: 500 }
@@ -152,7 +155,7 @@ export async function POST(req: NextRequest) {
       emailSent: true,
     });
   } catch (error) {
-    console.error("Error sending balance notification:", error instanceof Error ? error.stack : error);
+    creatorIndiekitOrdersNotifyBalanceLogger.error({ err: String(error instanceof Error ? error.stack : error) }, "Error sending balance notification:");
     const message = error instanceof Error ? error.message : "Failed to send balance notification";
     return NextResponse.json(
       { error: message },

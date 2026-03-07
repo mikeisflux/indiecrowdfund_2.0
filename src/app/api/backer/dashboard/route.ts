@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerDashboardLogger = logger.child({ module: "backer-dashboard" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -306,7 +309,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Backer dashboard error:", error);
+    backerDashboardLogger.error({ err: String(error) }, "Backer dashboard error:");
     return NextResponse.json(
       { error: "Failed to fetch dashboard data" },
       { status: 500 }

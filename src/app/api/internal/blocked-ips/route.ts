@@ -6,6 +6,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const internalBlockedIpsLogger = logger.child({ module: "internal-blocked-ips" });
 import { db } from "@/lib/db";
 import { appendFile } from "fs/promises";
 
@@ -59,7 +62,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("[Bot Blocker API] Error fetching blocked IPs:", error);
+    internalBlockedIpsLogger.error({ err: String(error) }, "[Bot Blocker API] Error fetching blocked IPs:");
     return NextResponse.json({ blocked: [] });
   }
 }
@@ -129,12 +132,12 @@ export async function POST(req: NextRequest) {
         // Non-fatal
       }
 
-      console.log(`[Bot Blocker API] IP blocked: ${ip} - ${reason} (${durationHours}h, violation #${violations})`);
+      internalBlockedIpsLogger.info(`[Bot Blocker API] IP blocked: ${ip} - ${reason} (${durationHours}h, violation #${violations})`);
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[Bot Blocker API] Error:", error);
+    internalBlockedIpsLogger.error({ err: String(error) }, "[Bot Blocker API] Error:");
     return NextResponse.json({ error: "Failed to process" }, { status: 500 });
   }
 }

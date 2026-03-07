@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const pledgesCheckLogger = logger.child({ module: "pledges-check" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -165,7 +168,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ hasPledge: false, pledge: null, isFunded });
   } catch (error) {
-    console.error("Check pledge error:", error);
+    pledgesCheckLogger.error({ err: String(error) }, "Check pledge error:");
     return NextResponse.json(
       { error: "Failed to check pledge status" },
       { status: 500 }

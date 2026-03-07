@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const pledgesLogger = logger.child({ module: "pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import Stripe from "stripe";
@@ -187,7 +190,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Get pledge error:", error);
+    pledgesLogger.error({ err: String(error) }, "Get pledge error:");
     return NextResponse.json(
       { error: "Failed to fetch pledge" },
       { status: 500 }
@@ -266,7 +269,7 @@ export async function PATCH(
               );
             }
           } catch (dcError) {
-            console.error("DivinityCoin refund error:", dcError);
+            pledgesLogger.error({ err: String(dcError) }, "DivinityCoin refund error:");
             return NextResponse.json(
               { error: "Failed to process refund" },
               { status: 500 }
@@ -293,7 +296,7 @@ export async function PATCH(
               },
             });
           } catch (stripeError) {
-            console.error("Stripe refund error:", stripeError);
+            pledgesLogger.error({ err: String(stripeError) }, "Stripe refund error:");
             return NextResponse.json(
               { error: "Failed to process refund" },
               { status: 400 }
@@ -321,7 +324,7 @@ export async function PATCH(
 
         // Send cancellation + refund notification (async, don't block response)
         notifyPledgeCancelled(pledgeId, true).catch(err =>
-          console.error("[Cancel] Failed to send refund notification:", err)
+          pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to send refund notification:")
         );
 
         return NextResponse.json({
@@ -374,7 +377,7 @@ export async function PATCH(
 
       // Send cancellation notification (async, don't block response)
       notifyPledgeCancelled(pledgeId, false).catch(err =>
-        console.error("[Cancel] Failed to send cancellation notification:", err)
+        pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to send cancellation notification:")
       );
 
       return NextResponse.json({
@@ -483,7 +486,7 @@ export async function PATCH(
 
             const dcResult = await dcResponse.json();
             if (!dcResponse.ok || !dcResult.success) {
-              console.error("[DivinityCoin Modify] Failed to create upcharge payment intent:", dcResult);
+              pledgesLogger.error({ err: String(dcResult) }, "[DivinityCoin Modify] Failed to create upcharge payment intent:");
               return NextResponse.json(
                 { error: dcResult.error || "Failed to initialize upcharge payment" },
                 { status: 502 }
@@ -523,7 +526,7 @@ export async function PATCH(
               newAmount,
             });
           } catch (dcError) {
-            console.error("[DivinityCoin Modify] API error:", dcError);
+            pledgesLogger.error({ err: String(dcError) }, "[DivinityCoin Modify] API error:");
             return NextResponse.json(
               { error: "Failed to connect to payment processor" },
               { status: 500 }
@@ -617,7 +620,7 @@ export async function PATCH(
               );
             }
           } catch (dcError) {
-            console.error("DivinityCoin partial refund error:", dcError);
+            pledgesLogger.error({ err: String(dcError) }, "DivinityCoin partial refund error:");
             return NextResponse.json(
               { error: "Failed to process refund" },
               { status: 500 }
@@ -645,7 +648,7 @@ export async function PATCH(
               },
             });
           } catch (stripeError) {
-            console.error("Stripe partial refund error:", stripeError);
+            pledgesLogger.error({ err: String(stripeError) }, "Stripe partial refund error:");
             return NextResponse.json(
               { error: "Failed to process refund" },
               { status: 400 }
@@ -658,7 +661,7 @@ export async function PATCH(
 
         // Send refund notification
         notifyPledgeModified(pledgeId, oldAmount, newAmount, "refund").catch(err =>
-          console.error("[Modify] Failed to send refund notification:", err)
+          pledgesLogger.error({ err: String(err) }, "[Modify] Failed to send refund notification:")
         );
 
         return NextResponse.json({
@@ -675,7 +678,7 @@ export async function PATCH(
 
       // Send modification notification
       notifyPledgeModified(pledgeId, oldAmount, newAmount, "no_change").catch(err =>
-        console.error("[Modify] Failed to send modification notification:", err)
+        pledgesLogger.error({ err: String(err) }, "[Modify] Failed to send modification notification:")
       );
 
       return NextResponse.json({
@@ -774,7 +777,7 @@ export async function PATCH(
               });
             }
           } catch (stripeError) {
-            console.error("Stripe error:", stripeError);
+            pledgesLogger.error({ err: String(stripeError) }, "Stripe error:");
             return NextResponse.json(
               { error: "Payment failed" },
               { status: 400 }
@@ -799,7 +802,7 @@ export async function PATCH(
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error("Update pledge error:", error);
+    pledgesLogger.error({ err: String(error) }, "Update pledge error:");
     return NextResponse.json(
       { error: "Failed to update pledge" },
       { status: 500 }
@@ -890,7 +893,7 @@ export async function DELETE(
       message: "Pledge cancelled successfully",
     });
   } catch (error) {
-    console.error("Cancel pledge error:", error);
+    pledgesLogger.error({ err: String(error) }, "Cancel pledge error:");
     return NextResponse.json(
       { error: "Failed to cancel pledge" },
       { status: 500 }

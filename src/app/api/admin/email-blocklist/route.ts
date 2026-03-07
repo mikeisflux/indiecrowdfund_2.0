@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminEmailBlocklistLogger = logger.child({ module: "admin-email-blocklist" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -41,7 +44,7 @@ export async function GET() {
 
     return NextResponse.json({ entries });
   } catch (error) {
-    console.error("Error fetching blocklist:", error);
+    adminEmailBlocklistLogger.error({ err: String(error) }, "Error fetching blocklist:");
     return NextResponse.json(
       { error: "Failed to fetch blocklist" },
       { status: 500 }
@@ -103,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ entry });
   } catch (error) {
-    console.error("Error creating blocklist entry:", error);
+    adminEmailBlocklistLogger.error({ err: String(error) }, "Error creating blocklist entry:");
     return NextResponse.json(
       { error: "Failed to create blocklist entry" },
       { status: 500 }

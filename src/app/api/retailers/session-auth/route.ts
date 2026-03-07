@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const retailersSessionAuthLogger = logger.child({ module: "retailers-session-auth" });
 import { db } from "@/lib/db";
 import { cookies } from "next/headers";
 import { SignJWT } from "jose";
@@ -98,7 +101,7 @@ export async function POST() {
 
     return await authenticateRetailer(retailer);
   } catch (error) {
-    console.error("Error in session auth:", error);
+    retailersSessionAuthLogger.error({ err: String(error) }, "Error in session auth:");
     return NextResponse.json(
       { error: "Failed to authenticate" },
       { status: 500 }
@@ -226,7 +229,7 @@ export async function GET() {
       reason: user.retailerAccess ? undefined : "no_retailer_access"
     });
   } catch (error) {
-    console.error("Error checking session access:", error);
+    retailersSessionAuthLogger.error({ err: String(error) }, "Error checking session access:");
     return NextResponse.json({
       hasAccess: false,
       reason: "error"

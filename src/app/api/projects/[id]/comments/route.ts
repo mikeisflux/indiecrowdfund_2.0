@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsCommentsLogger = logger.child({ module: "projects-comments" });
 import { db } from "@/lib/db";
 import { validateSession } from "@/lib/auth/session";
 import { notifyCommentReply } from "@/lib/notifications";
@@ -205,7 +208,7 @@ export async function GET(
 
     return NextResponse.json(formattedComments);
   } catch (error) {
-    console.error("Error fetching comments:", error);
+    projectsCommentsLogger.error({ err: String(error) }, "Error fetching comments:");
     return NextResponse.json(
       { error: "Failed to fetch comments" },
       { status: 500 }
@@ -418,7 +421,7 @@ export async function POST(
           content.trim(),
           projectUrlPath
         ).catch((err) => {
-          console.error("Failed to send comment reply notification:", err);
+          projectsCommentsLogger.error({ err: String(err) }, "Failed to send comment reply notification:");
         });
       }
     }
@@ -437,7 +440,7 @@ export async function POST(
       parentId: comment.parentId,
     });
   } catch (error) {
-    console.error("Error creating comment:", error);
+    projectsCommentsLogger.error({ err: String(error) }, "Error creating comment:");
     return NextResponse.json(
       { error: "Failed to create comment" },
       { status: 500 }

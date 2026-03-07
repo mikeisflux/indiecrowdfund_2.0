@@ -1,6 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const aiAnthropicLogger = logger.child({ module: "ai-anthropic" });
+
+
 // Lazy initialization to avoid build-time errors
 let anthropicClient: Anthropic | null = null;
 let cachedApiKey: string | null = null;
@@ -147,7 +152,7 @@ Respond in JSON format:
       confidence: result.confidence || 0.5,
     };
   } catch (error) {
-    console.error("Anthropic moderation error:", error);
+    aiAnthropicLogger.error({ err: error }, "Anthropic moderation error:");
     // Fail safe - flag for manual review
     return {
       isApproved: false,
@@ -231,7 +236,7 @@ Respond in JSON format:
       explanation: result.explanation || "",
     };
   } catch (error) {
-    console.error("Anthropic fraud analysis error:", error);
+    aiAnthropicLogger.error({ err: error }, "Anthropic fraud analysis error:");
     return {
       fraudScore: 50,
       riskFactors: [
@@ -302,7 +307,7 @@ Respond in JSON:
       suggestions: result.suggestions || [],
     };
   } catch (error) {
-    console.error("Anthropic safety review error:", error);
+    aiAnthropicLogger.error({ err: error }, "Anthropic safety review error:");
     return {
       safe: true,
       concerns: ["Automated review failed"],
@@ -361,7 +366,7 @@ Respond in JSON:
       toxicityScore: result.toxicityScore ?? 0,
     };
   } catch (error) {
-    console.error("Anthropic comment moderation error:", error);
+    aiAnthropicLogger.error({ err: error }, "Anthropic comment moderation error:");
     return { isAllowed: true, toxicityScore: 0 };
   }
 }
@@ -461,7 +466,7 @@ Respond in JSON format:
       confidence: result.confidence || 0.5,
     };
   } catch (error) {
-    console.error("Auto-tag error:", error);
+    aiAnthropicLogger.error({ err: error }, "Auto-tag error:");
     throw new Error("Failed to auto-tag project");
   }
 }
@@ -518,7 +523,7 @@ Respond in JSON format:
       callToAction: result.callToAction || "Back this project",
     };
   } catch (error) {
-    console.error("Marketing copy error:", error);
+    aiAnthropicLogger.error({ err: error }, "Marketing copy error:");
     throw new Error("Failed to generate marketing copy");
   }
 }
@@ -558,7 +563,7 @@ Respond in JSON format:
       suggestions: result.suggestions || [],
     };
   } catch (error) {
-    console.error("Improve description error:", error);
+    aiAnthropicLogger.error({ err: error }, "Improve description error:");
     throw new Error("Failed to improve description");
   }
 }
@@ -642,7 +647,7 @@ Respond in JSON format:
       footer: result.footer || "Happy exploring!",
     };
   } catch (error) {
-    console.error("Campaign content error:", error);
+    aiAnthropicLogger.error({ err: error }, "Campaign content error:");
     throw new Error("Failed to generate campaign content");
   }
 }

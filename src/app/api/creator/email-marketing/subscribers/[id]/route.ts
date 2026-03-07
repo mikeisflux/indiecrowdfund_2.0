@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorEmailMarketingSubscribersLogger = logger.child({ module: "creator-email-marketing-subscribers" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -52,7 +55,7 @@ export async function GET(
 
     return NextResponse.json({ subscriber });
   } catch (error) {
-    console.error("Error fetching subscriber:", error);
+    creatorEmailMarketingSubscribersLogger.error({ err: String(error) }, "Error fetching subscriber:");
     return NextResponse.json(
       { error: "Failed to fetch subscriber" },
       { status: 500 }
@@ -111,7 +114,7 @@ export async function PATCH(
 
     return NextResponse.json({ subscriber: updated });
   } catch (error) {
-    console.error("Error updating subscriber:", error);
+    creatorEmailMarketingSubscribersLogger.error({ err: String(error) }, "Error updating subscriber:");
     return NextResponse.json(
       { error: "Failed to update subscriber" },
       { status: 500 }
@@ -143,7 +146,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting subscriber:", error);
+    creatorEmailMarketingSubscribersLogger.error({ err: String(error) }, "Error deleting subscriber:");
     return NextResponse.json(
       { error: "Failed to delete subscriber" },
       { status: 500 }

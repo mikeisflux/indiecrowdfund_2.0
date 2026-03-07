@@ -1,5 +1,10 @@
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const shopifyPushLogger = logger.child({ module: "shopify-push" });
+
+
 // Types for Shopify API responses
 interface ShopifyOrder {
   id: number;
@@ -33,7 +38,7 @@ async function findOrCreateCustomer(
       const searchResult = await searchResponse.json();
       if (searchResult.customers && searchResult.customers.length > 0) {
         const customerId = searchResult.customers[0].id;
-        console.log(`[findOrCreateCustomer] Found existing customer ${customerId} for email ${email}`);
+        shopifyPushLogger.info(`[findOrCreateCustomer] Found existing customer ${customerId} for email ${email}`);
         return customerId;
       }
     }
@@ -61,15 +66,15 @@ async function findOrCreateCustomer(
     if (createResponse.ok) {
       const createResult = await createResponse.json();
       const customerId = createResult.customer?.id;
-      console.log(`[findOrCreateCustomer] Created new customer ${customerId} for email ${email}`);
+      shopifyPushLogger.info(`[findOrCreateCustomer] Created new customer ${customerId} for email ${email}`);
       return customerId;
     } else {
       const errorText = await createResponse.text();
-      console.error(`[findOrCreateCustomer] Failed to create customer: ${errorText}`);
+      shopifyPushLogger.error(`[findOrCreateCustomer] Failed to create customer: ${errorText}`);
       return null;
     }
   } catch (error) {
-    console.error(`[findOrCreateCustomer] Error:`, error);
+    shopifyPushLogger.error({ err: error }, `[findOrCreateCustomer] Error:`);
     return null;
   }
 }
@@ -127,14 +132,14 @@ async function lookupVariantBySku(
       const gid = edges[0].node.id;
       const numericId = parseInt(gid.split('/').pop());
       skuToVariantCache.set(cacheKey, numericId);
-      console.log(`[lookupVariantBySku] Found variant ${numericId} for SKU ${sku}`);
+      shopifyPushLogger.info(`[lookupVariantBySku] Found variant ${numericId} for SKU ${sku}`);
       return numericId;
     }
 
-    console.log(`[lookupVariantBySku] No variant found for SKU ${sku}`);
+    shopifyPushLogger.info(`[lookupVariantBySku] No variant found for SKU ${sku}`);
     return null;
   } catch (error) {
-    console.error(`[lookupVariantBySku] Error looking up SKU ${sku}:`, error);
+    shopifyPushLogger.error({ err: error }, `[lookupVariantBySku] Error looking up SKU ${sku}:`);
     return null;
   }
 }
@@ -181,7 +186,7 @@ export async function pushOrdersToShopify(
   projectId: string,
   backerIds?: string[]
 ): Promise<PushToShopifyResult> {
-  console.log("[pushOrdersToShopify] Starting for project:", projectId, "backers:", backerIds);
+  shopifyPushLogger.info({ projectId, backerIds }, "Starting Shopify push");
 
   // Get the integration
   const integration = await db.fulfillmentIntegration.findUnique({
@@ -208,7 +213,7 @@ export async function pushOrdersToShopify(
     accessToken: string;
   };
 
-  console.log("[pushOrdersToShopify] Using credentials for shop:", credentials.shopDomain);
+  shopifyPushLogger.info({ data: credentials.shopDomain }, "[pushOrdersToShopify] Using credentials for shop:");
 
   // Get project title for line items
   const project = await db.project.findUnique({
@@ -255,10 +260,10 @@ export async function pushOrdersToShopify(
     });
   }
 
-  console.log("[pushOrdersToShopify] SKU mappings loaded:");
-  console.log("  - Reward SKUs:", Array.from(rewardSkuMap.entries()));
-  console.log("  - Addon SKUs:", Array.from(addonSkuMap.entries()));
-  console.log("  - Modifier SKUs:", Array.from(modifierSkuMap.entries()));
+  shopifyPushLogger.info("[pushOrdersToShopify] SKU mappings loaded:");
+  shopifyPushLogger.info({ data: Array.from(rewardSkuMap.entries()) }, "  - Reward SKUs:");
+  shopifyPushLogger.info({ data: Array.from(addonSkuMap.entries()) }, "  - Addon SKUs:");
+  shopifyPushLogger.info({ data: Array.from(modifierSkuMap.entries()) }, "  - Modifier SKUs:");
 
   // Get backers to push (either specified or all unpushed)
   const whereClause: {
@@ -329,7 +334,7 @@ export async function pushOrdersToShopify(
     surveyResponses.map(sr => [sr.pledgeId, sr.shippingAddress])
   );
 
-  console.log("[pushOrdersToShopify] Found pledges to push:", pledges.length);
+  shopifyPushLogger.info({ data: pledges.length }, "[pushOrdersToShopify] Found pledges to push:");
 
   if (pledges.length === 0) {
     return {
@@ -379,7 +384,7 @@ export async function pushOrdersToShopify(
                 rewardId: pledge.reward.id,
                 modifierAddonId: modifierAddon.addon.id,
               };
-              console.log(`[pushOrdersToShopify] Auto-detected modifier: ${pledge.reward.title} + ${modifierAddon.addon.title}`);
+              shopifyPushLogger.info(`[pushOrdersToShopify] Auto-detected modifier: ${pledge.reward.title} + ${modifierAddon.addon.title}`);
             }
           }
         }
@@ -508,16 +513,13 @@ export async function pushOrdersToShopify(
 
       const phone = shippingAddress?.phone || "";
 
-      console.log("[pushOrdersToShopify] Customer data for pledge", pledge.id, ":", {
+      shopifyPushLogger.info({
+        pledgeId: pledge.id,
         email: customerEmail,
         name: customerName,
-        firstName,
-        lastName,
-        phone,
         hasShippingAddress: !!shippingAddress,
         shippingAddressSource: surveyAddress ? "survey" : (pledgeAddress ? "pledge" : "none"),
-        shippingAddress,
-      });
+      }, "Customer data for pledge");
 
       // Find or create customer in Shopify first
       let customerId: number | null = null;
@@ -574,9 +576,9 @@ export async function pushOrdersToShopify(
         draftOrderPayload.draft_order.billing_address = draftOrderPayload.draft_order.shipping_address;
       }
 
-      console.log("[pushOrdersToShopify] Creating draft order for pledge:", pledge.id);
-      console.log("[pushOrdersToShopify] Line items:", JSON.stringify(draftOrderPayload.draft_order.line_items, null, 2));
-      console.log("[pushOrdersToShopify] Full payload:", JSON.stringify(draftOrderPayload, null, 2));
+      shopifyPushLogger.info({ data: pledge.id }, "[pushOrdersToShopify] Creating draft order for pledge:");
+      shopifyPushLogger.info({ data: JSON.stringify(draftOrderPayload.draft_order.line_items, null, 2) }, "[pushOrdersToShopify] Line items:");
+      shopifyPushLogger.info({ data: JSON.stringify(draftOrderPayload, null, 2) }, "[pushOrdersToShopify] Full payload:");
 
       // Create draft order (kept as draft - not completed)
       const orderResponse = await shopifyFetch<{ draft_order: ShopifyOrder }>(
@@ -589,7 +591,7 @@ export async function pushOrdersToShopify(
         }
       );
 
-      console.log("[pushOrdersToShopify] Created draft order:", orderResponse.draft_order.id, orderResponse.draft_order.name);
+      shopifyPushLogger.info({ orderId: orderResponse.draft_order.id, orderName: orderResponse.draft_order.name }, "Created draft order");
 
       // Create or update tracking record
       await db.shopifyFulfillmentOrder.upsert({
@@ -625,7 +627,7 @@ export async function pushOrdersToShopify(
 
       pushedCount++;
     } catch (pushError) {
-      console.error(`[pushOrdersToShopify] Failed to push pledge ${pledge.id}:`, pushError);
+      shopifyPushLogger.error({ err: pushError }, `[pushOrdersToShopify] Failed to push pledge ${pledge.id}:`);
       failedCount++;
       errors.push(`Pledge ${pledge.id}: ${pushError instanceof Error ? pushError.message : "Unknown error"}`);
 
@@ -669,7 +671,7 @@ export async function pushOrdersToShopify(
     },
   });
 
-  console.log("[pushOrdersToShopify] Completed. Pushed:", pushedCount, "Failed:", failedCount);
+  shopifyPushLogger.info({ pushedCount, failedCount }, "Shopify push completed");
 
   return {
     success: true,

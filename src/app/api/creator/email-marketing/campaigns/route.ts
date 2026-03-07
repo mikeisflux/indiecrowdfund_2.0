@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorEmailMarketingCampaignsLogger = logger.child({ module: "creator-email-marketing-campaigns" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { queueEmail, EMAIL_PRIORITY, escapeHtmlForEmail } from "@/lib/email";
@@ -55,7 +58,7 @@ export async function GET() {
 
     return NextResponse.json({ campaigns });
   } catch (error) {
-    console.error("Error fetching campaigns:", error);
+    creatorEmailMarketingCampaignsLogger.error({ err: String(error) }, "Error fetching campaigns:");
     return NextResponse.json(
       { error: "Failed to fetch campaigns" },
       { status: 500 }
@@ -247,7 +250,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Return first 10 errors
     });
   } catch (error) {
-    console.error("Error creating campaign:", error);
+    creatorEmailMarketingCampaignsLogger.error({ err: String(error) }, "Error creating campaign:");
     return NextResponse.json(
       { error: "Failed to create campaign" },
       { status: 500 }

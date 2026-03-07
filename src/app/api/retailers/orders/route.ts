@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const retailersOrdersLogger = logger.child({ module: "retailers-orders" });
 import { db } from "@/lib/db";
 import { authenticateRetailerRequest } from "@/lib/retailer-auth";
 
@@ -121,7 +124,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching retailer orders:", error);
+    retailersOrdersLogger.error({ err: String(error) }, "Error fetching retailer orders:");
     return NextResponse.json(
       { error: "Failed to fetch orders" },
       { status: 500 }
@@ -331,7 +334,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error creating retailer order:", error);
+    retailersOrdersLogger.error({ err: String(error) }, "Error creating retailer order:");
     return NextResponse.json(
       { error: "Failed to create order" },
       { status: 500 }

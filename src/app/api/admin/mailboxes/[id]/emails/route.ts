@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMailboxesEmailsLogger = logger.child({ module: "admin-mailboxes-emails" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { sendEmail, EmailAttachment } from "@/lib/email";
@@ -132,7 +135,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching emails:", error);
+    adminMailboxesEmailsLogger.error({ err: String(error) }, "Error fetching emails:");
     return NextResponse.json(
       { error: "Failed to fetch emails" },
       { status: 500 }
@@ -186,7 +189,7 @@ export async function POST(
         } else if (att.r2Key && r2Storage) {
           // Need to fetch from R2
           try {
-            console.log(`[Admin Email] Fetching attachment from R2: ${att.r2Key}`);
+            adminMailboxesEmailsLogger.info(`[Admin Email] Fetching attachment from R2: ${att.r2Key}`);
             const fileData = await r2Storage.getFile(att.r2Key);
             if (fileData) {
               // Convert Buffer to base64 string
@@ -198,7 +201,7 @@ export async function POST(
               });
             }
           } catch (err) {
-            console.error(`[Admin Email] Failed to fetch attachment ${att.r2Key}:`, err);
+            adminMailboxesEmailsLogger.error({ err: String(err) }, `[Admin Email] Failed to fetch attachment ${att.r2Key}:`);
           }
         }
       }
@@ -249,7 +252,7 @@ export async function POST(
     if (sendNow && folder !== "DRAFTS") {
       try {
         // Send email directly using the email library
-        console.log(`[Admin Email] Sending email to ${toEmail}, subject: ${subject}, attachments: ${attachments.length}`);
+        adminMailboxesEmailsLogger.info(`[Admin Email] Sending email to ${toEmail}, subject: ${subject}, attachments: ${attachments.length}`);
         const sendResult = await sendEmail({
           to: toEmail,
           subject,
@@ -259,7 +262,7 @@ export async function POST(
         });
 
         if (sendResult.success) {
-          console.log(`[Admin Email] Email sent successfully to ${toEmail}`);
+          adminMailboxesEmailsLogger.info(`[Admin Email] Email sent successfully to ${toEmail}`);
           await db.adminEmail.update({
             where: { id: email.id },
             data: {
@@ -268,14 +271,14 @@ export async function POST(
             },
           });
         } else {
-          console.error(`[Admin Email] Failed to send email: ${sendResult.error}`);
+          adminMailboxesEmailsLogger.error(`[Admin Email] Failed to send email: ${sendResult.error}`);
           await db.adminEmail.update({
             where: { id: email.id },
             data: { status: "FAILED" },
           });
         }
       } catch (sendError) {
-        console.error(`[Admin Email] Exception sending email:`, sendError);
+        adminMailboxesEmailsLogger.error({ err: String(sendError) }, `[Admin Email] Exception sending email:`);
         await db.adminEmail.update({
           where: { id: email.id },
           data: { status: "FAILED" },
@@ -285,7 +288,7 @@ export async function POST(
 
     return NextResponse.json({ email });
   } catch (error) {
-    console.error("Error creating email:", error);
+    adminMailboxesEmailsLogger.error({ err: String(error) }, "Error creating email:");
     return NextResponse.json(
       { error: "Failed to create email" },
       { status: 500 }
@@ -340,14 +343,14 @@ export async function DELETE(
       },
     });
 
-    console.log(`[Admin Email] Emptied folder ${folder} for mailbox ${mailbox.name}: ${result.count} emails deleted`);
+    adminMailboxesEmailsLogger.info(`[Admin Email] Emptied folder ${folder} for mailbox ${mailbox.name}: ${result.count} emails deleted`);
 
     return NextResponse.json({
       success: true,
       deletedCount: result.count,
     });
   } catch (error) {
-    console.error("Error emptying folder:", error);
+    adminMailboxesEmailsLogger.error({ err: String(error) }, "Error emptying folder:");
     return NextResponse.json(
       { error: "Failed to empty folder" },
       { status: 500 }

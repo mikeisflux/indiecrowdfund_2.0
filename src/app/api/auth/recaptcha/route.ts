@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const authRecaptchaLogger = logger.child({ module: "auth-recaptcha" });
 import { db } from "@/lib/db";
 
 // Force dynamic - reads from database
@@ -42,7 +45,7 @@ export async function GET() {
       siteKey: null,
     });
   } catch (error) {
-    console.error("[reCAPTCHA API] Error fetching settings:", error);
+    authRecaptchaLogger.error({ err: String(error) }, "[reCAPTCHA API] Error fetching settings:");
 
     // Fall back to env var on error
     const envSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;

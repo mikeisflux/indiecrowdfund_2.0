@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitSettingsLogger = logger.child({ module: "creator-indiekit-settings" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -44,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ project });
   } catch (error) {
-    console.error("Settings GET error:", error);
+    creatorIndiekitSettingsLogger.error({ err: String(error) }, "Settings GET error:");
     return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
   }
 }
@@ -116,7 +119,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    console.error("Settings POST error:", error);
+    creatorIndiekitSettingsLogger.error({ err: String(error) }, "Settings POST error:");
     return NextResponse.json({ error: "Failed to update settings" }, { status: 500 });
   }
 }

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingStatsLogger = logger.child({ module: "admin-ai-marketing-stats" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -483,7 +486,7 @@ export async function GET() {
       }
     });
   } catch (error) {
-    console.error("Error fetching AI marketing stats:", error);
+    adminAiMarketingStatsLogger.error({ err: String(error) }, "Error fetching AI marketing stats:");
     return NextResponse.json(
       { error: "Failed to fetch AI marketing stats" },
       { status: 500 }

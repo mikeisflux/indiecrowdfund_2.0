@@ -2,6 +2,11 @@
 
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const oauthConfigLogger = logger.child({ module: "oauth-config" });
+
+
 export type OAuthProvider = "youtube" | "facebook" | "twitter" | "instagram";
 
 export interface OAuthConfig {
@@ -105,7 +110,7 @@ export async function getClientCredentials(provider: OAuthProvider): Promise<{ c
     if (!dbClientId || !dbClientSecret) return null;
     return { clientId: dbClientId, clientSecret: dbClientSecret };
   } catch (error) {
-    console.error(`Failed to read OAuth credentials from database for ${provider}:`, error);
+    oauthConfigLogger.error({ err: error }, `Failed to read OAuth credentials from database for ${provider}:`);
     return null;
   }
 }
@@ -216,13 +221,13 @@ export async function exchangeCodeForTokens(
     });
 
     if (!response.ok) {
-      console.error(`Token exchange failed for ${provider}:`, await response.text());
+      oauthConfigLogger.error({ err: await response.text() }, `Token exchange failed for ${provider}:`);
       return null;
     }
 
     return await response.json();
   } catch (error) {
-    console.error(`Token exchange error for ${provider}:`, error);
+    oauthConfigLogger.error({ err: error }, `Token exchange error for ${provider}:`);
     return null;
   }
 }
@@ -250,7 +255,7 @@ export async function getUserInfo(
     });
 
     if (!response.ok) {
-      console.error(`Failed to get user info for ${provider}:`, await response.text());
+      oauthConfigLogger.error({ err: await response.text() }, `Failed to get user info for ${provider}:`);
       return null;
     }
 
@@ -271,7 +276,7 @@ export async function getUserInfo(
       picture: data.picture?.data?.url || data.picture,
     };
   } catch (error) {
-    console.error(`User info error for ${provider}:`, error);
+    oauthConfigLogger.error({ err: error }, `User info error for ${provider}:`);
     return null;
   }
 }

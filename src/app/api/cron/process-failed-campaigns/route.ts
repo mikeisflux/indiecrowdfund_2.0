@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const cronProcessFailedCampaignsLogger = logger.child({ module: "cron-process-failed-campaigns" });
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 
@@ -99,14 +102,9 @@ export async function GET(req: NextRequest) {
           amount: Number(project.currentAmount),
         });
 
-        console.log(
-          `[Cron Ended Campaigns] "${project.title}" → FUNDED ($${project.currentAmount}/$${project.goalAmount})`
-        );
+        cronProcessFailedCampaignsLogger.info(`[Cron Ended Campaigns] "${project.title}" → FUNDED ($${project.currentAmount}/$${project.goalAmount})`);
       } catch (error) {
-        console.error(
-          `[Cron Ended Campaigns] Error transitioning project ${project.id} to FUNDED:`,
-          error
-        );
+        cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Ended Campaigns] Error transitioning project ${project.id} to FUNDED:`);
       }
     }
 
@@ -146,16 +144,11 @@ export async function GET(req: NextRequest) {
         results.totalDivinityCoinAmount += projectResult.divinityCoinAmount;
         results.totalStripePledgesCancelled += projectResult.stripePledgesCancelled;
 
-        console.log(
-          `[Cron Ended Campaigns] "${project.title}" → FAILED: ` +
+        cronProcessFailedCampaignsLogger.info(`[Cron Ended Campaigns] "${project.title}" → FAILED: ` +
           `${projectResult.divinityCoinRefunds} DC refunds ($${projectResult.divinityCoinAmount}), ` +
-          `${projectResult.stripePledgesCancelled} Stripe pledges cancelled`
-        );
+          `${projectResult.stripePledgesCancelled} Stripe pledges cancelled`);
       } catch (error) {
-        console.error(
-          `[Cron Ended Campaigns] Error processing failed project ${project.id}:`,
-          error
-        );
+        cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Ended Campaigns] Error processing failed project ${project.id}:`);
       }
     }
 
@@ -165,7 +158,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Process ended campaigns cron error:", error);
+    cronProcessFailedCampaignsLogger.error({ err: String(error) }, "Process ended campaigns cron error:");
     return NextResponse.json(
       { error: "Failed to process ended campaigns" },
       { status: 500 }
@@ -216,10 +209,7 @@ async function refundDivinityCoinPledges(projectId: string, projectTitle: string
       });
 
       if (!dcResult.success) {
-        console.error(
-          `[Cron Failed Campaigns] DC API release failed for pledge ${pledge.id}:`,
-          dcResult.error
-        );
+        cronProcessFailedCampaignsLogger.error({ err: dcResult.error }, `[Cron Failed Campaigns] DC API release failed for pledge ${pledge.id}:`);
         // Continue processing other pledges even if one fails
       }
 
@@ -265,10 +255,7 @@ async function refundDivinityCoinPledges(projectId: string, projectTitle: string
 
       totalAmount += amount;
     } catch (error) {
-      console.error(
-        `[Cron Failed Campaigns] Error refunding pledge ${pledge.id}:`,
-        error
-      );
+      cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Failed Campaigns] Error refunding pledge ${pledge.id}:`);
     }
   }
 
@@ -322,10 +309,7 @@ async function cancelStripePledges(projectId: string) {
         }
       });
     } catch (error) {
-      console.error(
-        `[Cron Failed Campaigns] Error cancelling pledge ${pledge.id}:`,
-        error
-      );
+      cronProcessFailedCampaignsLogger.error({ err: error }, `[Cron Failed Campaigns] Error cancelling pledge ${pledge.id}:`);
     }
   }
 

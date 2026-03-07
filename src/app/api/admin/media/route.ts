@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMediaLogger = logger.child({ module: "admin-media" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -113,7 +116,7 @@ export async function GET(req: NextRequest) {
       }))
     });
   } catch (error) {
-    console.error("Error fetching media:", error);
+    adminMediaLogger.error({ err: String(error) }, "Error fetching media:");
     return NextResponse.json(
       { error: "Failed to fetch media files" },
       { status: 500 }
@@ -159,7 +162,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, file });
   } catch (error) {
-    console.error("Error uploading media:", error);
+    adminMediaLogger.error({ err: String(error) }, "Error uploading media:");
     return NextResponse.json(
       { error: "Failed to upload media file" },
       { status: 500 }
@@ -218,7 +221,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, file });
   } catch (error) {
-    console.error("Error updating media:", error);
+    adminMediaLogger.error({ err: String(error) }, "Error updating media:");
     return NextResponse.json(
       { error: "Failed to update media file" },
       { status: 500 }
@@ -251,7 +254,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting media:", error);
+    adminMediaLogger.error({ err: String(error) }, "Error deleting media:");
     return NextResponse.json(
       { error: "Failed to delete media file" },
       { status: 500 }

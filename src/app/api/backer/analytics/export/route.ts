@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerAnalyticsExportLogger = logger.child({ module: "backer-analytics-export" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -115,7 +118,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error exporting analytics:", error);
+    backerAnalyticsExportLogger.error({ err: String(error) }, "Error exporting analytics:");
     return NextResponse.json(
       { error: "Failed to export" },
       { status: 500, headers: corsHeaders }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const webhooksStripe_connectLogger = logger.child({ module: "webhooks-stripe_connect" });
 import Stripe from "stripe";
 import { getStripeInstance } from "@/lib/payments/stripe";
 import { db } from "@/lib/db";
@@ -28,7 +31,7 @@ async function getStripeConnectWebhookSecret(): Promise<string | null> {
       return settings.stripeConnectWebhookSecret;
     }
   } catch (error) {
-    console.warn("Could not fetch Stripe Connect settings from database:", error);
+    webhooksStripe_connectLogger.warn({ data: error }, "Could not fetch Stripe Connect settings from database:");
   }
 
   return process.env.STRIPE_CONNECT_WEBHOOK_SECRET || null;
@@ -49,7 +52,7 @@ export async function POST(req: NextRequest) {
     // Get Connect webhook secret from database settings or env var
     const webhookSecret = await getStripeConnectWebhookSecret();
     if (!webhookSecret) {
-      console.error("Stripe Connect webhook secret not configured");
+      webhooksStripe_connectLogger.error("Stripe Connect webhook secret not configured");
       return NextResponse.json(
         { error: "Connect webhook secret not configured" },
         { status: 500 }
@@ -64,14 +67,14 @@ export async function POST(req: NextRequest) {
     try {
       event = stripeClient.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
-      console.error("Connect webhook signature verification failed:", err);
+      webhooksStripe_connectLogger.error({ err: String(err) }, "Connect webhook signature verification failed:");
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 400 }
       );
     }
 
-    console.log(`[Stripe Connect Webhook] Received event: ${event.type} (${event.id})`);
+    webhooksStripe_connectLogger.info(`[Stripe Connect Webhook] Received event: ${event.type} (${event.id})`);
 
     // Check for duplicate event (idempotency)
     const existingEvent = await db.processedWebhookEvent.findUnique({
@@ -79,7 +82,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingEvent) {
-      console.log(`[Stripe Connect Webhook] Duplicate event ignored: ${event.id}`);
+      webhooksStripe_connectLogger.info(`[Stripe Connect Webhook] Duplicate event ignored: ${event.id}`);
       return NextResponse.json({ received: true, duplicate: true });
     }
 
@@ -93,7 +96,7 @@ export async function POST(req: NextRequest) {
         },
       });
     } catch {
-      console.log(`[Stripe Connect Webhook] Event already being processed: ${event.id}`);
+      webhooksStripe_connectLogger.info(`[Stripe Connect Webhook] Event already being processed: ${event.id}`);
       return NextResponse.json({ received: true, duplicate: true });
     }
 
@@ -108,13 +111,13 @@ export async function POST(req: NextRequest) {
         break;
 
       default:
-        console.log(`[Stripe Connect Webhook] Unhandled event type: ${event.type}`);
+        webhooksStripe_connectLogger.info(`[Stripe Connect Webhook] Unhandled event type: ${event.type}`);
     }
 
-    console.log(`[Stripe Connect Webhook] Successfully processed: ${event.type}`);
+    webhooksStripe_connectLogger.info(`[Stripe Connect Webhook] Successfully processed: ${event.type}`);
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("Stripe Connect webhook error:", error);
+    webhooksStripe_connectLogger.error({ err: String(error) }, "Stripe Connect webhook error:");
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 }
@@ -127,7 +130,7 @@ export async function POST(req: NextRequest) {
  * Updates the onboarding status when a connected account changes
  */
 async function handleAccountUpdate(account: Stripe.Account) {
-  console.log(`[Connect Webhook] Handling account.updated for ${account.id}`);
+  webhooksStripe_connectLogger.info(`[Connect Webhook] Handling account.updated for ${account.id}`);
 
   const isOnboarded = account.charges_enabled && account.payouts_enabled;
 
@@ -141,7 +144,7 @@ async function handleAccountUpdate(account: Stripe.Account) {
       where: { id: config.id },
       data: { isOnboarded },
     });
-    console.log(`[Connect Webhook] Updated StripeConfig onboarding status for account ${account.id}: ${isOnboarded}`);
+    webhooksStripe_connectLogger.info(`[Connect Webhook] Updated StripeConfig onboarding status for account ${account.id}: ${isOnboarded}`);
     return;
   }
 
@@ -152,7 +155,7 @@ async function handleAccountUpdate(account: Stripe.Account) {
   });
 
   if (project) {
-    console.log(`[Connect Webhook] Account ${account.id} found on project "${project.title}" (${project.id})`);
+    webhooksStripe_connectLogger.info(`[Connect Webhook] Account ${account.id} found on project "${project.title}" (${project.id})`);
 
     // Try to create/update StripeConfig for the project's creator
     const existingConfig = await db.stripeConfig.findUnique({
@@ -164,7 +167,7 @@ async function handleAccountUpdate(account: Stripe.Account) {
         where: { id: existingConfig.id },
         data: { stripeAccountId: account.id, isOnboarded },
       });
-      console.log(`[Connect Webhook] Updated existing StripeConfig for creator ${project.creatorId}`);
+      webhooksStripe_connectLogger.info(`[Connect Webhook] Updated existing StripeConfig for creator ${project.creatorId}`);
     } else {
       await db.stripeConfig.create({
         data: {
@@ -173,12 +176,12 @@ async function handleAccountUpdate(account: Stripe.Account) {
           isOnboarded,
         },
       });
-      console.log(`[Connect Webhook] Created StripeConfig for creator ${project.creatorId}`);
+      webhooksStripe_connectLogger.info(`[Connect Webhook] Created StripeConfig for creator ${project.creatorId}`);
     }
     return;
   }
 
-  console.log(`[Connect Webhook] No config or project found for account ${account.id}`);
+  webhooksStripe_connectLogger.info(`[Connect Webhook] No config or project found for account ${account.id}`);
 }
 
 /**
@@ -186,12 +189,12 @@ async function handleAccountUpdate(account: Stripe.Account) {
  * Cleans up when a user disconnects their Stripe account
  */
 async function handleAccountDeauthorized(application: Stripe.Application) {
-  console.log(`[Connect Webhook] Handling account.application.deauthorized`);
+  webhooksStripe_connectLogger.info(`[Connect Webhook] Handling account.application.deauthorized`);
 
   // The application object contains info about the deauthorization
   // We need to find and update any affected accounts
   // Note: This event doesn't contain the account ID directly,
   // so we might need to handle this differently based on your use case
 
-  console.log(`[Connect Webhook] Application deauthorized:`, application.id);
+  webhooksStripe_connectLogger.info({ data: application.id }, `[Connect Webhook] Application deauthorized:`);
 }

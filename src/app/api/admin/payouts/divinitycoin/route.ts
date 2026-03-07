@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminPayoutsDivinitycoinLogger = logger.child({ module: "admin-payouts-divinitycoin" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendPayoutCreatedEmail } from "@/lib/notifications/email-templates";
@@ -506,7 +509,7 @@ export async function GET(request: NextRequest) {
       balanceStats,
     });
   } catch (error) {
-    console.error("Error fetching payouts:", error);
+    adminPayoutsDivinitycoinLogger.error({ err: String(error) }, "Error fetching payouts:");
     return NextResponse.json(
       { error: "Failed to fetch payouts" },
       { status: 500 }
@@ -614,7 +617,7 @@ export async function POST(request: NextRequest) {
       bankAccount.bankNameDisplay || "Bank Account",
       bankAccount.accountLastFour || "****"
     ).catch((emailError) => {
-      console.error("Failed to send payout created email:", emailError);
+      adminPayoutsDivinitycoinLogger.error({ err: String(emailError) }, "Failed to send payout created email:");
     });
 
     return NextResponse.json({
@@ -623,7 +626,7 @@ export async function POST(request: NextRequest) {
       type: "PROJECT_PAYOUT",
     });
   } catch (error) {
-    console.error("Error creating settlement:", error);
+    adminPayoutsDivinitycoinLogger.error({ err: String(error) }, "Error creating settlement:");
     return NextResponse.json(
       { error: "Failed to create settlement" },
       { status: 500 }
@@ -752,7 +755,7 @@ export async function PATCH(request: NextRequest) {
       settlement: updatedSettlement,
     });
   } catch (error) {
-    console.error("Error updating settlement:", error);
+    adminPayoutsDivinitycoinLogger.error({ err: String(error) }, "Error updating settlement:");
     return NextResponse.json(
       { error: "Failed to update settlement" },
       { status: 500 }

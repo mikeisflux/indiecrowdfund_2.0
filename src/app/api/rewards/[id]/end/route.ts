@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const rewardsEndLogger = logger.child({ module: "rewards-end" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -65,7 +68,7 @@ export async function POST(
       message: `${reward.type === "TIER" ? "Reward" : "Add-on"} has been ended. Existing backers will still receive it, but no new backers can select it.`,
     });
   } catch (error) {
-    console.error("End reward error:", error);
+    rewardsEndLogger.error({ err: String(error) }, "End reward error:");
     return NextResponse.json(
       { error: "Failed to end reward" },
       { status: 500 }

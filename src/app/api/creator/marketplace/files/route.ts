@@ -4,6 +4,11 @@ import { db as prisma } from "@/lib/db";
 import { getR2Storage, generateMarketplaceFileKey } from "@/lib/r2";
 import { formatFileSize } from "@/lib/utils";
 
+import { logger } from "@/lib/logger";
+
+const creatorMarketplaceFilesLogger = logger.child({ module: "creator-marketplace-files" });
+
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -62,7 +67,7 @@ export async function GET() {
       count: filesWithMetadata.length,
     });
   } catch (error) {
-    console.error("Error listing marketplace files:", error);
+    creatorMarketplaceFilesLogger.error({ err: error }, "Error listing marketplace files:");
     return NextResponse.json(
       { error: "Failed to list files" },
       { status: 500 }
@@ -76,23 +81,23 @@ export async function GET() {
  * Get presigned URL to upload a new PDF to marketplace
  */
 export async function POST(request: NextRequest) {
-  console.log("[Marketplace Files] POST request received");
+  creatorMarketplaceFilesLogger.info("[Marketplace Files] POST request received");
 
   try {
-    console.log("[Marketplace Files] Checking session...");
+    creatorMarketplaceFilesLogger.info("[Marketplace Files] Checking session...");
     const session = await auth();
     if (!session?.user?.id) {
-      console.log("[Marketplace Files] Unauthorized - no session");
+      creatorMarketplaceFilesLogger.info("[Marketplace Files] Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.log("[Marketplace Files] Session valid for user:", session.user.id);
+    creatorMarketplaceFilesLogger.info({ data: session.user.id }, "[Marketplace Files] Session valid for user:");
 
     let body;
     try {
       body = await request.json();
-      console.log("[Marketplace Files] Request body:", JSON.stringify(body));
+      creatorMarketplaceFilesLogger.info({ data: JSON.stringify(body) }, "[Marketplace Files] Request body:");
     } catch (parseError) {
-      console.error("[Marketplace Files] Failed to parse request body:", parseError);
+      creatorMarketplaceFilesLogger.error({ err: parseError }, "[Marketplace Files] Failed to parse request body:");
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
@@ -137,12 +142,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[Marketplace Files] Getting R2 storage...");
+    creatorMarketplaceFilesLogger.info("[Marketplace Files] Getting R2 storage...");
     let r2;
     try {
       r2 = await getR2Storage();
     } catch (r2Error) {
-      console.error("[Marketplace Files] Error initializing R2 storage:", r2Error);
+      creatorMarketplaceFilesLogger.error({ err: r2Error }, "[Marketplace Files] Error initializing R2 storage:");
       return NextResponse.json(
         { error: "Storage initialization failed" },
         { status: 500 }
@@ -150,23 +155,23 @@ export async function POST(request: NextRequest) {
     }
 
     if (!r2) {
-      console.error("[Marketplace Files] R2 storage not configured - check platform settings");
+      creatorMarketplaceFilesLogger.error("[Marketplace Files] R2 storage not configured - check platform settings");
       return NextResponse.json(
         { error: "Storage not configured. Please configure R2 storage in admin settings." },
         { status: 500 }
       );
     }
-    console.log("[Marketplace Files] R2 storage initialized successfully");
+    creatorMarketplaceFilesLogger.info("[Marketplace Files] R2 storage initialized successfully");
 
     // Generate storage key
     const fileId = crypto.randomUUID();
     const storageKey = generateMarketplaceFileKey(session.user.id, fileName, fileId);
-    console.log("[Marketplace Files] Generated storage key:", storageKey);
+    creatorMarketplaceFilesLogger.info({ data: storageKey }, "[Marketplace Files] Generated storage key:");
 
     // Get presigned upload URL
     let uploadUrl: string;
     try {
-      console.log("[Marketplace Files] Generating presigned URL...");
+      creatorMarketplaceFilesLogger.info("[Marketplace Files] Generating presigned URL...");
       uploadUrl = await r2.getUploadUrl(storageKey, {
         contentType: "application/pdf",
         expiresIn: 3600,
@@ -175,9 +180,9 @@ export async function POST(request: NextRequest) {
           originalName: fileName,
         },
       });
-      console.log("[Marketplace Files] Presigned URL generated successfully");
+      creatorMarketplaceFilesLogger.info("[Marketplace Files] Presigned URL generated successfully");
     } catch (signError) {
-      console.error("[Marketplace Files] Error generating presigned URL:", signError);
+      creatorMarketplaceFilesLogger.error({ err: signError }, "[Marketplace Files] Error generating presigned URL:");
       // Check for common R2/S3 errors
       const errorMessage = signError instanceof Error ? signError.message : "Unknown error";
       if (errorMessage.includes("digest") || errorMessage.includes("credential")) {
@@ -192,7 +197,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[Marketplace Files] Returning success response");
+    creatorMarketplaceFilesLogger.info("[Marketplace Files] Returning success response");
     return NextResponse.json({
       uploadUrl,
       fileId,
@@ -200,10 +205,10 @@ export async function POST(request: NextRequest) {
       expiresIn: 3600,
     });
   } catch (error) {
-    console.error("[Marketplace Files] Unexpected error:", error);
+    creatorMarketplaceFilesLogger.error({ err: error }, "[Marketplace Files] Unexpected error:");
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorStack = error instanceof Error ? error.stack : "";
-    console.error("[Marketplace Files] Error stack:", errorStack);
+    creatorMarketplaceFilesLogger.error({ err: errorStack }, "[Marketplace Files] Error stack:");
     return NextResponse.json(
       { error: `Failed to create upload URL: ${errorMessage}` },
       { status: 500 }
@@ -269,7 +274,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting marketplace file:", error);
+    creatorMarketplaceFilesLogger.error({ err: error }, "Error deleting marketplace file:");
     return NextResponse.json(
       { error: "Failed to delete file" },
       { status: 500 }

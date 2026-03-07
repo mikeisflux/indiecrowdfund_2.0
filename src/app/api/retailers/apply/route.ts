@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const retailersApplyLogger = logger.child({ module: "retailers-apply" });
 import { db } from "@/lib/db";
 import { hash } from "bcryptjs";
 import { verifyRecaptcha } from "@/lib/auth/recaptcha";
@@ -135,7 +138,7 @@ export async function POST(req: NextRequest) {
       applicationId: retailer.id,
     });
   } catch (error) {
-    console.error("Error submitting retailer application:", error);
+    retailersApplyLogger.error({ err: String(error) }, "Error submitting retailer application:");
     return NextResponse.json(
       { error: "Failed to submit application" },
       { status: 500 }

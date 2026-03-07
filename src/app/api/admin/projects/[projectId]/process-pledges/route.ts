@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminProjectsProcessPledgesLogger = logger.child({ module: "admin-projects-process-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { processPendingPledgesForProject, chargeSavedPledge, getStripeInstance } from "@/lib/payments/stripe";
@@ -217,7 +220,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Admin pledge diagnosis error:", error);
+    adminProjectsProcessPledgesLogger.error({ err: String(error) }, "Admin pledge diagnosis error:");
     return NextResponse.json(
       {
         error: "Failed to diagnose pledges",
@@ -323,7 +326,7 @@ export async function POST(
 
     // If a specific pledgeId is provided, charge just that one
     if (pledgeId) {
-      console.log(`[Admin] Manually charging pledge ${pledgeId}`);
+      adminProjectsProcessPledgesLogger.info(`[Admin] Manually charging pledge ${pledgeId}`);
       try {
         const success = await chargeSavedPledge(pledgeId);
         return NextResponse.json({
@@ -332,7 +335,7 @@ export async function POST(
           pledgeId,
         });
       } catch (error) {
-        console.error(`[Admin] Error charging pledge ${pledgeId}:`, error);
+        adminProjectsProcessPledgesLogger.error({ err: String(error) }, `[Admin] Error charging pledge ${pledgeId}:`);
         return NextResponse.json({
           success: false,
           error: error instanceof Error ? error.message : "Unknown error",
@@ -342,7 +345,7 @@ export async function POST(
     }
 
     // Otherwise, process all pending pledges
-    console.log(`[Admin] Manually processing all pledges for project ${projectId}`);
+    adminProjectsProcessPledgesLogger.info(`[Admin] Manually processing all pledges for project ${projectId}`);
     const results = await processPendingPledgesForProject(projectId);
 
     return NextResponse.json({
@@ -351,7 +354,7 @@ export async function POST(
       results,
     });
   } catch (error) {
-    console.error("Admin pledge processing error:", error);
+    adminProjectsProcessPledgesLogger.error({ err: String(error) }, "Admin pledge processing error:");
     return NextResponse.json(
       { error: "Failed to process pledges" },
       { status: 500 }
@@ -448,7 +451,7 @@ async function processDivinityCoinPendingPledges(projectId: string, specificPled
       results.reconciled++;
       detail.action = "Reconciled to COMPLETED (verified DivinityCoinTransaction record found)";
 
-      console.log(`[Admin DC] Reconciled pledge ${pledge.id} to COMPLETED`);
+      adminProjectsProcessPledgesLogger.info(`[Admin DC] Reconciled pledge ${pledge.id} to COMPLETED`);
     } else {
       // No verified transaction record — divinityCoinPaymentId alone is NOT proof of payment
       // (it's set at pledge creation before user pays). This is an abandoned cart.
@@ -475,7 +478,7 @@ async function processDivinityCoinPendingPledges(projectId: string, specificPled
       },
     });
 
-    console.log(`[Admin DC] Updated project stats: +$${reconciledAmount}, +${totalReconciled} backers`);
+    adminProjectsProcessPledgesLogger.info(`[Admin DC] Updated project stats: +$${reconciledAmount}, +${totalReconciled} backers`);
   }
 
   return NextResponse.json({
@@ -598,7 +601,7 @@ async function verifyDivinityCoinPledges(projectId: string) {
       detail.action = pledge.divinityCoinPaymentId
         ? "Downgraded COMPLETED → PENDING (DC payment intent created but no transaction record — payment never completed)"
         : "Downgraded COMPLETED → PENDING (no DC payment record)";
-      console.log(`[Admin DC Verify] Downgraded pledge ${pledge.id} from COMPLETED to PENDING (no transaction record)`);
+      adminProjectsProcessPledgesLogger.info(`[Admin DC Verify] Downgraded pledge ${pledge.id} from COMPLETED to PENDING (no transaction record)`);
     } else {
       // PENDING without transaction — normal incomplete/abandoned
       results.abandoned++;
@@ -620,7 +623,7 @@ async function verifyDivinityCoinPledges(projectId: string) {
     },
   });
 
-  console.log(`[Admin DC Verify] Set project stats: $${verifiedTotal}, ${verifiedCount} backers (upgraded: ${results.upgraded}, downgraded: ${results.downgraded})`);
+  adminProjectsProcessPledgesLogger.info(`[Admin DC Verify] Set project stats: $${verifiedTotal}, ${verifiedCount} backers (upgraded: ${results.upgraded}, downgraded: ${results.downgraded})`);
 
   return NextResponse.json({
     success: true,
@@ -744,7 +747,7 @@ async function verifyPaymentIntents(projectId: string) {
       },
     });
 
-    console.log(`[Admin Verify] Updated project stats: +$${totalNewlyCompletedAmount}, +${totalNewlyCompleted} backers`);
+    adminProjectsProcessPledgesLogger.info(`[Admin Verify] Updated project stats: +$${totalNewlyCompletedAmount}, +${totalNewlyCompleted} backers`);
   }
 
   return NextResponse.json({
@@ -861,7 +864,7 @@ async function deleteAbandonedCarts(projectId: string) {
       where: { id: { in: toDelete } },
     });
 
-    console.log(`[Admin] Permanently deleted ${toDelete.length} abandoned cart pledges for project ${projectId}`);
+    adminProjectsProcessPledgesLogger.info(`[Admin] Permanently deleted ${toDelete.length} abandoned cart pledges for project ${projectId}`);
   }
 
   return NextResponse.json({

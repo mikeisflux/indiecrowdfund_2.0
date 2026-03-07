@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const userMeLogger = logger.child({ module: "user-me" });
 import { db } from "@/lib/db";
 import { validateSession } from "@/lib/auth/session";
 
@@ -23,7 +26,7 @@ export async function GET() {
 
     return NextResponse.json({ user, vanityUrl: user?.vanityUrl || null });
   } catch (error) {
-    console.error("Error fetching current user:", error);
+    userMeLogger.error({ err: String(error) }, "Error fetching current user:");
     return NextResponse.json({ user: null });
   }
 }

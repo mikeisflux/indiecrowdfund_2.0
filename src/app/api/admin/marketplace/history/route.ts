@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMarketplaceHistoryLogger = logger.child({ module: "admin-marketplace-history" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -58,7 +61,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("Error fetching review history:", error);
+    adminMarketplaceHistoryLogger.error({ err: String(error) }, "Error fetching review history:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

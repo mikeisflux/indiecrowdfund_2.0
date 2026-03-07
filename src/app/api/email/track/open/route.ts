@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const emailTrackOpenLogger = logger.child({ module: "email-track-open" });
 import { db } from "@/lib/db";
 
 // 1x1 transparent PNG pixel
@@ -34,7 +37,7 @@ export async function GET(request: Request) {
         data: { openedAt: new Date() },
       });
 
-      console.log(`Email opened: campaign=${campaignId}, email=${email}`);
+      emailTrackOpenLogger.info(`Email opened: campaign=${campaignId}, email=${email}`);
     }
 
     // Return 1x1 transparent PNG
@@ -49,7 +52,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error tracking email open:", error);
+    emailTrackOpenLogger.error({ err: String(error) }, "Error tracking email open:");
     // Still return pixel to not break email display
     return new NextResponse(TRACKING_PIXEL, {
       status: 200,

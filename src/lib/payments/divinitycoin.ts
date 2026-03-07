@@ -4,6 +4,9 @@ import {
   notifyPledgeReceived,
   notifyBackerPledgeConfirmed,
 } from "@/lib/notifications";
+import { logger } from "@/lib/logger";
+
+const paymentsDivinitycoinLogger = logger.child({ module: "payments-divinitycoin" });
 
 // DivinityCoin API configuration
 interface DivinityCoinConfig {
@@ -44,7 +47,7 @@ export async function getDivinityCoinConfig(): Promise<DivinityCoinConfig> {
       return cachedConfig;
     }
   } catch (error) {
-    console.warn("Could not fetch DivinityCoin settings from database:", error);
+    paymentsDivinitycoinLogger.warn({ data: error }, "Could not fetch DivinityCoin settings from database:");
   }
 
   // Fall back to environment variables
@@ -75,7 +78,7 @@ export async function getDivinityCoinWebhookSecret(): Promise<string | null> {
       return settings.divinityCoinWebhookSecret;
     }
   } catch (error) {
-    console.warn("Could not fetch DivinityCoin webhook secret from database:", error);
+    paymentsDivinitycoinLogger.warn({ data: error }, "Could not fetch DivinityCoin webhook secret from database:");
   }
 
   return process.env.DIVINITYCOIN_WEBHOOK_SECRET || null;
@@ -163,7 +166,7 @@ export function verifyWebhookSignature(
   const signaturePart = parts.find((p) => p.startsWith("v1="));
 
   if (!timestampPart || !signaturePart) {
-    console.warn("[DivinityCoin] Invalid signature format");
+    paymentsDivinitycoinLogger.warn("[DivinityCoin] Invalid signature format");
     return false;
   }
 
@@ -173,7 +176,7 @@ export function verifyWebhookSignature(
   // Check timestamp is within 5 minutes (300 seconds)
   const timestampAge = Math.abs(Date.now() / 1000 - parseInt(timestamp));
   if (timestampAge > 300) {
-    console.warn("[DivinityCoin] Webhook timestamp too old:", timestampAge, "seconds");
+    paymentsDivinitycoinLogger.warn({ timestampAge }, "DivinityCoin webhook timestamp too old");
     return false;
   }
 
@@ -244,7 +247,7 @@ export async function handleCardValidate(
 ): Promise<CardValidateResponse> {
   // TODO: Implement card validation logic based on your business rules
   // This is where you'd check if the card code is valid in your system
-  console.log(`[DivinityCoin] Validating card: ${cardCode.substring(0, 4)}****`);
+  paymentsDivinitycoinLogger.info(`[DivinityCoin] Validating card: ${cardCode.substring(0, 4)}****`);
 
   // For now, return a placeholder response
   // You'll need to implement actual validation based on your requirements
@@ -263,10 +266,8 @@ export async function handleCardRedeem(
   cardCode: string,
   platformUserId?: string
 ): Promise<CardRedeemResponse> {
-  console.log(
-    `[DivinityCoin] Card redemption: ${cardCode.substring(0, 4)}****` +
-    (platformUserId ? ` for user ${platformUserId}` : "")
-  );
+  paymentsDivinitycoinLogger.info(`[DivinityCoin] Card redemption: ${cardCode.substring(0, 4)}****` +
+    (platformUserId ? ` for user ${platformUserId}` : ""));
 
   // In sandbox mode, just acknowledge without actual redemption
   if (process.env.NODE_ENV !== "production") {
@@ -302,15 +303,13 @@ export async function handleRefundRequest(
   originalTransactionId?: string,
   reason?: string
 ): Promise<RefundRequestResponse> {
-  console.log(
-    `[DivinityCoin] Refund request: ${refundId}, amount: ${amount}, ` +
+  paymentsDivinitycoinLogger.info(`[DivinityCoin] Refund request: ${refundId}, amount: ${amount}, ` +
     `cardCode: ${originalCardCode ? originalCardCode.substring(0, 4) + '****' : 'N/A'}, ` +
-    `txnId: ${originalTransactionId || 'N/A'}`
-  );
+    `txnId: ${originalTransactionId || 'N/A'}`);
 
   // Validate amount
   if (!amount || amount <= 0) {
-    console.warn(`[DivinityCoin] Invalid refund amount: ${amount}`);
+    paymentsDivinitycoinLogger.warn(`[DivinityCoin] Invalid refund amount: ${amount}`);
     return {
       success: false,
       refundId,
@@ -324,7 +323,7 @@ export async function handleRefundRequest(
 
   // Must have at least one identifier to trace the redemption
   if (!originalCardCode && !originalTransactionId) {
-    console.warn(`[DivinityCoin] No identifier provided to trace redemption`);
+    paymentsDivinitycoinLogger.warn(`[DivinityCoin] No identifier provided to trace redemption`);
     return {
       success: false,
       refundId,
@@ -360,7 +359,7 @@ export async function handleRefundRequest(
         amount: Number(redemption.amount),
         redeemedAt: redemption.redeemedAt,
       };
-      console.log(`[DivinityCoin] Found user ${userId} via card code lookup`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Found user ${userId} via card code lookup`);
     }
   }
 
@@ -402,16 +401,14 @@ export async function handleRefundRequest(
         amount: Number(transaction.amount),
         redeemedAt: transaction.createdAt,
       };
-      console.log(`[DivinityCoin] Found user ${userId} via transaction ID lookup`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Found user ${userId} via transaction ID lookup`);
     }
   }
 
   // If we couldn't find the user, return error
   if (!userId) {
-    console.warn(
-      `[DivinityCoin] Could not find redemption for refund. ` +
-      `cardCode: ${originalCardCode || 'N/A'}, txnId: ${originalTransactionId || 'N/A'}`
-    );
+    paymentsDivinitycoinLogger.warn(`[DivinityCoin] Could not find redemption for refund. ` +
+      `cardCode: ${originalCardCode || 'N/A'}, txnId: ${originalTransactionId || 'N/A'}`);
     return {
       success: false,
       refundId,
@@ -435,7 +432,7 @@ export async function handleRefundRequest(
 
   if (!user) {
     // This shouldn't happen if we found a redemption, but handle it anyway
-    console.warn(`[DivinityCoin] User ${userId} not found (but redemption exists)`);
+    paymentsDivinitycoinLogger.warn(`[DivinityCoin] User ${userId} not found (but redemption exists)`);
     return {
       success: false,
       refundId,
@@ -461,7 +458,7 @@ export async function handleRefundRequest(
   });
 
   if (existingRefund) {
-    console.log(`[DivinityCoin] Refund ${refundId} already processed`);
+    paymentsDivinitycoinLogger.info(`[DivinityCoin] Refund ${refundId} already processed`);
     return {
       success: false,
       refundId,
@@ -476,10 +473,8 @@ export async function handleRefundRequest(
 
   // Check if user has sufficient balance
   if (previousBalance < amount) {
-    console.warn(
-      `[DivinityCoin] Insufficient balance for refund. ` +
-      `User ${userId} has ${previousBalance}, needs ${amount}`
-    );
+    paymentsDivinitycoinLogger.warn(`[DivinityCoin] Insufficient balance for refund. ` +
+      `User ${userId} has ${previousBalance}, needs ${amount}`);
 
     // Notify DivinityCoin about insufficient balance via callback (if configured)
     await notifyDivinityCoinRefundFailed(refundId, userId, amount, previousBalance, originalCardCode, originalTransactionId);
@@ -531,10 +526,8 @@ export async function handleRefundRequest(
       });
     });
 
-    console.log(
-      `[DivinityCoin] Refund ${refundId} processed successfully. ` +
-      `User ${userId}: ${previousBalance} -> ${newBalance}`
-    );
+    paymentsDivinitycoinLogger.info(`[DivinityCoin] Refund ${refundId} processed successfully. ` +
+      `User ${userId}: ${previousBalance} -> ${newBalance}`);
 
     return {
       success: true,
@@ -545,7 +538,7 @@ export async function handleRefundRequest(
       userId,
     };
   } catch (error) {
-    console.error(`[DivinityCoin] Error processing refund ${refundId}:`, error);
+    paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error processing refund ${refundId}:`);
     throw error;
   }
 }
@@ -587,16 +580,14 @@ async function notifyDivinityCoinRefundFailed(
     });
 
     if (!response.ok) {
-      console.warn(
-        `[DivinityCoin] Failed to notify about refund failure. ` +
-        `Status: ${response.status}`
-      );
+      paymentsDivinitycoinLogger.warn(`[DivinityCoin] Failed to notify about refund failure. ` +
+        `Status: ${response.status}`);
     } else {
-      console.log(`[DivinityCoin] Successfully notified about refund failure: ${refundId}`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Successfully notified about refund failure: ${refundId}`);
     }
   } catch (error) {
     // Don't throw - this is a best-effort notification
-    console.warn(`[DivinityCoin] Error notifying about refund failure:`, error);
+    paymentsDivinitycoinLogger.warn({ data: error }, `[DivinityCoin] Error notifying about refund failure:`);
   }
 }
 
@@ -666,9 +657,7 @@ export async function handlePaymentSucceeded(
 
   // Log full payload keys for debugging when no payment reference was resolved
   if (!paymentId && !holdId && !stripePI) {
-    console.warn(
-      `[DivinityCoin] Webhook payload missing payment references. Keys received: ${Object.keys(data).join(", ")}`
-    );
+    paymentsDivinitycoinLogger.warn(`[DivinityCoin] Webhook payload missing payment references. Keys received: ${Object.keys(data).join(", ")}`);
   }
 
   // Handle marketplace purchase if purchaseId is provided
@@ -682,9 +671,7 @@ export async function handlePaymentSucceeded(
 
   // Use best available payment reference
   const paymentRef = paymentId || stripePI || "none";
-  console.log(
-    `[DivinityCoin] Payment succeeded: pledge=${pledgeId}, payment=${paymentRef}${holdId ? `, hold=${holdId}` : ""}${paymentMethodStr ? `, method=${paymentMethodStr}` : ""}`
-  );
+  paymentsDivinitycoinLogger.info(`[DivinityCoin] Payment succeeded: pledge=${pledgeId}, payment=${paymentRef}${holdId ? `, hold=${holdId}` : ""}${paymentMethodStr ? `, method=${paymentMethodStr}` : ""}`);
 
   try {
     const pledge = await db.pledge.findUnique({
@@ -704,7 +691,7 @@ export async function handlePaymentSucceeded(
 
     // Handle upcharge payments for COMPLETED pledges (pledge modification or add-items)
     if (pledge.status === "COMPLETED" && paymentType === "upcharge") {
-      console.log(`[DivinityCoin] Upcharge payment for COMPLETED pledge ${pledgeId}`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Upcharge payment for COMPLETED pledge ${pledgeId}`);
 
       const metadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
         ? pledge.metadata as Record<string, unknown>
@@ -735,13 +722,13 @@ export async function handlePaymentSucceeded(
         },
       });
 
-      console.log(`[DivinityCoin] Upcharge payment recorded for pledge ${pledgeId}`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Upcharge payment recorded for pledge ${pledgeId}`);
       return { success: true, message: "Upcharge payment recorded" };
     }
 
     // Only process initial payments if the pledge is still PENDING
     if (pledge.status !== "PENDING") {
-      console.log(`[DivinityCoin] Pledge ${pledgeId} already ${pledge.status}, skipping`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} already ${pledge.status}, skipping`);
       return { success: true, message: `Pledge already ${pledge.status}` };
     }
 
@@ -778,7 +765,7 @@ export async function handlePaymentSucceeded(
       });
     });
 
-    console.log(`[DivinityCoin] Pledge ${pledgeId} marked as COMPLETED via payment webhook`);
+    paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} marked as COMPLETED via payment webhook`);
 
     // Atomically claim the right to update project stats using confirmationEmailSent.
     // This prevents double-counting between this webhook and the /confirm endpoint.
@@ -796,9 +783,9 @@ export async function handlePaymentSucceeded(
           backerCount: { increment: 1 },
         },
       });
-      console.log(`[DivinityCoin] Updated project stats for pledge ${pledgeId}: +$${pledge.amount}`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Updated project stats for pledge ${pledgeId}: +$${pledge.amount}`);
     } else {
-      console.log(`[DivinityCoin] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);
     }
 
     // Notify creator of new pledge (non-blocking)
@@ -810,19 +797,19 @@ export async function handlePaymentSucceeded(
         Number(pledge.amount)
       );
     } catch (notifyError) {
-      console.error(`[DivinityCoin] Failed to notify creator for pledge ${pledgeId}:`, notifyError);
+      paymentsDivinitycoinLogger.error({ err: notifyError }, `[DivinityCoin] Failed to notify creator for pledge ${pledgeId}:`);
     }
 
     // Send confirmation email to backer (non-blocking)
     try {
       await notifyBackerPledgeConfirmed(pledge.id, true);
     } catch (emailError) {
-      console.error(`[DivinityCoin] Failed to send confirmation email for pledge ${pledgeId}:`, emailError);
+      paymentsDivinitycoinLogger.error({ err: emailError }, `[DivinityCoin] Failed to send confirmation email for pledge ${pledgeId}:`);
     }
 
     return { success: true, message: "Pledge completed" };
   } catch (error) {
-    console.error(`[DivinityCoin] Error handling payment.succeeded for pledge ${pledgeId}:`, error);
+    paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling payment.succeeded for pledge ${pledgeId}:`);
     throw error;
   }
 }
@@ -845,9 +832,7 @@ async function handleMarketplacePaymentSucceeded(
   const stripePI = data.stripePaymentIntentId || (data.stripe_payment_intent_id as string | undefined)
     || (data.paymentIntentId as string | undefined);
 
-  console.log(
-    `[DivinityCoin] Marketplace payment succeeded: purchase=${purchaseId}, payment=${paymentId || stripePI || "none"}`
-  );
+  paymentsDivinitycoinLogger.info(`[DivinityCoin] Marketplace payment succeeded: purchase=${purchaseId}, payment=${paymentId || stripePI || "none"}`);
 
   try {
     const purchase = await db.marketplacePurchase.findUnique({
@@ -860,7 +845,7 @@ async function handleMarketplacePaymentSucceeded(
     }
 
     if (purchase.status !== "PENDING") {
-      console.log(`[DivinityCoin] Purchase ${purchaseId} already ${purchase.status}, skipping`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Purchase ${purchaseId} already ${purchase.status}, skipping`);
       return { success: true, message: `Purchase already ${purchase.status}` };
     }
 
@@ -907,10 +892,10 @@ async function handleMarketplacePaymentSucceeded(
       });
     });
 
-    console.log(`[DivinityCoin] Purchase ${purchaseId} marked as COMPLETED via payment webhook`);
+    paymentsDivinitycoinLogger.info(`[DivinityCoin] Purchase ${purchaseId} marked as COMPLETED via payment webhook`);
     return { success: true, message: "Purchase completed" };
   } catch (error) {
-    console.error(`[DivinityCoin] Error handling payment.succeeded for purchase ${purchaseId}:`, error);
+    paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling payment.succeeded for purchase ${purchaseId}:`);
     throw error;
   }
 }
@@ -927,9 +912,7 @@ export async function handlePaymentFailed(
 
   // Handle marketplace purchase failure
   if (purchaseId) {
-    console.log(
-      `[DivinityCoin] Marketplace payment failed: purchase=${purchaseId}, payment=${paymentId}, reason=${reason}`
-    );
+    paymentsDivinitycoinLogger.info(`[DivinityCoin] Marketplace payment failed: purchase=${purchaseId}, payment=${paymentId}, reason=${reason}`);
 
     try {
       const purchase = await db.marketplacePurchase.findUnique({
@@ -950,10 +933,10 @@ export async function handlePaymentFailed(
         data: { status: "FAILED" },
       });
 
-      console.log(`[DivinityCoin] Purchase ${purchaseId} marked as FAILED`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Purchase ${purchaseId} marked as FAILED`);
       return { success: true, message: "Purchase marked as failed" };
     } catch (error) {
-      console.error(`[DivinityCoin] Error handling payment.failed for purchase ${purchaseId}:`, error);
+      paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling payment.failed for purchase ${purchaseId}:`);
       throw error;
     }
   }
@@ -962,9 +945,7 @@ export async function handlePaymentFailed(
     return { success: false, error: "pledgeId or purchaseId is required" };
   }
 
-  console.log(
-    `[DivinityCoin] Payment failed: pledge=${pledgeId}, payment=${paymentId}, reason=${reason}`
-  );
+  paymentsDivinitycoinLogger.info(`[DivinityCoin] Payment failed: pledge=${pledgeId}, payment=${paymentId}, reason=${reason}`);
 
   try {
     const pledge = await db.pledge.findUnique({
@@ -988,10 +969,10 @@ export async function handlePaymentFailed(
       },
     });
 
-    console.log(`[DivinityCoin] Pledge ${pledgeId} marked as FAILED`);
+    paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} marked as FAILED`);
     return { success: true, message: "Pledge marked as failed" };
   } catch (error) {
-    console.error(`[DivinityCoin] Error handling payment.failed for pledge ${pledgeId}:`, error);
+    paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling payment.failed for pledge ${pledgeId}:`);
     throw error;
   }
 }
@@ -1009,9 +990,7 @@ export async function handleRefundCompleted(
 
   // Handle marketplace purchase refund
   if (purchaseId) {
-    console.log(
-      `[DivinityCoin] Marketplace refund completed: purchase=${purchaseId}, refund=${refundId}, amount=${amount}`
-    );
+    paymentsDivinitycoinLogger.info(`[DivinityCoin] Marketplace refund completed: purchase=${purchaseId}, refund=${refundId}, amount=${amount}`);
 
     try {
       const purchase = await db.marketplacePurchase.findUnique({
@@ -1065,10 +1044,10 @@ export async function handleRefundCompleted(
         });
       });
 
-      console.log(`[DivinityCoin] Purchase ${purchaseId} marked as REFUNDED via webhook`);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Purchase ${purchaseId} marked as REFUNDED via webhook`);
       return { success: true, message: "Purchase refund recorded" };
     } catch (error) {
-      console.error(`[DivinityCoin] Error handling refund.completed for purchase ${purchaseId}:`, error);
+      paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling refund.completed for purchase ${purchaseId}:`);
       throw error;
     }
   }
@@ -1077,9 +1056,7 @@ export async function handleRefundCompleted(
     return { success: false, error: "pledgeId or purchaseId is required" };
   }
 
-  console.log(
-    `[DivinityCoin] Refund completed: pledge=${pledgeId}, refund=${refundId}, amount=${amount}`
-  );
+  paymentsDivinitycoinLogger.info(`[DivinityCoin] Refund completed: pledge=${pledgeId}, refund=${refundId}, amount=${amount}`);
 
   try {
     const pledge = await db.pledge.findUnique({
@@ -1135,10 +1112,10 @@ export async function handleRefundCompleted(
       }
     });
 
-    console.log(`[DivinityCoin] Pledge ${pledgeId} marked as REFUNDED via webhook`);
+    paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} marked as REFUNDED via webhook`);
     return { success: true, message: "Refund recorded" };
   } catch (error) {
-    console.error(`[DivinityCoin] Error handling refund.completed for pledge ${pledgeId}:`, error);
+    paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling refund.completed for pledge ${pledgeId}:`);
     throw error;
   }
 }
@@ -1167,7 +1144,7 @@ export async function callDivinityCoinAPI(
     const result = await response.json();
 
     if (!response.ok) {
-      console.error(`[DivinityCoin API] ${action} failed:`, result);
+      paymentsDivinitycoinLogger.error({ err: result }, `[DivinityCoin API] ${action} failed:`);
       return {
         success: false,
         error: result.error || `DC API ${action} failed with status ${response.status}`,
@@ -1176,7 +1153,7 @@ export async function callDivinityCoinAPI(
 
     return { success: true, data: result };
   } catch (error) {
-    console.error(`[DivinityCoin API] ${action} error:`, error);
+    paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin API] ${action} error:`);
     return {
       success: false,
       error: error instanceof Error ? error.message : "DivinityCoin API call failed",
@@ -1271,7 +1248,7 @@ export async function handleDivinityCoinWebhook(
       return handleRefundCompleted(request.data);
 
     default:
-      console.warn(`[DivinityCoin Webhook] Unknown event type: ${request.event}`);
+      paymentsDivinitycoinLogger.warn(`[DivinityCoin Webhook] Unknown event type: ${request.event}`);
       return {
         success: false,
         amount: 0,

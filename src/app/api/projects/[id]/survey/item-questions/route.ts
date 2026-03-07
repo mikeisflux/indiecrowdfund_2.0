@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsSurveyItemQuestionsLogger = logger.child({ module: "projects-survey-item-questions" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -89,7 +92,7 @@ export async function GET(
 
     return NextResponse.json({ itemQuestions });
   } catch (error) {
-    console.error("Error fetching item questions:", error);
+    projectsSurveyItemQuestionsLogger.error({ err: String(error) }, "Error fetching item questions:");
     return NextResponse.json(
       { error: "Failed to fetch item questions" },
       { status: 500 }
@@ -189,7 +192,7 @@ export async function POST(
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("Error creating item question:", error);
+    projectsSurveyItemQuestionsLogger.error({ err: String(error) }, "Error creating item question:");
     return NextResponse.json(
       { error: "Failed to create item question" },
       { status: 500 }
@@ -317,7 +320,7 @@ export async function PUT(
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("Error updating item question:", error);
+    projectsSurveyItemQuestionsLogger.error({ err: String(error) }, "Error updating item question:");
     return NextResponse.json(
       { error: "Failed to update item question" },
       { status: 500 }
@@ -385,7 +388,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting item question:", error);
+    projectsSurveyItemQuestionsLogger.error({ err: String(error) }, "Error deleting item question:");
     return NextResponse.json(
       { error: "Failed to delete item question" },
       { status: 500 }

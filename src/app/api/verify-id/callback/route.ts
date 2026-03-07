@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const verifyIdCallbackLogger = logger.child({ module: "verify-id-callback" });
 import { getShuftiService } from "@/lib/shufti";
 import { db } from "@/lib/db";
 import crypto from "crypto";
@@ -31,7 +34,7 @@ export async function POST(req: NextRequest) {
     // Verify signature if secret key is configured
     if (settings?.shuftiSecretKey && signature) {
       if (!verifySignature(rawBody, signature, settings.shuftiSecretKey)) {
-        console.error("Invalid Shufti webhook signature");
+        verifyIdCallbackLogger.error("Invalid Shufti webhook signature");
         return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
       }
     }
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
     const shufti = await getShuftiService();
 
     if (!shufti) {
-      console.error("Shufti service not configured");
+      verifyIdCallbackLogger.error("Shufti service not configured");
       return NextResponse.json({ error: "Service not configured" }, { status: 503 });
     }
 
@@ -52,11 +55,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to process callback" }, { status: 500 });
     }
 
-    console.log(`Verification callback processed: userId=${result.userId}, verified=${result.verified}`);
+    verifyIdCallbackLogger.info(`Verification callback processed: userId=${result.userId}, verified=${result.verified}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error processing Shufti callback:", error);
+    verifyIdCallbackLogger.error({ err: String(error) }, "Error processing Shufti callback:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

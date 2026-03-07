@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminUsersVanityUrlLogger = logger.child({ module: "admin-users-vanity-url" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -75,7 +78,7 @@ export async function PUT(
       user: updatedUser,
     });
   } catch (error) {
-    console.error("Error updating vanity URL:", error);
+    adminUsersVanityUrlLogger.error({ err: String(error) }, "Error updating vanity URL:");
     return NextResponse.json(
       { error: "Failed to update vanity URL" },
       { status: 500 }
@@ -124,7 +127,7 @@ export async function GET(
 
     return NextResponse.json({ user });
   } catch (error) {
-    console.error("Error fetching user vanity URL:", error);
+    adminUsersVanityUrlLogger.error({ err: String(error) }, "Error fetching user vanity URL:");
     return NextResponse.json(
       { error: "Failed to fetch user" },
       { status: 500 }

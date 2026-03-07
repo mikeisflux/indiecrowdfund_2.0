@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const cronCleanupProjectsLogger = logger.child({ module: "cron-cleanup-projects" });
 import { db } from "@/lib/db";
 
 // Cron job to clean up unused draft projects after 90 days
@@ -58,10 +61,10 @@ export async function GET(req: NextRequest) {
     });
 
     // Log the cleanup for audit purposes
-    console.log(`[Cron] Project Sanitizer: Cleaned up ${result.count} unused draft projects`, {
+    cronCleanupProjectsLogger.info({ data: {
       projectIds: projectsToCleanup.map(p => p.id),
       projectSlugs: projectsToCleanup.map(p => p.slug),
-    });
+    } }, `[Cron] Project Sanitizer: Cleaned up ${result.count} unused draft projects`);
 
     return NextResponse.json({
       success: true,
@@ -75,7 +78,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("[Cron] Project Sanitizer Error:", error);
+    cronCleanupProjectsLogger.error({ err: String(error) }, "[Cron] Project Sanitizer Error:");
     return NextResponse.json(
       { error: "Failed to clean up projects" },
       { status: 500 }
@@ -131,9 +134,9 @@ export async function POST(_req: NextRequest) {
       },
     });
 
-    console.log(`[Admin] Project Sanitizer: Manually cleaned up ${result.count} unused draft projects by ${session.user.email}`, {
+    cronCleanupProjectsLogger.info({ data: {
       projectIds: projectsToCleanup.map(p => p.id),
-    });
+    } }, `[Admin] Project Sanitizer: Manually cleaned up ${result.count} unused draft projects by ${session.user.email}`);
 
     return NextResponse.json({
       success: true,
@@ -147,7 +150,7 @@ export async function POST(_req: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("[Admin] Project Sanitizer Error:", error);
+    cronCleanupProjectsLogger.error({ err: String(error) }, "[Admin] Project Sanitizer Error:");
     return NextResponse.json(
       { error: "Failed to clean up projects" },
       { status: 500 }

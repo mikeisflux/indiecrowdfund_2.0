@@ -7,6 +7,11 @@ import {
 } from "./email-templates";
 import { APP_NAME, APP_URL } from "./types";
 
+import { logger } from "@/lib/logger";
+
+const notificationsMarketplaceNotificationsLogger = logger.child({ module: "notifications-marketplace-notifications" });
+
+
 /**
  * Notify buyer when their marketplace purchase is confirmed
  */
@@ -57,9 +62,9 @@ export async function notifyMarketplacePurchase(
       paymentMethod,
       purchase.book.coverImageUrl || purchase.book.pdfCoverImageUrl
     );
-    console.log(`Sent marketplace purchase email to ${purchase.buyer.email} for purchase ${purchaseId}`);
+    notificationsMarketplaceNotificationsLogger.info(`Sent marketplace purchase email to ${purchase.buyer.email} for purchase ${purchaseId}`);
   } catch (error) {
-    console.error(`Failed to send marketplace purchase email for ${purchaseId}:`, error);
+    notificationsMarketplaceNotificationsLogger.error({ err: error }, `Failed to send marketplace purchase email for ${purchaseId}:`);
   }
 }
 
@@ -117,9 +122,9 @@ export async function notifyMarketplaceSale(
       paymentMethod,
       buyerName
     );
-    console.log(`Sent marketplace sale email to ${purchase.book.creator.email} for purchase ${purchaseId}`);
+    notificationsMarketplaceNotificationsLogger.info(`Sent marketplace sale email to ${purchase.book.creator.email} for purchase ${purchaseId}`);
   } catch (error) {
-    console.error(`Failed to send marketplace sale email for ${purchaseId}:`, error);
+    notificationsMarketplaceNotificationsLogger.error({ err: error }, `Failed to send marketplace sale email for ${purchaseId}:`);
   }
 }
 
@@ -262,8 +267,8 @@ export async function notifyMarketplaceBookReview(
         `,
       });
     }
-    console.log(`Sent marketplace book review email to ${book.creator.email} for book ${bookId}`);
+    notificationsMarketplaceNotificationsLogger.info(`Sent marketplace book review email to ${book.creator.email} for book ${bookId}`);
   } catch (error) {
-    console.error(`Failed to send marketplace book review email for ${bookId}:`, error);
+    notificationsMarketplaceNotificationsLogger.error({ err: error }, `Failed to send marketplace book review email for ${bookId}:`);
   }
 }

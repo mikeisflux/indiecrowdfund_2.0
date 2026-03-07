@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const authSessionLogger = logger.child({ module: "auth-session" });
 import { validateSession } from "@/lib/auth/session";
 
 // This route uses cookies and must be dynamic
@@ -14,7 +17,7 @@ export async function GET() {
 
     return NextResponse.json(session);
   } catch (error) {
-    console.error("Error fetching session:", error);
+    authSessionLogger.error({ err: String(error) }, "Error fetching session:");
     return NextResponse.json({ user: null });
   }
 }

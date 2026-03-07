@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMailboxesLogger = logger.child({ module: "admin-mailboxes" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -108,7 +111,7 @@ export async function GET() {
 
     return NextResponse.json({ mailboxes: mailboxesWithCounts });
   } catch (error) {
-    console.error("Error fetching mailboxes:", error);
+    adminMailboxesLogger.error({ err: String(error) }, "Error fetching mailboxes:");
     return NextResponse.json(
       { error: "Failed to fetch mailboxes" },
       { status: 500 }
@@ -193,7 +196,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error creating mailbox:", error);
+    adminMailboxesLogger.error({ err: String(error) }, "Error creating mailbox:");
     return NextResponse.json(
       { error: "Failed to create mailbox" },
       { status: 500 }

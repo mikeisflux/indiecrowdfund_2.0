@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const uploadLogger = logger.child({ module: "upload" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
@@ -191,7 +194,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (dbError) {
       // Log but don't fail - the file was still uploaded successfully
-      console.error("Error creating MediaFile record:", dbError);
+      uploadLogger.error({ err: String(dbError) }, "Error creating MediaFile record:");
     }
 
     return NextResponse.json({
@@ -200,7 +203,7 @@ export async function POST(req: NextRequest) {
       filename,
     });
   } catch (error) {
-    console.error("Upload error:", error);
+    uploadLogger.error({ err: String(error) }, "Upload error:");
     return NextResponse.json(
       { error: "Failed to upload file" },
       { status: 500 }

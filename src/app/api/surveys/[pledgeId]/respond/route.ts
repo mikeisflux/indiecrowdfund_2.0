@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const surveysRespondLogger = logger.child({ module: "surveys-respond" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -236,7 +239,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching survey:", error);
+    surveysRespondLogger.error({ err: String(error) }, "Error fetching survey:");
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: `Failed to fetch survey: ${errorMessage}` },
@@ -496,7 +499,7 @@ export async function POST(
           );
         }
       } catch (emailError) {
-        console.error("Failed to send survey completion email:", emailError);
+        surveysRespondLogger.error({ err: String(emailError) }, "Failed to send survey completion email:");
         // Don't fail the survey submission if email fails
       }
     }
@@ -511,7 +514,7 @@ export async function POST(
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("Error submitting survey response:", error);
+    surveysRespondLogger.error({ err: String(error) }, "Error submitting survey response:");
     return NextResponse.json(
       { error: "Failed to submit survey response" },
       { status: 500 }

@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkEmailAccess } from "@/lib/auth/email-access";
+import { logger } from "@/lib/logger";
+
+const campaignLogger = logger.child({ module: "campaigns" });
 
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Server-side email access control
+    const emailAccess = await checkEmailAccess(session.user.id);
+    if (!emailAccess.allowed) {
+      return NextResponse.json({ error: emailAccess.reason }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -28,7 +38,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ campaigns });
   } catch (error) {
-    console.error("Campaigns GET error:", error);
+    campaignLogger.error({ err: error instanceof Error ? error.message : String(error) }, "Campaigns GET error");
     return NextResponse.json({ error: "Failed to fetch campaigns" }, { status: 500 });
   }
 }
@@ -38,6 +48,12 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Server-side email access control for all campaign operations
+    const emailAccess = await checkEmailAccess(session.user.id);
+    if (!emailAccess.allowed) {
+      return NextResponse.json({ error: emailAccess.reason }, { status: 403 });
     }
 
     const body = await req.json();
@@ -103,30 +119,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "send" && campaignId) {
-      // Server-side email access control: only SUPER_ADMIN or users with approved projects can send
-      const user = await db.user.findUnique({
-        where: { id: session.user.id },
-        select: { role: true },
-      });
-
-      if (user?.role !== "SUPER_ADMIN") {
-        const approvedProject = await db.project.findFirst({
-          where: {
-            OR: [
-              { creatorId: session.user.id },
-              { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
-            ],
-            prelaunchApproved: true,
-          },
-        });
-
-        if (!approvedProject) {
-          return NextResponse.json(
-            { error: "Email access requires an approved project or prelaunch page" },
-            { status: 403 }
-          );
-        }
-      }
+      // Email access already validated at top of handler
 
       // Get campaign
       const campaign = await db.emailCampaign.findUnique({
@@ -173,7 +166,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    console.error("Campaigns POST error:", error);
+    campaignLogger.error({ err: error instanceof Error ? error.message : String(error) }, "Campaigns POST error");
     return NextResponse.json({ error: "Failed to process campaign request" }, { status: 500 });
   }
 }
@@ -217,7 +210,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Campaigns DELETE error:", error);
+    campaignLogger.error({ err: error instanceof Error ? error.message : String(error) }, "Campaigns DELETE error");
     return NextResponse.json({ error: "Failed to delete campaign" }, { status: 500 });
   }
 }

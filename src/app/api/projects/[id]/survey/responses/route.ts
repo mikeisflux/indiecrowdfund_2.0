@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsSurveyResponsesLogger = logger.child({ module: "projects-survey-responses" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -144,7 +147,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching survey responses:", error);
+    projectsSurveyResponsesLogger.error({ err: String(error) }, "Error fetching survey responses:");
     return NextResponse.json(
       { error: "Failed to fetch survey responses" },
       { status: 500 }
@@ -356,7 +359,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Error exporting survey responses:", error);
+    projectsSurveyResponsesLogger.error({ err: String(error) }, "Error exporting survey responses:");
     return NextResponse.json(
       { error: "Failed to export survey responses" },
       { status: 500 }

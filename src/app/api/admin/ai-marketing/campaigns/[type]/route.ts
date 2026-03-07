@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingCampaignsLogger = logger.child({ module: "admin-ai-marketing-campaigns" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateCampaignContent } from "@/lib/ai";
@@ -258,7 +261,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching campaign type:", error);
+    adminAiMarketingCampaignsLogger.error({ err: String(error) }, "Error fetching campaign type:");
     return NextResponse.json(
       { error: "Failed to fetch campaign configuration" },
       { status: 500 }
@@ -613,7 +616,7 @@ export async function POST(
       hasOptimalSchedule: !!optimalSchedule,
     });
   } catch (error) {
-    console.error("Error creating campaign:", error);
+    adminAiMarketingCampaignsLogger.error({ err: String(error) }, "Error creating campaign:");
     return NextResponse.json(
       { error: "Failed to create campaign" },
       { status: 500 }

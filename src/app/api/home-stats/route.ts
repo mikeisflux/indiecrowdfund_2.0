@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const homeStatsLogger = logger.child({ module: "home-stats" });
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -86,7 +89,7 @@ export async function GET() {
       headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
     });
   } catch (error) {
-    console.error("Error fetching home stats:", error);
+    homeStatsLogger.error({ err: String(error) }, "Error fetching home stats:");
     return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
   }
 }

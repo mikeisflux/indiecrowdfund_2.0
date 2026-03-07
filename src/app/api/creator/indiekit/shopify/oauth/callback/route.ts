@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitShopifyOauthCallbackLogger = logger.child({ module: "creator-indiekit-shopify-oauth-callback" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import crypto from "crypto";
@@ -51,7 +54,7 @@ export async function GET(req: NextRequest) {
     const error = searchParams.get("error");
     if (error) {
       const errorDesc = searchParams.get("error_description") || "Authorization failed";
-      console.error("Shopify OAuth error:", error, errorDesc);
+      creatorIndiekitShopifyOauthCallbackLogger.error({ err: String(error, errorDesc) }, "Shopify OAuth error:");
       return NextResponse.redirect(
         new URL(`/dashboard/indiekit?error=${encodeURIComponent(errorDesc)}`, req.url)
       );
@@ -66,7 +69,7 @@ export async function GET(req: NextRequest) {
     // Verify state parameter
     const stateResult = verifySignedState(state);
     if (!stateResult.valid || !stateResult.data) {
-      console.error("Invalid or expired state parameter");
+      creatorIndiekitShopifyOauthCallbackLogger.error("Invalid or expired state parameter");
       return NextResponse.redirect(
         new URL("/dashboard/indiekit?error=Invalid or expired authorization request", req.url)
       );
@@ -76,7 +79,7 @@ export async function GET(req: NextRequest) {
 
     // Verify user matches
     if (userId !== session.user.id) {
-      console.error("User mismatch in OAuth callback");
+      creatorIndiekitShopifyOauthCallbackLogger.error("User mismatch in OAuth callback");
       return NextResponse.redirect(
         new URL("/dashboard/indiekit?error=Authorization mismatch", req.url)
       );
@@ -84,7 +87,7 @@ export async function GET(req: NextRequest) {
 
     // Verify shop matches
     if (shop !== shopDomain) {
-      console.error("Shop mismatch in OAuth callback:", shop, "vs", shopDomain);
+      creatorIndiekitShopifyOauthCallbackLogger.error({ err: String(shop, "vs", shopDomain) }, "Shop mismatch in OAuth callback:");
       return NextResponse.redirect(
         new URL("/dashboard/indiekit?error=Shop mismatch", req.url)
       );
@@ -100,7 +103,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user?.shopifyApiKey || !user?.shopifyApiSecret) {
-      console.error("Missing Shopify API credentials for user:", session.user.id);
+      creatorIndiekitShopifyOauthCallbackLogger.error({ err: String(session.user.id) }, "Missing Shopify API credentials for user:");
       return NextResponse.redirect(
         new URL("/dashboard/indiekit?error=Shopify API credentials not configured. Please add them in the Shopify API Key settings.", req.url)
       );
@@ -135,7 +138,7 @@ export async function GET(req: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error("Failed to exchange code for token:", errorText);
+      creatorIndiekitShopifyOauthCallbackLogger.error({ err: String(errorText) }, "Failed to exchange code for token:");
       return NextResponse.redirect(
         new URL("/dashboard/indiekit?error=Failed to complete authorization", req.url)
       );
@@ -176,7 +179,7 @@ export async function GET(req: NextRequest) {
       new URL(`/dashboard/indiekit?shopify=connected&shop=${encodeURIComponent(shopInfo.name)}`, appUrl)
     );
   } catch (error) {
-    console.error("Shopify OAuth callback error:", error);
+    creatorIndiekitShopifyOauthCallbackLogger.error({ err: String(error) }, "Shopify OAuth callback error:");
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.url;
     return NextResponse.redirect(
       new URL("/dashboard/indiekit?error=Failed to complete Shopify authorization", appUrl)

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminEmailLogger = logger.child({ module: "admin-email" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
@@ -115,7 +118,7 @@ export async function GET(req: NextRequest) {
       }))
     });
   } catch (error) {
-    console.error("Error fetching emails:", error);
+    adminEmailLogger.error({ err: String(error) }, "Error fetching emails:");
     return NextResponse.json(
       { error: "Failed to fetch email data" },
       { status: 500 }
@@ -248,7 +251,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, campaign });
   } catch (error) {
-    console.error("Error creating email:", error);
+    adminEmailLogger.error({ err: String(error) }, "Error creating email:");
     return NextResponse.json(
       { error: "Failed to create email" },
       { status: 500 }
@@ -335,7 +338,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, campaign });
   } catch (error) {
-    console.error("Error updating email:", error);
+    adminEmailLogger.error({ err: String(error) }, "Error updating email:");
     return NextResponse.json(
       { error: "Failed to update email" },
       { status: 500 }
@@ -370,7 +373,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting email:", error);
+    adminEmailLogger.error({ err: String(error) }, "Error deleting email:");
     return NextResponse.json(
       { error: "Failed to delete email" },
       { status: 500 }

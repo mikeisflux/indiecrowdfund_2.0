@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsItemsLogger = logger.child({ module: "projects-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -58,7 +61,7 @@ export async function POST(
       item: created,
     });
   } catch (error) {
-    console.error("Create item error:", error);
+    projectsItemsLogger.error({ err: String(error) }, "Create item error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -127,7 +130,7 @@ export async function PATCH(
       item: updated,
     });
   } catch (error) {
-    console.error("Update item error:", error);
+    projectsItemsLogger.error({ err: String(error) }, "Update item error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -188,7 +191,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete item error:", error);
+    projectsItemsLogger.error({ err: String(error) }, "Delete item error:");
     return NextResponse.json(
       { error: "Failed to delete item" },
       { status: 500 }
@@ -238,7 +241,7 @@ export async function GET(
 
     return NextResponse.json({ items: mappedItems });
   } catch (error) {
-    console.error("Get items error:", error);
+    projectsItemsLogger.error({ err: String(error) }, "Get items error:");
     return NextResponse.json(
       { error: "Failed to fetch items" },
       { status: 500 }

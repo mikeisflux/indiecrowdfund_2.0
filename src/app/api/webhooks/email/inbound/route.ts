@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getR2Storage, generateEmailAttachmentKey } from "@/lib/r2";
 
+import { logger } from "@/lib/logger";
+
+const webhooksEmailInboundLogger = logger.child({ module: "webhooks-email-inbound" });
+
+
 export const dynamic = "force-dynamic";
 
 // Disable body parsing - we need raw multipart/form-data
@@ -67,7 +72,7 @@ async function findCreatorByEmail(toEmail: string) {
     });
 
     if (creator) {
-      console.log(`[Inbound Email] Found creator ${creator.name} for ${toEmail}`);
+      webhooksEmailInboundLogger.info(`[Inbound Email] Found creator ${creator.name} for ${toEmail}`);
       return creator;
     }
   }
@@ -137,7 +142,7 @@ export async function POST(request: NextRequest) {
           formFields[key] = `[File: ${value.name}]`;
         }
       });
-      console.log("[Inbound Email] Received form fields:", Object.keys(formFields).join(", "));
+      webhooksEmailInboundLogger.info({ data: Object.keys(formFields).join(", ") }, "[Inbound Email] Received form fields:");
 
       // Mailgun uses "recipient" and "sender", SendGrid uses "to" and "from"
       const toRaw = (formData.get("recipient") as string) || (formData.get("to") as string) || "";
@@ -186,9 +191,9 @@ export async function POST(request: NextRequest) {
               size: attachment.size,
               data: Buffer.from(arrayBuffer),
             });
-            console.log(`[Inbound Email] Found attachment: ${attachment.name} (${attachment.size} bytes)`);
+            webhooksEmailInboundLogger.info(`[Inbound Email] Found attachment: ${attachment.name} (${attachment.size} bytes)`);
           } catch (err) {
-            console.error(`[Inbound Email] Failed to read attachment ${i}:`, err);
+            webhooksEmailInboundLogger.error({ err: err }, `[Inbound Email] Failed to read attachment ${i}:`);
           }
         }
       }
@@ -208,7 +213,7 @@ export async function POST(request: NextRequest) {
       // Parse JSON
       emailData = await request.json();
     } else {
-      console.error("Unsupported content type for inbound email:", contentType);
+      webhooksEmailInboundLogger.error({ err: contentType }, "Unsupported content type for inbound email:");
       return NextResponse.json(
         { error: "Unsupported content type" },
         { status: 400 }
@@ -231,7 +236,7 @@ export async function POST(request: NextRequest) {
 
     if (creator) {
       // This email is for a creator - store as a Message
-      console.log(`[Inbound Email] Routing to creator ${creator.name} (${creator.id})`);
+      webhooksEmailInboundLogger.info(`[Inbound Email] Routing to creator ${creator.name} (${creator.id})`);
 
       // Try to find the sender as a user in our system
       const sender = await db.user.findUnique({
@@ -261,7 +266,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log(`[Inbound Email] Created message ${message.id} for creator ${creator.id}`);
+      webhooksEmailInboundLogger.info(`[Inbound Email] Created message ${message.id} for creator ${creator.id}`);
 
       return NextResponse.json({
         success: true,
@@ -276,7 +281,7 @@ export async function POST(request: NextRequest) {
     const mailbox = await findMailboxForEmail(recipientEmail);
 
     if (!mailbox) {
-      console.warn("No mailbox found for inbound email to:", recipientEmail);
+      webhooksEmailInboundLogger.warn({ data: recipientEmail }, "No mailbox found for inbound email to:");
       // Still return 200 to prevent SendGrid from retrying
       return NextResponse.json({
         success: false,
@@ -335,13 +340,13 @@ export async function POST(request: NextRequest) {
               r2Key: r2Key,
             });
 
-            console.log(`[Inbound Email] Uploaded attachment to R2: ${attachment.filename}`);
+            webhooksEmailInboundLogger.info(`[Inbound Email] Uploaded attachment to R2: ${attachment.filename}`);
           } catch (err) {
-            console.error(`[Inbound Email] Failed to upload attachment ${attachment.filename}:`, err);
+            webhooksEmailInboundLogger.error({ err: err }, `[Inbound Email] Failed to upload attachment ${attachment.filename}:`);
           }
         }
       } else {
-        console.warn("[Inbound Email] R2 storage not configured, skipping attachments");
+        webhooksEmailInboundLogger.warn("[Inbound Email] R2 storage not configured, skipping attachments");
       }
     }
 
@@ -379,7 +384,7 @@ export async function POST(request: NextRequest) {
       mailboxName: mailbox.name,
     });
   } catch (error) {
-    console.error("Error processing inbound email:", error);
+    webhooksEmailInboundLogger.error({ err: error }, "Error processing inbound email:");
     // Return 200 anyway to prevent SendGrid from retrying on our errors
     return NextResponse.json({
       success: false,

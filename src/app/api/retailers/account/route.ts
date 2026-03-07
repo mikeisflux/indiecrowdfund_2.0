@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const retailersAccountLogger = logger.child({ module: "retailers-account" });
 import { db } from "@/lib/db";
 import { authenticateRetailerRequest } from "@/lib/retailer-auth";
 
@@ -91,7 +94,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error fetching retailer account:", error);
+    retailersAccountLogger.error({ err: String(error) }, "Error fetching retailer account:");
     return NextResponse.json(
       { error: "Failed to fetch account" },
       { status: 500 }
@@ -215,7 +218,7 @@ export async function PATCH(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error updating retailer account:", error);
+    retailersAccountLogger.error({ err: String(error) }, "Error updating retailer account:");
     return NextResponse.json(
       { error: "Failed to update account" },
       { status: 500 }

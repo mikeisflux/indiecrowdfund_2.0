@@ -2,6 +2,11 @@ import { db } from "@/lib/db";
 import { createNotification } from "./core";
 import { sendCommentReplyEmail } from "./email-templates";
 
+import { logger } from "@/lib/logger";
+
+const notificationsSocialNotificationsLogger = logger.child({ module: "notifications-social-notifications" });
+
+
 /**
  * Notify user when they receive a message
  */
@@ -73,10 +78,10 @@ export async function notifyCommentReply(
         projectUrlPath || `/projects/${projectSlug}`,
         replyContent
       );
-      console.log(`Sent comment reply email to ${user.email}`);
+      notificationsSocialNotificationsLogger.info(`Sent comment reply email to ${user.email}`);
     }
   } catch (error) {
-    console.error("Failed to send comment reply email:", error);
+    notificationsSocialNotificationsLogger.error({ err: error }, "Failed to send comment reply email:");
     // Don't throw - in-app notification was still created
   }
 }

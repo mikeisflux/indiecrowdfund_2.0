@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerCollectionsLogger = logger.child({ module: "backer-collections" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -86,7 +89,7 @@ export async function GET() {
       totalProjects: collections.reduce((sum: number, c: typeof collections[0]) => sum + c.projects.length, 0),
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching collections:", error);
+    backerCollectionsLogger.error({ err: String(error) }, "Error fetching collections:");
     return NextResponse.json(
       { error: "Failed to fetch collections" },
       { status: 500, headers: corsHeaders }
@@ -194,7 +197,7 @@ export async function POST(request: NextRequest) {
       { status: 400, headers: corsHeaders }
     );
   } catch (error) {
-    console.error("Error with collection operation:", error);
+    backerCollectionsLogger.error({ err: String(error) }, "Error with collection operation:");
     return NextResponse.json(
       { error: "Operation failed" },
       { status: 500, headers: corsHeaders }

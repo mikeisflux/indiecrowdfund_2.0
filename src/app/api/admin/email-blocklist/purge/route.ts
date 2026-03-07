@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminEmailBlocklistPurgeLogger = logger.child({ module: "admin-email-blocklist-purge" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -56,7 +59,7 @@ export async function DELETE() {
       restoredCount = restored.count;
     }
 
-    console.log(`[Blocklist Purge] Admin ${admin.id} removed ALL ${result.count} blocklist entries, restored ${restoredCount} subscribers`);
+    adminEmailBlocklistPurgeLogger.info(`[Blocklist Purge] Admin ${admin.id} removed ALL ${result.count} blocklist entries, restored ${restoredCount} subscribers`);
 
     return NextResponse.json({
       purged: result.count,
@@ -64,7 +67,7 @@ export async function DELETE() {
       message: `Removed all ${result.count} blocklist entries and restored ${restoredCount} subscriber records`,
     });
   } catch (error) {
-    console.error("Error removing all blocklist entries:", error);
+    adminEmailBlocklistPurgeLogger.error({ err: String(error) }, "Error removing all blocklist entries:");
     return NextResponse.json(
       { error: "Failed to remove blocklist entries" },
       { status: 500 }
@@ -135,7 +138,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`[Blocklist Purge] Admin ${admin.id} purged ${result.count} entries for domains: ${normalizedDomains.join(", ")}`);
+    adminEmailBlocklistPurgeLogger.info(`[Blocklist Purge] Admin ${admin.id} purged ${result.count} entries for domains: ${normalizedDomains.join(", ")}`);
 
     return NextResponse.json({
       purged: result.count,
@@ -144,7 +147,7 @@ export async function POST(request: NextRequest) {
       message: `Purged ${result.count} webhook-added blocklist entries and restored ${restoredSubscribers.count} subscriber records`,
     });
   } catch (error) {
-    console.error("Error purging blocklist:", error);
+    adminEmailBlocklistPurgeLogger.error({ err: String(error) }, "Error purging blocklist:");
     return NextResponse.json(
       { error: "Failed to purge blocklist entries" },
       { status: 500 }

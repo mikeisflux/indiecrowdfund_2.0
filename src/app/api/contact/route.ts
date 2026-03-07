@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const contactLogger = logger.child({ module: "contact" });
 import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { db } from "@/lib/db";
@@ -79,7 +82,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!result.success) {
-      console.error("Failed to send contact email:", result.error);
+      contactLogger.error({ err: String(result.error) }, "Failed to send contact email:");
       return NextResponse.json(
         { error: "Failed to send message. Please try again later." },
         { status: 500 }
@@ -106,7 +109,7 @@ export async function POST(req: NextRequest) {
       message: "Your message has been sent successfully.",
     });
   } catch (error) {
-    console.error("Contact form error:", error);
+    contactLogger.error({ err: String(error) }, "Contact form error:");
 
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');

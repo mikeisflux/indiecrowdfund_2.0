@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const lcsLocatorLogger = logger.child({ module: "lcs-locator" });
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -102,7 +105,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching comic shops:", error);
+    lcsLocatorLogger.error({ err: String(error) }, "Error fetching comic shops:");
     return NextResponse.json(
       { error: "Failed to fetch comic shops" },
       { status: 500 }

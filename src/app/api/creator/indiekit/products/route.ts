@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitProductsLogger = logger.child({ module: "creator-indiekit-products" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -102,7 +105,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ products: formattedProducts });
   } catch (error) {
-    console.error("IndieKit products fetch error:", error);
+    creatorIndiekitProductsLogger.error({ err: String(error) }, "IndieKit products fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch products" },
       { status: 500 }
@@ -198,7 +201,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("IndieKit product create error:", error);
+    creatorIndiekitProductsLogger.error({ err: String(error) }, "IndieKit product create error:");
     return NextResponse.json(
       { error: "Failed to create product" },
       { status: 500 }
@@ -285,7 +288,7 @@ export async function PATCH(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("IndieKit product update error:", error);
+    creatorIndiekitProductsLogger.error({ err: String(error) }, "IndieKit product update error:");
     return NextResponse.json(
       { error: "Failed to update product" },
       { status: 500 }
@@ -337,7 +340,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("IndieKit product delete error:", error);
+    creatorIndiekitProductsLogger.error({ err: String(error) }, "IndieKit product delete error:");
     return NextResponse.json(
       { error: "Failed to delete product" },
       { status: 500 }

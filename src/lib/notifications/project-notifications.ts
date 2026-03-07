@@ -8,6 +8,11 @@ import {
 } from "./email-templates";
 import type { NotificationType } from "./types";
 
+import { logger } from "@/lib/logger";
+
+const notificationsProjectNotificationsLogger = logger.child({ module: "notifications-project-notifications" });
+
+
 /**
  * Notify backers when a project is funded
  */
@@ -71,7 +76,7 @@ export async function notifyProjectFunded(projectId: string) {
     }
 
     if (uniqueEmails.length > 0) {
-      console.log(`Sent project funded emails to ${uniqueEmails.length} backers for project: ${project.title}`);
+      notificationsProjectNotificationsLogger.info(`Sent project funded emails to ${uniqueEmails.length} backers for project: ${project.title}`);
     }
   }
 }
@@ -175,7 +180,7 @@ export async function notifyProjectLaunched(projectId: string) {
 
   // Log the email sends
   if (uniqueEmails.length > 0) {
-    console.log(`Sent project launch emails to ${uniqueEmails.length} followers for project: ${project.title}`);
+    notificationsProjectNotificationsLogger.info(`Sent project launch emails to ${uniqueEmails.length} followers for project: ${project.title}`);
   }
 }
 
@@ -240,7 +245,7 @@ export async function notifyProjectUpdate(
   const projectUpdateEnabled = await isEmailTypeEnabled("projectUpdate");
 
   if (!projectUpdateEnabled) {
-    console.log(`Project update notifications are disabled in settings`);
+    notificationsProjectNotificationsLogger.info(`Project update notifications are disabled in settings`);
     return;
   }
 
@@ -287,7 +292,7 @@ export async function notifyProjectUpdate(
   }
 
   if (uniqueEmails.length > 0) {
-    console.log(`Sent project update emails to ${uniqueEmails.length} users for project: ${project.title}`);
+    notificationsProjectNotificationsLogger.info(`Sent project update emails to ${uniqueEmails.length} users for project: ${project.title}`);
   }
 }
 

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
 import { db } from "@/lib/db";
 import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
 
@@ -36,7 +39,7 @@ async function syncPaymentMethodsFromStripe(projectId: string) {
       });
 
       if (currentPledge?.status !== "PENDING") {
-        console.log(`[Cron Sync] Skipping pledge ${pledge.id} - status changed to ${currentPledge?.status}`);
+        cronProcessFundedCampaignsLogger.info(`[Cron Sync] Skipping pledge ${pledge.id} - status changed to ${currentPledge?.status}`);
         continue;
       }
 
@@ -52,11 +55,11 @@ async function syncPaymentMethodsFromStripe(projectId: string) {
         try {
           const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
           if (!pm.customer) {
-            console.log(`[Cron Sync] Skipping pledge ${pledge.id} - payment method ${paymentMethodId} is detached`);
+            cronProcessFundedCampaignsLogger.info(`[Cron Sync] Skipping pledge ${pledge.id} - payment method ${paymentMethodId} is detached`);
             continue;
           }
         } catch {
-          console.log(`[Cron Sync] Skipping pledge ${pledge.id} - payment method ${paymentMethodId} not found`);
+          cronProcessFundedCampaignsLogger.info(`[Cron Sync] Skipping pledge ${pledge.id} - payment method ${paymentMethodId} not found`);
           continue;
         }
 
@@ -66,10 +69,10 @@ async function syncPaymentMethodsFromStripe(projectId: string) {
         });
         synced++;
       } else if (setupIntent.status === "canceled") {
-        console.log(`[Cron Sync] SetupIntent ${pledge.stripeSetupIntentId} was cancelled - skipping`);
+        cronProcessFundedCampaignsLogger.info(`[Cron Sync] SetupIntent ${pledge.stripeSetupIntentId} was cancelled - skipping`);
       }
     } catch (error) {
-      console.warn(`[Cron Sync] Error syncing pledge ${pledge.id}:`, error);
+      cronProcessFundedCampaignsLogger.warn({ data: error }, `[Cron Sync] Error syncing pledge ${pledge.id}:`);
       // Ignore errors - will be retried next cron run
     }
   }
@@ -167,7 +170,7 @@ export async function GET(req: NextRequest) {
       const synced = await syncPaymentMethodsFromStripe(project.id);
       totalSynced += synced;
       if (synced > 0) {
-        console.log(`[Cron] Synced ${synced} payment methods for "${project.title}"`);
+        cronProcessFundedCampaignsLogger.info(`[Cron] Synced ${synced} payment methods for "${project.title}"`);
       }
     }
 
@@ -210,14 +213,9 @@ export async function GET(req: NextRequest) {
         results.totalSuccessful += pledgeResults.successful;
         results.totalFailed += pledgeResults.failed;
 
-        console.log(
-          `[Cron] Processed funded campaign "${project.title}": ${pledgeResults.successful}/${pledgeResults.total} pledges charged`
-        );
+        cronProcessFundedCampaignsLogger.info(`[Cron] Processed funded campaign "${project.title}": ${pledgeResults.successful}/${pledgeResults.total} pledges charged`);
       } catch (error) {
-        console.error(
-          `[Cron] Error processing pledges for project ${project.id}:`,
-          error
-        );
+        cronProcessFundedCampaignsLogger.error({ err: error }, `[Cron] Error processing pledges for project ${project.id}:`);
         results.processed.push({
           projectId: project.id,
           projectTitle: project.title,
@@ -236,7 +234,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Process funded campaigns cron error:", error);
+    cronProcessFundedCampaignsLogger.error({ err: String(error) }, "Process funded campaigns cron error:");
     return NextResponse.json(
       { error: "Failed to process funded campaigns" },
       { status: 500 }

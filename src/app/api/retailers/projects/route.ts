@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const retailersProjectsLogger = logger.child({ module: "retailers-projects" });
 import { db } from "@/lib/db";
 import { authenticateRetailerRequest } from "@/lib/retailer-auth";
 
@@ -141,7 +144,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching retailer projects:", error);
+    retailersProjectsLogger.error({ err: String(error) }, "Error fetching retailer projects:");
     return NextResponse.json(
       { error: "Failed to fetch projects" },
       { status: 500 }

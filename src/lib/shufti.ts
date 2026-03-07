@@ -5,6 +5,11 @@
 
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const shuftiLogger = logger.child({ module: "shufti" });
+
+
 export interface ShuftiConfig {
   clientId: string;
   secretKey: string;
@@ -171,7 +176,7 @@ export class ShuftiService {
       });
 
       if (!response.ok) {
-        console.error("Shufti API error:", response.status, response.statusText);
+        shuftiLogger.error({ status: response.status, statusText: response.statusText }, "Shufti API error");
         return {
           success: false,
           error: `Verification service unavailable (${response.status})`,
@@ -204,7 +209,7 @@ export class ShuftiService {
         reference,
       };
     } catch (error) {
-      console.error("Shufti verification error:", error);
+      shuftiLogger.error({ err: error }, "Shufti verification error:");
       return {
         success: false,
         error: "Failed to create verification request",
@@ -227,7 +232,7 @@ export class ShuftiService {
       });
 
       if (!response.ok) {
-        console.error("Shufti status API error:", response.status, response.statusText);
+        shuftiLogger.error({ status: response.status, statusText: response.statusText }, "Shufti status API error");
         return {
           success: false,
           error: `Status check failed (${response.status})`,
@@ -242,7 +247,7 @@ export class ShuftiService {
         data,
       };
     } catch (error) {
-      console.error("Shufti status check error:", error);
+      shuftiLogger.error({ err: error }, "Shufti status check error:");
       return {
         success: false,
         error: "Failed to check verification status",
@@ -267,7 +272,7 @@ export class ShuftiService {
     });
 
     if (!verification) {
-      console.error("Verification record not found for reference:", reference);
+      shuftiLogger.error({ err: reference }, "Verification record not found for reference:");
       return { success: false };
     }
 
@@ -358,7 +363,7 @@ export class ShuftiService {
       });
 
       if (!response.ok) {
-        console.error("Shufti delete API error:", response.status, response.statusText);
+        shuftiLogger.error({ status: response.status, statusText: response.statusText }, "Shufti delete API error");
         return { success: false, error: `Delete request failed (${response.status})` };
       }
 
@@ -376,7 +381,7 @@ export class ShuftiService {
 
       return { success: true };
     } catch (error) {
-      console.error("Shufti delete error:", error);
+      shuftiLogger.error({ err: error }, "Shufti delete error:");
       return { success: false, error: "Failed to delete verification" };
     }
   }

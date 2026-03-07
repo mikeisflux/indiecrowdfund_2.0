@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorEmailThreadsLogger = logger.child({ module: "creator-email-threads" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -128,7 +131,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ threads });
   } catch (error) {
-    console.error("Error fetching email threads:", error);
+    creatorEmailThreadsLogger.error({ err: String(error) }, "Error fetching email threads:");
     return NextResponse.json(
       { error: "Failed to fetch threads" },
       { status: 500 }

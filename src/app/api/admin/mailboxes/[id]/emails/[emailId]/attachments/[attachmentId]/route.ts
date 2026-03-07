@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMailboxesAttachmentsLogger = logger.child({ module: "admin-mailboxes-attachments" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getR2Storage } from "@/lib/r2";
@@ -91,7 +94,7 @@ export async function GET(
     // Redirect to the presigned URL
     return NextResponse.redirect(downloadUrl);
   } catch (error) {
-    console.error("Error downloading attachment:", error);
+    adminMailboxesAttachmentsLogger.error({ err: String(error) }, "Error downloading attachment:");
     return NextResponse.json(
       { error: "Failed to download attachment" },
       { status: 500 }

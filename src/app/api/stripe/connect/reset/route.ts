@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const stripeConnectResetLogger = logger.child({ module: "stripe-connect-reset" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -31,7 +34,7 @@ export async function DELETE() {
       message: "Stripe account disconnected successfully",
     });
   } catch (error) {
-    console.error("Stripe reset error:", error);
+    stripeConnectResetLogger.error({ err: String(error) }, "Stripe reset error:");
     return NextResponse.json(
       { error: "Failed to reset Stripe connection" },
       { status: 500 }

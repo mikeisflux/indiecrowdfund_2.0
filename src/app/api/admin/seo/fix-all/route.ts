@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminSeoFixAllLogger = logger.child({ module: "admin-seo-fix-all" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { SEO_PAGE_DEFAULTS } from "@/lib/seo-defaults";
@@ -140,7 +143,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error in bulk SEO fix:", error);
+    adminSeoFixAllLogger.error({ err: String(error) }, "Error in bulk SEO fix:");
     return NextResponse.json(
       { error: "Failed to apply SEO fixes" },
       { status: 500 }

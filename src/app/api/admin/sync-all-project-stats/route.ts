@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminSyncAllProjectStatsLogger = logger.child({ module: "admin-sync-all-project-stats" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -103,9 +106,9 @@ export async function POST() {
       }
     }
 
-    console.log(`[Batch Sync] Updated ${updated}/${projects.length} projects`);
+    adminSyncAllProjectStatsLogger.info(`[Batch Sync] Updated ${updated}/${projects.length} projects`);
     changes.forEach(c => {
-      console.log(`  ${c.title}: $${c.oldAmount} → $${c.newAmount}, ${c.oldBackers} → ${c.newBackers} backers`);
+      adminSyncAllProjectStatsLogger.info(`  ${c.title}: $${c.oldAmount} → $${c.newAmount}, ${c.oldBackers} → ${c.newBackers} backers`);
     });
 
     return NextResponse.json({
@@ -115,7 +118,7 @@ export async function POST() {
       changes,
     });
   } catch (error) {
-    console.error("Batch sync error:", error);
+    adminSyncAllProjectStatsLogger.error({ err: String(error) }, "Batch sync error:");
     return NextResponse.json({ error: "Failed to sync" }, { status: 500 });
   }
 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminUsersLogger = logger.child({ module: "admin-users" });
 import { auth, BCRYPT_COST } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
@@ -141,7 +144,7 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error) {
-    console.error("Error fetching users:", error);
+    adminUsersLogger.error({ err: String(error) }, "Error fetching users:");
     return NextResponse.json(
       { error: "Failed to fetch users" },
       { status: 500 }
@@ -243,7 +246,7 @@ export async function PATCH(req: NextRequest) {
               });
             });
 
-            console.log(`Updated email from ${oldEmail} to ${newEmail} and cleaned up related records`);
+            adminUsersLogger.info(`Updated email from ${oldEmail} to ${newEmail} and cleaned up related records`);
           }
 
           updateData.email = newEmail;
@@ -311,7 +314,7 @@ export async function PATCH(req: NextRequest) {
             message: `Password reset email sent to ${user.email}`,
           });
         } catch (error) {
-          console.error("Error sending reset email:", error);
+          adminUsersLogger.error({ err: String(error) }, "Error sending reset email:");
           return NextResponse.json(
             { error: "Failed to send reset email" },
             { status: 500 }
@@ -397,7 +400,7 @@ export async function PATCH(req: NextRequest) {
               },
             });
           } catch (ipError) {
-            console.error("Error adding IP to blocklist:", ipError);
+            adminUsersLogger.error({ err: String(ipError) }, "Error adding IP to blocklist:");
             // Continue with user ban even if IP block fails
           }
         }
@@ -408,7 +411,7 @@ export async function PATCH(req: NextRequest) {
             where: { userId: userId },
           });
         } catch (sessionError) {
-          console.error("Error deleting user sessions:", sessionError);
+          adminUsersLogger.error({ err: String(sessionError) }, "Error deleting user sessions:");
         }
         break;
 
@@ -431,7 +434,7 @@ export async function PATCH(req: NextRequest) {
               where: { ipAddress: user.lastKnownIP },
             });
           } catch (ipError) {
-            console.error("Error removing IP from blocklist:", ipError);
+            adminUsersLogger.error({ err: String(ipError) }, "Error removing IP from blocklist:");
           }
         }
         break;
@@ -486,7 +489,7 @@ export async function PATCH(req: NextRequest) {
       user: updatedUser
     });
   } catch (error) {
-    console.error("Error updating user:", error);
+    adminUsersLogger.error({ err: String(error) }, "Error updating user:");
     return NextResponse.json(
       { error: "Failed to update user" },
       { status: 500 }
@@ -574,7 +577,7 @@ export async function POST(req: NextRequest) {
       message: "User created successfully"
     });
   } catch (error) {
-    console.error("Error creating user:", error);
+    adminUsersLogger.error({ err: String(error) }, "Error creating user:");
     return NextResponse.json(
       { error: "Failed to create user" },
       { status: 500 }
@@ -978,7 +981,7 @@ export async function DELETE(req: NextRequest) {
       message: `User and all associated data deleted successfully (${projectIds.length} project(s), ${bookIds.length} marketplace book(s))`
     });
   } catch (error) {
-    console.error("Error deleting user:", error);
+    adminUsersLogger.error({ err: String(error) }, "Error deleting user:");
     return NextResponse.json(
       { error: "Failed to delete user. Please check server logs for details." },
       { status: 500 }

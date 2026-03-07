@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsSimilarLogger = logger.child({ module: "projects-similar" });
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ projects: formattedProjects });
   } catch (error) {
-    console.error("Similar projects error:", error);
+    projectsSimilarLogger.error({ err: String(error) }, "Similar projects error:");
     return NextResponse.json({ projects: [] });
   }
 }

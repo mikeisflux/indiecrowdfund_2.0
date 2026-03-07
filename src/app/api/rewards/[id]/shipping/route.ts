@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const rewardsShippingLogger = logger.child({ module: "rewards-shipping" });
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
@@ -62,10 +65,10 @@ export async function PATCH(
     const body = await req.json();
     const data = updateShippingSchema.parse(body);
 
-    console.log("[Shipping API] Updating reward shipping:", {
+    rewardsShippingLogger.info({ data: {
       rewardId,
       ...data,
-    });
+    } }, "[Shipping API] Updating reward shipping:");
 
     // Update just the shipping fields
     const updated = await db.reward.update({
@@ -77,12 +80,12 @@ export async function PATCH(
       },
     });
 
-    console.log("[Shipping API] Updated reward shipping:", {
+    rewardsShippingLogger.info({ data: {
       rewardId: updated.id,
       shippingType: updated.shippingType,
       shippingCost: updated.shippingCost,
       shippingCountries: updated.shippingCountries,
-    });
+    } }, "[Shipping API] Updated reward shipping:");
 
     return NextResponse.json({
       success: true,
@@ -94,7 +97,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error("Update reward shipping error:", error);
+    rewardsShippingLogger.error({ err: String(error) }, "Update reward shipping error:");
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues.map(i => i.message).join(", ") }, { status: 400 });
     }
@@ -164,7 +167,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Get reward shipping error:", error);
+    rewardsShippingLogger.error({ err: String(error) }, "Get reward shipping error:");
     return NextResponse.json({ error: "Failed to get shipping" }, { status: 500 });
   }
 }

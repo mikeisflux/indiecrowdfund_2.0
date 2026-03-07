@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const retailersLogoutLogger = logger.child({ module: "retailers-logout" });
 import { cookies } from "next/headers";
 
 // POST - Retailer logout
@@ -12,7 +15,7 @@ export async function POST() {
       message: "Logged out successfully",
     });
   } catch (error) {
-    console.error("Error logging out retailer:", error);
+    retailersLogoutLogger.error({ err: String(error) }, "Error logging out retailer:");
     return NextResponse.json(
       { error: "Failed to logout" },
       { status: 500 }

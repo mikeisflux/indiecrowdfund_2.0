@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const pledgesAddItemsLogger = logger.child({ module: "pledges-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, assignBackerNumber } from "@/lib/payments/stripe";
@@ -42,13 +45,13 @@ async function healStuckPendingPledge(pledgeId: string, stripePaymentIntentId: s
         },
       });
 
-      console.log(`[AddItems] Self-healed pledge ${pledgeId} - updated to COMPLETED`);
+      pledgesAddItemsLogger.info(`[AddItems] Self-healed pledge ${pledgeId} - updated to COMPLETED`);
       return true;
     }
 
     return false;
   } catch (error) {
-    console.error(`[AddItems] Failed to heal pledge ${pledgeId}:`, error);
+    pledgesAddItemsLogger.error({ err: String(error) }, `[AddItems] Failed to heal pledge ${pledgeId}:`);
     return false;
   }
 }
@@ -246,7 +249,7 @@ export async function POST(
 
         const dcResult = await dcResponse.json();
         if (!dcResponse.ok || !dcResult.success) {
-          console.error("[AddItems DC] Failed to create payment intent:", dcResult);
+          pledgesAddItemsLogger.error({ err: String(dcResult) }, "[AddItems DC] Failed to create payment intent:");
           return NextResponse.json(
             { error: dcResult.error || "Failed to initialize payment" },
             { status: 502 }
@@ -274,7 +277,7 @@ export async function POST(
           },
         });
 
-        console.log(`[AddItems DC] Created payment intent for pledge ${pledgeId}: ${addonsWithQuantity.length} addons, $${amount}`);
+        pledgesAddItemsLogger.info(`[AddItems DC] Created payment intent for pledge ${pledgeId}: ${addonsWithQuantity.length} addons, $${amount}`);
 
         return NextResponse.json({
           paymentMethod: paymentProcessor,
@@ -285,7 +288,7 @@ export async function POST(
         });
       } catch (dcError) {
         const message = dcError instanceof Error ? dcError.message : "Unknown error";
-        console.error("[AddItems DC] API error:", message, dcError);
+        pledgesAddItemsLogger.error({ err: String(message, dcError) }, "[AddItems DC] API error:");
         return NextResponse.json(
           { error: `Failed to connect to payment processor: ${message}` },
           { status: 500 }
@@ -349,7 +352,7 @@ export async function POST(
       paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
     } catch (stripeError: unknown) {
       const message = stripeError instanceof Error ? stripeError.message : "Unknown Stripe error";
-      console.error(`[AddItems] Stripe PaymentIntent creation failed for pledge ${pledgeId}:`, message);
+      pledgesAddItemsLogger.error({ err: String(message) }, `[AddItems] Stripe PaymentIntent creation failed for pledge ${pledgeId}:`);
       return NextResponse.json(
         { error: `Payment creation failed: ${message}` },
         { status: 502 }
@@ -385,7 +388,7 @@ export async function POST(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error adding items to pledge:", message, error);
+    pledgesAddItemsLogger.error({ err: String(message, error) }, "Error adding items to pledge:");
     return NextResponse.json(
       { error: `Failed to add items to pledge: ${message}` },
       { status: 500 }

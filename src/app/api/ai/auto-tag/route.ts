@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const aiAutoTagLogger = logger.child({ module: "ai-auto-tag" });
 import { auth } from "@/lib/auth";
 import { autoTagProject } from "@/lib/ai/anthropic";
 
@@ -32,7 +35,7 @@ export async function POST(req: NextRequest) {
       ...result,
     });
   } catch (error) {
-    console.error("Auto-tag error:", error);
+    aiAutoTagLogger.error({ err: String(error) }, "Auto-tag error:");
     return NextResponse.json(
       { error: "Failed to auto-tag project" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMarketplaceTransactionsLogger = logger.child({ module: "admin-marketplace-transactions" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -161,7 +164,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching marketplace transactions:", error);
+    adminMarketplaceTransactionsLogger.error({ err: String(error) }, "Error fetching marketplace transactions:");
     return NextResponse.json(
       { error: "Failed to fetch transactions" },
       { status: 500 }

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const creatorProjectsForImportLogger = logger.child({ module: "creator-projects-for-import" });
+
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -17,14 +22,14 @@ export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      console.log("[projects-for-import] Unauthorized - no session");
+      creatorProjectsForImportLogger.info("[projects-for-import] Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const excludeProjectId = searchParams.get("exclude");
 
-    console.log("[projects-for-import] User:", session.user.id, "Exclude:", excludeProjectId);
+    creatorProjectsForImportLogger.info({ userId: session.user.id, excludeProjectId }, "Fetching projects for import");
 
     // Find projects where user is creator OR an accepted collaborator
     const projects = await db.project.findMany({
@@ -58,11 +63,11 @@ export async function GET(req: NextRequest) {
       take: 50,
     });
 
-    console.log("[projects-for-import] Found", projects.length, "projects:", projects.map(p => p.title));
+    creatorProjectsForImportLogger.info({ count: projects.length }, "Found projects for import");
 
     return NextResponse.json({ projects });
   } catch (error) {
-    console.error("[projects-for-import] Failed to fetch projects:", error);
+    creatorProjectsForImportLogger.error({ err: error }, "[projects-for-import] Failed to fetch projects:");
     return NextResponse.json(
       { error: "Failed to fetch projects" },
       { status: 500 }

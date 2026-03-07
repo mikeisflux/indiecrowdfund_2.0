@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMailboxesEmailsLogger = logger.child({ module: "admin-mailboxes-emails" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -60,11 +63,11 @@ export async function GET(
     }
 
     // Debug logging
-    console.log(`Fetching email ${emailId}:`, {
+    adminMailboxesEmailsLogger.info({ data: {
       subject: email.subject,
       bodyHtmlLength: email.bodyHtml?.length || 0,
       bodyTextLength: email.bodyText?.length || 0,
-    });
+    } }, `Fetching email ${emailId}:`);
 
     // Mark as read when viewing
     if (!email.isRead) {
@@ -81,7 +84,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching email:", error);
+    adminMailboxesEmailsLogger.error({ err: String(error) }, "Error fetching email:");
     return NextResponse.json(
       { error: "Failed to fetch email" },
       { status: 500 }
@@ -127,7 +130,7 @@ export async function PUT(
 
     return NextResponse.json({ email });
   } catch (error) {
-    console.error("Error updating email:", error);
+    adminMailboxesEmailsLogger.error({ err: String(error) }, "Error updating email:");
     return NextResponse.json(
       { error: "Failed to update email" },
       { status: 500 }
@@ -176,7 +179,7 @@ export async function DELETE(
       return NextResponse.json({ success: true, action: "trashed" });
     }
   } catch (error) {
-    console.error("Error deleting email:", error);
+    adminMailboxesEmailsLogger.error({ err: String(error) }, "Error deleting email:");
     return NextResponse.json(
       { error: "Failed to delete email" },
       { status: 500 }

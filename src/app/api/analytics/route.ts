@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const analyticsLogger = logger.child({ module: "analytics" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAnalytics } from "@/lib/tracking/index";
@@ -110,7 +113,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Get analytics error:", error);
+    analyticsLogger.error({ err: String(error) }, "Get analytics error:");
     return NextResponse.json(
       { error: "Failed to fetch analytics" },
       { status: 500 }

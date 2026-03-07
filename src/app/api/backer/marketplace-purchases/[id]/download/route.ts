@@ -3,6 +3,11 @@ import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getR2Storage } from "@/lib/r2";
 
+import { logger } from "@/lib/logger";
+
+const backerMarketplacePurchasesDownloadLogger = logger.child({ module: "backer-marketplace-purchases-download" });
+
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -18,12 +23,12 @@ export async function GET(
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      console.log("[Marketplace Download] Unauthorized - no session");
+      backerMarketplacePurchasesDownloadLogger.info("[Marketplace Download] Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    console.log("[Marketplace Download] Request for purchase:", id, "by user:", session.user.id);
+    backerMarketplacePurchasesDownloadLogger.info({ purchaseId: id, userId: session.user.id }, "Marketplace download request");
 
     // Find the purchase and verify ownership
     const purchase = await prisma.marketplacePurchase.findFirst({
@@ -45,14 +50,14 @@ export async function GET(
       },
     });
 
-    console.log("[Marketplace Download] Purchase found:", purchase ? "yes" : "no");
+    backerMarketplacePurchasesDownloadLogger.info({ data: purchase ? "yes" : "no" }, "[Marketplace Download] Purchase found:");
     if (purchase) {
-      console.log("[Marketplace Download] Purchase details:", {
+      backerMarketplacePurchasesDownloadLogger.info({ data: {
         purchaseId: purchase.id,
         bookId: purchase.book.id,
         bookTitle: purchase.book.title,
         hasPdfUrl: !!purchase.book.pdfFileUrl,
-      });
+      } }, "[Marketplace Download] Purchase details:");
     } else {
       // Try to find the purchase without the buyerId filter to debug
       const anyPurchase = await prisma.marketplacePurchase.findUnique({
@@ -63,7 +68,7 @@ export async function GET(
           status: true,
         },
       });
-      console.log("[Marketplace Download] Debug - purchase exists but not matching:", anyPurchase);
+      backerMarketplacePurchasesDownloadLogger.info({ data: anyPurchase }, "[Marketplace Download] Debug - purchase exists but not matching:");
     }
 
     if (!purchase) {
@@ -74,18 +79,18 @@ export async function GET(
     }
 
     if (!purchase.book.pdfFileUrl) {
-      console.log("[Marketplace Download] No PDF file URL for book");
+      backerMarketplacePurchasesDownloadLogger.info("[Marketplace Download] No PDF file URL for book");
       return NextResponse.json(
         { error: "PDF file not available" },
         { status: 404 }
       );
     }
 
-    console.log("[Marketplace Download] PDF file URL:", purchase.book.pdfFileUrl);
+    backerMarketplacePurchasesDownloadLogger.info({ data: purchase.book.pdfFileUrl }, "[Marketplace Download] PDF file URL:");
 
     // Decode URL-encoded paths (some books have %2F instead of /)
     const decodedPdfUrl = decodeURIComponent(purchase.book.pdfFileUrl);
-    console.log("[Marketplace Download] Decoded PDF URL:", decodedPdfUrl);
+    backerMarketplacePurchasesDownloadLogger.info({ data: decodedPdfUrl }, "[Marketplace Download] Decoded PDF URL:");
 
     // Extract R2 storage key from pdfFileUrl
     // pdfFileUrl is stored as "/api/r2/serve/marketplace/userId/pdfs/file.pdf"
@@ -100,12 +105,12 @@ export async function GET(
     }
 
     const r2Key = r2KeyMatch[1];
-    console.log("[Marketplace Download] R2 key:", r2Key);
+    backerMarketplacePurchasesDownloadLogger.info({ data: r2Key }, "[Marketplace Download] R2 key:");
 
     // Get R2 storage and generate presigned URL
     const r2 = await getR2Storage();
     if (!r2) {
-      console.log("[Marketplace Download] R2 storage not configured");
+      backerMarketplacePurchasesDownloadLogger.info("[Marketplace Download] R2 storage not configured");
       return NextResponse.json(
         { error: "Storage not configured" },
         { status: 500 }
@@ -113,9 +118,9 @@ export async function GET(
     }
 
     // Check if file exists - try decoded path first, then original (URL-encoded) path
-    console.log("[Marketplace Download] Checking if file exists in R2...");
+    backerMarketplacePurchasesDownloadLogger.info("[Marketplace Download] Checking if file exists in R2...");
     let exists = await r2.fileExists(r2Key);
-    console.log("[Marketplace Download] File exists (decoded path):", exists);
+    backerMarketplacePurchasesDownloadLogger.info({ data: exists }, "[Marketplace Download] File exists (decoded path):");
 
     // If not found with decoded path, try the original URL-encoded path
     // (in case the file was uploaded with %2F as literal characters in the key)
@@ -124,9 +129,9 @@ export async function GET(
       const originalR2KeyMatch = purchase.book.pdfFileUrl.match(/\/api\/r2\/serve\/(.+)$/);
       if (originalR2KeyMatch) {
         const encodedKey = originalR2KeyMatch[1];
-        console.log("[Marketplace Download] Trying original encoded key:", encodedKey);
+        backerMarketplacePurchasesDownloadLogger.info({ data: encodedKey }, "[Marketplace Download] Trying original encoded key:");
         exists = await r2.fileExists(encodedKey);
-        console.log("[Marketplace Download] File exists (encoded path):", exists);
+        backerMarketplacePurchasesDownloadLogger.info({ data: exists }, "[Marketplace Download] File exists (encoded path):");
         if (exists) {
           actualKey = encodedKey;
         }
@@ -137,11 +142,11 @@ export async function GET(
       // Try to list files in the directory to see what's there
       try {
         const dirPath = r2Key.substring(0, r2Key.lastIndexOf('/'));
-        console.log("[Marketplace Download] Listing files in directory:", dirPath);
+        backerMarketplacePurchasesDownloadLogger.info({ data: dirPath }, "[Marketplace Download] Listing files in directory:");
         const files = await r2.listFiles(dirPath);
-        console.log("[Marketplace Download] Files in directory:", files?.slice(0, 10));
+        backerMarketplacePurchasesDownloadLogger.info({ data: files?.slice(0, 10) }, "[Marketplace Download] Files in directory:");
       } catch (listErr) {
-        console.log("[Marketplace Download] Could not list directory:", listErr);
+        backerMarketplacePurchasesDownloadLogger.info({ data: listErr }, "[Marketplace Download] Could not list directory:");
       }
       return NextResponse.json(
         { error: "PDF file not found in storage" },
@@ -169,7 +174,7 @@ export async function GET(
       expiresIn,
     });
   } catch (error) {
-    console.error("Error getting marketplace download:", error);
+    backerMarketplacePurchasesDownloadLogger.error({ err: error }, "Error getting marketplace download:");
     return NextResponse.json(
       { error: "Failed to get download URL" },
       { status: 500 }

@@ -10,6 +10,11 @@
 
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const aiUserInterestsLogger = logger.child({ module: "ai-user-interests" });
+
+
 interface CategoryInterests {
   [category: string]: number; // 0-1 score
 }
@@ -302,7 +307,7 @@ export async function batchUpdateUserInterests(userIds: string[]): Promise<{
       await updateUserInterestProfile(userId);
       processed++;
     } catch (error) {
-      console.error(`Failed to update interests for user ${userId}:`, error);
+      aiUserInterestsLogger.error({ err: error }, `Failed to update interests for user ${userId}:`);
       failed++;
     }
   }

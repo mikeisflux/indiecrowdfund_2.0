@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorEmailMarketingSubscribersLogger = logger.child({ module: "creator-email-marketing-subscribers" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -140,7 +143,7 @@ export async function GET() {
 
     return NextResponse.json({ subscribers, stats });
   } catch (error) {
-    console.error("Error fetching subscribers:", error);
+    creatorEmailMarketingSubscribersLogger.error({ err: String(error) }, "Error fetching subscribers:");
     return NextResponse.json(
       { error: "Failed to fetch subscribers" },
       { status: 500 }
@@ -230,7 +233,7 @@ export async function POST(request: NextRequest) {
         });
       }
     } catch (err) {
-      console.error("Failed to sync to admin newsletter:", err);
+      creatorEmailMarketingSubscribersLogger.error({ err: String(err) }, "Failed to sync to admin newsletter:");
     }
 
     return NextResponse.json({
@@ -245,7 +248,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error adding subscriber:", error);
+    creatorEmailMarketingSubscribersLogger.error({ err: String(error) }, "Error adding subscriber:");
     return NextResponse.json(
       { error: "Failed to add subscriber" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingSubscribersLogger = logger.child({ module: "admin-ai-marketing-subscribers" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -352,7 +355,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching subscribers:", error);
+    adminAiMarketingSubscribersLogger.error({ err: String(error) }, "Error fetching subscribers:");
     return NextResponse.json(
       { error: "Failed to fetch subscribers" },
       { status: 500 }
@@ -418,7 +421,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, subscriber });
   } catch (error) {
-    console.error("Error creating subscriber:", error);
+    adminAiMarketingSubscribersLogger.error({ err: String(error) }, "Error creating subscriber:");
     return NextResponse.json(
       { error: "Failed to create subscriber" },
       { status: 500 }
@@ -476,7 +479,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, subscriber });
   } catch (error) {
-    console.error("Error updating subscriber:", error);
+    adminAiMarketingSubscribersLogger.error({ err: String(error) }, "Error updating subscriber:");
     return NextResponse.json(
       { error: "Failed to update subscriber" },
       { status: 500 }
@@ -566,7 +569,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting subscriber:", error);
+    adminAiMarketingSubscribersLogger.error({ err: String(error) }, "Error deleting subscriber:");
     return NextResponse.json(
       { error: "Failed to delete subscriber" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const platformStatsLogger = logger.child({ module: "platform-stats" });
 import { db } from "@/lib/db";
 
 // Force dynamic rendering - this route needs database access
@@ -111,7 +114,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("Error fetching platform stats:", error);
+    platformStatsLogger.error({ err: String(error) }, "Error fetching platform stats:");
     return NextResponse.json(
       { error: "Failed to fetch platform stats" },
       { status: 500 }

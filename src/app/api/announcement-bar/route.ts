@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const announcementBarLogger = logger.child({ module: "announcement-bar" });
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +64,7 @@ export async function GET() {
 
     return NextResponse.json({ announcements }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching announcement bars:", error);
+    announcementBarLogger.error({ err: String(error) }, "Error fetching announcement bars:");
     return NextResponse.json({ announcements: [] }, { headers: corsHeaders });
   }
 }

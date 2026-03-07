@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const userSettingsEmailLogger = logger.child({ module: "user-settings-email" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
@@ -112,7 +115,7 @@ export async function POST(request: Request) {
       user: updatedUser,
     });
   } catch (error) {
-    console.error("Email change error:", error);
+    userSettingsEmailLogger.error({ err: String(error) }, "Email change error:");
     return NextResponse.json(
       { error: "Failed to change email" },
       { status: 500 }

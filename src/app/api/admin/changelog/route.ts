@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminChangelogLogger = logger.child({ module: "admin-changelog" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -86,7 +89,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching changelog entries:", error);
+    adminChangelogLogger.error({ err: String(error) }, "Error fetching changelog entries:");
     return NextResponse.json({ error: "Failed to fetch changelog entries" }, { status: 500 });
   }
 }
@@ -125,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ entry });
   } catch (error) {
-    console.error("Error creating changelog entry:", error);
+    adminChangelogLogger.error({ err: String(error) }, "Error creating changelog entry:");
     return NextResponse.json({ error: "Failed to create changelog entry" }, { status: 500 });
   }
 }
@@ -172,7 +175,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ entry });
   } catch (error) {
-    console.error("Error updating changelog entry:", error);
+    adminChangelogLogger.error({ err: String(error) }, "Error updating changelog entry:");
     return NextResponse.json({ error: "Failed to update changelog entry" }, { status: 500 });
   }
 }
@@ -198,7 +201,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting changelog entry:", error);
+    adminChangelogLogger.error({ err: String(error) }, "Error deleting changelog entry:");
     return NextResponse.json({ error: "Failed to delete changelog entry" }, { status: 500 });
   }
 }

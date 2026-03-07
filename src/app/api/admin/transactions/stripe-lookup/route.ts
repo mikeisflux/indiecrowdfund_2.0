@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminTransactionsStripeLookupLogger = logger.child({ module: "admin-transactions-stripe-lookup" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
@@ -271,7 +274,7 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error("Error in Stripe lookup:", error);
+    adminTransactionsStripeLookupLogger.error({ err: String(error) }, "Error in Stripe lookup:");
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: `Stripe lookup failed: ${message}` },

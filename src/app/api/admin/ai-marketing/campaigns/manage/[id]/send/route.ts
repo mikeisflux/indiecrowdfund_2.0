@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingCampaignsManageSendLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-send" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { queueEmail, EMAIL_PRIORITY } from "@/lib/email";
@@ -148,7 +151,7 @@ export async function POST(
 
     // Log if this is a resend
     if (isResend) {
-      console.log(`Resending campaign "${campaign.name}" (previously sent at ${campaign.status === "SENT" ? "earlier" : "never"})`);
+      adminAiMarketingCampaignsManageSendLogger.info(`Resending campaign "${campaign.name}" (previously sent at ${campaign.status === "SENT" ? "earlier" : "never"})`);
     }
 
     // Update status to SENDING
@@ -286,7 +289,7 @@ export async function POST(
 
     const recipients = Array.from(recipientMap.values());
 
-    console.log(`Queueing campaign "${campaign.name}" to ${recipients.length} recipients`);
+    adminAiMarketingCampaignsManageSendLogger.info(`Queueing campaign "${campaign.name}" to ${recipients.length} recipients`);
 
     let queuedCount = 0;
     let failedCount = 0;
@@ -326,15 +329,15 @@ export async function POST(
           queuedCount++;
         } else {
           failedCount++;
-          console.error(`Failed to queue email to ${recipient.email}:`, result.error);
+          adminAiMarketingCampaignsManageSendLogger.error({ err: String(result.error) }, `Failed to queue email to ${recipient.email}:`);
         }
       } catch (err) {
         failedCount++;
-        console.error(`Error queueing email to ${recipient.email}:`, err);
+        adminAiMarketingCampaignsManageSendLogger.error({ err: String(err) }, `Error queueing email to ${recipient.email}:`);
       }
     }
 
-    console.log(`Campaign "${campaign.name}" queued: ${queuedCount} queued, ${failedCount} failed`);
+    adminAiMarketingCampaignsManageSendLogger.info(`Campaign "${campaign.name}" queued: ${queuedCount} queued, ${failedCount} failed`);
 
     // Update campaign status to SENDING (emails are in queue, will be sent over time)
     await db.emailCampaign.update({
@@ -355,7 +358,7 @@ export async function POST(
       totalRecipients: recipients.length,
     });
   } catch (error) {
-    console.error("Error queueing campaign:", error);
+    adminAiMarketingCampaignsManageSendLogger.error({ err: String(error) }, "Error queueing campaign:");
 
     // Try to reset status if failed
     try {

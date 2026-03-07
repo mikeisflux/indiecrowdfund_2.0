@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminEmailBlocklistLogger = logger.child({ module: "admin-email-blocklist" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -48,7 +51,7 @@ export async function GET(
 
     return NextResponse.json({ entry });
   } catch (error) {
-    console.error("Error fetching blocklist entry:", error);
+    adminEmailBlocklistLogger.error({ err: String(error) }, "Error fetching blocklist entry:");
     return NextResponse.json(
       { error: "Failed to fetch blocklist entry" },
       { status: 500 }
@@ -117,7 +120,7 @@ export async function PATCH(
 
     return NextResponse.json({ entry });
   } catch (error) {
-    console.error("Error updating blocklist entry:", error);
+    adminEmailBlocklistLogger.error({ err: String(error) }, "Error updating blocklist entry:");
     return NextResponse.json(
       { error: "Failed to update blocklist entry" },
       { status: 500 }
@@ -156,7 +159,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting blocklist entry:", error);
+    adminEmailBlocklistLogger.error({ err: String(error) }, "Error deleting blocklist entry:");
     return NextResponse.json(
       { error: "Failed to delete blocklist entry" },
       { status: 500 }

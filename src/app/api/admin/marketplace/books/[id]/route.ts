@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const adminMarketplaceBooksLogger = logger.child({ module: "admin-marketplace-books" });
+
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -50,7 +55,7 @@ export async function GET(
 
     return NextResponse.json({ book });
   } catch (error) {
-    console.error("Error fetching book:", error);
+    adminMarketplaceBooksLogger.error({ err: error }, "Error fetching book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -127,7 +132,7 @@ export async function PATCH(
       );
     }
 
-    console.log("[Admin Book Update] Updating book:", id, "with data:", updateData);
+    adminMarketplaceBooksLogger.info({ bookId: id, updateData }, "Updating book");
 
     const updatedBook = await prisma.marketplaceBook.update({
       where: { id },
@@ -139,7 +144,7 @@ export async function PATCH(
       book: updatedBook,
     });
   } catch (error) {
-    console.error("Error updating book:", error);
+    adminMarketplaceBooksLogger.error({ err: error }, "Error updating book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

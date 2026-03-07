@@ -2,6 +2,11 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { cache } from "react";
 
+import { logger } from "@/lib/logger";
+
+const authSessionLogger = logger.child({ module: "auth-session" });
+
+
 const SESSION_COOKIE_NAME = "session_token";
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 
@@ -128,7 +133,7 @@ export const validateSession = cache(async (): Promise<Session | null> => {
     if (isDynamicServerError) {
       return null;
     }
-    console.error("Session validation error:", error);
+    authSessionLogger.error({ err: error }, "Session validation error:");
     return null;
   }
 });

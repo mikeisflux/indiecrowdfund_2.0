@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorAccountPasswordLogger = logger.child({ module: "creator-account-password" });
 import { auth, BCRYPT_COST } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Password update error:", error);
+    creatorAccountPasswordLogger.error({ err: String(error) }, "Password update error:");
     return NextResponse.json({ error: "Failed to update password" }, { status: 500 });
   }
 }

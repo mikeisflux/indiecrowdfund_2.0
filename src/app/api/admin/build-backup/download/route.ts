@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminBuildBackupDownloadLogger = logger.child({ module: "admin-build-backup-download" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { existsSync } from "fs";
@@ -92,13 +95,13 @@ export async function GET(req: NextRequest) {
         },
       });
     } catch (tarError) {
-      console.error("Error creating tar archive:", tarError);
+      adminBuildBackupDownloadLogger.error({ err: String(tarError) }, "Error creating tar archive:");
       // Clean up temp file on error
       await fs.unlink(tmpFile).catch(() => {});
       throw tarError;
     }
   } catch (error) {
-    console.error("Error downloading build backup:", error);
+    adminBuildBackupDownloadLogger.error({ err: String(error) }, "Error downloading build backup:");
     return NextResponse.json(
       { error: "Failed to download backup" },
       { status: 500 }

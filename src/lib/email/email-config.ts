@@ -158,7 +158,7 @@ export async function isEmailBlocked(email: string): Promise<{ blocked: boolean;
     if (blockedEmail) {
       // Skip blocking for rate-limited emails - these are temporary and should go through
       if (blockedEmail.reason === "ratelimit") {
-        console.log(`[Email] Allowing rate-limited email through for: ${normalizedEmail}`);
+        emailLogger.info(`[Email] Allowing rate-limited email through for: ${normalizedEmail}`);
         return { blocked: false };
       }
 
@@ -202,7 +202,7 @@ export async function isEmailBlocked(email: string): Promise<{ blocked: boolean;
 
     return { blocked: false };
   } catch (error) {
-    console.error("[Email] Error checking blocklist:", error);
+    emailLogger.error({ err: error }, "[Email] Error checking blocklist:");
     return { blocked: false };
   }
 }
@@ -302,14 +302,14 @@ async function sendViaSendGrid(
       headers: Object.keys(headers).length > 0 ? headers : undefined,
     });
 
-    console.log("Email sent via SendGrid, status:", response[0]?.statusCode);
+    emailLogger.info({ data: response[0]?.statusCode }, "Email sent via SendGrid, status:");
     return { success: true };
   } catch (error: unknown) {
-    console.error("SendGrid Error:");
+    emailLogger.error("SendGrid Error:");
     if (error && typeof error === "object" && "response" in error) {
       const sgError = error as { response?: { body?: unknown; statusCode?: number } };
-      console.error("SendGrid status code:", sgError.response?.statusCode);
-      console.error("SendGrid response body:", JSON.stringify(sgError.response?.body, null, 2));
+      emailLogger.error({ err: sgError.response?.statusCode }, "SendGrid status code:");
+      emailLogger.error({ err: JSON.stringify(sgError.response?.body, null, 2) }, "SendGrid response body:");
     }
     return { success: false, error: String(error) };
   }
@@ -363,22 +363,22 @@ async function sendViaMailgun(
 
     const response = await mg.messages.create(domain, messageData);
 
-    console.log("Email sent via Mailgun, id:", response.id);
+    emailLogger.info({ data: response.id }, "Email sent via Mailgun, id:");
     return { success: true };
   } catch (error: unknown) {
-    console.error("Mailgun Error:", error);
+    emailLogger.error({ err: error }, "Mailgun Error:");
     return { success: false, error: String(error) };
   }
 }
 
 export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName, isCreatorEmail, attachments, _fromQueue }: SendEmailOptions) {
-  console.log(`[Email] sendEmail called - to: ${to}, subject: ${subject}${_fromQueue ? " (from queue)" : ""}`);
+  emailLogger.info(`[Email] sendEmail called - to: ${to}, subject: ${subject}${_fromQueue ? " (from queue)" : ""}`);
 
   // Check if email is on the blocklist (bounced, spam reported, etc.)
   // This check applies to ALL emails including transactional ones
   const blocklistCheck = await isEmailBlocked(to);
   if (blocklistCheck.blocked) {
-    console.log(`[Email] Skipping email - address is blocked: ${to}, reason: ${blocklistCheck.reason}`);
+    emailLogger.info(`[Email] Skipping email - address is blocked: ${to}, reason: ${blocklistCheck.reason}`);
     return { success: false, error: blocklistCheck.reason || "Email address is blocked", skipped: true, blocked: true };
   }
 
@@ -386,13 +386,13 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
   if (!skipUnsubscribeCheck) {
     const unsubscribed = await isEmailUnsubscribed(to);
     if (unsubscribed) {
-      console.log(`[Email] Skipping email - user has unsubscribed: ${to}`);
+      emailLogger.info(`[Email] Skipping email - user has unsubscribed: ${to}`);
       return { success: false, error: "User has unsubscribed from emails", skipped: true };
     }
   }
 
   const settings = await getEmailSettings();
-  console.log(`[Email] Settings loaded:`, {
+  emailLogger.info({ data: {
     hasSettings: !!settings,
     emailProvider: settings?.emailProvider,
     smtpFromEmail: settings?.smtpFromEmail,
@@ -400,7 +400,7 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
     hasMailgunKey: !!settings?.mailgunApiKey,
     mailgunDomain: settings?.mailgunDomain,
     hasSendgridKey: !!settings?.sendgridApiKey,
-  });
+  } }, `[Email] Settings loaded:`);
 
   // Use custom from address if provided, otherwise fall back to settings/defaults
   const fromEmail = customFromEmail || settings?.smtpFromEmail || process.env.EMAIL_FROM || "noreply@indiecrowdfund.com";
@@ -436,33 +436,33 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
   if (emailProvider === "mailgun") {
     // Mailgun is explicitly selected
     if (!mailgunApiKey || !mailgunDomain) {
-      console.error("[Email] Mailgun selected but credentials incomplete - API key:", !!mailgunApiKey, ", Domain:", !!mailgunDomain);
+      emailLogger.error({ hasApiKey: !!mailgunApiKey, hasDomain: !!mailgunDomain }, "Mailgun selected but credentials incomplete");
       return { success: false, error: "Mailgun selected but API key or domain is missing" };
     }
-    console.log(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}, attachments: ${attachments?.length || 0}`);
+    emailLogger.info(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}, attachments: ${attachments?.length || 0}`);
     result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo, unsubscribeUrl, attachments);
-    console.log(`[Email] Mailgun result:`, result);
+    emailLogger.info({ data: result }, `[Email] Mailgun result:`);
   } else if (emailProvider === "sendgrid") {
     // SendGrid is explicitly selected
     if (!sendgridApiKey) {
-      console.error("[Email] SendGrid selected but API key is missing");
+      emailLogger.error("[Email] SendGrid selected but API key is missing");
       return { success: false, error: "SendGrid selected but API key is missing" };
     }
-    console.log(`[Email] Sending email via SendGrid to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}`);
+    emailLogger.info(`[Email] Sending email via SendGrid to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}`);
     result = await sendViaSendGrid(to, subject, finalHtml, plainText, fromEmail, fromName, sendgridApiKey, replyTo, unsubscribeUrl);
-    console.log(`[Email] SendGrid result:`, result);
+    emailLogger.info({ data: result }, `[Email] SendGrid result:`);
   } else {
     // Try Mailgun first if configured, then SendGrid
     if (mailgunApiKey && mailgunDomain) {
-      console.log(`[Email] Sending email via Mailgun (auto) to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}, attachments: ${attachments?.length || 0}`);
+      emailLogger.info(`[Email] Sending email via Mailgun (auto) to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}, attachments: ${attachments?.length || 0}`);
       result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo, unsubscribeUrl, attachments);
     } else if (sendgridApiKey) {
-      console.log(`[Email] Sending email via SendGrid (auto) to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}`);
+      emailLogger.info(`[Email] Sending email via SendGrid (auto) to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}`);
       result = await sendViaSendGrid(to, subject, finalHtml, plainText, fromEmail, fromName, sendgridApiKey, replyTo, unsubscribeUrl);
     } else {
-      console.warn("[Email] NOT CONFIGURED - no Mailgun or SendGrid API key found");
-      console.log("[Email] Would send email to:", to);
-      console.log("[Email] Subject:", subject);
+      emailLogger.warn("[Email] NOT CONFIGURED - no Mailgun or SendGrid API key found");
+      emailLogger.info({ data: to }, "[Email] Would send email to:");
+      emailLogger.info({ data: subject }, "[Email] Subject:");
       return { success: false, error: "Email not configured - no Mailgun or SendGrid API key" };
     }
   }
@@ -485,7 +485,7 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
             isCreatorMailbox: isCreatorEmail || false,
           },
         });
-        console.log(`Created ${isCreatorEmail ? "creator" : "system"} mailbox for ${fromEmail}`);
+        emailLogger.info(`Created ${isCreatorEmail ? "creator" : "system"} mailbox for ${fromEmail}`);
       }
 
       await db.adminEmail.create({
@@ -503,9 +503,9 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
           sentAt: new Date(),
         },
       });
-      console.log(`Saved outgoing email to admin sent folder`);
+      emailLogger.info(`Saved outgoing email to admin sent folder`);
     } catch (saveError) {
-      console.error("Failed to save email to admin sent folder:", saveError);
+      emailLogger.error({ err: saveError }, "Failed to save email to admin sent folder:");
     }
   } else if (!_fromQueue) {
     // Send failed and this was a direct call (not from the queue processor).
@@ -513,9 +513,7 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
     const recipientDomain = to.split("@")[1]?.toLowerCase();
     const isMicrosoftDomain = recipientDomain ? MICROSOFT_DOMAINS.has(recipientDomain) : false;
 
-    console.warn(
-      `[Email] Direct send failed to ${to}${isMicrosoftDomain ? " (Microsoft domain)" : ""} — auto-queuing for retry. Error: ${result.error}`
-    );
+    emailLogger.warn(`[Email] Direct send failed to ${to}${isMicrosoftDomain ? " (Microsoft domain)" : ""} — auto-queuing for retry. Error: ${result.error}`);
 
     try {
       const queueEntry = await db.emailQueue.create({
@@ -533,11 +531,11 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
           error: `Auto-queued after direct send failure: ${result.error}`,
         },
       });
-      console.log(`[Email] Auto-queued failed email as ${queueEntry.id} for retry to ${to}`);
+      emailLogger.info(`[Email] Auto-queued failed email as ${queueEntry.id} for retry to ${to}`);
       // Return success:false but include the queueId so callers know it wasn't dropped
       return { success: false, error: result.error, queued: true, queueId: queueEntry.id };
     } catch (queueError) {
-      console.error(`[Email] Failed to auto-queue email for ${to}:`, queueError);
+      emailLogger.error({ err: queueError }, `[Email] Failed to auto-queue email for ${to}:`);
     }
   }
 
@@ -564,10 +562,10 @@ export async function queueEmail(options: SendEmailOptions & { priority?: number
       },
     });
 
-    console.log(`[Email Queue] Added email to queue: ${queueEntry.id} -> ${to}`);
+    emailLogger.info(`[Email Queue] Added email to queue: ${queueEntry.id} -> ${to}`);
     return { success: true, queueId: queueEntry.id };
   } catch (error) {
-    console.error("[Email Queue] Failed to queue email:", error);
+    emailLogger.error({ err: error }, "[Email Queue] Failed to queue email:");
     return { success: false, error: String(error) };
   }
 }
@@ -647,7 +645,7 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
           sentAt: new Date(),
         },
       });
-      console.log(`[Email Queue] Successfully sent queued email: ${queueEntry.id}`);
+      emailLogger.info(`[Email Queue] Successfully sent queued email: ${queueEntry.id}`);
       processed = 1;
     } else {
       // If the email is permanently blocked or skipped (unsubscribed), fail immediately - no retries
@@ -677,18 +675,18 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
             where: { email: queueEntry.toEmail.toLowerCase().trim() },
           });
           if (removed.count > 0) {
-            console.log(`[Email Queue] Removed ${removed.count} subscriber records for blocked address: ${queueEntry.toEmail}`);
+            emailLogger.info(`[Email Queue] Removed ${removed.count} subscriber records for blocked address: ${queueEntry.toEmail}`);
           }
         } catch (cleanupError) {
-          console.error(`[Email Queue] Failed to clean up subscriber for ${queueEntry.toEmail}:`, cleanupError);
+          emailLogger.error({ err: cleanupError }, `[Email Queue] Failed to clean up subscriber for ${queueEntry.toEmail}:`);
         }
       }
 
-      console.error(`[Email Queue] Failed to send queued email: ${queueEntry.id}`, result.error);
+      emailLogger.error({ err: result.error }, `[Email Queue] Failed to send queued email: ${queueEntry.id}`);
       errors = 1;
     }
   } catch (error) {
-    console.error("[Email Queue] Error processing email:", error);
+    emailLogger.error({ err: error }, "[Email Queue] Error processing email:");
     errors = 1;
 
     // Reset the claimed email back to PENDING so it doesn't get stuck in PROCESSING
@@ -698,9 +696,9 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
           where: { id: claimedId },
           data: { status: "PENDING", error: `Processing error: ${String(error)}` },
         });
-        console.log(`[Email Queue] Reset stuck email ${claimedId} back to PENDING`);
+        emailLogger.info(`[Email Queue] Reset stuck email ${claimedId} back to PENDING`);
       } catch (resetError) {
-        console.error(`[Email Queue] Failed to reset email ${claimedId}:`, resetError);
+        emailLogger.error({ err: resetError }, `[Email Queue] Failed to reset email ${claimedId}:`);
       }
     }
   }
@@ -751,11 +749,11 @@ export async function recoverStuckProcessingEmails(): Promise<number> {
       },
     });
     if (result.count > 0) {
-      console.log(`[Email Queue] Auto-recovered ${result.count} stuck PROCESSING email(s)`);
+      emailLogger.info(`[Email Queue] Auto-recovered ${result.count} stuck PROCESSING email(s)`);
     }
     return result.count;
   } catch (error) {
-    console.error("[Email Queue] Error recovering stuck emails:", error);
+    emailLogger.error({ err: error }, "[Email Queue] Error recovering stuck emails:");
     return 0;
   }
 }
@@ -787,5 +785,5 @@ export async function setEmailQueueEnabled(enabled: boolean): Promise<void> {
       emailQueuePausedAt: enabled ? null : new Date(),
     },
   });
-  console.log(`[Email Queue] Queue ${enabled ? "enabled" : "disabled"}`);
+  emailLogger.info(`[Email Queue] Queue ${enabled ? "enabled" : "disabled"}`);
 }

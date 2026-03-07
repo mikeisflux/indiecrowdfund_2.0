@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsSlugStatsLogger = logger.child({ module: "projects-slug-stats" });
 import { db } from "@/lib/db";
 
 /**
@@ -79,7 +82,7 @@ export async function GET(
           backerCount: actualBackerCount,
         },
       });
-      console.log(`[Auto-sync] Project ${project.id} stats corrected: $${actualAmount} from ${actualBackerCount} backers`);
+      projectsSlugStatsLogger.info(`[Auto-sync] Project ${project.id} stats corrected: $${actualAmount} from ${actualBackerCount} backers`);
     }
 
     return NextResponse.json(
@@ -97,7 +100,7 @@ export async function GET(
       }
     );
   } catch (error) {
-    console.error("Failed to fetch project stats:", error);
+    projectsSlugStatsLogger.error({ err: String(error) }, "Failed to fetch project stats:");
     return NextResponse.json(
       { error: "Failed to fetch project stats" },
       { status: 500 }

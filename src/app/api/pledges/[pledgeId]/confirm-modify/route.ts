@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const pledgesConfirmModifyLogger = logger.child({ module: "pledges-confirm-modify" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
@@ -196,11 +199,11 @@ export async function POST(
       }
     });
 
-    console.log(`[ConfirmModify] Successfully modified pledge ${pledgeId}, amount changed by $${pending.amountDiff}`);
+    pledgesConfirmModifyLogger.info(`[ConfirmModify] Successfully modified pledge ${pledgeId}, amount changed by $${pending.amountDiff}`);
 
     // Send upcharge notification email
     notifyPledgeModified(pledgeId, pending.oldAmount, pending.newAmount, "upcharge").catch(err =>
-      console.error("[ConfirmModify] Failed to send notification:", err)
+      pledgesConfirmModifyLogger.error({ err: String(err) }, "[ConfirmModify] Failed to send notification:")
     );
 
     return NextResponse.json({
@@ -209,7 +212,7 @@ export async function POST(
       newAmount: pending.newAmount,
     });
   } catch (error) {
-    console.error("Failed to confirm pledge modification:", error);
+    pledgesConfirmModifyLogger.error({ err: String(error) }, "Failed to confirm pledge modification:");
     return NextResponse.json(
       { error: "Failed to confirm pledge modification" },
       { status: 500 }

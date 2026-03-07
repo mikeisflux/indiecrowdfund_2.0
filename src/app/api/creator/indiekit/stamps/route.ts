@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitStampsLogger = logger.child({ module: "creator-indiekit-stamps" });
 import type { NextRequest } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitStampsLogger = logger.child({ module: "creator-indiekit-stamps" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -178,7 +184,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Stamps.com API error:", error);
+    creatorIndiekitStampsLogger.error({ err: String(error) }, "Stamps.com API error:");
     return NextResponse.json({ error: "Failed to process Stamps.com request" }, { status: 500 });
   }
 }

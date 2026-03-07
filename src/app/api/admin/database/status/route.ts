@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminDatabaseStatusLogger = logger.child({ module: "admin-database-status" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -76,7 +79,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error getting database status:", error);
+    adminDatabaseStatusLogger.error({ err: String(error) }, "Error getting database status:");
     return NextResponse.json(
       { error: "Failed to get database status" },
       { status: 500 }

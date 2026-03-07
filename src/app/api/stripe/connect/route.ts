@@ -3,6 +3,11 @@ import { auth } from "@/lib/auth";
 import { createStripeConnectAccount, getStripeInstance } from "@/lib/payments/stripe";
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const stripeConnectLogger = logger.child({ module: "stripe-connect" });
+
+
 export async function POST() {
   try {
     const session = await auth();
@@ -33,8 +38,8 @@ export async function POST() {
       accountId: result.accountId,
     });
   } catch (error) {
-    console.error("Stripe Connect error:", error);
-    console.error("Stripe Connect error message:", (error as Error).message);
+    stripeConnectLogger.error({ err: error }, "Stripe Connect error:");
+    stripeConnectLogger.error({ err: (error as Error).message }, "Stripe Connect error message:");
 
     // Extract Stripe error message if available
     const stripeError = error as { message?: string; type?: string; code?: string };
@@ -91,7 +96,7 @@ export async function GET() {
         const sErr = stripeError as { type?: string; code?: string; message?: string };
         if (sErr.type === "StripePermissionError" || sErr.code === "account_invalid") {
           // Account access revoked - mark as inactive and inform the user
-          console.warn(`[Stripe Connect] Account ${config.stripeAccountId} access revoked or invalid`);
+          stripeConnectLogger.warn(`[Stripe Connect] Account ${config.stripeAccountId} access revoked or invalid`);
           await db.stripeConfig.update({
             where: { id: config.id },
             data: { isOnboarded: false, isActive: false },
@@ -102,7 +107,7 @@ export async function GET() {
             error: "Stripe account access has been revoked. Please reconnect your Stripe account.",
           });
         }
-        console.error("Error checking Stripe account status:", sErr.message || stripeError);
+        stripeConnectLogger.error({ err: sErr.message || stripeError }, "Error checking Stripe account status:");
         // Continue with DB value if Stripe check fails
       }
     }
@@ -113,7 +118,7 @@ export async function GET() {
       accountId: config.stripeAccountId,
     });
   } catch (error) {
-    console.error("Stripe status error:", error);
+    stripeConnectLogger.error({ err: error }, "Stripe status error:");
     return NextResponse.json(
       { error: "Failed to get Stripe status" },
       { status: 500 }

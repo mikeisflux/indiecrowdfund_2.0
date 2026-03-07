@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminProjectsAdjustEndDateLogger = logger.child({ module: "admin-projects-adjust-end-date" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -49,9 +52,7 @@ export async function PATCH(
       select: { id: true, title: true, endDate: true },
     });
 
-    console.log(
-      `[Admin] End date adjusted for project "${project.title}" (${projectId}): ${project.endDate?.toISOString() || "none"} → ${parsedDate.toISOString()} by ${session.user.email}`
-    );
+    adminProjectsAdjustEndDateLogger.info(`[Admin] End date adjusted for project "${project.title}" (${projectId}): ${project.endDate?.toISOString() || "none"} → ${parsedDate.toISOString()} by ${session.user.email}`);
 
     return NextResponse.json({
       success: true,
@@ -62,7 +63,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error("Error adjusting end date:", error);
+    adminProjectsAdjustEndDateLogger.error({ err: String(error) }, "Error adjusting end date:");
     return NextResponse.json({ error: "Failed to adjust end date" }, { status: 500 });
   }
 }

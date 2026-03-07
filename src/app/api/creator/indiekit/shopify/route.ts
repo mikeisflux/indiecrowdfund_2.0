@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitShopifyLogger = logger.child({ module: "creator-indiekit-shopify" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -173,7 +176,7 @@ export async function GET(req: NextRequest) {
         : null,
     });
   } catch (error) {
-    console.error("Shopify GET error:", error);
+    creatorIndiekitShopifyLogger.error({ err: String(error) }, "Shopify GET error:");
     return NextResponse.json({ error: "Failed to fetch Shopify integration" }, { status: 500 });
   }
 }
@@ -290,7 +293,7 @@ export async function POST(req: NextRequest) {
           },
         });
       } catch (shopifyError) {
-        console.error("Shopify connection error:", shopifyError);
+        creatorIndiekitShopifyLogger.error({ err: String(shopifyError) }, "Shopify connection error:");
         return NextResponse.json(
           {
             error: "Failed to connect to Shopify. Please verify your shop domain and access token.",
@@ -641,7 +644,7 @@ export async function POST(req: NextRequest) {
 
           pushedCount++;
         } catch (pushError) {
-          console.error(`Failed to push pledge ${pledge.id}:`, pushError);
+          creatorIndiekitShopifyLogger.error({ err: String(pushError) }, `Failed to push pledge ${pledge.id}:`);
           failedCount++;
           errors.push(`Pledge ${pledge.id}: ${pushError instanceof Error ? pushError.message : "Unknown error"}`);
 
@@ -778,7 +781,7 @@ export async function POST(req: NextRequest) {
             updatedCount++;
           }
         } catch (syncError) {
-          console.error(`Failed to sync order ${order.shopifyOrderId}:`, syncError);
+          creatorIndiekitShopifyLogger.error({ err: String(syncError) }, `Failed to sync order ${order.shopifyOrderId}:`);
         }
       }
 
@@ -806,7 +809,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    console.error("Shopify POST error:", error);
+    creatorIndiekitShopifyLogger.error({ err: String(error) }, "Shopify POST error:");
     return NextResponse.json(
       { error: "Failed to process Shopify request" },
       { status: 500 }

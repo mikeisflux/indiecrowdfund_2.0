@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsSlugLogger = logger.child({ module: "projects-slug" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -271,7 +274,7 @@ export async function GET(
       addons,
     });
   } catch (error) {
-    console.error("Get project by slug error:", error);
+    projectsSlugLogger.error({ err: String(error) }, "Get project by slug error:");
     return NextResponse.json(
       { error: "Failed to fetch project" },
       { status: 500 }

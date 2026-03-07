@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const surveysLogger = logger.child({ module: "surveys" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -113,7 +116,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ survey }, { status: 201 });
     }
   } catch (error) {
-    console.error("Survey error:", error);
+    surveysLogger.error({ err: String(error) }, "Survey error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -193,7 +196,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   } catch (error) {
-    console.error("Get survey error:", error);
+    surveysLogger.error({ err: String(error) }, "Get survey error:");
     return NextResponse.json(
       { error: "Failed to fetch survey" },
       { status: 500 }

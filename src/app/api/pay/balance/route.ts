@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const payBalanceLogger = logger.child({ module: "pay-balance" });
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe/config";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
@@ -86,7 +89,7 @@ export async function GET(req: NextRequest) {
       originalAmount: pledgeTotal,
     });
   } catch (error) {
-    console.error("Error fetching balance details:", error);
+    payBalanceLogger.error({ err: String(error) }, "Error fetching balance details:");
     return NextResponse.json({ error: "Failed to load payment details" }, { status: 500 });
   }
 }
@@ -236,7 +239,7 @@ export async function POST(req: NextRequest) {
 
       if (!dcResponse.ok) {
         const errorText = await dcResponse.text();
-        console.error("[Balance DC] API error:", errorText);
+        payBalanceLogger.error({ err: String(errorText) }, "[Balance DC] API error:");
         return NextResponse.json({ error: "Payment processing failed" }, { status: 500 });
       }
 
@@ -264,7 +267,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown payment processor" }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error creating balance payment:", message, error);
+    payBalanceLogger.error({ err: String(message, error) }, "Error creating balance payment:");
     return NextResponse.json({ error: `Failed to create payment: ${message}` }, { status: 500 });
   }
 }

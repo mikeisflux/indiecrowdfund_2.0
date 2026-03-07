@@ -9,6 +9,11 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, Head
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const r2Logger = logger.child({ module: "r2" });
+
+
 // File type magic bytes for validation
 const FILE_SIGNATURES: Record<string, Buffer> = {
   pdf: Buffer.from([0x25, 0x50, 0x44, 0x46]), // %PDF
@@ -138,7 +143,7 @@ export class R2Storage {
         expiresIn: options.expiresIn || 3600,
       });
     } catch (error) {
-      console.error("R2 getUploadUrl error:", error);
+      r2Logger.error({ err: error }, "R2 getUploadUrl error:");
       // Re-throw with more context
       throw new Error(`Failed to generate presigned upload URL: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
@@ -204,7 +209,7 @@ export class R2Storage {
       }
       return Buffer.concat(chunks);
     } catch (error) {
-      console.error(`[R2] Failed to get file ${key}:`, error);
+      r2Logger.error({ err: error }, `[R2] Failed to get file ${key}:`);
       return null;
     }
   }

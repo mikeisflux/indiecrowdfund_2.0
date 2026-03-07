@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminMarketplaceBooksLogger = logger.child({ module: "admin-marketplace-books" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -125,7 +128,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error fetching admin marketplace books:", error);
+    adminMarketplaceBooksLogger.error({ err: String(error) }, "Error fetching admin marketplace books:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const chatStickersLogger = logger.child({ module: "chat-stickers" });
 import { auth } from "@/lib/auth";
 
 // Sticker packs - using open source emojis and animated stickers
@@ -107,7 +110,7 @@ export async function GET() {
 
     return NextResponse.json({ stickerPacks: STICKER_PACKS });
   } catch (error) {
-    console.error("Error fetching stickers:", error);
+    chatStickersLogger.error({ err: String(error) }, "Error fetching stickers:");
     return NextResponse.json(
       { error: "Failed to fetch stickers" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const chatPresenceLogger = logger.child({ module: "chat-presence" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -48,7 +51,7 @@ export async function GET() {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error("Error fetching chat presence:", error);
+    chatPresenceLogger.error({ err: String(error) }, "Error fetching chat presence:");
     return NextResponse.json(
       { error: "Failed to fetch presence" },
       { status: 500 }
@@ -77,7 +80,7 @@ export async function POST() {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Error updating chat presence:", error);
+    chatPresenceLogger.error({ err: String(error) }, "Error updating chat presence:");
     return NextResponse.json(
       { error: "Failed to update presence" },
       { status: 500 }
@@ -100,7 +103,7 @@ export async function DELETE() {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Error removing chat presence:", error);
+    chatPresenceLogger.error({ err: String(error) }, "Error removing chat presence:");
     return NextResponse.json(
       { error: "Failed to remove presence" },
       { status: 500 }

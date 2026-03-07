@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminSeoRedirectsLogger = logger.child({ module: "admin-seo-redirects" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -30,7 +33,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error fetching SEO redirects:", error);
+    adminSeoRedirectsLogger.error({ err: String(error) }, "Error fetching SEO redirects:");
     return NextResponse.json(
       { error: "Failed to fetch SEO redirects" },
       { status: 500 }
@@ -117,7 +120,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error creating SEO redirect:", error);
+    adminSeoRedirectsLogger.error({ err: String(error) }, "Error creating SEO redirect:");
     return NextResponse.json(
       { error: "Failed to create SEO redirect" },
       { status: 500 }
@@ -230,7 +233,7 @@ export async function PATCH(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error updating SEO redirect:", error);
+    adminSeoRedirectsLogger.error({ err: String(error) }, "Error updating SEO redirect:");
     return NextResponse.json(
       { error: "Failed to update SEO redirect" },
       { status: 500 }
@@ -279,7 +282,7 @@ export async function DELETE(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error deleting SEO redirect:", error);
+    adminSeoRedirectsLogger.error({ err: String(error) }, "Error deleting SEO redirect:");
     return NextResponse.json(
       { error: "Failed to delete SEO redirect" },
       { status: 500 }

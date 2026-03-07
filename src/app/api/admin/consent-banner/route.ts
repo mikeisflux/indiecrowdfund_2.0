@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminConsentBannerLogger = logger.child({ module: "admin-consent-banner" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -51,7 +54,7 @@ export async function GET() {
 
     return NextResponse.json({ banner });
   } catch (error) {
-    console.error("Error fetching consent banner:", error);
+    adminConsentBannerLogger.error({ err: String(error) }, "Error fetching consent banner:");
     return NextResponse.json({ error: "Failed to fetch consent banner" }, { status: 500 });
   }
 }
@@ -87,7 +90,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ banner });
   } catch (error) {
-    console.error("Error updating consent banner:", error);
+    adminConsentBannerLogger.error({ err: String(error) }, "Error updating consent banner:");
     return NextResponse.json({ error: "Failed to update consent banner" }, { status: 500 });
   }
 }
@@ -119,7 +122,7 @@ export async function POST() {
 
     return NextResponse.json({ banner });
   } catch (error) {
-    console.error("Error resetting consent banner:", error);
+    adminConsentBannerLogger.error({ err: String(error) }, "Error resetting consent banner:");
     return NextResponse.json({ error: "Failed to reset consent banner" }, { status: 500 });
   }
 }

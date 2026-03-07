@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const marketplaceCompaniesLogger = logger.child({ module: "marketplace-companies" });
 import { db as prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -99,7 +102,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       })),
     });
   } catch (error) {
-    console.error("Error fetching company:", error);
+    marketplaceCompaniesLogger.error({ err: String(error) }, "Error fetching company:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

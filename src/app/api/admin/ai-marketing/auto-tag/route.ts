@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingAutoTagLogger = logger.child({ module: "admin-ai-marketing-auto-tag" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { autoTagProject } from "@/lib/ai";
@@ -122,7 +125,7 @@ export async function POST(request: Request) {
             status: "pending" as const,
           };
         } catch (error) {
-          console.error(`Error tagging project ${project.id}:`, error);
+          adminAiMarketingAutoTagLogger.error({ err: String(error) }, `Error tagging project ${project.id}:`);
           return {
             projectId: project.id,
             projectTitle: project.title,
@@ -144,7 +147,7 @@ export async function POST(request: Request) {
       taggedProjects: tagResults,
     });
   } catch (error) {
-    console.error("Error running auto-tagging:", error);
+    adminAiMarketingAutoTagLogger.error({ err: String(error) }, "Error running auto-tagging:");
     return NextResponse.json(
       { error: "Failed to run auto-tagging" },
       { status: 500 }
@@ -190,7 +193,7 @@ export async function PATCH(request: Request) {
 
           return { projectId: update.projectId, success: true };
         } catch (error) {
-          console.error(`Error updating project ${update.projectId}:`, error);
+          adminAiMarketingAutoTagLogger.error({ err: String(error) }, `Error updating project ${update.projectId}:`);
           return { projectId: update.projectId, success: false, error: "Failed to update" };
         }
       })
@@ -204,7 +207,7 @@ export async function PATCH(request: Request) {
       results,
     });
   } catch (error) {
-    console.error("Error applying tags:", error);
+    adminAiMarketingAutoTagLogger.error({ err: String(error) }, "Error applying tags:");
     return NextResponse.json(
       { error: "Failed to apply tags" },
       { status: 500 }

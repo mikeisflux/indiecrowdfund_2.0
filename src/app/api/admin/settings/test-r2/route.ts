@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminSettingsTestR2Logger = logger.child({ module: "admin-settings-test-r2" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
@@ -77,13 +80,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Log what we're using (mask sensitive data)
-    console.log("[R2 Test] Using credentials:", {
+    adminSettingsTestR2Logger.info({ data: {
       accountId: accountId,
       accessKeyIdPrefix: accessKeyId.substring(0, 8) + "...",
       secretKeyLength: secretAccessKey.length,
       bucketName: bucketName,
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    });
+    } }, "[R2 Test] Using credentials:");
 
     // Create S3 client for R2
     const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
@@ -109,7 +112,7 @@ export async function POST(request: NextRequest) {
       message: "Connection successful",
     });
   } catch (error) {
-    console.error("R2 connection test error:", error);
+    adminSettingsTestR2Logger.error({ err: String(error) }, "R2 connection test error:");
 
     let errorMessage = "Connection failed";
     let errorDetails = "";
@@ -153,14 +156,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.error("[R2 Test] Full error details:", {
+    adminSettingsTestR2Logger.error({ err: {
       awsErrorCode,
       httpStatusCode,
       requestId,
       message: errorDetails,
       accountId: accountId?.substring(0, 8) + "...",
       bucketName,
-    });
+    } }, "[R2 Test] Full error details:");
 
     return NextResponse.json(
       {

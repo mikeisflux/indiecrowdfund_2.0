@@ -1,6 +1,11 @@
 import { sendEmail, queueEmail, EMAIL_PRIORITY } from "./email-config";
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const emailEmailTemplatesMiscLogger = logger.child({ module: "email-email-templates-misc" });
+
+
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -243,7 +248,7 @@ export async function addToCreatorEmailList(options: {
   const { creatorId, email, name, source, sourceProjectId } = options;
 
   if (!email || !email.includes("@")) {
-    console.log(`[addToCreatorEmailList] Invalid email: ${email}`);
+    emailEmailTemplatesMiscLogger.info(`[addToCreatorEmailList] Invalid email: ${email}`);
     return { success: false, isNew: false };
   }
 
@@ -261,7 +266,7 @@ export async function addToCreatorEmailList(options: {
     });
 
     if (existing) {
-      console.log(`[addToCreatorEmailList] Email ${normalizedEmail} already in list for creator ${creatorId}`);
+      emailEmailTemplatesMiscLogger.info(`[addToCreatorEmailList] Email ${normalizedEmail} already in list for creator ${creatorId}`);
       return { success: true, isNew: false, subscriberId: existing.id };
     }
 
@@ -277,16 +282,16 @@ export async function addToCreatorEmailList(options: {
       },
     });
 
-    console.log(`[addToCreatorEmailList] Added ${normalizedEmail} to list for creator ${creatorId} (source: ${source})`);
+    emailEmailTemplatesMiscLogger.info(`[addToCreatorEmailList] Added ${normalizedEmail} to list for creator ${creatorId} (source: ${source})`);
     return { success: true, isNew: true, subscriberId: subscriber.id };
   } catch (error) {
     // Handle race condition where another request added the same email
     if ((error as { code?: string })?.code === "P2002") {
-      console.log(`[addToCreatorEmailList] Race condition: ${normalizedEmail} already exists`);
+      emailEmailTemplatesMiscLogger.info(`[addToCreatorEmailList] Race condition: ${normalizedEmail} already exists`);
       return { success: true, isNew: false };
     }
 
-    console.error(`[addToCreatorEmailList] Error adding ${normalizedEmail}:`, error);
+    emailEmailTemplatesMiscLogger.error({ err: error }, `[addToCreatorEmailList] Error adding ${normalizedEmail}:`);
     return { success: false, isNew: false };
   }
 }

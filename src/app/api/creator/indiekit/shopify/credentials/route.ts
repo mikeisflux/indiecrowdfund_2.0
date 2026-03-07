@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitShopifyCredentialsLogger = logger.child({ module: "creator-indiekit-shopify-credentials" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { encryptCredential, decryptCredential } from "@/lib/encryption";
@@ -48,7 +51,7 @@ export async function GET() {
       shopDomain,
     });
   } catch (error) {
-    console.error("Error fetching Shopify credentials:", error);
+    creatorIndiekitShopifyCredentialsLogger.error({ err: String(error) }, "Error fetching Shopify credentials:");
     return NextResponse.json({ error: "Failed to fetch credentials" }, { status: 500 });
   }
 }
@@ -90,7 +93,7 @@ export async function POST(req: NextRequest) {
       apiKeyPreview,
     });
   } catch (error) {
-    console.error("Error saving Shopify credentials:", error);
+    creatorIndiekitShopifyCredentialsLogger.error({ err: String(error) }, "Error saving Shopify credentials:");
     return NextResponse.json({ error: "Failed to save credentials" }, { status: 500 });
   }
 }
@@ -116,7 +119,7 @@ export async function DELETE() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error clearing Shopify credentials:", error);
+    creatorIndiekitShopifyCredentialsLogger.error({ err: String(error) }, "Error clearing Shopify credentials:");
     return NextResponse.json({ error: "Failed to clear credentials" }, { status: 500 });
   }
 }

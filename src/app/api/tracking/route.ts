@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const trackingLogger = logger.child({ module: "tracking" });
 import { trackEvent, trackProjectView, trackReferrer } from "@/lib/tracking/index";
 
 // Simple in-memory cache to avoid hitting IP-API rate limits (45 req/min)
@@ -125,7 +128,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Tracking error:", error);
+    trackingLogger.error({ err: String(error) }, "Tracking error:");
     // Return success anyway - tracking shouldn't fail requests
     return NextResponse.json({ success: true });
   }

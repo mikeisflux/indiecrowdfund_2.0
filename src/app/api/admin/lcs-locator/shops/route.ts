@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminLcsLocatorShopsLogger = logger.child({ module: "admin-lcs-locator-shops" });
 import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth-helpers";
 import { slugify } from "@/lib/utils";
@@ -78,7 +81,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching comic shops:", error);
+    adminLcsLocatorShopsLogger.error({ err: String(error) }, "Error fetching comic shops:");
     return NextResponse.json({ error: "Failed to fetch comic shops" }, { status: 500 });
   }
 }
@@ -126,7 +129,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(shop);
   } catch (error) {
-    console.error("Error creating comic shop:", error);
+    adminLcsLocatorShopsLogger.error({ err: String(error) }, "Error creating comic shop:");
     return NextResponse.json({ error: "Failed to create comic shop" }, { status: 500 });
   }
 }
@@ -179,7 +182,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json(shop);
   } catch (error) {
-    console.error("Error updating comic shop:", error);
+    adminLcsLocatorShopsLogger.error({ err: String(error) }, "Error updating comic shop:");
     return NextResponse.json({ error: "Failed to update comic shop" }, { status: 500 });
   }
 }
@@ -207,7 +210,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting comic shop:", error);
+    adminLcsLocatorShopsLogger.error({ err: String(error) }, "Error deleting comic shop:");
     return NextResponse.json({ error: "Failed to delete comic shop" }, { status: 500 });
   }
 }

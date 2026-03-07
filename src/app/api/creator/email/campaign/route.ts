@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorEmailCampaignLogger = logger.child({ module: "creator-email-campaign" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { queueEmail, EMAIL_PRIORITY, escapeHtmlForEmail as escapeHtml } from "@/lib/email";
@@ -214,7 +217,7 @@ export async function POST(request: NextRequest) {
           },
         });
       } catch (activityError) {
-        console.error("Failed to log campaign activity:", activityError);
+        creatorEmailCampaignLogger.error({ err: String(activityError) }, "Failed to log campaign activity:");
       }
     }
 
@@ -232,7 +235,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
     });
   } catch (error) {
-    console.error("Error sending campaign:", error);
+    creatorEmailCampaignLogger.error({ err: String(error) }, "Error sending campaign:");
     return NextResponse.json(
       { error: "Failed to send campaign" },
       { status: 500 }

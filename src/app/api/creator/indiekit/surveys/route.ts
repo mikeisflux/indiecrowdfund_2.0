@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitSurveysLogger = logger.child({ module: "creator-indiekit-surveys" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -88,7 +91,7 @@ export async function GET(req: NextRequest) {
       questions: questions.sort((a: QuestionFormat, b: QuestionFormat) => a.sortOrder - b.sortOrder),
     });
   } catch (error) {
-    console.error("IndieKit surveys fetch error:", error);
+    creatorIndiekitSurveysLogger.error({ err: String(error) }, "IndieKit surveys fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch survey" },
       { status: 500 }
@@ -183,7 +186,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    console.error("IndieKit surveys update error:", error);
+    creatorIndiekitSurveysLogger.error({ err: String(error) }, "IndieKit surveys update error:");
     return NextResponse.json(
       { error: "Failed to update survey" },
       { status: 500 }
@@ -296,7 +299,7 @@ export async function PATCH(req: NextRequest) {
               );
               emailsSent++;
             } catch (emailError) {
-              console.error(`Failed to send survey email to ${pledge.user.email}:`, emailError);
+              creatorIndiekitSurveysLogger.error({ err: String(emailError) }, `Failed to send survey email to ${pledge.user.email}:`);
             }
           }
         }
@@ -388,7 +391,7 @@ export async function PATCH(req: NextRequest) {
               );
               emailsSent++;
             } catch (emailError) {
-              console.error(`Failed to send backfill survey email to ${pledge.user.email}:`, emailError);
+              creatorIndiekitSurveysLogger.error({ err: String(emailError) }, `Failed to send backfill survey email to ${pledge.user.email}:`);
             }
           }
         }
@@ -408,7 +411,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, emailsSent });
   } catch (error) {
-    console.error("IndieKit survey status update error:", error);
+    creatorIndiekitSurveysLogger.error({ err: String(error) }, "IndieKit survey status update error:");
     return NextResponse.json(
       { error: "Failed to update survey status" },
       { status: 500 }

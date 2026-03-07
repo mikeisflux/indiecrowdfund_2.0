@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsSurveyLockLogger = logger.child({ module: "projects-survey-lock" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -79,7 +82,7 @@ export async function POST(
       message: "Survey and addresses have been locked",
     });
   } catch (error) {
-    console.error("Error locking survey:", error);
+    projectsSurveyLockLogger.error({ err: String(error) }, "Error locking survey:");
     return NextResponse.json(
       { error: "Failed to lock survey" },
       { status: 500 }

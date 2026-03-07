@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const userFollowingLogger = logger.child({ module: "user-following" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { addToCreatorEmailList } from "@/lib/email";
@@ -141,7 +144,7 @@ export async function GET(request: Request) {
       })),
     });
   } catch (error) {
-    console.error("Following fetch error:", error);
+    userFollowingLogger.error({ err: String(error) }, "Following fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch following data" },
       { status: 500 }
@@ -241,7 +244,7 @@ export async function POST(request: Request) {
           sourceProjectId: projectId,
         });
       } catch (emailListError) {
-        console.error("[Follow] Failed to add follower to email list:", emailListError);
+        userFollowingLogger.error({ err: String(emailListError) }, "[Follow] Failed to add follower to email list:");
       }
     }
 
@@ -271,7 +274,7 @@ export async function POST(request: Request) {
       message: "Successfully followed project",
     });
   } catch (error) {
-    console.error("Follow project error:", error);
+    userFollowingLogger.error({ err: String(error) }, "Follow project error:");
     return NextResponse.json(
       { error: "Failed to follow project" },
       { status: 500 }
@@ -325,7 +328,7 @@ export async function DELETE(request: Request) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Unfollow error:", error);
+    userFollowingLogger.error({ err: String(error) }, "Unfollow error:");
     return NextResponse.json(
       { error: "Failed to unfollow" },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminReconcilePledgesLogger = logger.child({ module: "admin-reconcile-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
@@ -65,7 +68,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(summary);
   } catch (error) {
-    console.error("Reconciliation error:", error);
+    adminReconcilePledgesLogger.error({ err: String(error) }, "Reconciliation error:");
     return NextResponse.json(
       { error: "Failed to reconcile pledges" },
       { status: 500 }
@@ -102,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(summary);
   } catch (error) {
-    console.error("Reconciliation fix error:", error);
+    adminReconcilePledgesLogger.error({ err: String(error) }, "Reconciliation fix error:");
     return NextResponse.json(
       { error: "Failed to apply reconciliation fixes" },
       { status: 500 }
@@ -283,7 +286,7 @@ async function reconcileDCProject(
             confirmationEmailSent: false,
           },
         });
-        console.log(`[Reconcile] Downgraded DC pledge ${pledge.id} from COMPLETED to PENDING (no transaction record)`);
+        adminReconcilePledgesLogger.info(`[Reconcile] Downgraded DC pledge ${pledge.id} from COMPLETED to PENDING (no transaction record)`);
       }
     }
     // PENDING pledges without transactions are fine — they're just incomplete/abandoned
@@ -307,7 +310,7 @@ async function reconcileDCProject(
         backerCount: verifiedCount,
       },
     });
-    console.log(`[Reconcile] DC project ${project.id}: set currentAmount=$${verifiedTotal}, backerCount=${verifiedCount}`);
+    adminReconcilePledgesLogger.info(`[Reconcile] DC project ${project.id}: set currentAmount=$${verifiedTotal}, backerCount=${verifiedCount}`);
   }
 
   return {
@@ -415,7 +418,7 @@ async function reconcileStripeProject(
       lastId = morePayments.data[morePayments.data.length - 1]?.id;
     }
   } catch (error) {
-    console.warn(`Could not fetch PaymentIntents for project ${project.id}:`, error);
+    adminReconcilePledgesLogger.warn({ data: error }, `Could not fetch PaymentIntents for project ${project.id}:`);
   }
 
   // Fetch SetupIntents from Stripe
@@ -478,7 +481,7 @@ async function reconcileStripeProject(
       lastId = moreSetups.data[moreSetups.data.length - 1]?.id;
     }
   } catch (error) {
-    console.warn(`Could not fetch SetupIntents for project ${project.id}:`, error);
+    adminReconcilePledgesLogger.warn({ data: error }, `Could not fetch SetupIntents for project ${project.id}:`);
   }
 
   // Compare with database
@@ -546,7 +549,7 @@ async function reconcileStripeProject(
             try {
               await notifyBackerPledgeConfirmed(pledgeId, true);
             } catch (e) {
-              console.warn(`Could not send confirmation email for pledge ${pledgeId}:`, e);
+              adminReconcilePledgesLogger.warn({ data: e }, `Could not send confirmation email for pledge ${pledgeId}:`);
             }
           }
         }
@@ -571,13 +574,13 @@ async function reconcileStripeProject(
                   try {
                     await notifyBackerPledgeConfirmed(pledgeId, false);
                   } catch (e) {
-                    console.warn(`Could not send confirmation email for pledge ${pledgeId}:`, e);
+                    adminReconcilePledgesLogger.warn({ data: e }, `Could not send confirmation email for pledge ${pledgeId}:`);
                   }
                 }
               }
             }
           } catch (e) {
-            console.warn(`Could not update payment method for pledge ${pledgeId}:`, e);
+            adminReconcilePledgesLogger.warn({ data: e }, `Could not update payment method for pledge ${pledgeId}:`);
           }
         }
       }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsBasicsLogger = logger.child({ module: "projects-basics" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -126,7 +129,7 @@ export async function POST(
       },
     });
 
-    console.log(`Project basics updated for ${projectId}`);
+    projectsBasicsLogger.info(`Project basics updated for ${projectId}`);
 
     return NextResponse.json({
       success: true,
@@ -136,7 +139,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Update basics error:", error);
+    projectsBasicsLogger.error({ err: String(error) }, "Update basics error:");
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -201,7 +204,7 @@ export async function GET(
       goalAmount: project ? Number(project.goalAmount) : 0,
     });
   } catch (error) {
-    console.error("Get basics error:", error);
+    projectsBasicsLogger.error({ err: String(error) }, "Get basics error:");
     return NextResponse.json(
       { error: "Failed to get project basics" },
       { status: 500 }

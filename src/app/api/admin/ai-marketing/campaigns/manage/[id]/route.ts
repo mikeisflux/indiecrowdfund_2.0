@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingCampaignsManageLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -66,7 +69,7 @@ export async function GET(
 
     return NextResponse.json({ campaign });
   } catch (error) {
-    console.error("Error fetching campaign:", error);
+    adminAiMarketingCampaignsManageLogger.error({ err: String(error) }, "Error fetching campaign:");
     return NextResponse.json(
       { error: "Failed to fetch campaign" },
       { status: 500 }
@@ -171,7 +174,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, campaign });
   } catch (error) {
-    console.error("Error updating campaign:", error);
+    adminAiMarketingCampaignsManageLogger.error({ err: String(error) }, "Error updating campaign:");
     return NextResponse.json(
       { error: "Failed to update campaign" },
       { status: 500 }
@@ -216,7 +219,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: `Campaign "${existing.name}" deleted` });
   } catch (error) {
-    console.error("Error deleting campaign:", error);
+    adminAiMarketingCampaignsManageLogger.error({ err: String(error) }, "Error deleting campaign:");
     return NextResponse.json(
       { error: "Failed to delete campaign" },
       { status: 500 }

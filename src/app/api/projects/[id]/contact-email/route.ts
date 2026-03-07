@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsContactEmailLogger = logger.child({ module: "projects-contact-email" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -64,7 +67,7 @@ export async function POST(
       select: { id: true, contactEmail: true },
     });
 
-    console.log(`Contact email saved for project ${projectId}: ${contactEmail}`);
+    projectsContactEmailLogger.info(`Contact email saved for project ${projectId}: ${contactEmail}`);
 
     return NextResponse.json({
       success: true,
@@ -72,7 +75,7 @@ export async function POST(
       message: "Contact email saved successfully",
     });
   } catch (error) {
-    console.error("Save contact email error:", error);
+    projectsContactEmailLogger.error({ err: String(error) }, "Save contact email error:");
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -134,7 +137,7 @@ export async function GET(
       contactEmail: project.contactEmail || "",
     });
   } catch (error) {
-    console.error("Get contact email error:", error);
+    projectsContactEmailLogger.error({ err: String(error) }, "Get contact email error:");
     return NextResponse.json(
       { error: "Failed to get contact email" },
       { status: 500 }

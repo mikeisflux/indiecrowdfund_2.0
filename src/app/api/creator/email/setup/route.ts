@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorEmailSetupLogger = logger.child({ module: "creator-email-setup" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -39,7 +42,7 @@ export async function GET() {
       suggestedHandle: user.creatorEmailHandle || generateSuggestedHandle(user.name),
     });
   } catch (error) {
-    console.error("Error checking creator email setup:", error);
+    creatorEmailSetupLogger.error({ err: String(error) }, "Error checking creator email setup:");
     return NextResponse.json(
       { error: "Failed to check email setup" },
       { status: 500 }
@@ -120,7 +123,7 @@ export async function POST(req: NextRequest) {
       fullEmail: `${updatedUser.creatorEmailHandle}@indiecrowdfund.com`,
     });
   } catch (error) {
-    console.error("Error setting up creator email:", error);
+    creatorEmailSetupLogger.error({ err: String(error) }, "Error setting up creator email:");
     return NextResponse.json(
       { error: "Failed to set up email" },
       { status: 500 }

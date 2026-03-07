@@ -2,6 +2,11 @@
 
 import { db } from "@/lib/db";
 
+import { logger } from "@/lib/logger";
+
+const statsActionsLogger = logger.child({ module: "stats-actions" });
+
+
 export interface PlatformStats {
   totalPledged: number;
   projectsFunded: number;
@@ -130,7 +135,7 @@ async function fetchPlatformStatsUncached(): Promise<PlatformStats> {
       backerPool: totalBackers,
     };
   } catch (error) {
-    console.error("Error fetching platform stats:", error);
+    statsActionsLogger.error({ err: error }, "Error fetching platform stats:");
     return DEFAULT_PLATFORM_STATS;
   }
 }
@@ -212,7 +217,7 @@ async function fetchRetailerStatsUncached(): Promise<RetailerStats> {
       satisfactionRate,
     };
   } catch (error) {
-    console.error("Error fetching retailer stats:", error);
+    statsActionsLogger.error({ err: error }, "Error fetching retailer stats:");
     return DEFAULT_RETAILER_STATS;
   }
 }

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const marketplacePurchaseConfirmLogger = logger.child({ module: "marketplace-purchase-confirm" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -80,16 +83,14 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log(
-      `[Marketplace] Purchase ${purchaseId} confirmed for user ${session.user.id}, book: ${purchase.book.title}`
-    );
+    marketplacePurchaseConfirmLogger.info(`[Marketplace] Purchase ${purchaseId} confirmed for user ${session.user.id}, book: ${purchase.book.title}`);
 
     return NextResponse.json({
       success: true,
       message: "Purchase confirmed",
     });
   } catch (error) {
-    console.error("Error confirming purchase:", error);
+    marketplacePurchaseConfirmLogger.error({ err: String(error) }, "Error confirming purchase:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

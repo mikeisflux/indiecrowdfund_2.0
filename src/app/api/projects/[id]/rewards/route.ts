@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsRewardsLogger = logger.child({ module: "projects-rewards" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -30,7 +33,7 @@ export async function GET(
       rewards: serializedRewards,
     });
   } catch (error) {
-    console.error("Fetch rewards error:", error);
+    projectsRewardsLogger.error({ err: String(error) }, "Fetch rewards error:");
     return NextResponse.json(
       { error: "Failed to fetch rewards" },
       { status: 500 }
@@ -227,11 +230,11 @@ export async function POST(
     const body = await req.json();
 
     // Debug: log shipping data received
-    console.log("[Rewards API] Received shipping data:", {
+    projectsRewardsLogger.info({ data: {
       shippingType: body.shippingType,
       shippingCost: body.shippingCost,
       shippingCountries: body.shippingCountries,
-    });
+    } }, "[Rewards API] Received shipping data:");
 
     // Check if this is a batch request
     if (body.rewards && Array.isArray(body.rewards)) {
@@ -244,7 +247,7 @@ export async function POST(
           const savedReward = await saveReward(projectId, rewardData);
           results.push({ success: true, reward: savedReward });
         } catch (err) {
-          console.error(`Error saving reward:`, err);
+          projectsRewardsLogger.error({ err: String(err) }, `Error saving reward:`);
           results.push({
             success: false,
             error: err instanceof Error ? err.message : "Unknown error"
@@ -252,7 +255,7 @@ export async function POST(
         }
       }
 
-      console.log(`Batch rewards saved: ${results.filter(r => r.success).length}/${batch.rewards.length} for project ${projectId}`);
+      projectsRewardsLogger.info(`Batch rewards saved: ${results.filter(r => r.success).length}/${batch.rewards.length} for project ${projectId}`);
       return NextResponse.json({
         success: true,
         results,
@@ -264,27 +267,27 @@ export async function POST(
     // Single reward handling - use the shared helper
     const reward = rewardSchema.parse(body);
     // Debug: log parsed shipping data
-    console.log("[Rewards API] Parsed shipping data:", {
+    projectsRewardsLogger.info({ data: {
       shippingType: reward.shippingType,
       shippingCost: reward.shippingCost,
       shippingCountries: reward.shippingCountries,
-    });
+    } }, "[Rewards API] Parsed shipping data:");
     const savedReward = await saveReward(projectId, reward);
-    console.log(`Reward ${reward.id ? 'updated' : 'created'}: ${savedReward.id} for project ${projectId}`);
+    projectsRewardsLogger.info(`Reward ${reward.id ? 'updated' : 'created'}: ${savedReward.id} for project ${projectId}`);
     return NextResponse.json({
       success: true,
       reward: savedReward,
     });
   } catch (error) {
-    console.error("Create reward error:", error);
+    projectsRewardsLogger.error({ err: String(error) }, "Create reward error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
-      console.error("Zod validation error:", errorMessage);
+      projectsRewardsLogger.error({ err: String(errorMessage) }, "Zod validation error:");
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     // Log the actual error message for debugging
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error("Database/other error:", errorMsg);
+    projectsRewardsLogger.error({ err: String(errorMsg) }, "Database/other error:");
     return NextResponse.json(
       { error: `Failed to create reward: ${errorMsg}` },
       { status: 500 }
@@ -338,22 +341,22 @@ export async function PATCH(
     const body = await req.json();
 
     // Debug: log shipping data received for PATCH
-    console.log("[Rewards API PATCH] Received shipping data:", {
+    projectsRewardsLogger.info({ data: {
       rewardId: body.id,
       shippingType: body.shippingType,
       shippingCost: body.shippingCost,
       shippingCountries: body.shippingCountries,
-    });
+    } }, "[Rewards API PATCH] Received shipping data:");
 
     const reward = rewardSchema.parse(body);
 
     // Debug: log parsed shipping data
-    console.log("[Rewards API PATCH] Parsed shipping data:", {
+    projectsRewardsLogger.info({ data: {
       rewardId: reward.id,
       shippingType: reward.shippingType,
       shippingCost: reward.shippingCost,
       shippingCountries: reward.shippingCountries,
-    });
+    } }, "[Rewards API PATCH] Parsed shipping data:");
 
     if (!reward.id) {
       return NextResponse.json({ error: "Reward ID required for update" }, { status: 400 });
@@ -415,12 +418,12 @@ export async function PATCH(
     });
 
     // Debug: log saved shipping data
-    console.log("[Rewards API PATCH] Saved shipping data:", {
+    projectsRewardsLogger.info({ data: {
       rewardId: updated.id,
       shippingType: updated.shippingType,
       shippingCost: updated.shippingCost,
       shippingCountries: updated.shippingCountries,
-    });
+    } }, "[Rewards API PATCH] Saved shipping data:");
 
     return NextResponse.json({
       success: true,
@@ -430,15 +433,15 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error("Update reward error:", error);
+    projectsRewardsLogger.error({ err: String(error) }, "Update reward error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
-      console.error("Zod validation error:", errorMessage);
+      projectsRewardsLogger.error({ err: String(errorMessage) }, "Zod validation error:");
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
     // Log the actual error message for debugging
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error("Database/other error:", errorMsg);
+    projectsRewardsLogger.error({ err: String(errorMsg) }, "Database/other error:");
     return NextResponse.json(
       { error: `Failed to update reward: ${errorMsg}` },
       { status: 500 }
@@ -525,7 +528,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete reward error:", error);
+    projectsRewardsLogger.error({ err: String(error) }, "Delete reward error:");
     return NextResponse.json(
       { error: "Failed to delete reward" },
       { status: 500 }

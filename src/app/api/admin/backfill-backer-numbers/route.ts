@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminBackfillBackerNumbersLogger = logger.child({ module: "admin-backfill-backer-numbers" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -88,7 +91,7 @@ export async function POST() {
       details: results,
     });
   } catch (error) {
-    console.error("Backfill backer numbers error:", error);
+    adminBackfillBackerNumbersLogger.error({ err: String(error) }, "Backfill backer numbers error:");
     return NextResponse.json(
       { error: "Failed to backfill backer numbers" },
       { status: 500 }

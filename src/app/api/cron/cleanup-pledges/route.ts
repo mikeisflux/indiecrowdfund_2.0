@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const cronCleanupPledgesLogger = logger.child({ module: "cron-cleanup-pledges" });
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +40,7 @@ export async function POST(req: NextRequest) {
   try {
     // Verify authorization
     if (!verifyCronAuth(req)) {
-      console.log("[Cron] Unauthorized cleanup attempt");
+      cronCleanupPledgesLogger.info("[Cron] Unauthorized cleanup attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest) {
       // No body or invalid JSON, use defaults
     }
 
-    console.log(`[Cron] Running stale pledge cleanup (hoursOld: ${hoursOld}, dryRun: ${dryRun})`);
+    cronCleanupPledgesLogger.info(`[Cron] Running stale pledge cleanup (hoursOld: ${hoursOld}, dryRun: ${dryRun})`);
 
     // Calculate the cutoff time
     const cutoffTime = new Date(Date.now() - hoursOld * 60 * 60 * 1000);
@@ -97,7 +100,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (dryRun) {
-      console.log(`[Cron] Dry run: Would cleanup ${stalePledges.length} stale pledges`);
+      cronCleanupPledgesLogger.info(`[Cron] Dry run: Would cleanup ${stalePledges.length} stale pledges`);
       return NextResponse.json({
         success: true,
         dryRun: true,
@@ -107,7 +110,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (stalePledges.length === 0) {
-      console.log("[Cron] No stale pledges found to cleanup");
+      cronCleanupPledgesLogger.info("[Cron] No stale pledges found to cleanup");
       return NextResponse.json({
         success: true,
         count: 0,
@@ -120,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     // Log details for auditing before deletion
     stalePledges.forEach((p) => {
-      console.log(`[Cron] Deleting stale pledge ${p.id} ($${p.amount}) for "${p.project.title}" - user: ${p.user.email}`);
+      cronCleanupPledgesLogger.info(`[Cron] Deleting stale pledge ${p.id} ($${p.amount}) for "${p.project.title}" - user: ${p.user.email}`);
     });
 
     // Delete associated addons first (foreign key constraint)
@@ -133,7 +136,7 @@ export async function POST(req: NextRequest) {
       where: { id: { in: pledgeIds } },
     });
 
-    console.log(`[Cron] Deleted ${deleted.count} stale pledges`);
+    cronCleanupPledgesLogger.info(`[Cron] Deleted ${deleted.count} stale pledges`);
 
     return NextResponse.json({
       success: true,
@@ -142,7 +145,7 @@ export async function POST(req: NextRequest) {
       totalAmountCleared: stalePledges.reduce((sum, p) => sum + Number(p.amount), 0),
     });
   } catch (error) {
-    console.error("[Cron] Error in pledge cleanup:", error);
+    cronCleanupPledgesLogger.error({ err: String(error) }, "[Cron] Error in pledge cleanup:");
     return NextResponse.json(
       { error: "Failed to cleanup stale pledges" },
       { status: 500 }

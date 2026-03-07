@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminProjectsReviewLogger = logger.child({ module: "admin-projects-review" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -183,7 +186,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (emailAddresses.size === 0) {
-          console.log("No email addresses found for project creator");
+          adminProjectsReviewLogger.info("No email addresses found for project creator");
         } else {
           // Send to each unique email address
           for (const email of Array.from(emailAddresses)) {
@@ -219,18 +222,18 @@ export async function POST(req: NextRequest) {
             }
 
             if (emailResult.success) {
-              console.log(`Review email sent successfully to ${email} for action: ${reviewAction}`);
+              adminProjectsReviewLogger.info(`Review email sent successfully to ${email} for action: ${reviewAction}`);
             } else {
-              console.error(`Failed to send review email to ${email}: ${emailResult.error}`);
+              adminProjectsReviewLogger.error(`Failed to send review email to ${email}: ${emailResult.error}`);
             }
           }
         }
       } catch (emailError) {
-        console.error("Failed to send review email:", emailError);
+        adminProjectsReviewLogger.error({ err: String(emailError) }, "Failed to send review email:");
         // Continue with the response even if email fails
       }
     } else {
-      console.log(`Email notification skipped - sendEmail: ${sendEmail}`);
+      adminProjectsReviewLogger.info(`Email notification skipped - sendEmail: ${sendEmail}`);
     }
 
     const reviewAuditMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {
@@ -254,7 +257,7 @@ export async function POST(req: NextRequest) {
       review,
     });
   } catch (error) {
-    console.error("Error reviewing project:", error);
+    adminProjectsReviewLogger.error({ err: String(error) }, "Error reviewing project:");
     return NextResponse.json(
       { error: "Failed to review project" },
       { status: 500 }
@@ -431,7 +434,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching projects for review:", error);
+    adminProjectsReviewLogger.error({ err: String(error) }, "Error fetching projects for review:");
     return NextResponse.json(
       { error: "Failed to fetch projects" },
       { status: 500 }

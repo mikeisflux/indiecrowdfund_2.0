@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const backerDigitalLibraryLogger = logger.child({ module: "backer-digital-library" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 
@@ -170,13 +173,13 @@ export async function GET(request: Request) {
           },
         });
 
-        console.log("[Digital Library] Found marketplace purchases:", marketplacePurchases.length);
+        backerDigitalLibraryLogger.info({ data: marketplacePurchases.length }, "[Digital Library] Found marketplace purchases:");
         for (const purchase of marketplacePurchases) {
-          console.log("[Digital Library] Adding marketplace item:", {
+          backerDigitalLibraryLogger.info({ data: {
             purchaseId: purchase.id,
             bookTitle: purchase.book.title,
             hasPdfUrl: !!purchase.book.pdfFileUrl,
-          });
+          } }, "[Digital Library] Adding marketplace item:");
           libraryItems.push({
             id: `mp_${purchase.id}`,
             title: purchase.book.title,
@@ -193,7 +196,7 @@ export async function GET(request: Request) {
         }
       } catch {
         // MarketplacePurchase table doesn't exist yet, skip
-        console.log("MarketplacePurchase table not yet available");
+        backerDigitalLibraryLogger.info("MarketplacePurchase table not yet available");
       }
     }
 
@@ -217,7 +220,7 @@ export async function GET(request: Request) {
       stats,
     });
   } catch (error) {
-    console.error("Digital library fetch error:", error);
+    backerDigitalLibraryLogger.error({ err: String(error) }, "Digital library fetch error:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

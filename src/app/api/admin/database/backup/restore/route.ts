@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const adminDatabaseBackupRestoreLogger = logger.child({ module: "admin-database-backup-restore" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { exec } from "child_process";
@@ -152,7 +155,7 @@ export async function POST(req: NextRequest) {
       details: stderr || stdout,
     });
   } catch (error) {
-    console.error("Error restoring backup:", error);
+    adminDatabaseBackupRestoreLogger.error({ err: String(error) }, "Error restoring backup:");
     return NextResponse.json(
       { error: "Failed to restore backup", details: String(error) },
       { status: 500 }
@@ -222,7 +225,7 @@ export async function PUT(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error uploading backup:", error);
+    adminDatabaseBackupRestoreLogger.error({ err: String(error) }, "Error uploading backup:");
     return NextResponse.json(
       { error: "Failed to upload backup", details: String(error) },
       { status: 500 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const creatorIndiekitTransactionsLogger = logger.child({ module: "creator-indiekit-transactions" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -153,7 +156,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching IndieKit transactions:", error);
+    creatorIndiekitTransactionsLogger.error({ err: String(error) }, "Error fetching IndieKit transactions:");
     return NextResponse.json(
       { error: "Failed to fetch transactions" },
       { status: 500 }

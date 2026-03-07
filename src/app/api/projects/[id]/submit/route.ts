@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+
+const projectsSubmitLogger = logger.child({ module: "projects-submit" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { moderateContent, analyzeFraud } from "@/lib/ai/anthropic";
@@ -228,7 +231,7 @@ export async function POST(
         }
       }
     } catch (aiError) {
-      console.error("AI analysis failed, falling back to rule-based checks:", aiError);
+      projectsSubmitLogger.error({ err: String(aiError) }, "AI analysis failed, falling back to rule-based checks:");
       flagsRaised.push("ai_analysis_failed");
     }
 
@@ -339,7 +342,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Error submitting project:", error);
+    projectsSubmitLogger.error({ err: String(error) }, "Error submitting project:");
     return NextResponse.json(
       { error: "Failed to submit project" },
       { status: 500 }
