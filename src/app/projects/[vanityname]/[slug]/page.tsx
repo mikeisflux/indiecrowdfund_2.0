@@ -43,6 +43,7 @@ import {
   CommunityTab,
 } from "@/components/project-details";
 import { CountdownTimer } from "@/components/ui/countdown-timer";
+import { BackToTop } from "@/components/back-to-top";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 export default function ProjectPage() {
@@ -896,6 +897,8 @@ export default function ProjectPage() {
           <CommunityTab />
         )}
       </section>
+
+      <BackToTop />
     </div>
   );
 }

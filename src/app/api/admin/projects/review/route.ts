@@ -6,6 +6,7 @@ import {
   sendProjectRejectedEmail,
   sendProjectChangesRequestedEmail,
 } from "@/lib/email";
+import { auditLog } from "@/lib/audit";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -230,6 +231,21 @@ export async function POST(req: NextRequest) {
       }
     } else {
       console.log(`Email notification skipped - sendEmail: ${sendEmail}`);
+    }
+
+    const reviewAuditMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {
+      APPROVED: "PROJECT_APPROVE",
+      REJECTED: "PROJECT_REJECT",
+    };
+    if (reviewAuditMap[action]) {
+      auditLog({
+        action: reviewAuditMap[action],
+        actorId: session.user.id,
+        actorEmail: session.user.email || undefined,
+        targetId: projectId,
+        targetType: "PROJECT",
+        details: { action, previousStatus, newStatus, rejectionReason },
+      });
     }
 
     return NextResponse.json({

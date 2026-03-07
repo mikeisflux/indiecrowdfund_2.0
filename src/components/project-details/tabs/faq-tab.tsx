@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronRight, ChevronDown, Heart, Clock, Bookmark } from "lucide-react";
+import { ChevronRight, ChevronDown, Heart, Clock, Bookmark, Search } from "lucide-react";
 import { SimilarProject } from "../types";
 import { formatTimeRemaining } from "@/lib/utils";
 
@@ -15,6 +16,19 @@ interface FaqTabProps {
 
 export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
   const [expandedFaqs, setExpandedFaqs] = useState<number[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredFaqs = useMemo(() => {
+    if (!searchQuery.trim()) return faqs.map((faq, i) => ({ ...faq, originalIndex: i }));
+    const q = searchQuery.toLowerCase();
+    return faqs
+      .map((faq, i) => ({ ...faq, originalIndex: i }))
+      .filter(
+        (faq) =>
+          faq.question.toLowerCase().includes(q) ||
+          faq.answer.toLowerCase().includes(q)
+      );
+  }, [faqs, searchQuery]);
 
   const toggleFaq = (index: number) => {
     setExpandedFaqs((prev) =>
@@ -31,23 +45,37 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
         {/* Left - FAQ Questions */}
         <div className="lg:col-span-8">
           <h2 className="text-2xl font-semibold mb-6">Frequently Asked Questions</h2>
+          {faqs.length > 3 && (
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search FAQs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          )}
+          {filteredFaqs.length === 0 && searchQuery && (
+            <p className="text-muted-foreground py-4">No FAQs match your search.</p>
+          )}
           <div className="divide-y">
-            {faqs.map((faq, index) => (
-              <div key={index} className="py-4">
+            {filteredFaqs.map((faq) => (
+              <div key={faq.originalIndex} className="py-4">
                 <button
-                  onClick={() => toggleFaq(index)}
+                  onClick={() => toggleFaq(faq.originalIndex)}
                   className="w-full flex items-center justify-between text-left group"
                 >
                   <span className="font-medium group-hover:text-primary transition-colors">
                     {faq.question}
                   </span>
-                  {expandedFaqs.includes(index) ? (
+                  {expandedFaqs.includes(faq.originalIndex) ? (
                     <ChevronDown className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   ) : (
                     <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   )}
                 </button>
-                {expandedFaqs.includes(index) && (
+                {expandedFaqs.includes(faq.originalIndex) && (
                   <p className="mt-3 text-muted-foreground pl-0">{faq.answer}</p>
                 )}
               </div>

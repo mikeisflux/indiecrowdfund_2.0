@@ -687,18 +687,25 @@ export default function ManagePledgePage() {
           <CardContent className="py-8 text-center">
             <XCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">
-              {pledge.status === "CANCELLED" ? "Pledge Cancelled" : "Pledge Failed"}
+              {pledge.status === "CANCELLED" ? "Pledge Cancelled" : "Payment Failed"}
             </h3>
             <p className="text-muted-foreground mb-4">
               {pledge.status === "CANCELLED"
                 ? "You cancelled this pledge. No payment was processed."
-                : "There was an issue processing your payment."}
+                : "There was an issue processing your payment. This may be due to insufficient funds, an expired card, or a bank decline."}
             </p>
-            {pledge.project.status === "LIVE" && (
-              <Link href={`${pledge.project.projectUrl}/pledge`}>
-                <Button>Back This Project Again</Button>
-              </Link>
-            )}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {pledge.project.status === "LIVE" && (
+                <Link href={`${pledge.project.projectUrl}/pledge`}>
+                  <Button>Back This Project Again</Button>
+                </Link>
+              )}
+              {pledge.status === "FAILED" && (
+                <Link href="/dashboard/settings">
+                  <Button variant="outline">Update Payment Method</Button>
+                </Link>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

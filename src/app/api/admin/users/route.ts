@@ -3,6 +3,7 @@ import { auth, BCRYPT_COST } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { auditLog } from "@/lib/audit";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -456,6 +457,29 @@ export async function PATCH(req: NextRequest) {
         lockedReason: true,
       }
     });
+
+    // Audit log for sensitive actions
+    const auditActionMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {
+      UPDATE_ROLE: "USER_ROLE_CHANGE",
+      BAN_USER: "USER_BAN",
+      UNBAN_USER: "USER_UNBAN",
+      LOCK_ACCOUNT: "USER_LOCK",
+      UNLOCK_ACCOUNT: "USER_UNLOCK",
+      SET_PASSWORD: "USER_PASSWORD_SET",
+      SEND_RESET_EMAIL: "USER_PASSWORD_RESET",
+      VERIFY_EMAIL: "USER_EMAIL_VERIFY",
+      UPDATE_INFO: "USER_EMAIL_CHANGE",
+    };
+    if (auditActionMap[action]) {
+      auditLog({
+        action: auditActionMap[action],
+        actorId: authResult.user.id,
+        actorEmail: authResult.user.email || undefined,
+        targetId: userId,
+        targetType: "USER",
+        details: { action, role: data?.role, reason: data?.reason },
+      });
+    }
 
     return NextResponse.json({
       success: true,

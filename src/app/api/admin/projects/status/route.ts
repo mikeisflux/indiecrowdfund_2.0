@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { validateStripeConnectAccount } from "@/lib/payments/stripe";
+import { auditLog } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -168,6 +169,23 @@ export async function POST(request: Request) {
     if (sendEmail && project.creator.email) {
       // await sendStatusChangeEmail(project.creator.email, project.title, action, reason);
       console.log(`Would send email to ${project.creator.email} about ${action}`);
+    }
+
+    const statusAuditMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {
+      DEACTIVATE: "PROJECT_DEACTIVATE",
+      SEND_TO_REVIEW: "PROJECT_DEACTIVATE",
+      REACTIVATE: "PROJECT_REACTIVATE",
+      MAKE_LIVE: "PROJECT_MAKE_LIVE",
+    };
+    if (statusAuditMap[action]) {
+      auditLog({
+        action: statusAuditMap[action],
+        actorId: session.user.id,
+        actorEmail: session.user.email || undefined,
+        targetId: projectId,
+        targetType: "PROJECT",
+        details: { action, previousStatus: project.status, newStatus, reason },
+      });
     }
 
     return NextResponse.json({

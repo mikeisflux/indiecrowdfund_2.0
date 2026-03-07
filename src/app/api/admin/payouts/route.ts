@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { auditLog } from "@/lib/audit";
 
 // Define types locally since Prisma client may not have them yet
 type PayoutStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
@@ -240,6 +241,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    auditLog({
+      action: "PAYOUT_CREATE",
+      actorId: authResult.user.id,
+      actorEmail: authResult.user.email || undefined,
+      targetId: payout.id,
+      targetType: "PAYOUT",
+      details: { projectId: payout.projectId, amount: Number(payout.amount) },
+    });
+
     return NextResponse.json(payout, { status: 201 });
   } catch (error) {
     console.error("Error creating payout:", error);
@@ -366,6 +376,22 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
+    const payoutAuditMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {
+      PROCESS: "PAYOUT_PROCESS",
+      COMPLETE: "PAYOUT_COMPLETE",
+      FAIL: "PAYOUT_FAIL",
+    };
+    if (payoutAuditMap[action]) {
+      auditLog({
+        action: payoutAuditMap[action],
+        actorId: authResult.user.id,
+        actorEmail: authResult.user.email || undefined,
+        targetId: payoutId,
+        targetType: "PAYOUT",
+        details: { action, previousStatus: payout.status },
+      });
+    }
+
     return NextResponse.json(updatedPayout);
   } catch (error) {
     console.error("Error updating payout:", error);
@@ -414,6 +440,15 @@ export async function DELETE(request: NextRequest) {
 
     await db.payout.delete({
       where: { id: payoutId },
+    });
+
+    auditLog({
+      action: "PAYOUT_CANCEL",
+      actorId: authResult.user.id,
+      actorEmail: authResult.user.email || undefined,
+      targetId: payoutId,
+      targetType: "PAYOUT",
+      details: { projectId: payout.projectId },
     });
 
     return NextResponse.json({ success: true });

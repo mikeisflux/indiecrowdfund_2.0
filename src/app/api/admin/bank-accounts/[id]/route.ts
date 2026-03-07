@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { decrypt } from "@/lib/encryption";
+import { auditLog } from "@/lib/audit";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -83,6 +84,15 @@ export async function GET(
       console.error("Error decrypting bank account details:", error);
       // Continue with encrypted placeholders if decryption fails
     }
+
+    auditLog({
+      action: "BANK_ACCOUNT_VIEW",
+      actorId: authResult.user.id,
+      actorEmail: authResult.user.email || undefined,
+      targetId: id,
+      targetType: "USER",
+      details: { bankAccountUserId: bankAccount.userId },
+    });
 
     return NextResponse.json({
       id: bankAccount.id,
