@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import { metrics } from "@/lib/metrics";
 import {
   notifyPledgeFailed,
   notifyBackerPledgeConfirmed,
@@ -48,18 +49,19 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
 
   // SAFETY: Skip if already processed
   if (pledge.status !== "PENDING") {
-    console.log(`[ChargePledge] Pledge ${pledgeId} already ${pledge.status} - skipping`);
+    stripeLogger.info({ pledgeId, status: pledge.status }, "Pledge already processed - skipping");
     return false;
   }
 
   // SAFETY: If this pledge already has a PaymentIntent, check its status instead of creating new one
   if (pledge.stripePaymentIntentId) {
     try {
-      const existingIntent = await stripeClient.paymentIntents.retrieve(pledge.stripePaymentIntentId);
+      const existingIntent = await circuitBreaker.execute("stripe", () =>
+        stripeClient.paymentIntents.retrieve(pledge.stripePaymentIntentId!)
+      );
 
       if (existingIntent.status === "succeeded") {
-        // Already charged successfully - update our record if needed
-        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} already succeeded - updating pledge ${pledgeId}`);
+        stripeLogger.info({ pledgeId, paymentIntentId: pledge.stripePaymentIntentId }, "PaymentIntent already succeeded - updating pledge");
         await db.pledge.update({
           where: { id: pledgeId },
           data: {
@@ -69,31 +71,28 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
             lastFailureReason: null,
           },
         });
-        // Track conversion if this pledge came from an email campaign
         if (pledge.sourceCampaignId) {
           await trackCampaignConversion(pledgeId, pledge.sourceCampaignId);
         }
+        metrics.pledgesCreated.inc({ status: "completed" });
         return true;
       } else if (existingIntent.status === "processing") {
-        // Payment is in progress - don't create another one
-        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} is processing - skipping pledge ${pledgeId}`);
+        stripeLogger.info({ pledgeId, paymentIntentId: pledge.stripePaymentIntentId }, "PaymentIntent is processing - skipping");
         return false;
       } else if (existingIntent.status === "canceled" || existingIntent.status === "requires_payment_method") {
-        // Previous attempt was canceled or failed - we can try again (clear the old intent)
-        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} status ${existingIntent.status} - will create new one`);
-        // Clear the old intent ID so we create a new one below
+        stripeLogger.info({ pledgeId, paymentIntentId: pledge.stripePaymentIntentId, status: existingIntent.status }, "PaymentIntent failed/canceled - will create new one");
         await db.pledge.update({
           where: { id: pledgeId },
           data: { stripePaymentIntentId: null },
         });
       } else if (existingIntent.status === "requires_action") {
-        // 3D Secure or other action required - leave for user to complete
-        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} requires action - skipping`);
+        stripeLogger.info({ pledgeId, paymentIntentId: pledge.stripePaymentIntentId }, "PaymentIntent requires action - skipping");
         return false;
       } else if (existingIntent.status === "requires_confirmation") {
-        // Try to confirm it
         try {
-          const confirmedIntent = await stripeClient.paymentIntents.confirm(pledge.stripePaymentIntentId);
+          const confirmedIntent = await circuitBreaker.execute("stripe", () =>
+            stripeClient.paymentIntents.confirm(pledge.stripePaymentIntentId!)
+          );
           if (confirmedIntent.status === "succeeded") {
             await db.pledge.update({
               where: { id: pledgeId },
@@ -104,28 +103,25 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
                 lastFailureReason: null,
               },
             });
-            // Track conversion if this pledge came from an email campaign
             if (pledge.sourceCampaignId) {
               await trackCampaignConversion(pledgeId, pledge.sourceCampaignId);
             }
+            metrics.pledgesCreated.inc({ status: "completed" });
             return true;
           }
         } catch {
-          // Confirmation failed - will create new intent
-          console.log(`[ChargePledge] Failed to confirm PaymentIntent ${pledge.stripePaymentIntentId} - will create new one`);
+          stripeLogger.info({ pledgeId, paymentIntentId: pledge.stripePaymentIntentId }, "Failed to confirm PaymentIntent - will create new one");
           await db.pledge.update({
             where: { id: pledgeId },
             data: { stripePaymentIntentId: null },
           });
         }
       } else {
-        // Unknown status - skip for safety
-        console.log(`[ChargePledge] PaymentIntent ${pledge.stripePaymentIntentId} status is ${existingIntent.status} - skipping`);
+        stripeLogger.info({ pledgeId, paymentIntentId: pledge.stripePaymentIntentId, status: existingIntent.status }, "PaymentIntent has unknown status - skipping");
         return false;
       }
     } catch {
-      // Intent doesn't exist anymore - clear it and proceed
-      console.log(`[ChargePledge] Could not retrieve PaymentIntent ${pledge.stripePaymentIntentId} - will create new one`);
+      stripeLogger.info({ pledgeId, paymentIntentId: pledge.stripePaymentIntentId }, "Could not retrieve PaymentIntent - will create new one");
       await db.pledge.update({
         where: { id: pledgeId },
         data: { stripePaymentIntentId: null },
@@ -134,7 +130,6 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
   }
 
   if (!pledge.stripePaymentMethodId || !pledge.stripeCustomerId) {
-    // No saved payment method - mark as failed
     await db.pledge.update({
       where: { id: pledgeId },
       data: {
@@ -142,15 +137,17 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
         lastFailureReason: "No saved payment method",
       },
     });
+    metrics.paymentFailures.inc({ reason: "no_payment_method" });
     return false;
   }
 
   // CRITICAL SAFETY CHECK: Verify payment method is still attached to customer
-  // This prevents charging if admin cancelled/deleted the pledge and detached the payment method
   try {
-    const paymentMethod = await stripeClient.paymentMethods.retrieve(pledge.stripePaymentMethodId);
+    const paymentMethod = await circuitBreaker.execute("stripe", () =>
+      stripeClient.paymentMethods.retrieve(pledge.stripePaymentMethodId!)
+    );
     if (!paymentMethod.customer) {
-      console.log(`[ChargePledge] Payment method ${pledge.stripePaymentMethodId} is detached - skipping charge for pledge ${pledgeId}`);
+      stripeLogger.info({ pledgeId, paymentMethodId: pledge.stripePaymentMethodId }, "Payment method is detached - skipping charge");
       await db.pledge.update({
         where: { id: pledgeId },
         data: {
@@ -161,9 +158,8 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
       });
       return false;
     }
-    // Also verify it's attached to the correct customer
     if (paymentMethod.customer !== pledge.stripeCustomerId) {
-      console.log(`[ChargePledge] Payment method ${pledge.stripePaymentMethodId} attached to wrong customer - skipping`);
+      stripeLogger.info({ pledgeId, paymentMethodId: pledge.stripePaymentMethodId }, "Payment method attached to wrong customer - skipping");
       await db.pledge.update({
         where: { id: pledgeId },
         data: {
@@ -171,10 +167,11 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
           lastFailureReason: "Payment method attached to different customer",
         },
       });
+      metrics.paymentFailures.inc({ reason: "wrong_customer" });
       return false;
     }
   } catch {
-    console.log(`[ChargePledge] Could not retrieve payment method ${pledge.stripePaymentMethodId} - marking as cancelled`);
+    stripeLogger.info({ pledgeId, paymentMethodId: pledge.stripePaymentMethodId }, "Could not retrieve payment method - marking as cancelled");
     await db.pledge.update({
       where: { id: pledgeId },
       data: {
@@ -192,7 +189,7 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
     select: { status: true, stripePaymentMethodId: true },
   });
   if (freshPledge?.status !== "PENDING" || !freshPledge.stripePaymentMethodId) {
-    console.log(`[ChargePledge] Pledge ${pledgeId} status changed to ${freshPledge?.status} - skipping charge`);
+    stripeLogger.info({ pledgeId, status: freshPledge?.status }, "Pledge status changed before charge - skipping");
     return false;
   }
 
@@ -205,44 +202,41 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
   const platformFee = Math.round(Number(pledge.amount) * 0.03 * 100);
 
   try {
-    // Generate idempotency key based on pledgeId AND retryCount
-    // This ensures that:
-    // 1. Multiple processes charging the same pledge simultaneously get the same PaymentIntent (no duplicates)
-    // 2. Legitimate retries (after card decline) get a new PaymentIntent (different retryCount)
     const idempotencyKey = `charge_pledge_${pledgeId}_v${pledge.retryCount}`;
 
-    // Create PaymentIntent with saved payment method (off-session)
-    const paymentIntent = await stripeClient.paymentIntents.create(
-      {
-        amount: amountInCents,
-        currency: "usd",
-        customer: pledge.stripeCustomerId,
-        payment_method: pledge.stripePaymentMethodId,
-        off_session: true,
-        confirm: true,
-        application_fee_amount: platformFee,
-        transfer_data: {
-          destination: connectedAccountId,
+    const startTime = Date.now();
+    const paymentIntent = await circuitBreaker.execute("stripe", () =>
+      stripeClient.paymentIntents.create(
+        {
+          amount: amountInCents,
+          currency: "usd",
+          customer: pledge.stripeCustomerId!,
+          payment_method: pledge.stripePaymentMethodId!,
+          off_session: true,
+          confirm: true,
+          application_fee_amount: platformFee,
+          transfer_data: {
+            destination: connectedAccountId,
+          },
+          metadata: {
+            pledgeId: pledge.id,
+            projectId: pledge.projectId,
+            userId: pledge.userId,
+            chargeType: "campaign_funded",
+          },
         },
-        metadata: {
-          pledgeId: pledge.id,
-          projectId: pledge.projectId,
-          userId: pledge.userId,
-          chargeType: "campaign_funded",
-        },
-      },
-      {
-        idempotencyKey, // Prevents duplicate charges for same pledge
-      }
+        {
+          idempotencyKey,
+        }
+      )
     );
+    const durationSec = (Date.now() - startTime) / 1000;
+    metrics.externalApiCalls.inc({ service: "stripe", method: "paymentIntents.create" });
+    metrics.externalApiDuration.observe({ service: "stripe", method: "paymentIntents.create" }, durationSec);
 
-    // Since confirm: true, we know immediately if the payment succeeded
-    // Update pledge status based on PaymentIntent status (don't rely solely on webhook)
     if (paymentIntent.status === "succeeded") {
-      // Payment succeeded - update pledge to COMPLETED with atomic backer number assignment
       let finalBackerNumber: number;
       if (pledge.backerNumber) {
-        // Already has backer number, just update status
         finalBackerNumber = pledge.backerNumber;
         await db.pledge.update({
           where: { id: pledgeId },
@@ -255,7 +249,6 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
           },
         });
       } else {
-        // Assign backer number atomically and update status
         finalBackerNumber = await assignBackerNumber(pledge.projectId, pledgeId);
         await db.pledge.update({
           where: { id: pledgeId },
@@ -269,43 +262,41 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
         });
       }
 
-      // Track conversion if this pledge came from an email campaign
       if (pledge.sourceCampaignId) {
         await trackCampaignConversion(pledgeId, pledge.sourceCampaignId);
       }
 
-      // Send confirmation email to backer
       try {
         await notifyBackerPledgeConfirmed(pledgeId, true);
       } catch (e) {
-        console.warn(`Could not send confirmation email for pledge ${pledgeId}:`, e);
+        stripeLogger.warn({ pledgeId, err: e instanceof Error ? e.message : String(e) }, "Could not send confirmation email");
       }
 
-      console.log(`[ChargePledge] Payment succeeded for pledge ${pledgeId}, backer #${finalBackerNumber}, status updated to COMPLETED`);
+      metrics.pledgesCreated.inc({ status: "completed" });
+      stripeLogger.info({ pledgeId, backerNumber: finalBackerNumber }, "Payment succeeded, status updated to COMPLETED");
     } else if (paymentIntent.status === "processing") {
-      // Payment is processing - save intent ID, status will be updated by webhook
       await db.pledge.update({
         where: { id: pledgeId },
         data: {
           stripePaymentIntentId: paymentIntent.id,
         },
       });
-      console.log(`[ChargePledge] Payment processing for pledge ${pledgeId}, waiting for webhook`);
+      stripeLogger.info({ pledgeId }, "Payment processing, waiting for webhook");
     } else {
-      // Unexpected status - save intent ID for tracking
       await db.pledge.update({
         where: { id: pledgeId },
         data: {
           stripePaymentIntentId: paymentIntent.id,
         },
       });
-      console.log(`[ChargePledge] Unexpected payment status ${paymentIntent.status} for pledge ${pledgeId}`);
+      stripeLogger.warn({ pledgeId, status: paymentIntent.status }, "Unexpected payment status");
     }
 
     return true;
   } catch (error) {
-    // Payment failed - schedule retry
     const stripeError = error as Stripe.errors.StripeError;
+    metrics.paymentFailures.inc({ reason: stripeError.code || "unknown" });
+    metrics.externalApiCalls.inc({ service: "stripe", method: "paymentIntents.create", status: "error" });
     await schedulePaymentRetry(pledgeId, stripeError.message || "Payment failed");
     return false;
   }
@@ -324,7 +315,6 @@ export async function schedulePaymentRetry(pledgeId: string, failureReason: stri
   const newRetryCount = pledge.retryCount + 1;
 
   if (newRetryCount > MAX_RETRY_ATTEMPTS) {
-    // Max retries reached - mark as permanently failed
     await db.pledge.update({
       where: { id: pledgeId },
       data: {
@@ -335,7 +325,6 @@ export async function schedulePaymentRetry(pledgeId: string, failureReason: stri
       },
     });
 
-    // Notify backer of final failure
     const pledgeWithProject = await db.pledge.findUnique({
       where: { id: pledgeId },
       include: {
@@ -350,7 +339,6 @@ export async function schedulePaymentRetry(pledgeId: string, failureReason: stri
     });
 
     if (pledgeWithProject) {
-      // Build project URL with vanity URL if available
       const projectUrlPath = pledgeWithProject.project.creator?.vanityUrl
         ? `/projects/${pledgeWithProject.project.creator.vanityUrl}/${pledgeWithProject.project.slug}`
         : undefined;
@@ -364,7 +352,6 @@ export async function schedulePaymentRetry(pledgeId: string, failureReason: stri
       );
     }
   } else {
-    // Schedule next retry (3 days from now)
     const nextRetryAt = new Date();
     nextRetryAt.setDate(nextRetryAt.getDate() + RETRY_INTERVAL_DAYS);
 
@@ -387,7 +374,6 @@ export async function schedulePaymentRetry(pledgeId: string, failureReason: stri
 export async function processPendingPledgesForProject(projectId: string) {
   const stripeClient = await getStripeInstance();
 
-  // Find all pending pledges that could potentially be charged
   const pendingPledges = await db.pledge.findMany({
     where: {
       projectId,
@@ -408,33 +394,33 @@ export async function processPendingPledgesForProject(projectId: string) {
   };
 
   for (const pledge of pendingPledges) {
-    // If no payment method saved, try to fetch from Stripe via SetupIntent
     let paymentMethodId = pledge.stripePaymentMethodId;
 
     if (!paymentMethodId && pledge.stripeSetupIntentId) {
       try {
-        const setupIntent = await stripeClient.setupIntents.retrieve(pledge.stripeSetupIntentId);
+        const setupIntent = await circuitBreaker.execute("stripe", () =>
+          stripeClient.setupIntents.retrieve(pledge.stripeSetupIntentId!)
+        );
+        metrics.externalApiCalls.inc({ service: "stripe", method: "setupIntents.retrieve" });
         if (setupIntent.status === "succeeded" && setupIntent.payment_method) {
           paymentMethodId = typeof setupIntent.payment_method === "string"
             ? setupIntent.payment_method
             : setupIntent.payment_method.id;
 
-          // Save the payment method to the pledge
           await db.pledge.update({
             where: { id: pledge.id },
             data: { stripePaymentMethodId: paymentMethodId },
           });
 
-          console.log(`[ProcessPledges] Fetched payment method for pledge ${pledge.id}`);
+          stripeLogger.info({ pledgeId: pledge.id }, "Fetched payment method from SetupIntent");
         }
       } catch (err) {
-        console.error(`[ProcessPledges] Failed to fetch SetupIntent for pledge ${pledge.id}:`, err);
+        stripeLogger.error({ pledgeId: pledge.id, err: err instanceof Error ? err.message : String(err) }, "Failed to fetch SetupIntent");
       }
     }
 
-    // Only count and process pledges that have a payment method
     if (!paymentMethodId) {
-      console.log(`[ProcessPledges] Skipping pledge ${pledge.id} - no payment method`);
+      stripeLogger.info({ pledgeId: pledge.id }, "Skipping pledge - no payment method");
       continue;
     }
 
@@ -461,7 +447,6 @@ export async function processPendingPledgesForProject(projectId: string) {
 export async function processPaymentRetries() {
   const now = new Date();
 
-  // Find pledges due for retry
   const pledgesToRetry = await db.pledge.findMany({
     where: {
       status: "PENDING",
@@ -469,7 +454,7 @@ export async function processPaymentRetries() {
       nextRetryAt: { lte: now },
       stripePaymentMethodId: { not: null },
     },
-    take: 100, // Process in batches
+    take: 100,
   });
 
   const results = {

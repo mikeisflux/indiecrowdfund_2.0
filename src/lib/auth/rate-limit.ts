@@ -8,6 +8,7 @@
 import { db } from "@/lib/db";
 import { rateLimiter as redisRateLimiter } from "@/lib/rate-limiter";
 import { logger } from "@/lib/logger";
+import { metrics } from "@/lib/metrics";
 
 const rateLimitLogger = logger.child({ module: "rate-limit" });
 
@@ -286,7 +287,8 @@ export interface RateLimitResult {
 }
 
 /**
- * Check if a login attempt is allowed based on IP and account
+ * Check if a login attempt is allowed based on IP and account.
+ * Tries Redis first for multi-instance consistency, falls back to in-memory.
  */
 export async function checkLoginRateLimit(
   ip: string | null,
@@ -303,35 +305,45 @@ export async function checkLoginRateLimit(
   const loginConfig = await getLoginConfig();
   const ipConfig = await getIpConfig();
 
-  // Check IP-based rate limit
+  // Check IP-based rate limit (try Redis first)
   if (ip && settings.globalRateLimitEnabled) {
-    const ipCheck = checkRateLimit(ipAttempts, ip, ipConfig);
-    if (!ipCheck.allowed) {
+    const redisIpResult = await redisRateLimiter.check("login-ip", ip, {
+      limit: ipConfig.maxAttempts,
+      windowSec: Math.ceil(ipConfig.windowMs / 1000),
+    });
+    if (!redisIpResult.allowed) {
+      const retryAfter = Math.max(0, redisIpResult.resetAt - Math.floor(Date.now() / 1000));
+      metrics.rateLimitHits.inc({ type: "login_ip" });
       return {
         allowed: false,
         remainingAttempts: 0,
-        retryAfter: ipCheck.retryAfter,
-        message: `Too many login attempts from this IP. Please try again in ${formatRetryTime(ipCheck.retryAfter || 0)}.`,
+        retryAfter,
+        message: `Too many login attempts from this IP. Please try again in ${formatRetryTime(retryAfter)}.`,
       };
     }
   }
 
-  // Check account-based rate limit
-  const accountCheck = checkRateLimit(accountAttempts, normalizedEmail, loginConfig);
-  if (!accountCheck.allowed) {
+  // Check account-based rate limit (try Redis first)
+  const redisAccountResult = await redisRateLimiter.check("login-account", normalizedEmail, {
+    limit: loginConfig.maxAttempts,
+    windowSec: Math.ceil(loginConfig.windowMs / 1000),
+  });
+  if (!redisAccountResult.allowed) {
+    const retryAfter = Math.max(0, redisAccountResult.resetAt - Math.floor(Date.now() / 1000));
+    metrics.rateLimitHits.inc({ type: "login_account" });
     return {
       allowed: false,
       remainingAttempts: 0,
-      retryAfter: accountCheck.retryAfter,
-      message: `Too many failed login attempts. Please try again in ${formatRetryTime(accountCheck.retryAfter || 0)}.`,
+      retryAfter,
+      message: `Too many failed login attempts. Please try again in ${formatRetryTime(retryAfter)}.`,
     };
   }
 
   return {
     allowed: true,
     remainingAttempts: Math.min(
-      ip && settings.globalRateLimitEnabled ? checkRateLimit(ipAttempts, ip, ipConfig).remainingAttempts : loginConfig.maxAttempts,
-      accountCheck.remainingAttempts
+      ip && settings.globalRateLimitEnabled ? redisAccountResult.remaining : loginConfig.maxAttempts,
+      redisAccountResult.remaining
     ),
   };
 }
@@ -356,44 +368,52 @@ export async function recordLoginAttempt(
 }
 
 /**
- * Check if password reset request is allowed
+ * Check if password reset request is allowed.
+ * Tries Redis first for multi-instance consistency, falls back to in-memory.
  */
 export async function checkPasswordResetRateLimit(
   ip: string | null,
   email: string
 ): Promise<RateLimitResult> {
   const normalizedEmail = email.toLowerCase().trim();
-  const key = `reset:${normalizedEmail}`;
   const passwordResetConfig = await getPasswordResetConfig();
+  const windowSec = Math.ceil(passwordResetConfig.windowMs / 1000);
 
-  // Check IP-based rate limit for reset requests
+  // Check IP-based rate limit for reset requests (via Redis)
   if (ip) {
-    const ipKey = `reset:${ip}`;
-    const ipCheck = checkRateLimit(ipAttempts, ipKey, passwordResetConfig);
-    if (!ipCheck.allowed) {
+    const ipResult = await redisRateLimiter.check("password-reset-ip", ip, {
+      limit: passwordResetConfig.maxAttempts,
+      windowSec,
+    });
+    if (!ipResult.allowed) {
+      const retryAfter = Math.max(0, ipResult.resetAt - Math.floor(Date.now() / 1000));
       return {
         allowed: false,
         remainingAttempts: 0,
-        retryAfter: ipCheck.retryAfter,
-        message: `Too many password reset requests. Please try again in ${formatRetryTime(ipCheck.retryAfter || 0)}.`,
+        retryAfter,
+        message: `Too many password reset requests. Please try again in ${formatRetryTime(retryAfter)}.`,
       };
     }
   }
 
-  // Check account-based rate limit
-  const accountCheck = checkRateLimit(accountAttempts, key, passwordResetConfig);
-  if (!accountCheck.allowed) {
+  // Check account-based rate limit (via Redis)
+  const accountResult = await redisRateLimiter.check("password-reset-account", normalizedEmail, {
+    limit: passwordResetConfig.maxAttempts,
+    windowSec,
+  });
+  if (!accountResult.allowed) {
+    const retryAfter = Math.max(0, accountResult.resetAt - Math.floor(Date.now() / 1000));
     return {
       allowed: false,
       remainingAttempts: 0,
-      retryAfter: accountCheck.retryAfter,
-      message: `Too many password reset requests for this email. Please try again in ${formatRetryTime(accountCheck.retryAfter || 0)}.`,
+      retryAfter,
+      message: `Too many password reset requests for this email. Please try again in ${formatRetryTime(retryAfter)}.`,
     };
   }
 
   return {
     allowed: true,
-    remainingAttempts: accountCheck.remainingAttempts,
+    remainingAttempts: accountResult.remaining,
   };
 }
 
@@ -417,13 +437,14 @@ export async function recordPasswordResetAttempt(
 }
 
 /**
- * Check retailer login rate limit (uses same logic but separate tracking)
+ * Check retailer login rate limit (uses same logic but separate tracking).
+ * Tries Redis first for multi-instance consistency, falls back to in-memory.
  */
 export async function checkRetailerLoginRateLimit(
   ip: string | null,
   identifier: string // email or access code
 ): Promise<RateLimitResult> {
-  const key = `retailer:${identifier.toLowerCase().trim()}`;
+  const normalizedId = identifier.toLowerCase().trim();
   const settings = await getSettings();
 
   // Check if login rate limiting is enabled
@@ -434,34 +455,41 @@ export async function checkRetailerLoginRateLimit(
   const loginConfig = await getLoginConfig();
   const ipConfig = await getIpConfig();
 
-  // Check IP-based rate limit
+  // Check IP-based rate limit (via Redis)
   if (ip && settings.globalRateLimitEnabled) {
-    const ipKey = `retailer:${ip}`;
-    const ipCheck = checkRateLimit(ipAttempts, ipKey, ipConfig);
-    if (!ipCheck.allowed) {
+    const ipResult = await redisRateLimiter.check("retailer-login-ip", ip, {
+      limit: ipConfig.maxAttempts,
+      windowSec: Math.ceil(ipConfig.windowMs / 1000),
+    });
+    if (!ipResult.allowed) {
+      const retryAfter = Math.max(0, ipResult.resetAt - Math.floor(Date.now() / 1000));
       return {
         allowed: false,
         remainingAttempts: 0,
-        retryAfter: ipCheck.retryAfter,
-        message: `Too many login attempts from this IP. Please try again in ${formatRetryTime(ipCheck.retryAfter || 0)}.`,
+        retryAfter,
+        message: `Too many login attempts from this IP. Please try again in ${formatRetryTime(retryAfter)}.`,
       };
     }
   }
 
-  // Check account-based rate limit
-  const accountCheck = checkRateLimit(accountAttempts, key, loginConfig);
-  if (!accountCheck.allowed) {
+  // Check account-based rate limit (via Redis)
+  const accountResult = await redisRateLimiter.check("retailer-login-account", normalizedId, {
+    limit: loginConfig.maxAttempts,
+    windowSec: Math.ceil(loginConfig.windowMs / 1000),
+  });
+  if (!accountResult.allowed) {
+    const retryAfter = Math.max(0, accountResult.resetAt - Math.floor(Date.now() / 1000));
     return {
       allowed: false,
       remainingAttempts: 0,
-      retryAfter: accountCheck.retryAfter,
-      message: `Too many failed login attempts. Please try again in ${formatRetryTime(accountCheck.retryAfter || 0)}.`,
+      retryAfter,
+      message: `Too many failed login attempts. Please try again in ${formatRetryTime(retryAfter)}.`,
     };
   }
 
   return {
     allowed: true,
-    remainingAttempts: accountCheck.remainingAttempts,
+    remainingAttempts: accountResult.remaining,
   };
 }
 
@@ -547,7 +575,8 @@ const REGISTRATION_CONFIG: RateLimitConfig = {
 };
 
 /**
- * Check if a registration attempt is allowed based on IP
+ * Check if a registration attempt is allowed based on IP.
+ * Tries Redis first for multi-instance consistency, falls back to in-memory.
  */
 export async function checkRegistrationRateLimit(
   ip: string | null
@@ -556,21 +585,24 @@ export async function checkRegistrationRateLimit(
     return { allowed: true, remainingAttempts: REGISTRATION_CONFIG.maxAttempts };
   }
 
-  const key = `register:${ip}`;
-  const check = checkRateLimit(registrationAttempts, key, REGISTRATION_CONFIG);
+  const result = await redisRateLimiter.check("registration", ip, {
+    limit: REGISTRATION_CONFIG.maxAttempts,
+    windowSec: Math.ceil(REGISTRATION_CONFIG.windowMs / 1000),
+  });
 
-  if (!check.allowed) {
+  if (!result.allowed) {
+    const retryAfter = Math.max(0, result.resetAt - Math.floor(Date.now() / 1000));
     return {
       allowed: false,
       remainingAttempts: 0,
-      retryAfter: check.retryAfter,
-      message: `Too many registration attempts. Please try again in ${formatRetryTime(check.retryAfter || 0)}.`,
+      retryAfter,
+      message: `Too many registration attempts. Please try again in ${formatRetryTime(retryAfter)}.`,
     };
   }
 
   return {
     allowed: true,
-    remainingAttempts: check.remainingAttempts,
+    remainingAttempts: result.remaining,
   };
 }
 

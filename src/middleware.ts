@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { metrics } from "@/lib/metrics";
 
 const SESSION_COOKIE_NAME = "session_token";
 const CSRF_COOKIE_NAME = "csrf_token";
@@ -339,6 +340,7 @@ export async function middleware(req: NextRequest) {
     // Rate limit server action requests per IP (catches brute-force action ID guessing)
     if (isServerActionRateLimited(clientIP)) {
       console.log(`[Bot Blocker] Server action rate limit exceeded for IP ${clientIP}`);
+      metrics.rateLimitHits.inc({ type: "server_action", ip: clientIP });
       recordSuspiciousRequest(
         clientIP,
         "Server action rate limit exceeded",
@@ -509,6 +511,11 @@ export async function middleware(req: NextRequest) {
       path: "/",
       maxAge: 60 * 60 * 24, // 24 hours
     });
+  }
+
+  // Record metrics for API requests
+  if (pathname.startsWith("/api/")) {
+    metrics.httpRequestsTotal.inc({ method: req.method, path: pathname, status: "200" });
   }
 
   return response;
