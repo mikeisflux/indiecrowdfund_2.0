@@ -190,6 +190,53 @@ export interface EmailCampaign {
   clickRate?: number;
 }
 
+export interface Segment {
+  id: string;
+  name: string;
+  type: "pledge_level" | "addon" | "survey_status" | "shipping_region" | "payment_status" | "custom";
+  criteria: string;
+  backerCount: number;
+  createdAt: string;
+}
+
+export interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  type: "physical" | "digital";
+  weight?: number;
+  weightUnit?: string;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+    unit: string;
+  };
+  customsCode?: string;
+  countryOfOrigin?: string;
+  customsDescription?: string;
+  status: "ready" | "no_weight" | "no_customs" | "error";
+}
+
+export interface TimelineEntry {
+  id: string;
+  type: "survey_reminder" | "survey_completed" | "orders_pushed" | "cards_charged" | "charge_failed" | "digital_download" | "address_updated" | "order_shipped" | "refund" | "comment";
+  time: string;
+  title: string;
+  detail: string;
+  link?: string;
+  date: string;
+}
+
+export interface SurveyQuestion {
+  id: string;
+  type: string;
+  label: string;
+  required: boolean;
+  helpText?: string;
+  options?: string[];
+}
+
 export const STATUS_COLORS: Record<Backer["status"], string> = {
   not_pushed: "bg-gray-100 text-gray-700",
   push_errored: "bg-red-100 text-red-700",

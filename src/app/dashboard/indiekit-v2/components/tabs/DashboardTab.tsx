@@ -8,13 +8,12 @@ import { LayoutDashboard, BarChart3 } from "lucide-react";
 import { OverviewTab } from "../../../indiekit/components/tabs";
 import { CountsTab } from "../../../indiekit/components/tabs";
 
-import type { FulfillmentStats, Backer } from "../../types";
+import type { FulfillmentStats, Backer, TimelineEntry } from "../../types";
 
 interface DashboardTabProps {
   stats: FulfillmentStats | null;
   backers: Backer[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  timeline: any[];
+  timeline: TimelineEntry[];
   projectId: string;
   onSwitchTab: (tab: string) => void;
 }

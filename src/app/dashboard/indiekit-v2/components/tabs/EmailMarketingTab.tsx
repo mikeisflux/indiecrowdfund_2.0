@@ -10,15 +10,14 @@ import { EmailsTab } from "../../../indiekit/components/tabs";
 import { EmailListTab } from "../../../indiekit/components/tabs";
 import { SegmentsTab } from "../../../indiekit/components/tabs";
 
-import type { EmailCampaign } from "../../types";
+import type { EmailCampaign, Segment } from "../../types";
 
 interface EmailMarketingTabProps {
   emailCampaigns: EmailCampaign[];
   onOpenEmailDialog: (template?: { subject?: string; body?: string; name?: string } | null) => void;
   projectId: string;
   onRefresh: () => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  segments: any[];
+  segments: Segment[];
   hasActiveCampaign: boolean;
   emailAccessLocked?: boolean;
 }

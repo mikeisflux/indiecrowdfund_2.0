@@ -9,11 +9,10 @@ import { TimelineTab } from "../../../indiekit/components/tabs";
 import { ExportTab } from "../../../indiekit/components/tabs";
 import { CountsTab } from "../../../indiekit/components/tabs";
 
-import type { FulfillmentStats } from "../../types";
+import type { FulfillmentStats, TimelineEntry } from "../../types";
 
 interface ReportsTabProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  timeline: any[];
+  timeline: TimelineEntry[];
   projectId: string;
   stats: FulfillmentStats | null;
 }

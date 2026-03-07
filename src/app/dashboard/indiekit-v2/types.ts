@@ -11,6 +11,10 @@ export type {
   ShippingService,
   DigitalFile,
   EmailCampaign,
+  Segment,
+  Product,
+  TimelineEntry,
+  SurveyQuestion,
 } from "../indiekit/types";
 
 export { STATUS_COLORS, STATUS_LABELS } from "../indiekit/types";

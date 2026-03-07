@@ -11,14 +11,12 @@ import { SurveyBuilderTab } from "../../../indiekit/components/tabs";
 import { AddonsTab } from "../../../indiekit/components/tabs";
 import { ImportAddonFromProjectDialog } from "../../../indiekit/components/dialogs/import-addon-from-project-dialog";
 
-import type { FulfillmentStats, Backer, SurveyAddon } from "../../types";
+import type { FulfillmentStats, Backer, SurveyAddon, Product, SurveyQuestion } from "../../types";
 
 interface SetupTabProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  products: any[];
+  products: Product[];
   projectId: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  surveyQuestions: any[];
+  surveyQuestions: SurveyQuestion[];
   stats: FulfillmentStats | null;
   backers: Backer[];
   surveyAddons: SurveyAddon[];
