@@ -168,10 +168,39 @@ export async function POST(request: Request) {
       },
     });
 
-    // TODO: Send email notification if sendEmail is true
+    // Send email notification if sendEmail is true
     if (sendEmail && project.creator.email) {
-      // await sendStatusChangeEmail(project.creator.email, project.title, action, reason);
-      adminProjectsStatusLogger.info(`Would send email to ${project.creator.email} about ${action}`);
+      try {
+        const { sendEmail: sendEmailFn } = await import("@/lib/email");
+        const actionLabels: Record<string, string> = {
+          DEACTIVATE: "deactivated",
+          REACTIVATE: "reactivated",
+          MAKE_LIVE: "set to live",
+          SEND_TO_REVIEW: "sent back for review",
+        };
+        const actionLabel = actionLabels[action] || action.toLowerCase();
+        const APP_NAME = "IndieCrowdfund";
+        const html = `
+          <div style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #333;">${APP_NAME}</h1>
+            <div style="background: #f9f9f9; border-radius: 8px; padding: 24px;">
+              <h2>Project Status Update</h2>
+              <p>Hi ${project.creator.name || "Creator"},</p>
+              <p>Your project <strong>${project.title}</strong> has been <strong>${actionLabel}</strong> by an administrator.</p>
+              ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
+              <p>If you have questions, please contact our support team.</p>
+            </div>
+          </div>
+        `;
+        await sendEmailFn({
+          to: project.creator.email,
+          subject: `Your project "${project.title}" has been ${actionLabel}`,
+          html,
+        });
+        adminProjectsStatusLogger.info({ email: project.creator.email, action }, "Status change email sent");
+      } catch (emailError) {
+        adminProjectsStatusLogger.error({ err: String(emailError) }, "Failed to send status change email");
+      }
     }
 
     const statusAuditMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {

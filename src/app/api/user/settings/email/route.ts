@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import crypto from "crypto";
 
 const userSettingsEmailLogger = logger.child({ module: "user-settings-email" });
 import { auth } from "@/lib/auth";
@@ -106,8 +107,27 @@ export async function POST(request: Request) {
       },
     });
 
-    // TODO: Send verification email to the new address
-    // await sendEmailVerification(newEmail, user.name);
+    // Send verification email to the new address
+    try {
+      const { sendVerificationEmail, isEmailVerificationRequired } = await import("@/lib/email");
+      const verificationRequired = await isEmailVerificationRequired();
+      if (verificationRequired) {
+        const verificationToken = crypto.randomUUID();
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        await db.verificationToken.create({
+          data: {
+            identifier: newEmail.toLowerCase(),
+            token: verificationToken,
+            expires,
+          },
+        });
+
+        await sendVerificationEmail(newEmail, session.user.name || "User", verificationToken);
+      }
+    } catch (emailError) {
+      userSettingsEmailLogger.error({ err: String(emailError) }, "Failed to send verification email after email change");
+    }
 
     return NextResponse.json({
       success: true,
