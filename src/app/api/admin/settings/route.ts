@@ -301,6 +301,28 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
+    // Audit log: track which sensitive fields were changed (before updating)
+    const changedSecretFields = secretFields.filter(f => f in updateData);
+    if (changedSecretFields.length > 0) {
+      const adminId = 'user' in authResult ? authResult.user.id : undefined;
+      await db.fulfillmentActivity.create({
+        data: {
+          projectId: "platform",
+          type: "SETTINGS_CHANGED",
+          title: `Admin updated sensitive settings: ${changedSecretFields.join(", ")}`,
+          affectedCount: changedSecretFields.length,
+          metadata: {
+            section,
+            changedFields: changedSecretFields,
+            adminId,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      }).catch((err: unknown) => {
+        console.error("[Settings] Failed to create audit log:", err);
+      });
+    }
+
     // Update settings
     const settings = await db.platformSettings.update({
       where: { id: "default" },
