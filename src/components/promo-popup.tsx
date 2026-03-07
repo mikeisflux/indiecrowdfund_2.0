@@ -49,12 +49,15 @@ export function PromoPopup() {
   const [showFrequency, setShowFrequency] = useState("once_per_session");
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const controller = new AbortController();
+
     async function fetchPopup() {
       try {
         // Don't show on admin pages
         if (window.location.pathname.startsWith("/admin")) return;
 
-        const response = await fetch("/api/promo-popup");
+        const response = await fetch("/api/promo-popup", { signal: controller.signal });
         if (!response.ok) return;
 
         const data = await response.json();
@@ -84,13 +87,19 @@ export function PromoPopup() {
         setShowFrequency(frequency);
 
         // Small delay so the page renders first
-        setTimeout(() => setIsOpen(true), 800);
-      } catch {
+        timeoutId = setTimeout(() => setIsOpen(true), 800);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
         // Silently fail
       }
     }
 
     fetchPopup();
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const handleDismiss = () => {

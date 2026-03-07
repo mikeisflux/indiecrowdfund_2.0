@@ -118,14 +118,18 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
   // Fetch slides on mount if none provided
   useEffect(() => {
     if (initialSlides.length === 0) {
-      fetch("/api/hero-slides")
+      const controller = new AbortController();
+      fetch("/api/hero-slides", { signal: controller.signal })
         .then((res) => res.json())
         .then((data) => {
           if (data.slides && data.slides.length > 0) {
             setSlides(data.slides);
           }
         })
-        .catch(console.error);
+        .catch((err) => {
+          if (err.name !== "AbortError") console.error(err);
+        });
+      return () => controller.abort();
     }
   }, [initialSlides.length]);
 

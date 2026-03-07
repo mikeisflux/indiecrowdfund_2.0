@@ -66,9 +66,11 @@ export function ConsentBanner() {
   }, [showFrequency]);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchBanner() {
       try {
-        const response = await fetch("/api/consent-banner");
+        const response = await fetch("/api/consent-banner", { signal: controller.signal });
         if (!response.ok) return;
 
         const data = await response.json();
@@ -76,7 +78,8 @@ export function ConsentBanner() {
 
         setContent(data.banner.content as ConsentContent);
         setShowFrequency(data.banner.showFrequency || "once_per_login");
-      } catch {
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
         // Silently fail
       }
     }
@@ -87,6 +90,8 @@ export function ConsentBanner() {
     if (hasUserConsented()) {
       setPreferences(getConsentPreferences());
     }
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {

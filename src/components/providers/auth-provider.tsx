@@ -43,7 +43,8 @@ export function AuthProvider({ children, session: initialSession }: AuthProvider
       // Server already provided a validated session — skip redundant fetch
       return;
     }
-    fetch("/api/auth/session")
+    const controller = new AbortController();
+    fetch("/api/auth/session", { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
         if (data.user) {
@@ -54,10 +55,12 @@ export function AuthProvider({ children, session: initialSession }: AuthProvider
           setStatus("unauthenticated");
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        if (err.name === "AbortError") return;
         setSession(null);
         setStatus("unauthenticated");
       });
+    return () => controller.abort();
   }, [initialSession]);
 
   const refreshSession = async () => {
