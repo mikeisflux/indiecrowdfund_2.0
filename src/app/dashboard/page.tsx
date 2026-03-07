@@ -21,6 +21,7 @@ import {
   ShoppingCart,
   ArrowLeft,
   Handshake,
+  Mail,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
@@ -44,6 +45,7 @@ import { SocialHubTab } from "./components/SocialHubTab";
 import { IndieKitTab } from "./components/IndieKitTab";
 import { IndieKitV2Tab } from "./components/IndieKitV2Tab";
 import { MarketplaceTab } from "./components/MarketplaceTab";
+import { EmailTab } from "./components/EmailTab";
 
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
@@ -337,6 +339,10 @@ export default function CreatorDashboard() {
                     <Package className="mr-2 h-4 w-4" />
                     Rewards
                   </TabsTrigger>
+                  <TabsTrigger value="email" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                    <Mail className="mr-2 h-4 w-4" />
+                    Email
+                  </TabsTrigger>
                   <TabsTrigger value="messages" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Messages
@@ -400,6 +406,10 @@ export default function CreatorDashboard() {
                   projectSlug={project.slug}
                   onRefresh={fetchDashboardData}
                 />
+              </TabsContent>
+
+              <TabsContent value="email" className="space-y-6">
+                <EmailTab projectId={selectedProjectId} onRefresh={fetchDashboardData} />
               </TabsContent>
 
               <TabsContent value="messages">

@@ -40,7 +40,6 @@ import {
   Bell,
   Settings,
   LayoutDashboard,
-  HeadphonesIcon,
   Mail,
   FileText,
   CreditCard,
@@ -108,7 +107,6 @@ import {
 
 // Import v2 merged tabs
 import { DashboardTab } from "./components/tabs/DashboardTab";
-import { SupportCenterTab } from "./components/tabs/SupportCenterTab";
 import { EmailMarketingTab } from "./components/tabs/EmailMarketingTab";
 import { SetupTab } from "./components/tabs/SetupTab";
 import { SurveysTab } from "./components/tabs/SurveysTab";
@@ -122,7 +120,6 @@ import { ReportsTab } from "./components/tabs/ReportsTab";
 const ALWAYS_AVAILABLE_TABS: { id: AlwaysAvailableTab; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "backers", label: "Backers", icon: Users },
-  { id: "support", label: "Support Center", icon: HeadphonesIcon },
   { id: "email-marketing", label: "Email Marketing", icon: Mail },
   { id: "updates", label: "Updates", icon: FileText },
   { id: "settings", label: "Settings", icon: Settings },
@@ -610,7 +607,6 @@ export default function IndieKitV2Page() {
                     const alwaysMapping: Record<string, AlwaysAvailableTab> = {
                       backers: "backers",
                       emails: "email-marketing",
-                      support: "support",
                       updates: "updates",
                       settings: "settings",
                     };
@@ -636,15 +632,6 @@ export default function IndieKitV2Page() {
                   hasActiveCampaign={hasActiveCampaign}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}
-                />
-              )}
-
-              {activeSection === "always" && activeAlwaysTab === "support" && (
-                <SupportCenterTab
-                  backers={backers}
-                  projectId={selectedProjectId}
-                  onRefresh={fetchData}
-                  emailAccessLocked={emailAccessLocked}
                 />
               )}
 

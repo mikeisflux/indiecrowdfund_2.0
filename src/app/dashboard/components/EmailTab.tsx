@@ -1,32 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Inbox, HeadphonesIcon, Lock } from "lucide-react";
+import { Inbox, HeadphonesIcon, Lock, Loader2 } from "lucide-react";
 
 // Import existing tabs from v1
-import { InboxTab } from "../../../indiekit/components/tabs";
-import { SupportTab } from "../../../indiekit/components/tabs";
+import { InboxTab } from "@/app/dashboard/indiekit/components/tabs";
+import { SupportTab } from "@/app/dashboard/indiekit/components/tabs";
 
-import type { Backer } from "../../types";
-
-interface SupportCenterTabProps {
-  backers: Backer[];
+interface EmailTabProps {
   projectId: string;
-  onRefresh: () => void;
-  emailAccessLocked?: boolean;
+  onRefresh?: () => void;
 }
 
-/**
- * Support Center Tab - Merges Inbox + Support from v1
- */
-export function SupportCenterTab({ backers, projectId, onRefresh, emailAccessLocked }: SupportCenterTabProps) {
-  const [subTab, setSubTab] = useState(emailAccessLocked ? "support" : "inbox");
+export function EmailTab({ projectId, onRefresh }: EmailTabProps) {
+  const [subTab, setSubTab] = useState("inbox");
+  const [emailAccessLocked, setEmailAccessLocked] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [backers, setBackers] = useState<Array<{ id: string; name: string; email: string; [key: string]: unknown }>>([]);
+
+  const fetchEmailData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (projectId) params.set("projectId", projectId);
+
+      const res = await fetch(`/api/creator/indiekit?${params}`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const userRole = data.userRole || "USER";
+      const hasApprovedProject = data.hasApprovedProject ?? false;
+      setEmailAccessLocked(userRole !== "SUPER_ADMIN" && !hasApprovedProject);
+      setBackers(data.backers || []);
+    } catch {
+      // Silently fail
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchEmailData();
+  }, [fetchEmailData]);
+
+  const handleRefresh = () => {
+    fetchEmailData();
+    onRefresh?.();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <Tabs value={subTab} onValueChange={setSubTab}>
+      <Tabs value={emailAccessLocked ? "support" : subTab} onValueChange={setSubTab}>
         <TabsList className="bg-muted/50">
           {!emailAccessLocked && (
             <TabsTrigger value="inbox">
@@ -65,7 +99,7 @@ export function SupportCenterTab({ backers, projectId, onRefresh, emailAccessLoc
         </TabsContent>
 
         <TabsContent value="support">
-          <SupportTab backers={backers} projectId={projectId} onRefresh={onRefresh} />
+          <SupportTab backers={backers} projectId={projectId} onRefresh={handleRefresh} />
         </TabsContent>
       </Tabs>
     </div>

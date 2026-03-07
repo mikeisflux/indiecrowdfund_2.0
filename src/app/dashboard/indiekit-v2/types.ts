@@ -21,7 +21,6 @@ export type FulfillmentPhase = "pre-fulfillment" | "fulfillment" | "post-fulfill
 export type AlwaysAvailableTab =
   | "dashboard"
   | "backers"
-  | "support"
   | "email-marketing"
   | "updates"
   | "settings"
