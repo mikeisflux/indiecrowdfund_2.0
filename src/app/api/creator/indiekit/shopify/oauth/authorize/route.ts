@@ -17,7 +17,10 @@ const SHOPIFY_SCOPES = [
 
 // Create a signed state parameter
 function createSignedState(data: object): string {
-  const secret = process.env.NEXTAUTH_SECRET || "fallback-secret";
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET is not configured");
+  }
   const payload = JSON.stringify(data);
   const signature = crypto.createHmac("sha256", secret).update(payload).digest("hex");
   return Buffer.from(JSON.stringify({ payload, signature })).toString("base64url");

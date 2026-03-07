@@ -95,14 +95,20 @@ export default function SecurityPage() {
         }
       }
 
+      // Fetch security stats from API
+      const statsResponse = await fetch("/api/admin/security/stats");
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats({
+          activeUsers: statsData.activeUsers ?? 0,
+          blockedIPs: statsData.blockedIPs ?? 0,
+          failedLogins24h: statsData.failedLogins24h ?? 0,
+          users2FAEnabled: statsData.users2FAEnabled ?? 0,
+        });
+      }
+
       // Security events will be populated when security logging API is implemented
       setSecurityEvents([]);
-      setStats({
-        activeUsers: 0,
-        blockedIPs: 0,
-        failedLogins24h: 0,
-        users2FAEnabled: 0,
-      });
     } catch (error) {
       console.error("Failed to fetch security data:", error);
     } finally {

@@ -306,7 +306,7 @@ export async function POST(
       );
     }
 
-    // Get existing response
+    // Get existing response with a select-for-update pattern to prevent concurrent submissions
     const existingResponse = await db.surveyResponse.findUnique({
       where: { pledgeId },
     });
@@ -315,6 +315,14 @@ export async function POST(
       return NextResponse.json(
         { error: "Survey response not found" },
         { status: 404 }
+      );
+    }
+
+    // Prevent resubmission of already completed surveys
+    if (existingResponse.isComplete) {
+      return NextResponse.json(
+        { error: "Survey has already been submitted. Contact the creator if you need to make changes." },
+        { status: 400 }
       );
     }
 

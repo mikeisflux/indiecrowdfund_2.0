@@ -83,6 +83,9 @@ export default function ProjectPage() {
   // Track when stats were last updated for animation
   const [statsJustUpdated, setStatsJustUpdated] = useState(false);
 
+  // Collaborator state (declared early to avoid reference-before-declaration in useEffect)
+  const [isCollaborator, setIsCollaborator] = useState(false);
+
   const tiers = rewards.filter((r) => r.type === "TIER");
   const fundingPercentage = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
   const hasEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
@@ -342,12 +345,19 @@ export default function ProjectPage() {
     };
   }, [slug, vanityname, loading, error, isLegacyUrl]);
 
-  // Scroll handler for sticky header
+  // Scroll handler for sticky header (throttled with rAF)
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setShowStickyHeader(window.scrollY > 600);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setShowStickyHeader(window.scrollY > 600);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -367,11 +377,28 @@ export default function ProjectPage() {
     );
   };
 
-  // TODO: Fetch similar projects from API
-  const similarProjects: SimilarProject[] = [];
+  const [similarProjects, setSimilarProjects] = useState<SimilarProject[]>([]);
 
-  // Collaborator state
-  const [isCollaborator, setIsCollaborator] = useState(false);
+  // Fetch similar projects based on category
+  useEffect(() => {
+    async function fetchSimilarProjects() {
+      if (!project.id || project.id === "" || !project.category) return;
+
+      try {
+        const response = await fetch(
+          `/api/projects/similar?projectId=${project.id}&category=${encodeURIComponent(project.category)}&limit=3`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSimilarProjects(data.projects || []);
+        }
+      } catch (err) {
+        console.debug("Error fetching similar projects:", err);
+      }
+    }
+
+    fetchSimilarProjects();
+  }, [project.id, project.category]);
 
   // Derived states for comments
   const isLoggedIn = currentUser !== null;

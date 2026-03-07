@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 // Verify signed state parameter
 function verifySignedState(state: string): { valid: boolean; data?: { userId: string; shopDomain: string; timestamp: number } } {
   try {
-    const secret = process.env.NEXTAUTH_SECRET || "fallback-secret";
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (!secret) {
+      throw new Error("NEXTAUTH_SECRET is not configured");
+    }
     const decoded = JSON.parse(Buffer.from(state, "base64url").toString());
     const { payload, signature } = decoded;
 

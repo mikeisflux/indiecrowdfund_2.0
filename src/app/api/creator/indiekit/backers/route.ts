@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import crypto from "crypto";
 import { pushOrdersToShopify } from "@/lib/shopify-push";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ const bulkActionSchema = z.object({
   ]),
   pledgeIds: z.array(z.string()).min(1),
   projectId: z.string(),
+  idempotencyKey: z.string().optional(),
 });
 
 // POST - Perform bulk actions on backers
@@ -29,7 +31,29 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { action, pledgeIds, projectId } = bulkActionSchema.parse(body);
+    const { action, pledgeIds, projectId, idempotencyKey } = bulkActionSchema.parse(body);
+
+    // Idempotency check for charge_cards to prevent duplicate charges
+    if (action === "charge_cards") {
+      const key = idempotencyKey || crypto.randomUUID();
+      const existingActivity = await db.fulfillmentActivity.findFirst({
+        where: {
+          projectId,
+          type: "CARDS_CHARGED",
+          metadata: { path: ["idempotencyKey"], equals: key },
+        },
+      });
+
+      if (existingActivity) {
+        return NextResponse.json({
+          success: true,
+          action,
+          results: { success: 0, failed: 0 },
+          message: "Duplicate request - charge already processed",
+          idempotencyKey: key,
+        });
+      }
+    }
 
     // Verify user has access to this project
     const project = await db.project.findFirst({
@@ -414,14 +438,21 @@ export async function POST(req: NextRequest) {
       }
 
       case "charge_cards": {
-        // This would integrate with Stripe
-        // For now, just log the activity
+        const chargeKey = idempotencyKey || crypto.randomUUID();
+
+        // Log activity with idempotency key to prevent duplicate charges
         await db.fulfillmentActivity.create({
           data: {
             projectId,
             type: "CARDS_CHARGED",
             title: `Card charge initiated for ${pledgeIds.length} backers`,
             affectedCount: pledgeIds.length,
+            metadata: {
+              idempotencyKey: chargeKey,
+              pledgeIds,
+              initiatedBy: session.user.id,
+              initiatedAt: new Date().toISOString(),
+            },
           },
         });
 

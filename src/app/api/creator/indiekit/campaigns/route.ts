@@ -103,6 +103,31 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "send" && campaignId) {
+      // Server-side email access control: only SUPER_ADMIN or users with approved projects can send
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true },
+      });
+
+      if (user?.role !== "SUPER_ADMIN") {
+        const approvedProject = await db.project.findFirst({
+          where: {
+            OR: [
+              { creatorId: session.user.id },
+              { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+            ],
+            prelaunchApproved: true,
+          },
+        });
+
+        if (!approvedProject) {
+          return NextResponse.json(
+            { error: "Email access requires an approved project or prelaunch page" },
+            { status: 403 }
+          );
+        }
+      }
+
       // Get campaign
       const campaign = await db.emailCampaign.findUnique({
         where: { id: campaignId },

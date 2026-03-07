@@ -174,6 +174,27 @@ export default function AdminLayout({
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState<SidebarStats | null>(null);
+  const [adminSearchQuery, setAdminSearchQuery] = useState("");
+  const [adminSearchResults, setAdminSearchResults] = useState<NavItem[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // All nav items flattened for search
+  const allNavItems = navigation.flatMap(s => s.items);
+
+  const handleAdminSearch = (query: string) => {
+    setAdminSearchQuery(query);
+    if (query.trim().length > 0) {
+      const q = query.toLowerCase();
+      const results = allNavItems.filter(item =>
+        item.name.toLowerCase().includes(q)
+      );
+      setAdminSearchResults(results);
+      setShowSearchResults(true);
+    } else {
+      setAdminSearchResults([]);
+      setShowSearchResults(false);
+    }
+  };
 
   // Fetch sidebar stats with automatic retry
   const fetchStats = useCallback(async () => {
@@ -365,12 +386,45 @@ export default function AdminLayout({
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
               <input
                 type="text"
-                placeholder="Search anything..."
+                placeholder="Search pages..."
+                value={adminSearchQuery}
+                onChange={(e) => handleAdminSearch(e.target.value)}
+                onFocus={() => adminSearchQuery && setShowSearchResults(true)}
+                onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
                 className="h-10 w-80 rounded-lg border border-border bg-muted/50 pl-10 pr-4 text-sm text-foreground outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                ⌘K
-              </kbd>
+              {!adminSearchQuery && (
+                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  ⌘K
+                </kbd>
+              )}
+              {showSearchResults && adminSearchResults.length > 0 && (
+                <div className="absolute top-12 left-0 w-full rounded-lg border bg-background shadow-lg z-50 max-h-64 overflow-y-auto">
+                  {adminSearchResults.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.href}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-muted/50 text-left"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          router.push(item.href);
+                          setAdminSearchQuery("");
+                          setShowSearchResults(false);
+                        }}
+                      >
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span>{item.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {showSearchResults && adminSearchQuery && adminSearchResults.length === 0 && (
+                <div className="absolute top-12 left-0 w-full rounded-lg border bg-background shadow-lg z-50 p-4">
+                  <p className="text-sm text-muted-foreground text-center">No pages found</p>
+                </div>
+              )}
             </div>
           </div>
 

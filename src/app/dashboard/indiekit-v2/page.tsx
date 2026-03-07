@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getCSRFHeaders } from "@/lib/csrf";
+import { v4 as uuidv4 } from "uuid";
 
 // Types and constants
 import type {
@@ -171,19 +172,16 @@ export default function IndieKitV2Page() {
   const [emailMemberCount, setEmailMemberCount] = useState<number>(0);
   const [userEmail, setUserEmail] = useState<string>("");
   const [surveyAddons, setSurveyAddons] = useState<SurveyAddon[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [segments, setSegments] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [products, setProducts] = useState<any[]>([]);
+  const [segments, setSegments] = useState<{ id: string; name: string; count: number; filters?: Record<string, string> }[]>([]);
+  const [products, setProducts] = useState<{ id: string; title: string; shopifyProductId?: string; variants?: { id: string; title: string }[] }[]>([]);
   const [rewards, setRewards] = useState<{ id: string; name: string; amount: number }[]>([]);
   const [addons, setAddons] = useState<{ id: string; name: string; price: number }[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [timeline, setTimeline] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [surveyQuestions, setSurveyQuestions] = useState<any[]>([]);
+  const [timeline, setTimeline] = useState<{ id: string; type: string; title: string; createdAt: string; affectedCount?: number }[]>([]);
+  const [surveyQuestions, setSurveyQuestions] = useState<{ id: string; type: string; label: string; required: boolean; helpText?: string; options?: string[]; sortOrder: number }[]>([]);
   const [userRole, setUserRole] = useState<string>("USER");
   const [hasApprovedProject, setHasApprovedProject] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBackers, setSelectedBackers] = useState<string[]>([]);
   const [packageGroupFilter, setPackageGroupFilter] = useState<string>("all");
@@ -212,12 +210,22 @@ export default function IndieKitV2Page() {
 
   const fulfillmentPercent = stats ? (stats.fulfilledBackers / stats.totalBackers) * 100 : 0;
 
-  const filteredBackers = backers.filter((backer) => {
-    const matchesSearch = backer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      backer.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || backer.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Debounce search query to avoid filtering on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const filteredBackers = useMemo(() => {
+    const query = debouncedSearchQuery.toLowerCase();
+    return backers.filter((backer) => {
+      const matchesSearch = !query ||
+        backer.name.toLowerCase().includes(query) ||
+        backer.email.toLowerCase().includes(query);
+      const matchesStatus = statusFilter === "all" || backer.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [backers, debouncedSearchQuery, statusFilter]);
 
   // Data fetching - same as v1
   const fetchData = useCallback(async () => {
@@ -826,9 +834,18 @@ export default function IndieKitV2Page() {
       <NPSFeedbackDialog
         open={isNPSDialogOpen}
         onOpenChange={setIsNPSDialogOpen}
-        onSubmit={(score, feedback) => {
-          console.log("NPS Score:", score, "Feedback:", feedback);
-          toast.success("Thank you for your feedback!");
+        onSubmit={async (score, feedback) => {
+          try {
+            const res = await fetch("/api/creator/indiekit/feedback", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+              body: JSON.stringify({ score, feedback, projectId: selectedProjectId }),
+            });
+            if (!res.ok) throw new Error("Failed to submit feedback");
+            toast.success("Thank you for your feedback!");
+          } catch {
+            toast.error("Failed to submit feedback. Please try again.");
+          }
         }}
       />
 
@@ -956,6 +973,7 @@ export default function IndieKitV2Page() {
                       action: "charge_cards",
                       pledgeIds: backersToCharge.map(b => b.id),
                       projectId: selectedProjectId,
+                      idempotencyKey: uuidv4(),
                     }),
                   });
 

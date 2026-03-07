@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Store, RefreshCw, Download, UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Users, Store, RefreshCw, Download, UserPlus, AlertTriangle, Loader2 } from "lucide-react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -46,6 +49,11 @@ export default function UsersPage() {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "request_info" | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
+
+  // Ban dialog state
+  const [showBanDialog, setShowBanDialog] = useState(false);
+  const [banReason, setBanReason] = useState("");
+  const [banningUser, setBanningUser] = useState<User | null>(null);
 
   // User edit/action states
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
@@ -475,27 +483,31 @@ export default function UsersPage() {
     setShowDeleteDialog(true);
   };
 
-  const handleBanUser = async (user: User) => {
-    if (!confirm(`Are you sure you want to ban ${user.name || user.email}? This will:\n\n• Lock their account immediately\n• Block their IP address from creating new accounts\n• Log them out of all sessions\n\nThis action can be reversed.`)) {
-      return;
-    }
+  const handleBanUser = (user: User) => {
+    setBanningUser(user);
+    setBanReason("");
+    setShowBanDialog(true);
+  };
+
+  const confirmBanUser = async () => {
+    if (!banningUser) return;
 
     try {
-      const reason = prompt("Enter a reason for banning this user (optional):");
-
       const response = await fetch("/api/admin/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
         body: JSON.stringify({
-          userId: user.id,
+          userId: banningUser.id,
           action: "BAN_USER",
-          data: { reason: reason || "Banned by administrator" },
+          data: { reason: banReason.trim() || "Banned by administrator" },
         }),
       });
 
       if (response.ok) {
         fetchUsers();
-        toast.success(`${user.name || user.email} has been banned`);
+        toast.success(`${banningUser.name || banningUser.email} has been banned`);
+        setShowBanDialog(false);
+        setBanningUser(null);
       } else {
         const error = await response.json();
         toast.error(error.error || "Failed to ban user");
@@ -1072,6 +1084,48 @@ export default function UsersPage() {
         onConfirm={handleResendReceipt}
         loading={resendingReceipt === resendReceiptConfirm.pledgeId}
       />
+
+      {/* Ban User Dialog */}
+      <Dialog open={showBanDialog} onOpenChange={(open) => {
+        setShowBanDialog(open);
+        if (!open) {
+          setBanningUser(null);
+          setBanReason("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Ban User
+            </DialogTitle>
+            <DialogDescription>
+              Ban {banningUser?.name || banningUser?.email}? This will lock their account, block their IP, and log them out of all sessions. This action can be reversed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="ban-reason">Reason for ban (optional)</Label>
+            <Input
+              id="ban-reason"
+              placeholder="Enter a reason..."
+              value={banReason}
+              onChange={(e) => setBanReason(e.target.value)}
+              maxLength={500}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBanDialog(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBanUser}
+              disabled={isUpdating}
+            >
+              {isUpdating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Confirm Ban
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
