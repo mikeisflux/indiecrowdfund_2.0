@@ -23,7 +23,6 @@ import { HeroSlider } from "@/components/hero-slider";
 import { JsonLd } from "@/components/json-ld";
 import { HomeStatsPoller } from "@/components/home-stats-poller";
 import { getPlatformStats, getRetailerStats } from "@/lib/stats/actions";
-import { formatCurrency, formatNumber } from "@/lib/stats/utils";
 import { db } from "@/lib/db";
 import { formatTimeRemaining } from "@/lib/utils";
 import { auth } from "@/lib/auth";

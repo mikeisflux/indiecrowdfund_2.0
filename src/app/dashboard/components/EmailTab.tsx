@@ -8,6 +8,7 @@ import { Inbox, HeadphonesIcon, Lock, Loader2 } from "lucide-react";
 // Import existing tabs from v1
 import { InboxTab } from "@/app/dashboard/indiekit/components/tabs";
 import { SupportTab } from "@/app/dashboard/indiekit/components/tabs";
+import type { Backer } from "@/app/dashboard/indiekit/types";
 
 interface EmailTabProps {
   projectId: string;
@@ -18,7 +19,7 @@ export function EmailTab({ projectId, onRefresh }: EmailTabProps) {
   const [subTab, setSubTab] = useState("inbox");
   const [emailAccessLocked, setEmailAccessLocked] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [backers, setBackers] = useState<Array<{ id: string; name: string; email: string; [key: string]: unknown }>>([]);
+  const [backers, setBackers] = useState<Backer[]>([]);
 
   const fetchEmailData = useCallback(async () => {
     try {

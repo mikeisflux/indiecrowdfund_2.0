@@ -164,7 +164,7 @@ export default function IndieKitV2Page() {
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>(WORKFLOW_STEPS);
   const [backers, setBackers] = useState<Backer[]>([]);
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>([]);
-  const [shippingServices, setShippingServices] = useState<ShippingService[]>(SHIPPING_SERVICES);
+  const [shippingServices] = useState<ShippingService[]>(SHIPPING_SERVICES);
   const [digitalFiles, setDigitalFiles] = useState<DigitalFile[]>([]);
   const [distributionRules, setDistributionRules] = useState<DistributionRule[]>([]);
   const [emailCampaigns, setEmailCampaigns] = useState<EmailCampaign[]>([]);
