@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -97,9 +98,9 @@ export default function BugReportPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/bug-reports", {
+      const response = await apiFetch("/api/bug-reports", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           ...formData,
           browser: navigator.userAgent,

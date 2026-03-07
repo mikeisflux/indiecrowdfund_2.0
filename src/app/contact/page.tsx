@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState } from "react";
@@ -62,9 +63,9 @@ export default function ContactPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/contact", {
+      const response = await apiFetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(formData),
       });
 

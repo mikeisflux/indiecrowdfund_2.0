@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,7 +71,7 @@ export function NotificationPreferencesTab() {
   const fetchPreferences = async () => {
     try {
       const response = await fetch("/api/backer/notifications/preferences", {
-        headers: { ...getCSRFHeaders() },
+        
       });
       if (!response.ok) throw new Error("Failed to fetch preferences");
       const prefsData = await response.json();
@@ -87,9 +88,9 @@ export function NotificationPreferencesTab() {
 
     setSaving("global");
     try {
-      const response = await fetch("/api/backer/notifications/preferences", {
+      const response = await apiFetch("/api/backer/notifications/preferences", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ global: { [key]: value } }),
       });
 
@@ -116,9 +117,9 @@ export function NotificationPreferencesTab() {
 
     setSaving(projectId);
     try {
-      const response = await fetch(`/api/backer/notifications/preferences/${projectId}`, {
+      const response = await apiFetch(`/api/backer/notifications/preferences/${projectId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ [key]: value }),
       });
 
@@ -429,9 +430,9 @@ export function NotificationPreferencesTab() {
                   // Enable all
                   setSaving("all");
                   try {
-                    await fetch("/api/backer/notifications/preferences/bulk", {
+                    await apiFetch("/api/backer/notifications/preferences/bulk", {
                       method: "POST",
-                      headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                      headers: { "Content-Type": "application/json", },
                       body: JSON.stringify({ action: "enable_all" }),
                     });
                     toast.success("All notifications enabled");
@@ -454,9 +455,9 @@ export function NotificationPreferencesTab() {
                   // Disable all
                   setSaving("all");
                   try {
-                    await fetch("/api/backer/notifications/preferences/bulk", {
+                    await apiFetch("/api/backer/notifications/preferences/bulk", {
                       method: "POST",
-                      headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                      headers: { "Content-Type": "application/json", },
                       body: JSON.stringify({ action: "disable_all" }),
                     });
                     toast.success("All notifications disabled");

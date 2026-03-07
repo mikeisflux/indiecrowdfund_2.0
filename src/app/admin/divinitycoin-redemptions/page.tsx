@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -250,9 +251,9 @@ export default function DivinityCoinRedemptionsPage() {
     try {
       if (editingTransaction) {
         // PATCH
-        const response = await fetch("/api/admin/divinitycoin-redemptions", {
+        const response = await apiFetch("/api/admin/divinitycoin-redemptions", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({
             id: editingTransaction.id,
             amount: parseFloat(formAmount),
@@ -269,9 +270,9 @@ export default function DivinityCoinRedemptionsPage() {
         toast.success("Transaction updated");
       } else {
         // POST
-        const response = await fetch("/api/admin/divinitycoin-redemptions", {
+        const response = await apiFetch("/api/admin/divinitycoin-redemptions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({
             userId: formUserId,
             amount: parseFloat(formAmount),
@@ -304,11 +305,11 @@ export default function DivinityCoinRedemptionsPage() {
 
     setDeleting(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/admin/divinitycoin-redemptions?id=${deleteTarget.id}`,
         {
           method: "DELETE",
-          headers: { ...getCSRFHeaders() },
+          
         }
       );
 

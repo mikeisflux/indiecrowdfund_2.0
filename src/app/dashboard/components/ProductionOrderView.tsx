@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,9 +66,9 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
 
     setSavingSkus((prev) => ({ ...prev, [item.projectItemId!]: true }));
     try {
-      const response = await fetch(`/api/projects/${projectId}/items`, {
+      const response = await apiFetch(`/api/projects/${projectId}/items`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           id: item.projectItemId,
           title: item.name,
@@ -99,9 +100,9 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
     setSavingStock((prev) => ({ ...prev, [item.projectItemId!]: true }));
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/items`, {
+      const response = await apiFetch(`/api/projects/${projectId}/items`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           id: item.projectItemId,
           title: item.name,

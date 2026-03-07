@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
@@ -60,11 +61,11 @@ export function SetVanityUrlDialog({
     setError(null);
 
     try {
-      const response = await fetch(`/api/admin/users/${creatorId}/vanity-url`, {
+      const response = await apiFetch(`/api/admin/users/${creatorId}/vanity-url`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ vanityUrl: vanityUrl.trim().toLowerCase() }),
       });

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
@@ -59,7 +60,7 @@ export default function RetailerAccountPage() {
   }, [router]);
 
   const handleLogout = async () => {
-    await fetch("/api/retailers/logout", { method: "POST", headers: getCSRFHeaders() });
+    await apiFetch("/api/retailers/logout", { method: "POST" });
     window.location.href = "/retailers/login";
   };
 
@@ -68,9 +69,9 @@ export default function RetailerAccountPage() {
 
     setSaving(true);
     try {
-      const response = await fetch("/api/retailers/account", {
+      const response = await apiFetch("/api/retailers/account", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(account),
       });
 

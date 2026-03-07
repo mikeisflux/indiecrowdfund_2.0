@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -85,9 +86,9 @@ export default function NotificationsPage() {
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch("/api/user/notifications", {
+      await apiFetch("/api/user/notifications", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "markRead",
           notificationIds: [id],
@@ -104,9 +105,9 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      await fetch("/api/user/notifications", {
+      await apiFetch("/api/user/notifications", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "markAllRead" }),
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -118,9 +119,9 @@ export default function NotificationsPage() {
 
   const deleteNotification = async (id: string) => {
     try {
-      await fetch(`/api/user/notifications?id=${id}`, {
+      await apiFetch(`/api/user/notifications?id=${id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       setPagination((prev) => ({ ...prev, total: prev.total - 1 }));

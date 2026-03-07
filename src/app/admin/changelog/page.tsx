@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,7 +180,7 @@ export default function AdminChangelogPage() {
 
       const response = await fetch("/api/admin/changelog", {
         method: editingEntry ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(payload),
       });
 
@@ -202,9 +203,9 @@ export default function AdminChangelogPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/changelog?id=${id}`, {
+      const response = await apiFetch(`/api/admin/changelog?id=${id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (response.ok) {
@@ -222,9 +223,9 @@ export default function AdminChangelogPage() {
 
   const togglePublished = async (entry: ChangelogEntry) => {
     try {
-      const response = await fetch("/api/admin/changelog", {
+      const response = await apiFetch("/api/admin/changelog", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           id: entry.id,
           isPublished: !entry.isPublished,
@@ -244,9 +245,9 @@ export default function AdminChangelogPage() {
   const handleExtractFromGit = async () => {
     setExtracting(true);
     try {
-      const response = await fetch("/api/admin/changelog/extract", {
+      const response = await apiFetch("/api/admin/changelog/extract", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ force: true }),
       });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -218,9 +219,9 @@ export function EmailCampaignsTab({
     if (!campaignToSend) return;
     setActionLoading(campaignToSend.id);
     try {
-      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToSend.id}/send`, {
+      const response = await apiFetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToSend.id}/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ resend: isResend }),
       });
       if (response.ok) {
@@ -241,9 +242,9 @@ export function EmailCampaignsTab({
     if (!campaignToDelete) return;
     setActionLoading(campaignToDelete.id);
     try {
-      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToDelete.id}`, {
+      const response = await apiFetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToDelete.id}`, {
         method: "DELETE",
-        headers: { ...getCSRFHeaders() },
+        
       });
       if (response.ok) {
         onRefresh?.();
@@ -261,9 +262,9 @@ export function EmailCampaignsTab({
   const handleDuplicateCampaign = async (campaign: EmailCampaign) => {
     setActionLoading(campaign.id);
     try {
-      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaign.id}/duplicate`, {
+      const response = await apiFetch(`/api/admin/ai-marketing/campaigns/manage/${campaign.id}/duplicate`, {
         method: "POST",
-        headers: { ...getCSRFHeaders() },
+        
       });
       if (response.ok) {
         onRefresh?.();
@@ -279,9 +280,9 @@ export function EmailCampaignsTab({
   const handleAbortCampaign = async (campaign: EmailCampaign) => {
     setActionLoading(campaign.id);
     try {
-      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaign.id}/abort`, {
+      const response = await apiFetch(`/api/admin/ai-marketing/campaigns/manage/${campaign.id}/abort`, {
         method: "POST",
-        headers: { ...getCSRFHeaders() },
+        
       });
       if (response.ok) {
         onRefresh?.();
@@ -316,9 +317,9 @@ export function EmailCampaignsTab({
     setTestSuccess(false);
 
     try {
-      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToTest.id}/test`, {
+      const response = await apiFetch(`/api/admin/ai-marketing/campaigns/manage/${campaignToTest.id}/test`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ email: testEmail, name: testName }),
       });
 
@@ -351,9 +352,9 @@ export function EmailCampaignsTab({
         filters.segments = selectedSegments;
       }
 
-      const response = await fetch(`/api/admin/ai-marketing/campaigns/manage/${selectedCampaign.id}`, {
+      const response = await apiFetch(`/api/admin/ai-marketing/campaigns/manage/${selectedCampaign.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           name: editName,
           subject: editSubject,

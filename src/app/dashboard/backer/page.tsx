@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
@@ -178,9 +179,9 @@ export default function BackerDashboard() {
   const handleUnsaveProject = async (projectId: string) => {
     setUnsavingProjectId(projectId);
     try {
-      const response = await fetch(`/api/user/following?projectId=${projectId}`, {
+      const response = await apiFetch(`/api/user/following?projectId=${projectId}`, {
         method: "DELETE",
-        headers: { ...getCSRFHeaders() },
+        
       });
       if (response.ok) {
         // Remove from local state

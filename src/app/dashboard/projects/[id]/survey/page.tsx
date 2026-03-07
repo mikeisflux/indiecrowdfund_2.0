@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
@@ -184,9 +185,9 @@ export default function SurveyBuilderPage() {
   const createSurvey = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/survey`, {
+      const response = await apiFetch(`/api/projects/${projectId}/survey`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           introTitle,
           introMessage,
@@ -208,9 +209,9 @@ export default function SurveyBuilderPage() {
     if (!survey) return;
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/survey`, {
+      const response = await apiFetch(`/api/projects/${projectId}/survey`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           introTitle,
           introMessage,
@@ -230,7 +231,7 @@ export default function SurveyBuilderPage() {
 
   const sendSurvey = async () => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/survey/send`, {
+      const response = await apiFetch(`/api/projects/${projectId}/survey/send`, {
         method: "POST",
       });
 
@@ -250,7 +251,7 @@ export default function SurveyBuilderPage() {
 
   const lockAddresses = async () => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/survey/lock`, {
+      const response = await apiFetch(`/api/projects/${projectId}/survey/lock`, {
         method: "POST",
       });
 
@@ -271,7 +272,7 @@ export default function SurveyBuilderPage() {
 
       const response = await fetch(`/api/projects/${projectId}/survey/item-questions`, {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(body),
       });
 
@@ -289,9 +290,9 @@ export default function SurveyBuilderPage() {
     const questionId = deleteItemConfirm.questionId;
     setIsDeletingItem(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/projects/${projectId}/survey/item-questions?questionId=${questionId}`,
-        { method: "DELETE", headers: getCSRFHeaders() }
+        { method: "DELETE" }
       );
 
       if (response.ok) {
@@ -312,7 +313,7 @@ export default function SurveyBuilderPage() {
 
       const response = await fetch(`/api/projects/${projectId}/survey/backer-questions`, {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(body),
       });
 
@@ -330,9 +331,9 @@ export default function SurveyBuilderPage() {
     const questionId = deleteBackerConfirm.questionId;
     setIsDeletingBacker(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/projects/${projectId}/survey/backer-questions?questionId=${questionId}`,
-        { method: "DELETE", headers: getCSRFHeaders() }
+        { method: "DELETE" }
       );
 
       if (response.ok) {

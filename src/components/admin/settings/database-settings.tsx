@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -169,9 +170,9 @@ export function DatabaseSettings() {
       setIsCreatingBackup(true);
       toast.info("Creating backup... This may take a moment.");
 
-      const response = await fetch("/api/admin/database/backup", {
+      const response = await apiFetch("/api/admin/database/backup", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
 
       const result = await response.json();
@@ -196,9 +197,9 @@ export function DatabaseSettings() {
 
   const deleteBackup = async (filename: string) => {
     try {
-      const response = await fetch(`/api/admin/database/backup?filename=${encodeURIComponent(filename)}`, {
+      const response = await apiFetch(`/api/admin/database/backup?filename=${encodeURIComponent(filename)}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) {
@@ -221,9 +222,9 @@ export function DatabaseSettings() {
       setIsRestoring(true);
       toast.info("Restoring database... This may take a moment.");
 
-      const response = await fetch("/api/admin/database/backup/restore", {
+      const response = await apiFetch("/api/admin/database/backup/restore", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ filename }),
       });
 
@@ -250,9 +251,9 @@ export function DatabaseSettings() {
 
       toast.info("Uploading backup file...");
 
-      const response = await fetch("/api/admin/database/backup/restore", {
+      const response = await apiFetch("/api/admin/database/backup/restore", {
         method: "PUT",
-        headers: getCSRFHeaders(),
+,
         body: formData,
       });
 
@@ -287,9 +288,9 @@ export function DatabaseSettings() {
 
   const deleteBuildBackup = async (name: string) => {
     try {
-      const response = await fetch(`/api/admin/build-backup?name=${encodeURIComponent(name)}`, {
+      const response = await apiFetch(`/api/admin/build-backup?name=${encodeURIComponent(name)}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) {
@@ -332,9 +333,9 @@ export function DatabaseSettings() {
     try {
       setIsRecalcApplying(true);
       setShowRecalcConfirm(false);
-      const response = await fetch("/api/admin/recalculate-pledge-amounts", {
+      const response = await apiFetch("/api/admin/recalculate-pledge-amounts", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       if (!response.ok) throw new Error("Failed to apply pledge amount fixes");
       const result = await response.json();

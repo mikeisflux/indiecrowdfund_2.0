@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -75,9 +76,9 @@ export function DigitalTab({
 
     setIsBlastingEmails(true);
     try {
-      const res = await fetch("/api/creator/indiekit/digital", {
+      const res = await apiFetch("/api/creator/indiekit/digital", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "blast_notifications",
@@ -112,9 +113,9 @@ export function DigitalTab({
 
     setIsStartingDistributions(true);
     try {
-      const res = await fetch("/api/creator/indiekit/digital", {
+      const res = await apiFetch("/api/creator/indiekit/digital", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "start_all_distributions",
@@ -142,7 +143,7 @@ export function DigitalTab({
     setRefreshingRuleId(ruleId);
     try {
       const res = await fetch(`/api/creator/indiekit/digital?projectId=${projectId}&ruleId=${ruleId}`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       const data = await res.json();
@@ -164,9 +165,9 @@ export function DigitalTab({
 
     setDeletingRuleId(rule.id);
     try {
-      const res = await fetch(`/api/creator/indiekit/digital?projectId=${projectId}&ruleId=${rule.id}`, {
+      const res = await apiFetch(`/api/creator/indiekit/digital?projectId=${projectId}&ruleId=${rule.id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -192,9 +193,9 @@ export function DigitalTab({
 
     setDistributingFileId(file.id);
     try {
-      const res = await fetch("/api/creator/indiekit/digital", {
+      const res = await apiFetch("/api/creator/indiekit/digital", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "distribute_file",
@@ -221,9 +222,9 @@ export function DigitalTab({
 
     setDeletingFileId(file.id);
     try {
-      const res = await fetch(`/api/creator/digital-files?fileId=${file.id}`, {
+      const res = await apiFetch(`/api/creator/digital-files?fileId=${file.id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {

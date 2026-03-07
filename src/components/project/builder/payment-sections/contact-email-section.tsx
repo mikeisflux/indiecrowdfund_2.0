@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,9 +29,9 @@ export function ContactEmailSection({ payment, updatePayment, projectId }: Conta
     setIsSavingEmail(true);
     try {
       // Use dedicated contact-email endpoint for reliable saving
-      const response = await fetch(`/api/projects/${projectId}/contact-email`, {
+      const response = await apiFetch(`/api/projects/${projectId}/contact-email`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ contactEmail: payment.contactEmail }),
       });
 

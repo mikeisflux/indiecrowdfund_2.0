@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useRef, useCallback } from "react";
 import {
   Dialog,
@@ -200,11 +201,11 @@ export function CSVImportDialog({
           };
         });
 
-      const response = await fetch("/api/admin/ai-marketing/subscribers/import", {
+      const response = await apiFetch("/api/admin/ai-marketing/subscribers/import", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ subscribers, listTag: listTag.trim(), category }),
       });

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,9 +103,9 @@ export function ShippingProvidersSection({ activeSection }: ShippingProvidersSec
   ) => {
     setSaving(true);
     try {
-      const res = await fetch("/api/creator/indiekit/shipping-providers/credentials", {
+      const res = await apiFetch("/api/creator/indiekit/shipping-providers/credentials", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ provider, credentials }),
       });
 
@@ -132,9 +133,9 @@ export function ShippingProvidersSection({ activeSection }: ShippingProvidersSec
   ) => {
     setSaving(true);
     try {
-      const res = await fetch("/api/creator/indiekit/shipping-providers/credentials", {
+      const res = await apiFetch("/api/creator/indiekit/shipping-providers/credentials", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ provider }),
       });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -217,9 +218,9 @@ export function SocialHubTab() {
   const disconnectPlatform = async (platformId: string) => {
     setDisconnectingPlatform(platformId);
     try {
-      const response = await fetch("/api/auth/social/connections", {
+      const response = await apiFetch("/api/auth/social/connections", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ provider: platformId }),
       });
 

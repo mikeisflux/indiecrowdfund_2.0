@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -141,7 +142,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
       });
 
       const response = await fetch(`/api/admin/ai-marketing/subscribers?${params}`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (response.ok) {
@@ -165,11 +166,11 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
     const { id, category } = deleteConfirm;
     setDeleting(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/admin/ai-marketing/subscribers?id=${id}&category=${category}`,
         {
           method: "DELETE",
-          headers: getCSRFHeaders(),
+,
         }
       );
 
@@ -223,7 +224,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
         method,
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify(body),
       });
@@ -268,11 +269,11 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
   const handleRemoveDuplicates = async () => {
     setRemovingDuplicates(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/admin/ai-marketing/subscribers?action=remove-duplicates&category=${selectedCategory}`,
         {
           method: "DELETE",
-          headers: getCSRFHeaders(),
+,
         }
       );
 

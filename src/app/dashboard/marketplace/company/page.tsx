@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -75,9 +76,9 @@ function FileUpload({
       formData.append("file", file);
       formData.append("type", "image");
 
-      const res = await fetch("/api/upload", {
+      const res = await apiFetch("/api/upload", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
         body: formData,
       });
 
@@ -261,7 +262,7 @@ export default function CompanyProfilePage() {
         method,
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify(formData),
       });

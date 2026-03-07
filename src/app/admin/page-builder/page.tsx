@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -226,9 +227,9 @@ export default function PageBuilderPage() {
     setSaveMessage(null);
 
     try {
-      const response = await fetch("/api/admin/pages", {
+      const response = await apiFetch("/api/admin/pages", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           id: selectedPageId,
           content: { blocks: pageContent },
@@ -254,9 +255,9 @@ export default function PageBuilderPage() {
     if (!newPageTitle || !newPageSlug) return;
 
     try {
-      const response = await fetch("/api/admin/pages", {
+      const response = await apiFetch("/api/admin/pages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           title: newPageTitle,
           slug: newPageSlug.toLowerCase().replace(/\s+/g, "-"),

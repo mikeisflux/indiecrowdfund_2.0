@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,9 +79,9 @@ export function AddonDialog({
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/creator/indiekit/addons", {
+      const res = await apiFetch("/api/creator/indiekit/addons", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: isEditing ? "update" : "create",

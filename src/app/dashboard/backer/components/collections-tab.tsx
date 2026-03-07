@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -117,7 +118,7 @@ export function CollectionsTab() {
   const fetchCollections = async () => {
     try {
       const response = await fetch("/api/backer/collections", {
-        headers: { ...getCSRFHeaders() },
+        
       });
       if (!response.ok) throw new Error("Failed to fetch collections");
       const data = await response.json();
@@ -166,7 +167,7 @@ export function CollectionsTab() {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(formData),
       });
 
@@ -188,9 +189,9 @@ export function CollectionsTab() {
   const handleDelete = async (collectionId: string) => {
     setDeleting(collectionId);
     try {
-      const response = await fetch(`/api/backer/collections/${collectionId}`, {
+      const response = await apiFetch(`/api/backer/collections/${collectionId}`, {
         method: "DELETE",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       if (!response.ok) throw new Error("Failed to delete collection");
@@ -208,9 +209,9 @@ export function CollectionsTab() {
 
   const handleRemoveProject = async (collectionId: string, projectId: string) => {
     try {
-      const response = await fetch(`/api/backer/collections/${collectionId}/projects/${projectId}`, {
+      const response = await apiFetch(`/api/backer/collections/${collectionId}/projects/${projectId}`, {
         method: "DELETE",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       if (!response.ok) throw new Error("Failed to remove project");

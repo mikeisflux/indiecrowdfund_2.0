@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -104,9 +105,9 @@ export default function FollowingPage() {
   const handleUnfollowProject = async (projectId: string) => {
     setUnfollowingId(projectId);
     try {
-      const res = await fetch(`/api/user/following?projectId=${projectId}`, {
+      const res = await apiFetch(`/api/user/following?projectId=${projectId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
       if (res.ok && data) {
         setData({
@@ -124,9 +125,9 @@ export default function FollowingPage() {
   const handleUnfollowCreator = async (creatorId: string) => {
     setUnfollowingId(creatorId);
     try {
-      const res = await fetch(`/api/user/following?creatorId=${creatorId}`, {
+      const res = await apiFetch(`/api/user/following?creatorId=${creatorId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
       if (res.ok && data) {
         setData({

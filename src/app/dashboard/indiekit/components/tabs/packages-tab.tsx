@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -117,9 +118,9 @@ export function PackagesTab({
             groupId,
           };
 
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(bodyData),
       });
 
@@ -144,7 +145,7 @@ export function PackagesTab({
 
     try {
       const res = await fetch(`/api/creator/indiekit/integrations?projectId=${projectId}&serviceId=${service.id}`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -168,9 +169,9 @@ export function PackagesTab({
         ? "/api/creator/indiekit/shopify"
         : "/api/creator/indiekit/fulfillment";
 
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "sync_status",
@@ -200,7 +201,7 @@ export function PackagesTab({
     setIsRefreshing(true);
     try {
       const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=refresh_groups`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -227,7 +228,7 @@ export function PackagesTab({
     setIsSearching(true);
     try {
       const res = await fetch(`/api/creator/indiekit/fulfillment?projectId=${projectId}&action=get_group&groupId=${searchGroupId}`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -268,9 +269,9 @@ export function PackagesTab({
             segment: segmentFilter,
           };
 
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(bodyData),
       });
 
@@ -295,9 +296,9 @@ export function PackagesTab({
 
     setIsRetrying(true);
     try {
-      const res = await fetch("/api/creator/indiekit/fulfillment", {
+      const res = await apiFetch("/api/creator/indiekit/fulfillment", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "retry_errored",
@@ -323,9 +324,9 @@ export function PackagesTab({
     if (!projectId) return;
 
     try {
-      const res = await fetch("/api/creator/indiekit/fulfillment", {
+      const res = await apiFetch("/api/creator/indiekit/fulfillment", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "export",

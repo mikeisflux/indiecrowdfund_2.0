@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 
 import { useState, useCallback, useEffect } from "react";
@@ -166,7 +167,7 @@ export default function RetailerApplyPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/retailers/apply", {
+      const response = await apiFetch("/api/retailers/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
@@ -100,7 +101,7 @@ export function ProjectDetailPanel({
     if (!project?.id) return;
     setLoadingFullCard(true);
     try {
-      const response = await fetch(`/api/projects/${project.id}/chargeback-card`, { method: "PUT", headers: getCSRFHeaders() });
+      const response = await apiFetch(`/api/projects/${project.id}/chargeback-card`, { method: "PUT" });
       if (response.ok) {
         const data = await response.json();
         setFullCardDetails(data);

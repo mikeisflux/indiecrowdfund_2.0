@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -162,9 +163,9 @@ export default function EmailQueuePage() {
   const doAction = useCallback(async (action: string, emailId?: string) => {
     setIsActioning(true);
     try {
-      const res = await fetch("/api/admin/email-queue", {
+      const res = await apiFetch("/api/admin/email-queue", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action, emailId }),
       });
       const data = await res.json();
@@ -182,9 +183,9 @@ export default function EmailQueuePage() {
     if (!confirm("This will permanently delete ALL pending and processing emails. Are you sure?")) return;
     setIsActioning(true);
     try {
-      const res = await fetch("/api/admin/email-queue", {
+      const res = await apiFetch("/api/admin/email-queue", {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);

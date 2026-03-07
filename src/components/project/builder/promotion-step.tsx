@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
@@ -175,15 +176,15 @@ export function PromotionStep() {
 
       let response;
       if (projectId) {
-        response = await fetch(`/api/projects/${projectId}`, {
+        response = await apiFetch(`/api/projects/${projectId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify(projectData),
         });
       } else {
-        response = await fetch("/api/projects", {
+        response = await apiFetch("/api/projects", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify(projectData),
         });
       }
@@ -259,9 +260,9 @@ export function PromotionStep() {
           prelaunchDescription: promotion.prelaunchDescription,
         };
 
-        const createResponse = await fetch("/api/projects", {
+        const createResponse = await apiFetch("/api/projects", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify(projectData),
         });
 
@@ -279,9 +280,9 @@ export function PromotionStep() {
       }
 
       // Submit the prelaunch for review
-      const response = await fetch(`/api/projects/${currentProjectId}/prelaunch`, {
+      const response = await apiFetch(`/api/projects/${currentProjectId}/prelaunch`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ prelaunchActive: true }),
       });
 
@@ -318,9 +319,9 @@ export function PromotionStep() {
 
     try {
       // Use dedicated prelaunch endpoint for reliable deactivation
-      const response = await fetch(`/api/projects/${projectId}/prelaunch`, {
+      const response = await apiFetch(`/api/projects/${projectId}/prelaunch`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ prelaunchActive: false }),
       });
 

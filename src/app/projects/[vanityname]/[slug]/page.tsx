@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -205,18 +206,18 @@ export default function ProjectPage() {
     try {
       if (isFollowing) {
         // Unfollow
-        const response = await fetch(`/api/user/following?projectId=${project.id}`, {
+        const response = await apiFetch(`/api/user/following?projectId=${project.id}`, {
           method: "DELETE",
-          headers: getCSRFHeaders(),
+,
         });
         if (response.ok) {
           setIsFollowing(false);
         }
       } else {
         // Follow
-        const response = await fetch("/api/user/following", {
+        const response = await apiFetch("/api/user/following", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ projectId: project.id, type: "live" }),
         });
         if (response.ok) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -85,9 +86,9 @@ export function CollaborationsTab() {
   const handleRemove = async (collaborationId: string, projectTitle: string) => {
     setRemovingId(collaborationId);
     try {
-      const res = await fetch(`/api/collaborations/${collaborationId}`, {
+      const res = await apiFetch(`/api/collaborations/${collaborationId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (res.ok) {

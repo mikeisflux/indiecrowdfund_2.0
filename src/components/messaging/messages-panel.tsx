@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useRef } from "react";
@@ -129,15 +130,15 @@ export function MessagesPanel({
           if (selectedConversation.project?.id) {
             params.set("projectId", selectedConversation.project.id);
           }
-          const res = await fetch(`/api/messages?${params}`);
+          const res = await apiFetch(`/api/messages?${params}`);
           if (res.ok) {
             const data = await res.json();
             setMessages(data.messages || []);
 
             // Mark as read
-            await fetch("/api/messages", {
+            await apiFetch("/api/messages", {
               method: "PATCH",
-              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+              headers: { "Content-Type": "application/json", },
               body: JSON.stringify({
                 conversationWith: selectedConversation.otherUser.id,
                 projectId: selectedConversation.project?.id,
@@ -216,9 +217,9 @@ export function MessagesPanel({
 
     setSending(true);
     try {
-      const res = await fetch("/api/messages", {
+      const res = await apiFetch("/api/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           recipientId: targetRecipientId,
           projectId: targetProjectId,

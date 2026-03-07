@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -100,9 +101,9 @@ export function ImportAddonFromProjectDialog({
 
     setIsImporting(true);
     try {
-      const res = await fetch("/api/creator/indiekit/addons", {
+      const res = await apiFetch("/api/creator/indiekit/addons", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "link",

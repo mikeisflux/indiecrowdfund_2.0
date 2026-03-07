@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
@@ -81,9 +82,9 @@ export function AdjustEndDateDialog({
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/admin/projects/${projectId}/adjust-end-date`, {
+      const response = await apiFetch(`/api/admin/projects/${projectId}/adjust-end-date`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ endDate: parsed.toISOString() }),
       });
 

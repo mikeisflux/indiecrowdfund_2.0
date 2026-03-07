@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
@@ -178,9 +179,9 @@ export default function RetailerProjectDetailPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/retailers/orders", {
+      const response = await apiFetch("/api/retailers/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           items: orderItems,

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,9 +60,9 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
 
     setTogglingId(addon.id);
     try {
-      const res = await fetch("/api/creator/indiekit/addons", {
+      const res = await apiFetch("/api/creator/indiekit/addons", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: addon.available ? "deactivate" : "activate",
@@ -88,9 +89,9 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
 
     setIsUnlinking(true);
     try {
-      const res = await fetch("/api/creator/indiekit/addons", {
+      const res = await apiFetch("/api/creator/indiekit/addons", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "unlink",
@@ -118,9 +119,9 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
 
     setIsUnlinkingAll(true);
     try {
-      const res = await fetch("/api/creator/indiekit/addons", {
+      const res = await apiFetch("/api/creator/indiekit/addons", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "unlink-all",

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { Store, ArrowLeft, KeyRound, Loader2, CheckCircle, AlertCircle } from "lucide-react";
@@ -56,7 +57,7 @@ export default function RetailerForgotPasswordPage() {
     }
 
     try {
-      const response = await fetch("/api/retailers/forgot-password", {
+      const response = await apiFetch("/api/retailers/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, recaptchaToken }),

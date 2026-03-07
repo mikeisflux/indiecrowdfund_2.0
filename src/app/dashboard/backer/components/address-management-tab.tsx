@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent } from "@/components/ui/card";
@@ -97,7 +98,7 @@ export function AddressManagementTab() {
   const fetchAddresses = async () => {
     try {
       const response = await fetch("/api/backer/addresses", {
-        headers: { ...getCSRFHeaders() },
+        
       });
       if (!response.ok) throw new Error("Failed to fetch addresses");
       const data = await response.json();
@@ -158,7 +159,7 @@ export function AddressManagementTab() {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(formData),
       });
 
@@ -180,9 +181,9 @@ export function AddressManagementTab() {
   const handleDelete = async (addressId: string) => {
     setDeleting(addressId);
     try {
-      const response = await fetch(`/api/backer/addresses/${addressId}`, {
+      const response = await apiFetch(`/api/backer/addresses/${addressId}`, {
         method: "DELETE",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       if (!response.ok) throw new Error("Failed to delete address");
@@ -197,9 +198,9 @@ export function AddressManagementTab() {
 
   const handleSetDefault = async (addressId: string) => {
     try {
-      const response = await fetch(`/api/backer/addresses/${addressId}`, {
+      const response = await apiFetch(`/api/backer/addresses/${addressId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ isDefault: true }),
       });
 

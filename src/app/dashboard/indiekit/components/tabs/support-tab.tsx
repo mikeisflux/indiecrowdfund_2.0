@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -118,9 +119,9 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
     }
 
     try {
-      const res = await fetch("/api/creator/indiekit/backers", {
+      const res = await apiFetch("/api/creator/indiekit/backers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "send_survey_reminder",
           pledgeIds: [backer.id],
@@ -148,9 +149,9 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/creator/indiekit/notes", {
+      const res = await apiFetch("/api/creator/indiekit/notes", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           pledgeId: selectedBacker.id,
           projectId,
@@ -178,9 +179,9 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/creator/indiekit/address", {
+      const res = await apiFetch("/api/creator/indiekit/address", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           pledgeId: selectedBacker.id,
           projectId,

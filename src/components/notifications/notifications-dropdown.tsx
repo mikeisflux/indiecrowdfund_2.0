@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -62,9 +63,9 @@ export function NotificationsDropdown() {
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch("/api/user/notifications", {
+      await apiFetch("/api/user/notifications", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "markRead",
           notificationIds: [id],
@@ -81,9 +82,9 @@ export function NotificationsDropdown() {
 
   const markAllAsRead = async () => {
     try {
-      await fetch("/api/user/notifications", {
+      await apiFetch("/api/user/notifications", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "markAllRead" }),
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

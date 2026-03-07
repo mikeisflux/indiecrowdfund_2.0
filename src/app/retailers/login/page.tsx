@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -59,14 +60,14 @@ export default function RetailerLoginPage() {
     const checkSession = async () => {
       try {
         // First check if user has retailer access via their session
-        const checkResponse = await fetch("/api/retailers/session-auth");
+        const checkResponse = await apiFetch("/api/retailers/session-auth");
         const checkData = await checkResponse.json();
 
         if (checkData.hasAccess) {
           setSessionMessage("You have retailer access. Redirecting...");
 
           // Try to auto-authenticate
-          const authResponse = await fetch("/api/retailers/session-auth", {
+          const authResponse = await apiFetch("/api/retailers/session-auth", {
             method: "POST"
           });
 
@@ -114,7 +115,7 @@ export default function RetailerLoginPage() {
     }
 
     try {
-      const response = await fetch("/api/retailers/login", {
+      const response = await apiFetch("/api/retailers/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

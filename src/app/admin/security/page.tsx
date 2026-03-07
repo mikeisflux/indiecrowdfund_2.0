@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -125,9 +126,9 @@ export default function SecurityPage() {
     setSaveMessage(null);
 
     try {
-      const response = await fetch("/api/admin/settings", {
+      const response = await apiFetch("/api/admin/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           section: "security",
           data: {

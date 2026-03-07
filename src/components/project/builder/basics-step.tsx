@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -130,9 +131,9 @@ export function BasicsStep() {
       formData.append("projectId", projectId);
       formData.append("type", "video");
 
-      const response = await fetch("/api/upload", {
+      const response = await apiFetch("/api/upload", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
         body: formData,
       });
 

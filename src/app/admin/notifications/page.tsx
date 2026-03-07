@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,7 @@ export default function NotificationsPage() {
     setIsLoading(true);
     try {
       const response = await fetch("/api/admin/notifications", {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) {
@@ -106,11 +107,11 @@ export default function NotificationsPage() {
     );
 
     try {
-      await fetch("/api/admin/notifications", {
+      await apiFetch("/api/admin/notifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           action: "markRead",
@@ -132,11 +133,11 @@ export default function NotificationsPage() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
 
     try {
-      await fetch("/api/admin/notifications", {
+      await apiFetch("/api/admin/notifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           action: "markAllRead",
@@ -157,11 +158,11 @@ export default function NotificationsPage() {
   const savePreferences = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch("/api/admin/notifications", {
+      const response = await apiFetch("/api/admin/notifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           action: "updatePreferences",

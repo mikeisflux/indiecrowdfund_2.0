@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,9 +91,9 @@ export function ConnectServiceDialog({
             apiSecret,
           };
 
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(bodyData),
       });
 
@@ -252,9 +253,9 @@ export function CreateGroupDialog({
 
     setIsCreatingGroup(true);
     try {
-      const res = await fetch("/api/creator/indiekit/fulfillment", {
+      const res = await apiFetch("/api/creator/indiekit/fulfillment", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "create_group",
@@ -462,9 +463,9 @@ export function EditCustomsDialog({
 
     setIsSavingCustoms(true);
     try {
-      const res = await fetch("/api/creator/indiekit/fulfillment", {
+      const res = await apiFetch("/api/creator/indiekit/fulfillment", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "update_customs",

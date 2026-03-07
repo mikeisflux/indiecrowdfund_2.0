@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,9 @@ export function SurveySection({ projectId }: SurveySectionProps) {
 
     setIsSavingSurvey(true);
     try {
-      const res = await fetch("/api/creator/indiekit/settings", {
+      const res = await apiFetch("/api/creator/indiekit/settings", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           section: "survey",

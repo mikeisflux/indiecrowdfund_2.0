@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
@@ -178,9 +179,9 @@ export default function PrelaunchPage() {
     setIsSubscribing(true);
 
     try {
-      const response = await fetch("/api/user/following", {
+      const response = await apiFetch("/api/user/following", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId: project?.id,
           type: "prelaunch",

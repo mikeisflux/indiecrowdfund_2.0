@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -229,9 +230,9 @@ export function BackersTab({
 
     setIsProcessing(true);
     try {
-      const res = await fetch("/api/creator/indiekit/backers", {
+      const res = await apiFetch("/api/creator/indiekit/backers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action,
           pledgeIds: selectedBackers,
@@ -353,9 +354,9 @@ export function BackersTab({
     setChargeProgress(10);
 
     try {
-      const res = await fetch("/api/creator/indiekit/backers", {
+      const res = await apiFetch("/api/creator/indiekit/backers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "charge_cards",
           pledgeIds: selectedBackers,
@@ -430,7 +431,7 @@ export function BackersTab({
 
     try {
       const res = await fetch(`/api/creator/indiekit/export?projectId=${projectId}&type=backers`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -1058,9 +1059,9 @@ export function BackersTab({
                             return;
                           }
                           try {
-                            const res = await fetch("/api/creator/indiekit/backers", {
+                            const res = await apiFetch("/api/creator/indiekit/backers", {
                               method: "POST",
-                              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                              headers: { "Content-Type": "application/json", },
                               body: JSON.stringify({
                                 action: "push_to_fulfillment",
                                 pledgeIds: [backer.id],
@@ -1086,9 +1087,9 @@ export function BackersTab({
                             return;
                           }
                           try {
-                            const res = await fetch("/api/creator/indiekit/backers", {
+                            const res = await apiFetch("/api/creator/indiekit/backers", {
                               method: "POST",
-                              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                              headers: { "Content-Type": "application/json", },
                               body: JSON.stringify({
                                 action: "mark_shipped",
                                 pledgeIds: [backer.id],

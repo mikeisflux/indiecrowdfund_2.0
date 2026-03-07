@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
@@ -112,9 +113,9 @@ export default function ManagePledgePage() {
   const handleCancelPledge = async (reason?: string) => {
     setIsProcessing(true);
     try {
-      const response = await fetch(`/api/pledges/${pledgeId}`, {
+      const response = await apiFetch(`/api/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "cancel", reason }),
       });
 
@@ -146,9 +147,9 @@ export default function ManagePledgePage() {
 
     setIsProcessing(true);
     try {
-      const response = await fetch(`/api/pledges/${pledgeId}`, {
+      const response = await apiFetch(`/api/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "increase", amount }),
       });
 

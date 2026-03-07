@@ -1,3 +1,48 @@
+import { getCSRFToken } from "@/lib/csrf";
+
+/**
+ * CSRF-aware fetch wrapper for API calls.
+ * Automatically includes CSRF token header on mutating requests (POST, PUT, PATCH, DELETE).
+ * Also sets Content-Type to application/json when a body object is provided.
+ *
+ * @param url - The API URL
+ * @param options - Standard fetch options (with optional json body shortcut)
+ * @returns Promise<Response>
+ */
+export async function apiFetch(
+  url: string,
+  options?: RequestInit & { json?: unknown }
+): Promise<Response> {
+  const headers = new Headers(options?.headers);
+  const method = (options?.method || "GET").toUpperCase();
+
+  // Auto-include CSRF token on mutating methods
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    const csrfToken = getCSRFToken();
+    if (csrfToken) {
+      headers.set("x-csrf-token", csrfToken);
+    }
+  }
+
+  let body = options?.body;
+
+  // Handle json shortcut
+  if (options && "json" in options && options.json !== undefined) {
+    headers.set("Content-Type", "application/json");
+    body = JSON.stringify(options.json);
+  } else if (body && typeof body === "string" && !headers.has("Content-Type")) {
+    // If body is a string (likely JSON), set content-type
+    headers.set("Content-Type", "application/json");
+  }
+
+  return fetch(url, {
+    ...options,
+    method,
+    headers,
+    body,
+  });
+}
+
 /**
  * Fetch with automatic retry for transient network failures
  *

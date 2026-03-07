@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,7 +84,7 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
     setIsLoading(true);
     try {
       const res = await fetch(`/api/creator/indiekit/updates?projectId=${projectId}`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -147,7 +148,7 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
       const isEditing = !!editingUpdate;
       const res = await fetch("/api/creator/indiekit/updates", {
         method: isEditing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           ...(isEditing && { updateId: editingUpdate.id }),
@@ -186,9 +187,9 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
 
     setIsPublishing(update.id);
     try {
-      const res = await fetch("/api/creator/indiekit/updates", {
+      const res = await apiFetch("/api/creator/indiekit/updates", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "publish",
@@ -215,9 +216,9 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
 
     setIsPublishing(update.id);
     try {
-      const res = await fetch("/api/creator/indiekit/updates", {
+      const res = await apiFetch("/api/creator/indiekit/updates", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "unpublish",
@@ -244,11 +245,11 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
 
     setIsDeleting(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/creator/indiekit/updates?projectId=${projectId}&updateId=${confirmDeleteUpdate.id}`,
         {
           method: "DELETE",
-          headers: getCSRFHeaders(),
+,
         }
       );
 

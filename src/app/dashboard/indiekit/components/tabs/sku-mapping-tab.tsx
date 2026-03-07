@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -189,9 +190,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     }));
 
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "validate",
@@ -306,9 +307,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
 
     setIsSavingSkuMapping(inputKey);
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "save",
@@ -429,9 +430,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
 
     setIsSavingAll(true);
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "bulk_save",
@@ -531,9 +532,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   const handleDeleteSkuMapping = async (mapping: SkuMapping) => {
     setIsSavingSkuMapping(mapping.id);
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "delete",
@@ -567,9 +568,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     setIsSkipping(key);
 
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "skip",
@@ -599,9 +600,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     setIsSkipping(key);
 
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "unskip",
@@ -632,9 +633,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     setIsMarkingAsModifier(key);
 
     try {
-      const res = await fetch("/api/creator/indiekit/modifiers", {
+      const res = await apiFetch("/api/creator/indiekit/modifiers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "set_modifier",
@@ -685,9 +686,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
       const baseReward = tierRewards.find(r => r.id === baseRewardId);
       const modifierAddon = modifierAddons.find(a => a.id === modifierAddonId);
 
-      const res = await fetch("/api/creator/indiekit/modifiers", {
+      const res = await apiFetch("/api/creator/indiekit/modifiers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "save_modifier_sku",
@@ -731,9 +732,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
   const handleDeleteModifierSku = async (mappingId: string) => {
     setIsSavingModifierSku(mappingId);
     try {
-      const res = await fetch("/api/creator/indiekit/modifiers", {
+      const res = await apiFetch("/api/creator/indiekit/modifiers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "delete_modifier_sku",
@@ -761,9 +762,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     setIsSkippingModifier(comboKey);
 
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "skip",
@@ -793,9 +794,9 @@ export function SkuMappingTab({ projectId }: SkuMappingTabProps) {
     setIsSkippingModifier(comboKey);
 
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "unskip",

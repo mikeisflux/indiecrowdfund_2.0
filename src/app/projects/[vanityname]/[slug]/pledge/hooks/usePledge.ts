@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
@@ -130,7 +131,7 @@ export function usePledge() {
       if (successParam === "true") {
         if (pledgeIdParam) {
           try {
-            const res = await fetch(`/api/pledges/${pledgeIdParam}/confirm`, {
+            const res = await apiFetch(`/api/pledges/${pledgeIdParam}/confirm`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
             });

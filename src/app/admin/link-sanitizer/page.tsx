@@ -1,7 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
-import { fetchWithRetry } from "@/lib/fetch-utils";
+import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 
 import { useState, useEffect, useCallback } from "react";
@@ -151,11 +151,11 @@ export default function LinkSanitizerPage() {
         ? [projectToDelete.id]
         : Array.from(selectedProjects);
 
-      const response = await fetch("/api/admin/link-sanitizer", {
+      const response = await apiFetch("/api/admin/link-sanitizer", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ projectIds: idsToDelete }),
       });
@@ -182,9 +182,9 @@ export default function LinkSanitizerPage() {
   const runCleanup = async () => {
     setIsRunningCleanup(true);
     try {
-      const response = await fetch("/api/cron/cleanup-projects", {
+      const response = await apiFetch("/api/cron/cleanup-projects", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       if (response.ok) {
         const data = await response.json();

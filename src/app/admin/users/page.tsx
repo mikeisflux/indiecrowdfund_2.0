@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -218,9 +219,9 @@ export default function UsersPage() {
         request_info: "UNDER_REVIEW",
       };
 
-      const response = await fetch("/api/admin/retailers", {
+      const response = await apiFetch("/api/admin/retailers", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           id: selectedRetailer.id,
           status: statusMap[approvalAction],
@@ -284,9 +285,9 @@ export default function UsersPage() {
 
     setCancellingPledge(pledgeId);
     try {
-      const response = await fetch(`/api/admin/pledges/${pledgeId}`, {
+      const response = await apiFetch(`/api/admin/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "cancel", reason: "Cancelled by admin" }),
       });
 
@@ -311,9 +312,9 @@ export default function UsersPage() {
 
     setRefundingPledge(pledgeId);
     try {
-      const response = await fetch(`/api/admin/pledges/${pledgeId}`, {
+      const response = await apiFetch(`/api/admin/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "refund", reason: "Refunded by admin" }),
       });
 
@@ -338,9 +339,9 @@ export default function UsersPage() {
 
     setCancellingPledge(pledgeId);
     try {
-      const response = await fetch(`/api/admin/pledges/${pledgeId}`, {
+      const response = await apiFetch(`/api/admin/pledges/${pledgeId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (response.ok) {
@@ -364,9 +365,9 @@ export default function UsersPage() {
 
     setResendingReceipt(pledgeId);
     try {
-      const response = await fetch(`/api/admin/pledges/${pledgeId}`, {
+      const response = await apiFetch(`/api/admin/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "resend_receipt" }),
       });
 
@@ -402,9 +403,9 @@ export default function UsersPage() {
 
     setZeroingWallet(true);
     try {
-      const res = await fetch("/api/admin/wallet", {
+      const res = await apiFetch("/api/admin/wallet", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ userId }),
       });
 
@@ -455,9 +456,9 @@ export default function UsersPage() {
 
   const handleToggleRetailerAccess = async (user: User) => {
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await apiFetch("/api/admin/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           userId: user.id,
           action: "TOGGLE_RETAILER_ACCESS",
@@ -493,9 +494,9 @@ export default function UsersPage() {
     if (!banningUser) return;
 
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await apiFetch("/api/admin/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           userId: banningUser.id,
           action: "BAN_USER",
@@ -526,9 +527,9 @@ export default function UsersPage() {
     try {
       const removeIPBlock = confirm("Also remove the IP block so they can create new accounts?");
 
-      const response = await fetch("/api/admin/users", {
+      const response = await apiFetch("/api/admin/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           userId: user.id,
           action: "UNBAN_USER",
@@ -554,9 +555,9 @@ export default function UsersPage() {
     setIsUpdating(true);
 
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await apiFetch("/api/admin/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           userId: selectedUser.id,
           action: "UPDATE_INFO",
@@ -589,9 +590,9 @@ export default function UsersPage() {
     setIsUpdating(true);
 
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await apiFetch("/api/admin/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           userId: selectedUser.id,
           action: "UPDATE_ROLE",
@@ -621,9 +622,9 @@ export default function UsersPage() {
     setIsUpdating(true);
 
     try {
-      const response = await fetch(`/api/admin/users?userId=${selectedUser.id}`, {
+      const response = await apiFetch(`/api/admin/users?userId=${selectedUser.id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (response.ok) {
@@ -649,9 +650,9 @@ export default function UsersPage() {
 
   const handleVerifyEmail = async (user: User) => {
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await apiFetch("/api/admin/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           userId: user.id,
           action: "VERIFY_EMAIL",
@@ -691,9 +692,9 @@ export default function UsersPage() {
 
     setIsUpdating(true);
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await apiFetch("/api/admin/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           userId: selectedUser.id,
           action: "SET_PASSWORD",
@@ -722,9 +723,9 @@ export default function UsersPage() {
   const handleSendResetEmail = async (user: User) => {
     // Using toast confirmation pattern - send directly since action is recoverable
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await apiFetch("/api/admin/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           userId: user.id,
           action: "SEND_RESET_EMAIL",
@@ -760,9 +761,9 @@ export default function UsersPage() {
 
     setIsCreating(true);
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await apiFetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           email: newUserData.email,
           name: newUserData.name || null,

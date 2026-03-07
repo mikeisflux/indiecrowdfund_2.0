@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
@@ -97,9 +98,9 @@ export function ComposeEmailDialog({
     setError(null);
 
     try {
-      const response = await fetch(`/api/admin/mailboxes/${fromMailboxId}/emails`, {
+      const response = await apiFetch(`/api/admin/mailboxes/${fromMailboxId}/emails`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           toEmail: to,
           subject,

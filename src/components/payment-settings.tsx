@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -182,9 +183,9 @@ export function PaymentSettings({
     setIsConnectingStripe(true);
     setConnectError(null);
     try {
-      const response = await fetch("/api/stripe/connect", {
+      const response = await apiFetch("/api/stripe/connect", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
       });
 
       const data = await response.json();
@@ -209,9 +210,9 @@ export function PaymentSettings({
     setIsResettingStripe(true);
     setConnectError(null);
     try {
-      const response = await fetch("/api/stripe/connect/reset", {
+      const response = await apiFetch("/api/stripe/connect/reset", {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       const data = await response.json();
@@ -263,9 +264,9 @@ export function PaymentSettings({
 
     setIsSavingBank(true);
     try {
-      const response = await fetch("/api/creator/bank-account", {
+      const response = await apiFetch("/api/creator/bank-account", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ ...bankAccount, projectId }),
       });
 

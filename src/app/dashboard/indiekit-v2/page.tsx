@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -334,9 +335,9 @@ export default function IndieKitV2Page() {
 
     setWorkflowActionLoading(stepId);
     try {
-      const res = await fetch("/api/creator/indiekit/backers", {
+      const res = await apiFetch("/api/creator/indiekit/backers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: actionConfig.action, pledgeIds, projectId: selectedProjectId }),
       });
 
@@ -836,9 +837,9 @@ export default function IndieKitV2Page() {
         onOpenChange={setIsNPSDialogOpen}
         onSubmit={async (score, feedback) => {
           try {
-            const res = await fetch("/api/creator/indiekit/feedback", {
+            const res = await apiFetch("/api/creator/indiekit/feedback", {
               method: "POST",
-              headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+              headers: { "Content-Type": "application/json", },
               body: JSON.stringify({ score, feedback, projectId: selectedProjectId }),
             });
             if (!res.ok) throw new Error("Failed to submit feedback");
@@ -966,9 +967,9 @@ export default function IndieKitV2Page() {
 
                 setWorkflowActionLoading("charge_cards");
                 try {
-                  const res = await fetch("/api/creator/indiekit/backers", {
+                  const res = await apiFetch("/api/creator/indiekit/backers", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                    headers: { "Content-Type": "application/json", },
                     body: JSON.stringify({
                       action: "charge_cards",
                       pledgeIds: backersToCharge.map(b => b.id),

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
@@ -112,9 +113,9 @@ export function RefundDialog({
 
     try {
       const isPartial = refundType === "partial";
-      const res = await fetch(`/api/creator/pledges/${pledgeId}`, {
+      const res = await apiFetch(`/api/creator/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "refund",
           amount: isPartial ? refundAmount : undefined, // Only send amount for partial refunds

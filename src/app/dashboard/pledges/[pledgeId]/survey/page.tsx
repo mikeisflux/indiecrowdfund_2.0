@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -299,9 +300,9 @@ export default function BackerSurveyPage() {
     setIsSaving(true);
     setError(null);
     try {
-      const response = await fetch(`/api/surveys/${pledgeId}/respond`, {
+      const response = await apiFetch(`/api/surveys/${pledgeId}/respond`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           itemResponses,
           backerResponses,
@@ -355,9 +356,9 @@ export default function BackerSurveyPage() {
         .filter(([, qty]) => qty > 0)
         .map(([id, quantity]) => ({ id, quantity }));
 
-      const response = await fetch(`/api/pledges/${pledgeId}/add-items`, {
+      const response = await apiFetch(`/api/pledges/${pledgeId}/add-items`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           addons: addonsWithQuantity,
           amount: addonsTotal,
@@ -416,9 +417,9 @@ export default function BackerSurveyPage() {
   const handlePaymentSuccess = async () => {
     try {
       // Confirm the add-items purchase
-      const response = await fetch(`/api/pledges/${pledgeId}/confirm-add-items`, {
+      const response = await apiFetch(`/api/pledges/${pledgeId}/confirm-add-items`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
       });
 
       if (!response.ok) {

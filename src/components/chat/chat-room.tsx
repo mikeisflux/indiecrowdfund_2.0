@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/providers/auth-provider";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -251,9 +252,9 @@ export function ChatRoom() {
   // Send presence heartbeat
   const sendHeartbeat = useCallback(async () => {
     try {
-      await fetch("/api/chat/presence", {
+      await apiFetch("/api/chat/presence", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
     } catch (err) {
       console.error("Error sending heartbeat:", err);
@@ -263,9 +264,9 @@ export function ChatRoom() {
   // Leave chat presence
   const leaveChat = useCallback(async () => {
     try {
-      await fetch("/api/chat/presence", {
+      await apiFetch("/api/chat/presence", {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
     } catch {
       // Ignore errors on leave
@@ -299,11 +300,11 @@ export function ChatRoom() {
 
     setIsSending(true);
     try {
-      const response = await fetch("/api/chat/messages", {
+      const response = await apiFetch("/api/chat/messages", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           content,
@@ -337,9 +338,9 @@ export function ChatRoom() {
   // Delete message (admin only)
   const deleteMessage = async (messageId: string) => {
     try {
-      const response = await fetch(`/api/chat/admin/delete?messageId=${messageId}`, {
+      const response = await apiFetch(`/api/chat/admin/delete?messageId=${messageId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) {
@@ -361,11 +362,11 @@ export function ChatRoom() {
   // Ban user (admin only)
   const banUser = async (userId: string, reason: string) => {
     try {
-      const response = await fetch("/api/chat/admin/ban", {
+      const response = await apiFetch("/api/chat/admin/ban", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ userId, reason }),
       });

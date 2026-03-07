@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -143,9 +144,9 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
 
     setIsAddingMember(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/members`, {
+      const response = await apiFetch(`/api/projects/${projectId}/members`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ email: newMemberEmail, name: newMemberName }),
       });
 
@@ -174,9 +175,9 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
     if (!projectId) return;
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/members?memberId=${memberId}`, {
+      const response = await apiFetch(`/api/projects/${projectId}/members?memberId=${memberId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (response.ok) {
@@ -200,9 +201,9 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
 
     setIsDeletingAll(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/members?deleteAll=true`, {
+      const response = await apiFetch(`/api/projects/${projectId}/members?deleteAll=true`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (response.ok) {

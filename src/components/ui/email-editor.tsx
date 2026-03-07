@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
@@ -89,9 +90,9 @@ export function EmailEditor({
       formData.append("file", file);
       formData.append("folder", "email-campaigns");
 
-      const response = await fetch(uploadUrl, {
+      const response = await apiFetch(uploadUrl, {
         method: "POST",
-        headers: { ...getCSRFHeaders() },
+        
         body: formData,
       });
 

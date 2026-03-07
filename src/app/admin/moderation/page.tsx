@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
@@ -115,9 +116,9 @@ export default function ModerationPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/admin/reports", {
+      const response = await apiFetch("/api/admin/reports", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           reportId: selectedReport.id,
           action,

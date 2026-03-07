@@ -1,7 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
-import { fetchWithRetry } from "@/lib/fetch-utils";
+import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -253,9 +253,9 @@ export default function ProjectsPage() {
   const syncAllProjectStats = async () => {
     setIsSyncingStats(true);
     try {
-      const response = await fetch("/api/admin/sync-all-project-stats", {
+      const response = await apiFetch("/api/admin/sync-all-project-stats", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       const data = await response.json();
       if (response.ok) {
@@ -342,9 +342,9 @@ export default function ProjectsPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/admin/projects/status", {
+      const response = await apiFetch("/api/admin/projects/status", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId: selectedProject.id,
           action: "MAKE_LIVE",
@@ -376,9 +376,9 @@ export default function ProjectsPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/admin/projects/status", {
+      const response = await apiFetch("/api/admin/projects/status", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId: selectedProject.id,
           action: "SEND_TO_REVIEW",
@@ -418,9 +418,9 @@ export default function ProjectsPage() {
         changes: "REQUESTED_CHANGES",
       };
 
-      const response = await fetch("/api/admin/projects/review", {
+      const response = await apiFetch("/api/admin/projects/review", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId: selectedProject.id,
           action: actionMap[reviewAction!],

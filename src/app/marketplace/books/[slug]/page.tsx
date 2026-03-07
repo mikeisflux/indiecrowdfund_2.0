@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -138,11 +139,11 @@ export default function BookDetailPage() {
 
     setValidatingCode(true);
     try {
-      const res = await fetch("/api/marketplace/validate-code", {
+      const res = await apiFetch("/api/marketplace/validate-code", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           code: promoCode.trim(),
@@ -196,11 +197,11 @@ export default function BookDetailPage() {
     try {
       // If there's a free promo code applied, use a special endpoint
       if (appliedPromo && appliedPromo.finalPrice === 0) {
-        const res = await fetch("/api/marketplace/redeem-code", {
+        const res = await apiFetch("/api/marketplace/redeem-code", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...getCSRFHeaders(),
+            
           },
           body: JSON.stringify({
             bookId: book.id,
@@ -224,11 +225,11 @@ export default function BookDetailPage() {
 
       if (paymentMethod === "stripe") {
         // Use Stripe Checkout
-        const res = await fetch("/api/marketplace/checkout", {
+        const res = await apiFetch("/api/marketplace/checkout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...getCSRFHeaders(),
+            
           },
           body: JSON.stringify({
             bookId: book.id,
@@ -249,11 +250,11 @@ export default function BookDetailPage() {
         }
       } else {
         // DivinityCoin seamless payment - get clientSecret + publishableKey
-        const res = await fetch("/api/marketplace/purchase", {
+        const res = await apiFetch("/api/marketplace/purchase", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...getCSRFHeaders(),
+            
           },
           body: JSON.stringify({
             bookId: book.id,
@@ -294,11 +295,11 @@ export default function BookDetailPage() {
   const handleDcPaymentSuccess = async () => {
     // Payment confirmed on Stripe side, now confirm with our backend
     try {
-      const res = await fetch("/api/marketplace/purchase/confirm", {
+      const res = await apiFetch("/api/marketplace/purchase/confirm", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           purchaseId: dcPurchaseId,

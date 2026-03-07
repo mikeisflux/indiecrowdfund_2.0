@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,11 +122,11 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
 
     setIsDeletingItem(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/projects/${projectId}/survey/item-questions?questionId=${questionId}`,
         {
           method: "DELETE",
-          headers: getCSRFHeaders(),
+,
         }
       );
 
@@ -151,11 +152,11 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
 
     setIsDeletingBacker(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/projects/${projectId}/survey/backer-questions?questionId=${questionId}`,
         {
           method: "DELETE",
-          headers: getCSRFHeaders(),
+,
         }
       );
 
@@ -179,9 +180,9 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
     if (!projectId) return;
     setIsBackfilling(true);
     try {
-      const response = await fetch("/api/creator/indiekit/surveys", {
+      const response = await apiFetch("/api/creator/indiekit/surveys", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ projectId, action: "backfill" }),
       });
       const data = await response.json();
@@ -206,9 +207,9 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
 
     setIsLocking(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/survey/lock`, {
+      const response = await apiFetch(`/api/projects/${projectId}/survey/lock`, {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (response.ok) {

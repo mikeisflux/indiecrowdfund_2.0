@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
@@ -56,9 +57,9 @@ export function RetailerAccountTab() {
 
     setSaving(true);
     try {
-      const response = await fetch("/api/retailers/account", {
+      const response = await apiFetch("/api/retailers/account", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(account),
       });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -122,9 +123,9 @@ export default function ProfilePage() {
     setSuccess(false);
 
     try {
-      const res = await fetch("/api/user/profile", {
+      const res = await apiFetch("/api/user/profile", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           name: profile.name,
           image: profile.image,
@@ -163,9 +164,9 @@ export default function ProfilePage() {
       formData.append("file", file);
       formData.append("type", type === "avatar" ? "profile" : "hero");
 
-      const res = await fetch("/api/upload", {
+      const res = await apiFetch("/api/upload", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
         body: formData,
       });
 

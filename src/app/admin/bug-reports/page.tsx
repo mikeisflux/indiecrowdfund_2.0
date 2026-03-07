@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
@@ -151,9 +152,9 @@ export default function BugReportsPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/bug-reports", {
+      const response = await apiFetch("/api/bug-reports", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           id: selectedReport.id,
           status: newStatus || undefined,
@@ -184,9 +185,9 @@ export default function BugReportsPage() {
 
   const quickStatusUpdate = async (reportId: string, status: string) => {
     try {
-      const response = await fetch("/api/bug-reports", {
+      const response = await apiFetch("/api/bug-reports", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ id: reportId, status }),
       });
 

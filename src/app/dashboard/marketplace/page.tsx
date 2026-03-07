@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -375,10 +376,10 @@ export default function CreatorMarketplaceDashboard() {
     }
     setCreatingCode(true);
     try {
-      const res = await fetch("/api/creator/marketplace/discount-codes", {
+      const res = await apiFetch("/api/creator/marketplace/discount-codes", {
         method: "POST",
         headers: {
-          ...getCSRFHeaders(),
+          
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ bookId: selectedBookId }),
@@ -402,10 +403,10 @@ export default function CreatorMarketplaceDashboard() {
   const handleUpdateCode = async (codeId: string, bookId: string) => {
     setEditingCodeId(codeId);
     try {
-      const res = await fetch("/api/creator/marketplace/discount-codes", {
+      const res = await apiFetch("/api/creator/marketplace/discount-codes", {
         method: "PUT",
         headers: {
-          ...getCSRFHeaders(),
+          
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ codeId, bookId }),
@@ -431,9 +432,9 @@ export default function CreatorMarketplaceDashboard() {
     }
     setDeletingCodeId(codeId);
     try {
-      const res = await fetch(`/api/creator/marketplace/discount-codes?codeId=${codeId}`, {
+      const res = await apiFetch(`/api/creator/marketplace/discount-codes?codeId=${codeId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -493,9 +494,9 @@ export default function CreatorMarketplaceDashboard() {
     }
 
     try {
-      const res = await fetch(`/api/creator/marketplace/books/${bookId}`, {
+      const res = await apiFetch(`/api/creator/marketplace/books/${bookId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -513,9 +514,9 @@ export default function CreatorMarketplaceDashboard() {
 
   const handleSubmitForReview = async (bookId: string) => {
     try {
-      const res = await fetch(`/api/creator/marketplace/books/${bookId}/submit`, {
+      const res = await apiFetch(`/api/creator/marketplace/books/${bookId}/submit`, {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {

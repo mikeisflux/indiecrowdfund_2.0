@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,9 +81,9 @@ export function DistributionDialog({
 
     setIsCreating(true);
     try {
-      const res = await fetch("/api/creator/indiekit/digital", {
+      const res = await apiFetch("/api/creator/indiekit/digital", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "create_distribution_rule",

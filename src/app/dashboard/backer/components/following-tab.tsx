@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -83,7 +84,7 @@ export function FollowingTab() {
   const fetchFollowing = async () => {
     try {
       const response = await fetch("/api/backer/following", {
-        headers: { ...getCSRFHeaders() },
+        
       });
       if (!response.ok) throw new Error("Failed to fetch following");
       const followingData = await response.json();
@@ -98,9 +99,9 @@ export function FollowingTab() {
   const handleUnfollow = async (creatorId: string) => {
     setUnfollowing(creatorId);
     try {
-      const response = await fetch(`/api/backer/following/${creatorId}`, {
+      const response = await apiFetch(`/api/backer/following/${creatorId}`, {
         method: "DELETE",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       if (!response.ok) throw new Error("Failed to unfollow");
@@ -122,9 +123,9 @@ export function FollowingTab() {
 
     setUpdating(creatorId);
     try {
-      const response = await fetch(`/api/backer/following/${creatorId}`, {
+      const response = await apiFetch(`/api/backer/following/${creatorId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ [key]: value }),
       });
 

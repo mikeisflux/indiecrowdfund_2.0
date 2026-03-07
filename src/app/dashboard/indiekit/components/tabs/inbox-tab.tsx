@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect, useCallback } from "react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -206,9 +207,9 @@ export function InboxTab({ projectId }: InboxTabProps) {
 
     setSettingUpEmail(true);
     try {
-      const res = await fetch("/api/creator/email/setup", {
+      const res = await apiFetch("/api/creator/email/setup", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ handle: emailHandle }),
       });
 
@@ -277,7 +278,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
   const fetchMessages = useCallback(async (threadId: string) => {
     try {
       setLoadingMessages(true);
-      const res = await fetch(`/api/creator/email/threads/${threadId}/messages`);
+      const res = await apiFetch(`/api/creator/email/threads/${threadId}/messages`);
       if (!res.ok) throw new Error("Failed to fetch messages");
 
       const data = await res.json();
@@ -285,9 +286,9 @@ export function InboxTab({ projectId }: InboxTabProps) {
 
       // Mark as read
       if (selectedThread?.status === "unread") {
-        await fetch(`/api/creator/email/threads/${threadId}/read`, {
+        await apiFetch(`/api/creator/email/threads/${threadId}/read`, {
           method: "POST",
-          headers: getCSRFHeaders(),
+,
         });
         setThreads((prev) =>
           prev.map((t) =>
@@ -317,9 +318,9 @@ export function InboxTab({ projectId }: InboxTabProps) {
     try {
       const attachments = replyAttachments.length > 0 ? await filesToAttachments(replyAttachments) : undefined;
 
-      const res = await fetch(`/api/creator/email/threads/${selectedThread.id}/reply`, {
+      const res = await apiFetch(`/api/creator/email/threads/${selectedThread.id}/reply`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ content: replyContent, attachments }),
       });
 
@@ -347,9 +348,9 @@ export function InboxTab({ projectId }: InboxTabProps) {
   const toggleStar = async (threadId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await fetch(`/api/creator/email/threads/${threadId}/star`, {
+      await apiFetch(`/api/creator/email/threads/${threadId}/star`, {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       setThreads((prev) =>
         prev.map((t) =>
@@ -364,9 +365,9 @@ export function InboxTab({ projectId }: InboxTabProps) {
   // Archive thread
   const archiveThread = async (threadId: string) => {
     try {
-      await fetch(`/api/creator/email/threads/${threadId}/archive`, {
+      await apiFetch(`/api/creator/email/threads/${threadId}/archive`, {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       setThreads((prev) =>
         prev.map((t) =>
@@ -388,9 +389,9 @@ export function InboxTab({ projectId }: InboxTabProps) {
     const threadId = deleteConfirm.threadId;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/creator/email/threads/${threadId}/delete`, {
+      const res = await apiFetch(`/api/creator/email/threads/${threadId}/delete`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
       if (!res.ok) throw new Error("Failed to delete");
       setThreads((prev) => prev.filter((t) => t.id !== threadId));
@@ -526,9 +527,9 @@ export function InboxTab({ projectId }: InboxTabProps) {
       let res;
       if (composeMode === "forward" && selectedThread) {
         // Use forward endpoint
-        res = await fetch(`/api/creator/email/threads/${selectedThread.id}/forward`, {
+        res = await apiFetch(`/api/creator/email/threads/${selectedThread.id}/forward`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({
             to: composeTo,
             additionalMessage: composeContent.split("---------- Forwarded message ----------")[0].trim(),
@@ -537,16 +538,16 @@ export function InboxTab({ projectId }: InboxTabProps) {
         });
       } else if ((composeMode === "reply" || composeMode === "replyAll") && selectedThread) {
         // Use reply endpoint
-        res = await fetch(`/api/creator/email/threads/${selectedThread.id}/reply`, {
+        res = await apiFetch(`/api/creator/email/threads/${selectedThread.id}/reply`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ content: composeContent, attachments }),
         });
       } else {
         // Use compose endpoint for new emails
-        res = await fetch("/api/creator/email/compose", {
+        res = await apiFetch("/api/creator/email/compose", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({
             to: composeTo,
             subject: composeSubject,

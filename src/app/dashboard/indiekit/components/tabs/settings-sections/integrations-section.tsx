@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,9 +91,9 @@ export function IntegrationsSection({
 
     setIsConnectingShipStation(true);
     try {
-      const res = await fetch("/api/creator/indiekit/integrations", {
+      const res = await apiFetch("/api/creator/indiekit/integrations", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           service: "shipstation",
@@ -125,9 +126,9 @@ export function IntegrationsSection({
 
     setIsConnectingEasyship(true);
     try {
-      const res = await fetch("/api/creator/indiekit/integrations", {
+      const res = await apiFetch("/api/creator/indiekit/integrations", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           service: "easyship",
@@ -155,9 +156,9 @@ export function IntegrationsSection({
 
     setIsConnectingShopify(true);
     try {
-      const res = await fetch("/api/creator/indiekit/shopify", {
+      const res = await apiFetch("/api/creator/indiekit/shopify", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "disconnect",

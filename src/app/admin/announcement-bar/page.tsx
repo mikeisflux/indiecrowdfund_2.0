@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -115,7 +116,7 @@ export default function AnnouncementBarPage() {
       const method = isEditing ? "PUT" : "POST";
       const response = await fetch("/api/admin/announcement-bar", {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(editingAnnouncement),
       });
 
@@ -141,9 +142,9 @@ export default function AnnouncementBarPage() {
     if (!confirm("Are you sure you want to delete this announcement?")) return;
 
     try {
-      const response = await fetch(`/api/admin/announcement-bar?id=${id}`, {
+      const response = await apiFetch(`/api/admin/announcement-bar?id=${id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (response.ok) {
@@ -161,9 +162,9 @@ export default function AnnouncementBarPage() {
   // Toggle active status
   const toggleActive = async (announcement: AnnouncementBar) => {
     try {
-      const response = await fetch("/api/admin/announcement-bar", {
+      const response = await apiFetch("/api/admin/announcement-bar", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ id: announcement.id, isActive: !announcement.isActive }),
       });
 
@@ -185,9 +186,9 @@ export default function AnnouncementBarPage() {
     [newAnnouncements[index], newAnnouncements[newIndex]] = [newAnnouncements[newIndex], newAnnouncements[index]];
 
     try {
-      const response = await fetch("/api/admin/announcement-bar", {
+      const response = await apiFetch("/api/admin/announcement-bar", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ announcementIds: newAnnouncements.map((a) => a.id) }),
       });
 

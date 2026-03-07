@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -37,9 +38,9 @@ export function EmailVerificationBanner() {
   const handleResend = async () => {
     setSending(true);
     try {
-      const res = await fetch("/api/user/verify-email", {
+      const res = await apiFetch("/api/user/verify-email", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       const data = await res.json();
       if (data.success) {

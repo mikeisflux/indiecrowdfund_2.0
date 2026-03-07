@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
@@ -170,9 +171,9 @@ export default function SettingsPage() {
     setSuccess(false);
 
     try {
-      const res = await fetch("/api/user/settings", {
+      const res = await apiFetch("/api/user/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           name: settings.name,
           bio: settings.bio,
@@ -228,9 +229,9 @@ export default function SettingsPage() {
     setVerificationMessage(null);
 
     try {
-      const response = await fetch("/api/user/verify-email", {
+      const response = await apiFetch("/api/user/verify-email", {
         method: "POST",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       const data = await response.json();
@@ -285,9 +286,9 @@ export default function SettingsPage() {
     setEmailChange({ ...emailChange, isChanging: true, error: null });
 
     try {
-      const res = await fetch("/api/user/settings/email", {
+      const res = await apiFetch("/api/user/settings/email", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           newEmail: emailChange.newEmail,
           password: emailChange.password,

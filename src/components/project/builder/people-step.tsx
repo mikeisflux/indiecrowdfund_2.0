@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -67,9 +68,9 @@ export function PeopleStep() {
     showNameOnly?: boolean;
   }) => {
     try {
-      const response = await fetch("/api/user/settings", {
+      const response = await apiFetch("/api/user/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(profileData),
       });
       if (!response.ok) {
@@ -130,9 +131,9 @@ export function PeopleStep() {
     if (projectId) {
       setIsSendingInvite(true);
       try {
-        const response = await fetch(`/api/projects/${projectId}/collaborators`, {
+        const response = await apiFetch(`/api/projects/${projectId}/collaborators`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify(newCollaborator),
         });
 
@@ -187,9 +188,9 @@ export function PeopleStep() {
     // If project exists and collaborator has an ID, remove via API
     if (projectId && collaborator.id) {
       try {
-        const response = await fetch(
+        const response = await apiFetch(
           `/api/projects/${projectId}/collaborators?collaboratorId=${collaborator.id}`,
-          { method: "DELETE", headers: getCSRFHeaders() }
+          { method: "DELETE" }
         );
 
         if (!response.ok) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
@@ -141,9 +142,9 @@ export default function HeroSliderPage() {
   const runMigration = async () => {
     setIsMigrating(true);
     try {
-      const response = await fetch("/api/admin/hero-slides/migrate", {
+      const response = await apiFetch("/api/admin/hero-slides/migrate", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       const data = await response.json();
       if (response.ok) {
@@ -204,7 +205,7 @@ export default function HeroSliderPage() {
       const method = isEditing ? "PUT" : "POST";
       const response = await fetch("/api/admin/hero-slides", {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(editingSlide),
       });
 
@@ -230,9 +231,9 @@ export default function HeroSliderPage() {
     if (!confirm("Are you sure you want to delete this slide?")) return;
 
     try {
-      const response = await fetch(`/api/admin/hero-slides?id=${id}`, {
+      const response = await apiFetch(`/api/admin/hero-slides?id=${id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (response.ok) {
@@ -250,9 +251,9 @@ export default function HeroSliderPage() {
   // Toggle active status
   const toggleActive = async (slide: HeroSlide) => {
     try {
-      const response = await fetch("/api/admin/hero-slides", {
+      const response = await apiFetch("/api/admin/hero-slides", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ id: slide.id, isActive: !slide.isActive }),
       });
 
@@ -274,9 +275,9 @@ export default function HeroSliderPage() {
     [newSlides[index], newSlides[newIndex]] = [newSlides[newIndex], newSlides[index]];
 
     try {
-      const response = await fetch("/api/admin/hero-slides", {
+      const response = await apiFetch("/api/admin/hero-slides", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ slideIds: newSlides.map((s) => s.id) }),
       });
 

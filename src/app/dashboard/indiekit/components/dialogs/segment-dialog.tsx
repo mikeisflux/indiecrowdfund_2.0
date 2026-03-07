@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
@@ -127,9 +128,9 @@ export function SegmentDialog({
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/creator/indiekit/segments", {
+      const res = await apiFetch("/api/creator/indiekit/segments", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           name: name.trim(),

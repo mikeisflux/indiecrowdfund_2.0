@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -193,7 +194,7 @@ export default function AdminLCSLocatorPage() {
 
       const response = await fetch("/api/admin/lcs-locator/shops", {
         method: editingShop ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(payload),
       });
 
@@ -219,9 +220,9 @@ export default function AdminLCSLocatorPage() {
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/admin/lcs-locator/shops?id=${deleteTarget.id}`, {
+      const response = await apiFetch(`/api/admin/lcs-locator/shops?id=${deleteTarget.id}`, {
         method: "DELETE",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       if (!response.ok) {

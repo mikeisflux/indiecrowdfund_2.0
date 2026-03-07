@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapImage from "@tiptap/extension-image";
@@ -74,9 +75,9 @@ export function BlockEditor({
           formData.append("projectId", projectId);
         }
 
-        const response = await fetch("/api/upload", {
+        const response = await apiFetch("/api/upload", {
           method: "POST",
-          headers: getCSRFHeaders(),
+,
           body: formData,
         });
 

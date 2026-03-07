@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,9 +100,9 @@ export function BackersList({
     setCancellingPledge(pledgeId);
     setCancelConfirm({ open: false, pledgeId: "" });
     try {
-      const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
+      const response = await apiFetch(`/api/creator/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "cancel", reason: "Cancelled by creator" }),
       });
 
@@ -125,9 +126,9 @@ export function BackersList({
     setDeletingPledge(pledgeId);
     setDeleteConfirm({ open: false, pledgeId: "" });
     try {
-      const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
+      const response = await apiFetch(`/api/creator/pledges/${pledgeId}`, {
         method: "DELETE",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       const responseData = await response.json();
@@ -151,9 +152,9 @@ export function BackersList({
     setRefundingPledge(pledgeId);
     setRefundConfirm({ open: false, pledgeId: "" });
     try {
-      const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
+      const response = await apiFetch(`/api/creator/pledges/${pledgeId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "refund", reason: "Refunded by creator" }),
       });
 
@@ -183,9 +184,9 @@ export function BackersList({
 
     for (const pledgeId of pledgeIds) {
       try {
-        const response = await fetch(`/api/creator/pledges/${pledgeId}`, {
+        const response = await apiFetch(`/api/creator/pledges/${pledgeId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ action: "cancel", reason: "Bulk cancelled by creator" }),
         });
         if (response.ok) {
@@ -218,9 +219,9 @@ export function BackersList({
     );
 
     try {
-      const response = await fetch(`/api/creator/pledges/bulk-delete`, {
+      const response = await apiFetch(`/api/creator/pledges/bulk-delete`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ pledgeIds }),
       });
 

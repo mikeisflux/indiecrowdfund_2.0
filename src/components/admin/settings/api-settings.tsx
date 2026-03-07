@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -103,9 +104,9 @@ export function ApiSettings() {
     setError(null);
 
     try {
-      const response = await fetch("/api/admin/api-keys", {
+      const response = await apiFetch("/api/admin/api-keys", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           name: newKeyName,
           environment: newKeyEnvironment.toUpperCase(),
@@ -137,9 +138,9 @@ export function ApiSettings() {
 
   const handleDeleteKey = async (keyId: string) => {
     try {
-      const response = await fetch(`/api/admin/api-keys?id=${keyId}`, {
+      const response = await apiFetch(`/api/admin/api-keys?id=${keyId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) {

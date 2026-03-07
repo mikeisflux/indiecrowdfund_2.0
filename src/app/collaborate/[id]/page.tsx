@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useEffect, useState } from "react";
@@ -75,9 +76,9 @@ export default function CollaboratePage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/collaborator/${collaborationId}/respond`, {
+      const res = await apiFetch(`/api/collaborator/${collaborationId}/respond`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action }),
       });
 

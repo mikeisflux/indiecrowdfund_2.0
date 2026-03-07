@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -137,9 +138,9 @@ export default function EmailCampaignEditPage() {
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/creator/indiekit/campaigns", {
+      const res = await apiFetch("/api/creator/indiekit/campaigns", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "update",
           campaignId,
@@ -182,9 +183,9 @@ export default function EmailCampaignEditPage() {
       }
 
       // Then send the campaign
-      const res = await fetch("/api/creator/indiekit/campaigns", {
+      const res = await apiFetch("/api/creator/indiekit/campaigns", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "send",
           campaignId,

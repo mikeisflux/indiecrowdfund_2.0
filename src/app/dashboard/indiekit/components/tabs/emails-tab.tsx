@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -379,9 +380,9 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
 
     setIsDuplicating(campaign.id);
     try {
-      const res = await fetch("/api/creator/indiekit/campaigns", {
+      const res = await apiFetch("/api/creator/indiekit/campaigns", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "duplicate",
@@ -411,9 +412,9 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
 
     setIsSending(campaign.id);
     try {
-      const res = await fetch("/api/creator/indiekit/campaigns", {
+      const res = await apiFetch("/api/creator/indiekit/campaigns", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "send",
@@ -444,9 +445,9 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
 
     setIsDeleting(campaign.id);
     try {
-      const res = await fetch(`/api/creator/indiekit/campaigns?campaignId=${campaign.id}&projectId=${projectId}`, {
+      const res = await apiFetch(`/api/creator/indiekit/campaigns?campaignId=${campaign.id}&projectId=${projectId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {

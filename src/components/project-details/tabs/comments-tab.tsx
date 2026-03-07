@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState } from "react";
@@ -62,9 +63,9 @@ export function CommentsTab({
     setError(null);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/comments`, {
+      const response = await apiFetch(`/api/projects/${projectId}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ content: newComment.trim() }),
       });
 
@@ -90,9 +91,9 @@ export function CommentsTab({
     setReplyError(null);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/comments`, {
+      const response = await apiFetch(`/api/projects/${projectId}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ content: replyContent.trim(), parentId }),
       });
 

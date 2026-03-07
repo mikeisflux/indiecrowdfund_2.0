@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -155,9 +156,9 @@ export default function MediaPage() {
       try {
         setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
 
-        const response = await fetch("/api/admin/media/upload", {
+        const response = await apiFetch("/api/admin/media/upload", {
           method: "POST",
-          headers: { ...getCSRFHeaders() },
+          
           body: formData,
         });
 
@@ -251,7 +252,7 @@ export default function MediaPage() {
     setDeleting(true);
     try {
       for (const fileId of selectedFiles) {
-        await fetch(`/api/admin/media?fileId=${fileId}`, { method: "DELETE", headers: getCSRFHeaders() });
+        await apiFetch(`/api/admin/media?fileId=${fileId}`, { method: "DELETE" });
       }
       setSelectedFiles([]);
       fetchMedia();
@@ -264,7 +265,7 @@ export default function MediaPage() {
 
   const deleteFile = async (fileId: string) => {
     try {
-      const response = await fetch(`/api/admin/media?fileId=${fileId}`, { method: "DELETE", headers: getCSRFHeaders() });
+      const response = await apiFetch(`/api/admin/media?fileId=${fileId}`, { method: "DELETE" });
       if (response.ok) {
         fetchMedia();
       }
@@ -301,9 +302,9 @@ export default function MediaPage() {
 
     setSaving(true);
     try {
-      const response = await fetch("/api/admin/media", {
+      const response = await apiFetch("/api/admin/media", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           fileId: editingFile.id,
           originalName: editForm.originalName,
@@ -331,9 +332,9 @@ export default function MediaPage() {
     if (idsToMove.length === 0) return;
 
     try {
-      const response = await fetch("/api/admin/media", {
+      const response = await apiFetch("/api/admin/media", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           fileIds: idsToMove,
           folder: targetFolder,
@@ -429,9 +430,9 @@ export default function MediaPage() {
     setImporting(true);
     setImportResult(null);
     try {
-      const response = await fetch(`/api/admin/media/scan?source=${source}`, {
+      const response = await apiFetch(`/api/admin/media/scan?source=${source}`, {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       if (response.ok) {
         const data = await response.json();

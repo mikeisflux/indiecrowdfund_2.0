@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -137,9 +138,9 @@ export default function AIControlPage() {
   // Save cron schedules to database
   const saveCronSchedules = useCallback(async (jobs: CronJob[]) => {
     try {
-      await fetch("/api/admin/settings", {
+      await apiFetch("/api/admin/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           section: "aiMarketing",
           data: {
@@ -163,9 +164,9 @@ export default function AIControlPage() {
     try {
       // Load AI status and settings
       const [statusRes, settingsRes] = await Promise.all([
-        fetch("/api/admin/ai-marketing/run", {
+        apiFetch("/api/admin/ai-marketing/run", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ action: "getStatus" }),
         }),
         fetch("/api/admin/settings"),
@@ -238,9 +239,9 @@ export default function AIControlPage() {
     );
 
     try {
-      const res = await fetch("/api/admin/ai-marketing/run", {
+      const res = await apiFetch("/api/admin/ai-marketing/run", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action, params: { limit: 100 } }),
       });
       const data = await res.json();

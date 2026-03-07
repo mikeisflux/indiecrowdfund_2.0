@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -174,11 +175,11 @@ export default function RetailersPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/admin/retailers", {
+      const response = await apiFetch("/api/admin/retailers", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           retailerId: selectedRetailer.id,

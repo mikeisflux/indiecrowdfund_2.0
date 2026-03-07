@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
@@ -92,9 +93,9 @@ export function PaymentStep() {
 
     setIsSavingBank(true);
     try {
-      const response = await fetch("/api/creator/bank-account", {
+      const response = await apiFetch("/api/creator/bank-account", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ ...bankAccount, projectId }),
       });
 
@@ -204,9 +205,9 @@ export function PaymentStep() {
 
     setIsSavingCard(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/chargeback-card`, {
+      const response = await apiFetch(`/api/projects/${projectId}/chargeback-card`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(chargebackCard),
       });
 
@@ -302,9 +303,9 @@ export function PaymentStep() {
     setIsConnecting(true);
     setConnectError(null);
     try {
-      const response = await fetch("/api/stripe/connect", {
+      const response = await apiFetch("/api/stripe/connect", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
       });
 
       const data = await response.json();
@@ -329,9 +330,9 @@ export function PaymentStep() {
     setIsResetting(true);
     setConnectError(null);
     try {
-      const response = await fetch("/api/stripe/connect/reset", {
+      const response = await apiFetch("/api/stripe/connect/reset", {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       const data = await response.json();

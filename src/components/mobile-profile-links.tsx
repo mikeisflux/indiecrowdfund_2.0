@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import Link from "next/link";
@@ -23,7 +24,7 @@ export function MobileProfileLinks() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST", headers: getCSRFHeaders() });
+      await apiFetch("/api/auth/logout", { method: "POST" });
       // Clear login-session dismiss flags so popups/banners show again on next login
       localStorage.removeItem("promo_popup_login_dismissed");
       localStorage.removeItem("consent_banner_login_dismissed");

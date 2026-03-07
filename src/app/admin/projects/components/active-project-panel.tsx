@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect } from "react";
@@ -80,9 +81,9 @@ export function ActiveProjectPanel({
     setProcessMessage(null);
 
     try {
-      const response = await fetch(`/api/admin/projects/${project.id}/process-pledges`, {
+      const response = await apiFetch(`/api/admin/projects/${project.id}/process-pledges`, {
         method: "POST",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       const data = await response.json();
@@ -113,9 +114,9 @@ export function ActiveProjectPanel({
     setSyncMessage(null);
 
     try {
-      const response = await fetch(`/api/projects/${project.id}/sync-stats`, {
+      const response = await apiFetch(`/api/projects/${project.id}/sync-stats`, {
         method: "POST",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       const data = await response.json();
@@ -140,9 +141,9 @@ export function ActiveProjectPanel({
     setVerifyMessage(null);
 
     try {
-      const response = await fetch(`/api/admin/projects/${project.id}/process-pledges`, {
+      const response = await apiFetch(`/api/admin/projects/${project.id}/process-pledges`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "verify" }),
       });
 
@@ -185,9 +186,9 @@ export function ActiveProjectPanel({
     setBackfillMessage(null);
 
     try {
-      const response = await fetch(`/api/admin/projects/${project.id}/backfill-backer-numbers`, {
+      const response = await apiFetch(`/api/admin/projects/${project.id}/backfill-backer-numbers`, {
         method: "POST",
-        headers: { ...getCSRFHeaders() },
+        
       });
 
       const data = await response.json();
@@ -215,9 +216,9 @@ export function ActiveProjectPanel({
     setReconcileMessage(null);
 
     try {
-      const response = await fetch(`/api/admin/reconcile-pledges`, {
+      const response = await apiFetch(`/api/admin/reconcile-pledges`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ projectId: project.id, applyFixes: true }),
       });
 
@@ -262,9 +263,9 @@ export function ActiveProjectPanel({
     setDeleteAbandonedMessage(null);
 
     try {
-      const response = await fetch(`/api/admin/projects/${project.id}/process-pledges`, {
+      const response = await apiFetch(`/api/admin/projects/${project.id}/process-pledges`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action: "delete-abandoned" }),
       });
 

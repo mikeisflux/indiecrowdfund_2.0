@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,7 +71,7 @@ export function DigitalDownloadsTab() {
   const fetchDigitalFiles = async () => {
     try {
       const response = await fetch("/api/backer/digital-files", {
-        headers: { ...getCSRFHeaders() },
+        
       });
       if (!response.ok) {
         throw new Error("Failed to fetch digital files");
@@ -91,11 +92,11 @@ export function DigitalDownloadsTab() {
 
   const handleDownload = async (fileId: string) => {
     try {
-      const response = await fetch("/api/backer/digital-files", {
+      const response = await apiFetch("/api/backer/digital-files", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ fileId }),
       });

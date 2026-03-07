@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
@@ -130,11 +131,11 @@ export default function AdminPrelaunchPage() {
   const handleAction = async (action: string, projectId: string, reason?: string) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/admin/prelaunch", {
+      const response = await apiFetch("/api/admin/prelaunch", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ projectId, action, reason }),
       });

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -350,11 +351,11 @@ export default function PayoutsPage() {
 
     setProcessing(true);
     try {
-      const response = await fetch("/api/admin/payouts/divinitycoin", {
+      const response = await apiFetch("/api/admin/payouts/divinitycoin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           projectId: selectedProject.id,
@@ -387,11 +388,11 @@ export default function PayoutsPage() {
 
     setProcessing(true);
     try {
-      const response = await fetch("/api/admin/payouts/divinitycoin", {
+      const response = await apiFetch("/api/admin/payouts/divinitycoin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           creatorId: selectedCreator.id,

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -562,9 +563,9 @@ export default function SettingsPage() {
     try {
       // Use ref to get latest values (avoids stale closure)
       const currentStorageSettings = storageSettingsRef.current;
-      const response = await fetch("/api/admin/settings/test-r2", {
+      const response = await apiFetch("/api/admin/settings/test-r2", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           accountId: currentStorageSettings.r2AccountId,
           accessKeyId: currentStorageSettings.r2AccessKeyId,
@@ -743,9 +744,9 @@ export default function SettingsPage() {
           return;
       }
 
-      const response = await fetch("/api/admin/settings", {
+      const response = await apiFetch("/api/admin/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ section, data }),
       });
 

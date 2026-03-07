@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -114,9 +115,9 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
 
     setIsCreating(true);
     try {
-      const res = await fetch("/api/creator/indiekit/segments", {
+      const res = await apiFetch("/api/creator/indiekit/segments", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           name,
@@ -150,9 +151,9 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
     if (!projectId) return;
 
     try {
-      const res = await fetch(`/api/creator/indiekit/segments?segmentId=${segmentId}&projectId=${projectId}`, {
+      const res = await apiFetch(`/api/creator/indiekit/segments?segmentId=${segmentId}&projectId=${projectId}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -174,7 +175,7 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
     setIsLoadingBackers(true);
     try {
       const res = await fetch(`/api/creator/indiekit/segments/backers?segmentId=${segment.id}&projectId=${projectId}`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -207,9 +208,9 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
 
     setIsSavingEdit(true);
     try {
-      const res = await fetch("/api/creator/indiekit/segments", {
+      const res = await apiFetch("/api/creator/indiekit/segments", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           segmentId: editingSegment.id,
@@ -240,9 +241,9 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
 
     setIsDuplicating(segment.id);
     try {
-      const res = await fetch("/api/creator/indiekit/segments", {
+      const res = await apiFetch("/api/creator/indiekit/segments", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "duplicate",
@@ -268,9 +269,9 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
     if (!projectId || !emailSegment) return;
 
     try {
-      const res = await fetch("/api/creator/indiekit/campaigns", {
+      const res = await apiFetch("/api/creator/indiekit/campaigns", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "send_to_segment",

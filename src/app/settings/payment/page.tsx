@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -52,9 +53,9 @@ export default function PaymentSettingsPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/stripe/connect", {
+      const res = await apiFetch("/api/stripe/connect", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       const data = await res.json();
 
@@ -76,9 +77,9 @@ export default function PaymentSettingsPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/stripe/connect/refresh", {
+      const res = await apiFetch("/api/stripe/connect/refresh", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
       });
       const data = await res.json();
 

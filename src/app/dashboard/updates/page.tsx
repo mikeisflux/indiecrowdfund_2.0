@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -98,7 +99,7 @@ export default function UpdatesPage() {
   const fetchProjects = useCallback(async () => {
     try {
       const res = await fetch("/api/creator/dashboard?days=30", {
-        headers: getCSRFHeaders(),
+,
       });
       if (res.ok) {
         const data = await res.json();
@@ -129,7 +130,7 @@ export default function UpdatesPage() {
     setIsLoadingUpdates(true);
     try {
       const res = await fetch(`/api/creator/indiekit/updates?projectId=${selectedProjectId}`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -215,7 +216,7 @@ export default function UpdatesPage() {
 
       const res = await fetch("/api/creator/indiekit/updates", {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(body),
       });
 
@@ -241,9 +242,9 @@ export default function UpdatesPage() {
     setIsPublishing(update.id);
     try {
       const newStatus = update.status === "published" ? "draft" : "published";
-      const res = await fetch("/api/creator/indiekit/updates", {
+      const res = await apiFetch("/api/creator/indiekit/updates", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId: selectedProjectId,
           action: newStatus === "published" ? "publish" : "unpublish",
@@ -270,9 +271,9 @@ export default function UpdatesPage() {
 
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/updates?projectId=${selectedProjectId}&updateId=${confirmDeleteUpdate.id}`, {
+      const res = await apiFetch(`/api/creator/indiekit/updates?projectId=${selectedProjectId}&updateId=${confirmDeleteUpdate.id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {

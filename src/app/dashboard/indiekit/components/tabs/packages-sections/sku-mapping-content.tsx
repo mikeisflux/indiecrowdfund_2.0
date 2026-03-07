@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -82,7 +83,7 @@ export function SkuMappingContent({ projectId, fulfillmentMethod }: SkuMappingCo
     try {
       const res = await fetch(
         `/api/creator/indiekit/shopify/sku-mapping?projectId=${projectId}`,
-        { headers: getCSRFHeaders() }
+        { }
       );
 
       if (res.ok) {
@@ -108,9 +109,9 @@ export function SkuMappingContent({ projectId, fulfillmentMethod }: SkuMappingCo
 
     setIsSavingSkuMapping(true);
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "save",
@@ -137,9 +138,9 @@ export function SkuMappingContent({ projectId, fulfillmentMethod }: SkuMappingCo
     if (!projectId) return;
 
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/sku-mapping", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/sku-mapping", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: "delete",

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -149,7 +150,7 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
     setLoadingSurvey(true);
     try {
       const response = await fetch(`/api/creator/indiekit/surveys?projectId=${projectId}`, {
-        headers: getCSRFHeaders(),
+,
       });
       if (response.ok) {
         const data = await response.json();
@@ -403,9 +404,9 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
       if (itemQuestion.id) {
         setSavingReward(rewardId);
         try {
-          await fetch(`/api/projects/${projectId}/survey/item-questions?questionId=${itemQuestion.id}`, {
+          await apiFetch(`/api/projects/${projectId}/survey/item-questions?questionId=${itemQuestion.id}`, {
             method: "DELETE",
-            headers: getCSRFHeaders(),
+,
           });
           const newMap = new Map(itemQuestions);
           newMap.delete(rewardId);
@@ -441,7 +442,7 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
       const method = itemQuestion.id ? "PUT" : "POST";
       const response = await fetch(`/api/projects/${projectId}/survey/item-questions`, {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(payload),
       });
 
@@ -501,9 +502,9 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
               return;
             }
             try {
-              const res = await fetch("/api/creator/indiekit/surveys", {
+              const res = await apiFetch("/api/creator/indiekit/surveys", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                headers: { "Content-Type": "application/json", },
                 body: JSON.stringify({
                   projectId,
                   questions: surveyQuestions,
@@ -532,9 +533,9 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
               }
               // First save the survey
               try {
-                const saveRes = await fetch("/api/creator/indiekit/surveys", {
+                const saveRes = await apiFetch("/api/creator/indiekit/surveys", {
                   method: "POST",
-                  headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                  headers: { "Content-Type": "application/json", },
                   body: JSON.stringify({
                     projectId,
                     questions: surveyQuestions,
@@ -546,9 +547,9 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
                 }
 
                 // Then send the survey
-                const sendRes = await fetch("/api/creator/indiekit/surveys", {
+                const sendRes = await apiFetch("/api/creator/indiekit/surveys", {
                   method: "PATCH",
-                  headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                  headers: { "Content-Type": "application/json", },
                   body: JSON.stringify({
                     projectId,
                     action: "send",

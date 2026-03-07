@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,9 +92,9 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
 
     try {
       // Step 1: Get presigned upload URL from API
-      const res = await fetch("/api/creator/digital-files", {
+      const res = await apiFetch("/api/creator/digital-files", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           fileName: selectedFile.name,
@@ -112,7 +113,7 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
       setUploadProgress(30);
 
       // Step 2: Upload file directly to R2 using presigned URL
-      const uploadRes = await fetch(uploadUrl, {
+      const uploadRes = await apiFetch(uploadUrl, {
         method: "PUT",
         body: selectedFile,
         headers: {

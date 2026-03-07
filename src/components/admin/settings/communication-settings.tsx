@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import {
@@ -178,7 +179,7 @@ function MailboxDialog({
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           ...formData,
           imapPort: formData.imapPort ? parseInt(formData.imapPort) : null,
@@ -426,7 +427,7 @@ function BlocklistDialog({
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           ...formData,
           source: entry ? entry.source : "manual",
@@ -629,9 +630,9 @@ export function CommunicationSettings() {
     if (!deletingMailbox) return;
 
     try {
-      const response = await fetch(`/api/admin/mailboxes/${deletingMailbox.id}`, {
+      const response = await apiFetch(`/api/admin/mailboxes/${deletingMailbox.id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) throw new Error("Failed to delete mailbox");
@@ -649,9 +650,9 @@ export function CommunicationSettings() {
     if (!deletingEntry) return;
 
     try {
-      const response = await fetch(`/api/admin/email-blocklist/${deletingEntry.id}`, {
+      const response = await apiFetch(`/api/admin/email-blocklist/${deletingEntry.id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) throw new Error("Failed to delete entry");
@@ -668,9 +669,9 @@ export function CommunicationSettings() {
   const handleRemoveAll = async () => {
     setRemovingAll(true);
     try {
-      const response = await fetch("/api/admin/email-blocklist/purge", {
+      const response = await apiFetch("/api/admin/email-blocklist/purge", {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) {

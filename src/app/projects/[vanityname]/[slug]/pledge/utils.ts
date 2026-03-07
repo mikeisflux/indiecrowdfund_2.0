@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 // Helper function to get shipping cost for a country
@@ -38,9 +39,9 @@ export async function createAdditionalItemsPurchase(
     quantity,
   }));
 
-  const response = await fetch(`/api/pledges/${existingPledgeId}/add-items`, {
+  const response = await apiFetch(`/api/pledges/${existingPledgeId}/add-items`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+    headers: { "Content-Type": "application/json", },
     body: JSON.stringify({
       addons: addonsWithQuantity,
       amount: addItemsTotal,
@@ -82,9 +83,9 @@ export async function modifyPledge(
   refundAmount?: number;
   message: string;
 }> {
-  const response = await fetch(`/api/pledges/${pledgeId}`, {
+  const response = await apiFetch(`/api/pledges/${pledgeId}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+    headers: { "Content-Type": "application/json", },
     body: JSON.stringify({
       action: "modify",
       rewardId,
@@ -131,9 +132,9 @@ export async function createPledgeForPayment(
     quantity,
   }));
 
-  const response = await fetch("/api/pledges", {
+  const response = await apiFetch("/api/pledges", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+    headers: { "Content-Type": "application/json", },
     body: JSON.stringify({
       projectId,
       rewardId,
@@ -170,9 +171,9 @@ export async function confirmPayment(pledgeId: string, isAddItemsMode: boolean, 
     endpoint = `/api/pledges/${pledgeId}/confirm`;
   }
 
-  const response = await fetch(endpoint, {
+  const response = await apiFetch(endpoint, {
     method: "POST",
-    headers: { ...getCSRFHeaders() },
+    
   });
 
   if (!response.ok) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -249,9 +250,9 @@ export default function SurveyResponsesPage() {
   const handleExport = async (format: "csv" | "json") => {
     setIsExporting(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/survey/responses`, {
+      const response = await apiFetch(`/api/projects/${projectId}/survey/responses`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ format }),
       });
 

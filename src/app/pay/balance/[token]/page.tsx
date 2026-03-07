@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,9 +96,9 @@ export default function BalancePaymentPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/pay/balance", {
+      const res = await apiFetch("/api/pay/balance", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ token }),
       });
 
@@ -124,9 +125,9 @@ export default function BalancePaymentPage() {
   const handlePaymentSuccess = async () => {
     try {
       // Confirm the balance payment on our backend
-      await fetch("/api/pay/balance/confirm", {
+      await apiFetch("/api/pay/balance/confirm", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ token }),
       });
       setPaymentSuccess(true);

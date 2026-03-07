@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
-import { fetchWithRetry } from "@/lib/fetch-utils";
+import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -182,9 +182,9 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
 
   const handleCancelOrder = async () => {
     try {
-      const res = await fetch("/api/creator/indiekit/backers", {
+      const res = await apiFetch("/api/creator/indiekit/backers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "cancel_order",
           pledgeIds: [backer.id],
@@ -202,9 +202,9 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
 
   const handleResendSurvey = async () => {
     try {
-      const res = await fetch("/api/creator/indiekit/backers", {
+      const res = await apiFetch("/api/creator/indiekit/backers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "send_survey_reminder",
           pledgeIds: [backer.id],
@@ -221,9 +221,9 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
 
   const handlePushToFulfillment = async () => {
     try {
-      const res = await fetch("/api/creator/indiekit/backers", {
+      const res = await apiFetch("/api/creator/indiekit/backers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           action: "push_to_fulfillment",
           pledgeIds: [backer.id],
@@ -253,9 +253,9 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
 
     setResendingCharge(true);
     try {
-      const res = await fetch("/api/creator/indiekit/orders/notify-balance", {
+      const res = await apiFetch("/api/creator/indiekit/orders/notify-balance", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           pledgeId: backer.id,
           projectId: backer.projectId,
@@ -286,9 +286,9 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
 
     setModifierAssignmentSaving(true);
     try {
-      const res = await fetch("/api/creator/indiekit/modifiers", {
+      const res = await apiFetch("/api/creator/indiekit/modifiers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId: backer.projectId,
           action: "manual_assign",

@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,9 +81,9 @@ export function AISettingsTab({
     const actions = ["runAutoTagging", "runPredictiveAnalytics", "runSegmentation", "runSendTimeOptimization"];
     for (const action of actions) {
       try {
-        const res = await fetch("/api/admin/ai-marketing/run", {
+        const res = await apiFetch("/api/admin/ai-marketing/run", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ action, params: { limit: 50 } }),
         });
         const data = await res.json();
@@ -105,9 +106,9 @@ export function AISettingsTab({
   const runService = async (action: string, params: Record<string, unknown> = {}) => {
     setIsProcessing(true);
     try {
-      const res = await fetch("/api/admin/ai-marketing/run", {
+      const res = await apiFetch("/api/admin/ai-marketing/run", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ action, params }),
       });
       const data = await res.json();

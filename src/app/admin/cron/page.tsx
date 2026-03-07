@@ -39,7 +39,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
-import { fetchWithRetry } from "@/lib/fetch-utils";
+import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import {
   Clock,
   Plus,
@@ -292,11 +292,11 @@ export default function CronManagementPage() {
   const saveCrontab = async (content: string) => {
     try {
       setSaving(true);
-      const res = await fetch("/api/admin/cron", {
+      const res = await apiFetch("/api/admin/cron", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ crontab: content }),
       });

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import Image from "next/image";
 
@@ -192,9 +193,9 @@ export default function EmailPage() {
 
     setIsDeletingMailbox(true);
     try {
-      const response = await fetch(`/api/admin/mailboxes/${mailbox.id}?force=true`, {
+      const response = await apiFetch(`/api/admin/mailboxes/${mailbox.id}?force=true`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
       if (response.ok) {
         await fetchMailboxes();
@@ -213,9 +214,9 @@ export default function EmailPage() {
     if (!selectedMailbox) return;
 
     try {
-      await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`, {
+      await apiFetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ isStarred: !email.isStarred }),
       });
       setEmails(emails.map(e => e.id === email.id ? { ...e, isStarred: !e.isStarred } : e));
@@ -228,9 +229,9 @@ export default function EmailPage() {
     if (!selectedMailbox) return;
 
     try {
-      await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`, {
+      await apiFetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails/${email.id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
       setEmails(emails.filter(e => e.id !== email.id));
       if (selectedEmail?.id === email.id) {
@@ -311,9 +312,9 @@ export default function EmailPage() {
 
     setIsDeletingEmail(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/admin/mailboxes/${selectedMailbox.id}/emails/${selectedEmail.id}`,
-        { method: "DELETE", headers: getCSRFHeaders() }
+        { method: "DELETE" }
       );
       if (response.ok) {
         setEmails(emails.filter(e => e.id !== selectedEmail.id));
@@ -337,9 +338,9 @@ export default function EmailPage() {
 
     setIsEmptyingFolder(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/admin/mailboxes/${selectedMailbox.id}/emails?folder=${selectedFolder}`,
-        { method: "DELETE", headers: getCSRFHeaders() }
+        { method: "DELETE" }
       );
       if (response.ok) {
         const data = await response.json();

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,9 +204,9 @@ export function EditOrderDialog({
         }
       }
 
-      const res = await fetch("/api/creator/indiekit/orders", {
+      const res = await apiFetch("/api/creator/indiekit/orders", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           pledgeId,
           projectId,
@@ -246,9 +247,9 @@ export function EditOrderDialog({
   const handleSendBalanceNotification = async () => {
     setSendingNotification(true);
     try {
-      const res = await fetch("/api/creator/indiekit/orders/notify-balance", {
+      const res = await apiFetch("/api/creator/indiekit/orders/notify-balance", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           pledgeId,
           projectId,

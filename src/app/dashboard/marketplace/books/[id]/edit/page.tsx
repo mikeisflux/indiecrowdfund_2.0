@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -221,9 +222,9 @@ function PDFFilePicker({
 
       setUploadProgress(10);
 
-      const uploadRes = await fetch("/api/creator/marketplace/files/upload", {
+      const uploadRes = await apiFetch("/api/creator/marketplace/files/upload", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
         body: formData,
       });
 
@@ -280,11 +281,11 @@ function PDFFilePicker({
 
     setDeleting(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/creator/marketplace/files?key=${encodeURIComponent(currentStorageKey)}`,
         {
           method: "DELETE",
-          headers: getCSRFHeaders(),
+,
         }
       );
 
@@ -495,9 +496,9 @@ function FileUpload({
       formData.append("file", file);
       formData.append("type", accept.includes("pdf") ? "pdf" : accept.includes("video") ? "video" : "image");
 
-      const res = await fetch("/api/upload", {
+      const res = await apiFetch("/api/upload", {
         method: "POST",
-        headers: getCSRFHeaders(),
+,
         body: formData,
       });
 
@@ -738,11 +739,11 @@ export default function EditBookPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/creator/marketplace/books/${bookId}`, {
+      const res = await apiFetch(`/api/creator/marketplace/books/${bookId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           ...formData,
@@ -766,9 +767,9 @@ export default function EditBookPage() {
 
       // If user wants to submit for review after saving
       if (submitForReview) {
-        const submitRes = await fetch(`/api/creator/marketplace/books/${bookId}/submit`, {
+        const submitRes = await apiFetch(`/api/creator/marketplace/books/${bookId}/submit`, {
           method: "POST",
-          headers: getCSRFHeaders(),
+,
         });
 
         if (!submitRes.ok) {

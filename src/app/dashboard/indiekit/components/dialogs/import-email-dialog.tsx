@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useCallback } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
@@ -252,9 +253,9 @@ export function ImportEmailDialog({
         ? `/api/projects/${projectId}/members/import`
         : "/api/creator/email-marketing/subscribers/import";
 
-      const response = await fetch(apiUrl, {
+      const response = await apiFetch(apiUrl, {
         method: "POST",
-        headers: { ...getCSRFHeaders() },
+        
         body: formData,
       });
 

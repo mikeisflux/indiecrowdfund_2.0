@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent } from "@/components/ui/card";
@@ -120,7 +121,7 @@ export function DigitalLibraryTab() {
       setLoading(true);
 
       // Fetch unified digital library (crowdfunding + marketplace purchases including discount code redemptions)
-      const libraryRes = await fetch("/api/backer/digital-library", { headers: getCSRFHeaders() });
+      const libraryRes = await fetch("/api/backer/digital-library", { });
       if (!libraryRes.ok) throw new Error("Failed to fetch library");
       const libraryData = await libraryRes.json();
 
@@ -213,9 +214,9 @@ export function DigitalLibraryTab() {
       if (item.source !== "crowdfunding") continue;
 
       try {
-        const res = await fetch("/api/backer/digital-files/extract-cover", {
+        const res = await apiFetch("/api/backer/digital-files/extract-cover", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ fileId: item.sourceId }),
         });
 
@@ -382,9 +383,9 @@ export function DigitalLibraryTab() {
 
       if (item.source === "crowdfunding") {
         console.log("[openBook] Fetching crowdfunding file:", item.sourceId);
-        const res = await fetch("/api/backer/digital-files", {
+        const res = await apiFetch("/api/backer/digital-files", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ fileId: item.sourceId }),
         });
         console.log("[openBook] Crowdfunding response status:", res.status);
@@ -409,7 +410,7 @@ export function DigitalLibraryTab() {
         const apiUrl = `/api/backer/marketplace-purchases/${item.sourceId}/download`;
         console.log("[openBook] API URL:", apiUrl);
         const res = await fetch(apiUrl, {
-          headers: getCSRFHeaders(),
+,
         });
         console.log("[openBook] Marketplace response status:", res.status);
         if (!res.ok) {

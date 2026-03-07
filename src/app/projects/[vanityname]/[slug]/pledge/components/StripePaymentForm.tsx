@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -22,9 +23,9 @@ interface StripePaymentFormProps {
 
 // Fire-and-forget diagnostic report to PM2 logs
 function reportDiag(event: string, data: Record<string, unknown>) {
-  fetch("/api/diagnostics/payment", {
+  apiFetch("/api/diagnostics/payment", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+    headers: { "Content-Type": "application/json", },
     body: JSON.stringify({ event, data }),
   }).catch(() => { /* ignore */ });
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,11 +97,11 @@ export function TeaserPagesTab({ hasActiveCampaign = false }: TeaserPagesTabProp
   const handleUnpublish = async (page: PrelaunchPage) => {
     setActionLoading(page.id);
     try {
-      const res = await fetch(`/api/projects/${page.id}/prelaunch`, {
+      const res = await apiFetch(`/api/projects/${page.id}/prelaunch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ prelaunchActive: false }),
       });
@@ -123,11 +124,11 @@ export function TeaserPagesTab({ hasActiveCampaign = false }: TeaserPagesTabProp
   const handlePublish = async (page: PrelaunchPage) => {
     setActionLoading(page.id);
     try {
-      const res = await fetch(`/api/projects/${page.id}/prelaunch`, {
+      const res = await apiFetch(`/api/projects/${page.id}/prelaunch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ prelaunchActive: true }),
       });
@@ -157,9 +158,9 @@ export function TeaserPagesTab({ hasActiveCampaign = false }: TeaserPagesTabProp
 
     setActionLoading(pageToDelete.id);
     try {
-      const res = await fetch(`/api/projects/${pageToDelete.id}`, {
+      const res = await apiFetch(`/api/projects/${pageToDelete.id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {

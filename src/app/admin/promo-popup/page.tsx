@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -124,7 +125,7 @@ export default function PromoPopupPage() {
     try {
       setIsLoading(true);
       const response = await fetch("/api/admin/promo-popup", {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) throw new Error("Failed to fetch");
@@ -148,9 +149,9 @@ export default function PromoPopupPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/admin/promo-popup", {
+      const response = await apiFetch("/api/admin/promo-popup", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(popup),
       });
 
@@ -170,9 +171,9 @@ export default function PromoPopupPage() {
   const handleResetToDefaults = async () => {
     setIsResetting(true);
     try {
-      const response = await fetch("/api/admin/promo-popup", {
+      const response = await apiFetch("/api/admin/promo-popup", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
       });
 
       if (!response.ok) throw new Error("Failed to reset");

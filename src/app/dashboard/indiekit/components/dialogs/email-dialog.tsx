@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,9 +148,9 @@ export function EmailDialog({
 
     setIsSendingTest(true);
     try {
-      const response = await fetch("/api/creator/email/send-test", {
+      const response = await apiFetch("/api/creator/email/send-test", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           to: testEmail,
           subject: emailTitle,
@@ -187,9 +188,9 @@ export function EmailDialog({
 
     setIsSendingCampaign(true);
     try {
-      const response = await fetch("/api/creator/email/campaign", {
+      const response = await apiFetch("/api/creator/email/campaign", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           subject: emailTitle,
           content: emailBody,

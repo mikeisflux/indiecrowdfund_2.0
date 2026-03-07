@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -91,7 +92,7 @@ export function CampaignTypeDialog({
 
     try {
       const response = await fetch(`/api/admin/ai-marketing/campaigns/${campaignType}`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!response.ok) {
@@ -124,11 +125,11 @@ export function CampaignTypeDialog({
     setSuccess(null);
 
     try {
-      const response = await fetch(`/api/admin/ai-marketing/campaigns/${campaignType}`, {
+      const response = await apiFetch(`/api/admin/ai-marketing/campaigns/${campaignType}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           name,
@@ -222,9 +223,9 @@ export function CampaignTypeDialog({
           formData.append("file", imageFile);
           formData.append("folder", "email-campaigns");
 
-          const response = await fetch("/api/admin/media/upload", {
+          const response = await apiFetch("/api/admin/media/upload", {
             method: "POST",
-            headers: { ...getCSRFHeaders() },
+            
             body: formData,
           });
 

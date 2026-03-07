@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState, useEffect, useCallback } from "react";
@@ -371,9 +372,9 @@ export default function AIMarketingPage() {
     setSaveMessage(null);
 
     try {
-      const response = await fetch("/api/admin/settings", {
+      const response = await apiFetch("/api/admin/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           section: "aiMarketing",
           data: {
@@ -427,9 +428,9 @@ export default function AIMarketingPage() {
   const runAutoTagging = async () => {
     setIsProcessing(true);
     try {
-      const response = await fetch("/api/admin/ai-marketing/auto-tag", {
+      const response = await apiFetch("/api/admin/ai-marketing/auto-tag", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           confidenceThreshold: aiSettings.autoTagConfidence,
           maxTags: aiSettings.maxTags,
@@ -493,9 +494,9 @@ export default function AIMarketingPage() {
         return;
       }
 
-      const response = await fetch("/api/admin/ai-marketing/auto-tag", {
+      const response = await apiFetch("/api/admin/ai-marketing/auto-tag", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({ projectUpdates: approvedUpdates }),
       });
 
@@ -554,9 +555,9 @@ export default function AIMarketingPage() {
     setCampaignSuccess(null);
 
     try {
-      const response = await fetch("/api/admin/ai-marketing/campaigns", {
+      const response = await apiFetch("/api/admin/ai-marketing/campaigns", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(campaignForm),
       });
 
@@ -621,9 +622,9 @@ export default function AIMarketingPage() {
       ];
 
       for (const rec of recommendations) {
-        await fetch("/api/admin/ai-marketing/campaigns", {
+        await apiFetch("/api/admin/ai-marketing/campaigns", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({
             name: rec.name,
             targetAudience: rec.targetAudience,

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useState } from "react";
@@ -146,9 +147,9 @@ export function ProjectBuilder() {
           metaPixelId: promotion.metaPixelId,
         };
 
-        const response = await fetch("/api/projects", {
+        const response = await apiFetch("/api/projects", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify(projectData),
         });
 
@@ -167,17 +168,17 @@ export function ProjectBuilder() {
           const newProjectPromises = [
             // Batch save all rewards in a single request
             transformedRewards.length > 0
-              ? fetch(`/api/projects/${newProjectId}/rewards`, {
+              ? apiFetch(`/api/projects/${newProjectId}/rewards`, {
                   method: "POST",
-                  headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                  headers: { "Content-Type": "application/json", },
                   body: JSON.stringify({ rewards: transformedRewards }),
                 })
               : Promise.resolve(new Response()),
             // Save collaborators in parallel
             ...(people.collaborators || []).map((collab) =>
-              fetch(`/api/projects/${newProjectId}/collaborators`, {
+              apiFetch(`/api/projects/${newProjectId}/collaborators`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+                headers: { "Content-Type": "application/json", },
                 body: JSON.stringify(collab),
               })
             ),
@@ -216,18 +217,18 @@ export function ProjectBuilder() {
             launchDate: basics.launchDate instanceof Date ? basics.launchDate.toISOString() : basics.launchDate,
           };
       savePromises.push(
-        fetch(`/api/projects/${projectId}/basics`, {
+        apiFetch(`/api/projects/${projectId}/basics`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify(basicsPayload),
         })
       );
 
       // Save story
       savePromises.push(
-        fetch(`/api/projects/${projectId}/story`, {
+        apiFetch(`/api/projects/${projectId}/story`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({
             description: story.description || "",
             risks: story.risks || "",
@@ -256,9 +257,9 @@ export function ProjectBuilder() {
             retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
           };
       savePromises.push(
-        fetch(`/api/projects/${projectId}/payment`, {
+        apiFetch(`/api/projects/${projectId}/payment`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify(paymentPayload),
         })
       );
@@ -266,9 +267,9 @@ export function ProjectBuilder() {
       // Save contact email separately (dedicated endpoint for reliability)
       if (payment.contactEmail) {
         savePromises.push(
-          fetch(`/api/projects/${projectId}/contact-email`, {
+          apiFetch(`/api/projects/${projectId}/contact-email`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+            headers: { "Content-Type": "application/json", },
             body: JSON.stringify({ contactEmail: payment.contactEmail }),
           })
         );
@@ -276,9 +277,9 @@ export function ProjectBuilder() {
 
       // Save promotion settings
       savePromises.push(
-        fetch(`/api/projects/${projectId}/promotion`, {
+        apiFetch(`/api/projects/${projectId}/promotion`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({
             customReferralTags: promotion.customReferralTags || [],
             googleAnalyticsId: promotion.googleAnalyticsId,
@@ -290,9 +291,9 @@ export function ProjectBuilder() {
       // Save prelaunch settings (skip for launched projects - not applicable)
       if (!isLive) {
         savePromises.push(
-          fetch(`/api/projects/${projectId}/prelaunch`, {
+          apiFetch(`/api/projects/${projectId}/prelaunch`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+            headers: { "Content-Type": "application/json", },
             body: JSON.stringify({
               prelaunchActive: promotion.prelaunchActive || false,
               prelaunchDescription: promotion.prelaunchDescription,
@@ -313,9 +314,9 @@ export function ProjectBuilder() {
 
       // Handle rewards with dedicated endpoint - batch save all rewards in a single request
       if (transformedRewards.length > 0) {
-        await fetch(`/api/projects/${projectId}/rewards`, {
+        await apiFetch(`/api/projects/${projectId}/rewards`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+          headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ rewards: transformedRewards }),
         });
       }
@@ -351,9 +352,9 @@ export function ProjectBuilder() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/submit`, {
+      const response = await apiFetch(`/api/projects/${projectId}/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
       });
 
       const result = await response.json();
@@ -398,9 +399,9 @@ export function ProjectBuilder() {
     setIsLaunching(true);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/launch`, {
+      const response = await apiFetch(`/api/projects/${projectId}/launch`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
       });
 
       const result = await response.json();

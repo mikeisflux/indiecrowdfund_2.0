@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,7 +78,7 @@ export function PostUpdatesTab({ projectId }: PostUpdatesTabProps) {
     setIsLoadingUpdates(true);
     try {
       const res = await fetch(`/api/creator/indiekit/updates?projectId=${projectId}`, {
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {
@@ -158,7 +159,7 @@ export function PostUpdatesTab({ projectId }: PostUpdatesTabProps) {
 
       const res = await fetch("/api/creator/indiekit/updates", {
         method,
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(body),
       });
 
@@ -184,9 +185,9 @@ export function PostUpdatesTab({ projectId }: PostUpdatesTabProps) {
     setIsPublishing(update.id);
     try {
       const newStatus = update.status === "published" ? "draft" : "published";
-      const res = await fetch("/api/creator/indiekit/updates", {
+      const res = await apiFetch("/api/creator/indiekit/updates", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify({
           projectId,
           action: newStatus === "published" ? "publish" : "unpublish",
@@ -213,9 +214,9 @@ export function PostUpdatesTab({ projectId }: PostUpdatesTabProps) {
 
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/creator/indiekit/updates?projectId=${projectId}&updateId=${confirmDeleteUpdate.id}`, {
+      const res = await apiFetch(`/api/creator/indiekit/updates?projectId=${projectId}&updateId=${confirmDeleteUpdate.id}`, {
         method: "DELETE",
-        headers: getCSRFHeaders(),
+,
       });
 
       if (!res.ok) {

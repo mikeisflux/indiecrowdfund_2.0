@@ -1,7 +1,7 @@
 "use client";
 
 import { getCSRFHeaders } from "@/lib/csrf";
-import { fetchWithRetry } from "@/lib/fetch-utils";
+import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
@@ -263,11 +263,11 @@ export default function AdminMarketplacePage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/admin/marketplace/books/${selectedBook.id}/review`, {
+      const response = await apiFetch(`/api/admin/marketplace/books/${selectedBook.id}/review`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ action: "approve" }),
       });
@@ -297,11 +297,11 @@ export default function AdminMarketplacePage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/admin/marketplace/books/${selectedBook.id}/review`, {
+      const response = await apiFetch(`/api/admin/marketplace/books/${selectedBook.id}/review`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({
           action: "reject",
@@ -334,11 +334,11 @@ export default function AdminMarketplacePage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/admin/marketplace/books/${book.id}/feature`, {
+      const response = await apiFetch(`/api/admin/marketplace/books/${book.id}/feature`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ featured: !book.isFeatured }),
       });
@@ -366,11 +366,11 @@ export default function AdminMarketplacePage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/admin/marketplace/books/${book.id}/staff-pick`, {
+      const response = await apiFetch(`/api/admin/marketplace/books/${book.id}/staff-pick`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ staffPick: !book.isStaffPick }),
       });
@@ -395,11 +395,11 @@ export default function AdminMarketplacePage() {
   const handleReorder = async (category: "featured" | "staffPick", bookIds: string[]) => {
     setIsReordering(true);
     try {
-      const response = await fetch("/api/admin/marketplace/books/reorder", {
+      const response = await apiFetch("/api/admin/marketplace/books/reorder", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ category, bookIds }),
       });
@@ -450,11 +450,11 @@ export default function AdminMarketplacePage() {
   const handleBulkFixSizes = async () => {
     setIsSavingPdf(true);
     try {
-      const response = await fetch("/api/admin/marketplace/pdf-management", {
+      const response = await apiFetch("/api/admin/marketplace/pdf-management", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
       });
 
@@ -511,11 +511,11 @@ export default function AdminMarketplacePage() {
   const handleR2Scan = async (autoFix: boolean) => {
     setIsSavingPdf(true);
     try {
-      const response = await fetch("/api/admin/marketplace/pdf-management", {
+      const response = await apiFetch("/api/admin/marketplace/pdf-management", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify({ action: autoFix ? "auto-fix" : "scan" }),
       });
@@ -580,11 +580,11 @@ export default function AdminMarketplacePage() {
       if (fileName) updateData.pdfFileName = fileName;
       if (fileSize) updateData.pdfFileSize = parseInt(fileSize, 10);
 
-      const response = await fetch(`/api/admin/marketplace/books/${bookId}`, {
+      const response = await apiFetch(`/api/admin/marketplace/books/${bookId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          ...getCSRFHeaders(),
+          
         },
         body: JSON.stringify(updateData),
       });

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/fetch-utils";
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,9 +103,9 @@ export function ShopifyCredentialsSection({
       if (isNewApiKey) payload.apiKey = apiKey;
       if (isNewApiSecret) payload.apiSecret = apiSecret;
 
-      const res = await fetch("/api/creator/indiekit/shopify/credentials", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/credentials", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(payload),
       });
 
@@ -130,9 +131,9 @@ export function ShopifyCredentialsSection({
   const handleClearShopifyCredentials = async () => {
     setIsSavingShopifyCreds(true);
     try {
-      const res = await fetch("/api/creator/indiekit/shopify/credentials", {
+      const res = await apiFetch("/api/creator/indiekit/shopify/credentials", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
+        headers: { "Content-Type": "application/json", },
       });
 
       if (!res.ok) {
