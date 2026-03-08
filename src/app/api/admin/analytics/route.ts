@@ -98,7 +98,6 @@ export async function GET(req: NextRequest) {
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
-              { status: "PENDING", divinityCoinPaymentId: { not: null } },
             ],
           },
           _sum: { amount: true },
@@ -113,7 +112,6 @@ export async function GET(req: NextRequest) {
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
-              { status: "PENDING", divinityCoinPaymentId: { not: null } },
             ],
           },
           _sum: { amount: true },
@@ -199,7 +197,6 @@ export async function GET(req: NextRequest) {
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
-              { status: "PENDING", divinityCoinPaymentId: { not: null } },
             ],
           },
           select: {
