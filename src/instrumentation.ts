@@ -1,28 +1,15 @@
 /**
  * Next.js Instrumentation
  *
- * Suppresses known benign errors from polluting PM2 stderr logs:
- * - "Failed to find Server Action" from bot/scanner probes (handled by middleware)
- * - "The requested resource isn't a valid image" from video URLs hitting image optimizer
- * - "Input Buffer is empty" from Sharp processing empty/corrupt files
- * - "did not initialize yet" from Prisma client when running a stale build
- * - "Failed to parse body as FormData" from malformed external requests
- * - "account_invalid" from Stripe when a creator's connected account is deactivated
+ * - Captures unhandled server errors to the self-hosted error tracker
+ * - Suppresses known benign errors from polluting PM2 stderr logs:
+ *   "Failed to find Server Action", "not a valid image", "Input Buffer is empty",
+ *   "did not initialize yet", "Failed to parse body as FormData", "account_invalid"
  */
 
 export async function register() {
-  // Initialize Sentry for error tracking (only when DSN is configured)
-  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    if (process.env.NEXT_RUNTIME === "nodejs") {
-      await import("../sentry.server.config");
-    }
-
-    if (process.env.NEXT_RUNTIME === "edge") {
-      await import("../sentry.edge.config");
-    }
-  }
-
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { captureError } = await import("@/lib/error-tracker");
     const originalConsoleError = console.error;
 
     console.error = (...args: unknown[]) => {
@@ -58,6 +45,25 @@ export async function register() {
       // Suppress Stripe account_invalid errors (creator's connected account deactivated)
       if (message.includes("account_invalid")) {
         return;
+      }
+
+      // Capture non-suppressed errors to the error tracker (fire-and-forget)
+      const errorObj = args.find((a) => a instanceof Error) as Error | undefined;
+      if (errorObj) {
+        captureError({
+          error: errorObj,
+          source: "SERVER",
+          level: "ERROR",
+          metadata: { rawMessage: message },
+        }).catch(() => {});
+      } else if (message.toLowerCase().includes("error") || message.toLowerCase().includes("fail")) {
+        // Capture string-based error messages
+        captureError({
+          error: message,
+          source: "SERVER",
+          level: "WARNING",
+          metadata: { rawArgs: args.map(String) },
+        }).catch(() => {});
       }
 
       originalConsoleError(...args);

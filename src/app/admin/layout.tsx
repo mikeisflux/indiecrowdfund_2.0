@@ -56,6 +56,7 @@ import {
   Sparkles,
   ListOrdered,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -71,6 +72,7 @@ interface SidebarStats {
   bugReports: number;
   retailers: number;
   prelaunch: number;
+  errorLogs: number;
 }
 
 // Navigation item type
@@ -157,6 +159,7 @@ const navigation: NavSection[] = [
       { name: "Settings", href: "/admin/settings", icon: Settings },
       { name: "Security", href: "/admin/security", icon: Lock },
       { name: "Link Sanitizer", href: "/admin/link-sanitizer", icon: Link2 },
+      { name: "Error Logs", href: "/admin/error-logs", icon: AlertCircle, badgeKey: "errorLogs" },
       { name: "Bug Reports", href: "/admin/bug-reports", icon: Bug, badgeKey: "bugReports" },
       { name: "Changelog", href: "/admin/changelog", icon: FileEdit },
       { name: "Cron Jobs", href: "/admin/cron", icon: Clock },

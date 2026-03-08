@@ -96,6 +96,7 @@ export async function GET() {
       newBugReports,
       pendingRetailers,
       pendingPrelaunch,
+      unresolvedErrors,
     ] = await Promise.all([
       // Total users count (exclude soft-deleted)
       db.user.count({ where: { deletedAt: null } }),
@@ -153,6 +154,11 @@ export async function GET() {
           deletedAt: null,
         },
       }),
+
+      // Unresolved error logs
+      db.errorGroup.count({
+        where: { status: "UNRESOLVED" },
+      }).catch(() => 0),
     ]);
 
     // Format large numbers
@@ -179,6 +185,7 @@ export async function GET() {
       bugReports: newBugReports,
       retailers: pendingRetailers,
       prelaunch: pendingPrelaunch,
+      errorLogs: unresolvedErrors,
     });
 
     // Cache for 30 seconds to avoid hammering the DB on every navigation

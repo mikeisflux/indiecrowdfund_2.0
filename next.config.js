@@ -1,4 +1,3 @@
-const { withSentryConfig } = require('@sentry/nextjs');
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
@@ -69,18 +68,4 @@ const nextConfig = {
   },
 };
 
-// Only wrap with Sentry if DSN is configured (avoids build errors without Sentry)
-const config = withBundleAnalyzer(nextConfig);
-
-module.exports = process.env.NEXT_PUBLIC_SENTRY_DSN
-  ? withSentryConfig(config, {
-      // Suppresses source map uploading logs during build
-      silent: true,
-      // Upload source maps for better error traces
-      widenClientFileUpload: true,
-      // Hide source maps from client bundles
-      hideSourceMaps: true,
-      // Disable Sentry telemetry
-      disableLogger: true,
-    })
-  : config;
+module.exports = withBundleAnalyzer(nextConfig);

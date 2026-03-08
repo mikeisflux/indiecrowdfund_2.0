@@ -1,6 +1,5 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
 export default function GlobalError({
@@ -17,7 +16,19 @@ export default function GlobalError({
 
   useEffect(() => {
     if (error) {
-      Sentry.captureException(error);
+      // Report to self-hosted error tracker
+      fetch("/api/error-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: error.message,
+          stack: error.stack,
+          url: typeof window !== "undefined" ? window.location.href : undefined,
+          metadata: { digest: error.digest, source: "global-error-boundary" },
+        }),
+      }).catch(() => {
+        // Ignore fetch errors from the error reporter
+      });
     }
   }, [error]);
 

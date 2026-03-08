@@ -10,6 +10,7 @@ import { ConsentBanner } from "@/components/consent-banner";
 import { SiteHeader } from "@/components/site-header";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { ScreenReaderAnnouncer } from "@/components/ui/screen-reader-announcer";
+import { ErrorReporter } from "@/components/error-reporter";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import "./globals.css";
@@ -182,6 +183,7 @@ export default async function RootLayout({
             </TrackingProvider>
             </ScreenReaderAnnouncer>
             <Toaster />
+            <ErrorReporter />
           </ThemeProvider>
         </AuthProvider>
       </body>
