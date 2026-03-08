@@ -184,10 +184,10 @@ export async function captureError(options: CaptureErrorOptions): Promise<void> 
         skip: 50,
         select: { id: true },
       })
-      .then((old) => {
+      .then((old: { id: string }[]) => {
         if (old.length > 0) {
           return db.errorOccurrence.deleteMany({
-            where: { id: { in: old.map((o) => o.id) } },
+            where: { id: { in: old.map((o: { id: string }) => o.id) } },
           });
         }
       })

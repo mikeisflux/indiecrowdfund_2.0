@@ -54,7 +54,7 @@ export async function GET(
     hourStart.setMinutes(0, 0, 0);
     const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000);
     const count = recentOccurrences.filter(
-      (o) => o.timestamp >= hourStart && o.timestamp < hourEnd
+      (o: { timestamp: Date }) => o.timestamp >= hourStart && o.timestamp < hourEnd
     ).length;
     frequencyChart.push({
       hour: hourStart.toISOString(),
