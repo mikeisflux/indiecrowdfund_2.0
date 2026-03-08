@@ -75,9 +75,29 @@ function getPrismaClient(): PrismaClient {
       client = new PrismaClient({
         log:
           process.env.NODE_ENV === "development"
-            ? ["query", "error", "warn"]
-            : ["error"],
+            ? ["query", { emit: "event", level: "error" }, { emit: "event", level: "warn" }]
+            : [{ emit: "event", level: "error" }],
       });
+
+      // Filter out noisy connection termination errors from Prisma engine logs.
+      // These flood the logs during normal PostgreSQL restarts (57P01).
+      const IGNORED_PRISMA_PATTERNS = [
+        "terminating connection due to administrator command",
+        "server closed the connection unexpectedly",
+      ];
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (client.$on as any)("error", (e: { message: string }) => {
+        if (IGNORED_PRISMA_PATTERNS.some((p) => e.message.includes(p))) return;
+        dbLogger.error({ err: e.message }, "Prisma engine error");
+      });
+
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (client.$on as any)("warn", (e: { message: string }) => {
+          dbLogger.warn({ err: e.message }, "Prisma engine warning");
+        });
+      }
     } catch (error) {
       const now = Date.now();
       if (now - lastInitErrorTime > INIT_ERROR_COOLDOWN_MS) {
