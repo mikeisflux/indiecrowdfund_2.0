@@ -111,5 +111,8 @@ while true; do
     rm -f "$WORK_FILE"
   fi
 
+  # Notify systemd watchdog that we're alive
+  systemd-notify WATCHDOG=1 2>/dev/null || true
+
   sleep "$INTERVAL"
 done
