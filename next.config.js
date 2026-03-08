@@ -7,9 +7,10 @@ const nextConfig = {
   // Allow custom build output directory for zero-downtime deployments
   distDir: process.env.NEXT_BUILD_OUTPUT || '.next',
   // Note: Shopify iframe headers are handled by middleware.ts for proper CSP frame-ancestors support
-  // Externalize jsdom so it's resolved from node_modules at runtime
-  // instead of being bundled by webpack (isomorphic-dompurify depends on it for SSR)
-  serverExternalPackages: ['jsdom'],
+  // Externalize jsdom and isomorphic-dompurify so they're resolved from
+  // node_modules at runtime. Without this, jsdom's __dirname resolves to
+  // the .next build directory causing ENOENT on default-stylesheet.css
+  serverExternalPackages: ['jsdom', 'isomorphic-dompurify'],
   experimental: {
     // Increase body size limit for server actions (default is 1MB)
     serverActions: {

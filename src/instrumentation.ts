@@ -47,6 +47,11 @@ export async function register() {
         return;
       }
 
+      // Suppress Node.js 22 undici TransformStream bug (benign internal error during fetch decompression)
+      if (message.includes("transformAlgorithm is not a function")) {
+        return;
+      }
+
       // Capture non-suppressed errors to the error tracker (fire-and-forget)
       const errorObj = args.find((a) => a instanceof Error) as Error | undefined;
       if (errorObj) {
