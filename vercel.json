@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/email-queue",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-pledges",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

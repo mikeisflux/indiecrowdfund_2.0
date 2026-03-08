@@ -467,9 +467,11 @@ export default function AnalyticsPage() {
                       <CardContent className="p-6">
                         <p className="text-sm font-medium text-zinc-500">Gross Revenue</p>
                         <p className="mt-1 text-2xl font-bold">
-                          {formatCurrency(revenueData.byStatus.reduce((sum, s) => sum + s.total, 0))}
+                          {formatCurrency(revenueData.byStatus
+                            .filter(s => s.status === "COMPLETED" || s.status === "PENDING")
+                            .reduce((sum, s) => sum + s.total, 0))}
                         </p>
-                        <p className="mt-1 text-sm text-zinc-500">Total from all pledges</p>
+                        <p className="mt-1 text-sm text-zinc-500">Total from committed pledges</p>
                       </CardContent>
                     </Card>
                     <Card>

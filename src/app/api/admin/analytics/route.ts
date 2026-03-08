@@ -230,9 +230,13 @@ export async function GET(req: NextRequest) {
             backerCount: true
           }
         }),
-        // Pledges by status
+        // Pledges by status (only non-deleted pledges on active projects)
         db.pledge.groupBy({
           by: ["status"],
+          where: {
+            deletedAt: null,
+            project: { deletedAt: null },
+          },
           _count: true,
           _sum: { amount: true }
         })
