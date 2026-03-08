@@ -97,8 +97,6 @@ export async function GET(req: NextRequest) {
             project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
             OR: [
               { status: "COMPLETED" },
-              { status: "PENDING", stripePaymentMethodId: { not: null } },
-              { status: "PENDING", stripeSetupIntentId: { not: null } },
               { status: "PENDING", confirmationEmailSent: true },
               { status: "PENDING", divinityCoinPaymentId: { not: null } },
             ],
@@ -114,8 +112,6 @@ export async function GET(req: NextRequest) {
             project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
             OR: [
               { status: "COMPLETED" },
-              { status: "PENDING", stripePaymentMethodId: { not: null } },
-              { status: "PENDING", stripeSetupIntentId: { not: null } },
               { status: "PENDING", confirmationEmailSent: true },
               { status: "PENDING", divinityCoinPaymentId: { not: null } },
             ],
@@ -202,8 +198,6 @@ export async function GET(req: NextRequest) {
             project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
             OR: [
               { status: "COMPLETED" },
-              { status: "PENDING", stripePaymentMethodId: { not: null } },
-              { status: "PENDING", stripeSetupIntentId: { not: null } },
               { status: "PENDING", confirmationEmailSent: true },
               { status: "PENDING", divinityCoinPaymentId: { not: null } },
             ],
