@@ -10,7 +10,18 @@
  * - "account_invalid" from Stripe when a creator's connected account is deactivated
  */
 
-export function register() {
+export async function register() {
+  // Initialize Sentry for error tracking (only when DSN is configured)
+  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    if (process.env.NEXT_RUNTIME === "nodejs") {
+      await import("../sentry.server.config");
+    }
+
+    if (process.env.NEXT_RUNTIME === "edge") {
+      await import("../sentry.edge.config");
+    }
+  }
+
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const originalConsoleError = console.error;
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import {
   Archive,
   CheckCircle,
   Bookmark,
+  Loader2,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { HeroSlider } from "@/components/hero-slider";
@@ -329,19 +331,378 @@ async function getHeroSlides() {
   }
 }
 
+// Skeleton loader for project sections
+function ProjectSectionSkeleton() {
+  return (
+    <div className="py-8 md:py-12 relative">
+      <div className="container">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <div className="h-8 w-48 bg-muted rounded animate-pulse mb-2" />
+            <div className="h-4 w-64 bg-muted rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-card rounded-2xl overflow-hidden">
+              <div className="aspect-video bg-muted animate-pulse" />
+              <div className="p-4 space-y-3">
+                <div className="h-5 w-3/4 bg-muted rounded animate-pulse" />
+                <div className="h-4 w-full bg-muted rounded animate-pulse" />
+                <div className="h-3 w-1/3 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatsSectionSkeleton() {
+  return (
+    <section className="relative border-y border-border/50 py-8 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-cyan-500/5 to-purple-500/5" />
+      <div className="container relative flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    </section>
+  );
+}
+
+// Async server component for stats section
+async function StatsSection() {
+  const [stats, retailerStats] = await Promise.all([
+    getPlatformStats(),
+    getRetailerStats(),
+  ]);
+
+  return (
+    <section className="relative border-y border-border/50 py-8 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-cyan-500/5 to-purple-500/5" />
+      <div className="container relative">
+        <HomeStatsPoller initialStats={{
+          totalPledged: stats.totalPledged,
+          projectsFunded: stats.projectsFunded,
+          successRate: stats.successRate,
+          backerPool: stats.backerPool,
+          certifiedRetailers: retailerStats.certifiedRetailers,
+        }} />
+      </div>
+    </section>
+  );
+}
+
+// Async server component for featured projects
+async function FeaturedProjectsSection({ userId }: { userId: string | undefined }) {
+  const [featuredProjects, followedProjectIds] = await Promise.all([
+    getFeaturedProjects(),
+    getUserFollowedProjectIds(userId),
+  ]);
+
+  if (featuredProjects.length === 0) return null;
+
+  return (
+    <section className="py-8 md:py-12 relative">
+      <div className="container">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-500/20 glow-pulse">
+                <Zap className="h-5 w-5 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold md:text-3xl">Featured Projects</h2>
+            </div>
+            <p className="text-muted-foreground">Handpicked projects we love</p>
+          </div>
+          <Link href="/discover">
+            <Button variant="ghost" className="group hover:bg-primary/10">
+              View all
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {featuredProjects.map((project, index) => (
+            <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+              <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
+                <div className="aspect-video bg-muted relative overflow-hidden">
+                  {project.imageUrl ? (
+                    <Image
+                      src={project.imageUrl}
+                      alt={project.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="project-card-image object-cover"
+                      priority={index < 3}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-cyan-500/10">
+                      <Play className="h-12 w-12 text-muted-foreground/50" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Badge className="absolute left-3 top-3 bg-gradient-to-r from-primary to-emerald-600 border-0 shadow-lg">
+                    {project.category}
+                  </Badge>
+                  <div className="absolute right-3 top-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 live-indicator" />
+                    Live
+                  </div>
+                </div>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold line-clamp-1 group-hover:text-primary transition-colors flex-1">{project.title}</h3>
+                    {followedProjectIds.has(project.id) && (
+                      <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
+                        <Bookmark className="w-3 h-3 mr-1 fill-current" />
+                        Following
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+                    {project.subtitle}
+                  </p>
+                  <p className="text-xs text-muted-foreground">by <span className="text-foreground/70">{project.creator}</span></p>
+                </CardContent>
+                <CardFooter className="flex-col items-start gap-3 border-t border-border/50 pt-4">
+                  <div className="relative w-full h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-emerald-500 rounded-full progress-glow-bar"
+                      style={{ width: `${Math.min((Number(project.currentAmount) / Number(project.goalAmount)) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex w-full items-center justify-between text-sm">
+                    <div>
+                      <span className="font-semibold text-primary">
+                        ${Number(project.currentAmount).toLocaleString()}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        / ${Number(project.goalAmount).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {project.backerCount}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining}d`}
+                      </span>
+                    </div>
+                  </div>
+                </CardFooter>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Async server component for prelaunch projects
+async function PrelaunchProjectsSection({ userId }: { userId: string | undefined }) {
+  const [prelaunchProjects, followedProjectIds] = await Promise.all([
+    getPrelaunchProjects(),
+    getUserFollowedProjectIds(userId),
+  ]);
+
+  if (prelaunchProjects.length === 0) return null;
+
+  return (
+    <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent" />
+      <div className="container relative">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 glow-pulse">
+                <Sparkles className="h-5 w-5 text-amber-500" />
+              </div>
+              <h2 className="text-2xl font-bold md:text-3xl">Projects in Prelaunch</h2>
+            </div>
+            <p className="text-muted-foreground">Coming soon - follow to get notified when they launch</p>
+          </div>
+          <Link href="/discover?prelaunch=true">
+            <Button variant="ghost" className="group hover:bg-amber-500/10">
+              View all
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {prelaunchProjects.map((project, index) => (
+            <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+              <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-amber-500/20">
+                <div className="aspect-video bg-muted relative overflow-hidden">
+                  {project.imageUrl ? (
+                    <Image
+                      src={project.imageUrl}
+                      alt={project.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="project-card-image object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-amber-500/10 to-orange-500/10">
+                      <Sparkles className="h-12 w-12 text-amber-400/50" />
+                    </div>
+                  )}
+                  <Badge className="absolute left-3 top-3 bg-gradient-to-r from-amber-500 to-orange-500 border-0 shadow-lg">
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Coming Soon
+                  </Badge>
+                  <Badge className="absolute right-3 top-3 bg-background/80 backdrop-blur-sm" variant="secondary">
+                    {project.category}
+                  </Badge>
+                </div>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold line-clamp-1 flex-1">{project.title}</h3>
+                    {followedProjectIds.has(project.id) && (
+                      <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
+                        <Bookmark className="w-3 h-3 mr-1 fill-current" />
+                        Following
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+                    {project.subtitle}
+                  </p>
+                  <p className="text-xs text-muted-foreground">by <span className="text-foreground/70">{project.creator}</span></p>
+                </CardContent>
+                <CardFooter className="border-t border-border/50 pt-4">
+                  <div className="flex w-full items-center justify-between text-sm">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Eye className="h-4 w-4" />
+                      <span>{project.followerCount} {project.followerCount === 1 ? 'follower' : 'followers'}</span>
+                    </div>
+                    {project.launchDate && (
+                      <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent font-medium">
+                        Launching {new Date(project.launchDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                </CardFooter>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Async server component for past campaigns
+async function PastCampaignsSection() {
+  const pastCampaigns = await getPastCampaigns();
+
+  if (pastCampaigns.length === 0) return null;
+
+  return (
+    <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-muted/20 to-transparent" />
+      <div className="container relative">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-zinc-500/20 to-slate-500/20">
+                <Archive className="h-5 w-5 text-zinc-500" />
+              </div>
+              <h2 className="text-2xl font-bold md:text-3xl">Past Projects</h2>
+            </div>
+            <p className="text-muted-foreground">Recently completed campaigns</p>
+          </div>
+          <Link href="/discover?status=past">
+            <Button variant="ghost" className="group">
+              View all
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {pastCampaigns.map((project, index) => (
+            <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+              <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
+                <div className="aspect-video bg-muted relative overflow-hidden">
+                  {project.imageUrl ? (
+                    <Image
+                      src={project.imageUrl}
+                      alt={project.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="project-card-image object-cover grayscale-[20%]"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-500/10 to-slate-500/10">
+                      <Archive className="h-12 w-12 text-zinc-400/50" />
+                    </div>
+                  )}
+                  <Badge className={`absolute left-3 top-3 shadow-lg ${project.wasSuccessful ? 'bg-gradient-to-r from-emerald-500 to-green-600 border-0' : 'bg-zinc-500/80 backdrop-blur-sm'}`}>
+                    {project.wasSuccessful ? (
+                      <><CheckCircle className="h-3 w-3 mr-1" /> Funded</>
+                    ) : (
+                      'Ended'
+                    )}
+                  </Badge>
+                  <Badge className="absolute right-3 top-3 bg-background/80 backdrop-blur-sm" variant="secondary">
+                    {project.category}
+                  </Badge>
+                </div>
+                <CardContent className="pt-4">
+                  <h3 className="mb-1 font-semibold line-clamp-1">{project.title}</h3>
+                  <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+                    {project.subtitle}
+                  </p>
+                  <p className="text-xs text-muted-foreground">by <span className="text-foreground/70">{project.creator}</span></p>
+                </CardContent>
+                <CardFooter className="flex-col items-start gap-3 border-t border-border/50 pt-4">
+                  <div className="relative w-full h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`absolute inset-y-0 left-0 rounded-full ${project.wasSuccessful ? 'bg-gradient-to-r from-emerald-500 to-green-500' : 'bg-zinc-400'}`}
+                      style={{ width: `${Math.min(project.fundingPercentage, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex w-full items-center justify-between text-sm">
+                    <div>
+                      <span className={`font-semibold ${project.wasSuccessful ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                        {project.fundingPercentage}% funded
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {project.backerCount}
+                      </span>
+                      {project.endDate && (
+                        <span className="text-xs">
+                          Ended {new Date(project.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </CardFooter>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [stats, retailerStats, featuredProjects, prelaunchProjects, pastCampaigns, followedProjectIds, heroSlides] = await Promise.all([
-    getPlatformStats(),
-    getRetailerStats(),
-    getFeaturedProjects(),
-    getPrelaunchProjects(),
-    getPastCampaigns(),
-    getUserFollowedProjectIds(userId),
-    getHeroSlides(),
-  ]);
+  // Only fetch hero slides synchronously (above the fold)
+  const heroSlides = await getHeroSlides();
 
   return (
     <main className="min-h-screen relative">
@@ -395,297 +756,25 @@ export default async function HomePage() {
       {/* Hero Section */}
       <HeroSlider initialSlides={heroSlides} />
 
-      {/* Stats Section */}
-      <section className="relative border-y border-border/50 py-8 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-cyan-500/5 to-purple-500/5" />
-        <div className="container relative">
-          <HomeStatsPoller initialStats={{
-            totalPledged: stats.totalPledged,
-            projectsFunded: stats.projectsFunded,
-            successRate: stats.successRate,
-            backerPool: stats.backerPool,
-            certifiedRetailers: retailerStats.certifiedRetailers,
-          }} />
-        </div>
-      </section>
+      {/* Stats Section - streams in */}
+      <Suspense fallback={<StatsSectionSkeleton />}>
+        <StatsSection />
+      </Suspense>
 
-      {/* Featured Projects */}
-      <section className="py-8 md:py-12 relative">
-        <div className="container">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-500/20 glow-pulse">
-                  <Zap className="h-5 w-5 text-primary" />
-                </div>
-                <h2 className="text-2xl font-bold md:text-3xl">Featured Projects</h2>
-              </div>
-              <p className="text-muted-foreground">Handpicked projects we love</p>
-            </div>
-            <Link href="/discover">
-              <Button variant="ghost" className="group hover:bg-primary/10">
-                View all
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-          </div>
+      {/* Featured Projects - streams in */}
+      <Suspense fallback={<ProjectSectionSkeleton />}>
+        <FeaturedProjectsSection userId={userId} />
+      </Suspense>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {featuredProjects.map((project, index) => (
-              <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
-                  <div className="aspect-video bg-muted relative overflow-hidden">
-                    {project.imageUrl ? (
-                      <Image
-                        src={project.imageUrl}
-                        alt={project.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="project-card-image object-cover"
-                        priority={index < 3}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-cyan-500/10">
-                        <Play className="h-12 w-12 text-muted-foreground/50" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <Badge className="absolute left-3 top-3 bg-gradient-to-r from-primary to-emerald-600 border-0 shadow-lg">
-                      {project.category}
-                    </Badge>
-                    <div className="absolute right-3 top-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
-                      <div className="w-2 h-2 rounded-full bg-emerald-400 live-indicator" />
-                      Live
-                    </div>
-                  </div>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold line-clamp-1 group-hover:text-primary transition-colors flex-1">{project.title}</h3>
-                      {followedProjectIds.has(project.id) && (
-                        <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
-                          <Bookmark className="w-3 h-3 mr-1 fill-current" />
-                          Following
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
-                      {project.subtitle}
-                    </p>
-                    <p className="text-xs text-muted-foreground">by <span className="text-foreground/70">{project.creator}</span></p>
-                  </CardContent>
-                  <CardFooter className="flex-col items-start gap-3 border-t border-border/50 pt-4">
-                    <div className="relative w-full h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-emerald-500 rounded-full progress-glow-bar"
-                        style={{ width: `${Math.min((Number(project.currentAmount) / Number(project.goalAmount)) * 100, 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex w-full items-center justify-between text-sm">
-                      <div>
-                        <span className="font-semibold text-primary">
-                          ${Number(project.currentAmount).toLocaleString()}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {" "}
-                          / ${Number(project.goalAmount).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {project.backerCount}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysRemaining}d`}
-                        </span>
-                      </div>
-                    </div>
-                  </CardFooter>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Prelaunch Projects - streams in */}
+      <Suspense fallback={<ProjectSectionSkeleton />}>
+        <PrelaunchProjectsSection userId={userId} />
+      </Suspense>
 
-      {/* Projects in Prelaunch */}
-      {prelaunchProjects.length > 0 && (
-        <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent" />
-          <div className="container relative">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 glow-pulse">
-                    <Sparkles className="h-5 w-5 text-amber-500" />
-                  </div>
-                  <h2 className="text-2xl font-bold md:text-3xl">Projects in Prelaunch</h2>
-                </div>
-                <p className="text-muted-foreground">Coming soon - follow to get notified when they launch</p>
-              </div>
-              <Link href="/discover?prelaunch=true">
-                <Button variant="ghost" className="group hover:bg-amber-500/10">
-                  View all
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {prelaunchProjects.map((project, index) => (
-                <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-amber-500/20">
-                    <div className="aspect-video bg-muted relative overflow-hidden">
-                      {project.imageUrl ? (
-                        <Image
-                          src={project.imageUrl}
-                          alt={project.title}
-                          fill
-                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          className="project-card-image object-cover"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-amber-500/10 to-orange-500/10">
-                          <Sparkles className="h-12 w-12 text-amber-400/50" />
-                        </div>
-                      )}
-                      <Badge className="absolute left-3 top-3 bg-gradient-to-r from-amber-500 to-orange-500 border-0 shadow-lg">
-                        <Sparkles className="w-3 h-3 mr-1" />
-                        Coming Soon
-                      </Badge>
-                      <Badge className="absolute right-3 top-3 bg-background/80 backdrop-blur-sm" variant="secondary">
-                        {project.category}
-                      </Badge>
-                    </div>
-                    <CardContent className="pt-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold line-clamp-1 flex-1">{project.title}</h3>
-                        {followedProjectIds.has(project.id) && (
-                          <Badge variant="secondary" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
-                            <Bookmark className="w-3 h-3 mr-1 fill-current" />
-                            Following
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
-                        {project.subtitle}
-                      </p>
-                      <p className="text-xs text-muted-foreground">by <span className="text-foreground/70">{project.creator}</span></p>
-                    </CardContent>
-                    <CardFooter className="border-t border-border/50 pt-4">
-                      <div className="flex w-full items-center justify-between text-sm">
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Eye className="h-4 w-4" />
-                          <span>{project.followerCount} {project.followerCount === 1 ? 'follower' : 'followers'}</span>
-                        </div>
-                        {project.launchDate && (
-                          <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent font-medium">
-                            Launching {new Date(project.launchDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </span>
-                        )}
-                      </div>
-                    </CardFooter>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Past Projects */}
-      {pastCampaigns.length > 0 && (
-        <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-muted/20 to-transparent" />
-          <div className="container relative">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-zinc-500/20 to-slate-500/20">
-                    <Archive className="h-5 w-5 text-zinc-500" />
-                  </div>
-                  <h2 className="text-2xl font-bold md:text-3xl">Past Projects</h2>
-                </div>
-                <p className="text-muted-foreground">Recently completed campaigns</p>
-              </div>
-              <Link href="/discover?status=past">
-                <Button variant="ghost" className="group">
-                  View all
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {pastCampaigns.map((project, index) => (
-                <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
-                    <div className="aspect-video bg-muted relative overflow-hidden">
-                      {project.imageUrl ? (
-                        <Image
-                          src={project.imageUrl}
-                          alt={project.title}
-                          fill
-                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          className="project-card-image object-cover grayscale-[20%]"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-500/10 to-slate-500/10">
-                          <Archive className="h-12 w-12 text-zinc-400/50" />
-                        </div>
-                      )}
-                      <Badge className={`absolute left-3 top-3 shadow-lg ${project.wasSuccessful ? 'bg-gradient-to-r from-emerald-500 to-green-600 border-0' : 'bg-zinc-500/80 backdrop-blur-sm'}`}>
-                        {project.wasSuccessful ? (
-                          <><CheckCircle className="h-3 w-3 mr-1" /> Funded</>
-                        ) : (
-                          'Ended'
-                        )}
-                      </Badge>
-                      <Badge className="absolute right-3 top-3 bg-background/80 backdrop-blur-sm" variant="secondary">
-                        {project.category}
-                      </Badge>
-                    </div>
-                    <CardContent className="pt-4">
-                      <h3 className="mb-1 font-semibold line-clamp-1">{project.title}</h3>
-                      <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
-                        {project.subtitle}
-                      </p>
-                      <p className="text-xs text-muted-foreground">by <span className="text-foreground/70">{project.creator}</span></p>
-                    </CardContent>
-                    <CardFooter className="flex-col items-start gap-3 border-t border-border/50 pt-4">
-                      <div className="relative w-full h-2 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`absolute inset-y-0 left-0 rounded-full ${project.wasSuccessful ? 'bg-gradient-to-r from-emerald-500 to-green-500' : 'bg-zinc-400'}`}
-                          style={{ width: `${Math.min(project.fundingPercentage, 100)}%` }}
-                        />
-                      </div>
-                      <div className="flex w-full items-center justify-between text-sm">
-                        <div>
-                          <span className={`font-semibold ${project.wasSuccessful ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-                            {project.fundingPercentage}% funded
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {project.backerCount}
-                          </span>
-                          {project.endDate && (
-                            <span className="text-xs">
-                              Ended {new Date(project.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Past Campaigns - streams in */}
+      <Suspense fallback={<ProjectSectionSkeleton />}>
+        <PastCampaignsSection />
+      </Suspense>
 
       {/* How It Works */}
       <section className="relative py-8 md:py-12 overflow-hidden">

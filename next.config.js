@@ -1,3 +1,8 @@
+const { withSentryConfig } = require('@sentry/nextjs');
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Allow custom build output directory for zero-downtime deployments
@@ -15,6 +20,20 @@ const nextConfig = {
     // Without this, large file uploads (PDFs) get truncated and fail with
     // "Failed to parse body as FormData" because the multipart boundary is lost
     middlewareClientMaxBodySize: 250 * 1024 * 1024, // 250MB
+    // Tree-shake large icon/component libraries for smaller bundles
+    optimizePackageImports: [
+      'lucide-react',
+      'recharts',
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-tooltip',
+      'date-fns',
+    ],
   },
   // Image optimization settings
   images: {
@@ -50,4 +69,18 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Only wrap with Sentry if DSN is configured (avoids build errors without Sentry)
+const config = withBundleAnalyzer(nextConfig);
+
+module.exports = process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? withSentryConfig(config, {
+      // Suppresses source map uploading logs during build
+      silent: true,
+      // Upload source maps for better error traces
+      widenClientFileUpload: true,
+      // Hide source maps from client bundles
+      hideSourceMaps: true,
+      // Disable Sentry telemetry
+      disableLogger: true,
+    })
+  : config;

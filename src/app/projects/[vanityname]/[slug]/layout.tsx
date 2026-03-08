@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { db } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
+import { JsonLd } from "@/components/json-ld";
 
 interface Props {
   params: Promise<{ vanityname: string; slug: string }>;
@@ -125,19 +126,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+const projectSelectForJsonLd = {
+  id: true,
+  title: true,
+  subtitle: true,
+  description: true,
+  imageUrl: true,
+  category: true,
+  goalAmount: true,
+  currentAmount: true,
+  backerCount: true,
+  endDate: true,
+  status: true,
+  creator: {
+    select: { name: true, vanityUrl: true },
+  },
+} as const;
+
 export default async function ProjectLayout({ params, children }: Props) {
   const { vanityname, slug } = await params;
 
   // Handle legacy URL (vanityname = "_" from middleware rewrite)
   const isLegacyUrl = vanityname === "_";
 
-  let project;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let project: any;
 
   if (isLegacyUrl) {
     // For legacy URLs, look up project directly by slug
     project = await db.project.findUnique({
       where: { slug },
-      select: { id: true },
+      select: projectSelectForJsonLd,
     });
   } else {
     // Verify the vanityname matches the project creator
@@ -155,7 +174,7 @@ export default async function ProjectLayout({ params, children }: Props) {
         slug,
         creatorId: creator.id,
       },
-      select: { id: true },
+      select: projectSelectForJsonLd,
     });
 
     if (!project) {
@@ -179,5 +198,65 @@ export default async function ProjectLayout({ params, children }: Props) {
     notFound();
   }
 
-  return children;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.com";
+  const creatorVanity = project.creator?.vanityUrl || vanityname;
+  const projectUrl = `${baseUrl}/projects/${creatorVanity}/${slug}`;
+  const imageUrl = project.imageUrl
+    ? (project.imageUrl.startsWith("http") ? project.imageUrl : `${baseUrl}${project.imageUrl}`)
+    : `${baseUrl}/og-default.png`;
+
+  const fundingPercentage = Number(project.goalAmount) > 0
+    ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)
+    : 0;
+
+  const jsonLdData: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: project.title,
+    description: project.subtitle || project.title,
+    image: imageUrl,
+    url: projectUrl,
+    brand: {
+      "@type": "Organization",
+      name: "IndieCrowdfund",
+    },
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "USD",
+      price: "1.00",
+      availability: project.status === "LIVE" ? "https://schema.org/InStock" : "https://schema.org/SoldOut",
+      url: projectUrl,
+    },
+    aggregateRating: project.backerCount > 0 ? {
+      "@type": "AggregateRating",
+      ratingValue: Math.min(5, Math.round((fundingPercentage / 20) * 10) / 10),
+      bestRating: 5,
+      ratingCount: project.backerCount,
+    } : undefined,
+    additionalProperty: [
+      { "@type": "PropertyValue", name: "Funding Goal", value: `$${Number(project.goalAmount).toLocaleString()}` },
+      { "@type": "PropertyValue", name: "Amount Raised", value: `$${Number(project.currentAmount).toLocaleString()}` },
+      { "@type": "PropertyValue", name: "Backers", value: String(project.backerCount) },
+      { "@type": "PropertyValue", name: "Category", value: project.category },
+    ],
+  };
+
+  const breadcrumbData: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
+      { "@type": "ListItem", position: 2, name: "Discover", item: `${baseUrl}/discover` },
+      { "@type": "ListItem", position: 3, name: project.category, item: `${baseUrl}/discover?category=${encodeURIComponent(project.category.toLowerCase())}` },
+      { "@type": "ListItem", position: 4, name: project.title, item: projectUrl },
+    ],
+  };
+
+  return (
+    <>
+      <JsonLd data={jsonLdData} />
+      <JsonLd data={breadcrumbData} />
+      {children}
+    </>
+  );
 }

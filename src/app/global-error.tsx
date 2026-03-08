@@ -1,5 +1,8 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
+import { useEffect } from "react";
+
 export default function GlobalError({
   error,
   reset,
@@ -11,6 +14,12 @@ export default function GlobalError({
   // This global error boundary prevents that crash from propagating
   const message = error?.message || "An unexpected error occurred";
   const digest = error?.digest;
+
+  useEffect(() => {
+    if (error) {
+      Sentry.captureException(error);
+    }
+  }, [error]);
 
   // Log for debugging but don't crash
   if (error) {
