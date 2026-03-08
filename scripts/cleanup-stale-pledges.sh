@@ -1,9 +1,9 @@
 #!/bin/bash
 # Cleanup stale PENDING pledges (abandoned checkouts)
-# Run this via cron every 2 days
+# Run this via cron every hour
 #
-# Crontab entry (runs at 3 AM every 2 days):
-# 0 3 */2 * * /root/indiecrowdfund_2.0/scripts/cleanup-stale-pledges.sh >> /var/log/pledge-cleanup.log 2>&1
+# Crontab entry (runs every hour):
+# 0 * * * * /root/indiecrowdfund_2.0/scripts/cleanup-stale-pledges.sh >> /var/log/pledge-cleanup.log 2>&1
 
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')] Pledge Cleanup:"
 
