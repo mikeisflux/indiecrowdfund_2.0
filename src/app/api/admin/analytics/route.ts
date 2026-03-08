@@ -73,7 +73,6 @@ export async function GET(req: NextRequest) {
         currentUsers,
         previousUsers,
         projectsByCategory,
-        activeProjects,
       ] = await Promise.all([
         // Page views current period
         db.userBehavior.count({
@@ -132,14 +131,6 @@ export async function GET(req: NextRequest) {
           _count: true,
           _sum: { currentAmount: true }
         }),
-        // Total revenue from active project currentAmounts (cumulative, not period-based)
-        db.project.findMany({
-          where: {
-            status: { in: ["LIVE", "FUNDED", "FAILED"] },
-            deletedAt: null,
-          },
-          select: { currentAmount: true },
-        }),
       ]);
 
       // Calculate growth percentages
@@ -163,7 +154,7 @@ export async function GET(req: NextRequest) {
             growth: visitGrowth.toFixed(1)
           },
           revenue: {
-            current: activeProjects.reduce((sum: number, p: { currentAmount: unknown }) => sum + Number(p.currentAmount), 0),
+            current: Number(currentPledges._sum.amount) || 0,
             previous: Number(previousPledges._sum.amount) || 0,
             growth: revenueGrowth.toFixed(1),
             count: currentPledges._count
@@ -187,7 +178,7 @@ export async function GET(req: NextRequest) {
 
     if (tab === "revenue") {
       // Get revenue breakdown
-      const [completedPledges, topProjects, pledgesByStatus] = await Promise.all([
+      const [completedPledges, topProjects, completedStats, committedPendingStats] = await Promise.all([
         // Get committed pledges in the period for grouping by day
         db.pledge.findMany({
           where: {
@@ -221,12 +212,23 @@ export async function GET(req: NextRequest) {
             backerCount: true
           }
         }),
-        // Pledges by status (only non-deleted pledges on active projects)
-        db.pledge.groupBy({
-          by: ["status"],
+        // Completed pledges aggregate
+        db.pledge.aggregate({
           where: {
             deletedAt: null,
-            project: { deletedAt: null },
+            status: "COMPLETED",
+            project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+          },
+          _count: true,
+          _sum: { amount: true }
+        }),
+        // Committed pending pledges aggregate
+        db.pledge.aggregate({
+          where: {
+            deletedAt: null,
+            status: "PENDING",
+            confirmationEmailSent: true,
+            project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
           },
           _count: true,
           _sum: { amount: true }
@@ -255,11 +257,18 @@ export async function GET(req: NextRequest) {
         revenue: {
           byDay,
           topProjects,
-          byStatus: pledgesByStatus.map(p => ({
-            status: p.status,
-            count: p._count,
-            total: Number(p._sum.amount) || 0
-          }))
+          byStatus: [
+            {
+              status: "COMPLETED",
+              count: completedStats._count,
+              total: Number(completedStats._sum.amount) || 0
+            },
+            {
+              status: "PENDING",
+              count: committedPendingStats._count,
+              total: Number(committedPendingStats._sum.amount) || 0
+            }
+          ]
         }
       });
     }
