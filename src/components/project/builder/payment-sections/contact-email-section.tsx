@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { ContactEmailSectionProps } from "./types";
 
 export function ContactEmailSection({ payment, updatePayment, projectId }: ContactEmailSectionProps) {

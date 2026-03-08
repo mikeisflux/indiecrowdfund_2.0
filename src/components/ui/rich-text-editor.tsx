@@ -9,7 +9,6 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect, useCallback, useState, useRef } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { Button } from "./button";
 import {
   Bold,

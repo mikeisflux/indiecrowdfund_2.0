@@ -1,7 +1,6 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";

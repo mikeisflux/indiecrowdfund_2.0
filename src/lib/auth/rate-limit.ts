@@ -185,49 +185,6 @@ function cleanup() {
   });
 }
 
-function checkRateLimit(
-  store: Map<string, RateLimitEntry>,
-  key: string,
-  config: RateLimitConfig
-): { allowed: boolean; remainingAttempts: number; retryAfter?: number } {
-  cleanup();
-
-  const now = Date.now();
-  const entry = store.get(key);
-
-  if (!entry) {
-    return { allowed: true, remainingAttempts: config.maxAttempts };
-  }
-
-  // Check if currently locked out
-  if (entry.lockedUntil && now < entry.lockedUntil) {
-    return {
-      allowed: false,
-      remainingAttempts: 0,
-      retryAfter: Math.ceil((entry.lockedUntil - now) / 1000),
-    };
-  }
-
-  // Check if window has expired
-  if (now - entry.firstAttempt > config.windowMs) {
-    // Reset the window
-    store.set(key, {
-      attempts: 0,
-      firstAttempt: now,
-      lastAttempt: now,
-    });
-    return { allowed: true, remainingAttempts: config.maxAttempts };
-  }
-
-  // Check attempts within window
-  const remaining = config.maxAttempts - entry.attempts;
-  return {
-    allowed: remaining > 0,
-    remainingAttempts: Math.max(0, remaining),
-    retryAfter: remaining <= 0 ? Math.ceil((entry.firstAttempt + config.windowMs - now) / 1000) : undefined,
-  };
-}
-
 function recordAttempt(
   store: Map<string, RateLimitEntry>,
   key: string,
