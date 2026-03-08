@@ -43,7 +43,7 @@ async function getRedis() {
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!redisUrl || !redisToken) {
-    logger.info({}, "Redis not configured, using in-memory rate limiting");
+    logger.debug({}, "Redis not configured, using in-memory rate limiting");
     return null;
   }
 

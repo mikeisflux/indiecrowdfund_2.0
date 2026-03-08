@@ -34,6 +34,7 @@ interface CachedSecret {
 
 const SECRET_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const secretCache = new Map<SecretName, CachedSecret>();
+const plaintextWarned = new Set<SecretName>();
 
 /**
  * Encrypt a secret for storage in the database.
@@ -77,7 +78,10 @@ export function getSecret(name: SecretName, rawValue: string | null | undefined)
     rawValue.startsWith("sk-ant-");
 
   if (isPlaintext) {
-    logger.warn({ secret: name }, "Secret stored in plaintext — migrate to encrypted storage");
+    if (!plaintextWarned.has(name)) {
+      logger.warn({ secret: name }, "Secret stored in plaintext — migrate to encrypted storage");
+      plaintextWarned.add(name);
+    }
     decrypted = rawValue;
   } else {
     try {
@@ -93,7 +97,7 @@ export function getSecret(name: SecretName, rawValue: string | null | undefined)
   secretCache.set(name, { value: decrypted, cachedAt: Date.now() });
 
   // Audit log (only the name, never the value)
-  logger.info({ secret: name, action: "access" }, "Secret accessed");
+  logger.debug({ secret: name, action: "access" }, "Secret accessed");
 
   return decrypted;
 }
