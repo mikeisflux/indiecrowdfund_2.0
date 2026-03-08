@@ -53,8 +53,37 @@ const serverActionRateLimit = new Map<string, { count: number; windowStart: numb
 const BOT_BLOCK_THRESHOLD = 3;
 const SUSPICIOUS_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const SCANNER_BLOCK_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days for scanners
 const SERVER_ACTION_RATE_WINDOW_MS = 60 * 1000; // 1 minute
 const SERVER_ACTION_RATE_LIMIT = 30; // max server actions per IP per minute
+
+// Paths that only scanners/bots would probe — instant block on first hit
+const SCANNER_PATHS = [
+  // Next.js internals that should never be directly requested
+  "/_next/server",
+  "/_next/turbopack",
+  "/_next/flight",
+  "/_next/on-demand-entries-ping",
+  "/_next/refresh",
+  "/_next/route",
+  "/_next/server-actions",
+  "/_next/data",
+  "/_react_server",
+  "/_react/flight",
+  "/_rsc",
+  // Common scanner targets
+  "/.env",
+  "/wp-admin",
+  "/wp-login",
+  "/wp-content",
+  "/xmlrpc.php",
+  "/admin.php",
+  "/phpmyadmin",
+  "/actuator",
+  "/config.json",
+  "/.git",
+  "/cgi-bin",
+];
 
 // Track last sync/cleanup time
 let lastDbSync = 0;
@@ -314,7 +343,14 @@ export async function middleware(req: NextRequest) {
 
   // Check if IP is blocked (fast in-memory check)
   if (isIPBlockedFast(clientIP)) {
-    console.log(`[Bot Blocker] Blocked request from ${clientIP} to ${pathname}`);
+    return rewriteToBlocked("Forbidden", 403);
+  }
+
+  // Instant-block scanners probing internal/sensitive paths
+  if (SCANNER_PATHS.some((p) => pathname.startsWith(p))) {
+    console.log(`[Bot Blocker] Scanner detected: ${clientIP} probing ${pathname}`);
+    blockedIPCache.set(clientIP, { expiresAt: Date.now() + SCANNER_BLOCK_DURATION_MS });
+    persistBlockedIP(clientIP, `Scanner probe: ${pathname}`, { path: pathname, userAgent });
     return rewriteToBlocked("Forbidden", 403);
   }
 

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { auditLog, computeChanges } from "@/lib/audit";
 import { logger } from "@/lib/logger";
+import { encryptSecret } from "@/lib/vault";
 
 const settingsLogger = logger.child({ module: "admin-settings" });
 
@@ -292,6 +293,23 @@ export async function PATCH(req: NextRequest) {
         { error: "No valid fields to update" },
         { status: 400 }
       );
+    }
+
+    // Encrypt secret fields before saving to database
+    for (const field of secretFields) {
+      if (typeof updateData[field] === "string" && updateData[field]) {
+        const value = updateData[field] as string;
+        // Only encrypt if not already encrypted (plaintext keys start with known prefixes)
+        const isPlaintext = value.startsWith("sk_") || value.startsWith("pk_") ||
+          value.startsWith("whsec_") || value.startsWith("SG.") ||
+          value.startsWith("key-") || value.startsWith("sk-ant-") ||
+          value.startsWith("rk_") || value.startsWith("shpat_") ||
+          value.startsWith("AIza");
+        if (isPlaintext) {
+          updateData[field] = encryptSecret(value);
+          settingsLogger.info({ field }, "Encrypted secret before saving");
+        }
+      }
     }
 
     // Ensure settings record exists
