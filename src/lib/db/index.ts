@@ -23,12 +23,29 @@ let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
 let lastInitErrorTime = 0;
 const INIT_ERROR_COOLDOWN_MS = 30_000; // Only log init errors every 30 seconds
 
+// Track transient retry warnings to avoid log flooding
+let lastTransientWarnTime = 0;
+const TRANSIENT_WARN_COOLDOWN_MS = 10_000; // Only log transient retry warnings every 10 seconds
+
+// Patterns in PrismaClientInitializationError that are genuinely transient
+const TRANSIENT_INIT_PATTERNS = [
+  "server has closed the connection",
+  "connection reset",
+  "econnreset",
+  "econnrefused",
+  "connection timed out",
+  "too many connections",
+];
+
 function isTransientError(error: unknown): boolean {
   if (error instanceof PrismaClientKnownRequestError) {
     return TRANSIENT_ERROR_CODES.includes(error.code);
   }
   if (error instanceof PrismaClientInitializationError) {
-    return true;
+    // Only retry init errors that look like transient connection issues,
+    // not permanent problems like "Can't reach database server"
+    const msg = error.message.toLowerCase();
+    return TRANSIENT_INIT_PATTERNS.some((pattern) => msg.includes(pattern));
   }
   // Check for generic connection reset errors
   if (error instanceof Error) {
@@ -83,13 +100,14 @@ function getPrismaClient(): PrismaClient {
               return await query(args);
             } catch (error) {
               if (attempt < MAX_RETRIES && isTransientError(error)) {
-                dbLogger.warn(
-                  { attempt: attempt + 1, maxRetries: MAX_RETRIES + 1, err: error instanceof Error ? error.message : String(error) },
-                  "Transient error, retrying"
-                );
-                // On connection errors, disconnect to force pool refresh before retry
-                if (attempt === 0) {
-                  try { await client.$disconnect(); } catch { /* ignore */ }
+                // Throttle retry warnings to avoid log flooding during outages
+                const now = Date.now();
+                if (now - lastTransientWarnTime > TRANSIENT_WARN_COOLDOWN_MS) {
+                  lastTransientWarnTime = now;
+                  dbLogger.warn(
+                    { attempt: attempt + 1, maxRetries: MAX_RETRIES + 1, err: error instanceof Error ? error.message : String(error) },
+                    "Transient error, retrying"
+                  );
                 }
                 await sleep(RETRY_DELAY_MS * (attempt + 1));
                 continue;
