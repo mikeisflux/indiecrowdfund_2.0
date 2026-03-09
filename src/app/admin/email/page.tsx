@@ -47,6 +47,8 @@ import {
   ReplyAll,
   Paperclip,
   Download,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -101,6 +103,9 @@ export default function EmailPage() {
 
   // Image lightbox state
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+
+  // Fullscreen email viewer state
+  const [isEmailFullscreen, setIsEmailFullscreen] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -659,21 +664,32 @@ export default function EmailPage() {
           </Card>
         </div>
 
-        {/* Email Detail */}
-        {selectedEmail && (
+        {/* Email Detail (inline panel) */}
+        {selectedEmail && !isEmailFullscreen && (
           <div className="flex-1 min-w-0">
             <Card className="h-full flex flex-col">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium truncate">{selectedEmail.subject}</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setSelectedEmail(null)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      title="Open fullscreen"
+                      onClick={() => setIsEmailFullscreen(true)}
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setSelectedEmail(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="text-xs text-zinc-500 space-y-1 mt-2">
                   <p><span className="font-medium">From:</span> {selectedEmail.fromName || selectedEmail.fromEmail}</p>
@@ -803,6 +819,164 @@ export default function EmailPage() {
                 )}
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Fullscreen Email Viewer */}
+        {selectedEmail && isEmailFullscreen && (
+          <div className="fixed inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col">
+            {/* Fullscreen Header */}
+            <div className="border-b px-6 py-4 flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold truncate mr-4">{selectedEmail.subject}</h2>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Exit fullscreen"
+                    onClick={() => setIsEmailFullscreen(false)}
+                  >
+                    <Minimize2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setIsEmailFullscreen(false);
+                      setSelectedEmail(null);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="text-sm text-zinc-500 space-y-1">
+                <p><span className="font-medium">From:</span> {selectedEmail.fromName || selectedEmail.fromEmail}</p>
+                <p><span className="font-medium">To:</span> {selectedEmail.toEmail}</p>
+                <p><span className="font-medium">Date:</span> {new Date(selectedEmail.sentAt || selectedEmail.createdAt).toLocaleString()}</p>
+              </div>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleReply(selectedEmail)}
+                  disabled={!isConfigured}
+                >
+                  <Reply className="h-3 w-3 mr-1" />
+                  Reply
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleReply(selectedEmail, true)}
+                  disabled={!isConfigured}
+                >
+                  <ReplyAll className="h-3 w-3 mr-1" />
+                  Reply All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleForward(selectedEmail)}
+                  disabled={!isConfigured}
+                >
+                  <Forward className="h-3 w-3 mr-1" />
+                  Forward
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => setDeleteEmailConfirm(true)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Fullscreen Body */}
+            <div className="flex-1 overflow-auto px-6 py-6">
+              <div className="max-w-4xl mx-auto">
+                {/* Attachments Section */}
+                {selectedEmail.attachments && selectedEmail.attachments.count > 0 && (
+                  <div className="mb-6 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Paperclip className="h-4 w-4 text-zinc-500" />
+                      <span className="text-sm font-medium">
+                        {selectedEmail.attachments.count} Attachment{selectedEmail.attachments.count !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    {selectedEmail.attachments.files && selectedEmail.attachments.files.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedEmail.attachments.files.map((attachment) => {
+                          const Icon = getFileIcon(attachment.contentType);
+                          const isImage = attachment.contentType.startsWith("image/");
+                          return (
+                            <a
+                              key={attachment.id}
+                              href={`/api/admin/mailboxes/${selectedMailbox?.id}/emails/${selectedEmail.id}/attachments/${attachment.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-700 rounded-md border hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors group"
+                              onClick={(e) => {
+                                if (isImage) {
+                                  e.preventDefault();
+                                  setExpandedImage(`/api/admin/mailboxes/${selectedMailbox?.id}/emails/${selectedEmail.id}/attachments/${attachment.id}`);
+                                }
+                              }}
+                            >
+                              <Icon className="h-4 w-4 text-zinc-500 group-hover:text-emerald-600" />
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-sm truncate max-w-[200px]" title={attachment.filename}>
+                                  {attachment.filename}
+                                </span>
+                                <span className="text-xs text-zinc-400">
+                                  {formatFileSize(attachment.size)}
+                                </span>
+                              </div>
+                              <Download className="h-3 w-3 text-zinc-400 group-hover:text-emerald-600 ml-1" />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-500">
+                        Attachment files not available for download
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Email Body */}
+                {selectedEmail.bodyHtml ? (
+                  <div
+                    className="prose dark:prose-invert max-w-none [&_img]:cursor-zoom-in [&_img]:transition-opacity [&_img]:hover:opacity-80"
+                    dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedEmail.bodyHtml) }}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.tagName === "IMG") {
+                        const src = target.getAttribute("src");
+                        if (src) {
+                          setExpandedImage(src);
+                        }
+                      }
+                    }}
+                  />
+                ) : selectedEmail.bodyText ? (
+                  <p className="text-sm whitespace-pre-wrap">{selectedEmail.bodyText}</p>
+                ) : (
+                  <div className="text-center py-8">
+                    <AlertCircle className="h-8 w-8 text-zinc-300 mx-auto mb-2" />
+                    <p className="text-sm text-zinc-500">No email content available</p>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      bodyHtml: {selectedEmail.bodyHtml?.length || 0} chars,
+                      bodyText: {selectedEmail.bodyText?.length || 0} chars
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
