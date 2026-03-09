@@ -63,6 +63,7 @@ export function BasicsStep() {
   const [slugMessage, setSlugMessage] = useState("");
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [userVanityUrl, setUserVanityUrl] = useState<string | null>(null);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!basics.slug);
 
   // Fetch user's vanity URL on mount and when page becomes visible (e.g., after navigating back)
   useEffect(() => {
@@ -151,13 +152,13 @@ export function BasicsStep() {
     }
   };
 
-  // Auto-generate slug from title when title changes (only if slug is empty)
+  // Auto-generate slug from title when title changes (unless user manually edited)
   useEffect(() => {
-    if (basics.title && !basics.slug && !slugInput) {
+    if (basics.title && !slugManuallyEdited) {
       const generatedSlug = slugify(basics.title);
       setSlugInput(generatedSlug);
     }
-  }, [basics.title, basics.slug, slugInput]);
+  }, [basics.title, slugManuallyEdited]);
 
   // Debounced slug availability check
   const checkSlugAvailability = useCallback(async (slug: string) => {
@@ -248,6 +249,11 @@ export function BasicsStep() {
         </Label>
         <Input
           id="title"
+          name="project-title"
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
+          data-form-type="other"
           placeholder="Enter your project title"
           value={basics.title || ""}
           onChange={(e) => updateBasics({ title: e.target.value })}
@@ -286,11 +292,17 @@ export function BasicsStep() {
               <div className="relative flex-1">
                 <Input
                   id="slug"
+                  name="project-slug-url"
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
                   placeholder="my-awesome-project"
                   value={slugInput}
                   onChange={(e) => {
                     const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
                     setSlugInput(value);
+                    setSlugManuallyEdited(true);
                   }}
                   className={`pr-10 ${
                     slugStatus === "available" ? "border-green-500 focus-visible:ring-green-500" :
