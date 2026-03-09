@@ -210,10 +210,9 @@ export default function UpdatesPage() {
             publish: publish,
           };
 
-      const res = await fetch("/api/creator/indiekit/updates", {
+      const res = await apiFetch("/api/creator/indiekit/updates", {
         method,
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(body),
+        json: body,
       });
 
       if (!res.ok) {

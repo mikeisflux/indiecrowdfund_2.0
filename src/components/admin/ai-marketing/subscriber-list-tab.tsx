@@ -217,13 +217,9 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
         ? formData
         : { id: editingSubscriber?.id, ...formData };
 
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          
-        },
-        body: JSON.stringify(body),
+        json: body,
       });
 
       const data = await response.json();

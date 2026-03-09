@@ -114,10 +114,9 @@ export default function AnnouncementBarPage() {
     setIsSaving(true);
     try {
       const method = isEditing ? "PUT" : "POST";
-      const response = await fetch("/api/admin/announcement-bar", {
+      const response = await apiFetch("/api/admin/announcement-bar", {
         method,
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(editingAnnouncement),
+        json: editingAnnouncement,
       });
 
       if (response.ok) {

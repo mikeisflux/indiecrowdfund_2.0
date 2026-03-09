@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { apiFetch } from "@/lib/fetch-utils";
 import Image from "next/image";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -126,7 +127,7 @@ export default function PublicProfilePage() {
     }
 
     try {
-      const res = await fetch(`/api/user/${profile?.id}/follow`, {
+      const res = await apiFetch(`/api/user/${profile?.id}/follow`, {
         method: isFollowing ? "DELETE" : "POST",
       });
       if (res.ok) {

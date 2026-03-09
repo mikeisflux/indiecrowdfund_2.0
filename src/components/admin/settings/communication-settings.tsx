@@ -177,14 +177,13 @@ function MailboxDialog({
         : "/api/admin/mailboxes";
       const method = mailbox ? "PATCH" : "POST";
 
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
+        json: {
           ...formData,
           imapPort: formData.imapPort ? parseInt(formData.imapPort) : null,
           smtpPort: formData.smtpPort ? parseInt(formData.smtpPort) : null,
-        }),
+        },
       });
 
       if (!response.ok) {
@@ -425,14 +424,13 @@ function BlocklistDialog({
         : "/api/admin/email-blocklist";
       const method = entry ? "PATCH" : "POST";
 
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
+        json: {
           ...formData,
           source: entry ? entry.source : "manual",
           expiresAt: formData.expiresAt || null,
-        }),
+        },
       });
 
       if (!response.ok) {

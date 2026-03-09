@@ -1,6 +1,6 @@
 "use client";
 
-import { getCSRFHeaders } from "@/lib/csrf";
+import { apiFetch } from "@/lib/fetch-utils";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -74,17 +74,16 @@ export function MailboxDialog({
         ? `/api/admin/mailboxes/${mailbox.id}`
         : "/api/admin/mailboxes";
 
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: mailbox ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json", ...getCSRFHeaders() },
-        body: JSON.stringify({
+        json: {
           name,
           email,
           description: description || null,
           color,
           isDefault,
           isCreatorMailbox,
-        }),
+        },
       });
 
       if (response.ok) {

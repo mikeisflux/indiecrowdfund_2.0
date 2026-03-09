@@ -270,10 +270,9 @@ export default function SurveyBuilderPage() {
       const method = item.id ? "PUT" : "POST";
       const body = item.id ? { questionId: item.id, ...item } : item;
 
-      const response = await fetch(`/api/projects/${projectId}/survey/item-questions`, {
+      const response = await apiFetch(`/api/projects/${projectId}/survey/item-questions`, {
         method,
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(body),
+        json: body,
       });
 
       if (response.ok) {
@@ -311,10 +310,9 @@ export default function SurveyBuilderPage() {
       const method = question.id ? "PUT" : "POST";
       const body = question.id ? { questionId: question.id, ...question } : question;
 
-      const response = await fetch(`/api/projects/${projectId}/survey/backer-questions`, {
+      const response = await apiFetch(`/api/projects/${projectId}/survey/backer-questions`, {
         method,
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(body),
+        json: body,
       });
 
       if (response.ok) {

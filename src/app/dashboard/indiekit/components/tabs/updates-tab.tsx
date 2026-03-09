@@ -144,17 +144,16 @@ export function UpdatesTab({ projectId, projectName, hasActiveCampaign = false }
     setIsSaving(true);
     try {
       const isEditing = !!editingUpdate;
-      const res = await fetch("/api/creator/indiekit/updates", {
+      const res = await apiFetch("/api/creator/indiekit/updates", {
         method: isEditing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
+        json: {
           projectId,
           ...(isEditing && { updateId: editingUpdate.id }),
           title: title.trim(),
           content,
           visibility: isBackersOnly ? "backers_only" : "public",
           publish,
-        }),
+        },
       });
 
       if (!res.ok) {

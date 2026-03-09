@@ -192,10 +192,9 @@ export default function AdminLCSLocatorPage() {
         website: formWebsite,
       };
 
-      const response = await fetch("/api/admin/lcs-locator/shops", {
+      const response = await apiFetch("/api/admin/lcs-locator/shops", {
         method: editingShop ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(payload),
+        json: payload,
       });
 
       if (!response.ok) {

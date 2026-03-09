@@ -178,10 +178,9 @@ export default function AdminChangelogPage() {
         isPublished,
       };
 
-      const response = await fetch("/api/admin/changelog", {
+      const response = await apiFetch("/api/admin/changelog", {
         method: editingEntry ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(payload),
+        json: payload,
       });
 
       if (response.ok) {

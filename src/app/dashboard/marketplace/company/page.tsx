@@ -257,13 +257,9 @@ export default function CompanyProfilePage() {
     setSaving(true);
     try {
       const method = isNew ? "POST" : "PUT";
-      const res = await fetch("/api/creator/marketplace/company", {
+      const res = await apiFetch("/api/creator/marketplace/company", {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          
-        },
-        body: JSON.stringify(formData),
+        json: formData,
       });
 
       if (!res.ok) {

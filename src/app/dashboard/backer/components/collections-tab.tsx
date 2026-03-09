@@ -4,7 +4,6 @@ import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -165,10 +164,9 @@ export function CollectionsTab() {
         : "/api/backer/collections";
       const method = editingCollection ? "PATCH" : "POST";
 
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(formData),
+        json: formData,
       });
 
       if (!response.ok) {

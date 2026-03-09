@@ -202,10 +202,9 @@ export default function HeroSliderPage() {
     setIsSaving(true);
     try {
       const method = isEditing ? "PUT" : "POST";
-      const response = await fetch("/api/admin/hero-slides", {
+      const response = await apiFetch("/api/admin/hero-slides", {
         method,
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(editingSlide),
+        json: editingSlide,
       });
 
       if (response.ok) {

@@ -437,10 +437,9 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
       };
 
       const method = itemQuestion.id ? "PUT" : "POST";
-      const response = await fetch(`/api/projects/${projectId}/survey/item-questions`, {
+      const response = await apiFetch(`/api/projects/${projectId}/survey/item-questions`, {
         method,
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify(payload),
+        json: payload,
       });
 
       if (response.ok) {

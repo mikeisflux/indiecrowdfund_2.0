@@ -97,15 +97,14 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       setIsSaving(true);
       try {
         const method = editingItemId ? "PATCH" : "POST";
-        const response = await fetch(`/api/projects/${projectId}/items`, {
+        const response = await apiFetch(`/api/projects/${projectId}/items`, {
           method,
-          headers: { "Content-Type": "application/json", },
-          body: JSON.stringify({
+          json: {
             id: editingItemId || undefined,
             title: currentItem.title,
             description: currentItem.description,
             imageUrl: currentItem.imageUrl,
-          }),
+          },
         });
 
         const result = await response.json();
@@ -374,10 +373,9 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
         const isEditing = editingRewardIndex !== null && currentReward.id;
         const method = isEditing ? "PATCH" : "POST";
 
-        const response = await fetch(`/api/projects/${projectId}/rewards`, {
+        const response = await apiFetch(`/api/projects/${projectId}/rewards`, {
           method,
-          headers: { "Content-Type": "application/json", },
-          body: JSON.stringify({
+          json: {
             id: isEditing ? currentReward.id : undefined,
             type: rewardToSave.type,
             title: rewardToSave.title,
@@ -398,7 +396,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
               description: item.description,
               imageUrl: item.imageUrl,
             })),
-          }),
+          },
         });
 
         const result = await response.json();
