@@ -10,6 +10,80 @@ const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 /**
+ * Send bug report resolution email to the reporter
+ */
+export async function sendBugReportResolutionEmail(
+  email: string,
+  reporterName: string,
+  bugTitle: string,
+  resolution: string,
+  status: string
+) {
+  const statusLabel = status === "RESOLVED" ? "Resolved" : status === "CLOSED" ? "Closed" : status;
+  const statusColor = status === "RESOLVED" ? "#22c55e" : "#6366f1";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Bug Report Update - ${APP_NAME}</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: #f0fdf4; border-radius: 8px; padding: 30px; margin-bottom: 20px; border: 1px solid #bbf7d0;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: ${statusColor}; color: white; padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+              ${statusLabel.toUpperCase()}
+            </div>
+          </div>
+
+          <h2 style="margin-top: 0; color: #15803d; text-align: center;">Your Bug Report Has Been Addressed</h2>
+
+          <p>Hi ${reporterName || "there"},</p>
+
+          <p>Thank you so much for taking the time to report this issue. Your dedication to improving ${APP_NAME} makes a real difference, and we truly appreciate community members like you who help us build a better platform for everyone. Contributors like you are the backbone of what makes this community so special.</p>
+
+          <p>We wanted to let you know that your bug report <strong>"${bugTitle}"</strong> has been reviewed and addressed by our team. Below you'll find the details of the resolution:</p>
+
+          <div style="background: white; border-radius: 6px; padding: 20px; margin: 20px 0; border-left: 4px solid ${statusColor};">
+            <p style="margin: 0 0 8px 0; color: #666; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Resolution</p>
+            <p style="margin: 0; color: #333; font-size: 15px; line-height: 1.7;">${resolution}</p>
+          </div>
+
+          <p>If you notice that the issue persists or if you encounter anything else, please don't hesitate to submit another report. Every piece of feedback helps us improve.</p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${APP_URL}" style="display: inline-block; background: ${statusColor}; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+              Visit ${APP_NAME}
+            </a>
+          </div>
+
+          <p style="color: #666; font-size: 14px; text-align: center;">
+            Thank you for being a valued member of the ${APP_NAME} community!
+          </p>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Your bug report "${bugTitle}" has been ${statusLabel.toLowerCase()}`,
+    html,
+    skipUnsubscribeCheck: true,
+  });
+}
+
+/**
  * Send survey available notification email to backer
  */
 export async function sendSurveyAvailableEmail(

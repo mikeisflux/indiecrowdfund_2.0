@@ -5,6 +5,7 @@ const bugReportsLogger = logger.child({ module: "bug-reports" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { sendBugReportResolutionEmail } from "@/lib/email/email-templates-misc";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -214,6 +215,22 @@ export async function PATCH(req: NextRequest) {
       where: { id },
       data: updateData,
     });
+
+    // Send resolution email when status is RESOLVED or CLOSED and resolution notes exist
+    if ((status === "RESOLVED" || status === "CLOSED") && bugReport.email && bugReport.resolution) {
+      try {
+        await sendBugReportResolutionEmail(
+          bugReport.email,
+          bugReport.name || "",
+          bugReport.title,
+          bugReport.resolution,
+          status
+        );
+        bugReportsLogger.info({ bugReportId: id, email: bugReport.email }, "Sent bug report resolution email");
+      } catch (emailError) {
+        bugReportsLogger.error({ err: String(emailError), bugReportId: id }, "Failed to send bug report resolution email");
+      }
+    }
 
     return NextResponse.json({ success: true, bugReport });
   } catch (error) {
