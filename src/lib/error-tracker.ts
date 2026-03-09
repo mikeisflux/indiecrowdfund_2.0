@@ -59,19 +59,13 @@ const MAX_PER_FINGERPRINT = 3; // max 3 writes per fingerprint per window
 
 function isRateLimited(fingerprint: string): boolean {
   const now = Date.now();
-  const lastCount = recentErrors.get(fingerprint);
 
   // Clean up old entries periodically
   if (recentErrors.size > 1000) {
     recentErrors.clear();
   }
 
-  if (!lastCount || lastCount < 0) {
-    recentErrors.set(fingerprint, now);
-    return false;
-  }
-
-  // Simple sliding window: track count in current window
+  // Use windowed key so counts reset each window
   const key = `${fingerprint}:${Math.floor(now / RATE_LIMIT_WINDOW_MS)}`;
   const count = recentErrors.get(key) || 0;
 
@@ -120,61 +114,69 @@ export async function captureError(options: CaptureErrorOptions): Promise<void> 
     const now = new Date();
 
     // Upsert the error group (create or increment count)
-    await db.errorGroup.upsert({
-      where: { fingerprint },
-      create: {
-        fingerprint,
-        title,
-        type,
-        level,
-        source,
-        endpoint,
-        status: "UNRESOLVED",
-        eventCount: 1,
-        firstSeen: now,
-        lastSeen: now,
-        latestMessage: message,
-        latestStack: stack || null,
-        latestMetadata: metadata || null,
-        occurrences: {
-          create: {
-            message,
-            stack: stack || null,
-            url,
-            method,
-            statusCode,
-            userId,
-            userAgent,
-            ip,
-            metadata: metadata || null,
-            timestamp: now,
-          },
+    // Wrapped in a retry to handle race conditions where two concurrent requests
+    // try to create the same fingerprint simultaneously (P2002 unique constraint).
+    const occurrenceData = {
+      message,
+      stack: stack || null,
+      url,
+      method,
+      statusCode,
+      userId,
+      userAgent,
+      ip,
+      metadata: metadata || null,
+      timestamp: now,
+    };
+
+    try {
+      await db.errorGroup.upsert({
+        where: { fingerprint },
+        create: {
+          fingerprint,
+          title,
+          type,
+          level,
+          source,
+          endpoint,
+          status: "UNRESOLVED",
+          eventCount: 1,
+          firstSeen: now,
+          lastSeen: now,
+          latestMessage: message,
+          latestStack: stack || null,
+          latestMetadata: metadata || null,
+          occurrences: { create: occurrenceData },
         },
-      },
-      update: {
-        eventCount: { increment: 1 },
-        lastSeen: now,
-        latestMessage: message,
-        latestStack: stack || null,
-        latestMetadata: metadata || null,
-        // Re-open resolved issues if they recur
-        status: undefined, // Don't change status on update by default
-        occurrences: {
-          create: {
-            message,
-            stack: stack || null,
-            url,
-            method,
-            statusCode,
-            userId,
-            userAgent,
-            ip,
-            metadata: metadata || null,
-            timestamp: now,
-          },
+        update: {
+          eventCount: { increment: 1 },
+          lastSeen: now,
+          latestMessage: message,
+          latestStack: stack || null,
+          latestMetadata: metadata || null,
+          occurrences: { create: occurrenceData },
         },
-      },
-    });
+      });
+    } catch (upsertErr: unknown) {
+      // P2002 = unique constraint violation — another request created the group
+      // between our read and write. Fall back to a plain update.
+      const prismaErr = upsertErr as { code?: string };
+      if (prismaErr.code === "P2002") {
+        await db.errorGroup.update({
+          where: { fingerprint },
+          data: {
+            eventCount: { increment: 1 },
+            lastSeen: now,
+            latestMessage: message,
+            latestStack: stack || null,
+            latestMetadata: metadata || null,
+            occurrences: { create: occurrenceData },
+          },
+        });
+      } else {
+        throw upsertErr;
+      }
+    }
 
     // Clean up old occurrences (keep max 50 per group) — fire and forget
     db.errorOccurrence
