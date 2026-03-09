@@ -52,6 +52,11 @@ export async function register() {
         return;
       }
 
+      // Suppress client disconnect errors (user navigated away or connection dropped mid-request)
+      if (message === "aborted" || message.includes("aborted\n")) {
+        return;
+      }
+
       // Capture non-suppressed errors to the error tracker (fire-and-forget)
       const errorObj = args.find((a) => a instanceof Error) as Error | undefined;
       if (errorObj) {
