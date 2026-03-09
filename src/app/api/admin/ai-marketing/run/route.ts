@@ -12,6 +12,7 @@ import {
 import { autoTagProject } from "@/lib/ai/anthropic";
 import { getAISettings, clearSettingsCache } from "@/lib/ai/settings-integration";
 import { batchUpdateUserInterests } from "@/lib/ai/user-interests";
+import { runAutomatedMarketing } from "@/lib/ai/automation";
 
 export const dynamic = "force-dynamic";
 
@@ -311,6 +312,111 @@ export async function POST(request: Request) {
           stats: {
             totalProfiles,
             avgProfileScore: avgScore._avg.profileScore?.toFixed(1) || "0",
+          },
+        };
+        break;
+      }
+
+      // ==========================================
+      // RUN FULL AUTOMATED MARKETING
+      // ==========================================
+      case "runAutomation": {
+        const automationResult = await runAutomatedMarketing();
+
+        result = {
+          success: automationResult.success,
+          message: automationResult.success
+            ? `Automation complete: ${automationResult.campaignsCreated} campaigns, ${automationResult.emailsQueued} emails queued (${(automationResult.duration / 1000).toFixed(1)}s)`
+            : `Automation finished with ${automationResult.errors.length} error(s)`,
+          steps: automationResult.steps,
+          campaignsCreated: automationResult.campaignsCreated,
+          emailsQueued: automationResult.emailsQueued,
+          errors: automationResult.errors,
+          duration: automationResult.duration,
+        };
+        break;
+      }
+
+      // ==========================================
+      // GET AUTOMATION STATUS
+      // ==========================================
+      case "getAutomationStatus": {
+        // Get last automated campaign
+        const lastAutoCampaign = await db.emailCampaign.findFirst({
+          where: {
+            status: "SENT",
+            filters: { path: ["automated"], equals: true },
+          },
+          orderBy: { sentAt: "desc" },
+          select: {
+            id: true,
+            name: true,
+            sentAt: true,
+            sentCount: true,
+            openCount: true,
+            clickCount: true,
+            recipientCount: true,
+            filters: true,
+          },
+        });
+
+        // Get all automated campaigns in last 30 days
+        const recentAutoCampaigns = await db.emailCampaign.findMany({
+          where: {
+            filters: { path: ["automated"], equals: true },
+            sentAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+          },
+          orderBy: { sentAt: "desc" },
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            sentAt: true,
+            sentCount: true,
+            openCount: true,
+            clickCount: true,
+            recipientCount: true,
+            filters: true,
+          },
+        });
+
+        // Calculate aggregate performance
+        type CampaignRow = { id: string; name: string; status: string; sentAt: Date | null; sentCount: number; openCount: number; clickCount: number; recipientCount: number; filters: unknown };
+        const sentCampaigns = recentAutoCampaigns.filter((c: CampaignRow) => c.status === "SENT" && c.sentCount > 0);
+        const totalSent = sentCampaigns.reduce((sum: number, c: CampaignRow) => sum + c.sentCount, 0);
+        const totalOpens = sentCampaigns.reduce((sum: number, c: CampaignRow) => sum + c.openCount, 0);
+        const totalClicks = sentCampaigns.reduce((sum: number, c: CampaignRow) => sum + c.clickCount, 0);
+
+        result = {
+          success: true,
+          lastRun: lastAutoCampaign?.sentAt || null,
+          lastCampaign: lastAutoCampaign
+            ? {
+                id: lastAutoCampaign.id,
+                name: lastAutoCampaign.name,
+                sentAt: lastAutoCampaign.sentAt,
+                recipients: lastAutoCampaign.recipientCount,
+                sent: lastAutoCampaign.sentCount,
+                opens: lastAutoCampaign.openCount,
+                clicks: lastAutoCampaign.clickCount,
+                type: (lastAutoCampaign.filters as { campaignType?: string } | null)?.campaignType || "unknown",
+              }
+            : null,
+          recentCampaigns: recentAutoCampaigns.map((c: CampaignRow) => ({
+            id: c.id,
+            name: c.name,
+            status: c.status,
+            sentAt: c.sentAt,
+            sent: c.sentCount,
+            opens: c.openCount,
+            clicks: c.clickCount,
+            type: (c.filters as { campaignType?: string } | null)?.campaignType || "unknown",
+          })),
+          performance: {
+            campaignsSent: sentCampaigns.length,
+            totalEmailsSent: totalSent,
+            avgOpenRate: totalSent > 0 ? ((totalOpens / totalSent) * 100).toFixed(1) + "%" : "N/A",
+            avgClickRate: totalOpens > 0 ? ((totalClicks / totalOpens) * 100).toFixed(1) + "%" : "N/A",
           },
         };
         break;

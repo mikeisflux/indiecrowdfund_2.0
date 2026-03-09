@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/fetch-utils";
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,10 @@ import {
   Maximize2,
   ArrowRight,
   Timer,
+  Zap,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 
 interface AISettings {
@@ -49,6 +54,36 @@ interface AISettings {
 interface AIRunResult {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   success: boolean; message: string; data?: any; timestamp: string
+}
+
+interface AutomationStatus {
+  lastRun: string | null;
+  lastCampaign: {
+    id: string;
+    name: string;
+    sentAt: string;
+    recipients: number;
+    sent: number;
+    opens: number;
+    clicks: number;
+    type: string;
+  } | null;
+  recentCampaigns: Array<{
+    id: string;
+    name: string;
+    status: string;
+    sentAt: string;
+    sent: number;
+    opens: number;
+    clicks: number;
+    type: string;
+  }>;
+  performance: {
+    campaignsSent: number;
+    totalEmailsSent: number;
+    avgOpenRate: string;
+    avgClickRate: string;
+  };
 }
 
 interface AISettingsTabProps {
@@ -129,8 +164,204 @@ export function AISettingsTab({
     }
   };
 
+  // Automation status
+  const [automationStatus, setAutomationStatus] = useState<AutomationStatus | null>(null);
+  const [isRunningAutomation, setIsRunningAutomation] = useState(false);
+  const [automationResult, setAutomationResult] = useState<{ success: boolean; message: string; steps?: Array<{ step: string; success: boolean; message: string }> } | null>(null);
+
+  const fetchAutomationStatus = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/admin/ai-marketing/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "getAutomationStatus" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAutomationStatus(data);
+      }
+    } catch {
+      // Silently fail — status will just show as unknown
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAutomationStatus();
+  }, [fetchAutomationStatus]);
+
+  const triggerAutomation = async () => {
+    setIsRunningAutomation(true);
+    setAutomationResult(null);
+    try {
+      const res = await apiFetch("/api/admin/ai-marketing/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "runAutomation" }),
+      });
+      const data = await res.json();
+      setAutomationResult({
+        success: data.success,
+        message: data.message,
+        steps: data.steps,
+      });
+      // Refresh status after run
+      fetchAutomationStatus();
+    } catch {
+      setAutomationResult({ success: false, message: "Failed to run automation" });
+    } finally {
+      setIsRunningAutomation(false);
+    }
+  };
+
   return (
     <div className="mt-6 space-y-6">
+      {/* Automated Marketing */}
+      <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-emerald-600" />
+                Automated Marketing
+              </CardTitle>
+              <CardDescription>
+                AI automatically creates and sends campaigns based on platform activity. Runs daily via cron.
+              </CardDescription>
+            </div>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              size="sm"
+              disabled={isRunningAutomation || isProcessing}
+              onClick={triggerAutomation}
+            >
+              {isRunningAutomation ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-4 w-4" />
+              )}
+              {isRunningAutomation ? "Running..." : "Run Now"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Automation Result */}
+          {automationResult && (
+            <div className={`mb-4 rounded-lg border p-4 ${automationResult.success ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30' : 'bg-red-50 border-red-200 dark:bg-red-950/30'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                {automationResult.success ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-600" />
+                )}
+                <span className="font-medium text-sm">{automationResult.message}</span>
+              </div>
+              {automationResult.steps && (
+                <div className="space-y-1 mt-2">
+                  {automationResult.steps.map((step, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      {step.success ? (
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
+                      )}
+                      <span className="text-zinc-600 dark:text-zinc-400">
+                        <span className="font-medium">{step.step}:</span> {step.message}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Last Run */}
+            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+              <p className="text-xs text-zinc-500 mb-1">Last Run</p>
+              <p className="font-semibold text-sm">
+                {automationStatus?.lastRun
+                  ? new Date(automationStatus.lastRun).toLocaleDateString("en-US", {
+                      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+                    })
+                  : "Never"}
+              </p>
+            </div>
+
+            {/* Campaigns Sent (30d) */}
+            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+              <p className="text-xs text-zinc-500 mb-1">Auto Campaigns (30d)</p>
+              <p className="font-semibold text-sm">
+                {automationStatus?.performance?.campaignsSent ?? 0}
+              </p>
+            </div>
+
+            {/* Open Rate */}
+            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+              <p className="text-xs text-zinc-500 mb-1">Avg Open Rate</p>
+              <p className="font-semibold text-sm">
+                {automationStatus?.performance?.avgOpenRate ?? "N/A"}
+              </p>
+            </div>
+
+            {/* Click Rate */}
+            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+              <p className="text-xs text-zinc-500 mb-1">Avg Click Rate</p>
+              <p className="font-semibold text-sm">
+                {automationStatus?.performance?.avgClickRate ?? "N/A"}
+              </p>
+            </div>
+          </div>
+
+          {/* Recent automated campaigns */}
+          {automationStatus?.recentCampaigns && automationStatus.recentCampaigns.length > 0 && (
+            <div className="mt-4 rounded-lg border bg-white dark:bg-zinc-900 overflow-hidden">
+              <div className="px-4 py-2 border-b bg-zinc-50 dark:bg-zinc-800">
+                <span className="text-sm font-medium">Recent Automated Campaigns</span>
+              </div>
+              <div className="p-2">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="text-xs">
+                      <TableHead className="h-8">Campaign</TableHead>
+                      <TableHead className="h-8">Type</TableHead>
+                      <TableHead className="h-8 text-right">Sent</TableHead>
+                      <TableHead className="h-8 text-right">Opens</TableHead>
+                      <TableHead className="h-8 text-right">Clicks</TableHead>
+                      <TableHead className="h-8 text-right">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {automationStatus.recentCampaigns.slice(0, 5).map((c) => (
+                      <TableRow key={c.id} className="text-xs">
+                        <TableCell className="py-2">{c.name}</TableCell>
+                        <TableCell className="py-2">
+                          <Badge variant="outline" className="text-xs">{c.type}</Badge>
+                        </TableCell>
+                        <TableCell className="py-2 text-right">{c.sent}</TableCell>
+                        <TableCell className="py-2 text-right">{c.opens}</TableCell>
+                        <TableCell className="py-2 text-right">{c.clicks}</TableCell>
+                        <TableCell className="py-2 text-right text-zinc-500">
+                          {c.sentAt ? new Date(c.sentAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {/* Cron setup instructions */}
+          <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:bg-zinc-800 dark:border-zinc-700">
+            <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">Cron Setup</p>
+            <code className="text-xs text-zinc-500 break-all">
+              0 10 * * * curl -s -H &quot;Authorization: Bearer $CRON_SECRET&quot; http://localhost:3000/api/cron/ai-marketing
+            </code>
+            <p className="text-xs text-zinc-400 mt-1">Add this to your crontab to run daily at 10 AM. The AI decides what to send based on platform activity.</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Quick Run Panel */}
       <Card className="border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30">
         <CardHeader>
