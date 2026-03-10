@@ -10,7 +10,7 @@ import {
   notifyPledgeReceived,
   notifyProjectFunded,
 } from "@/lib/notifications";
-import { processPendingPledgesForProject, getStripeInstance, claimRewardSlot } from "@/lib/payments/stripe";
+import { processPendingPledgesForProject, getStripeInstance, claimRewardSlot, assignBackerNumber } from "@/lib/payments/stripe";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm
@@ -321,6 +321,19 @@ export async function POST(
       pledgesConfirmLogger.info(`[Confirm] Updated project stats for chargedImmediately pledge ${pledgeId}: +$${pledge.amount}`);
     }
 
+    // Assign backer number BEFORE sending confirmation email.
+    // This ensures the email always includes the backer number.
+    let assignedBackerNumber = pledge.backerNumber;
+    if (!assignedBackerNumber) {
+      try {
+        assignedBackerNumber = await assignBackerNumber(pledge.projectId, pledgeId);
+        pledgesConfirmLogger.info(`[Confirm] Assigned backer number #${assignedBackerNumber} to pledge ${pledgeId}`);
+      } catch (bnError) {
+        // Non-fatal — backer number is nice-to-have, don't block confirmation
+        pledgesConfirmLogger.error({ err: String(bnError) }, `[Confirm] Failed to assign backer number for pledge ${pledgeId}:`);
+      }
+    }
+
     // Send confirmation email if user has email and feature is enabled
     // (pledge was already marked as confirmed above)
     let emailSent = false;
@@ -365,7 +378,7 @@ export async function POST(
         Number(pledge.rewardAmount) || undefined,
         Number(pledge.shippingAmount) || undefined,
         pledge.paymentProcessor as "STRIPE" | "DIVINITYCOIN",
-        pledge.backerNumber,
+        assignedBackerNumber,
         pledge.id
       );
       emailSent = emailResult.success;

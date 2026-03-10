@@ -175,6 +175,15 @@ export async function assignBackerNumber(projectId: string, pledgeId: string): P
     // Using raw SQL for SELECT FOR UPDATE since Prisma doesn't support it directly
     await tx.$executeRaw`SELECT id FROM "Project" WHERE id = ${projectId} FOR UPDATE`;
 
+    // Check if already assigned (idempotent - safe to call multiple times)
+    const existing = await tx.pledge.findUnique({
+      where: { id: pledgeId },
+      select: { backerNumber: true },
+    });
+    if (existing?.backerNumber) {
+      return existing.backerNumber;
+    }
+
     // Count existing backers with assigned numbers
     const existingBackerCount = await tx.pledge.count({
       where: {

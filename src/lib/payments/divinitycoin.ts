@@ -4,6 +4,7 @@ import {
   notifyPledgeReceived,
   notifyBackerPledgeConfirmed,
 } from "@/lib/notifications";
+import { assignBackerNumber } from "@/lib/payments/stripe";
 import { logger } from "@/lib/logger";
 import { circuitBreaker } from "@/lib/circuit-breaker";
 
@@ -801,6 +802,14 @@ export async function handlePaymentSucceeded(
       );
     } catch (notifyError) {
       paymentsDivinitycoinLogger.error({ err: notifyError }, `[DivinityCoin] Failed to notify creator for pledge ${pledgeId}:`);
+    }
+
+    // Assign backer number before sending confirmation email
+    try {
+      const backerNum = await assignBackerNumber(pledge.projectId, pledgeId);
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Assigned backer number #${backerNum} to pledge ${pledgeId}`);
+    } catch (bnError) {
+      paymentsDivinitycoinLogger.error({ err: bnError }, `[DivinityCoin] Failed to assign backer number for pledge ${pledgeId}:`);
     }
 
     // Send confirmation email to backer (non-blocking)
