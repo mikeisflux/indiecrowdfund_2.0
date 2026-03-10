@@ -1,7 +1,6 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -112,13 +111,18 @@ export default function CollaboratePage() {
   }
 
   if (error && !collaboration) {
+    const isNotFound = error === "Collaboration invite not found";
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <CardTitle>Unable to Load Invitation</CardTitle>
-            <CardDescription>{error}</CardDescription>
+            <CardTitle>{isNotFound ? "Invitation No Longer Available" : "Unable to Load Invitation"}</CardTitle>
+            <CardDescription>
+              {isNotFound
+                ? "This collaboration invitation has been revoked by the project creator. If you believe this is a mistake, please contact the project creator for a new invitation."
+                : error}
+            </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Link href="/dashboard">

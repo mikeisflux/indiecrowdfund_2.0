@@ -206,7 +206,7 @@ export function PeopleStep() {
     updatePeople({
       collaborators: collaborators.filter((_, i) => i !== index),
     });
-    toast.success("Collaborator removed");
+    toast.success("Collaborator removed and invitation link revoked");
   };
 
   // Truncate bio for preview
