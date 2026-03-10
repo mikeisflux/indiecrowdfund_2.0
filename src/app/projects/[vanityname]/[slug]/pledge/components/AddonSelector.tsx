@@ -56,7 +56,7 @@ export function AddonSelector({
               <Card
                 key={addon.id}
                 className={`overflow-hidden transition-all glass-card rounded-2xl animate-in fade-in slide-in-from-bottom-4 ${
-                  isSelected ? "ring-2 ring-[#028858] border-[#028858]" : "border-border/50"
+                  isSelected ? "ring-2 ring-[#05ce78] border-[#05ce78]" : "border-border/50"
                 }`}
                 style={{ animationDelay: `${addons.indexOf(addon) * 100}ms`, animationFillMode: 'backwards' }}
               >
@@ -141,10 +141,10 @@ export function AddonSelector({
 
                       {isSelected ? (
                         /* Quantity controls when addon is selected */
-                        <div className="flex items-center h-12 bg-[#028858]">
+                        <div className="flex items-center h-12 bg-[#05ce78]">
                           <Button
                             onClick={() => handleAddonQuantityChange(addon.id, -1)}
-                            className="h-full px-3 rounded-none bg-transparent hover:bg-[#026d47] text-white border-r border-white/20"
+                            className="h-full px-3 rounded-none bg-transparent hover:bg-[#04b86a] text-white border-r border-white/20"
                             variant="ghost"
                           >
                             <Minus className="h-4 w-4" />
@@ -154,7 +154,7 @@ export function AddonSelector({
                           </div>
                           <Button
                             onClick={() => handleAddonQuantityChange(addon.id, 1)}
-                            className="h-full px-3 rounded-none bg-transparent hover:bg-[#026d47] text-white border-l border-white/20"
+                            className="h-full px-3 rounded-none bg-transparent hover:bg-[#04b86a] text-white border-l border-white/20"
                             variant="ghost"
                             disabled={addon.limitedQuantity !== null && addon.limitedQuantity !== undefined && selectedAddons[addon.id] >= (addon.limitedQuantity - addon.quantityClaimed)}
                           >
@@ -164,7 +164,7 @@ export function AddonSelector({
                       ) : (
                         <Button
                           onClick={() => handleAddonToggle(addon.id)}
-                          className="rounded-none h-12 font-medium bg-zinc-900 hover:bg-zinc-800 text-white w-full"
+                          className="rounded-none h-12 font-medium bg-[#05ce78] hover:bg-[#05ce78]/90 text-white w-full"
                         >
                           <span className="md:hidden">Add</span>
                           <span className="hidden md:inline">Add • ${addon.amount}</span>
