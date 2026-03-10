@@ -129,26 +129,18 @@ export async function captureError(options: CaptureErrorOptions): Promise<void> 
       timestamp: now,
     };
 
-    try {
-      await db.errorGroup.upsert({
+    // Use findUnique + create/update instead of upsert to avoid P2002 race conditions.
+    // Prisma's upsert can fail with unique constraint violations when concurrent requests
+    // try to create the same fingerprint simultaneously.
+    const existingGroup = await db.errorGroup.findUnique({
+      where: { fingerprint },
+      select: { id: true },
+    });
+
+    if (existingGroup) {
+      await db.errorGroup.update({
         where: { fingerprint },
-        create: {
-          fingerprint,
-          title,
-          type,
-          level,
-          source,
-          endpoint,
-          status: "UNRESOLVED",
-          eventCount: 1,
-          firstSeen: now,
-          lastSeen: now,
-          latestMessage: message,
-          latestStack: stack || null,
-          latestMetadata: metadata || null,
-          occurrences: { create: occurrenceData },
-        },
-        update: {
+        data: {
           eventCount: { increment: 1 },
           lastSeen: now,
           latestMessage: message,
@@ -157,15 +149,19 @@ export async function captureError(options: CaptureErrorOptions): Promise<void> 
           occurrences: { create: occurrenceData },
         },
       });
-    } catch (upsertErr: unknown) {
-      // P2002 = unique constraint violation — another request created the group
-      // between our read and write. Fall back to a plain update.
-      const prismaErr = upsertErr as { code?: string };
-      if (prismaErr.code === "P2002") {
-        await db.errorGroup.update({
-          where: { fingerprint },
+    } else {
+      try {
+        await db.errorGroup.create({
           data: {
-            eventCount: { increment: 1 },
+            fingerprint,
+            title,
+            type,
+            level,
+            source,
+            endpoint,
+            status: "UNRESOLVED",
+            eventCount: 1,
+            firstSeen: now,
             lastSeen: now,
             latestMessage: message,
             latestStack: stack || null,
@@ -173,8 +169,25 @@ export async function captureError(options: CaptureErrorOptions): Promise<void> 
             occurrences: { create: occurrenceData },
           },
         });
-      } else {
-        throw upsertErr;
+      } catch (createErr: unknown) {
+        // P2002 = unique constraint violation — another request created the group
+        // between our findUnique and create. Fall back to update.
+        const prismaErr = createErr as { code?: string };
+        if (prismaErr.code === "P2002") {
+          await db.errorGroup.update({
+            where: { fingerprint },
+            data: {
+              eventCount: { increment: 1 },
+              lastSeen: now,
+              latestMessage: message,
+              latestStack: stack || null,
+              latestMetadata: metadata || null,
+              occurrences: { create: occurrenceData },
+            },
+          });
+        } else {
+          throw createErr;
+        }
       }
     }
 
