@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, Store, RefreshCw, Download, UserPlus, AlertTriangle, Loader2 } from "lucide-react";
+import { Users, Store, RefreshCw, Download, UserPlus, AlertTriangle, Loader2, Merge } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
@@ -69,6 +69,8 @@ export default function UsersPage() {
   const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
   const [resendingReceipt, setResendingReceipt] = useState<string | null>(null);
   const [zeroingWallet, setZeroingWallet] = useState(false);
+  const [isMergingDuplicates, setIsMergingDuplicates] = useState(false);
+  const [duplicateCount, setDuplicateCount] = useState<number | null>(null);
 
   // Pledge action confirmation dialogs
   const [cancelPledgeConfirm, setCancelPledgeConfirm] = useState<{ open: boolean; pledgeId: string }>({
@@ -130,9 +132,51 @@ export default function UsersPage() {
     }
   }, [currentPage, searchQuery, roleFilter]);
 
+  // Check for duplicate accounts on load
+  const checkDuplicates = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/users/merge-duplicates");
+      if (response.ok) {
+        const data = await response.json();
+        setDuplicateCount(data.totalGroups || 0);
+      }
+    } catch (error) {
+      console.error("Error checking duplicates:", error);
+    }
+  }, []);
+
+  const mergeDuplicates = async () => {
+    if (!confirm("This will merge all duplicate email accounts (case-insensitive). The most recently active account will be kept and all data will be transferred. Continue?")) {
+      return;
+    }
+
+    setIsMergingDuplicates(true);
+    try {
+      const response = await apiFetch("/api/admin/users/merge-duplicates", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || "Duplicates merged successfully");
+        setDuplicateCount(0);
+        fetchUsers();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to merge duplicates");
+      }
+    } catch (error) {
+      console.error("Error merging duplicates:", error);
+      toast.error("Failed to merge duplicates");
+    } finally {
+      setIsMergingDuplicates(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    checkDuplicates();
+  }, [fetchUsers, checkDuplicates]);
 
   // Fetch retailers from API
   const fetchRetailers = useCallback(async () => {
@@ -832,7 +876,14 @@ export default function UsersPage() {
           <p className="text-zinc-500">Manage platform users and retailer applications</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Button variant="outline" onClick={() => { fetchUsers(); if (activeTab === "retailers") fetchRetailers(); }} disabled={isLoading || isLoadingRetailers} className="flex-1 sm:flex-none">
+          {duplicateCount !== null && duplicateCount > 0 && (
+            <Button variant="destructive" onClick={mergeDuplicates} disabled={isMergingDuplicates} className="flex-1 sm:flex-none">
+              {isMergingDuplicates ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <Merge className="h-4 w-4 sm:mr-2" />}
+              <span className="hidden sm:inline">Merge Duplicates ({duplicateCount})</span>
+              <span className="sm:hidden">{duplicateCount}</span>
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => { fetchUsers(); checkDuplicates(); if (activeTab === "retailers") fetchRetailers(); }} disabled={isLoading || isLoadingRetailers} className="flex-1 sm:flex-none">
             <RefreshCw className={`h-4 w-4 sm:mr-2 ${isLoading || isLoadingRetailers ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">Refresh</span>
           </Button>

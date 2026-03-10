@@ -100,11 +100,11 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
       return { error: { name: [nameValidation.reason || "Please enter a valid name"] } };
     }
 
-    // Check if user already exists
+    // Check if user already exists (case-insensitive to prevent duplicates)
     let existingUser;
     try {
-      existingUser = await db.user.findUnique({
-        where: { email },
+      existingUser = await db.user.findFirst({
+        where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
       });
     } catch (dbError) {
       authActionsLogger.error({ err: dbError }, "[Register] Database error checking existing user:");
@@ -223,9 +223,9 @@ export async function login(formData: FormData, callbackUrl?: string) {
     };
   }
 
-  // Find user
-  const user = await db.user.findUnique({
-    where: { email },
+  // Find user (case-insensitive to handle legacy mixed-case emails)
+  const user = await db.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
   });
 
   if (!user || !user.password) {
@@ -317,9 +317,9 @@ export async function requestPasswordReset(formData: FormData) {
     // Record the reset attempt
     await recordPasswordResetAttempt(clientIP, email);
 
-    // Check if user exists
-    const user = await db.user.findUnique({
-      where: { email },
+    // Check if user exists (case-insensitive)
+    const user = await db.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
     });
 
     // Always return success to prevent email enumeration
@@ -327,19 +327,22 @@ export async function requestPasswordReset(formData: FormData) {
       return { success: true };
     }
 
-    // Delete any existing tokens for this email
+    // Use the actual user email (normalized to lowercase) for the token
+    const normalizedEmail = user.email.toLowerCase();
+
+    // Delete any existing tokens for this email (case-insensitive cleanup)
     await db.passwordResetToken.deleteMany({
-      where: { email },
+      where: { email: { in: [email, normalizedEmail, user.email] } },
     });
 
     // Generate a secure token
     const token = crypto.randomUUID();
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Create the reset token
+    // Create the reset token (use normalized email so reset matches login lookup)
     await db.passwordResetToken.create({
       data: {
-        email,
+        email: normalizedEmail,
         token,
         expires,
       },
@@ -347,7 +350,7 @@ export async function requestPasswordReset(formData: FormData) {
 
     // Send the reset email
     const { sendPasswordResetEmail } = await import("@/lib/email");
-    const emailResult = await sendPasswordResetEmail(email, token);
+    const emailResult = await sendPasswordResetEmail(normalizedEmail, token);
 
     if (!emailResult.success) {
       authActionsLogger.error({ err: emailResult.error }, "Failed to send password reset email:");
@@ -410,10 +413,21 @@ export async function resetPassword(formData: FormData, token: string) {
     // Hash the new password
     const hashedPassword = await bcrypt.hash(password, BCRYPT_COST);
 
-    // Update the user's password
+    // Find the user case-insensitively and update their password + normalize email
+    const targetUser = await db.user.findFirst({
+      where: { email: { equals: resetToken.email, mode: "insensitive" }, deletedAt: null },
+    });
+
+    if (!targetUser) {
+      return { error: { _form: ["User not found. Please request a new reset link."] } };
+    }
+
     await db.user.update({
-      where: { email: resetToken.email },
-      data: { password: hashedPassword },
+      where: { id: targetUser.id },
+      data: {
+        password: hashedPassword,
+        email: targetUser.email.toLowerCase(), // Normalize email to lowercase
+      },
     });
 
     // Delete the used token

@@ -221,10 +221,10 @@ export async function PATCH(req: NextRequest) {
           const newEmail = data.email.toLowerCase().trim();
           const oldEmail = user.email.toLowerCase();
 
-          // Check if new email is already taken by another user
+          // Check if new email is already taken by another user (case-insensitive)
           if (newEmail !== oldEmail) {
-            const existingUser = await db.user.findUnique({
-              where: { email: newEmail }
+            const existingUser = await db.user.findFirst({
+              where: { email: { equals: newEmail, mode: "insensitive" }, deletedAt: null, id: { not: userId } }
             });
             if (existingUser) {
               return NextResponse.json(
@@ -288,26 +288,28 @@ export async function PATCH(req: NextRequest) {
       case "SEND_RESET_EMAIL":
         // Send a password reset email to the user
         try {
+          const resetEmail = user.email.toLowerCase();
+
           // Delete any existing tokens for this email
           await db.passwordResetToken.deleteMany({
-            where: { email: user.email },
+            where: { email: { in: [user.email, resetEmail] } },
           });
 
           // Generate a secure token
           const token = crypto.randomUUID();
           const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-          // Create the reset token
+          // Create the reset token (normalized to lowercase)
           await db.passwordResetToken.create({
             data: {
-              email: user.email,
+              email: resetEmail,
               token,
               expires,
             },
           });
 
           // Send the reset email
-          const emailResult = await sendPasswordResetEmail(user.email, token);
+          const emailResult = await sendPasswordResetEmail(resetEmail, token);
 
           if (!emailResult.success) {
             return NextResponse.json(
@@ -534,9 +536,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await db.user.findUnique({
-      where: { email }
+    // Check if user already exists (case-insensitive)
+    const existingUser = await db.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" }, deletedAt: null }
     });
 
     if (existingUser) {
