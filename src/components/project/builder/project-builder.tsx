@@ -303,11 +303,19 @@ export function ProjectBuilder() {
       // Execute all saves in parallel
       const results = await Promise.allSettled(savePromises);
 
-      // Check for any failures
-      const failures = results.filter(r => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok));
-      if (failures.length > 0) {
-        console.warn("Some saves had issues:", failures);
-        // Don't throw - partial success is better than complete failure
+      // Check for any failures and extract error messages
+      const failedResults: string[] = [];
+      for (const r of results) {
+        if (r.status === "rejected") {
+          failedResults.push(String(r.reason));
+        } else if (r.status === "fulfilled" && !r.value.ok) {
+          try {
+            const errBody = await r.value.json();
+            failedResults.push(errBody.error || `Save failed (${r.value.status})`);
+          } catch {
+            failedResults.push(`Save failed (${r.value.status})`);
+          }
+        }
       }
 
       // Handle rewards with dedicated endpoint - batch save all rewards in a single request
@@ -317,6 +325,19 @@ export function ProjectBuilder() {
           headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ rewards: transformedRewards }),
         });
+      }
+
+      if (failedResults.length > 0) {
+        console.error("Save failures:", failedResults);
+        if (failedResults.length === results.length) {
+          // All saves failed
+          toast.error(`Failed to save project: ${failedResults[0]}`);
+          return false;
+        } else {
+          // Partial failure
+          toast.error(`Some sections failed to save: ${failedResults[0]}`);
+          return true;
+        }
       }
 
       toast.success("Project saved successfully");
