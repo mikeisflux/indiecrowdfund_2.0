@@ -19,10 +19,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Thread ID format: senderId-projectId
-    const [senderId, projectId] = threadId.split("-");
+    // Thread ID format: senderId::projectId (projectId may be "none" for null)
+    const parts = threadId.split("::");
+    const senderId = parts[0];
+    const projectId = parts[1] === "none" ? null : parts[1] || null;
 
-    if (!senderId || !projectId) {
+    if (!senderId) {
       return NextResponse.json({ error: "Invalid thread ID" }, { status: 400 });
     }
 

@@ -22,15 +22,17 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Thread ID format: senderId-projectId (projectId may be "null" or empty for direct messages)
-    const [recipientId, projectId] = threadId.split("-");
+    // Thread ID format: senderId::projectId (projectId may be "none" for null)
+    const parts = threadId.split("::");
+    const recipientId = parts[0];
+    const projectId = parts[1] === "none" ? null : parts[1] || null;
 
     if (!recipientId) {
       return NextResponse.json({ error: "Invalid thread ID" }, { status: 400 });
     }
 
-    // Handle null/undefined/empty projectId (direct messages without project association)
-    const hasProject = projectId && projectId !== "null" && projectId !== "undefined";
+    // Handle null projectId (direct messages without project association)
+    const hasProject = !!projectId;
 
     const body = await request.json();
     const { content, attachments } = body;

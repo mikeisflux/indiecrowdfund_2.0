@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     }>();
 
     for (const msg of messages) {
-      const threadKey = `${msg.senderId}-${msg.projectId}`;
+      const threadKey = `${msg.senderId}::${msg.projectId || "none"}`;
 
       if (!threadMap.has(threadKey)) {
         // Determine status
