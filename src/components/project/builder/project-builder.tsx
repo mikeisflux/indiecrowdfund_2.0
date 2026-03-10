@@ -46,6 +46,7 @@ export function ProjectBuilder() {
     setProjectId,
     projectStatus,
     setProjectStatus,
+    updateReward,
     reset,
   } = useProjectStore();
 
@@ -163,25 +164,43 @@ export function ProjectBuilder() {
           setProjectId(newProjectId);
 
           // Save rewards (batch) and collaborators in parallel for new projects
-          const newProjectPromises = [
-            // Batch save all rewards in a single request
-            transformedRewards.length > 0
-              ? apiFetch(`/api/projects/${newProjectId}/rewards`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", },
-                  body: JSON.stringify({ rewards: transformedRewards }),
-                })
-              : Promise.resolve(new Response()),
-            // Save collaborators in parallel
-            ...(people.collaborators || []).map((collab) =>
-              apiFetch(`/api/projects/${newProjectId}/collaborators`, {
+          const rewardsPromise = transformedRewards.length > 0
+            ? apiFetch(`/api/projects/${newProjectId}/rewards`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", },
-                body: JSON.stringify(collab),
+                body: JSON.stringify({ rewards: transformedRewards }),
               })
-            ),
-          ];
-          await Promise.allSettled(newProjectPromises);
+            : Promise.resolve(new Response());
+
+          const collabPromises = (people.collaborators || []).map((collab) =>
+            apiFetch(`/api/projects/${newProjectId}/collaborators`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", },
+              body: JSON.stringify(collab),
+            })
+          );
+
+          const allResults = await Promise.allSettled([rewardsPromise, ...collabPromises]);
+          const rewardsResult = allResults[0];
+
+          // Update store with IDs returned from batch save to prevent duplicates on next save
+          if (rewardsResult.status === "fulfilled" && rewardsResult.value.ok) {
+            try {
+              const rewardsData = await rewardsResult.value.json();
+              if (rewardsData.results) {
+                rewardsData.results.forEach((result: { success: boolean; reward?: { id: string } }, idx: number) => {
+                  if (result.success && result.reward?.id && idx < rewards.length) {
+                    const existingReward = rewards[idx];
+                    if (!existingReward.id) {
+                      updateReward(idx, { ...existingReward, id: result.reward!.id });
+                    }
+                  }
+                });
+              }
+            } catch {
+              // Non-critical: IDs will be synced on next page load
+            }
+          }
         }
 
         toast.success("Project created successfully");
@@ -320,11 +339,30 @@ export function ProjectBuilder() {
 
       // Handle rewards with dedicated endpoint - batch save all rewards in a single request
       if (transformedRewards.length > 0) {
-        await apiFetch(`/api/projects/${projectId}/rewards`, {
+        const rewardsResponse = await apiFetch(`/api/projects/${projectId}/rewards`, {
           method: "POST",
           headers: { "Content-Type": "application/json", },
           body: JSON.stringify({ rewards: transformedRewards }),
         });
+
+        // Update store with IDs returned from the API to prevent duplicate creation on next save
+        if (rewardsResponse.ok) {
+          try {
+            const rewardsResult = await rewardsResponse.json();
+            if (rewardsResult.results) {
+              rewardsResult.results.forEach((result: { success: boolean; reward?: { id: string } }, idx: number) => {
+                if (result.success && result.reward?.id && idx < rewards.length) {
+                  const existingReward = rewards[idx];
+                  if (!existingReward.id) {
+                    updateReward(idx, { ...existingReward, id: result.reward!.id });
+                  }
+                }
+              });
+            }
+          } catch {
+            // Non-critical: IDs will be synced on next page load
+          }
+        }
       }
 
       if (failedResults.length > 0) {
