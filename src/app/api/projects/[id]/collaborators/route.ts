@@ -70,7 +70,7 @@ export async function POST(
 
     const creatorName = session.user.name || project.creator.name || "Project Creator";
 
-    // Get creator's email handle for sending from their address
+    // Get creator's email handle for reply-to address
     const creator = await db.user.findUnique({
       where: { id: session.user.id },
       select: { creatorEmailHandle: true },
@@ -114,13 +114,18 @@ export async function POST(
       });
     }
 
-    // Send email notification from creator's email address
+    // Send email notification with reply-to set to creator's email
     const emailResult = await sendCollaboratorInviteEmail(
       collab.email,
       creatorName,
       project.title,
       collaboratorRecord.id,
-      creatorEmail ? { fromEmail: creatorEmail, fromName: creatorName, replyTo: creatorEmail } : undefined
+      creatorEmail ? { replyTo: creatorEmail } : undefined
+    );
+
+    projectsCollaboratorsLogger.info(
+      { emailSent: emailResult.success, error: emailResult.error || null, to: collab.email },
+      "Collaborator invite email result"
     );
 
     // Create a Message record so it appears in the creator's inbox

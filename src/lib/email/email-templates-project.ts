@@ -335,11 +335,11 @@ export async function sendCollaboratorInviteEmail(
     subject,
     html,
     text: plainTextContent,
-    ...(options?.fromEmail && {
-      fromEmail: options.fromEmail,
-      fromName: options.fromName,
-      replyTo: options.replyTo || options.fromEmail,
-      isCreatorEmail: true,
+    skipUnsubscribeCheck: true, // Collaborator invites are transactional
+    // Use platform default FROM (same as admin compose) for reliable delivery,
+    // but set reply-to to creator's email so replies go to them
+    ...(options?.replyTo && {
+      replyTo: options.replyTo,
     }),
   });
 
