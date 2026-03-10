@@ -28,7 +28,9 @@ export async function sendPledgeConfirmationEmail(
   projectUrlPath?: string,
   rewardAmount?: number,
   shippingAmount?: number,
-  paymentMethod?: "STRIPE" | "DIVINITYCOIN"
+  paymentMethod?: "STRIPE" | "DIVINITYCOIN",
+  backerNumber?: number | null,
+  confirmationNumber?: string
 ) {
   // Use provided projectUrlPath if available (for vanity URLs), otherwise fallback to legacy format
   const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
@@ -125,6 +127,18 @@ export async function sendPledgeConfirmationEmail(
           </table>
           <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e5e5;">
             <table style="width: 100%; border-collapse: collapse;">
+              ${backerNumber ? `
+              <tr>
+                <td style="padding: 4px 0; color: #666;">Backer Number</td>
+                <td style="padding: 4px 0; text-align: right; font-weight: 600; color: #028858;">#${backerNumber}</td>
+              </tr>
+              ` : ""}
+              ${confirmationNumber ? `
+              <tr>
+                <td style="padding: 4px 0; color: #666;">Confirmation #</td>
+                <td style="padding: 4px 0; text-align: right; font-weight: 500; font-family: monospace; font-size: 12px;">${confirmationNumber}</td>
+              </tr>
+              ` : ""}
               <tr>
                 <td style="padding: 4px 0; color: #666;">Payment Method</td>
                 <td style="padding: 4px 0; text-align: right; font-weight: 500;">${paymentMethodLabel}</td>

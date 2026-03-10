@@ -41,6 +41,8 @@ import {
   Loader2,
   Edit,
   ShieldAlert,
+  Hash,
+  Shield,
 } from "lucide-react";
 
 interface PledgeDetails {
@@ -266,25 +268,18 @@ export default function ManagePledgePage() {
       {/* Pledge Details */}
       <Card className="mb-6">
         <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                {pledge.project.title}
-              </CardTitle>
-              <CardDescription>
-                Pledged on {new Date(pledge.createdAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </CardDescription>
-            </div>
-            {pledge.backerNumber && (
-              <Badge variant="outline" className="text-sm font-medium">
-                Backer #{pledge.backerNumber}
-              </Badge>
-            )}
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              {pledge.project.title}
+            </CardTitle>
+            <CardDescription>
+              Pledged on {new Date(pledge.createdAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -297,6 +292,30 @@ export default function ManagePledgePage() {
               <div>
                 <p className="text-sm text-muted-foreground">Your Pledge</p>
                 <p className="text-2xl font-bold">${Number(pledge.amount).toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Backer Number & Confirmation */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {pledge.backerNumber && (
+              <div className="flex items-center gap-3 p-4 rounded-lg border bg-primary/5 border-primary/20">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Backer Number</p>
+                  <p className="text-xl font-bold text-primary">#{pledge.backerNumber}</p>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30">
+              <div className="p-2 rounded-full bg-muted">
+                <Hash className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Confirmation #</p>
+                <p className="text-sm font-mono font-semibold">{pledge.id}</p>
               </div>
             </div>
           </div>

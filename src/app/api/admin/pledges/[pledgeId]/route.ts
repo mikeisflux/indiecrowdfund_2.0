@@ -192,7 +192,15 @@ export async function PATCH(
           pledge.reward?.title || null,
           chargedImmediately,
           pledge.project.imageUrl,
-          pledge.project.currency || "USD"
+          pledge.project.currency || "USD",
+          [], // addons
+          undefined, // shippingInfo
+          undefined, // projectUrlPath
+          undefined, // rewardAmount
+          undefined, // shippingAmount
+          undefined, // paymentMethod
+          pledge.backerNumber,
+          pledge.id
         );
 
         if (result.success) {

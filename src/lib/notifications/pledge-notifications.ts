@@ -207,7 +207,12 @@ export async function notifyBackerPledgeConfirmed(
       pledge.project.currency,
       addons,
       shippingInfo,
-      projectUrlPath
+      projectUrlPath,
+      undefined, // rewardAmount
+      undefined, // shippingAmount
+      undefined, // paymentMethod
+      pledge.backerNumber,
+      pledge.id
     );
 
     if (result.success) {
@@ -432,7 +437,12 @@ export async function processUnsentConfirmationEmails() {
         pledge.project.currency,
         addons,
         shippingInfo,
-        projectUrlPath
+        projectUrlPath,
+        undefined, // rewardAmount
+        undefined, // shippingAmount
+        undefined, // paymentMethod
+        pledge.backerNumber,
+        pledge.id
       );
 
       if (emailResult.success) {

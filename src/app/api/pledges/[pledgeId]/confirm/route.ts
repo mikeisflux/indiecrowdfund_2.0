@@ -364,7 +364,9 @@ export async function POST(
         projectUrlPath,
         Number(pledge.rewardAmount) || undefined,
         Number(pledge.shippingAmount) || undefined,
-        pledge.paymentProcessor as "STRIPE" | "DIVINITYCOIN"
+        pledge.paymentProcessor as "STRIPE" | "DIVINITYCOIN",
+        pledge.backerNumber,
+        pledge.id
       );
       emailSent = emailResult.success;
 

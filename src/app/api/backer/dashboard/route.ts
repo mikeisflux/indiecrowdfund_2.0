@@ -239,6 +239,7 @@ export async function GET() {
           reward: pledge.reward?.title || "No reward",
           pledgedAt: pledge.createdAt,
           status: pledge.status,
+          backerNumber: pledge.backerNumber,
         },
         estimatedDelivery: pledge.reward?.estimatedDelivery || null,
         fulfillmentStatus: pledge.fulfillmentStatus,

@@ -77,6 +77,7 @@ interface BackedProject {
     reward: string;
     pledgedAt: string;
     status: string;
+    backerNumber: number | null;
   };
   estimatedDelivery: string | null;
   fulfillmentStatus: string;
@@ -714,6 +715,13 @@ export default function BackerDashboard() {
                             {/* Pledge Details */}
                             <div className="mb-4 rounded-xl bg-gradient-to-r from-primary/5 to-purple-500/5 border border-primary/10 p-4">
                               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                                {project.pledge.backerNumber && (
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-primary" />
+                                    <span className="text-muted-foreground">Backer:</span>
+                                    <span className="font-semibold">#{project.pledge.backerNumber}</span>
+                                  </div>
+                                )}
                                 <div className="flex items-center gap-2">
                                   <DollarSign className="h-4 w-4 text-green-500" />
                                   <span className="text-muted-foreground">Your pledge:</span>
