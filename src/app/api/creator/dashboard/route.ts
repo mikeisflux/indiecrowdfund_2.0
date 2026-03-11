@@ -281,7 +281,7 @@ export async function GET(req: NextRequest) {
         orderBy: { amount: "asc" },
       }),
 
-      // All addons for this project (for CSV export columns)
+      // All addons for this project (with performance stats)
       db.reward.findMany({
         where: {
           projectId: selectedProjectId,
@@ -290,6 +290,18 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           title: true,
+          amount: true,
+          quantityAvailable: true,
+          quantityClaimed: true,
+          selectedAddons: {
+            where: {
+              pledge: { status: "COMPLETED", deletedAt: null },
+            },
+            select: {
+              quantity: true,
+              amount: true,
+            },
+          },
         },
         orderBy: { amount: "asc" },
       }),
@@ -656,6 +668,24 @@ export async function GET(req: NextRequest) {
       allRewards: rewardStats.map((r) => ({ id: r.id, title: r.title })),
       // All addons for CSV column headers
       allAddons: addonsList.map((a) => ({ id: a.id, title: a.title })),
+      // Addon performance stats
+      addonStats: addonsList.map((addon) => {
+        const totalQuantity = addon.selectedAddons.reduce((sum: number, pa: { quantity: number; amount: unknown }) => sum + pa.quantity, 0);
+        const totalRevenue = addon.selectedAddons.reduce((sum: number, pa: { quantity: number; amount: unknown }) => sum + Number(pa.amount), 0);
+        const uniqueBackers = addon.selectedAddons.length;
+        const remaining = addon.quantityAvailable !== null
+          ? addon.quantityAvailable - addon.quantityClaimed
+          : null;
+        return {
+          id: addon.id,
+          title: addon.title,
+          amount: Number(addon.amount),
+          backers: uniqueBackers,
+          quantity: totalQuantity,
+          total: Math.round(totalRevenue * 100) / 100,
+          remaining,
+        };
+      }),
       referrers: processedReferrers,
       productionOrderStats: fulfillmentStats,
       userRole,

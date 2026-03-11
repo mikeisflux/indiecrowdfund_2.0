@@ -75,6 +75,16 @@ export interface RewardStat {
   remaining: number | null;
 }
 
+export interface AddonStat {
+  id: string;
+  title: string;
+  amount: number;
+  backers: number;
+  quantity: number;
+  total: number;
+  remaining: number | null;
+}
+
 export interface Referrer {
   source: string;
   visits: number;
@@ -114,6 +124,7 @@ export interface DashboardData {
   fundingData: FundingDataPoint[];
   recentBackers: Backer[];
   rewardStats: RewardStat[];
+  addonStats: AddonStat[];
   allRewards: RewardAddonItem[];
   allAddons: RewardAddonItem[];
   referrers: Referrer[];

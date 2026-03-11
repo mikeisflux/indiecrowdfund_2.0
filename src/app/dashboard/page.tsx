@@ -15,7 +15,7 @@ import {
   BarChart3,
   Users,
   MessageSquare,
-  Package,
+
   Truck,
   FileText,
   ShoppingCart,
@@ -354,9 +354,9 @@ export default function CreatorDashboard() {
                     <Users className="mr-2 h-4 w-4" />
                     Backers
                   </TabsTrigger>
-                  <TabsTrigger value="rewards" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <Package className="mr-2 h-4 w-4" />
-                    Rewards
+                  <TabsTrigger value="performance" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Performance
                   </TabsTrigger>
                   <TabsTrigger value="email" className="relative data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                     <Mail className="mr-2 h-4 w-4" />
@@ -411,8 +411,12 @@ export default function CreatorDashboard() {
                 <QuickStats stats={stats} />
               </TabsContent>
 
-              <TabsContent value="rewards" className="space-y-6">
-                <RewardStats rewardStats={data.rewardStats} projectUrl={project.projectUrl} />
+              <TabsContent value="performance" className="space-y-6">
+                <RewardStats
+                  rewardStats={data.rewardStats}
+                  addonStats={data.addonStats}
+                  projectUrl={project.projectUrl}
+                />
               </TabsContent>
 
               <TabsContent value="backers" className="space-y-6">
