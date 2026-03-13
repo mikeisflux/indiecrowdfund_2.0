@@ -9,6 +9,7 @@ import {
   CreditCard,
   Megaphone,
   ShoppingBag,
+  ShieldCheck,
   Info,
   ArrowLeft,
   AlertCircle,
@@ -17,6 +18,7 @@ import Link from 'next/link';
 import { Footer } from "@/components/footer";
 
 const tabs = [
+  { id: 'verification', label: 'Verification', icon: ShieldCheck },
   { id: 'basics', label: 'Basics', icon: Lightbulb },
   { id: 'rewards', label: 'Rewards & Add-ons', icon: Gift },
   { id: 'story', label: 'Story', icon: BookOpen },
@@ -34,6 +36,20 @@ interface FieldInfo {
 }
 
 const tabContent: Record<string, { title: string; description: string; fields: FieldInfo[] }> = {
+  'verification': {
+    title: 'Creator Verification & Due Diligence',
+    description: 'Before your campaign can go live, you must complete our verification process. This protects backers and maintains platform trust.',
+    fields: [
+      { name: 'Government-Issued Photo ID', required: true, description: 'New creators must submit a valid government-issued photo ID (driver\'s license, passport, or state ID). This is required for all first-time creators on the platform.', tips: 'Ensure your ID is not expired and the photo is clearly legible. Returning creators with previously verified accounts may be exempt.' },
+      { name: 'Business Filing Documentation', required: true, description: 'New creators must provide a legitimate business filing from the Secretary of State office in the state where they reside (e.g., LLC articles of organization, business registration certificate, DBA filing).', tips: 'If you operate as a sole proprietor, a DBA (Doing Business As) filing is acceptable. Documents must be current and verifiable.' },
+      { name: 'Social Media Verification', required: true, description: 'All social media accounts linked to your creator profile are logged and verified by our team. We check for consistency, authenticity, and active presence.', tips: 'Link your most active and professional accounts. Accounts with established history strengthen your application.' },
+      { name: 'Cross-Platform Campaign Audit', required: true, description: 'Our team searches other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review your previous campaign history. We examine backer reviews, comments, public feedback, and fulfillment track record.', tips: 'Be transparent about previous campaigns. Proactively disclose any past issues — honesty is valued during review.' },
+      { name: 'Fulfillment History Validation', required: true, description: 'We validate your fulfillment history by reviewing backer feedback across all platforms. We contact creators directly when discrepancies or concerns are identified. All findings are documented internally.', tips: 'If you had fulfillment delays on past projects, be prepared to explain the circumstances and resolution.' },
+      { name: 'Automatic Disqualification Rules', required: false, description: 'Creators are automatically disqualified if they have three or more unfulfilled campaigns on any platform, OR if any campaign is more than one year past its stated delivery date regardless of fulfillment status.', tips: 'These rules apply to campaigns across ALL crowdfunding platforms, not just IndieCrowdfund. There are no exceptions.' },
+      { name: 'Payment Account Verification', required: true, description: 'Complete Stripe Connect Express onboarding (US-based identity verification, SSN/Tax ID, US bank account) or equivalent verification through DivinityCoin.', tips: 'This is a separate verification handled by the payment processor. Have your SSN and bank details ready.' },
+      { name: 'Internal Review & Documentation', required: false, description: 'All verification findings, correspondence, and review decisions are documented internally and retained for compliance and audit purposes. Our admin team reviews all documentation before approving campaigns.', tips: 'The review process typically takes 2-5 business days. You\'ll be notified of the outcome via email.' },
+    ]
+  },
   'basics': {
     title: 'Step 1: Basics',
     description: 'Set up the foundation of your project. This information appears prominently on your project page and in search results.',
@@ -158,7 +174,7 @@ function FieldCard({ field }: { field: FieldInfo }) {
 }
 
 export default function CreatorHandbookPage() {
-  const [activeTab, setActiveTab] = useState('basics');
+  const [activeTab, setActiveTab] = useState('verification');
   const currentTab = tabContent[activeTab];
 
   return (

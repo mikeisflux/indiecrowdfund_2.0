@@ -35,9 +35,9 @@ const trustPillars = [
   },
   {
     icon: UserCheck,
-    title: "Creator Verification",
+    title: "Creator Verification & Due Diligence",
     description:
-      "Creators must verify their identity through our secure process. Verified creators display a badge, giving backers confidence in who they're supporting.",
+      "New creators must provide a government-issued photo ID and a legitimate business filing from their state's Secretary of State. We verify all linked social media accounts, search other crowdfunding platforms for previous campaigns, and validate fulfillment history by reviewing backer reviews and comments. Creators with three or more unfulfilled campaigns on any platform, or any campaign more than one year past delivery, are automatically disqualified. All findings are documented internally.",
   },
   {
     icon: ShieldCheck,
@@ -392,7 +392,7 @@ export default function TrustSafetyPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    Creators must connect a valid payment account (which requires identity verification), provide contact information, and pass our project review process. We support two PCI-compliant payment processors — Stripe (Level 1 PCI) and DivinityCoin. All payment data is encrypted and we never store credit card numbers on our servers. We also check for patterns that might indicate fraud. Verified creators display a badge on their profile.
+                    Our verification process is thorough and multi-layered. New creators must provide a government-issued photo ID and a legitimate business filing from their state&apos;s Secretary of State office. We log and verify all linked social media accounts. Our team searches other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review previous campaign history, including backer reviews, comments, and fulfillment track records. We contact creators directly when concerns arise. Creators with three or more unfulfilled campaigns on any platform, or any campaign more than one year past delivery, are automatically disqualified. All findings are documented internally. Additionally, creators must connect a valid payment account through Stripe Connect (identity, SSN, US bank account) or DivinityCoin. We support two PCI-compliant payment processors — Stripe (Level 1 PCI) and DivinityCoin. All payment data is encrypted and we never store credit card numbers on our servers. Verified creators display a badge on their profile.
                   </p>
                 </CardContent>
               </Card>

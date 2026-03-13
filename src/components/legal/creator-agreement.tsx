@@ -6,7 +6,7 @@ export function CreatorAgreementContent() {
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">Creator Responsibility Agreement</h2>
         <p className="text-sm text-zinc-500 mb-8">
-          <strong>Last Updated:</strong> November 27, 2025
+          <strong>Last Updated:</strong> March 13, 2026
         </p>
 
         <p className="mb-8 font-medium">
@@ -80,9 +80,30 @@ export function CreatorAgreementContent() {
         </ul>
         <p className="mb-6 font-medium">Creators must not use IndieCrowdfund to violate any law.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">7. Previous History</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">7. Identity Verification & Due Diligence</h3>
+        <p className="mb-4">Before launching a campaign, creators must complete our verification process:</p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li><strong>New Creators:</strong> Must provide a valid government-issued photo ID and a legitimate business filing from their state&apos;s Secretary of State office</li>
+          <li><strong>Social Media Verification:</strong> All linked social media accounts are logged and verified by our team</li>
+          <li><strong>Cross-Platform Audit:</strong> We search other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review your previous campaign history, including backer reviews, comments, and public feedback</li>
+          <li><strong>Fulfillment History Validation:</strong> We contact creators directly when discrepancies or concerns are identified during our review</li>
+          <li><strong>Payment Verification:</strong> Completion of Stripe Connect Express onboarding (identity, SSN/Tax ID, US bank account) or equivalent processor verification</li>
+        </ul>
+        <p className="mb-4 font-medium">All verification findings, correspondence, and review decisions are documented internally and retained for compliance purposes.</p>
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+          <p className="text-red-800 dark:text-red-200 font-medium mb-2">Automatic Disqualification</p>
+          <p className="text-red-700 dark:text-red-300 text-sm mb-2">
+            Creators are automatically disqualified from launching on IndieCrowdfund if:
+          </p>
+          <ul className="list-disc pl-6 text-red-700 dark:text-red-300 text-sm space-y-1">
+            <li>They have <strong>three or more unfulfilled campaigns</strong> on any crowdfunding platform</li>
+            <li>They have <strong>any campaign that is more than one year past its stated delivery date</strong>, regardless of current fulfillment status</li>
+          </ul>
+        </div>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">8. Previous History</h3>
         <p className="mb-6">
-          Your previous history on other crowdfunding sites may be taken into account. We reserve the right to refuse service to anyone, at any time, for any reason.
+          Your previous history on other crowdfunding sites will be thoroughly reviewed as part of our verification process. We reserve the right to refuse service to anyone, at any time, for any reason.
         </p>
 
         <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">

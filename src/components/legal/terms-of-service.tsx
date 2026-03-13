@@ -6,7 +6,7 @@ export function TermsOfServiceContent() {
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">IndieCrowdfund — Terms of Service</h2>
         <p className="text-sm text-zinc-500 mb-8">
-          <strong>Last Updated:</strong> November 27, 2025
+          <strong>Last Updated:</strong> March 13, 2026
         </p>
 
         <p className="mb-6">
@@ -82,7 +82,32 @@ export function TermsOfServiceContent() {
           Creators are responsible for all taxes, shipping costs, duties, and regulatory compliance.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">7. Prohibited Activities</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">7. Creator Verification & Due Diligence</h3>
+        <p className="mb-4">
+          IndieCrowdfund conducts thorough due diligence on all creators before approving campaigns. Our verification process includes:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li><strong>Identity Verification:</strong> New creators must provide a valid government-issued photo ID and a legitimate business filing from their state Secretary of State office. Returning creators with verified accounts may be exempt from re-submission.</li>
+          <li><strong>Social Media & Online Presence Audit:</strong> We log and verify all social media accounts linked to the creator. Our team searches other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review the creator&apos;s previous campaign history.</li>
+          <li><strong>Fulfillment History Review:</strong> We review backer comments, reviews, and public feedback on all prior campaigns across all platforms. We contact creators directly when discrepancies or concerns are identified.</li>
+          <li><strong>Internal Documentation:</strong> All verification findings, correspondence, and review decisions are documented internally and retained for compliance and audit purposes.</li>
+          <li><strong>Payment Account Verification:</strong> Creators must complete Stripe Connect Express onboarding (US-based identity verification, SSN/Tax ID, and US bank account) or equivalent verification through our alternative payment processor.</li>
+        </ul>
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+          <p className="text-red-800 dark:text-red-200 font-medium mb-2">Automatic Disqualification</p>
+          <p className="text-red-700 dark:text-red-300 text-sm">
+            Creators are automatically disqualified from launching on IndieCrowdfund if:
+          </p>
+          <ul className="list-disc pl-6 mt-2 text-red-700 dark:text-red-300 text-sm space-y-1">
+            <li>They have <strong>three or more unfulfilled campaigns</strong> on any crowdfunding platform</li>
+            <li>They have <strong>any campaign that is more than one year past its stated delivery date</strong>, regardless of fulfillment status</li>
+          </ul>
+        </div>
+        <p className="mb-6">
+          IndieCrowdfund reserves the right to request additional documentation, deny applications, or revoke access at any time based on verification findings.
+        </p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">8. Prohibited Activities</h3>
         <p className="mb-4">Users may not:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>Break any laws while using the platform</li>
@@ -94,7 +119,7 @@ export function TermsOfServiceContent() {
         </ul>
         <p className="mb-6 font-medium">Violations may result in account termination.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">8. Intellectual Property</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">9. Intellectual Property</h3>
         <p className="mb-4">
           Creators retain ownership of their content but grant IndieCrowdfund a limited license to:
         </p>
@@ -105,7 +130,7 @@ export function TermsOfServiceContent() {
         </ul>
         <p className="mb-6">Users may not copy, steal, or misuse other creators' content.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">9. Platform Rights</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">10. Platform Rights</h3>
         <p className="mb-4">IndieCrowdfund may:</p>
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li>Remove content that violates these Terms</li>
@@ -115,7 +140,7 @@ export function TermsOfServiceContent() {
           <li>Refuse service at our discretion</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">10. Disclaimers</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">11. Disclaimers</h3>
         <p className="mb-4 font-medium">IndieCrowdfund is provided "as is" without warranties.</p>
         <p className="mb-4">We do not guarantee:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
@@ -127,7 +152,7 @@ export function TermsOfServiceContent() {
         </ul>
         <p className="mb-6 font-medium">Use the platform at your own risk.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">11. Limitation of Liability</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">12. Limitation of Liability</h3>
         <p className="mb-4">To the fullest extent permitted by law:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>IndieCrowdfund is not liable for losses related to project failures, disputes, delays, or unfulfilled rewards</li>
@@ -137,22 +162,22 @@ export function TermsOfServiceContent() {
           Some jurisdictions do not allow certain limitations; in such cases, the limitations apply to the maximum extent allowed.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">12. Dispute Resolution</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">13. Dispute Resolution</h3>
         <p className="mb-4">
           You agree to resolve disputes through binding arbitration, not in court. Class actions are waived. Local consumer rights may apply based on your jurisdiction.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">13. Governing Law</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">14. Governing Law</h3>
         <p className="mb-6">
           These Terms are governed by the laws of the State of Indiana, without regard to conflicts of law.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">14. Changes to These Terms</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">15. Changes to These Terms</h3>
         <p className="mb-6">
           We may update these Terms at any time. We will notify users by email or website notice. Continued use after changes means you accept the updated Terms.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">15. Contact Information</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">16. Contact Information</h3>
         <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
           <p className="font-semibold mb-2">IndieCrowdfund, Inc.</p>
           <p className="mb-1">
