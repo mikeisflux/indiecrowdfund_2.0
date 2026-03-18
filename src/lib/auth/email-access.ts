@@ -28,7 +28,7 @@ export async function checkEmailAccess(userId: string): Promise<{ allowed: boole
         {
           OR: [
             { status: { in: ["APPROVED", "LIVE", "FUNDED"] } },
-            { prelaunchApproved: true },
+            { prelaunchStatus: "APPROVED" },
           ],
         },
       ],
