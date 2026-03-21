@@ -31,35 +31,69 @@ import { auth } from "@/lib/auth";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.com";
 
-export const metadata: Metadata = {
-  title: "IndieCrowdfund - The #1 Kickstarter Alternative | Crowdfunding for Creators",
-  description:
-    "IndieCrowdfund is the best Kickstarter alternative for crowdfunding creative projects. Lower fees, better tools, and a passionate backer community. Launch your campaign today and bring your idea to life.",
-  alternates: {
-    canonical: SITE_URL,
-  },
-  openGraph: {
+// Dynamic metadata that uses the most recent live project's image for social sharing
+export async function generateMetadata(): Promise<Metadata> {
+  // Fetch the most recently launched live project's image for OG tags
+  let ogImageUrl = "/og-default.png";
+  let ogImageAlt = "IndieCrowdfund - Crowdfunding for Independent Creators";
+
+  try {
+    const latestProject = await db.project.findFirst({
+      where: {
+        status: "LIVE",
+        deletedAt: null,
+        imageUrl: { not: null },
+        NOT: {
+          title: { contains: "test", mode: "insensitive" },
+        },
+      },
+      orderBy: { launchDate: "desc" },
+      select: { imageUrl: true, title: true },
+    });
+
+    if (latestProject?.imageUrl) {
+      ogImageUrl = latestProject.imageUrl;
+      ogImageAlt = `${latestProject.title} on IndieCrowdfund`;
+    }
+  } catch (error) {
+    console.error("Error fetching latest project for OG image:", error);
+  }
+
+  return {
     title: "IndieCrowdfund - The #1 Kickstarter Alternative | Crowdfunding for Creators",
     description:
-      "The crowdfunding platform built for independent creators. Lower fees, better tools, and a passionate backer community. Launch your campaign today.",
-    url: SITE_URL,
-    images: [
-      {
-        url: "/og-default.png",
-        width: 1200,
-        height: 630,
-        alt: "IndieCrowdfund - Crowdfunding for Independent Creators",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "IndieCrowdfund - The #1 Kickstarter Alternative",
-    description:
-      "The crowdfunding platform built for independent creators. Lower fees, better tools, and a passionate backer community.",
-    images: ["/og-default.png"],
-  },
-};
+      "IndieCrowdfund is the best Kickstarter alternative for crowdfunding creative projects. Lower fees, better tools, and a passionate backer community. Launch your campaign today and bring your idea to life.",
+    alternates: {
+      canonical: SITE_URL,
+    },
+    openGraph: {
+      title: "IndieCrowdfund - The #1 Kickstarter Alternative | Crowdfunding for Creators",
+      description:
+        "The crowdfunding platform built for independent creators. Lower fees, better tools, and a passionate backer community. Launch your campaign today.",
+      url: SITE_URL,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: ogImageAlt,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "IndieCrowdfund - The #1 Kickstarter Alternative",
+      description:
+        "The crowdfunding platform built for independent creators. Lower fees, better tools, and a passionate backer community.",
+      images: [
+        {
+          url: ogImageUrl,
+          alt: ogImageAlt,
+        },
+      ],
+    },
+  };
+}
 
 // Revalidate homepage every 60 seconds.
 // Note: auth() uses cookies() which opts into dynamic rendering at request time.
