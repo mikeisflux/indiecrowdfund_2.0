@@ -26,6 +26,7 @@ import {
   Shield,
   Copy,
   Check,
+  Send,
 } from "lucide-react";
 import type { Retailer } from "../types";
 import { getRetailerStatusBadge, getBusinessTypeBadge } from "./StatusBadges";
@@ -35,9 +36,10 @@ interface RetailerDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAction: (retailer: Retailer, action: string) => void;
+  onResendApprovalEmail?: (retailer: Retailer) => void;
 }
 
-export function RetailerDetailDialog({ retailer, open, onOpenChange, onAction }: RetailerDetailDialogProps) {
+export function RetailerDetailDialog({ retailer, open, onOpenChange, onAction, onResendApprovalEmail }: RetailerDetailDialogProps) {
   const [copiedCode, setCopiedCode] = useState(false);
 
   const copyAccessCode = async (code: string) => {
@@ -293,16 +295,30 @@ export function RetailerDetailDialog({ retailer, open, onOpenChange, onAction }:
             </>
           )}
           {retailer.status === "APPROVED" && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-                onAction(retailer, "SUSPEND");
-              }}
-            >
-              <Ban className="h-4 w-4 mr-2" />
-              Suspend Account
-            </Button>
+            <>
+              {onResendApprovalEmail && (
+                <Button
+                  variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                  onClick={() => {
+                    onResendApprovalEmail(retailer);
+                  }}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Approval Email
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false);
+                  onAction(retailer, "SUSPEND");
+                }}
+              >
+                <Ban className="h-4 w-4 mr-2" />
+                Suspend Account
+              </Button>
+            </>
           )}
           {retailer.status === "SUSPENDED" && (
             <Button

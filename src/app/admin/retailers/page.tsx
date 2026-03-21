@@ -30,6 +30,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Star,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -156,6 +157,28 @@ export default function RetailersPage() {
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
     setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handleResendApprovalEmail = async (retailer: Retailer) => {
+    try {
+      const response = await apiFetch("/api/admin/retailers/resend-approval", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ retailerId: retailer.id }),
+      });
+
+      if (response.ok) {
+        toast.success(`Approval email sent to ${retailer.email}`);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error || "Failed to send approval email");
+      }
+    } catch (error) {
+      console.error("Error sending approval email:", error);
+      toast.error("An error occurred while sending the approval email");
+    }
   };
 
   const handleViewRetailer = (retailer: Retailer) => {
@@ -427,15 +450,26 @@ export default function RetailersPage() {
                             </>
                           )}
                           {retailer.status === "APPROVED" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-zinc-600 hover:text-zinc-700"
-                              onClick={() => handleActionClick(retailer, "SUSPEND")}
-                              title="Suspend"
-                            >
-                              <Ban className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => handleResendApprovalEmail(retailer)}
+                                title="Send Approval Email"
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-zinc-600 hover:text-zinc-700"
+                                onClick={() => handleActionClick(retailer, "SUSPEND")}
+                                title="Suspend"
+                              >
+                                <Ban className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                           {retailer.status === "SUSPENDED" && (
                             <Button
@@ -736,6 +770,7 @@ export default function RetailersPage() {
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
         onAction={handleActionClick}
+        onResendApprovalEmail={handleResendApprovalEmail}
       />
 
       {/* Action Confirmation Dialog */}

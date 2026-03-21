@@ -1,6 +1,7 @@
 // Retailer interface
 export interface Retailer {
   id: string;
+  userId: string | null;
   businessName: string;
   businessType: string;
   contactName: string;

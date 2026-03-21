@@ -163,15 +163,19 @@ export async function sendSurveyAvailableEmail(
 }
 
 /**
- * Send retailer approval email with access code
+ * Send retailer approval email with access code and password setup link
  */
 export async function sendRetailerApprovalEmail(
   email: string,
   businessName: string,
   contactName: string,
-  accessCode: string
+  accessCode: string,
+  passwordSetupToken?: string | null
 ) {
   const loginUrl = `${APP_URL}/retailers/login`;
+  const passwordSetupUrl = passwordSetupToken
+    ? `${APP_URL}/retailers/reset-password?token=${passwordSetupToken}`
+    : null;
 
   const html = `
     <!DOCTYPE html>
@@ -194,19 +198,34 @@ export async function sendRetailerApprovalEmail(
             </div>
           </div>
           <h2 style="margin-top: 0; color: white; text-align: center;">Congratulations, ${contactName || businessName}!</h2>
-          <p style="text-align: center;">Your retailer application for <strong>${businessName}</strong> has been approved!</p>
+          <p style="text-align: center;">Your retailer application for <strong>${businessName}</strong> has been approved! An account has been created for you.</p>
         </div>
+
+        ${passwordSetupUrl ? `
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin-top: 0; color: #1e40af;">Set Up Your Password</h3>
+          <p style="color: #1e3a5f; margin-bottom: 15px;">Your account has been created. Please set your password to get started:</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="${passwordSetupUrl}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+              Set Your Password
+            </a>
+          </div>
+          <p style="color: #1e3a5f; font-size: 13px; margin-bottom: 0;">
+            This link expires in 72 hours. If it expires, you can request a new one from the login page.
+          </p>
+        </div>
+        ` : ""}
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
           <h3 style="margin-top: 0; color: #333;">Your Retailer Access Code</h3>
-          <p style="color: #666; margin-bottom: 15px;">Use this access code to sign in to the retailer portal:</p>
+          <p style="color: #666; margin-bottom: 15px;">You can also use this access code to sign in to the retailer portal:</p>
 
           <div style="background: #fff; border: 2px dashed #10b981; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
             <span style="font-family: monospace; font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #10b981;">${accessCode}</span>
           </div>
 
           <p style="color: #666; font-size: 14px; margin-bottom: 0;">
-            <strong>Important:</strong> Keep this code safe. You can also set up a password after logging in for easier access.
+            <strong>Important:</strong> Keep this code safe as a backup login method.
           </p>
         </div>
 

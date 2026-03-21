@@ -6,6 +6,7 @@ import { revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendRetailerApprovalEmail, sendRetailerRejectionEmail } from "@/lib/email";
+import crypto from "crypto";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -61,6 +62,7 @@ export async function GET(req: NextRequest) {
         take: limit,
         select: {
           id: true,
+          userId: true,
           businessName: true,
           businessType: true,
           contactName: true,
@@ -291,6 +293,54 @@ export async function PATCH(req: NextRequest) {
         );
     }
 
+    // On approval, find or create a User account and link it to the retailer
+    let linkedUserId = retailer.userId;
+    let passwordSetupToken: string | null = null;
+
+    if (action === "APPROVE" && !retailer.userId) {
+      // Check if a User account already exists with this email
+      const existingUser = await db.user.findFirst({
+        where: { email: retailer.email, deletedAt: null },
+      });
+
+      if (existingUser) {
+        // Link existing user to the retailer
+        linkedUserId = existingUser.id;
+        adminRetailersLogger.info(`[Admin] Linked retailer ${retailerId} to existing user ${existingUser.id}`);
+      } else {
+        // Create a new User account for the retailer
+        const newUser = await db.user.create({
+          data: {
+            email: retailer.email,
+            name: retailer.contactName,
+            emailVerified: new Date(),
+            retailerAccess: true,
+          },
+        });
+        linkedUserId = newUser.id;
+        adminRetailersLogger.info(`[Admin] Created new user account ${newUser.id} for retailer ${retailerId}`);
+      }
+
+      // Link the retailer to the user
+      updateData.userId = linkedUserId;
+
+      // Generate a password setup token so they can set their password
+      await db.passwordResetToken.deleteMany({
+        where: { email: retailer.email },
+      });
+
+      passwordSetupToken = crypto.randomUUID();
+      const expires = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours for initial setup
+
+      await db.passwordResetToken.create({
+        data: {
+          email: retailer.email,
+          token: passwordSetupToken,
+          expires,
+        },
+      });
+    }
+
     const updatedRetailer = await db.retailer.update({
       where: { id: retailerId },
       data: updateData,
@@ -300,9 +350,9 @@ export async function PATCH(req: NextRequest) {
     revalidateTag("retailer-stats");
 
     // Update linked user's retailerAccess if applicable
-    if (updateUserRetailerAccess !== null && retailer.userId) {
+    if (updateUserRetailerAccess !== null && linkedUserId) {
       await db.user.update({
-        where: { id: retailer.userId },
+        where: { id: linkedUserId },
         data: { retailerAccess: updateUserRetailerAccess },
       });
     }
@@ -316,7 +366,8 @@ export async function PATCH(req: NextRequest) {
             retailer.email,
             retailer.businessName,
             retailer.contactName,
-            accessCode
+            accessCode,
+            passwordSetupToken
           );
           adminRetailersLogger.info(`[Admin] Sent retailer approval email to ${retailer.email}`);
         }
