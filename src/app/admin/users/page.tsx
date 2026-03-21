@@ -30,6 +30,7 @@ import {
   RetailerDetailsDialog,
   ApprovalActionDialog,
   EditUserDialog,
+  EditRetailerDialog,
   RoleDialog,
   DeleteUserDialog,
   PasswordDialog,
@@ -53,6 +54,8 @@ export default function UsersPage() {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "request_info" | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
+  const [showEditRetailerDialog, setShowEditRetailerDialog] = useState(false);
+  const [isUpdatingRetailer, setIsUpdatingRetailer] = useState(false);
 
   // User edit/action states (remaining)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -238,6 +241,36 @@ export default function UsersPage() {
     setApprovalAction(action);
     setApprovalNotes("");
     setShowApprovalDialog(true);
+  };
+
+  const handleEditRetailer = (retailer: Retailer) => {
+    setSelectedRetailer(retailer);
+    setShowEditRetailerDialog(true);
+  };
+
+  const submitEditRetailer = async (retailerId: string, data: Record<string, unknown>) => {
+    setIsUpdatingRetailer(true);
+    try {
+      const response = await apiFetch("/api/admin/retailers", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ retailerId, ...data }),
+      });
+
+      if (response.ok) {
+        fetchRetailers();
+        setShowEditRetailerDialog(false);
+        toast.success("Retailer updated successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update retailer");
+      }
+    } catch (error) {
+      console.error("Error updating retailer:", error);
+      toast.error("Failed to update retailer");
+    } finally {
+      setIsUpdatingRetailer(false);
+    }
   };
 
   const submitApprovalAction = async () => {
@@ -1008,6 +1041,7 @@ export default function UsersPage() {
         onApprove={(retailer) => handleRetailerAction(retailer, "approve")}
         onRequestInfo={(retailer) => handleRetailerAction(retailer, "request_info")}
         onReject={(retailer) => handleRetailerAction(retailer, "reject")}
+        onEdit={handleEditRetailer}
       />
 
       <ApprovalActionDialog
@@ -1018,6 +1052,14 @@ export default function UsersPage() {
         notes={approvalNotes}
         onNotesChange={setApprovalNotes}
         onSubmit={submitApprovalAction}
+      />
+
+      <EditRetailerDialog
+        open={showEditRetailerDialog}
+        onOpenChange={setShowEditRetailerDialog}
+        retailer={selectedRetailer}
+        onSubmit={submitEditRetailer}
+        isUpdating={isUpdatingRetailer}
       />
 
       <EditUserDialog

@@ -125,6 +125,87 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// PUT - Edit retailer information
+export async function PUT(req: NextRequest) {
+  try {
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify user is admin
+    const user = await db.user.findUnique({ where: { id: session.user.id } });
+    if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { retailerId, ...fields } = body;
+
+    if (!retailerId) {
+      return NextResponse.json({ error: "Retailer ID is required" }, { status: 400 });
+    }
+
+    const retailer = await db.retailer.findUnique({
+      where: { id: retailerId },
+    });
+
+    if (!retailer) {
+      return NextResponse.json({ error: "Retailer not found" }, { status: 404 });
+    }
+
+    // Only allow updating specific fields
+    const allowedFields = [
+      "businessName", "businessType", "contactName", "email", "phone",
+      "address", "city", "state", "zipCode", "country",
+      "taxId", "taxIdType", "websiteUrl", "yearsInBusiness",
+      "numberOfLocations", "annualRevenue",
+    ];
+
+    const updateData: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      if (key in fields && fields[key] !== undefined) {
+        updateData[key] = fields[key];
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+
+    // If email is being changed, check for uniqueness
+    if (updateData.email && updateData.email !== retailer.email) {
+      const existingRetailer = await db.retailer.findUnique({
+        where: { email: updateData.email as string },
+      });
+      if (existingRetailer) {
+        return NextResponse.json({ error: "A retailer with this email already exists" }, { status: 409 });
+      }
+    }
+
+    const updatedRetailer = await db.retailer.update({
+      where: { id: retailerId },
+      data: updateData,
+    });
+
+    adminRetailersLogger.info(`[Admin] Retailer ${retailerId} updated by ${session.user.id}: ${Object.keys(updateData).join(", ")}`);
+
+    revalidateTag("retailer-stats");
+
+    return NextResponse.json({
+      success: true,
+      retailer: updatedRetailer,
+    });
+  } catch (error) {
+    adminRetailersLogger.error({ err: String(error) }, "Error editing retailer:");
+    return NextResponse.json(
+      { error: "Failed to update retailer" },
+      { status: 500 }
+    );
+  }
+}
+
 // PATCH - Update retailer status
 export async function PATCH(req: NextRequest) {
   try {

@@ -18,6 +18,7 @@ import {
   Users,
   MapPin,
   Mail,
+  Pencil,
 } from "lucide-react";
 import { Retailer } from "../types";
 import { getBusinessTypeBadge, getRetailerStatusBadge } from "../utils";
@@ -29,6 +30,7 @@ interface RetailerDetailsDialogProps {
   onApprove: (retailer: Retailer) => void;
   onRequestInfo: (retailer: Retailer) => void;
   onReject: (retailer: Retailer) => void;
+  onEdit: (retailer: Retailer) => void;
 }
 
 export function RetailerDetailsDialog({
@@ -38,6 +40,7 @@ export function RetailerDetailsDialog({
   onApprove,
   onRequestInfo,
   onReject,
+  onEdit,
 }: RetailerDetailsDialogProps) {
   if (!retailer) return null;
 
@@ -182,7 +185,17 @@ export function RetailerDetailsDialog({
             </div>
           )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex justify-between sm:justify-between">
+          <Button
+            variant="outline"
+            onClick={() => {
+              onOpenChange(false);
+              onEdit(retailer);
+            }}
+          >
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit Info
+          </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
