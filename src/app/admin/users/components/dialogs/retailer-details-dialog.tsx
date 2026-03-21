@@ -19,6 +19,7 @@ import {
   MapPin,
   Mail,
   Pencil,
+  Send,
 } from "lucide-react";
 import { Retailer } from "../types";
 import { getBusinessTypeBadge, getRetailerStatusBadge } from "../utils";
@@ -31,6 +32,7 @@ interface RetailerDetailsDialogProps {
   onRequestInfo: (retailer: Retailer) => void;
   onReject: (retailer: Retailer) => void;
   onEdit: (retailer: Retailer) => void;
+  onSendApprovalEmail?: (retailer: Retailer) => void;
 }
 
 export function RetailerDetailsDialog({
@@ -41,6 +43,7 @@ export function RetailerDetailsDialog({
   onRequestInfo,
   onReject,
   onEdit,
+  onSendApprovalEmail,
 }: RetailerDetailsDialogProps) {
   if (!retailer) return null;
 
@@ -186,16 +189,28 @@ export function RetailerDetailsDialog({
           )}
         </div>
         <DialogFooter className="flex justify-between sm:justify-between">
-          <Button
-            variant="outline"
-            onClick={() => {
-              onOpenChange(false);
-              onEdit(retailer);
-            }}
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit Info
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false);
+                onEdit(retailer);
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Info
+            </Button>
+            {retailer.status === "APPROVED" && onSendApprovalEmail && (
+              <Button
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                onClick={() => onSendApprovalEmail(retailer)}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Send Account Setup Email
+              </Button>
+            )}
+          </div>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>

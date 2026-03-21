@@ -18,6 +18,7 @@ import {
   Store,
   RefreshCw,
   Bell,
+  Send,
 } from "lucide-react";
 import { Retailer, RetailerStats } from "./types";
 import { getBusinessTypeBadge, getRetailerStatusBadge } from "./utils";
@@ -31,6 +32,7 @@ interface RetailerTableProps {
   onViewRetailer: (retailer: Retailer) => void;
   onApproveRetailer: (retailer: Retailer) => void;
   onRejectRetailer: (retailer: Retailer) => void;
+  onSendApprovalEmail?: (retailer: Retailer) => void;
 }
 
 export function RetailerTable({
@@ -42,6 +44,7 @@ export function RetailerTable({
   onViewRetailer,
   onApproveRetailer,
   onRejectRetailer,
+  onSendApprovalEmail,
 }: RetailerTableProps) {
   return (
     <>
@@ -170,6 +173,17 @@ export function RetailerTable({
                                 <XCircle className="h-4 w-4" />
                               </Button>
                             </>
+                          )}
+                          {retailer.status === "APPROVED" && onSendApprovalEmail && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => onSendApprovalEmail(retailer)}
+                              title="Create account & send setup email"
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       </td>

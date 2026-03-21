@@ -243,6 +243,26 @@ export default function UsersPage() {
     setShowApprovalDialog(true);
   };
 
+  const handleSendApprovalEmail = async (retailer: Retailer) => {
+    try {
+      const response = await apiFetch("/api/admin/retailers/resend-approval", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ retailerId: retailer.id }),
+      });
+
+      if (response.ok) {
+        toast.success(`Account setup email sent to ${retailer.email}`);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error || "Failed to send account setup email");
+      }
+    } catch (error) {
+      console.error("Error sending approval email:", error);
+      toast.error("An error occurred while sending the email");
+    }
+  };
+
   const handleEditRetailer = (retailer: Retailer) => {
     setSelectedRetailer(retailer);
     setShowEditRetailerDialog(true);
@@ -998,6 +1018,7 @@ export default function UsersPage() {
             }}
             onApproveRetailer={(retailer) => handleRetailerAction(retailer, "approve")}
             onRejectRetailer={(retailer) => handleRetailerAction(retailer, "reject")}
+            onSendApprovalEmail={handleSendApprovalEmail}
           />
         </TabsContent>
       </Tabs>
@@ -1042,6 +1063,7 @@ export default function UsersPage() {
         onRequestInfo={(retailer) => handleRetailerAction(retailer, "request_info")}
         onReject={(retailer) => handleRetailerAction(retailer, "reject")}
         onEdit={handleEditRetailer}
+        onSendApprovalEmail={handleSendApprovalEmail}
       />
 
       <ApprovalActionDialog
