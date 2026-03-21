@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,37 +38,31 @@ export function EditRetailerDialog({
 }: EditRetailerDialogProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
 
-  // Initialize form when retailer changes
-  const initForm = () => {
-    if (!retailer) return;
-    setFormData({
-      businessName: retailer.businessName || "",
-      contactName: retailer.contactName || "",
-      email: retailer.email || "",
-      phone: retailer.phone || "",
-      businessType: retailer.businessType || "",
-      address: retailer.address || "",
-      city: retailer.city || "",
-      state: retailer.state || "",
-      zipCode: retailer.zipCode || "",
-      country: retailer.country || "",
-      websiteUrl: retailer.websiteUrl || "",
-      taxId: retailer.taxId || "",
-      taxIdType: retailer.taxIdType || "",
-      annualRevenue: retailer.annualRevenue || "",
-      yearsInBusiness: String(retailer.yearsInBusiness ?? ""),
-      numberOfLocations: String(retailer.numberOfLocations ?? ""),
-    });
-  };
+  // Initialize form when dialog opens or retailer changes
+  useEffect(() => {
+    if (open && retailer) {
+      setFormData({
+        businessName: retailer.businessName || "",
+        contactName: retailer.contactName || "",
+        email: retailer.email || "",
+        phone: retailer.phone || "",
+        businessType: retailer.businessType || "",
+        address: retailer.address || "",
+        city: retailer.city || "",
+        state: retailer.state || "",
+        zipCode: retailer.zipCode || "",
+        country: retailer.country || "",
+        websiteUrl: retailer.websiteUrl || "",
+        taxId: retailer.taxId || "",
+        taxIdType: retailer.taxIdType || "",
+        annualRevenue: retailer.annualRevenue || "",
+        yearsInBusiness: String(retailer.yearsInBusiness ?? ""),
+        numberOfLocations: String(retailer.numberOfLocations ?? ""),
+      });
+    }
+  }, [open, retailer]);
 
   if (!retailer) return null;
-
-  const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) {
-      initForm();
-    }
-    onOpenChange(isOpen);
-  };
 
   const update = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -108,7 +102,7 @@ export function EditRetailerDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Retailer</DialogTitle>
