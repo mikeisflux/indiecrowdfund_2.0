@@ -13,9 +13,9 @@ export async function GET() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background:
-            "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%)",
+          backgroundColor: "#0a0a0a",
           position: "relative",
+          overflow: "hidden",
         }}
       >
         {/* Gradient accent bar at top */}
@@ -31,30 +31,34 @@ export async function GET() {
           }}
         />
 
-        {/* Decorative circles */}
+        {/* Decorative circle - top right */}
         <div
           style={{
             position: "absolute",
-            top: "-100px",
-            right: "-100px",
+            top: "0px",
+            right: "0px",
             width: "400px",
             height: "400px",
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)",
+            borderRadius: "200px",
+            opacity: 0.15,
+            backgroundColor: "#10b981",
+            filter: "blur(80px)",
             display: "flex",
           }}
         />
+
+        {/* Decorative circle - bottom left */}
         <div
           style={{
             position: "absolute",
-            bottom: "-80px",
-            left: "-80px",
+            bottom: "0px",
+            left: "0px",
             width: "350px",
             height: "350px",
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)",
+            borderRadius: "175px",
+            opacity: 0.12,
+            backgroundColor: "#06b6d4",
+            filter: "blur(80px)",
             display: "flex",
           }}
         />
@@ -74,9 +78,7 @@ export async function GET() {
             style={{
               fontSize: "72px",
               fontWeight: 800,
-              background: "linear-gradient(90deg, #10b981 0%, #06b6d4 100%)",
-              backgroundClip: "text",
-              color: "transparent",
+              color: "#10b981",
               lineHeight: 1.1,
               display: "flex",
             }}
