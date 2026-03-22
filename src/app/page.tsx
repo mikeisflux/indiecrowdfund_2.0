@@ -33,31 +33,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.
 
 // Dynamic metadata that uses the most recent live project's image for social sharing
 export async function generateMetadata(): Promise<Metadata> {
-  // Fetch the most recently launched live project's image for OG tags
-  let ogImageUrl = "/api/og";
-  let ogImageAlt = "IndieCrowdfund - Crowdfunding for Independent Creators";
-
-  try {
-    const latestProject = await db.project.findFirst({
-      where: {
-        status: "LIVE",
-        deletedAt: null,
-        imageUrl: { not: null },
-        NOT: {
-          title: { contains: "test", mode: "insensitive" },
-        },
-      },
-      orderBy: { launchDate: "desc" },
-      select: { imageUrl: true, title: true },
-    });
-
-    if (latestProject?.imageUrl) {
-      ogImageUrl = latestProject.imageUrl;
-      ogImageAlt = `${latestProject.title} on IndieCrowdfund`;
-    }
-  } catch (error) {
-    console.error("Error fetching latest project for OG image:", error);
-  }
+  const ogImageUrl = "/api/og";
+  const ogImageAlt = "IndieCrowdfund - Crowdfunding for Independent Creators";
 
   return {
     title: "IndieCrowdfund - The #1 Kickstarter Alternative | Crowdfunding for Creators",
