@@ -91,9 +91,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const projectUrl = `${baseUrl}/projects/${creatorVanity}/${slug}/prelaunch`;
 
   // Use the project image or fall back to a default
-  const imageUrl = project.imageUrl
+  // Append ?format=jpeg for webp images so social media crawlers can process them
+  const rawImageUrl = project.imageUrl
     ? (project.imageUrl.startsWith("http") ? project.imageUrl : `${baseUrl}${project.imageUrl}`)
     : `${baseUrl}/api/og`;
+  const imageUrl = rawImageUrl.endsWith(".webp") ? `${rawImageUrl}?format=jpeg` : rawImageUrl;
 
   return {
     title: `${project.title} - Coming Soon | IndieCrowdfund`,

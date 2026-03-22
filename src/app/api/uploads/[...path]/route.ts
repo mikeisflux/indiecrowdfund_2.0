@@ -5,6 +5,7 @@ const uploadsLogger = logger.child({ module: "uploads" });
 import { readFile, stat } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
+import sharp from "sharp";
 
 // Base uploads directory - use env var or fallback to project directory
 const UPLOADS_BASE = process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads");
@@ -103,9 +104,27 @@ export async function GET(
       });
     }
 
-    // Read and return the full file (for images or non-range video requests)
+    // Read the file
     const fileBuffer = await readFile(finalPath);
 
+    // Support format conversion via ?format=jpeg (useful for og:image compatibility)
+    const requestedFormat = req.nextUrl.searchParams.get("format");
+    if (requestedFormat === "jpeg" && ext === ".webp") {
+      try {
+        const jpegBuffer = await sharp(fileBuffer).jpeg({ quality: 85 }).toBuffer();
+        return new NextResponse(jpegBuffer, {
+          headers: {
+            "Content-Type": "image/jpeg",
+            "Content-Length": String(jpegBuffer.length),
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
+        });
+      } catch (conversionError) {
+        uploadsLogger.error({ err: String(conversionError) }, "WebP to JPEG conversion failed, serving original");
+      }
+    }
+
+    // Return the full file (for images or non-range video requests)
     return new NextResponse(fileBuffer, {
       headers: {
         "Content-Type": mimeType,
