@@ -33,8 +33,28 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.
 
 // Dynamic metadata that uses the most recent live project's image for social sharing
 export async function generateMetadata(): Promise<Metadata> {
-  const ogImageUrl = "/api/og";
-  const ogImageAlt = "IndieCrowdfund - Crowdfunding for Independent Creators";
+  let ogImageUrl = `${SITE_URL}/api/og`;
+  let ogImageAlt = "IndieCrowdfund - Crowdfunding for Independent Creators";
+
+  try {
+    // Get the most recently launched LIVE project's image
+    const latestLiveProject = await db.project.findFirst({
+      where: {
+        status: "LIVE",
+        deletedAt: null,
+        imageUrl: { not: null },
+      },
+      orderBy: { launchedAt: "desc" },
+      select: { imageUrl: true, title: true },
+    });
+
+    if (latestLiveProject?.imageUrl) {
+      ogImageUrl = latestLiveProject.imageUrl;
+      ogImageAlt = `${latestLiveProject.title} - Live now on IndieCrowdfund`;
+    }
+  } catch (error) {
+    console.error("Failed to fetch latest live project for OG image:", error);
+  }
 
   return {
     title: "IndieCrowdfund - The #1 Kickstarter Alternative | Crowdfunding for Creators",
