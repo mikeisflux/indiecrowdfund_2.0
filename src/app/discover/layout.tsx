@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     url: `${SITE_URL}/discover`,
     images: [
       {
-        url: "/og-default.png",
+        url: "/api/og",
         width: 1200,
         height: 630,
         alt: "Discover Projects on IndieCrowdfund",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "Discover Projects on IndieCrowdfund",
     description:
       "Browse hundreds of crowdfunding campaigns from independent creators. Find and back projects you believe in.",
-    images: ["/og-default.png"],
+    images: ["/api/og"],
   },
 };
 

@@ -77,7 +77,7 @@ export const metadata: Metadata = {
       "The crowdfunding platform built for independent creators. Launch your campaign with lower fees, better tools, and a supportive community. Better than Kickstarter.",
     images: [
       {
-        url: "/og-default.png",
+        url: "/api/og",
         width: 1200,
         height: 630,
         alt: "IndieCrowdfund - Crowdfunding for Independent Creators",
@@ -89,7 +89,7 @@ export const metadata: Metadata = {
     title: "IndieCrowdfund - The Best Kickstarter Alternative",
     description:
       "The crowdfunding platform built for independent creators. Launch your campaign with lower fees, better tools, and a supportive community.",
-    images: ["/og-default.png"],
+    images: ["/api/og"],
   },
   robots: {
     index: true,

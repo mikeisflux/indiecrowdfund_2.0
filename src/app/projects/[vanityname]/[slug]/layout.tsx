@@ -94,7 +94,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Use the project image or fall back to a default
   const imageUrl = project.imageUrl
     ? (project.imageUrl.startsWith("http") ? project.imageUrl : `${baseUrl}${project.imageUrl}`)
-    : `${baseUrl}/og-default.png`;
+    : `${baseUrl}/api/og`;
 
   return {
     title: `${project.title} - Crowdfunding Campaign`,
@@ -203,7 +203,7 @@ export default async function ProjectLayout({ params, children }: Props) {
   const projectUrl = `${baseUrl}/projects/${creatorVanity}/${slug}`;
   const imageUrl = project.imageUrl
     ? (project.imageUrl.startsWith("http") ? project.imageUrl : `${baseUrl}${project.imageUrl}`)
-    : `${baseUrl}/og-default.png`;
+    : `${baseUrl}/api/og`;
 
   const fundingPercentage = Number(project.goalAmount) > 0
     ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)

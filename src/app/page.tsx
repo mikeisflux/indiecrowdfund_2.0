@@ -34,7 +34,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.
 // Dynamic metadata that uses the most recent live project's image for social sharing
 export async function generateMetadata(): Promise<Metadata> {
   // Fetch the most recently launched live project's image for OG tags
-  let ogImageUrl = "/og-default.png";
+  let ogImageUrl = "/api/og";
   let ogImageAlt = "IndieCrowdfund - Crowdfunding for Independent Creators";
 
   try {

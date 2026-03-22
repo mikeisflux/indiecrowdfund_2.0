@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? book.description.replace(/<[^>]*>/g, "").slice(0, 200)
     : `${book.title} by ${book.creator?.name || "an indie creator"} on IndieCrowdfund Marketplace`;
 
-  const imageUrl = book.coverImageUrl || `${baseUrl}/og-default.png`;
+  const imageUrl = book.coverImageUrl || `${baseUrl}/api/og`;
 
   return {
     title: `${book.title} - Marketplace`,
@@ -74,7 +74,7 @@ export default async function BookDetailLayout({ params, children }: Props) {
       ? book.description.replace(/<[^>]*>/g, "").slice(0, 200)
       : `${book.title} by ${book.creator?.name || "an indie creator"}`;
 
-    const imageUrl = book.coverImageUrl || `${baseUrl}/og-default.png`;
+    const imageUrl = book.coverImageUrl || `${baseUrl}/api/og`;
     const bookUrl = `${baseUrl}/marketplace/books/${slug}`;
 
     const bookJsonLd: Record<string, unknown> = {

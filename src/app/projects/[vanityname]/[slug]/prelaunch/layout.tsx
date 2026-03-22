@@ -93,7 +93,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Use the project image or fall back to a default
   const imageUrl = project.imageUrl
     ? (project.imageUrl.startsWith("http") ? project.imageUrl : `${baseUrl}${project.imageUrl}`)
-    : `${baseUrl}/og-default.png`;
+    : `${baseUrl}/api/og`;
 
   return {
     title: `${project.title} - Coming Soon | IndieCrowdfund`,

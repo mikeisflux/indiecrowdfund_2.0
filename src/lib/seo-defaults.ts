@@ -12,7 +12,7 @@ export interface SeoPageDefaults {
   keywords: string[];
 }
 
-const DEFAULT_OG_IMAGE = "/og-default.png";
+const DEFAULT_OG_IMAGE = "/api/og";
 
 export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
   "/": {
