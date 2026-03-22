@@ -40,9 +40,8 @@ export async function GET() {
             width: "400px",
             height: "400px",
             borderRadius: "200px",
-            opacity: 0.15,
+            opacity: 0.08,
             backgroundColor: "#10b981",
-            filter: "blur(80px)",
             display: "flex",
           }}
         />
@@ -56,9 +55,8 @@ export async function GET() {
             width: "350px",
             height: "350px",
             borderRadius: "175px",
-            opacity: 0.12,
+            opacity: 0.06,
             backgroundColor: "#06b6d4",
-            filter: "blur(80px)",
             display: "flex",
           }}
         />
