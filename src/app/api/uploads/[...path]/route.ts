@@ -112,7 +112,7 @@ export async function GET(
     if (requestedFormat === "jpeg" && ext === ".webp") {
       try {
         const jpegBuffer = await sharp(fileBuffer).jpeg({ quality: 85 }).toBuffer();
-        return new NextResponse(jpegBuffer, {
+        return new NextResponse(new Uint8Array(jpegBuffer), {
           headers: {
             "Content-Type": "image/jpeg",
             "Content-Length": String(jpegBuffer.length),
@@ -125,7 +125,7 @@ export async function GET(
     }
 
     // Return the full file (for images or non-range video requests)
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         "Content-Type": mimeType,
         "Content-Length": String(fileSize),
