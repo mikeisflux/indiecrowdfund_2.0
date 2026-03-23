@@ -43,7 +43,7 @@ fi
 # Step 2: Install dependencies
 echo ""
 echo "📦 Step 2: Installing dependencies..."
-if npm ci --prefer-offline 2>&1; then
+if npm install --prefer-offline 2>&1; then
     echo -e "${GREEN}   Dependencies installed${NC}"
 else
     echo -e "${RED}❌ ERROR: Failed to install dependencies${NC}"
