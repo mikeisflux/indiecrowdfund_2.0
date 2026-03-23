@@ -100,7 +100,8 @@
   },
   "overrides": {
     "fast-xml-parser": "^5.3.8",
-    "glob": "^11.0.0"
+    "glob": "^11.0.0",
+    "effect": "^3.20.0"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.3",
