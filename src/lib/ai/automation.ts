@@ -539,7 +539,18 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
       // Add tracking pixel
       const encodedEmail = Buffer.from(recipient.email).toString("base64");
       const trackingPixel = `<img src="${baseUrl}/api/email/track/open?c=${campaign.id}&e=${encodedEmail}" width="1" height="1" style="display:none;" alt="" />`;
-      personalizedHtml = personalizedHtml.replace("</body>", `${trackingPixel}</body>`);
+      if (personalizedHtml.includes("</body>")) {
+        personalizedHtml = personalizedHtml.replace("</body>", `${trackingPixel}</body>`);
+      } else {
+        personalizedHtml = personalizedHtml + trackingPixel;
+      }
+
+      // Wrap internal links for click tracking
+      const linkRegex = /href="(https?:\/\/(?:www\.)?indiecrowdfund\.com[^"]*)"/gi;
+      personalizedHtml = personalizedHtml.replace(linkRegex, (_, url) => {
+        const encodedUrl = Buffer.from(url).toString("base64");
+        return `href="${baseUrl}/api/email/track/click?c=${campaign.id}&e=${encodedEmail}&url=${encodedUrl}"`;
+      });
 
       const result = await queueEmail({
         to: recipient.email,

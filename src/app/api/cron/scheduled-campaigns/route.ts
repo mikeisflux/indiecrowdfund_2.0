@@ -16,6 +16,31 @@ import { queueEmail, EMAIL_PRIORITY, escapeHtmlForEmail as escapeHtml } from "@/
 export const dynamic = "force-dynamic";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+
+// Add tracking pixel and wrap links for click tracking
+function addEmailTracking(html: string, campaignId: string, recipientEmail: string): string {
+  const encodedEmail = Buffer.from(recipientEmail).toString("base64");
+
+  // Add tracking pixel before </body> or at end
+  const trackingPixel = `<img src="${BASE_URL}/api/email/track/open?c=${campaignId}&e=${encodedEmail}" width="1" height="1" style="display:none;" alt="" />`;
+
+  let result = html;
+  if (result.includes("</body>")) {
+    result = result.replace("</body>", `${trackingPixel}</body>`);
+  } else {
+    result = result + trackingPixel;
+  }
+
+  // Wrap internal links for click tracking
+  const linkRegex = /href="(https?:\/\/(?:www\.)?indiecrowdfund\.com[^"]*)"/gi;
+  result = result.replace(linkRegex, (_, url) => {
+    const encodedUrl = Buffer.from(url).toString("base64");
+    return `href="${BASE_URL}/api/email/track/click?c=${campaignId}&e=${encodedEmail}&url=${encodedUrl}"`;
+  });
+
+  return result;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -103,10 +128,13 @@ export async function GET(req: NextRequest) {
         let queuedCount = 0;
         for (const recipientEmail of uniqueEmails) {
           try {
+            // Add open/click tracking for this recipient
+            const trackedHtml = addEmailTracking(htmlBody, campaign.id, recipientEmail as string);
+
             const result = await queueEmail({
               to: recipientEmail as string,
               subject: campaign.subject,
-              html: htmlBody,
+              html: trackedHtml,
               text: campaign.htmlContent || "",
               fromEmail,
               fromName,

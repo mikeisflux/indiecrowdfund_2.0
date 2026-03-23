@@ -339,13 +339,13 @@ export async function POST(
 
     adminAiMarketingCampaignsManageSendLogger.info(`Campaign "${campaign.name}" queued: ${queuedCount} queued, ${failedCount} failed`);
 
-    // Update campaign status to SENDING (emails are in queue, will be sent over time)
+    // Update campaign status to SENT (all emails have been queued)
     await db.emailCampaign.update({
       where: { id },
       data: {
-        status: "SENDING",
+        status: "SENT",
         sentAt: new Date(),
-        sentCount: queuedCount, // Track as queued count for now
+        sentCount: queuedCount,
         recipientCount: recipients.length,
       },
     });
