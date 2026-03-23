@@ -34,7 +34,7 @@ const lockoutCounts = new Map<string, { count: number; lastLockout: number }>();
 const registrationAttempts = new Map<string, RateLimitEntry>();
 
 // Cached settings from database
-let cachedSettings: {
+type RateLimitSettings = {
   globalRateLimitEnabled: boolean;
   globalRateLimitRequests: number;
   globalRateLimitWindow: number;
@@ -44,12 +44,29 @@ let cachedSettings: {
   passwordResetRateLimitRequests: number;
   passwordResetRateLimitWindow: number;
   maxLoginAttempts: number;
-} | null = null;
+};
+let cachedSettings: RateLimitSettings | null = null;
 let settingsCacheTime = 0;
 const SETTINGS_CACHE_TTL = 60 * 1000; // 1 minute cache
 
+// Track whether we've already logged a DB failure to avoid log spam
+let lastDbFailureLogTime = 0;
+const DB_FAILURE_LOG_INTERVAL = 60 * 1000; // Log at most once per minute
+
+const DEFAULT_SETTINGS: RateLimitSettings = {
+  globalRateLimitEnabled: true,
+  globalRateLimitRequests: 100,
+  globalRateLimitWindow: 60,
+  loginRateLimitEnabled: true,
+  loginRateLimitRequests: 5,
+  loginRateLimitWindow: 300,
+  passwordResetRateLimitRequests: 3,
+  passwordResetRateLimitWindow: 900,
+  maxLoginAttempts: 5,
+};
+
 // Load settings from database with caching
-async function getSettings() {
+async function getSettings(): Promise<RateLimitSettings> {
   const now = Date.now();
   if (cachedSettings && now - settingsCacheTime < SETTINGS_CACHE_TTL) {
     return cachedSettings;
@@ -77,22 +94,17 @@ async function getSettings() {
       return settings;
     }
   } catch (error) {
-    rateLimitLogger.error({ err: error instanceof Error ? error.message : String(error) },
-      "Error loading rate limit settings");
+    // Log at warn level (not error) since we gracefully fall back,
+    // and deduplicate to avoid flooding logs during outages
+    if (now - lastDbFailureLogTime > DB_FAILURE_LOG_INTERVAL) {
+      lastDbFailureLogTime = now;
+      rateLimitLogger.warn({ err: error instanceof Error ? error.message : String(error) },
+        "Failed to load rate limit settings from DB, using fallback");
+    }
   }
 
-  // Return defaults if database query fails
-  return {
-    globalRateLimitEnabled: true,
-    globalRateLimitRequests: 100,
-    globalRateLimitWindow: 60,
-    loginRateLimitEnabled: true,
-    loginRateLimitRequests: 5,
-    loginRateLimitWindow: 300,
-    passwordResetRateLimitRequests: 3,
-    passwordResetRateLimitWindow: 900,
-    maxLoginAttempts: 5,
-  };
+  // Prefer stale cached settings over hardcoded defaults
+  return cachedSettings ?? DEFAULT_SETTINGS;
 }
 
 // Clear the settings cache (call this when settings are updated)
