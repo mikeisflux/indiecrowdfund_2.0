@@ -343,6 +343,9 @@ export async function middleware(req: NextRequest) {
 
   // Check if IP is blocked (fast in-memory check)
   if (isIPBlockedFast(clientIP)) {
+    if (pathname.includes("/survey") || pathname.includes("/pledges/")) {
+      console.log(`[Bot Blocker] Blocked IP ${clientIP} accessing survey/pledge path: ${pathname}`);
+    }
     return rewriteToBlocked("Forbidden", 403);
   }
 

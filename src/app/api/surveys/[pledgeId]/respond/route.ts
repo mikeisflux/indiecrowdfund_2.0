@@ -79,6 +79,15 @@ export async function GET(
     }
 
     if (pledge.userId !== session.user.id) {
+      surveysRespondLogger.warn(
+        {
+          pledgeId,
+          sessionUserId: session.user.id,
+          pledgeUserId: pledge.userId,
+          projectId: pledge.projectId,
+        },
+        "Survey GET forbidden: session user does not own pledge"
+      );
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -274,6 +283,15 @@ export async function POST(
     }
 
     if (pledge.userId !== session.user.id) {
+      surveysRespondLogger.warn(
+        {
+          pledgeId,
+          sessionUserId: session.user.id,
+          pledgeUserId: pledge.userId,
+          projectId: pledge.projectId,
+        },
+        "Survey POST forbidden: session user does not own pledge"
+      );
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

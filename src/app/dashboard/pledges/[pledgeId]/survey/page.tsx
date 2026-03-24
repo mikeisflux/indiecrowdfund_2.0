@@ -150,6 +150,7 @@ export default function BackerSurveyPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState<Step>("intro");
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   // Form state
   const [itemResponses, setItemResponses] = useState<Record<string, { variants?: Record<string, string>; customAnswers?: Record<string, string | string[]> }>>({});
@@ -217,6 +218,7 @@ export default function BackerSurveyPage() {
         }
       } else {
         const err = await response.json();
+        setErrorStatus(response.status);
         setError(err.error || "Failed to load survey");
       }
     } catch (err) {
@@ -504,12 +506,40 @@ export default function BackerSurveyPage() {
   }
 
   if (error && !data) {
+    const isForbiddenOrUnauth = errorStatus === 403 || errorStatus === 401;
+    const loginUrl = `/login?callbackUrl=${encodeURIComponent(`/dashboard/pledges/${pledgeId}/survey`)}`;
     return (
       <Card className="max-w-lg mx-auto mt-12">
         <CardContent className="py-12 text-center">
           <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
           <h3 className="text-lg font-semibold mb-2">Unable to Load Survey</h3>
-          <p className="text-zinc-500">{error}</p>
+          <p className="text-zinc-500 mb-4">{error}</p>
+          {isForbiddenOrUnauth && (
+            <div className="space-y-3">
+              <p className="text-sm text-zinc-400">
+                This usually means your session has expired or you&apos;re signed in with a different account than the one that made this pledge.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button
+                  variant="default"
+                  onClick={() => { window.location.href = loginUrl; }}
+                >
+                  Sign In Again
+                </Button>
+                <Link href="/dashboard/backer">
+                  <Button variant="outline">
+                    Go to Dashboard
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+          {!isForbiddenOrUnauth && (
+            <Button variant="outline" onClick={fetchSurvey} className="mt-2">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
