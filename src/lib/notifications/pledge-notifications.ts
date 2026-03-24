@@ -281,6 +281,37 @@ export async function notifySurveySent(projectId: string, projectTitle: string) 
 }
 
 /**
+ * Notify backers that the survey has been updated and needs re-review
+ */
+export async function notifySurveyUpdateRequested(projectId: string, projectTitle: string) {
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      slug: true,
+      pledges: {
+        where: { status: "COMPLETED" },
+        select: { userId: true, id: true },
+      },
+    },
+  });
+
+  if (!project) return;
+
+  const notifications = project.pledges.map((pledge: { userId: string; id: string }) => ({
+    userId: pledge.userId,
+    type: "SURVEY_UPDATE_REQUESTED" as NotificationType,
+    title: "Survey Updated - Action Required",
+    message: `The survey for "${projectTitle}" has been updated. Please review and resubmit your responses.`,
+    actionUrl: `/dashboard/pledges/${pledge.id}/survey`,
+    projectId,
+  }));
+
+  if (notifications.length > 0) {
+    await db.notification.createMany({ data: notifications });
+  }
+}
+
+/**
  * Notify backers with a survey reminder
  */
 export async function notifySurveyReminder(projectId: string, projectTitle: string) {

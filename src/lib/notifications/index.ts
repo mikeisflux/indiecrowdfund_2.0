@@ -27,6 +27,7 @@ export {
   notifyBackerPledgeConfirmed,
   notifySurveySent,
   notifySurveyReminder,
+  notifySurveyUpdateRequested,
   processUnsentConfirmationEmails,
 } from "./pledge-notifications";
 

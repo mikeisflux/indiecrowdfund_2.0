@@ -5,7 +5,8 @@ const creatorIndiekitSurveysLogger = logger.child({ module: "creator-indiekit-su
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { sendSurveyAvailableEmail } from "@/lib/email";
+import { sendSurveyAvailableEmail, sendSurveyUpdateRequestEmail } from "@/lib/email";
+import { notifySurveyUpdateRequested } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -405,6 +406,81 @@ export async function PATCH(req: NextRequest) {
             },
           });
         }
+        break;
+      }
+
+      case "request-update": {
+        // Survey must be in SENT status to request updates
+        if (survey.status !== "SENT") {
+          return NextResponse.json(
+            { error: "Survey must be in SENT status to request updates" },
+            { status: 400 }
+          );
+        }
+
+        // Reset all survey responses to incomplete so backers need to re-review
+        await db.surveyResponse.updateMany({
+          where: { surveyId: survey.id },
+          data: { isComplete: false, completedAt: null },
+        });
+
+        // Also reset surveyCompleted on pledges
+        await db.pledge.updateMany({
+          where: {
+            projectId,
+            status: "COMPLETED",
+          },
+          data: { surveyCompleted: false },
+        });
+
+        // Get all backers with completed pledges to send notifications
+        const updateBackers = await db.pledge.findMany({
+          where: {
+            projectId,
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", stripePaymentMethodId: { not: null } },
+              { status: "PENDING", stripeSetupIntentId: { not: null } },
+              { status: "PENDING", stripePaymentIntentId: { not: null } },
+              { status: "PENDING", divinityCoinPaymentId: { not: null } },
+            ],
+          },
+          include: {
+            user: { select: { email: true, name: true } },
+          },
+        });
+
+        // Send update request email to each backer
+        for (const pledge of updateBackers) {
+          if (pledge.user?.email) {
+            try {
+              await sendSurveyUpdateRequestEmail(
+                pledge.user.email,
+                pledge.user.name || "Backer",
+                project.title,
+                session.user.name || "The Creator",
+                pledge.id
+              );
+              emailsSent++;
+            } catch (emailError) {
+              creatorIndiekitSurveysLogger.error({ err: String(emailError) }, `Failed to send survey update request email to ${pledge.user.email}:`);
+            }
+          }
+        }
+
+        // Create in-app notifications
+        await notifySurveyUpdateRequested(projectId, project.title);
+
+        // Log activity
+        await db.fulfillmentActivity.create({
+          data: {
+            projectId,
+            type: "SURVEY_SENT",
+            title: `Survey update requested - ${emailsSent} backers notified`,
+          },
+        });
+
         break;
       }
     }

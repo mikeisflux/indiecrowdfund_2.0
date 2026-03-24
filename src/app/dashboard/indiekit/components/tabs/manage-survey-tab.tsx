@@ -18,6 +18,7 @@ import {
   Package,
   Loader2,
   UserPlus,
+  RotateCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCSRFHeaders } from "@/lib/csrf";
@@ -89,6 +90,10 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
   const [lockConfirm, setLockConfirm] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
+
+  // Request updated survey
+  const [requestUpdateConfirm, setRequestUpdateConfirm] = useState(false);
+  const [isRequestingUpdate, setIsRequestingUpdate] = useState(false);
 
   const fetchSurvey = useCallback(async () => {
     if (!projectId) return;
@@ -197,6 +202,35 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
       toast.error("Failed to backfill survey");
     } finally {
       setIsBackfilling(false);
+    }
+  };
+
+  const requestSurveyUpdate = async () => {
+    if (!projectId) return;
+    setIsRequestingUpdate(true);
+    try {
+      const response = await apiFetch("/api/creator/indiekit/surveys", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, action: "request-update" }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(
+          data.emailsSent > 0
+            ? `Update request sent to ${data.emailsSent} backers`
+            : "No backers to notify"
+        );
+        fetchSurvey();
+      } else {
+        toast.error(data.error || "Failed to request survey update");
+      }
+    } catch (error) {
+      console.error("Error requesting survey update:", error);
+      toast.error("Failed to request survey update");
+    } finally {
+      setIsRequestingUpdate(false);
+      setRequestUpdateConfirm(false);
     }
   };
 
@@ -344,6 +378,19 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
                     <UserPlus className="h-4 w-4 mr-2" />
                   )}
                   Send to New Backers
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200"
+                  onClick={() => setRequestUpdateConfirm(true)}
+                  disabled={isRequestingUpdate}
+                >
+                  {isRequestingUpdate ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RotateCw className="h-4 w-4 mr-2" />
+                  )}
+                  Request Updated Survey
                 </Button>
                 <Button
                   variant="outline"
@@ -531,6 +578,16 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
         variant="destructive"
         onConfirm={lockSurvey}
         loading={isLocking}
+      />
+
+      <ConfirmDialog
+        open={requestUpdateConfirm}
+        onOpenChange={setRequestUpdateConfirm}
+        title="Request Updated Survey Responses?"
+        description="This will notify all backers that the survey has been updated and ask them to review and resubmit their responses. All existing responses will be marked as incomplete. Backers will receive an email and a dashboard notification."
+        confirmText="Send Update Request"
+        onConfirm={requestSurveyUpdate}
+        loading={isRequestingUpdate}
       />
     </div>
   );

@@ -163,6 +163,79 @@ export async function sendSurveyAvailableEmail(
 }
 
 /**
+ * Send survey update request email to backer
+ */
+export async function sendSurveyUpdateRequestEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  creatorName: string,
+  pledgeId: string
+) {
+  const surveyUrl = `${APP_URL}/dashboard/pledges/${pledgeId}/survey`;
+  const dashboardUrl = `${APP_URL}/dashboard/backer`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Survey Updated - Please Review</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+              SURVEY UPDATED
+            </div>
+          </div>
+
+          <h2 style="margin-top: 0; color: white; text-align: center;">Please Review Your Survey</h2>
+          <p style="text-align: center;">Hi ${backerName || "there"},</p>
+          <p style="text-align: center;"><strong>${creatorName}</strong> has updated the survey for <strong>"${projectTitle}"</strong> and is requesting that you review and update your responses.</p>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin-top: 0;">What changed?</h3>
+          <p style="color: #666; margin: 0;">The creator has made changes to the survey questions. Your previous responses have been kept, but please review the updated questions and make sure your answers are still correct. You may need to answer new or modified questions.</p>
+        </div>
+
+        <div style="background: #fffbeb; border-radius: 8px; padding: 15px; margin-bottom: 20px; border: 1px solid #fef3c7;">
+          <p style="margin: 0; font-size: 14px; color: #92400e;"><strong>Action Required:</strong> Please review and resubmit your survey responses as soon as possible so the creator can proceed with fulfillment.</p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${surveyUrl}" style="display: inline-block; background: #f59e0b; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+            Review Survey Now
+          </a>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+          <a href="${dashboardUrl}" style="color: #666; font-size: 14px; text-decoration: underline;">View all your pledges</a>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because you backed "${projectTitle}" on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return queueEmail({
+    to: email,
+    subject: `Survey updated for "${projectTitle}" - Please review your responses`,
+    html,
+    priority: EMAIL_PRIORITY.CREATOR,
+  });
+}
+
+/**
  * Send retailer approval email with access code and password setup link
  */
 export async function sendRetailerApprovalEmail(
