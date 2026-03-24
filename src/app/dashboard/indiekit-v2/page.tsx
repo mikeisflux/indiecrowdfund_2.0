@@ -709,16 +709,6 @@ export default function IndieKitV2Page() {
                 <SetupTab
                   products={products}
                   projectId={selectedProjectId}
-                  surveyQuestions={surveyQuestions}
-                  stats={stats}
-                  backers={backers}
-                  surveyAddons={surveyAddons}
-                  onOpenAddonDialog={() => setIsAddonDialogOpen(true)}
-                  onRefresh={fetchData}
-                  onEditAddon={(addon) => {
-                    setEditingAddon(addon);
-                    setIsAddonDialogOpen(true);
-                  }}
                 />
               )}
 
@@ -731,6 +721,15 @@ export default function IndieKitV2Page() {
                   }}
                   projectId={selectedProjectId}
                   onRefresh={fetchData}
+                  surveyQuestions={surveyQuestions}
+                  stats={stats}
+                  backers={backers}
+                  surveyAddons={surveyAddons}
+                  onOpenAddonDialog={() => setIsAddonDialogOpen(true)}
+                  onEditAddon={(addon) => {
+                    setEditingAddon(addon);
+                    setIsAddonDialogOpen(true);
+                  }}
                 />
               )}
 

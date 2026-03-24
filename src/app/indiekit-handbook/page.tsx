@@ -105,7 +105,6 @@ const sections: SectionGroup[] = [
       { id: 'shipping', label: 'Shipping', icon: Truck },
       { id: 'sku-mapping', label: 'SKU Mapping', icon: Link2 },
       { id: 'digital', label: 'Digital Files', icon: Download },
-      { id: 'addons', label: 'Add-ons', icon: ShoppingCart },
       { id: 'preorders', label: 'Pre-Orders', icon: TrendingUp },
     ],
   },
@@ -123,8 +122,10 @@ const sections: SectionGroup[] = [
     id: 'surveys-section',
     label: 'Surveys',
     tabs: [
+      { id: 'sent-surveys', label: 'Sent Surveys', icon: Mail },
       { id: 'survey-builder', label: 'Survey Builder', icon: FormInput },
-      { id: 'manage-survey', label: 'Manage Survey', icon: ClipboardList },
+      { id: 'addons', label: 'Add-ons', icon: ShoppingCart },
+      { id: 'manage-survey', label: 'Survey Responses', icon: ClipboardList },
     ],
   },
   {
@@ -158,7 +159,7 @@ const tabContent: Record<string, TabContent> = {
     howTo: [
       { step: 'Access IndieKit', detail: 'Log into your IndieCrowdfund account and go to your Creator Dashboard. Click "IndieKit" in the sidebar navigation. IndieKit becomes available once your campaign has reached its funding goal.' },
       { step: 'Select your project', detail: 'Use the project dropdown at the top of IndieKit to choose which campaign you want to manage. If you have multiple funded projects, you can switch between them at any time. Your last selected project is remembered.' },
-      { step: 'Understand the layout', detail: 'IndieKit is organized into four tab rows across the top: Row 1 is Dashboard & Core (Overview, Backers, Projects, Updates, Timeline, SKU Mapping). Row 2 is Fulfillment & Products (Packages, Products, Shipping, Digital, Add-ons, Pre-Orders). Row 3 is Communication (Email Campaigns, Email List, Teaser Pages, Segments). Row 4 is Data & Settings (Counts, Export, Survey Builder, Manage Survey, Transaction History, Settings, Account). Note: The Inbox and Support Resources are now in the Creator Dashboard under the Email tab.' },
+      { step: 'Understand the layout', detail: 'IndieKit is organized into phases. The Setup phase contains Products and SKU Mapping. The Surveys phase contains Sent Surveys, Survey Builder, Add-ons, and Survey Responses. The Fulfillment phase handles Packages, Products, Shipping, Digital Files, and Pre-Orders. Communication includes Email Campaigns, Email List, Teaser Pages, and Segments. Data & Settings covers Counts, Export, Transaction History, Settings, and Account.' },
       { step: 'Check the Workflow sidebar', detail: 'On the left side of the dashboard you will see the Fulfillment Workflow — a step-by-step guide showing your progress: Send & Remind, Lock Orders, Charge Cards, Lock Addresses, Start Shipping, and Shipped. Steps unlock sequentially as you complete each one.' },
     ],
     tips: [
@@ -172,10 +173,10 @@ const tabContent: Record<string, TabContent> = {
     description: 'Your campaign just funded — congratulations! Here is exactly what to do next in IndieKit, in order.',
     howTo: [
       { step: '1. Open IndieKit and check the Overview', detail: 'Go to IndieKit and look at the "What\'s Next" banner at the top of the Overview tab. It will tell you your most important next action. Below that, review your Key Metrics: Total Backers, Surveys Completed %, Add-ons Purchased %, and Fulfilled %.' },
-      { step: '2. Build your backer survey', detail: 'Click the Survey Builder tab. Add questions to collect the information you need from backers — shipping addresses, size/color preferences, and any other details. Use the drag-and-drop builder to reorder questions. Set item-specific variant questions (like Size or Color) per reward tier.' },
-      { step: '3. Set up add-ons (optional)', detail: 'If you want to offer extra items backers can purchase, go to the Add-ons tab and create them. Add-ons appear in the survey so backers can buy them while filling out their information.' },
+      { step: '2. Build your backer survey', detail: 'Go to the Surveys phase and click the Survey Builder tab. Add questions to collect the information you need from backers — shipping addresses, size/color preferences, and any other details. Use the drag-and-drop builder to reorder questions. Set item-specific variant questions (like Size or Color) per reward tier.' },
+      { step: '3. Set up add-ons (optional)', detail: 'If you want to offer extra items backers can purchase, go to the Add-ons tab within the Surveys phase and create them. Add-ons appear in the survey so backers can buy them while filling out their information.' },
       { step: '4. Configure shipping zones', detail: 'Go to the Shipping tab and set up your shipping zones (Domestic, Canada, EU, Rest of World, etc.) with base rates and per-item pricing. This determines what backers will be charged for shipping in their survey.' },
-      { step: '5. Send the survey', detail: 'Go to Email Campaigns and use the survey reminder template to notify all backers that their survey is ready. Monitor completion rates on the Manage Survey tab and send reminders to those who haven\'t completed it yet.' },
+      { step: '5. Send the survey', detail: 'Go to the Sent Surveys tab within the Surveys phase to compose and send survey notification emails to your backers. Monitor completion rates on the Survey Responses tab and send reminders to those who haven\'t completed it yet.' },
       { step: '6. Set up SKU Mapping (if using Shopify)', detail: 'If you use Shopify for fulfillment, go to the SKU Mapping tab to connect your Shopify store and map each reward tier and add-on to the correct Shopify product SKU.' },
     ],
     tips: [
@@ -188,7 +189,7 @@ const tabContent: Record<string, TabContent> = {
     title: 'Fulfillment Workflow',
     description: 'IndieKit guides you through fulfillment with a six-step workflow displayed in the left sidebar. Each step unlocks after completing the previous one. Here is what each step does and when to use it.',
     howTo: [
-      { step: 'Step 1: Send & Remind', detail: 'This is about collecting backer surveys. Go to the Email Campaigns tab and send a survey notification. Then use the Manage Survey tab to track completion rates. Send reminder emails to backers who haven\'t responded — you can do this from Email Campaigns using segment targeting for "Incomplete Survey" backers. Keep sending reminders until you hit 90%+ completion.' },
+      { step: 'Step 1: Send & Remind', detail: 'This is about collecting backer surveys. Go to the Surveys phase and use the Sent Surveys tab to send a survey notification. Then use the Survey Responses tab to track completion rates. Send reminder emails to backers who haven\'t responded — you can do this from the Sent Surveys tab or Email Campaigns using segment targeting for "Incomplete Survey" backers. Keep sending reminders until you hit 90%+ completion.' },
       { step: 'Step 2: Lock Orders', detail: 'Once survey responses are in, click "Lock Orders" in the workflow sidebar. This finalizes what each backer receives — their reward tier, add-ons, and variant selections. After locking, backers can no longer change their selections. Only lock when you are confident the data is complete.' },
       { step: 'Step 3: Charge Cards', detail: 'Click "Charge Cards" in the workflow sidebar. IndieKit will show a preview of all charges before processing. This step charges backers for any additional amounts owed — add-on purchases and shipping costs beyond what was included in their pledge. Review the charge preview carefully before confirming.' },
       { step: 'Step 4: Lock Addresses', detail: 'Click "Lock Addresses" to freeze shipping addresses. Send a "last chance to update your address" email first via Email Campaigns. After locking, backers can no longer modify their shipping information. This ensures your shipping labels are accurate.' },
@@ -378,7 +379,7 @@ const tabContent: Record<string, TabContent> = {
   },
   'addons': {
     title: 'Add-ons Tab',
-    description: 'Create and manage optional extras that backers can purchase during the survey.',
+    description: 'Create and manage optional extras that backers can purchase during the survey. Found within the Surveys phase alongside the Survey Builder and Survey Responses.',
     howTo: [
       { step: 'Create an add-on', detail: 'Click "Create Add-on" and fill in: name, description, price, and optional image. Set quantity limits if you have limited stock.' },
       { step: 'Link add-ons to rewards', detail: 'Choose which reward tiers can access each add-on. You can make add-ons available to all tiers or restrict them to specific ones.' },
@@ -479,6 +480,23 @@ const tabContent: Record<string, TabContent> = {
   },
 
   // ---- Surveys ----
+  'sent-surveys': {
+    title: 'Sent Surveys',
+    description: 'View all surveys that have been sent to your backers, track email campaign performance, and manage your survey communication timeline.',
+    howTo: [
+      { step: 'View sent surveys', detail: 'The Sent Surveys tab shows a list of all survey-related email campaigns that have been sent to your backers. Each entry shows the campaign status, title, number of recipients, open rate, click rate, and send date.' },
+      { step: 'Track campaign performance', detail: 'Monitor key metrics for each sent survey: Total Sent, Total Recipients, Total Opens, and Total Clicks. Use these numbers to gauge backer engagement.' },
+      { step: 'Draft a new email', detail: 'Click "Draft Your Next Email" to compose a new survey notification or reminder email. Use the pre-built templates organized by campaign stage (Before Launch, During Campaign, After Campaign, Post-Fulfillment).' },
+      { step: 'Use templates', detail: 'Browse the Launch Timeline at the bottom of the tab to find pre-written email templates for each stage of your campaign. Click a template to use it as a starting point.' },
+      { step: 'Manage campaigns', detail: 'Use the action menu on each campaign to duplicate, archive, or view detailed analytics for individual email sends.' },
+    ],
+    tips: [
+      'Send your first survey email within a week of funding to maintain momentum.',
+      'Send reminders to backers who have not completed their survey — aim for 90%+ completion.',
+      'Use the Launch Timeline templates as starting points for professional, effective emails.',
+      'Monitor open and click rates to optimize your email strategy over time.',
+    ],
+  },
   'survey-builder': {
     title: 'Survey Builder Tab',
     description: 'Build your backer survey with a drag-and-drop question editor. The survey collects shipping addresses, size/color preferences, and any other information you need for fulfillment.',
@@ -503,7 +521,7 @@ const tabContent: Record<string, TabContent> = {
     ],
   },
   'manage-survey': {
-    title: 'Manage Survey Tab',
+    title: 'Survey Responses Tab',
     description: 'Monitor survey responses, send reminders, and manage the survey lifecycle.',
     howTo: [
       { step: 'Check survey status', detail: 'The survey has three states: Draft (not yet sent), Sent (backers can respond), and Locked (responses frozen). The current status is shown at the top of the tab.' },
