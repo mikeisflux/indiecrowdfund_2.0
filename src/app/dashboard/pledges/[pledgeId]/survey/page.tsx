@@ -1414,6 +1414,79 @@ function SurveyPaymentForm({
   );
 }
 
+// Address/Email toggle component - needs its own component to use hooks
+function AddressEmailToggle({
+  questionId,
+  displayType,
+  value,
+  onChange,
+}: {
+  questionId?: string;
+  displayType: string;
+  value?: string;
+  onChange: (value: string | string[]) => void;
+}) {
+  const strValue = value || "";
+  const [wantsNew, setWantsNew] = useState(
+    strValue !== "" && strValue !== "No change needed"
+  );
+  const placeholderText =
+    displayType === "address"
+      ? "Enter your new address..."
+      : "Enter your new email...";
+  const noId = `${questionId || displayType}-no`;
+  const yesId = `${questionId || displayType}-yes`;
+
+  // Ensure value is set to "No change needed" if it's currently empty
+  // (handles initial render where radio shows "No" but value was never written)
+  useEffect(() => {
+    if (!value && !wantsNew) {
+      onChange("No change needed");
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="space-y-3">
+      <RadioGroup
+        value={wantsNew ? "yes" : "no"}
+        onValueChange={(v) => {
+          if (v === "no") {
+            setWantsNew(false);
+            onChange("No change needed");
+          } else {
+            setWantsNew(true);
+            onChange("");
+          }
+        }}
+      >
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="no" id={noId} />
+          <Label htmlFor={noId}>No, keep my current {displayType}</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="yes" id={yesId} />
+          <Label htmlFor={yesId}>Yes, I have a new {displayType}</Label>
+        </div>
+      </RadioGroup>
+      {wantsNew &&
+        (displayType === "email" ? (
+          <Input
+            type="email"
+            value={strValue}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholderText}
+          />
+        ) : (
+          <Textarea
+            value={strValue}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholderText}
+          />
+        ))}
+    </div>
+  );
+}
+
 // Question Input Component
 function QuestionInput({
   questionId,
@@ -1430,54 +1503,15 @@ function QuestionInput({
   value?: string | string[];
   onChange: (value: string | string[]) => void;
 }) {
-  // Address and email types get a Yes/No toggle instead of a bare text field
+  // Address and email types get their own component with local state
   if (displayType === "address" || displayType === "email") {
-    const strValue = (value as string) || "";
-    const isYes = strValue !== "" && strValue !== "No change needed";
-    const placeholderText = displayType === "address"
-      ? "Enter your new address..."
-      : "Enter your new email...";
-    const noId = `${questionId || displayType}-no`;
-    const yesId = `${questionId || displayType}-yes`;
-
     return (
-      <div className="space-y-3">
-        <RadioGroup
-          value={isYes ? "yes" : "no"}
-          onValueChange={(v) => {
-            if (v === "no") {
-              onChange("No change needed");
-            } else {
-              onChange("");
-            }
-          }}
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="no" id={noId} />
-            <Label htmlFor={noId}>No, keep my current {displayType}</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="yes" id={yesId} />
-            <Label htmlFor={yesId}>Yes, I have a new {displayType}</Label>
-          </div>
-        </RadioGroup>
-        {isYes && (
-          displayType === "email" ? (
-            <Input
-              type="email"
-              value={strValue}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholderText}
-            />
-          ) : (
-            <Textarea
-              value={strValue}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholderText}
-            />
-          )
-        )}
-      </div>
+      <AddressEmailToggle
+        questionId={questionId}
+        displayType={displayType}
+        value={value as string | undefined}
+        onChange={onChange}
+      />
     );
   }
 
