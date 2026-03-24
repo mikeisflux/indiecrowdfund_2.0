@@ -100,8 +100,8 @@ export async function notifyNewComment(
 ) {
   // Use provided projectUrlPath or fallback to legacy slug-based URL
   const actionUrl = projectUrlPath
-    ? `${projectUrlPath}#comments`
-    : `/projects/${projectSlug}#comments`;
+    ? `${projectUrlPath}?tab=comments`
+    : `/projects/${projectSlug}?tab=comments`;
 
   await createNotification({
     userId: creatorId,
