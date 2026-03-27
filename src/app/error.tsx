@@ -13,6 +13,21 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error("Page error:", error);
+    // Report to self-hosted error tracker
+    if (error) {
+      fetch("/api/error-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: error.message,
+          stack: error.stack,
+          url: typeof window !== "undefined" ? window.location.href : undefined,
+          metadata: { digest: error.digest, source: "page-error-boundary" },
+        }),
+      }).catch(() => {
+        // Ignore fetch errors from the error reporter
+      });
+    }
   }, [error]);
 
   return (
