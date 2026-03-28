@@ -428,7 +428,7 @@ export function CommentsTab({
                 <div className="flex items-start gap-2">
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarFallback className="text-xs bg-muted">
-                      {proj.creator[0]}
+                      {proj.creator?.[0] || "C"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">

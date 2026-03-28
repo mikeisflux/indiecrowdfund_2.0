@@ -114,7 +114,7 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
                 <div className="flex items-start gap-2">
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarFallback className="text-xs bg-muted">
-                      {project.creator[0]}
+                      {project.creator?.[0] || "C"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">

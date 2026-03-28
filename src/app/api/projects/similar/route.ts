@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
         goalAmount: true,
         backerCount: true,
         category: true,
+        endDate: true,
         creator: {
           select: {
             vanityUrl: true,
@@ -44,18 +45,32 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
-    const formattedProjects = projects.map((p) => ({
-      id: p.id,
-      title: p.title,
-      slug: p.slug,
-      imageUrl: p.imageUrl,
-      currentAmount: Number(p.currentAmount),
-      goalAmount: Number(p.goalAmount),
-      backerCount: p.backerCount,
-      category: p.category,
-      creatorName: p.creator?.name || "Creator",
-      vanityUrl: p.creator?.vanityUrl || null,
-    }));
+    const formattedProjects = projects.map((p) => {
+      const goal = Number(p.goalAmount) || 1;
+      const current = Number(p.currentAmount) || 0;
+      const fundedPercent = Math.round((current / goal) * 100);
+      const endDate = p.endDate ? p.endDate.toISOString() : null;
+      const daysLeft = p.endDate
+        ? Math.max(0, Math.ceil((p.endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+        : 0;
+
+      return {
+        id: p.id,
+        title: p.title,
+        slug: p.slug,
+        imageUrl: p.imageUrl,
+        currentAmount: current,
+        goalAmount: goal,
+        backerCount: p.backerCount,
+        category: p.category,
+        creator: p.creator?.name || "Creator",
+        vanityUrl: p.creator?.vanityUrl || null,
+        endDate,
+        daysLeft,
+        fundedPercent,
+        isProjectWeLove: false,
+      };
+    });
 
     return NextResponse.json({ projects: formattedProjects });
   } catch (error) {
