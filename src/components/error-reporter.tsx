@@ -50,8 +50,10 @@ export function ErrorReporter() {
       const response = await originalFetch.apply(this, args);
 
       // Report 4xx/5xx errors (but skip the error-report endpoint itself to avoid loops)
-      const requestUrl = typeof args[0] === "string" ? args[0] : args[0] instanceof Request ? args[0].url : "";
-      if (response.status >= 400 && !requestUrl.includes("/api/error-report")) {
+      const requestUrl = typeof args[0] === "string" ? args[0] : args[0] instanceof Request ? args[0].url : args[0] instanceof URL ? args[0].href : "";
+      // Skip: error-report endpoint (avoid loops), Next.js internal requests, and empty URLs
+      const isInternal = requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || requestUrl === "";
+      if (response.status >= 400 && !isInternal) {
         reportError(
           `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,
           undefined,
