@@ -124,10 +124,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file size
-    const maxBytes = (settings.maxFileSizeMB || 2048) * 1024 * 1024;
+    // Digital files use a 2GB limit (matching nginx/Next.js config)
+    // The shared maxFileSizeMB setting (default 50MB) is for marketplace files
+    const DIGITAL_FILE_MAX_MB = 2048;
+    const maxBytes = DIGITAL_FILE_MAX_MB * 1024 * 1024;
     if (fileSize > maxBytes) {
       return NextResponse.json(
-        { error: `File size exceeds maximum of ${settings.maxFileSizeMB}MB` },
+        { error: `File size exceeds maximum of ${DIGITAL_FILE_MAX_MB}MB` },
         { status: 400, headers: corsHeaders }
       );
     }
