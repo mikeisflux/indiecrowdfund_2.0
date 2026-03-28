@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file size
-    const maxBytes = (settings.maxFileSizeMB || 50) * 1024 * 1024;
+    const maxBytes = (settings.maxFileSizeMB || 2048) * 1024 * 1024;
     if (fileSize > maxBytes) {
       return NextResponse.json(
         { error: `File size exceeds maximum of ${settings.maxFileSizeMB}MB` },
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     }
 
     const currentUsage = await r2.getProjectStorageUsed(projectId);
-    const maxProjectBytes = (settings.maxProjectStorageMB || 200) * 1024 * 1024;
+    const maxProjectBytes = (settings.maxProjectStorageMB || 10240) * 1024 * 1024;
     if (currentUsage + fileSize > maxProjectBytes) {
       return NextResponse.json(
         { error: `Project storage limit exceeded (${settings.maxProjectStorageMB}MB max)` },
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
     // Get presigned upload URL
     const uploadUrl = await r2.getUploadUrl(storageKey, {
       contentType: mimeType,
-      expiresIn: 3600,
+      expiresIn: 7200, // 2 hours for large file uploads
     });
 
     return NextResponse.json(
