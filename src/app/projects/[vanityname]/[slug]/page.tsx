@@ -3,6 +3,7 @@
 import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { useSession } from "@/components/providers/auth-provider";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ import { BackToTop } from "@/components/back-to-top";
 import { getCSRFHeaders } from "@/lib/csrf";
 
 export default function ProjectPage() {
+  const { data: session } = useSession();
   const params = useParams();
   const searchParams = useSearchParams();
   const vanityname = (params?.vanityname as string) || "";
@@ -156,10 +158,10 @@ export default function ProjectPage() {
     fetchProject();
   }, [slug, vanityname, isLegacyUrl]);
 
-  // Check if user has an existing pledge for this project
+  // Check if user has an existing pledge for this project (only when logged in)
   useEffect(() => {
     async function checkExistingPledge() {
-      if (!project.id || project.id === "") return;
+      if (!project.id || project.id === "" || !session?.user) return;
 
       try {
         const response = await fetch(`/api/pledges/check?projectId=${project.id}`);
@@ -177,12 +179,12 @@ export default function ProjectPage() {
     }
 
     checkExistingPledge();
-  }, [project.id]);
+  }, [project.id, session?.user]);
 
-  // Check if user is following this project
+  // Check if user is following this project (only when logged in)
   useEffect(() => {
     async function checkFollowStatus() {
-      if (!project.id || project.id === "") return;
+      if (!project.id || project.id === "" || !session?.user) return;
 
       try {
         const response = await fetch(`/api/user/following?projectId=${project.id}`);
@@ -196,7 +198,7 @@ export default function ProjectPage() {
     }
 
     checkFollowStatus();
-  }, [project.id]);
+  }, [project.id, session?.user]);
 
   // Handle follow/unfollow project
   const handleFollow = async () => {
