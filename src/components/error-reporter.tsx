@@ -61,9 +61,17 @@ export function ErrorReporter() {
       }
 
       // Report 4xx/5xx errors (but skip the error-report endpoint itself to avoid loops)
-      const requestUrl = typeof args[0] === "string" ? args[0] : args[0] instanceof Request ? args[0].url : args[0] instanceof URL ? args[0].href : "";
-      // Skip: error-report endpoint (avoid loops), Next.js internal requests, and empty URLs
-      const isInternal = requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || requestUrl === "";
+      const input = args[0];
+      const requestUrl =
+        typeof input === "string" ? input
+        : input instanceof URL ? input.href
+        : input instanceof Request ? input.url
+        // Fallback: duck-type check for Request-like objects (cross-realm instanceof can fail)
+        : (typeof input === "object" && input !== null && "url" in input && typeof (input as Record<string, unknown>).url === "string")
+          ? (input as Record<string, unknown>).url as string
+        : "";
+      // Skip: error-report endpoint (avoid loops), Next.js internal requests, and empty/unresolvable URLs
+      const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc");
       if (response.status >= 400 && !isInternal) {
         reportError(
           `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,
