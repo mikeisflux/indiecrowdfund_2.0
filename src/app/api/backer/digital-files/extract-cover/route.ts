@@ -85,18 +85,12 @@ export async function POST(request: Request) {
       "digital-file"
     );
 
-    if (result.success) {
-      return NextResponse.json({
-        success: true,
-        coverUrl: result.coverUrl,
-        totalPages: result.totalPages,
-      });
-    } else {
-      return NextResponse.json({
-        success: false,
-        error: result.error,
-      }, { status: 500 });
-    }
+    return NextResponse.json({
+      success: result.success,
+      coverUrl: result.coverUrl,
+      totalPages: result.totalPages,
+      ...(result.error && { error: result.error }),
+    });
   } catch (error) {
     backerDigitalFilesExtractCoverLogger.error({ err: String(error) }, "Cover extraction error:");
     return NextResponse.json(

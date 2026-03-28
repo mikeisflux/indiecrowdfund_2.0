@@ -127,10 +127,20 @@ export async function GET() {
     );
     const activityFeed = allRecentProjects.slice(0, 20);
 
+    // Calculate stats
+    const totalProjects = creators.reduce(
+      (sum: number, c: { totalProjects: number }) => sum + c.totalProjects,
+      0
+    );
+
     return NextResponse.json({
       creators,
-      activityFeed,
-      totalFollowing: creators.length,
+      activity: activityFeed,
+      stats: {
+        totalFollowing: creators.length,
+        totalProjects,
+        recentUpdates: activityFeed.length,
+      },
     }, { headers: corsHeaders });
   } catch (error) {
     backerFollowingLogger.error({ err: String(error) }, "Error fetching following:");
