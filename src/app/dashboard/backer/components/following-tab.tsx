@@ -215,7 +215,7 @@ export function FollowingTab() {
                 <Users className="h-6 w-6 text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{data.stats.totalFollowing}</p>
+                <p className="text-2xl font-bold">{data.stats?.totalFollowing ?? 0}</p>
                 <p className="text-sm text-muted-foreground">Creators Following</p>
               </div>
             </div>
@@ -229,7 +229,7 @@ export function FollowingTab() {
                 <Package className="h-6 w-6 text-purple-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{data.stats.totalProjects}</p>
+                <p className="text-2xl font-bold">{data.stats?.totalProjects ?? 0}</p>
                 <p className="text-sm text-muted-foreground">Their Projects</p>
               </div>
             </div>
@@ -243,7 +243,7 @@ export function FollowingTab() {
                 <Activity className="h-6 w-6 text-amber-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{data.stats.recentUpdates}</p>
+                <p className="text-2xl font-bold">{data.stats?.recentUpdates ?? 0}</p>
                 <p className="text-sm text-muted-foreground">Recent Updates</p>
               </div>
             </div>
