@@ -42,8 +42,13 @@ export async function GET(req: NextRequest) {
         creatorId: session.user.id,
         deletedAt: null,
         OR: [
+          // Currently approved, live, or funded
           { status: { in: ["APPROVED", "LIVE", "FUNDED"] } },
+          // Approved or active prelaunch page
           { prelaunchStatus: "APPROVED" },
+          { prelaunchActive: true },
+          // Prior campaigns (launched at some point) — grants perpetual access
+          { status: { in: ["PAUSED", "FAILED", "CANCELLED"] } },
         ],
       },
     });

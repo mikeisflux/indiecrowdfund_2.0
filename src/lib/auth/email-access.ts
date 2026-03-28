@@ -1,7 +1,11 @@
 /**
  * Server-side email access control.
- * Only SUPER_ADMIN or users with at least one approved/prelaunch-approved project
- * can access email features (create campaigns, send emails, etc.).
+ * Access is granted if the user:
+ *   - Is a SUPER_ADMIN, OR
+ *   - Has at least one approved/active prelaunch page or approved campaign, OR
+ *   - Has ever had a prior campaign (any project that progressed past DRAFT/SUBMITTED)
+ *
+ * Once a creator has had at least one campaign they retain email access in perpetuity.
  */
 
 import { db } from "@/lib/db";
@@ -16,7 +20,7 @@ export async function checkEmailAccess(userId: string): Promise<{ allowed: boole
     return { allowed: true };
   }
 
-  const approvedProject = await db.project.findFirst({
+  const eligibleProject = await db.project.findFirst({
     where: {
       AND: [
         {
@@ -27,8 +31,13 @@ export async function checkEmailAccess(userId: string): Promise<{ allowed: boole
         },
         {
           OR: [
+            // Currently approved, live, or funded
             { status: { in: ["APPROVED", "LIVE", "FUNDED"] } },
+            // Approved or active prelaunch page
             { prelaunchStatus: "APPROVED" },
+            { prelaunchActive: true },
+            // Prior campaigns (launched at some point) — grants perpetual access
+            { status: { in: ["PAUSED", "FAILED", "CANCELLED"] } },
           ],
         },
       ],
@@ -36,7 +45,7 @@ export async function checkEmailAccess(userId: string): Promise<{ allowed: boole
     select: { id: true },
   });
 
-  if (!approvedProject) {
+  if (!eligibleProject) {
     return {
       allowed: false,
       reason: "Email access requires an approved project or prelaunch page",
