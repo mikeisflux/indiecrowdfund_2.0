@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       where: {
         creatorId: session.user.id,
         OR: [
-          { status: { in: ["FUNDED", "LIVE"] } },
+          { status: { in: ["FUNDED", "LIVE", "APPROVED"] } },
           { status: "DRAFT", prelaunchActive: true },
         ],
       },
@@ -129,6 +129,8 @@ export async function GET(req: NextRequest) {
         distributionRules: [],
         emailCampaigns: [],
         workflowState: null,
+        userRole,
+        hasApprovedProject,
       }, {
         headers: { [CORRELATION_HEADER]: correlationId },
       });
