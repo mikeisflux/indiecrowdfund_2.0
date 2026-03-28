@@ -14,7 +14,7 @@ import {
 import { Upload, FileText, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
+
 
 interface UploadDialogProps {
   open: boolean;
@@ -88,7 +88,7 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
     }
 
     setIsUploading(true);
-    setUploadProgress(10);
+    setUploadProgress(2);
 
     try {
       // Step 1: Get presigned upload URL from API
@@ -110,20 +110,35 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
       }
 
       const { uploadUrl } = await res.json();
-      setUploadProgress(30);
+      setUploadProgress(5);
 
-      // Step 2: Upload file directly to R2 using presigned URL
-      const uploadRes = await apiFetch(uploadUrl, {
-        method: "PUT",
-        body: selectedFile,
-        headers: {
-          "Content-Type": selectedFile.type || "application/octet-stream",
-        },
+      // Step 2: Upload file directly to R2 using XMLHttpRequest for real progress tracking
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", selectedFile.type || "application/octet-stream");
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            // Map upload progress to 5-95% range (5% for API call, 95-100% for completion)
+            const percent = Math.round(5 + (event.loaded / event.total) * 90);
+            setUploadProgress(percent);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error("Failed to upload file to storage"));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error during upload"));
+        xhr.onabort = () => reject(new Error("Upload cancelled"));
+
+        xhr.send(selectedFile);
       });
-
-      if (!uploadRes.ok) {
-        throw new Error("Failed to upload file to storage");
-      }
 
       setUploadProgress(100);
       toast.success("File uploaded successfully. Create distribution rules to send it to backers.");
@@ -192,7 +207,7 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 text-center">
-                    {uploadProgress < 100 ? "Uploading..." : "Complete!"}
+                    {uploadProgress < 100 ? `Uploading... ${uploadProgress}%` : "Complete!"}
                   </p>
                 </div>
               )}
