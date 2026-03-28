@@ -31,6 +31,10 @@ export function ErrorReporter() {
     };
 
     const handleError = (event: ErrorEvent) => {
+      // "Script error." is a generic cross-origin error with no useful info — skip it
+      if (!event.message || event.message === "Script error." || event.message === "Script error") {
+        return;
+      }
       reportError(
         event.message || "Unhandled error",
         event.error?.stack
@@ -47,7 +51,14 @@ export function ErrorReporter() {
     // Intercept fetch to report HTTP 4xx/5xx errors to admin error logs
     const originalFetch = window.fetch;
     window.fetch = async function (...args: Parameters<typeof window.fetch>) {
-      const response = await originalFetch.apply(this, args);
+      let response: Response;
+      try {
+        response = await originalFetch.apply(this, args);
+      } catch (err) {
+        // Network failures, AbortErrors, etc. — let them propagate naturally
+        // but don't report them (the caller's catch handler should deal with these)
+        throw err;
+      }
 
       // Report 4xx/5xx errors (but skip the error-report endpoint itself to avoid loops)
       const requestUrl = typeof args[0] === "string" ? args[0] : args[0] instanceof Request ? args[0].url : args[0] instanceof URL ? args[0].href : "";
