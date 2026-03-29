@@ -71,9 +71,12 @@ export function ErrorReporter() {
           ? (input as Record<string, unknown>).url as string
         : "";
       // Skip: error-report endpoint (avoid loops), Next.js internal requests, empty/unresolvable URLs,
-      // and expected 400s from token-based flows (verify-email, password reset, etc.)
+      // expected 400s from token-based flows (verify-email), 404s from surveys without a survey record,
+      // and 401s from user-specific endpoints hit by unauthenticated visitors
       const isExpected400 = response.status === 400 && requestUrl.includes("/api/user/verify-email");
-      const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400;
+      const isExpected404 = response.status === 404 && requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond");
+      const isExpected401 = response.status === 401 && requestUrl.includes("/api/user/following");
+      const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401;
       if (response.status >= 400 && !isInternal) {
         reportError(
           `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,
