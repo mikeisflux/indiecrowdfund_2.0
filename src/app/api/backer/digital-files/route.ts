@@ -29,11 +29,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("projectId");
 
-    // Get all valid pledges for the user
+    // Get all valid pledges for the user (PENDING = campaign backer, COMPLETED = charged/funded)
     const pledges = await db.pledge.findMany({
       where: {
         userId: session.user.id,
-        status: "COMPLETED",
+        status: { in: ["PENDING", "COMPLETED"] },
         deletedAt: null,
         ...(projectId ? { projectId } : {}),
       },
@@ -224,12 +224,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File not found" }, { status: 404, headers: corsHeaders });
     }
 
-    // Get user's pledge for this project
+    // Get user's pledge for this project (PENDING = campaign backer, COMPLETED = charged/funded)
     const pledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
         projectId: file.projectId,
-        status: "COMPLETED",
+        status: { in: ["PENDING", "COMPLETED"] },
+        deletedAt: null,
       },
       include: {
         addons: {

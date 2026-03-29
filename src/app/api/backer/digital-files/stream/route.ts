@@ -34,12 +34,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    // Verify access: user must have a COMPLETED pledge for this project
+    // Verify access: user must have an active pledge for this project
+    // (PENDING = campaign backer, COMPLETED = charged/funded)
     const pledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
         projectId: file.projectId,
-        status: "COMPLETED",
+        status: { in: ["PENDING", "COMPLETED"] },
         deletedAt: null,
       },
       include: {
