@@ -70,8 +70,10 @@ export function ErrorReporter() {
         : (typeof input === "object" && input !== null && "url" in input && typeof (input as Record<string, unknown>).url === "string")
           ? (input as Record<string, unknown>).url as string
         : "";
-      // Skip: error-report endpoint (avoid loops), Next.js internal requests, and empty/unresolvable URLs
-      const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc");
+      // Skip: error-report endpoint (avoid loops), Next.js internal requests, empty/unresolvable URLs,
+      // and expected 400s from token-based flows (verify-email, password reset, etc.)
+      const isExpected400 = response.status === 400 && requestUrl.includes("/api/user/verify-email");
+      const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400;
       if (response.status >= 400 && !isInternal) {
         reportError(
           `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,

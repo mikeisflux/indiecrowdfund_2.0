@@ -33,6 +33,7 @@ const csrfExemptRoutes = [
   "/api/retailers/apply", // Protected by CAPTCHA instead
   "/api/retailers/session-auth", // Uses NextAuth session for authentication
   "/api/error-report", // Error reporting from error boundaries and ErrorReporter (no auth needed)
+  "/api/backer/digital-files/extract-cover", // Background thumbnail extraction; already protected by session auth
 ];
 
 // Routes that allow Shopify iframe embedding

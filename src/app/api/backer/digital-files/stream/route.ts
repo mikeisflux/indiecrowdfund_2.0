@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "File content unavailable" }, { status: 404 });
     }
 
-    return new NextResponse(content, {
+    return new NextResponse(new Uint8Array(content), {
       headers: {
         "Content-Type": file.mimeType || "application/pdf",
         "Content-Length": content.length.toString(),
