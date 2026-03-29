@@ -37,16 +37,24 @@ export function getConsentPreferences(): ConsentPreferences {
 
 export function setConsentPreferences(prefs: ConsentPreferences): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(
-    CONSENT_PREFS_KEY,
-    JSON.stringify({ ...prefs, essential: true })
-  );
-  // Dispatch event so tracking library can react in real time
-  window.dispatchEvent(new CustomEvent("consent-updated", { detail: prefs }));
+  try {
+    localStorage.setItem(
+      CONSENT_PREFS_KEY,
+      JSON.stringify({ ...prefs, essential: true })
+    );
+    // Dispatch event so tracking library can react in real time
+    window.dispatchEvent(new CustomEvent("consent-updated", { detail: prefs }));
+  } catch {
+    // localStorage unavailable (e.g. Safari Private Browsing) — skip silently
+  }
 }
 
 export function hasUserConsented(): boolean {
   if (typeof window === "undefined") return false;
-  return localStorage.getItem(CONSENT_PREFS_KEY) !== null;
+  try {
+    return localStorage.getItem(CONSENT_PREFS_KEY) !== null;
+  } catch {
+    return false;
+  }
 }
 

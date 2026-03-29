@@ -44,21 +44,26 @@ export function ConsentBanner() {
       return false;
     }
 
-    if (showFrequency === "once_per_session") {
-      return !sessionStorage.getItem(CONSENT_SESSION_KEY);
-    }
-
-    if (showFrequency === "once_per_login") {
-      return !localStorage.getItem(CONSENT_LOGIN_KEY);
-    }
-
-    if (showFrequency === "once_per_day") {
-      const lastDismissed = localStorage.getItem(CONSENT_DISMISSED_KEY);
-      if (lastDismissed) {
-        const dismissedAt = parseInt(lastDismissed, 10);
-        const twentyFourHours = 24 * 60 * 60 * 1000;
-        if (Date.now() - dismissedAt < twentyFourHours) return false;
+    try {
+      if (showFrequency === "once_per_session") {
+        return !sessionStorage.getItem(CONSENT_SESSION_KEY);
       }
+
+      if (showFrequency === "once_per_login") {
+        return !localStorage.getItem(CONSENT_LOGIN_KEY);
+      }
+
+      if (showFrequency === "once_per_day") {
+        const lastDismissed = localStorage.getItem(CONSENT_DISMISSED_KEY);
+        if (lastDismissed) {
+          const dismissedAt = parseInt(lastDismissed, 10);
+          const twentyFourHours = 24 * 60 * 60 * 1000;
+          if (Date.now() - dismissedAt < twentyFourHours) return false;
+        }
+        return true;
+      }
+    } catch {
+      // localStorage/sessionStorage unavailable (Safari Private Browsing) — show banner
       return true;
     }
 
@@ -103,10 +108,14 @@ export function ConsentBanner() {
 
   const dismiss = useCallback(() => {
     setIsVisible(false);
-    sessionStorage.setItem(CONSENT_SESSION_KEY, Date.now().toString());
-    localStorage.setItem(CONSENT_DISMISSED_KEY, Date.now().toString());
-    if (showFrequency === "once_per_login") {
-      localStorage.setItem(CONSENT_LOGIN_KEY, Date.now().toString());
+    try {
+      sessionStorage.setItem(CONSENT_SESSION_KEY, Date.now().toString());
+      localStorage.setItem(CONSENT_DISMISSED_KEY, Date.now().toString());
+      if (showFrequency === "once_per_login") {
+        localStorage.setItem(CONSENT_LOGIN_KEY, Date.now().toString());
+      }
+    } catch {
+      // Storage unavailable — banner will reappear next visit, which is acceptable
     }
   }, [showFrequency]);
 
