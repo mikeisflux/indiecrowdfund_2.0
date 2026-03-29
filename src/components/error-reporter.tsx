@@ -78,9 +78,11 @@ export function ErrorReporter() {
       const isExpected401 = response.status === 401 && requestUrl.includes("/api/user/following");
       // collaborators/me never returns 403 itself — a 403 here means the bot blocker blocked the IP
       // digital-files/stream 403 = access denied for thumbnail (shows fallback icon, not a crash)
+      // project stats 403 = bot blocker; stats endpoint has no 403 code path of its own
       const isExpected403 = response.status === 403 && (
         requestUrl.includes("/collaborators/me") ||
-        requestUrl.includes("/api/backer/digital-files/stream")
+        requestUrl.includes("/api/backer/digital-files/stream") ||
+        (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/stats"))
       );
       const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403;
       if (response.status >= 400 && !isInternal) {
