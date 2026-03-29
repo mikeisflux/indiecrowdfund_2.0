@@ -16,6 +16,21 @@ export default function GlobalError({
 
   useEffect(() => {
     if (error) {
+      // ChunkLoadError = stale JS chunks after a deploy (user has old cached page).
+      // Auto-reload once to pick up the new chunks. Guard against reload loops with sessionStorage.
+      const isChunkError =
+        error.message?.includes("Loading chunk") ||
+        error.message?.includes("ChunkLoadError") ||
+        error.name === "ChunkLoadError";
+      if (isChunkError) {
+        const key = "chunk_reload_attempted";
+        if (!sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, "1");
+          window.location.reload();
+          return;
+        }
+      }
+
       // Report to self-hosted error tracker
       fetch("/api/error-report", {
         method: "POST",

@@ -35,6 +35,10 @@ export function ErrorReporter() {
       if (!event.message || event.message === "Script error." || event.message === "Script error") {
         return;
       }
+      // Chunk load failures = stale cached page after a deploy; global-error.tsx auto-reloads
+      if (event.message?.includes("Loading chunk") || event.error?.name === "ChunkLoadError") {
+        return;
+      }
       reportError(
         event.message || "Unhandled error",
         event.error?.stack
@@ -45,6 +49,10 @@ export function ErrorReporter() {
       const error = event.reason;
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
+      // Suppress chunk load errors from promise rejections too
+      if (message?.includes("Loading chunk") || (error instanceof Error && error.name === "ChunkLoadError")) {
+        return;
+      }
       reportError(`Unhandled Promise Rejection: ${message}`, stack);
     };
 
@@ -82,7 +90,8 @@ export function ErrorReporter() {
         requestUrl.includes("/collaborators/me") ||
         requestUrl.includes("/api/backer/digital-files/stream") ||
         (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/stats")) ||
-        requestUrl.includes("/api/auth/session")
+        requestUrl.includes("/api/auth/session") ||
+        (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/comments"))
       );
       const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403;
       if (response.status >= 400 && !isInternal) {

@@ -385,11 +385,12 @@ export async function middleware(req: NextRequest) {
   }
 
   // General rate limiter — catches scrapers hammering pages/API before server action checks
-  // Skip internal Next.js requests and static assets
+  // Skip all Next.js framework paths, static assets, and internal API
   if (
-    !pathname.startsWith("/_next/static") &&
+    !pathname.startsWith("/_next/") &&
     !pathname.startsWith("/favicon") &&
     !pathname.startsWith("/api/internal/") &&
+    !pathname.startsWith("/api/auth/") &&
     isGeneralRateLimited(clientIP)
   ) {
     console.log(`[Bot Blocker] General rate limit exceeded: ${clientIP} on ${pathname}`);
