@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, MailCheck } from "lucide-react";
 import { Elements } from "@stripe/react-stripe-js";
 import { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
@@ -28,6 +29,54 @@ interface PaymentStepProps {
   dcStripePromise: Promise<Stripe | null> | null;
   intentType: "payment_intent" | "setup_intent";
   projectPath: string;
+}
+
+const isEmailVerificationError = (error: string | null) =>
+  !!error && error.toLowerCase().includes("verify your email");
+
+function ResendVerificationButton() {
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const handleResend = async () => {
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/user/verify-email", { method: "POST" });
+      if (res.ok) {
+        setStatus("sent");
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (status === "sent") {
+    return (
+      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 mt-2">
+        <MailCheck className="h-4 w-4" />
+        Verification email sent! Check your inbox.
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleResend}
+      disabled={status === "sending"}
+      className="mt-2"
+    >
+      {status === "sending" ? (
+        <><Loader2 className="h-3 w-3 animate-spin mr-1" />Sending...</>
+      ) : status === "error" ? (
+        "Failed to send — try again"
+      ) : (
+        "Resend verification email"
+      )}
+    </Button>
+  );
 }
 
 export function PaymentStep({
@@ -124,19 +173,24 @@ export function PaymentStep({
           {/* Show error if any - only for Stripe */}
           {paymentError && project?.paymentProcessor === "STRIPE" && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400 mb-2">{paymentError}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setPaymentError(null);
-                  setClientSecret(null);
-                  setIsProcessing(false);
-                  // This will trigger the useEffect to create a new pledge
-                }}
-              >
-                Try Again
-              </Button>
+              <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+              {isEmailVerificationError(paymentError) ? (
+                <ResendVerificationButton />
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    setPaymentError(null);
+                    setClientSecret(null);
+                    setIsProcessing(false);
+                    // This will trigger the useEffect to create a new pledge
+                  }}
+                >
+                  Try Again
+                </Button>
+              )}
             </div>
           )}
 
@@ -201,18 +255,23 @@ export function PaymentStep({
               <div className="space-y-4">
                 {paymentError ? (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <p className="text-sm text-red-600 dark:text-red-400 mb-2">{paymentError}</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setPaymentError(null);
-                        setClientSecret(null);
-                        setIsProcessing(false);
-                      }}
-                    >
-                      Try Again
-                    </Button>
+                    <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                    {isEmailVerificationError(paymentError) ? (
+                      <ResendVerificationButton />
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => {
+                          setPaymentError(null);
+                          setClientSecret(null);
+                          setIsProcessing(false);
+                        }}
+                      >
+                        Try Again
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8">
@@ -278,7 +337,7 @@ export function PaymentStep({
                   buttonLabel={isModifyMode ? `Pay Additional $${displayTotal.toFixed(2)}` : undefined}
                 />
               </Elements>
-            ) : (
+            ) : paymentError ? null : (
               /* Loading state while creating pledge and loading Stripe */
               <div className="space-y-4">
                 <div className="flex flex-col items-center justify-center py-8">
