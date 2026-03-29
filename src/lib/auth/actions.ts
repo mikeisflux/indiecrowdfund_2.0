@@ -223,9 +223,11 @@ export async function login(formData: FormData, callbackUrl?: string) {
     };
   }
 
-  // Find user (case-insensitive to handle legacy mixed-case emails)
+  // Find user — explicit select avoids requesting columns that may not exist yet in DB
+  // (e.g. failedLoginAttempts before migration is run)
   const user = await db.user.findFirst({
     where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
+    select: { id: true, password: true, role: true },
   });
 
   if (!user || !user.password) {
