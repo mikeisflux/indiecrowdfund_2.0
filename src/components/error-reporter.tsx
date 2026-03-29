@@ -76,7 +76,9 @@ export function ErrorReporter() {
       const isExpected400 = response.status === 400 && requestUrl.includes("/api/user/verify-email");
       const isExpected404 = response.status === 404 && requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond");
       const isExpected401 = response.status === 401 && requestUrl.includes("/api/user/following");
-      const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401;
+      // collaborators/me never returns 403 itself — a 403 here means the bot blocker blocked the IP
+      const isExpected403 = response.status === 403 && requestUrl.includes("/collaborators/me");
+      const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403;
       if (response.status >= 400 && !isInternal) {
         reportError(
           `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,
