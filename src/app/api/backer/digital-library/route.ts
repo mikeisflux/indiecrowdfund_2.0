@@ -48,7 +48,7 @@ export async function GET(request: Request) {
 
     // Fetch crowdfunding digital files
     if (!source || source === "crowdfunding") {
-      // First, get user's pledges with their rewardIds
+      // Get user's pledges with their rewardIds AND addon IDs
       const userPledges = await prisma.pledge.findMany({
         where: {
           userId: session.user.id,
@@ -59,14 +59,11 @@ export async function GET(request: Request) {
           id: true,
           projectId: true,
           rewardId: true,
+          addons: {
+            select: { addonId: true },
+          },
         },
       });
-
-      // Create maps for quick lookup
-      const pledgesByProject = new Map<string, string | null>();
-      for (const pledge of userPledges) {
-        pledgesByProject.set(pledge.projectId, pledge.rewardId);
-      }
 
       const projectIds = userPledges.map(p => p.projectId);
       const pledgeIds = userPledges.map(p => p.id);
@@ -111,21 +108,49 @@ export async function GET(request: Request) {
         explicitDistributions.map((d: { digitalFileId: string }) => d.digitalFileId)
       );
 
-      // Filter files based on explicit distribution OR rewardIds restriction
+      // Filter files using accessType — same logic as the stream/download routes
       for (const file of digitalFiles) {
-        // If the file was explicitly distributed to this backer, show it
-        const wasDistributed = explicitlyDistributedFileIds.has(file.id);
+        // Explicitly distributed to this backer always grants access
+        if (explicitlyDistributedFileIds.has(file.id)) {
+          libraryItems.push({
+            id: `cf_${file.id}`,
+            title: file.name,
+            subtitle: file.project.title,
+            fileSize: file.fileSize,
+            coverImageUrl: file.coverImageUrl,
+            totalPages: file.totalPages,
+            source: "crowdfunding",
+            sourceId: file.id,
+            sourceName: file.project.title,
+            createdAt: file.createdAt.toISOString(),
+            mimeType: file.mimeType,
+          });
+          continue;
+        }
 
-        const userRewardId = pledgesByProject.get(file.projectId);
+        // Find this user's pledge for the project
+        const pledge = userPledges.find(p => p.projectId === file.projectId);
+        if (!pledge) continue;
+
         const fileRewardIds = (file.rewardIds as string[]) || [];
+        const fileAddonIds = (file.addonIds as string[]) || [];
+        const userAddonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
 
-        // Show file if:
-        // 1. It was explicitly distributed to this backer, OR
-        // 2. rewardIds is empty (available to all backers), OR
-        // 3. User's rewardId is in the file's rewardIds array
-        const hasAccess = wasDistributed ||
-          fileRewardIds.length === 0 ||
-          (userRewardId && fileRewardIds.includes(userRewardId));
+        let hasAccess = false;
+        if (file.accessType === "ALL_BACKERS") {
+          hasAccess = true;
+        } else if (fileRewardIds.length === 0 && fileAddonIds.length === 0) {
+          // No specific IDs configured — grant access to any backer of this project
+          hasAccess = true;
+        } else {
+          // Union check: backer qualifies if they match ANY configured reward OR addon.
+          // This correctly handles files with multiple distribution rules (e.g. both a
+          // main-reward rule and an addon rule) where the last rule may have overwritten
+          // the accessType but both rewardIds and addonIds arrays remain accurate.
+          const rewardMatch = fileRewardIds.length > 0 && !!pledge.rewardId && fileRewardIds.includes(pledge.rewardId);
+          const addonMatch = fileAddonIds.length > 0 && userAddonIds.some((id: string) => fileAddonIds.includes(id));
+          hasAccess = rewardMatch || addonMatch;
+        }
 
         if (hasAccess) {
           libraryItems.push({

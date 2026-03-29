@@ -261,31 +261,22 @@ export async function POST(request: NextRequest) {
     if (explicitDistribution?.distributedAt) {
       // File was explicitly distributed to this backer — grant access
       hasAccess = true;
+    } else if (file.accessType === "ALL_BACKERS") {
+      hasAccess = true;
     } else {
-      // Fall back to checking file access type
-      switch (file.accessType) {
-        case "ALL_BACKERS":
-          hasAccess = true;
-          break;
+      const fileRewardIds = (file.rewardIds as string[]) || [];
+      const fileAddonIds = (file.addonIds as string[]) || [];
+      const pledgeAddonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
 
-        case "SPECIFIC_REWARDS":
-          hasAccess = pledge.rewardId !== null && file.rewardIds.includes(pledge.rewardId);
-          break;
-
-        case "SPECIFIC_ADDONS":
-          const pledgeAddonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
-          hasAccess = file.addonIds.some((addonId: string) => pledgeAddonIds.includes(addonId));
-          break;
-
-        case "REWARD_AND_ADDON":
-          const hasReward = pledge.rewardId !== null && file.rewardIds.includes(pledge.rewardId);
-          const pledgeAddons = pledge.addons.map((a: { addonId: string }) => a.addonId);
-          const hasAddon = file.addonIds.some((addonId: string) => pledgeAddons.includes(addonId));
-          hasAccess = hasReward || hasAddon;
-          break;
-
-        default:
-          hasAccess = true;
+      if (fileRewardIds.length === 0 && fileAddonIds.length === 0) {
+        // No restrictions configured — allow any backer
+        hasAccess = true;
+      } else {
+        // Union check: backer qualifies if they match ANY reward OR addon.
+        // Handles files with multiple distribution rules (reward + addon) correctly.
+        const rewardMatch = fileRewardIds.length > 0 && pledge.rewardId !== null && fileRewardIds.includes(pledge.rewardId);
+        const addonMatch = fileAddonIds.length > 0 && fileAddonIds.some((addonId: string) => pledgeAddonIds.includes(addonId));
+        hasAccess = rewardMatch || addonMatch;
       }
     }
 

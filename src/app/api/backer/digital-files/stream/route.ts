@@ -65,28 +65,19 @@ export async function GET(request: NextRequest) {
 
     if (explicitDistribution?.distributedAt) {
       hasAccess = true;
+    } else if (file.accessType === "ALL_BACKERS") {
+      hasAccess = true;
     } else {
-      switch (file.accessType) {
-        case "ALL_BACKERS":
-          hasAccess = true;
-          break;
-        case "SPECIFIC_REWARDS":
-          hasAccess = pledge.rewardId !== null && file.rewardIds.includes(pledge.rewardId);
-          break;
-        case "SPECIFIC_ADDONS": {
-          const pledgeAddonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
-          hasAccess = file.addonIds.some((id: string) => pledgeAddonIds.includes(id));
-          break;
-        }
-        case "REWARD_AND_ADDON": {
-          const hasReward = pledge.rewardId !== null && file.rewardIds.includes(pledge.rewardId);
-          const pledgeAddons = pledge.addons.map((a: { addonId: string }) => a.addonId);
-          const hasAddon = file.addonIds.some((id: string) => pledgeAddons.includes(id));
-          hasAccess = hasReward || hasAddon;
-          break;
-        }
-        default:
-          hasAccess = true;
+      const fileRewardIds = (file.rewardIds as string[]) || [];
+      const fileAddonIds = (file.addonIds as string[]) || [];
+      const pledgeAddonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
+
+      if (fileRewardIds.length === 0 && fileAddonIds.length === 0) {
+        hasAccess = true;
+      } else {
+        const rewardMatch = fileRewardIds.length > 0 && pledge.rewardId !== null && fileRewardIds.includes(pledge.rewardId);
+        const addonMatch = fileAddonIds.length > 0 && fileAddonIds.some((id: string) => pledgeAddonIds.includes(id));
+        hasAccess = rewardMatch || addonMatch;
       }
     }
 
