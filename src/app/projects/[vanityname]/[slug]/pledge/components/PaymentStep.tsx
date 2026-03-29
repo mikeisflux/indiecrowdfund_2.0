@@ -8,6 +8,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
 import { StripePaymentForm } from "./StripePaymentForm";
+import { apiFetch } from "@/lib/fetch-utils";
 
 interface PaymentStepProps {
   project: ProjectData | null;
@@ -40,7 +41,7 @@ function ResendVerificationButton() {
   const handleResend = async () => {
     setStatus("sending");
     try {
-      const res = await fetch("/api/user/verify-email", { method: "POST" });
+      const res = await apiFetch("/api/user/verify-email", { method: "POST" });
       if (res.ok) {
         setStatus("sent");
       } else {
