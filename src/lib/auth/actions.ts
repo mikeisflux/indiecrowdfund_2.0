@@ -238,8 +238,15 @@ export async function login(formData: FormData, callbackUrl?: string) {
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
-    // Record failed attempt
+    // Record failed attempt (in-memory/Redis rate limiter + persistent DB counter)
     await recordLoginAttempt(clientIP, email, false);
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: { increment: 1 },
+        lastFailedLoginAt: new Date(),
+      },
+    }).catch(() => {}); // Non-fatal — don't break login flow
 
     // Calculate remaining attempts for user feedback
     const updatedCheck = await checkLoginRateLimit(clientIP, email);
@@ -250,8 +257,12 @@ export async function login(formData: FormData, callbackUrl?: string) {
     return { error: { _form: [`Invalid email or password${remainingMsg}`] } };
   }
 
-  // Record successful login (clears rate limit)
+  // Record successful login (clears rate limit + reset DB counter)
   await recordLoginAttempt(clientIP, email, true);
+  await db.user.update({
+    where: { id: user.id },
+    data: { failedLoginAttempts: 0, lastFailedLoginAt: null },
+  }).catch(() => {}); // Non-fatal
 
   // Create session
   await createSession(user.id);

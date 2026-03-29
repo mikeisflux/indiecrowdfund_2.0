@@ -34,9 +34,14 @@ export async function GET() {
     // Count blocked IPs
     const blockedIPs = await db.blockedIP.count();
 
-    // Count failed logins in last 24h
-    // failedLoginAttempts/lastFailedLoginAt not yet in schema — return 0 until implemented
-    const failedLogins24h = 0;
+    // Count accounts with failed login attempts in last 24h
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const failedLogins24h = await db.user.count({
+      where: {
+        failedLoginAttempts: { gt: 0 },
+        lastFailedLoginAt: { gte: oneDayAgo },
+      },
+    });
 
     return NextResponse.json({
       activeUsers,

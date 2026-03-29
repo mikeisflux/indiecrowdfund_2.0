@@ -117,6 +117,10 @@ model User {
   lockedById        String?    // Admin who locked the account
   lastKnownIP       String?    // Last known IP address for ban enforcement
 
+  // Failed login tracking (brute-force detection / admin security stats)
+  failedLoginAttempts Int       @default(0)
+  lastFailedLoginAt   DateTime?
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?  // Soft delete timestamp
