@@ -24,8 +24,7 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Count active users (sessions within last 24 hours)
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Count active users (non-expired sessions)
     const activeUsers = await db.session.count({
       where: {
         expires: { gt: new Date() },
@@ -35,13 +34,9 @@ export async function GET() {
     // Count blocked IPs
     const blockedIPs = await db.blockedIP.count();
 
-    // Count failed logins in last 24h (from account lockout attempts)
-    const failedLogins24h = await db.user.count({
-      where: {
-        failedLoginAttempts: { gt: 0 },
-        lastFailedLoginAt: { gte: oneDayAgo },
-      },
-    });
+    // Count failed logins in last 24h
+    // failedLoginAttempts/lastFailedLoginAt not yet in schema — return 0 until implemented
+    const failedLogins24h = 0;
 
     return NextResponse.json({
       activeUsers,
