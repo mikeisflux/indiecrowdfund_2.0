@@ -1,11 +1,9 @@
 "use client";
 
-import { apiFetch } from "@/lib/fetch-utils";
 import { useEffect, useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { getLocalBookUrl } from "@/lib/local-books-db";
 
 // Use local worker for reliability
@@ -149,14 +147,8 @@ export function PdfThumbnail({
         if (!pdfUrl && fileId) {
           // Fetch URL based on source
           if (source === "crowdfunding") {
-            const res = await apiFetch("/api/backer/digital-files", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", },
-              body: JSON.stringify({ fileId }),
-            });
-            if (!res.ok) throw new Error("Failed to get PDF URL");
-            const { downloadUrl } = await res.json();
-            pdfUrl = downloadUrl;
+            // Use proxy endpoint to avoid CORS issues with direct R2 URLs
+            pdfUrl = `/api/backer/digital-files/stream?fileId=${encodeURIComponent(fileId)}`;
           } else if (source === "marketplace") {
             const res = await fetch(`/api/backer/marketplace-purchases/${fileId}/download`);
             if (!res.ok) throw new Error("Failed to get PDF URL");

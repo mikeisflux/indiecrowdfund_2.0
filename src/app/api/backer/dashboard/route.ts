@@ -244,6 +244,7 @@ export async function GET() {
         estimatedDelivery: pledge.reward?.estimatedDelivery || null,
         fulfillmentStatus: pledge.fulfillmentStatus,
         surveyCompleted: pledge.surveyCompleted,
+        hasSurvey: projectsWithSurveys.has(pledge.project.id),
         updates: pledge.project._count.updates,
         backerCount: pledge.project.backerCount,
         projectUrl,

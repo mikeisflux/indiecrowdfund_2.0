@@ -82,6 +82,7 @@ interface BackedProject {
   estimatedDelivery: string | null;
   fulfillmentStatus: string;
   surveyCompleted: boolean;
+  hasSurvey: boolean;
   updates: number;
   backerCount: number;
   projectUrl: string;
@@ -794,7 +795,7 @@ export default function BackerDashboard() {
                                   Message Creator
                                 </Button>
                               </Link>
-                              {!project.surveyCompleted && (project.status === "FUNDED" || project.currentAmount >= project.goalAmount) && (
+                              {!project.surveyCompleted && project.hasSurvey && (project.status === "FUNDED" || project.currentAmount >= project.goalAmount) && (
                                 <Link href={`/dashboard/pledges/${project.pledge.id}/survey`}>
                                   <Button size="sm" className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
                                     Complete Survey
