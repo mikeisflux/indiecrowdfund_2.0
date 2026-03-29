@@ -50,6 +50,7 @@ const shopifyIframeRoutes = [
 const blockedIPCache = new Map<string, { expiresAt: number }>();
 const suspiciousIPCounts = new Map<string, { count: number; firstSeen: number }>();
 const serverActionRateLimit = new Map<string, { count: number; windowStart: number }>();
+const generalRateLimit = new Map<string, { count: number; windowStart: number }>();
 
 // Configuration
 const BOT_BLOCK_THRESHOLD = 3;
@@ -58,6 +59,8 @@ const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 const SCANNER_BLOCK_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days for scanners
 const SERVER_ACTION_RATE_WINDOW_MS = 60 * 1000; // 1 minute
 const SERVER_ACTION_RATE_LIMIT = 30; // max server actions per IP per minute
+const GENERAL_RATE_WINDOW_MS = 60 * 1000; // 1 minute
+const GENERAL_RATE_LIMIT = 120; // max requests per IP per minute (2/sec avg — real users won't hit this)
 
 // Paths that only scanners/bots would probe — instant block on first hit
 const SCANNER_PATHS = [
@@ -209,6 +212,11 @@ function isServerActionRateLimited(ip: string): boolean {
         serverActionRateLimit.delete(key);
       }
     });
+    Array.from(generalRateLimit.entries()).forEach(([key, val]) => {
+      if (now - val.windowStart > GENERAL_RATE_WINDOW_MS * 2) {
+        generalRateLimit.delete(key);
+      }
+    });
   }
 
   const entry = serverActionRateLimit.get(ip);
@@ -224,6 +232,23 @@ function isServerActionRateLimited(ip: string): boolean {
   }
 
   return false;
+}
+
+/**
+ * General per-IP rate limiter covering all requests.
+ * Returns true if the IP has exceeded the limit and should be blocked.
+ */
+function isGeneralRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = generalRateLimit.get(ip);
+
+  if (!entry || now - entry.windowStart > GENERAL_RATE_WINDOW_MS) {
+    generalRateLimit.set(ip, { count: 1, windowStart: now });
+    return false;
+  }
+
+  entry.count++;
+  return entry.count > GENERAL_RATE_LIMIT;
 }
 
 /**
@@ -357,6 +382,26 @@ export async function middleware(req: NextRequest) {
     blockedIPCache.set(clientIP, { expiresAt: Date.now() + SCANNER_BLOCK_DURATION_MS });
     persistBlockedIP(clientIP, `Scanner probe: ${pathname}`, { path: pathname, userAgent });
     return rewriteToBlocked("Forbidden", 403);
+  }
+
+  // General rate limiter — catches scrapers hammering pages/API before server action checks
+  // Skip internal Next.js requests and static assets
+  if (
+    !pathname.startsWith("/_next/static") &&
+    !pathname.startsWith("/favicon") &&
+    !pathname.startsWith("/api/internal/") &&
+    isGeneralRateLimited(clientIP)
+  ) {
+    console.log(`[Bot Blocker] General rate limit exceeded: ${clientIP} on ${pathname}`);
+    const blocked = recordSuspiciousRequest(
+      clientIP,
+      `Rate limit exceeded (>${GENERAL_RATE_LIMIT} req/min)`,
+      { path: pathname, userAgent }
+    );
+    if (blocked) {
+      return rewriteToBlocked("Forbidden", 403);
+    }
+    return rewriteToBlocked("Too Many Requests", 429);
   }
 
   // Handle Server Action requests - detect bots
