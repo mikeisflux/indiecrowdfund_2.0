@@ -221,7 +221,23 @@ export async function GET() {
       });
 
     // Helper to get recipient count by audience type
-    const getRecipientCount = async (audience: string): Promise<number> => {
+    const getRecipientCount = async (audience: string, segments?: string[]): Promise<number> => {
+      // If segments are specified, count newsletter subscribers matching those segments
+      if (segments && segments.length > 0) {
+        const segmentFilters: Array<{ tags: { has: string } } | { source: { in: string[] } }> = [];
+        for (const segmentId of segments) {
+          if (segmentId.startsWith("source-")) {
+            segmentFilters.push({ source: { in: [segmentId.replace("source-", "")] } });
+          } else if (segmentId.startsWith("tag-")) {
+            segmentFilters.push({ tags: { has: segmentId.replace(/^tag-/, "") } });
+          } else {
+            segmentFilters.push({ tags: { has: segmentId } });
+          }
+        }
+        return db.newsletterSubscriber.count({
+          where: { isActive: true, OR: segmentFilters },
+        });
+      }
       switch (audience) {
         case "subscriber": {
           const [nlSubCount, verifiedCount] = await Promise.all([
@@ -264,9 +280,10 @@ export async function GET() {
       // For sent campaigns, show how many were actually sent
       // For unsent (draft/scheduled), recalculate live count so UI shows current audience size
       const isSent = c.status === "SENT";
+      const savedSegments = (c.filters as { segments?: string[] } | null)?.segments;
       const recipients = isSent
         ? (c.sentCount || c.recipientCount || 0)
-        : await getRecipientCount(c.targetAudience || "all");
+        : await getRecipientCount(c.targetAudience || "all", savedSegments);
       return {
         id: c.id,
         name: c.name,
