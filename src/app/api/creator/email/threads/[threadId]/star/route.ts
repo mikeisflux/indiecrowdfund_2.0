@@ -23,7 +23,6 @@ export async function POST(
     // Thread ID format: senderId::projectId (projectId may be "none" for null)
     const parts = threadId.split("::");
     const senderId = parts[0];
-    const projectId = parts[1] === "none" ? null : parts[1] || null;
 
     if (!senderId) {
       return NextResponse.json({ error: "Invalid thread ID" }, { status: 400 });

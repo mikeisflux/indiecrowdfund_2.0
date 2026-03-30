@@ -2,6 +2,7 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import Image from "next/image";
+import Link from "next/link";
 
 import { useState, useEffect, useCallback } from "react";
 import { sanitizeEmailHtml } from "@/lib/utils/sanitize";
@@ -380,10 +381,10 @@ export default function EmailPage() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button variant="outline" size="sm" asChild className="flex-1 sm:flex-none">
-            <a href="/admin/settings">
+            <Link href="/admin/settings">
               <Settings className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Email Settings</span>
-            </a>
+            </Link>
           </Button>
           <Button
             className="bg-emerald-600 hover:bg-emerald-700 flex-1 sm:flex-none"
@@ -402,7 +403,7 @@ export default function EmailPage() {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             Email is not configured. Please add your SendGrid API key in{" "}
-            <a href="/admin/settings" className="font-medium underline">Settings → Email</a>{" "}
+            <Link href="/admin/settings" className="font-medium underline">Settings → Email</Link>{" "}
             to enable email functionality.
           </AlertDescription>
         </Alert>

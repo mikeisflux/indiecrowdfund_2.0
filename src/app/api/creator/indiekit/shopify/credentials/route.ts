@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     if (apiSecret) updateData.shopifyApiSecret = encryptCredential(apiSecret);
 
     // Update the user's Shopify credentials
-    const updatedUser = await db.user.update({
+    await db.user.update({
       where: { id: session.user.id },
       data: updateData,
       select: { shopifyApiKey: true },
