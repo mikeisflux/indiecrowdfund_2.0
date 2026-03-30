@@ -385,12 +385,16 @@ export async function middleware(req: NextRequest) {
   }
 
   // General rate limiter — catches scrapers hammering pages/API before server action checks
-  // Skip all Next.js framework paths, static assets, and internal API
+  // Skip all Next.js framework paths, static assets, internal API, and authenticated users
+  // (bots don't have session cookies; real logged-in users navigating complex pages can easily
+  // exceed 120 req/min across simultaneous API calls and should never be false-positived)
+  const hasSessionCookie = !!req.cookies.get(SESSION_COOKIE_NAME);
   if (
     !pathname.startsWith("/_next/") &&
     !pathname.startsWith("/favicon") &&
     !pathname.startsWith("/api/internal/") &&
     !pathname.startsWith("/api/auth/") &&
+    !hasSessionCookie &&
     isGeneralRateLimited(clientIP)
   ) {
     console.log(`[Bot Blocker] General rate limit exceeded: ${clientIP} on ${pathname}`);
