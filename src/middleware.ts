@@ -53,9 +53,9 @@ const serverActionRateLimit = new Map<string, { count: number; windowStart: numb
 const generalRateLimit = new Map<string, { count: number; windowStart: number }>();
 
 // Configuration
-const BOT_BLOCK_THRESHOLD = 3;
+const BOT_BLOCK_THRESHOLD = 5;
 const SUSPICIOUS_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const BLOCK_DURATION_MS = 60 * 60 * 1000; // 1 hour (was 24h — too aggressive for false positives)
 const SCANNER_BLOCK_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days for scanners
 const SERVER_ACTION_RATE_WINDOW_MS = 60 * 1000; // 1 minute
 const SERVER_ACTION_RATE_LIMIT = 30; // max server actions per IP per minute
@@ -369,7 +369,9 @@ export async function middleware(req: NextRequest) {
   }
 
   // Check if IP is blocked (fast in-memory check)
-  if (isIPBlockedFast(clientIP)) {
+  // Authenticated users are never blocked — only unauthenticated requests are bot candidates
+  const hasSessionCookie = !!req.cookies.get(SESSION_COOKIE_NAME);
+  if (!hasSessionCookie && isIPBlockedFast(clientIP)) {
     if (pathname.includes("/survey") || pathname.includes("/pledges/")) {
       console.log(`[Bot Blocker] Blocked IP ${clientIP} accessing survey/pledge path: ${pathname}`);
     }
@@ -388,7 +390,6 @@ export async function middleware(req: NextRequest) {
   // Skip all Next.js framework paths, static assets, internal API, and authenticated users
   // (bots don't have session cookies; real logged-in users navigating complex pages can easily
   // exceed 120 req/min across simultaneous API calls and should never be false-positived)
-  const hasSessionCookie = !!req.cookies.get(SESSION_COOKIE_NAME);
   if (
     !pathname.startsWith("/_next/") &&
     !pathname.startsWith("/favicon") &&
@@ -410,8 +411,9 @@ export async function middleware(req: NextRequest) {
   }
 
   // Handle Server Action requests - detect bots
+  // Authenticated users (session cookie present) skip all server action bot checks
   const serverActionId = req.headers.get("Next-Action");
-  if (serverActionId) {
+  if (serverActionId && !hasSessionCookie) {
     // Check if this is an invalid/malformed action ID (bot behavior)
     if (!isValidServerActionId(serverActionId)) {
       console.log(`[Bot Blocker] Invalid action ID "${serverActionId}" from IP ${clientIP}`);
@@ -444,9 +446,8 @@ export async function middleware(req: NextRequest) {
     // Bots often send server actions with no referer, no origin, and no session cookie
     const hasReferer = req.headers.get("referer") && req.headers.get("referer") !== "none";
     const hasOrigin = req.headers.get("origin") && req.headers.get("origin") !== "none";
-    const hasSession = !!req.cookies.get("session_token");
 
-    if (!hasReferer && !hasOrigin && !hasSession) {
+    if (!hasReferer && !hasOrigin) {
       console.log(`[Bot Blocker] Suspicious server action: no referer/origin/session from IP ${clientIP}`);
       recordSuspiciousRequest(
         clientIP,
