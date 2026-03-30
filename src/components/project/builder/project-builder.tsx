@@ -57,7 +57,7 @@ export function ProjectBuilder() {
   const [showReReviewWarning, setShowReReviewWarning] = useState(false);
 
   const isApproved = projectStatus === "APPROVED";
-  const isLive = projectStatus === "LIVE";
+  const isLive = ["LIVE", "FUNDED", "PAUSED"].includes(projectStatus);
   const isSubmitted = projectStatus === "SUBMITTED";
 
   const progress = ((currentStep + 1) / BUILDER_STEPS.length) * 100;
