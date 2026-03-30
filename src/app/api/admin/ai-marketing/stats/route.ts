@@ -258,16 +258,21 @@ export async function GET() {
       }
     };
 
-    // Email campaigns formatted with live recipient counts
+    // Email campaigns: for SENT campaigns use the actual sentCount; otherwise use live count
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const campaigns = await Promise.all(emailCampaigns.map(async (c: any) => {
-      // Recalculate recipient count based on target audience
-      const recipients = await getRecipientCount(c.targetAudience || "all");
+      // For sent campaigns, show how many were actually sent
+      // For unsent (draft/scheduled), recalculate live count so UI shows current audience size
+      const isSent = c.status === "SENT";
+      const recipients = isSent
+        ? (c.sentCount || c.recipientCount || 0)
+        : await getRecipientCount(c.targetAudience || "all");
       return {
         id: c.id,
         name: c.name,
         status: c.status.toLowerCase(),
         recipients,
+        sentCount: c.sentCount || 0,
         opens: c.openCount || 0,
         clicks: c.clickCount || 0,
         conversions: c.conversionCount || 0, // May be undefined before migration

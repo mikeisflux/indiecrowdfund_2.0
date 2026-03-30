@@ -48,7 +48,7 @@ async function getRecipientCountByAudience(audience: string, segments?: string[]
             const sourceName = segmentId.replace("source-", "");
             segmentFilters.push({ source: { in: [sourceName] } });
           } else if (segmentId.startsWith("tag-")) {
-            const tagName = segmentId.replace("tag-", "").replace(/-/g, " ");
+            const tagName = segmentId.replace(/^tag-/, "");
             segmentFilters.push({ tags: { has: tagName } });
           } else {
             segmentFilters.push({ tags: { has: segmentId } });
@@ -92,6 +92,24 @@ async function getRecipientCountByAudience(audience: string, segments?: string[]
       });
     case "all":
     default:
+      // If segments are specified, count the newsletter subscribers matching those segments
+      if (segments && segments.length > 0) {
+        const segmentFilters: Array<{ tags: { has: string } } | { source: { in: string[] } }> = [];
+        for (const segmentId of segments) {
+          if (segmentId.startsWith("source-")) {
+            const sourceName = segmentId.replace("source-", "");
+            segmentFilters.push({ source: { in: [sourceName] } });
+          } else if (segmentId.startsWith("tag-")) {
+            const tagName = segmentId.replace(/^tag-/, "");
+            segmentFilters.push({ tags: { has: tagName } });
+          } else {
+            segmentFilters.push({ tags: { has: segmentId } });
+          }
+        }
+        return db.newsletterSubscriber.count({
+          where: { isActive: true, OR: segmentFilters },
+        });
+      }
       return db.user.count({ where: { emailVerified: { not: null }, deletedAt: null } });
   }
 }
@@ -240,7 +258,7 @@ export async function POST(request: Request) {
               const sourceName = segmentId.replace("source-", "");
               segmentFilters.push({ source: { in: [sourceName] } });
             } else if (segmentId.startsWith("tag-")) {
-              const tagName = segmentId.replace("tag-", "").replace(/-/g, " ");
+              const tagName = segmentId.replace(/^tag-/, "");
               segmentFilters.push({ tags: { has: tagName } });
             } else {
               segmentFilters.push({ tags: { has: segmentId } });

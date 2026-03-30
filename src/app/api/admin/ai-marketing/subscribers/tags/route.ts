@@ -121,7 +121,7 @@ export async function GET() {
     // Add tag-based segments
     for (const tag of tags) {
       segments.push({
-        id: `tag-${tag.name.toLowerCase().replace(/\s+/g, "-")}`,
+        id: `tag-${tag.name}`,
         name: tag.name,
         description: `Subscribers tagged with "${tag.name}"`,
         count: tag.count,

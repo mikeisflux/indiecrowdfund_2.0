@@ -192,9 +192,8 @@ export async function POST(
               const sourceName = segmentId.replace("source-", "");
               segmentFilters.push({ source: { in: [sourceName] } });
             } else if (segmentId.startsWith("tag-")) {
-              // Tag-based segment - extract the tag name
-              // Convert dashes back to spaces for multi-word tags
-              const tagName = segmentId.replace("tag-", "").replace(/-/g, " ");
+              // Tag-based segment - extract the tag name (preserve original case)
+              const tagName = segmentId.replace(/^tag-/, "");
               segmentFilters.push({ tags: { has: tagName } });
             } else {
               // Legacy format or direct tag name
@@ -276,15 +275,40 @@ export async function POST(
         });
         break;
 
-      default:
-        // All verified users
-        const allUsers = await db.user.findMany({
-          where: { emailVerified: { not: null } },
-          select: { email: true, name: true },
-        });
-        allUsers.forEach(u => {
-          recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
-        });
+      default: {
+        // "all" audience: if segments are selected, treat as subscriber query with segment filters.
+        // Otherwise fall back to all verified platform users.
+        if (selectedSegmentIds.length > 0) {
+          const segmentFilters: Array<{ tags: { has: string } } | { source: { in: string[] } }> = [];
+          for (const segmentId of selectedSegmentIds) {
+            if (segmentId.startsWith("source-")) {
+              const sourceName = segmentId.replace("source-", "");
+              segmentFilters.push({ source: { in: [sourceName] } });
+            } else if (segmentId.startsWith("tag-")) {
+              const tagName = segmentId.replace(/^tag-/, "");
+              segmentFilters.push({ tags: { has: tagName } });
+            } else {
+              segmentFilters.push({ tags: { has: segmentId } });
+            }
+          }
+          const segmentSubscribers = await db.newsletterSubscriber.findMany({
+            where: { isActive: true, OR: segmentFilters },
+            select: { email: true, name: true },
+          });
+          segmentSubscribers.forEach((s: { email: string; name: string | null }) => {
+            recipientMap.set(s.email.toLowerCase(), { email: s.email.toLowerCase(), name: s.name });
+          });
+        } else {
+          const allUsers = await db.user.findMany({
+            where: { emailVerified: { not: null } },
+            select: { email: true, name: true },
+          });
+          allUsers.forEach(u => {
+            recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
+          });
+        }
+        break;
+      }
     }
 
     const recipients = Array.from(recipientMap.values());

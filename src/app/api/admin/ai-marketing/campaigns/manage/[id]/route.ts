@@ -134,7 +134,7 @@ export async function PATCH(
             const sourceName = segmentId.replace("source-", "");
             segmentFilters.push({ source: { in: [sourceName] } });
           } else if (segmentId.startsWith("tag-")) {
-            const tagName = segmentId.replace("tag-", "").replace(/-/g, " ");
+            const tagName = segmentId.replace(/^tag-/, "");
             segmentFilters.push({ tags: { has: tagName } });
           } else {
             segmentFilters.push({ tags: { has: segmentId } });

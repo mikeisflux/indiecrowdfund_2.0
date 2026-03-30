@@ -84,6 +84,7 @@ interface EmailCampaign {
   name: string;
   status: string;
   recipients: number;
+  sentCount: number;
   opens: number;
   clicks: number;
   conversions: number;
