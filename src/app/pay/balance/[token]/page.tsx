@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { StripePaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm";
-import { getCSRFHeaders } from "@/lib/csrf";
 import {
   DollarSign,
   CheckCircle2,

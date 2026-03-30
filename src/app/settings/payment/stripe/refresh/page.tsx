@@ -1,7 +1,6 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

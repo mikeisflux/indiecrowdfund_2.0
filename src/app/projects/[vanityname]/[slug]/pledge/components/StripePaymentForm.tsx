@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Lock, ShieldCheck } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface StripePaymentFormProps {
   onSuccess: () => void;

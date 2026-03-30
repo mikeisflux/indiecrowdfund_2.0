@@ -2,7 +2,6 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
 import { useState, useEffect } from "react";

@@ -1,5 +1,4 @@
 import { apiFetch } from "@/lib/fetch-utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 // Helper function to get shipping cost for a country
 export function getShippingCost(
