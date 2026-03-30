@@ -1,9 +1,9 @@
 "use client";
 
+import NextLink from "next/link";
 import { apiFetch } from "@/lib/fetch-utils";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { PROJECT_CATEGORIES } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -335,13 +335,13 @@ export function BasicsStep() {
             <p className="text-sm text-amber-800 dark:text-amber-200">
               You need to set up a custom username before creating a project URL.
             </p>
-            <a
+            <NextLink
               href="/dashboard/profile"
               className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-amber-700 underline hover:no-underline dark:text-amber-300"
             >
               Set up your username in profile settings
               <Link className="h-3 w-3" />
-            </a>
+            </NextLink>
           </div>
         )}
       </div>

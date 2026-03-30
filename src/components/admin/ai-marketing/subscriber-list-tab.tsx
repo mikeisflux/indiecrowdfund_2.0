@@ -50,7 +50,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Subscriber {

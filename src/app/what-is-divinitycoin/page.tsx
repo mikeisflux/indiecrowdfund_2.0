@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import {
   CreditCard,
@@ -489,20 +490,20 @@ export default function WhatIsDivinityCoinPage() {
             Discover amazing projects and support creators. Whether they use standard checkout or DivinityCoin, paying is simple.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4">
-            <a
+            <Link
               href="/discover"
               className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 font-medium text-amber-700 hover:bg-amber-50 transition-colors"
             >
               <Users className="h-5 w-5" />
               Discover Projects
-            </a>
-            <a
+            </Link>
+            <Link
               href="/marketplace"
               className="inline-flex items-center gap-2 rounded-lg border-2 border-white px-6 py-3 font-medium text-white hover:bg-white/10 transition-colors"
             >
               <ShoppingBag className="h-5 w-5" />
               Browse Marketplace
-            </a>
+            </Link>
           </div>
         </div>
       </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 import Link from "next/link";
 import { useSession } from "@/components/providers/auth-provider";

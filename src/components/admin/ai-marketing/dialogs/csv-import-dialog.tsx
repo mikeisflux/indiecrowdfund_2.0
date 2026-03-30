@@ -31,7 +31,6 @@ import {
   X,
   Download,
 } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface CSVImportDialogProps {
   open: boolean;

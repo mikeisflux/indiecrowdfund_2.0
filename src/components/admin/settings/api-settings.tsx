@@ -45,7 +45,6 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface ApiKey {
   id: string;

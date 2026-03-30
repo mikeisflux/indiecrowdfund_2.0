@@ -63,7 +63,6 @@ import {
   Inbox,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 // Types
 interface Mailbox {

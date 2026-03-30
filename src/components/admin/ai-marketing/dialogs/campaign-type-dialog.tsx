@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmailEditor } from "@/components/ui/email-editor";
 import { Loader2, Users, UserCheck, Layers, Send, Check, AlertCircle, FileArchive, Store } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import JSZip from "jszip";
 
 interface CampaignTypeConfig {

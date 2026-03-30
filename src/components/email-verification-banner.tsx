@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useSession } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Mail, X, Loader2 } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { usePathname } from "next/navigation";
 
 export function EmailVerificationBanner() {

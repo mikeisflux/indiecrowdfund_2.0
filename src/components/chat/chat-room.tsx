@@ -3,7 +3,6 @@
 import { apiFetch } from "@/lib/fetch-utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/providers/auth-provider";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

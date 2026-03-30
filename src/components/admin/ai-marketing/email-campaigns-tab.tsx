@@ -69,7 +69,6 @@ import {
   StopCircle,
   Filter,
 } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface EmailStats {
   totalSent: number;
