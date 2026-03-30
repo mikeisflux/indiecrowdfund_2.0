@@ -38,7 +38,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import {
   Clock,

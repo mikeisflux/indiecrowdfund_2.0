@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
 interface SurveySectionProps {

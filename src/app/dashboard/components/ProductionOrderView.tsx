@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Truck, CheckCircle, Package, Sparkles, Download, Check, X } from "lucide-react";
 import { CircularProgress } from "./CircularProgress";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import type { ProductionOrderStats } from "../types";
 
 interface ProductionOrderViewProps {

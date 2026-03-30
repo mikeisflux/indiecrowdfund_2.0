@@ -29,7 +29,6 @@ import {
   Package,
   CreditCard,
 } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
 interface Collaboration {

@@ -26,7 +26,6 @@ import {
   CheckCircle,
   Store,
 } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 

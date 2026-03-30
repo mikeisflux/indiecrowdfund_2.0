@@ -36,7 +36,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface PrelaunchPage {
   id: string;

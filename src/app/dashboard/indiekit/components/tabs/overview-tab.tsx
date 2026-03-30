@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import type { Backer, FulfillmentStats } from "../../types";
 import { STATUS_LABELS } from "../../types";
 

@@ -2,7 +2,6 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

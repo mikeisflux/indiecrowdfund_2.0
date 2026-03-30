@@ -43,7 +43,6 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import type { PackageGroup } from "../../types";
 import {
   InstructionsContent,

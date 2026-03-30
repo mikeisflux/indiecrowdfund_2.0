@@ -57,7 +57,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { v4 as uuidv4 } from "uuid";
 
 // Types and constants

@@ -41,7 +41,6 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ImportEmailDialog } from "./import-email-dialog";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface Project {
   id: string;

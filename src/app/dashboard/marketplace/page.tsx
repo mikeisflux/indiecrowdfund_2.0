@@ -48,7 +48,6 @@ import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { PaymentSettings } from "@/components/payment-settings";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { cn } from "@/lib/utils";
 
 interface MarketplaceBook {

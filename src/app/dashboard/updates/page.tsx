@@ -49,7 +49,6 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";

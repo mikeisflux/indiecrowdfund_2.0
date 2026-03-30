@@ -34,7 +34,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import type { SurveyAddon, Backer, FulfillmentStats } from "../../types";
 
 interface AddonsTabProps {

@@ -26,7 +26,6 @@ import {
   Package,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 

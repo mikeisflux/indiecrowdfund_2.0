@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

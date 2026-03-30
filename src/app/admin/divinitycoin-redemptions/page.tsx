@@ -51,7 +51,6 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface TransactionUser {
   id: string;

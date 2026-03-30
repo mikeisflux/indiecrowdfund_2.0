@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import type { DigitalFile } from "../../types";
 
 interface DistributionDialogProps {

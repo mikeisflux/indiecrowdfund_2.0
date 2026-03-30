@@ -14,7 +14,6 @@ import {
   Store,
   Info,
 } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 import { SkuItemRow, ModifierCombinationsCard } from "./sku-mapping-sections";
 import type {

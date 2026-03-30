@@ -54,7 +54,6 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
 // Refund entry for display

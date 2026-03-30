@@ -39,7 +39,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { formatDistanceToNow } from "date-fns";
 

@@ -30,7 +30,6 @@ import {
 import { MoreHorizontal, Mail, PenLine, Loader2, AlertTriangle, ChevronDown, ChevronRight, FileText, Eye, MousePointer, Send, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import type { EmailCampaign } from "../../types";
 
 interface TemplateData {

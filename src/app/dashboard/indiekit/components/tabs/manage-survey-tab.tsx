@@ -21,7 +21,6 @@ import {
   RotateCw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import Link from "next/link";
 

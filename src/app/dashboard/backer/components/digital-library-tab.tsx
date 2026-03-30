@@ -2,7 +2,6 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

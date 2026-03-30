@@ -24,7 +24,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
 interface QueueEmail {

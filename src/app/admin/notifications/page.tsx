@@ -23,7 +23,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface Notification {
   id: string;

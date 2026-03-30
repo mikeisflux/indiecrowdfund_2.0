@@ -17,7 +17,6 @@ import {
 import { Users, Download, XCircle, RefreshCw, Trash2, MessageSquare, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { cn } from "@/lib/utils";
 import type { Backer, RewardAddonItem } from "../types";
 

@@ -48,7 +48,6 @@ import {
 } from "lucide-react";
 import { ImportEmailDialog, ExportDialog } from "../dialogs";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface Member {
   id: string;

@@ -36,7 +36,6 @@ import {
 } from "lucide-react";
 import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface SkuMapping {
   id: string;

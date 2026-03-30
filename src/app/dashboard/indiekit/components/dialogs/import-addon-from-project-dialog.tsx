@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface ProjectReward {
   id: string;

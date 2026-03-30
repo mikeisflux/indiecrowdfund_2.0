@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, CheckCircle, Truck, Key } from "lucide-react";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
 type ShippingProvider = "shipstation" | "shippo" | "easypost" | "stamps";

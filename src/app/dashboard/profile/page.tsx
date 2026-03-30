@@ -36,7 +36,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/components/providers/auth-provider";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { AddressManagementTab } from "@/app/dashboard/backer/components/address-management-tab";
 
 interface SocialLinks {

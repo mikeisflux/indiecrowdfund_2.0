@@ -37,7 +37,6 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import { cn } from "@/lib/utils";
 
 interface ExistingFile {

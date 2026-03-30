@@ -1,6 +1,5 @@
 "use client";
 
-import { getCSRFHeaders } from "@/lib/csrf";
 import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 

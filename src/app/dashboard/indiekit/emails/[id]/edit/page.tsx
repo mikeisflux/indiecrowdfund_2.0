@@ -39,7 +39,6 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface EmailCampaign {
   id: string;

@@ -69,7 +69,6 @@ import {
   Link2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import type { Backer } from "../../types";
 import { STATUS_COLORS, STATUS_LABELS } from "../../types";
 

@@ -31,7 +31,6 @@ import {
   DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 
 interface AddonEntry {
   id: string;

@@ -33,7 +33,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { getCSRFHeaders } from "@/lib/csrf";
 import {
   Plus,
   Pencil,
