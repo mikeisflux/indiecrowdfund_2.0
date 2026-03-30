@@ -80,6 +80,9 @@ export function EmailEditor({
   uploadUrl = "/api/admin/media/upload",
 }: EmailEditorProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkFetching, setLinkFetching] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadImage = async (file: File): Promise<string | null> => {
@@ -227,15 +230,52 @@ export function EmailEditor({
 
   const addLink = useCallback(() => {
     if (!editor) return;
-    const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt("Enter URL:", previousUrl);
-    if (url === null) return;
-    if (url === "") {
+    const previousUrl = editor.getAttributes("link").href || "";
+    setLinkUrl(previousUrl);
+    setLinkDialogOpen(true);
+  }, [editor]);
+
+  const submitLink = useCallback(async () => {
+    if (!editor) return;
+    const url = linkUrl.trim();
+    setLinkDialogOpen(false);
+
+    if (!url) {
       editor.chain().focus().unsetLink().run();
       return;
     }
+
+    // Set the link on the selected text
     editor.chain().focus().setLink({ href: url }).run();
-  }, [editor]);
+
+    // Detect indiecrowdfund project URLs and auto-insert campaign image
+    const isProjectUrl = /\/projects\/[^/?#]+/.test(url);
+    if (!isProjectUrl) return;
+
+    setLinkFetching(true);
+    try {
+      const res = await fetch(`/api/admin/projects/link-preview?url=${encodeURIComponent(url)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.found || !data.imageUrl) return;
+
+      // Make imageUrl absolute
+      const imageUrl = data.imageUrl.startsWith("http")
+        ? data.imageUrl
+        : `${window.location.origin}${data.imageUrl}`;
+
+      // Insert project image before the current paragraph
+      const { $from } = editor.state.selection;
+      const blockStart = $from.before($from.depth);
+      editor.chain()
+        .insertContentAt(blockStart, { type: "image", attrs: { src: imageUrl } })
+        .run();
+    } catch {
+      // Silently ignore — link was already set
+    } finally {
+      setLinkFetching(false);
+    }
+  }, [editor, linkUrl]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -257,7 +297,7 @@ export function EmailEditor({
   }
 
   return (
-    <div className={cn("border rounded-md overflow-hidden bg-background", className)}>
+    <div className={cn("relative border rounded-md overflow-hidden bg-background", className)}>
       <input
         ref={fileInputRef}
         type="file"
@@ -499,6 +539,48 @@ export function EmailEditor({
         </span>
         <span>Emails will be sent as beautiful HTML</span>
       </div>
+
+      {/* Link dialog */}
+      {linkDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-background border rounded-lg shadow-xl p-5 w-[420px] max-w-[90vw]">
+            <p className="font-semibold mb-1">Insert Link</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Project URLs will automatically pull the campaign image.
+            </p>
+            <input
+              autoFocus
+              type="url"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitLink();
+                if (e.key === "Escape") setLinkDialogOpen(false);
+              }}
+              placeholder="https://indiecrowdfund.com/projects/..."
+              className="w-full border rounded px-3 py-2 text-sm bg-background mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setLinkDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" size="sm" onClick={submitLink}>
+                Insert
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-fetch overlay */}
+      {linkFetching && (
+        <div className="absolute inset-0 bg-white/60 dark:bg-zinc-900/60 flex items-center justify-center rounded-md pointer-events-none">
+          <div className="flex items-center gap-2 text-emerald-600 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Fetching project image…
+          </div>
+        </div>
+      )}
     </div>
   );
 }
