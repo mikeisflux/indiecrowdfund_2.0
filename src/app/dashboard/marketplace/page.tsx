@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
-import { PaymentSettings } from "@/components/payment-settings";
+import { PayPalPayoutSection } from "@/components/project/builder/payment-sections/paypal-payout-section";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -1273,13 +1273,8 @@ export default function CreatorMarketplaceDashboard() {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
-            <div className="max-w-2xl">
-              <PaymentSettings
-                compact={false}
-                title="Stripe Connect"
-                description="Connect your Stripe account to receive payments from marketplace sales. This is the same Stripe account used across all your IndieCrowdfund projects."
-                showDivinityCoin={true}
-              />
+            <div className="max-w-2xl space-y-6">
+              <PayPalPayoutSection />
             </div>
           </TabsContent>
         </Tabs>
