@@ -264,9 +264,11 @@ export async function GET(request: NextRequest) {
       // IndieCrowdfund Platform Fee: 3%
       const partnerFeeRate = 0.06;
       const platformFeeRate = 0.03;
-      const stripePerTransactionFee = 0.30; // per-transaction processing fee
+      const perTransactionRate = 0.30;
       const backerCount = project.pledges.length;
-      const partnerFee = Math.round((effectiveRevenue * partnerFeeRate + stripePerTransactionFee * backerCount) * 100) / 100;
+      const processorFee = Math.round(effectiveRevenue * partnerFeeRate * 100) / 100;
+      const perTransactionFee = Math.round(perTransactionRate * backerCount * 100) / 100;
+      const partnerFee = Math.round((processorFee + perTransactionFee) * 100) / 100;
       const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
       const totalFees = Math.round((partnerFee + platformFee) * 100) / 100;
       const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
@@ -303,13 +305,15 @@ export async function GET(request: NextRequest) {
         fundedAt: project.fundedAt,
         totalRaised,
         effectiveRevenue,
+        processorFee,
+        perTransactionFee,
         partnerFee,
         platformFee,
         totalFees,
         amountOwed,
         amountSettled,
         remainingAmount,
-        backerCount: project.pledges.length,
+        backerCount,
         hasBank: !!bankAccount,
         bankVerified: bankAccount?.isVerified || false,
         hasPendingSettlement,

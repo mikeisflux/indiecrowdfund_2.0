@@ -78,6 +78,8 @@ interface CreatorProject {
   fundedAt: string | null;
   totalRaised: number;
   effectiveRevenue: number;
+  processorFee: number;
+  perTransactionFee: number;
   partnerFee: number;
   platformFee: number;
   totalFees: number;
@@ -423,7 +425,7 @@ export default function PayoutsPage() {
   // Export as CSV
   const exportCSV = () => {
     const csv = [
-      ["Project", "Creator", "Email", "Total Raised", "Total Refunded", "Effective Revenue", "DC Partner Fee (6%)", "Platform Fee (3%)", "Total Fees", "Amount Owed", "Amount Settled", "Remaining", "Has Bank", "Status"].join(","),
+      ["Project", "Creator", "Email", "Total Raised", "Total Refunded", "Effective Revenue", "DC Partner Fee (6%)", "Per-Transaction Fee", "Platform Fee (3%)", "Total Fees", "Amount Owed", "Amount Settled", "Remaining", "Has Bank", "Status"].join(","),
       ...projects.map((p) =>
         [
           `"${p.title}"`,
@@ -432,7 +434,8 @@ export default function PayoutsPage() {
           p.totalRaised,
           p.totalRefunded,
           p.effectiveRevenue,
-          p.partnerFee,
+          p.processorFee,
+          p.perTransactionFee,
           p.platformFee,
           p.totalFees,
           p.amountOwed,
@@ -1044,7 +1047,11 @@ export default function PayoutsPage() {
                     )}
                     <div className="flex justify-between text-zinc-500">
                       <span>DivinityCoin Partner Fee (6%)</span>
-                      <span className="text-red-500">-{formatCurrency(selectedProject.partnerFee)}</span>
+                      <span className="text-red-500">-{formatCurrency(selectedProject.processorFee)}</span>
+                    </div>
+                    <div className="flex justify-between text-zinc-500">
+                      <span>Per-Transaction Fee ({selectedProject.backerCount} × $0.30)</span>
+                      <span className="text-red-500">-{formatCurrency(selectedProject.perTransactionFee)}</span>
                     </div>
                     <div className="flex justify-between text-zinc-500">
                       <span>Platform Fee (3%)</span>
