@@ -50,6 +50,8 @@ interface BankAccountStatus {
 interface PaymentSettingsProps {
   /** Optional project ID for project-specific settings */
   projectId?: string;
+  /** Whether to show the Stripe Connect section (default true for back-compat) */
+  showStripe?: boolean;
   /** Whether to show the DivinityCoin bank account section */
   showDivinityCoin?: boolean;
   /** Custom title for the component */
@@ -66,6 +68,7 @@ interface PaymentSettingsProps {
 
 export function PaymentSettings({
   projectId,
+  showStripe = false,
   showDivinityCoin = true,
   title = "Payment Settings",
   description = "Connect your Stripe account to receive payments",
@@ -100,8 +103,12 @@ export function PaymentSettings({
   });
   const [isSavingBank, setIsSavingBank] = useState(false);
 
-  // Check Stripe connection status
+  // Check Stripe connection status — skipped when showStripe is false
   const checkStripeStatus = useCallback(async () => {
+    if (!showStripe) {
+      setStripeStatus(prev => ({ ...prev, loading: false }));
+      return;
+    }
     try {
       const response = await fetch("/api/stripe/connect");
       const data = await response.json();
@@ -298,8 +305,8 @@ export function PaymentSettings({
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Stripe Connect Section */}
-      <Card className={compact ? "bg-white/5 backdrop-blur-md border-white/10" : ""}>
+      {/* Stripe Connect Section — hidden by default, Stripe replaced by PayPal */}
+      {showStripe && <Card className={compact ? "bg-white/5 backdrop-blur-md border-white/10" : ""}>
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", compact && "text-white")}>
             <CreditCard className="h-5 w-5 text-[#635BFF]" />
@@ -455,7 +462,7 @@ export function PaymentSettings({
             </p>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* DivinityCoin Bank Account Section */}
       {showDivinityCoin && (

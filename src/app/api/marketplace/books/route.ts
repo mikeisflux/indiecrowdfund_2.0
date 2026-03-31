@@ -167,17 +167,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is a creator
+    // Fetch current user role
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true },
     });
 
-    if (!user || !["CREATOR", "SUPER_ADMIN", "ADMIN"].includes(user.role)) {
-      return NextResponse.json(
-        { error: "Only creators can create marketplace books" },
-        { status: 403 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -257,6 +254,14 @@ export async function POST(request: Request) {
         status: "DRAFT",
       },
     });
+
+    // Auto-promote user to CREATOR if they aren't already
+    if (!["CREATOR", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { role: "CREATOR" },
+      });
+    }
 
     return NextResponse.json({ book }, { status: 201 });
   } catch (error) {

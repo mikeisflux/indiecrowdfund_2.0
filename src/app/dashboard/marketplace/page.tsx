@@ -47,6 +47,7 @@ import {
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { PayPalPayoutSection } from "@/components/project/builder/payment-sections/paypal-payout-section";
+import { PaymentSettings } from "@/components/payment-settings";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -1275,6 +1276,10 @@ export default function CreatorMarketplaceDashboard() {
           <TabsContent value="settings" className="space-y-6">
             <div className="max-w-2xl space-y-6">
               <PayPalPayoutSection />
+              <PaymentSettings
+                showStripe={false}
+                showDivinityCoin={true}
+              />
             </div>
           </TabsContent>
         </Tabs>
