@@ -35,6 +35,7 @@ import {
   DeleteUserDialog,
   PasswordDialog,
   AddUserDialog,
+  SendEmailDialog,
   NewUserData,
 } from "./components";
 
@@ -59,6 +60,8 @@ export default function UsersPage() {
 
   // User edit/action states (remaining)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSendEmailDialog, setShowSendEmailDialog] = useState(false);
+  const [emailTargetUser, setEmailTargetUser] = useState<User | null>(null);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [newUserData, setNewUserData] = useState<NewUserData>({ name: "", email: "", password: "", confirmPassword: "", role: "USER", retailerAccess: false });
   const [isCreating, setIsCreating] = useState(false);
@@ -727,7 +730,8 @@ export default function UsersPage() {
   };
 
   const handleSendEmail = (user: User) => {
-    window.location.href = `mailto:${user.email}`;
+    setEmailTargetUser(user);
+    setShowSendEmailDialog(true);
   };
 
   const handleVerifyEmail = async (user: User) => {
@@ -1127,6 +1131,12 @@ export default function UsersPage() {
           setConfirmPassword("");
         }}
         isUpdating={isUpdating}
+      />
+
+      <SendEmailDialog
+        open={showSendEmailDialog}
+        onOpenChange={setShowSendEmailDialog}
+        user={emailTargetUser}
       />
 
       <AddUserDialog

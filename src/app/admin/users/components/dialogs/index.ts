@@ -9,3 +9,4 @@ export { PasswordDialog } from "./password-dialog";
 export { AddUserDialog } from "./add-user-dialog";
 export type { NewUserData } from "./add-user-dialog";
 export { EditRetailerDialog } from "./edit-retailer-dialog";
+export { SendEmailDialog } from "./send-email-dialog";
