@@ -356,3 +356,22 @@ enum EmailBlocklistType {
   IP          // IP address
   PATTERN     // Regex pattern (e.g., *@tempmail.*)
 }
+
+// ============================================
+// SUBSCRIBER SEGMENTS
+// ============================================
+
+model SubscriberSegment {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  // JSON array of filter rules: [{ type: "tag"|"source", values: string[], operator: "AND"|"OR" }]
+  rules       Json
+  // Cached count, refreshed on read
+  cachedCount Int      @default(0)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+}

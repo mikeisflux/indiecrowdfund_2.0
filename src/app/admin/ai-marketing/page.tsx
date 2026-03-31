@@ -20,6 +20,7 @@ import {
   Mail,
   Users,
   Tag,
+  Layers,
   TrendingUp,
   Settings,
   RefreshCw,
@@ -32,6 +33,7 @@ import {
 import {
   OverviewTab,
   AutoTaggingTab,
+  TagSegmentsTab,
   EmailCampaignsTab,
   BehaviorAnalyticsTab,
   AISettingsTab,
@@ -792,7 +794,7 @@ export default function AIMarketingPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
           <TabsTrigger value="overview">
             <BarChart3 className="mr-2 h-4 w-4" />
             Overview
@@ -804,6 +806,10 @@ export default function AIMarketingPage() {
           <TabsTrigger value="auto-tagging">
             <Tag className="mr-2 h-4 w-4" />
             Auto-Tagging
+          </TabsTrigger>
+          <TabsTrigger value="tag-segments">
+            <Layers className="mr-2 h-4 w-4" />
+            Create Tag Segment
           </TabsTrigger>
           <TabsTrigger value="email-campaigns">
             <Mail className="mr-2 h-4 w-4" />
@@ -848,6 +854,11 @@ export default function AIMarketingPage() {
             runAutoTagging={runAutoTagging}
             setAiSettings={setAiSettings}
           />
+        </TabsContent>
+
+        {/* Tag Segments Tab */}
+        <TabsContent value="tag-segments">
+          <TagSegmentsTab />
         </TabsContent>
 
         {/* Email Campaigns Tab */}
