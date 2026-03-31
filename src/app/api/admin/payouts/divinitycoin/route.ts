@@ -260,12 +260,13 @@ export async function GET(request: NextRequest) {
       // (Full refunds are already excluded since pledge status is REFUNDED)
       const effectiveRevenue = Math.round((totalRaised - projectRefunds.partialRefundTotal) * 100) / 100;
 
-      // DivinityCoin Partner Fee: 6% (DC's processing fee)
+      // DivinityCoin Partner Fee: 6% + $0.30 per transaction (Stripe's per-transaction charge)
       // IndieCrowdfund Platform Fee: 3%
-      // Total: 9% (creators receive 91%)
       const partnerFeeRate = 0.06;
       const platformFeeRate = 0.03;
-      const partnerFee = Math.round(effectiveRevenue * partnerFeeRate * 100) / 100;
+      const stripePerTransactionFee = 0.30;
+      const backerCount = project.pledges.length;
+      const partnerFee = Math.round((effectiveRevenue * partnerFeeRate + stripePerTransactionFee * backerCount) * 100) / 100;
       const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
       const totalFees = Math.round((partnerFee + platformFee) * 100) / 100;
       const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
@@ -578,16 +579,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate fee breakdown for the email
-    const totalRaised = await db.pledge.aggregate({
-      where: {
-        projectId,
-        status: "COMPLETED",
-        deletedAt: null,
-      },
-      _sum: { amount: true },
-    });
+    const [totalRaised, backerCount] = await Promise.all([
+      db.pledge.aggregate({
+        where: { projectId, status: "COMPLETED", deletedAt: null },
+        _sum: { amount: true },
+      }),
+      db.pledge.count({
+        where: { projectId, status: "COMPLETED", deletedAt: null },
+      }),
+    ]);
     const grossAmount = Number(totalRaised._sum.amount || 0);
-    const partnerFee = Math.round(grossAmount * 0.06 * 100) / 100;
+    const partnerFee = Math.round((grossAmount * 0.06 + 0.30 * backerCount) * 100) / 100;
     const platformFee = Math.round(grossAmount * 0.03 * 100) / 100;
 
     // Create the DivinityCoin settlement record as COMPLETED
