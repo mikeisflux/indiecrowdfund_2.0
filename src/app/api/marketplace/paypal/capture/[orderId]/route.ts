@@ -9,6 +9,8 @@ const captureLogger = logger.child({ module: "marketplace-paypal-capture" });
 export const dynamic = "force-dynamic";
 
 const PLATFORM_FEE_PERCENT = 3;
+const PAYPAL_FEE_RATE = 0.0349;   // 3.49%
+const PAYPAL_FEE_FIXED = 0.49;    // $0.49 per transaction
 
 export async function POST(
   req: NextRequest,
@@ -95,8 +97,9 @@ export async function POST(
 
     // Atomically mark purchase as completed
     const grossAmount = Number(purchase.amount);
+    const paypalFee = Math.round((grossAmount * PAYPAL_FEE_RATE + PAYPAL_FEE_FIXED) * 100) / 100;
     const platformFee = Math.round(grossAmount * (PLATFORM_FEE_PERCENT / 100) * 100) / 100;
-    const netAmount = Math.round((grossAmount - platformFee) * 100) / 100;
+    const netAmount = Math.round((grossAmount - paypalFee - platformFee) * 100) / 100;
 
     const updated = await db.marketplacePurchase.updateMany({
       where: { id: purchase.id, status: "PENDING" },
@@ -105,7 +108,7 @@ export async function POST(
         completedAt: new Date(),
         deliveredAt: new Date(),
         transactionId,
-        platformFee,
+        platformFee: paypalFee + platformFee, // PayPal processing fee + platform fee
         creatorPayout: netAmount,
       },
     });

@@ -9,6 +9,17 @@ const paypalPayoutsLogger = logger.child({ module: "admin-paypal-payouts" });
 
 export const dynamic = "force-dynamic";
 
+// PayPal Advanced Checkout processing fee (passed through to creator)
+const PAYPAL_FEE_RATE = 0.0349;   // 3.49%
+const PAYPAL_FEE_FIXED = 0.49;    // $0.49 per transaction
+
+function calcPayoutAmounts(grossAmount: number, platformFeePercent: number) {
+  const paypalFee = Math.round((grossAmount * PAYPAL_FEE_RATE + PAYPAL_FEE_FIXED) * 100) / 100;
+  const platformFee = Math.round(grossAmount * (platformFeePercent / 100) * 100) / 100;
+  const netAmount = Math.round((grossAmount - paypalFee - platformFee) * 100) / 100;
+  return { paypalFee, platformFee, netAmount };
+}
+
 const payoutSchema = z.object({
   projectId: z.string(),
   grossAmount: z.number().positive(),
@@ -80,8 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     const grossAmount = data.grossAmount;
-    const platformFee = Math.round(grossAmount * (data.platformFeePercent / 100) * 100) / 100;
-    const netAmount = Math.round((grossAmount - platformFee) * 100) / 100;
+    const { paypalFee, platformFee, netAmount } = calcPayoutAmounts(grossAmount, data.platformFeePercent);
 
     if (netAmount <= 0) {
       return NextResponse.json({ error: "Net payout amount is zero or negative" }, { status: 400 });
@@ -94,12 +104,12 @@ export async function POST(req: NextRequest) {
         projectId: project.id,
         projectName: project.title,
         grossAmount,
-        platformFee,
+        platformFee: platformFee + paypalFee, // total fees retained by platform (platform fee + PayPal processing fee)
         netAmount,
         status: "PROCESSING",
         initiatedAt: new Date(),
         processedBy: session.user.id,
-        adminNotes: data.note,
+        adminNotes: data.note ? `${data.note} | PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}` : `PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}`,
       },
     });
 
