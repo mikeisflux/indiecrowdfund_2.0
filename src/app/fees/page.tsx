@@ -57,11 +57,45 @@ const divinityCoinFeeBreakdown = [
 
 const comparisonData = [
   { platform: "IndieCrowdfund (Stripe)", platformFee: "3%", paymentFee: "2.9% + $0.30", total: "~6%", highlight: true },
+  { platform: "IndieCrowdfund (PayPal)", platformFee: "3%", paymentFee: "3.49% + $0.49", total: "~6.5%", highlight: true },
   { platform: "IndieCrowdfund (DivinityCoin)", platformFee: "3%", paymentFee: "6% partner", total: "~9%", highlight: false },
   { platform: "Kickstarter", platformFee: "5%", paymentFee: "3% + $0.20", total: "~8%", highlight: false },
   { platform: "Indiegogo", platformFee: "5%", paymentFee: "2.9% + $0.30", total: "~8%", highlight: false },
   { platform: "GoFundMe", platformFee: "0%", paymentFee: "2.9% + $0.30", total: "~3%", highlight: false },
 ];
+
+const paypalFeeBreakdown = [
+  {
+    title: "PayPal Processing Fee",
+    rate: "3.49% + $0.49",
+    description: "Per-transaction fee charged by PayPal",
+    details: "PayPal Advanced Checkout processing fee. This covers secure card processing via PayPal's payment infrastructure and is passed through to the creator.",
+  },
+  {
+    title: "IndieCrowdfund Platform Fee",
+    rate: "3%",
+    description: "Charged on successfully funded campaigns only",
+    details: "Our platform fee covers hosting, tools, customer support, and payment infrastructure.",
+  },
+];
+
+// Calculate fees for PayPal payments (3.49% + $0.49 per transaction)
+function calculatePayPalFees(amount: number, averagePledge: number = 50) {
+  const platformFee = amount * 0.03;
+  const numTransactions = Math.ceil(amount / averagePledge);
+  const processingFee = (amount * 0.0349) + (numTransactions * 0.49);
+  const totalFees = platformFee + processingFee;
+  const youReceive = amount - totalFees;
+  const feePercentage = (totalFees / amount) * 100;
+
+  return {
+    platformFee,
+    processingFee,
+    totalFees,
+    youReceive,
+    feePercentage,
+  };
+}
 
 const features = [
   {
@@ -127,11 +161,12 @@ function calculateDivinityCoinFees(amount: number) {
 
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]); // Default to $50,000
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "divinitycoin">("stripe");
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal" | "divinitycoin">("stripe");
   const amount = sliderValue[0];
   const stripeFees = calculateStripeFees(amount);
   const divinityFees = calculateDivinityCoinFees(amount);
-  const fees = paymentMethod === "stripe" ? stripeFees : divinityFees;
+  const paypalFees = calculatePayPalFees(amount);
+  const fees = paymentMethod === "stripe" ? stripeFees : paymentMethod === "paypal" ? paypalFees : divinityFees;
 
   return (
     <div className="relative min-h-screen bg-background overflow-hidden">
@@ -193,11 +228,15 @@ export default function FeesPage() {
             </p>
           </div>
 
-          <Tabs defaultValue="stripe" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "divinitycoin")}>
-            <TabsList className="grid w-full max-w-lg mx-auto grid-cols-2 mb-8">
+          <Tabs defaultValue="stripe" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "paypal" | "divinitycoin")}>
+            <TabsList className="grid w-full max-w-xl mx-auto grid-cols-3 mb-8">
               <TabsTrigger value="stripe" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 Stripe
+              </TabsTrigger>
+              <TabsTrigger value="paypal" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                PayPal
               </TabsTrigger>
               <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" />
@@ -234,6 +273,67 @@ export default function FeesPage() {
                   <Calculator className="h-5 w-5 text-emerald-600" />
                   <span className="font-medium text-emerald-700 dark:text-emerald-400">
                     Total fees with Stripe: approximately 6% of funds raised
+                  </span>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="paypal">
+              <div className="grid gap-8 md:grid-cols-2 lg:max-w-4xl lg:mx-auto">
+                {paypalFeeBreakdown.map((fee, index) => (
+                  <Card
+                    key={fee.title}
+                    className="glass-card border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                    style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
+                  >
+                    <CardHeader className="text-center pb-2">
+                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#003087] shadow-lg mb-4">
+                        <CreditCard className="h-8 w-8 text-white" />
+                      </div>
+                      <CardTitle className="text-2xl">{fee.title}</CardTitle>
+                      <div className="text-4xl font-bold text-[#003087] mt-2">{fee.rate}</div>
+                      <CardDescription className="text-base mt-2">{fee.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground text-center">
+                        {fee.details}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <Card className="mt-8 lg:max-w-4xl lg:mx-auto border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#003087]/10">
+                      <CreditCard className="h-6 w-6 text-[#003087]" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">How PayPal fees work</h3>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                        PayPal Advanced Checkout lets backers pay with their PayPal wallet or any major credit/debit card inline — no redirects.
+                        The processing fee is passed through transparently.
+                      </p>
+                      <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows (example: $100 pledge):</h4>
+                      <ol className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1 list-decimal list-inside mb-4">
+                        <li>Backer pays $100 via PayPal or card at checkout</li>
+                        <li>PayPal deposits $96.02 into IndieCrowdfund&apos;s account (deducted $3.98 fee)</li>
+                        <li>When your project funds, we pay out your earnings</li>
+                        <li>PayPal processing fee ($3.98) deducted from creator payout</li>
+                        <li>Platform fee (3% of $100 = $3.00) deducted from creator payout</li>
+                        <li>You receive <strong>$93.02</strong></li>
+                      </ol>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="mt-8 text-center">
+                <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 dark:bg-blue-900/20 px-6 py-3">
+                  <Calculator className="h-5 w-5 text-[#003087]" />
+                  <span className="font-medium text-[#003087] dark:text-blue-400">
+                    Total fees with PayPal: approximately 6.5% of funds raised
                   </span>
                 </div>
               </div>

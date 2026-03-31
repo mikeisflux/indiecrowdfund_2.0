@@ -287,15 +287,20 @@ export function PaymentStep() {
     }
   }, [mustUseAltProcessor, payment.paymentProcessor, updatePayment]);
 
-  // Stripe fee calculations
-  // Stripe: 2.9% + $0.30 per transaction
-  // Platform fee: 3%
+  // Fee calculations
   const avgPledgeSize = 50; // Assume average pledge
   const numTransactions = goalAmount / avgPledgeSize;
+
+  // Stripe: 2.9% + $0.30 per transaction
   const stripeFee = goalAmount * 0.029 + numTransactions * 0.30;
   const platformFee = goalAmount * 0.03;
   const totalFees = stripeFee + platformFee;
   const netAmount = goalAmount - totalFees;
+
+  // PayPal Advanced Checkout: 3.49% + $0.49 per transaction
+  const paypalFee = goalAmount * 0.0349 + numTransactions * 0.49;
+  const paypalTotalFees = paypalFee + platformFee;
+  const paypalNetAmount = goalAmount - paypalTotalFees;
 
   const handleConnectStripe = async () => {
     setIsConnecting(true);
@@ -390,6 +395,9 @@ export function PaymentStep() {
         platformFee={platformFee}
         totalFees={totalFees}
         netAmount={netAmount}
+        paypalFee={paypalFee}
+        paypalTotalFees={paypalTotalFees}
+        paypalNetAmount={paypalNetAmount}
       />
 
       <Separator />

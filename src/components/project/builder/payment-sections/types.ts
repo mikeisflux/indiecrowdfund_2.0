@@ -26,6 +26,10 @@ export interface PaymentProcessorSectionProps {
   platformFee: number;
   totalFees: number;
   netAmount: number;
+  // PayPal-specific (3.49% + $0.49/txn)
+  paypalFee: number;
+  paypalTotalFees: number;
+  paypalNetAmount: number;
 }
 
 export interface StripeConnectSectionProps {

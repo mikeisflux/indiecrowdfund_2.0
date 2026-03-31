@@ -17,6 +17,9 @@ export function PaymentProcessorSection({
   platformFee,
   totalFees,
   netAmount,
+  paypalFee,
+  paypalTotalFees,
+  paypalNetAmount,
 }: PaymentProcessorSectionProps) {
   return (
     <div className="space-y-4">
@@ -158,7 +161,7 @@ export function PaymentProcessorSection({
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
-                <span>~6% total fees (2.9% + $0.30 + 3% platform)</span>
+                <span>~6.5% total fees (3.49% + $0.49 + 3% platform)</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
@@ -271,8 +274,8 @@ export function PaymentProcessorSection({
           </h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span>PayPal processing fee (~2.9% + $0.30/txn)</span>
-              <span className="font-medium">{formatCurrency(stripeFee)}</span>
+              <span>PayPal processing fee (3.49% + $0.49/txn)</span>
+              <span className="font-medium">{formatCurrency(paypalFee)}</span>
             </div>
             <div className="flex justify-between">
               <span>Platform fee (3%)</span>
@@ -281,11 +284,11 @@ export function PaymentProcessorSection({
             <Separator className="my-2" />
             <div className="flex justify-between font-semibold">
               <span>Total fees</span>
-              <span className="text-amber-600">{formatCurrency(totalFees)}</span>
+              <span className="text-amber-600">{formatCurrency(paypalTotalFees)}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg">
               <span>You receive</span>
-              <span className="text-green-600">{formatCurrency(netAmount)}</span>
+              <span className="text-green-600">{formatCurrency(paypalNetAmount)}</span>
             </div>
           </div>
         </div>
