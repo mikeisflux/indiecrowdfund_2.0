@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
-import type { SubscriberSegment } from "@prisma/client";
+
+interface SubscriberSegment {
+  id: string;
+  name: string;
+  description: string | null;
+  rules: unknown;
+  cachedCount: number;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 async function requireAdmin() {
   const session = await auth();
