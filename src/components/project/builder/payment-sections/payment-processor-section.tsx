@@ -39,51 +39,51 @@ export function PaymentProcessorSection({
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Stripe Option - DISABLED: Replaced by PayPal */}
-        {/* <Card
+        {/* PayPal Option — first / recommended */}
+        <Card
           className={`cursor-pointer transition-all ${
-            payment.paymentProcessor === "STRIPE" ? "border-2 border-primary" : "border"
+            payment.paymentProcessor === "PAYPAL" ? "border-2 border-primary" : "border"
           } ${mustUseAltProcessor ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => !mustUseAltProcessor && updatePayment({ paymentProcessor: "STRIPE" })}
+          onClick={() => !mustUseAltProcessor && updatePayment({ paymentProcessor: "PAYPAL" })}
         >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-[#635BFF] flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-white" />
+                <div className="h-8 w-8 rounded-lg bg-[#003087] flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-white" />
                 </div>
-                Stripe
+                PayPal
                 {!mustUseAltProcessor && (
                   <Badge variant="secondary" className="ml-2">Recommended</Badge>
                 )}
               </CardTitle>
-              {payment.paymentProcessor === "STRIPE" && (
+              {payment.paymentProcessor === "PAYPAL" && (
                 <CheckCircle className="h-5 w-5 text-primary" />
               )}
             </div>
             <CardDescription>
               {mustUseAltProcessor
                 ? "Not available for adult/controversial content"
-                : "Industry-leading payment processing"}
+                : "PayPal & card payments"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
-                <span>~6% total fees (2.9% + $0.30 + 3% platform)</span>
+                <span>~6.5% total fees (3.49% + $0.49 + 3% platform)</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
-                <span>Fast payouts via Stripe Connect</span>
+                <span>Credit/debit cards + PayPal wallet</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
-                <span>All major cards + Apple/Google Pay</span>
+                <span>Inline Advanced Checkout form</span>
               </div>
             </div>
           </CardContent>
-        </Card> */}
+        </Card>
 
         {/* DivinityCoin Option */}
         <Card
@@ -129,51 +129,8 @@ export function PaymentProcessorSection({
           </CardContent>
         </Card>
 
-        {/* PayPal Option */}
-        <Card
-          className={`cursor-pointer transition-all ${
-            payment.paymentProcessor === "PAYPAL" ? "border-2 border-primary" : "border"
-          } ${mustUseAltProcessor ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => !mustUseAltProcessor && updatePayment({ paymentProcessor: "PAYPAL" })}
-        >
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-[#003087] flex items-center justify-center">
-                  <Wallet className="h-5 w-5 text-white" />
-                </div>
-                PayPal
-                {!mustUseAltProcessor && (
-                  <Badge variant="secondary" className="ml-2">Recommended</Badge>
-                )}
-              </CardTitle>
-              {payment.paymentProcessor === "PAYPAL" && (
-                <CheckCircle className="h-5 w-5 text-primary" />
-              )}
-            </div>
-            <CardDescription>
-              {mustUseAltProcessor
-                ? "Not available for adult/controversial content"
-                : "PayPal & card payments"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>~6.5% total fees (3.49% + $0.49 + 3% platform)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Credit/debit cards + PayPal wallet</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Inline Advanced Checkout form</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Stripe Option - DISABLED: Replaced by PayPal */}
+        {/* <Card> ... </Card> */}
 
       </div>
 

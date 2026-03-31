@@ -583,7 +583,7 @@ function createInitialFormData(): BookFormData {
     category: "",
     price: "",
     currency: "USD",
-    paymentProcessor: "STRIPE",
+    paymentProcessor: "PAYPAL",
     promoImageUrl: "",
     promoVideoUrl: "",
     pdfFileUrl: "",
@@ -962,9 +962,9 @@ function NewBookForm() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="STRIPE">Stripe (Credit/Debit Cards)</SelectItem>
                     <SelectItem value="PAYPAL">PayPal (Card + PayPal Wallet)</SelectItem>
                     <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
+                    <SelectItem value="STRIPE">Stripe (Legacy)</SelectItem>
                   </SelectContent>
                 </Select>
                 {formData.isNsfw && (

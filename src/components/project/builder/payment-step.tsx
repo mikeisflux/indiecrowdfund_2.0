@@ -4,19 +4,51 @@ import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import {
   ContactEmailSection,
   ProjectTypeSection,
   ContentDeclarationSection,
   PaymentProcessorSection,
   DivinityCoinBankSection,
+  PayPalPayoutSection,
   RetailerAccessSection,
   ChargebackCardSection,
 } from "./payment-sections";
 
 export function PaymentStep() {
-  const { payment, updatePayment, basics, projectId } = useProjectStore();
+  const { payment, updatePayment, basics, projectId, projectStatus } = useProjectStore();
+  const [isMigratingToPayPal, setIsMigratingToPayPal] = useState(false);
+
+  const handleMigrateToPayPal = async () => {
+    if (!projectId) return;
+    setIsMigratingToPayPal(true);
+    try {
+      const res = await apiFetch(`/api/projects/${projectId}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentProcessor: "PAYPAL" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to switch processor");
+      }
+      updatePayment({ paymentProcessor: "PAYPAL" });
+      toast.success("Switched to PayPal! New pledges will now use PayPal checkout.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to switch to PayPal");
+    } finally {
+      setIsMigratingToPayPal(false);
+    }
+  };
+
+  const showPayPalMigrationBanner =
+    payment.paymentProcessor === "STRIPE" &&
+    !payment.hasAdultContent &&
+    !payment.hasRiskyContent &&
+    (projectStatus === "LIVE" || projectStatus === "APPROVED" || projectStatus === "FUNDED");
   // Stripe Connect state - DISABLED: Stripe replaced by PayPal
   // const [isConnecting, setIsConnecting] = useState(false);
   // const [stripeStatus, setStripeStatus] = useState<{
@@ -289,6 +321,32 @@ export function PaymentStep() {
 
   return (
     <div className="space-y-8">
+      {/* PayPal Migration Banner — shown for live/approved Stripe campaigns */}
+      {showPayPalMigrationBanner && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-amber-900 dark:text-amber-200">
+              Your campaign is using Stripe (legacy)
+            </p>
+            <p className="text-sm text-amber-800 dark:text-amber-300 mt-0.5">
+              IndieCrowdfund has switched to PayPal as the primary payment processor. Switch your live campaign now — existing pledges are unaffected, and new pledges will use PayPal checkout immediately.
+            </p>
+          </div>
+          <Button
+            onClick={handleMigrateToPayPal}
+            disabled={isMigratingToPayPal}
+            className="bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap flex-shrink-0"
+          >
+            {isMigratingToPayPal ? (
+              <><Loader2 className="h-4 w-4 animate-spin mr-2" />Switching...</>
+            ) : (
+              "Switch to PayPal"
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* Contact Email */}
       <ContactEmailSection
         payment={payment}
@@ -355,6 +413,14 @@ export function PaymentStep() {
             isSavingBank={isSavingBank}
             handleSaveBankAccount={handleSaveBankAccount}
           />
+        </>
+      )}
+
+      {/* PayPal Payout Email - Only show when PayPal is selected */}
+      {payment.paymentProcessor === "PAYPAL" && (
+        <>
+          <Separator />
+          <PayPalPayoutSection />
         </>
       )}
 
