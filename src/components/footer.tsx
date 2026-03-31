@@ -38,7 +38,7 @@ export function Footer() {
               <li><Link href="/backer-handbook" className="hover:text-foreground">Backer Handbook</Link></li>
               <li><Link href="/marketplace-handbook/backers" className="hover:text-foreground">Marketplace Handbook</Link></li>
               <li><Link href="/what-is-divinitycoin" className="hover:text-foreground">What is DivinityCoin?</Link></li>
-              <li><Link href="/backer-handbook#stripe" className="hover:text-foreground">Paying with Card</Link></li>
+              <li><Link href="/backer-handbook#paypal" className="hover:text-foreground">Paying with PayPal</Link></li>
               <li><Link href="/backer-handbook#divinitycoin" className="hover:text-foreground">Paying with DivinityCoin</Link></li>
               <li><Link href="/dashboard/backer" className="hover:text-foreground">My Pledges</Link></li>
             </ul>

@@ -20,7 +20,7 @@ import { Footer } from "@/components/footer";
 const tabs = [
   { id: 'discover', label: 'Finding Projects', icon: Search },
   { id: 'backing', label: 'Making a Pledge', icon: Heart },
-  { id: 'stripe', label: 'Paying with Card', icon: CreditCard },
+  { id: 'paypal', label: 'Paying with PayPal', icon: CreditCard },
   { id: 'divinitycoin', label: 'DivinityCoin', icon: Coins },
   { id: 'rewards', label: 'Rewards & Add-ons', icon: Gift },
   { id: 'after', label: 'After You Pledge', icon: Package },
@@ -58,17 +58,17 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
       { title: 'Review Your Pledge', description: 'See the complete breakdown before payment. Make sure everything looks correct.', tip: 'Take a screenshot for your records.' },
     ]
   },
-  'stripe': {
-    title: 'Paying with Card (Stripe)',
-    description: 'Everything about card payments, including when you\'re charged.',
-    alert: { icon: Shield, title: 'Secure Payment Processing', text: 'All card payments are processed by Stripe. Your card details are encrypted and never stored on our servers.', color: 'emerald' },
+  'paypal': {
+    title: 'Paying with PayPal',
+    description: 'Everything about PayPal payments on IndieCrowdfund, including when you\'re charged.',
+    alert: { icon: Shield, title: 'Secure Payment Processing', text: 'Standard campaign payments are processed securely by PayPal. You can pay with your PayPal account, credit card, or debit card. Your card details are encrypted and never stored on our servers.', color: 'emerald' },
     steps: [
-      { title: 'Select Card Payment', description: 'Card payment is the default option, powered by Stripe - trusted by millions worldwide.', tip: 'Look for the lock icon and "Powered by Stripe".' },
-      { title: 'Enter Card Details', description: 'Fill in card number, expiration, CVV, and billing zip. Data is encrypted.', tip: 'Make sure your card won\'t expire before the campaign ends.' },
-      { title: 'Understand When You\'re Charged', description: 'You\'re NOT charged immediately. Card is saved and only charged if project reaches its goal.', tip: 'All-or-nothing: if goal isn\'t reached, you\'re never charged.' },
+      { title: 'Select Your Payment Method', description: 'At checkout you\'ll see the PayPal Advanced Checkout form — use your PayPal wallet, or enter a credit/debit card directly. No PayPal account required to pay by card.', tip: 'PayPal is trusted by hundreds of millions worldwide.' },
+      { title: 'Enter Card or Use PayPal Wallet', description: 'Fill in your card details (Visa, Mastercard, Amex, Discover) or log into your PayPal account to use your saved payment method.', tip: 'Make sure your card won\'t expire before the campaign ends.' },
+      { title: 'Understand When You\'re Charged', description: 'You\'re NOT charged immediately. Your payment is processed and only captured if the project reaches its goal.', tip: 'All-or-nothing: if goal isn\'t reached, the payment authorization is cancelled.' },
       { title: 'Confirm Your Pledge', description: 'Click "Pledge" to submit. You\'ll see confirmation and receive an email.', tip: 'Save your confirmation email.' },
-      { title: 'What Happens at Campaign End', description: 'If successful, card is charged automatically. If not, nothing happens.', tip: 'Ensure sufficient funds when campaign ends.' },
-      { title: 'Already-Funded Campaigns', description: 'If a campaign already reached its goal, your card is charged immediately.', tip: 'Immediate charges are clearly indicated before you confirm.' },
+      { title: 'What Happens at Campaign End', description: 'If successful, payment is captured automatically. If not, any authorization is released.', tip: 'Ensure sufficient funds when campaign ends.' },
+      { title: 'Already-Funded Campaigns', description: 'If a campaign already reached its goal, your payment is captured immediately.', tip: 'Immediate charges are clearly indicated before you confirm.' },
     ]
   },
   'divinitycoin': {
@@ -115,7 +115,7 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
       { title: 'What is the Marketplace?', description: 'A storefront for completed digital works. Immediate purchase and instant download.', tip: 'Perfect for supporting creators and getting content right away.' },
       { title: 'Browsing', description: 'Explore Featured titles, Staff Picks, or all works. Use search for specific titles.', tip: 'Check out Staff Picks for hand-curated recommendations.' },
       { title: 'Understanding Pricing', description: 'Fixed prices in USD set by creators. You\'re directly supporting them.', tip: 'Digital often costs less than physical - no printing or shipping.' },
-      { title: 'Making a Purchase', description: 'Click "Purchase" to checkout. Pay with card via Stripe or DivinityCoin depending on the creator\'s chosen processor. Charged immediately.', tip: 'Unlike pledges, marketplace purchases are instant.' },
+      { title: 'Making a Purchase', description: 'Click "Purchase" to checkout. Pay via PayPal or DivinityCoin depending on the creator\'s chosen processor. Charged immediately.', tip: 'Unlike pledges, marketplace purchases are instant.' },
       { title: 'Your Digital Library', description: 'Purchases added to your Digital Library in your dashboard. Access anytime.', tip: 'Bookmark your Digital Library for quick access.' },
       { title: 'Reading and Downloads', description: 'Read in browser or download as PDF for offline reading.', tip: 'Downloaded files are yours to keep. Back them up!' },
     ]
@@ -124,9 +124,9 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
     title: 'Frequently Asked Questions',
     description: 'Common questions about backing projects.',
     steps: [
-      { title: 'What if project doesn\'t reach its goal?', description: 'No money changes hands. Your card is never charged, regardless of whether the project uses Stripe or DivinityCoin.', tip: 'All-or-nothing funding protects you.' },
+      { title: 'What if project doesn\'t reach its goal?', description: 'No money changes hands. Your payment is never captured, regardless of whether the project uses PayPal or DivinityCoin.', tip: 'All-or-nothing funding protects you.' },
       { title: 'Can I get a refund after pledging?', description: 'Before campaign ends, cancel anytime in your dashboard. After, contact the creator directly.', tip: 'Refund policies are set by each creator.' },
-      { title: 'Is my payment information secure?', description: 'Yes! Stripe processes all payments with PCI-DSS Level 1 certification. We never store full card numbers.', tip: 'Look for the Stripe badge for security.' },
+      { title: 'Is my payment information secure?', description: 'Yes! PayPal processes standard payments with PCI-DSS Level 1 certification. We never store full card numbers on our servers.', tip: 'Look for the PayPal secure checkout badge.' },
       { title: 'What if my card is declined?', description: 'We retry automatically 3 times over 9 days. You\'ll get emails to update your card details.', tip: 'Keep card info updated to avoid failed payments.' },
       { title: 'How do I contact a creator?', description: 'Use "Contact" or "Ask a question" on the project page. Backers often have priority response.', tip: 'Always mention your backer email for pledge-specific issues.' },
       { title: 'What if a creator never delivers?', description: 'Crowdfunding carries risk. Creators are legally obligated to fulfill or refund. Report concerns to our support team.', tip: 'Our verification process helps, but due diligence is important.' },

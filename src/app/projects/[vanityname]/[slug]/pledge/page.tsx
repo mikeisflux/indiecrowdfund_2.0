@@ -158,7 +158,6 @@ export default function PledgePage() {
                 handlePaymentError={pledge.handlePaymentError}
                 isProcessing={pledge.isProcessing}
                 clientSecret={pledge.clientSecret}
-                stripePromise={pledge.stripePromise}
                 dcStripePromise={pledge.dcStripePromise}
                 intentType={pledge.intentType}
                 projectPath={pledge.projectPath}

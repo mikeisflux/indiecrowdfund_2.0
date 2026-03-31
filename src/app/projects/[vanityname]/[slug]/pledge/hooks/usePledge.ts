@@ -69,8 +69,7 @@ export function usePledge() {
   const [originalPledgeAmount, setOriginalPledgeAmount] = useState<number>(0);
   const [modifyChargeAmount, setModifyChargeAmount] = useState<number | null>(null);
 
-  // Stripe state
-  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  // Stripe state (stripePromise removed - platform Stripe disabled, replaced by PayPal)
   const [dcStripePromise, setDcStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentType, setIntentType] = useState<"payment_intent" | "setup_intent">("setup_intent");
@@ -149,19 +148,19 @@ export function usePledge() {
     handleSuccessRedirect();
   }, [successParam, pledgeIdParam]);
 
-  // Initialize Stripe
-  useEffect(() => {
-    async function initStripe() {
-      try {
-        const res = await fetch("/api/stripe/config");
-        const data = await res.json();
-        if (data.publishableKey) setStripePromise(loadStripe(data.publishableKey));
-      } catch (err) {
-        console.error("Failed to load Stripe config:", err);
-      }
-    }
-    initStripe();
-  }, []);
+  // Initialize Stripe - DISABLED: Replaced by PayPal
+  // useEffect(() => {
+  //   async function initStripe() {
+  //     try {
+  //       const res = await fetch("/api/stripe/config");
+  //       const data = await res.json();
+  //       if (data.publishableKey) setStripePromise(loadStripe(data.publishableKey));
+  //     } catch (err) {
+  //       console.error("Failed to load Stripe config:", err);
+  //     }
+  //   }
+  //   initStripe();
+  // }, []);
 
   // Load PayPal client ID when project uses PayPal
   useEffect(() => {
@@ -479,8 +478,8 @@ export function usePledge() {
     shippingCountry, setShippingCountry, hasSavedAddress,
     agreedToTerms, setAgreedToTerms, isProcessing, setIsProcessing,
     isAddItemsMode, isModifyMode, originalPledgeAmount, modifyChargeAmount,
-    // Stripe
-    stripePromise, dcStripePromise, clientSecret, setClientSecret,
+    // Stripe (dcStripePromise is used by DivinityCoin processor)
+    dcStripePromise, clientSecret, setClientSecret,
     intentType, paymentError, setPaymentError, currentPledgeId,
     // PayPal
     paypalOrderId, paypalClientId,

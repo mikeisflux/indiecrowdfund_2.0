@@ -17,7 +17,7 @@ export function PciComplianceContent() {
             <h3 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 m-0">Payment Security Status</h3>
           </div>
           <p className="text-emerald-700 dark:text-emerald-300 m-0">
-            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with <strong>Stripe</strong> (Level 1 PCI Service Provider). We never store, process, or transmit credit card data on our servers.
+            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with <strong>PayPal</strong> (Level 1 PCI Service Provider) as our primary processor and <strong>DivinityCoin</strong> for NSFW/adult content campaigns. We never store, process, or transmit credit card data on our servers.
           </p>
         </div>
 
@@ -33,7 +33,7 @@ export function PciComplianceContent() {
         <p className="mb-4">IndieCrowdfund takes a security-first approach to handling payment information across all payment processors:</p>
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li><strong>No storage of card data:</strong> We never store, process, or transmit full credit card numbers on our servers</li>
-          <li><strong>Tokenization (Stripe):</strong> All Stripe payment information is securely tokenized before reaching our systems</li>
+          <li><strong>Tokenization (PayPal):</strong> All PayPal payment information is securely tokenized before reaching our systems</li>
           <li><strong>Outsourced processing (DivinityCoin):</strong> DivinityCoin is an independent payment sub-processor with its own PCI-compliant infrastructure. Card data entered through DivinityCoin&apos;s payment forms never reaches our servers</li>
           <li><strong>Encrypted connections:</strong> All data transmission uses TLS 1.2+ encryption (HTTPS-only)</li>
           <li><strong>CSRF protection:</strong> All payment initiation endpoints are protected with CSRF tokens to prevent cross-site request forgery</li>
@@ -42,20 +42,20 @@ export function PciComplianceContent() {
 
         <h3 className="text-xl font-semibold mt-8 mb-4">3. Our Payment Partners</h3>
 
-        <h4 className="text-lg font-semibold mt-6 mb-3">Stripe</h4>
+        <h4 className="text-lg font-semibold mt-6 mb-3">PayPal (Primary Processor)</h4>
         <p className="mb-4">
-          Stripe, Inc. is our primary payment processor and maintains the highest level of PCI compliance:
+          PayPal, Inc. is our primary payment processor and maintains the highest level of PCI compliance:
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
-          <li><strong>PCI DSS Level 1:</strong> The most rigorous level of certification, processing over 6 million transactions annually</li>
+          <li><strong>PCI DSS Level 1:</strong> The most rigorous level of certification, processing billions of transactions annually</li>
           <li><strong>Annual audits:</strong> Conducted by a PCI-qualified security assessor (QSA)</li>
-          <li><strong>SOC 2 Type II:</strong> Certified for security, availability, and confidentiality</li>
-          <li><strong>ISO 27001:</strong> Certified information security management system</li>
+          <li><strong>Advanced fraud protection:</strong> PayPal&apos;s fraud detection tools help prevent unauthorized transactions</li>
+          <li><strong>Buyer and seller protection:</strong> PayPal provides dispute resolution and protection programs</li>
         </ul>
         <p className="mb-6">
-          For more information about Stripe's security practices, visit{" "}
-          <a href="https://stripe.com/docs/security" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
-            stripe.com/docs/security
+          For more information about PayPal&apos;s security practices, visit{" "}
+          <a href="https://www.paypal.com/us/webapps/mpp/paypal-safety-and-security" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
+            paypal.com/security
           </a>
         </p>
 
@@ -71,16 +71,16 @@ export function PciComplianceContent() {
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li>Have completely outsourced all cardholder data functions to PCI DSS validated third-party service providers</li>
           <li>Do not electronically store, process, or transmit any cardholder data on their systems</li>
-          <li>Use only PCI DSS compliant payment gateways (Stripe) for all card transactions</li>
+          <li>Use only PCI DSS compliant payment gateways (PayPal, DivinityCoin) for all card transactions</li>
         </ul>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">5. Security Measures We Implement</h3>
-        <p className="mb-4">Beyond delegating payment processing to Stripe, we implement additional security measures:</p>
+        <p className="mb-4">Beyond delegating payment processing to our partners, we implement additional security measures:</p>
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li><strong>HTTPS everywhere:</strong> Our entire platform uses SSL/TLS encryption</li>
           <li><strong>Regular security audits:</strong> We conduct periodic security assessments</li>
           <li><strong>Access controls:</strong> Strict role-based access to sensitive systems</li>
-          <li><strong>Fraud detection:</strong> Stripe Radar helps prevent fraudulent transactions</li>
+          <li><strong>Fraud detection:</strong> PayPal&apos;s advanced fraud protection helps prevent unauthorized transactions</li>
           <li><strong>Secure authentication:</strong> Multi-factor authentication available for user accounts</li>
           <li><strong>Data minimization:</strong> We only collect and retain data necessary for operations</li>
         </ul>
@@ -91,14 +91,14 @@ export function PciComplianceContent() {
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>Your payment card information is never stored on IndieCrowdfund servers</li>
           <li>All transactions are protected by bank-level security regardless of payment processor</li>
-          <li>Stripe's fraud protection (Stripe Radar) helps prevent unauthorized charges on Stripe transactions</li>
+          <li>PayPal&apos;s fraud protection helps prevent unauthorized charges on PayPal transactions</li>
           <li>DivinityCoin transactions use their own PCI-compliant payment infrastructure — your card data never reaches IndieCrowdfund</li>
           <li>You can manage saved payment methods securely through your account</li>
         </ul>
 
         <h4 className="text-lg font-semibold mt-6 mb-3">For Creators:</h4>
         <ul className="list-disc pl-6 mb-6 space-y-2">
-          <li>Funds are securely processed through your chosen payment processor (Stripe Connect or DivinityCoin)</li>
+          <li>Funds are securely processed through your chosen payment processor (PayPal or DivinityCoin)</li>
           <li>Settlement account details (bank information) are encrypted with AES-256 encryption</li>
           <li>You never have direct access to backer payment card details</li>
           <li>Chargeback and dispute handling follows industry-standard procedures</li>
@@ -129,9 +129,9 @@ export function PciComplianceContent() {
           Our PCI compliance status can be verified through:
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
-          <li>Stripe's PCI attestation available at{" "}
-            <a href="https://stripe.com/docs/security/stripe" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
-              stripe.com/docs/security/stripe
+          <li>PayPal&apos;s PCI attestation available at{" "}
+            <a href="https://www.paypal.com/us/webapps/mpp/paypal-safety-and-security" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
+              paypal.com/security
             </a>
           </li>
           <li>Our Attestation of Compliance (AOC) is available upon request for business partners</li>
@@ -141,7 +141,7 @@ export function PciComplianceContent() {
         <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-6 mt-8">
           <h4 className="text-lg font-semibold mb-4">Summary</h4>
           <p className="mb-0">
-            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with Stripe (Level 1 PCI Service Provider) for tokenized card payments and DivinityCoin (independent PCI-compliant payment sub-processor). We never store credit card information on our servers, enforce CSRF protection on all payment endpoints, and communicate exclusively over HTTPS. This approach ensures the highest level of protection for all financial transactions on our platform.
+            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with PayPal (Level 1 PCI Service Provider) as our primary processor for standard campaigns, and DivinityCoin (independent PCI-compliant payment sub-processor) for NSFW/adult content campaigns. We never store credit card information on our servers, enforce CSRF protection on all payment endpoints, and communicate exclusively over HTTPS. This approach ensures the highest level of protection for all financial transactions on our platform.
           </p>
         </div>
       </div>

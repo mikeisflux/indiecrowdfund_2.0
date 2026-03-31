@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Check, ExternalLink, AlertTriangle, CheckCircle, Banknote, Wallet } from "lucide-react";
+import { Check, ExternalLink, AlertTriangle, CheckCircle, Banknote, Wallet } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { PaymentProcessorSectionProps } from "./types";
 
@@ -13,10 +13,7 @@ export function PaymentProcessorSection({
   updatePayment,
   mustUseAltProcessor,
   goalAmount,
-  stripeFee,
   platformFee,
-  totalFees,
-  netAmount,
   paypalFee,
   paypalTotalFees,
   paypalNetAmount,
@@ -41,9 +38,9 @@ export function PaymentProcessorSection({
         </Alert>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* Stripe Option */}
-        <Card
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Stripe Option - DISABLED: Replaced by PayPal */}
+        {/* <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "STRIPE" ? "border-2 border-primary" : "border"
           } ${mustUseAltProcessor ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -86,7 +83,7 @@ export function PaymentProcessorSection({
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* DivinityCoin Option */}
         <Card
@@ -146,6 +143,9 @@ export function PaymentProcessorSection({
                   <Wallet className="h-5 w-5 text-white" />
                 </div>
                 PayPal
+                {!mustUseAltProcessor && (
+                  <Badge variant="secondary" className="ml-2">Recommended</Badge>
+                )}
               </CardTitle>
               {payment.paymentProcessor === "PAYPAL" && (
                 <CheckCircle className="h-5 w-5 text-primary" />
@@ -177,8 +177,8 @@ export function PaymentProcessorSection({
 
       </div>
 
-      {/* Fee Calculator */}
-      {payment.paymentProcessor === "STRIPE" && (
+      {/* Stripe Fee Calculator - DISABLED: Replaced by PayPal */}
+      {/* {payment.paymentProcessor === "STRIPE" && (
         <div className="rounded-lg bg-muted/50 p-4 border">
           <h4 className="font-medium mb-3">
             Stripe Fee Breakdown for {formatCurrency(goalAmount)} Goal
@@ -203,7 +203,7 @@ export function PaymentProcessorSection({
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {payment.paymentProcessor === "DIVINITYCOIN" && (
         <>

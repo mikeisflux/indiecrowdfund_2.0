@@ -5,14 +5,11 @@ import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-
 import {
   ContactEmailSection,
   ProjectTypeSection,
   ContentDeclarationSection,
   PaymentProcessorSection,
-  StripeConnectSection,
   DivinityCoinBankSection,
   RetailerAccessSection,
   ChargebackCardSection,
@@ -20,15 +17,16 @@ import {
 
 export function PaymentStep() {
   const { payment, updatePayment, basics, projectId } = useProjectStore();
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [stripeStatus, setStripeStatus] = useState<{
-    connected: boolean;
-    onboarded: boolean;
-    loading: boolean;
-    error: string | null;
-  }>({ connected: false, onboarded: false, loading: true, error: null });
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
+  // Stripe Connect state - DISABLED: Stripe replaced by PayPal
+  // const [isConnecting, setIsConnecting] = useState(false);
+  // const [stripeStatus, setStripeStatus] = useState<{
+  //   connected: boolean;
+  //   onboarded: boolean;
+  //   loading: boolean;
+  //   error: string | null;
+  // }>({ connected: false, onboarded: false, loading: true, error: null });
+  // const [connectError, setConnectError] = useState<string | null>(null);
+  // const [isResetting, setIsResetting] = useState(false);
 
   // DivinityCoin bank account state
   const [bankAccount, setBankAccount] = useState({
@@ -44,7 +42,7 @@ export function PaymentStep() {
     lastFour: string | null;
   }>({ saved: false, loading: true, lastFour: null });
   const [isSavingBank, setIsSavingBank] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  // const [showResetConfirm, setShowResetConfirm] = useState(false); // Stripe Connect removed
 
   // Chargeback card state
   const [chargebackCard, setChargebackCard] = useState({
@@ -238,41 +236,24 @@ export function PaymentStep() {
     }
   };
 
-  // Check Stripe connection status on mount
-  useEffect(() => {
-    async function checkStripeStatus() {
-      try {
-        const response = await fetch("/api/stripe/connect");
-        const data = await response.json();
-
-        if (!response.ok) {
-          setStripeStatus({
-            connected: false,
-            onboarded: false,
-            loading: false,
-            error: data.error || "Failed to check status",
-          });
-          return;
-        }
-
-        setStripeStatus({
-          connected: data.connected || false,
-          onboarded: data.onboarded || false,
-          loading: false,
-          error: null,
-        });
-      } catch (error) {
-        console.error("Failed to check Stripe status:", error);
-        setStripeStatus({
-          connected: false,
-          onboarded: false,
-          loading: false,
-          error: "Network error checking status"
-        });
-      }
-    }
-    checkStripeStatus();
-  }, []);
+  // Check Stripe connection status - DISABLED: Stripe replaced by PayPal
+  // useEffect(() => {
+  //   async function checkStripeStatus() {
+  //     try {
+  //       const response = await fetch("/api/stripe/connect");
+  //       const data = await response.json();
+  //       if (!response.ok) {
+  //         setStripeStatus({ connected: false, onboarded: false, loading: false, error: data.error || "Failed to check status" });
+  //         return;
+  //       }
+  //       setStripeStatus({ connected: data.connected || false, onboarded: data.onboarded || false, loading: false, error: null });
+  //     } catch (error) {
+  //       console.error("Failed to check Stripe status:", error);
+  //       setStripeStatus({ connected: false, onboarded: false, loading: false, error: "Network error checking status" });
+  //     }
+  //   }
+  //   checkStripeStatus();
+  // }, []);
 
   const goalAmount = basics.goalAmount || 10000;
   const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
@@ -302,62 +283,9 @@ export function PaymentStep() {
   const paypalTotalFees = paypalFee + platformFee;
   const paypalNetAmount = goalAmount - paypalTotalFees;
 
-  const handleConnectStripe = async () => {
-    setIsConnecting(true);
-    setConnectError(null);
-    try {
-      const response = await apiFetch("/api/stripe/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setConnectError(data.error || "Failed to connect Stripe");
-        return;
-      }
-
-      if (data.onboardingUrl) {
-        window.location.href = data.onboardingUrl;
-      }
-    } catch (error) {
-      console.error("Failed to initiate Stripe connection:", error);
-      setConnectError("Network error connecting to Stripe");
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  const handleResetStripe = async () => {
-    setIsResetting(true);
-    setConnectError(null);
-    try {
-      const response = await apiFetch("/api/stripe/connect/reset", {
-        method: "DELETE",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setConnectError(data.error || "Failed to reset Stripe");
-        return;
-      }
-
-      // Reset the status
-      setStripeStatus({
-        connected: false,
-        onboarded: false,
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      console.error("Failed to reset Stripe connection:", error);
-      setConnectError("Network error resetting Stripe");
-    } finally {
-      setIsResetting(false);
-    }
-  };
+  // Stripe Connect handlers - DISABLED: Stripe replaced by PayPal
+  // const handleConnectStripe = async () => { ... };
+  // const handleResetStripe = async () => { ... };
 
   return (
     <div className="space-y-8">
@@ -402,8 +330,8 @@ export function PaymentStep() {
 
       <Separator />
 
-      {/* Connect Stripe Account - Only show when Stripe is selected */}
-      {payment.paymentProcessor === "STRIPE" && (
+      {/* Connect Stripe Account - DISABLED: Stripe replaced by PayPal */}
+      {/* {payment.paymentProcessor === "STRIPE" && (
         <StripeConnectSection
           stripeStatus={stripeStatus}
           connectError={connectError}
@@ -412,7 +340,7 @@ export function PaymentStep() {
           handleConnectStripe={handleConnectStripe}
           setShowResetConfirm={setShowResetConfirm}
         />
-      )}
+      )} */}
 
       {/* DivinityCoin Bank Account for Settlements - Only show when DivinityCoin is selected */}
       {payment.paymentProcessor === "DIVINITYCOIN" && (
@@ -449,7 +377,8 @@ export function PaymentStep() {
         projectId={projectId}
       />
 
-      <ConfirmDialog
+      {/* Stripe ConfirmDialog - DISABLED: Stripe Connect removed */}
+      {/* <ConfirmDialog
         open={showResetConfirm}
         onOpenChange={setShowResetConfirm}
         title="Disconnect Stripe Account?"
@@ -458,7 +387,7 @@ export function PaymentStep() {
         variant="destructive"
         onConfirm={handleResetStripe}
         loading={isResetting}
-      />
+      /> */}
     </div>
   );
 }

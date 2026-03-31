@@ -56,9 +56,9 @@ const divinityCoinFeeBreakdown = [
 ];
 
 const comparisonData = [
-  { platform: "IndieCrowdfund (Stripe)", platformFee: "3%", paymentFee: "2.9% + $0.30", total: "~6%", highlight: true },
   { platform: "IndieCrowdfund (PayPal)", platformFee: "3%", paymentFee: "3.49% + $0.49", total: "~6.5%", highlight: true },
   { platform: "IndieCrowdfund (DivinityCoin)", platformFee: "3%", paymentFee: "6% partner", total: "~9%", highlight: false },
+  { platform: "IndieCrowdfund (Stripe – Legacy)", platformFee: "3%", paymentFee: "2.9% + $0.30", total: "~6%", highlight: false },
   { platform: "Kickstarter", platformFee: "5%", paymentFee: "3% + $0.20", total: "~8%", highlight: false },
   { platform: "Indiegogo", platformFee: "5%", paymentFee: "2.9% + $0.30", total: "~8%", highlight: false },
   { platform: "GoFundMe", platformFee: "0%", paymentFee: "2.9% + $0.30", total: "~3%", highlight: false },
@@ -161,7 +161,7 @@ function calculateDivinityCoinFees(amount: number) {
 
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]); // Default to $50,000
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal" | "divinitycoin">("stripe");
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal" | "divinitycoin">("paypal");
   const amount = sliderValue[0];
   const stripeFees = calculateStripeFees(amount);
   const divinityFees = calculateDivinityCoinFees(amount);
@@ -228,12 +228,8 @@ export default function FeesPage() {
             </p>
           </div>
 
-          <Tabs defaultValue="stripe" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "paypal" | "divinitycoin")}>
+          <Tabs defaultValue="paypal" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "paypal" | "divinitycoin")}>
             <TabsList className="grid w-full max-w-xl mx-auto grid-cols-3 mb-8">
-              <TabsTrigger value="stripe" className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Stripe
-              </TabsTrigger>
               <TabsTrigger value="paypal" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 PayPal
@@ -241,6 +237,10 @@ export default function FeesPage() {
               <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" />
                 DivinityCoin
+              </TabsTrigger>
+              <TabsTrigger value="stripe" className="flex items-center gap-2 opacity-50">
+                <CreditCard className="h-4 w-4" />
+                Stripe (Legacy)
               </TabsTrigger>
             </TabsList>
 
@@ -431,15 +431,15 @@ export default function FeesPage() {
               <div className="flex justify-center mb-6">
                 <div className="inline-flex rounded-lg border p-1 bg-white dark:bg-zinc-800">
                   <button
-                    onClick={() => setPaymentMethod("stripe")}
+                    onClick={() => setPaymentMethod("paypal")}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      paymentMethod === "stripe"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                      paymentMethod === "paypal"
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                         : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400"
                     }`}
                   >
                     <CreditCard className="inline h-4 w-4 mr-1" />
-                    Stripe
+                    PayPal
                   </button>
                   <button
                     onClick={() => setPaymentMethod("divinitycoin")}
@@ -451,6 +451,17 @@ export default function FeesPage() {
                   >
                     <Coins className="inline h-4 w-4 mr-1" />
                     DivinityCoin
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod("stripe")}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors opacity-60 ${
+                      paymentMethod === "stripe"
+                        ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"
+                        : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400"
+                    }`}
+                  >
+                    <CreditCard className="inline h-4 w-4 mr-1" />
+                    Stripe
                   </button>
                 </div>
               </div>
@@ -484,7 +495,7 @@ export default function FeesPage() {
                 {/* Fee Breakdown */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-zinc-900 dark:text-white mb-4">
-                    Fee Breakdown ({paymentMethod === "stripe" ? "Stripe" : "DivinityCoin"})
+                    Fee Breakdown ({paymentMethod === "paypal" ? "PayPal" : paymentMethod === "stripe" ? "Stripe (Legacy)" : "DivinityCoin"})
                   </h3>
 
                   <div className="flex justify-between py-2 border-b">
@@ -492,7 +503,18 @@ export default function FeesPage() {
                     <span className="font-medium">${amount.toLocaleString()}</span>
                   </div>
 
-                  {paymentMethod === "stripe" ? (
+                  {paymentMethod === "paypal" ? (
+                    <>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-zinc-600 dark:text-zinc-400">Platform fee (3%)</span>
+                        <span className="text-red-500">-${paypalFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-zinc-600 dark:text-zinc-400">PayPal processing (3.49% + $0.49)</span>
+                        <span className="text-red-500">-${paypalFees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    </>
+                  ) : paymentMethod === "stripe" ? (
                     <>
                       <div className="flex justify-between py-2 border-b">
                         <span className="text-zinc-600 dark:text-zinc-400">Platform fee (3%)</span>
@@ -527,26 +549,34 @@ export default function FeesPage() {
 
                 {/* You Receive */}
                 <div className={`flex flex-col justify-center items-center rounded-xl p-8 ${
-                  paymentMethod === "stripe"
+                  paymentMethod === "paypal"
+                    ? "bg-blue-50 dark:bg-blue-900/20"
+                    : paymentMethod === "stripe"
                     ? "bg-emerald-50 dark:bg-emerald-900/20"
                     : "bg-purple-50 dark:bg-purple-900/20"
                 }`}>
                   <span className={`text-sm font-medium mb-2 ${
-                    paymentMethod === "stripe"
+                    paymentMethod === "paypal"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : paymentMethod === "stripe"
                       ? "text-emerald-600 dark:text-emerald-400"
                       : "text-purple-600 dark:text-purple-400"
                   }`}>
                     You receive
                   </span>
                   <span className={`text-5xl font-bold ${
-                    paymentMethod === "stripe"
+                    paymentMethod === "paypal"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : paymentMethod === "stripe"
                       ? "text-emerald-600 dark:text-emerald-400"
                       : "text-purple-600 dark:text-purple-400"
                   }`}>
                     ${fees.youReceive.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </span>
                   <span className={`text-sm mt-2 ${
-                    paymentMethod === "stripe"
+                    paymentMethod === "paypal"
+                      ? "text-blue-600/70 dark:text-blue-400/70"
+                      : paymentMethod === "stripe"
                       ? "text-emerald-600/70 dark:text-emerald-400/70"
                       : "text-purple-600/70 dark:text-purple-400/70"
                   }`}>
@@ -559,9 +589,9 @@ export default function FeesPage() {
               <div className="mt-8 pt-8 border-t">
                 <h4 className="text-sm font-medium text-zinc-500 mb-4">Compare with other platforms at ${amount.toLocaleString()}</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                    <div className="text-xs text-zinc-500 mb-1">IndieCrowdfund (Stripe)</div>
-                    <div className="font-bold text-emerald-600">${stripeFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="text-xs text-zinc-500 mb-1">IndieCrowdfund (PayPal)</div>
+                    <div className="font-bold text-blue-600">${paypalFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
                   <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                     <div className="text-xs text-zinc-500 mb-1">IndieCrowdfund (DivinityCoin)</div>
@@ -574,9 +604,9 @@ export default function FeesPage() {
                     </div>
                   </div>
                   <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <div className="text-xs text-zinc-500 mb-1">Your savings (Stripe vs Kickstarter)</div>
+                    <div className="text-xs text-zinc-500 mb-1">Your savings (PayPal vs Kickstarter)</div>
                     <div className="font-bold text-green-600">
-                      +${(stripeFees.youReceive - (amount * 0.92)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      +${(paypalFees.youReceive - (amount * 0.92)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>
                   </div>
                 </div>

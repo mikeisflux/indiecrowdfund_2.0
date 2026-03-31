@@ -87,7 +87,7 @@ export function CreatorAgreementContent() {
           <li><strong>Social Media Verification:</strong> All linked social media accounts are logged and verified by our team</li>
           <li><strong>Cross-Platform Audit:</strong> We search other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review your previous campaign history, including backer reviews, comments, and public feedback</li>
           <li><strong>Fulfillment History Validation:</strong> We contact creators directly when discrepancies or concerns are identified during our review</li>
-          <li><strong>Payment Verification:</strong> Completion of Stripe Connect Express onboarding (identity, SSN/Tax ID, US bank account) or equivalent processor verification</li>
+          <li><strong>Payment Verification:</strong> Adding a valid PayPal payout email (standard campaigns) or completing DivinityCoin bank account setup (NSFW/adult campaigns) to receive payouts</li>
         </ul>
         <p className="mb-4 font-medium">All verification findings, correspondence, and review decisions are documented internally and retained for compliance purposes.</p>
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">

@@ -27,7 +27,6 @@ interface PaymentStepProps {
   handlePaymentError: (message: string) => void;
   isProcessing: boolean;
   clientSecret: string | null;
-  stripePromise: Promise<Stripe | null> | null;
   dcStripePromise: Promise<Stripe | null> | null;
   intentType: "payment_intent" | "setup_intent";
   projectPath: string;
@@ -99,7 +98,6 @@ export function PaymentStep({
   handlePaymentError,
   isProcessing,
   clientSecret,
-  stripePromise,
   dcStripePromise,
   intentType,
   projectPath,
@@ -176,8 +174,8 @@ export function PaymentStep({
         <CardContent className="p-5">
           <h3 className="font-medium mb-4">Payment</h3>
 
-          {/* Show error if any - only for Stripe */}
-          {paymentError && project?.paymentProcessor === "STRIPE" && (
+          {/* Show error if any - Stripe removed, kept for DivinityCoin fallback */}
+          {/* {paymentError && project?.paymentProcessor === "STRIPE" && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
               {isEmailVerificationError(paymentError) ? (
@@ -191,14 +189,13 @@ export function PaymentStep({
                     setPaymentError(null);
                     setClientSecret(null);
                     setIsProcessing(false);
-                    // This will trigger the useEffect to create a new pledge
                   }}
                 >
                   Try Again
                 </Button>
               )}
             </div>
-          )}
+          )} */}
 
           {/* Payment Form - PayPal, DivinityCoin, or Stripe */}
           {project?.paymentProcessor === "PAYPAL" ? (
@@ -324,8 +321,8 @@ export function PaymentStep({
               </div>
             )
           ) : (
-            /* Stripe Payment */
-            clientSecret && stripePromise ? (
+            /* Stripe Payment - DISABLED: Replaced by PayPal */
+            /* clientSecret && stripePromise ? (
               <Elements
                 key={clientSecret}
                 stripe={stripePromise}
@@ -380,7 +377,14 @@ export function PaymentStep({
                 />
               </Elements>
             ) : paymentError ? null : (
-              /* Loading state while creating pledge and loading Stripe */
+              <div className="space-y-4">
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">Loading payment form...</p>
+                </div>
+              </div>
+            ) */
+            paymentError ? null : (
               <div className="space-y-4">
                 <div className="flex flex-col items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
