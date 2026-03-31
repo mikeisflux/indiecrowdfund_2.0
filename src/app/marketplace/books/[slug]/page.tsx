@@ -190,6 +190,13 @@ export default function BookDetailPage() {
   const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin") => {
     if (!book) return;
 
+    // Redirect unauthenticated users to login before attempting purchase
+    const sessionRes = await fetch("/api/auth/session");
+    if (!sessionRes.ok) {
+      window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.href)}`;
+      return;
+    }
+
     setPurchasing(true);
     setShowPaymentModal(false);
 
