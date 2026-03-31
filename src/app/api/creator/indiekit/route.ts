@@ -503,7 +503,7 @@ export async function GET(req: NextRequest) {
       notCharged: backersWithBalanceDue.length, // Backers with outstanding balance from post-campaign changes
       errored: pledges.filter(p => p.chargeStatus === "FAILED").length,
       charged: 0, // TODO: track successful additional charge collections
-      paypalCollected: 0,
+      paypalCollected: pledges.filter(p => p.paymentProcessor === "PAYPAL" && p.status === "COMPLETED").length,
     };
 
     // Calculate backers with addons (campaign + post-campaign)
@@ -612,7 +612,9 @@ export async function GET(req: NextRequest) {
       // Determine charge status
       let chargeStatus: "not_charged" | "errored" | "charged" | "paypal_collected" = "not_charged";
       if (pledge.status === "COMPLETED") {
-        chargeStatus = pledge.paymentProcessor === "DIVINITYCOIN" ? "paypal_collected" : "charged";
+        chargeStatus = (pledge.paymentProcessor === "DIVINITYCOIN" || pledge.paymentProcessor === "PAYPAL")
+          ? "paypal_collected"
+          : "charged";
       } else if (pledge.status === "FAILED") {
         chargeStatus = "errored";
       }

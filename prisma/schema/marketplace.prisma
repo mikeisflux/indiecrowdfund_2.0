@@ -158,6 +158,9 @@ model MarketplacePurchase {
   // DivinityCoin fields
   divinityCoinPaymentId String?  @unique
 
+  // PayPal fields
+  paypalOrderId         String?  @unique
+
   // Status
   status            MarketplacePurchaseStatus @default(PENDING)
   completedAt       DateTime?

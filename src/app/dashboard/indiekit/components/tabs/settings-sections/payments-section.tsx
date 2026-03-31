@@ -27,6 +27,7 @@ import {
   Building2,
   AlertTriangle,
   ExternalLink,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -47,6 +48,55 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
   const [connectError, setConnectError] = useState<string | null>(null);
   const [isResettingStripe, setIsResettingStripe] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // PayPal payout state
+  const [paypalEmail, setPaypalEmail] = useState("");
+  const [paypalEmailSaved, setPaypalEmailSaved] = useState<string | null>(null);
+  const [isSavingPaypalEmail, setIsSavingPaypalEmail] = useState(false);
+  const [paypalEmailMessage, setPaypalEmailMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    async function fetchPaypalConfig() {
+      try {
+        const res = await fetch("/api/creator/paypal");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.config?.paypalEmail) {
+            setPaypalEmailSaved(data.config.paypalEmail);
+            setPaypalEmail(data.config.paypalEmail);
+          }
+        }
+      } catch {
+        // non-fatal
+      }
+    }
+    fetchPaypalConfig();
+  }, []);
+
+  const handleSavePaypalEmail = async () => {
+    if (!paypalEmail.trim()) {
+      setPaypalEmailMessage({ type: "error", text: "Please enter a PayPal email address" });
+      return;
+    }
+    setIsSavingPaypalEmail(true);
+    setPaypalEmailMessage(null);
+    try {
+      const res = await apiFetch("/api/creator/paypal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paypalEmail: paypalEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save PayPal email");
+      setPaypalEmailSaved(paypalEmail.trim().toLowerCase());
+      setPaypalEmailMessage({ type: "success", text: data.message || "PayPal email saved" });
+      setTimeout(() => setPaypalEmailMessage(null), 4000);
+    } catch (err) {
+      setPaypalEmailMessage({ type: "error", text: err instanceof Error ? err.message : "Failed to save" });
+    } finally {
+      setIsSavingPaypalEmail(false);
+    }
+  };
 
   // DivinityCoin bank account state
   const [bankAccount, setBankAccount] = useState({
@@ -391,6 +441,65 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
               {" "}&bull; It only takes a few minutes to get started
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* PayPal Payout Email Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-blue-600" />
+            PayPal Payout Email
+          </CardTitle>
+          <CardDescription>
+            Add your PayPal email to receive payouts from your campaigns and marketplace sales automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {paypalEmailSaved && (
+            <div className="flex items-center gap-3 p-4 border rounded-lg border-green-500">
+              <div className="h-10 w-10 rounded-xl bg-[#003087] flex items-center justify-center shrink-0">
+                <CheckCircle className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">PayPal Connected</p>
+                <p className="text-sm text-muted-foreground">{paypalEmailSaved}</p>
+              </div>
+              <Badge variant="default" className="bg-green-500">Connected</Badge>
+            </div>
+          )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">PayPal Email Address</label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={paypalEmail}
+                onChange={(e) => setPaypalEmail(e.target.value)}
+                placeholder="your@paypal.com"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <button
+                onClick={handleSavePaypalEmail}
+                disabled={isSavingPaypalEmail}
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-[#003087] text-white hover:bg-[#002070] h-10 px-4 py-2 gap-2"
+              >
+                {isSavingPaypalEmail ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save
+              </button>
+            </div>
+            {paypalEmailMessage && (
+              <p className={`text-xs ${paypalEmailMessage.type === "success" ? "text-green-500" : "text-destructive"}`}>
+                {paypalEmailMessage.text}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Payouts are sent to this PayPal email automatically after your campaign funds or marketplace sales.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

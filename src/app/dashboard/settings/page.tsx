@@ -53,6 +53,7 @@ import {
   Search,
   Megaphone,
   Lock,
+  CreditCard,
 } from "lucide-react";
 import { useSession } from "@/components/providers/auth-provider";
 
@@ -138,6 +139,10 @@ export default function SettingsPage() {
   const [sendingVerification, setSendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [vanityUrlLocked, setVanityUrlLocked] = useState(false);
+  const [paypalEmail, setPaypalEmail] = useState("");
+  const [paypalEmailSaved, setPaypalEmailSaved] = useState<string | null>(null);
+  const [paypalEmailSaving, setPaypalEmailSaving] = useState(false);
+  const [paypalEmailMessage, setPaypalEmailMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     async function fetchSettings() {
@@ -157,8 +162,24 @@ export default function SettingsPage() {
       }
     }
 
+    async function fetchPaypalConfig() {
+      try {
+        const res = await fetch("/api/creator/paypal");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.config?.paypalEmail) {
+            setPaypalEmailSaved(data.config.paypalEmail);
+            setPaypalEmail(data.config.paypalEmail);
+          }
+        }
+      } catch {
+        // non-fatal
+      }
+    }
+
     if (session?.user) {
       fetchSettings();
+      fetchPaypalConfig();
     }
   }, [session]);
 
@@ -196,6 +217,31 @@ export default function SettingsPage() {
       setError(err instanceof Error ? err.message : "Failed to save settings");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSavePaypalEmail = async () => {
+    if (!paypalEmail.trim()) {
+      setPaypalEmailMessage({ type: "error", text: "Please enter a PayPal email address" });
+      return;
+    }
+    setPaypalEmailSaving(true);
+    setPaypalEmailMessage(null);
+    try {
+      const res = await apiFetch("/api/creator/paypal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paypalEmail: paypalEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save PayPal email");
+      setPaypalEmailSaved(paypalEmail.trim().toLowerCase());
+      setPaypalEmailMessage({ type: "success", text: data.message || "PayPal email saved" });
+      setTimeout(() => setPaypalEmailMessage(null), 4000);
+    } catch (err) {
+      setPaypalEmailMessage({ type: "error", text: err instanceof Error ? err.message : "Failed to save" });
+    } finally {
+      setPaypalEmailSaving(false);
     }
   };
 
@@ -1008,6 +1054,61 @@ export default function SettingsPage() {
                 <Button variant="destructive" size="sm">
                   Delete
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* PayPal Payout Settings */}
+          <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '380ms' }}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-blue-500" />
+                PayPal Payout Email
+              </CardTitle>
+              <CardDescription>
+                Add your PayPal email to receive payouts from crowdfunding campaigns and marketplace sales.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {paypalEmailSaved && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
+                  <span className="text-sm text-green-600 dark:text-green-400">
+                    Connected: <span className="font-medium">{paypalEmailSaved}</span>
+                  </span>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="paypalEmail">PayPal Email Address</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="paypalEmail"
+                    type="email"
+                    value={paypalEmail}
+                    onChange={(e) => setPaypalEmail(e.target.value)}
+                    placeholder="your@paypal.com"
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleSavePaypalEmail}
+                    disabled={paypalEmailSaving}
+                  >
+                    {paypalEmailSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    <span className="ml-2">Save</span>
+                  </Button>
+                </div>
+                {paypalEmailMessage && (
+                  <p className={`text-xs ${paypalEmailMessage.type === "success" ? "text-green-500" : "text-destructive"}`}>
+                    {paypalEmailMessage.text}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  This email will be used to send your payouts via PayPal. Make sure it matches your PayPal account.
+                </p>
               </div>
             </CardContent>
           </Card>

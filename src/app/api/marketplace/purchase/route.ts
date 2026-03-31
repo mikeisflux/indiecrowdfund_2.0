@@ -5,6 +5,7 @@ const marketplacePurchaseLogger = logger.child({ module: "marketplace-purchase" 
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,12 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    if (book.paymentProcessor === "PAYPAL" && paymentMethod !== "paypal") {
+      return NextResponse.json(
+        { error: "This book requires PayPal payment" },
+        { status: 400 }
+      );
+    }
 
     // Create purchase record in PENDING state
     const purchase = await prisma.marketplacePurchase.create({
@@ -80,6 +87,77 @@ export async function POST(request: Request) {
         status: "PENDING",
       },
     });
+
+    // PayPal payment flow — create an order and return the orderId for the frontend
+    if (book.paymentProcessor === "PAYPAL" && paymentMethod === "paypal") {
+      try {
+        const config = await getPayPalConfig();
+        const accessToken = await getPayPalAccessToken();
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+
+        const orderRes = await fetch(`${config.baseUrl}/v2/checkout/orders`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            intent: "CAPTURE",
+            purchase_units: [
+              {
+                custom_id: purchase.id,
+                description: `Marketplace: ${book.title}`,
+                amount: {
+                  currency_code: (book.currency || "USD").toUpperCase(),
+                  value: Number(book.price).toFixed(2),
+                },
+              },
+            ],
+            application_context: {
+              return_url: `${appUrl}/marketplace/books/${book.slug}?purchase=success`,
+              cancel_url: `${appUrl}/marketplace/books/${book.slug}`,
+              brand_name: "IndieCrowdfund",
+              landing_page: "NO_PREFERENCE",
+              user_action: "PAY_NOW",
+            },
+          }),
+        });
+
+        if (!orderRes.ok) {
+          const errBody = await orderRes.text();
+          marketplacePurchaseLogger.error({ err: errBody }, "[Marketplace PayPal] Failed to create order");
+          await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
+          return NextResponse.json({ error: "Failed to create PayPal order" }, { status: 502 });
+        }
+
+        const orderData = await orderRes.json();
+        const paypalOrderId = orderData.id as string;
+
+        await prisma.marketplacePurchase.update({
+          where: { id: purchase.id },
+          data: { paypalOrderId },
+        });
+
+        marketplacePurchaseLogger.info(
+          { purchaseId: purchase.id, paypalOrderId },
+          "Marketplace PayPal order created"
+        );
+
+        return NextResponse.json({
+          success: true,
+          purchaseId: purchase.id,
+          paymentRequired: true,
+          paymentProcessor: "PAYPAL",
+          paypalOrderId,
+          amount: Number(book.price),
+          currency: book.currency,
+        });
+      } catch (paypalError) {
+        marketplacePurchaseLogger.error({ err: String(paypalError) }, "[Marketplace PayPal] Error:");
+        await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
+        return NextResponse.json({ error: "Failed to initialize PayPal payment" }, { status: 502 });
+      }
+    }
 
     // DivinityCoin seamless payment flow
     if (book.paymentProcessor === "DIVINITYCOIN" && paymentMethod === "divinitycoin") {

@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { StripePaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm";
+import { MarketplacePayPalForm } from "@/app/marketplace/components/MarketplacePayPalForm";
 
 interface Book {
   id: string;
@@ -64,7 +65,7 @@ interface Book {
   publishedAt: string | null;
   hasAdultContent: boolean;
   hasRiskyContent: boolean;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
   creator: {
     id: string;
     name: string | null;
@@ -107,6 +108,11 @@ export default function BookDetailPage() {
   const [dcPurchaseId, setDcPurchaseId] = useState<string | null>(null);
   const [dcPaymentProcessing, setDcPaymentProcessing] = useState(false);
   const [dcPaymentError, setDcPaymentError] = useState<string | null>(null);
+
+  // PayPal state
+  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalPurchaseId, setPaypalPurchaseId] = useState<string | null>(null);
+  const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
 
   const fetchBook = useCallback(async () => {
     try {
@@ -187,7 +193,12 @@ export default function BookDetailPage() {
     setDcPaymentError(null);
   };
 
-  const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin") => {
+  const resetPaypalPayment = () => {
+    setPaypalOrderId(null);
+    setPaypalPurchaseId(null);
+  };
+
+  const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin" | "paypal") => {
     if (!book) return;
 
     // Redirect unauthenticated users to login before attempting purchase
@@ -235,7 +246,7 @@ export default function BookDetailPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            
+
           },
           body: JSON.stringify({
             bookId: book.id,
@@ -252,6 +263,29 @@ export default function BookDetailPage() {
         if (data.checkoutUrl) {
           toast.info("Redirecting to payment...");
           window.location.href = data.checkoutUrl;
+          return;
+        }
+      } else if (paymentMethod === "paypal") {
+        // PayPal Advanced Checkout — fetch PayPal client ID then create order
+        const configRes = await fetch("/api/paypal/config");
+        const configData = await configRes.json();
+        if (!configData.clientId) {
+          throw new Error("PayPal is not configured");
+        }
+        setPaypalClientId(configData.clientId);
+
+        const res = await apiFetch("/api/marketplace/purchase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookId: book.id, paymentMethod: "paypal" }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to create PayPal order");
+
+        if (data.paypalOrderId) {
+          setPaypalOrderId(data.paypalOrderId);
+          setPaypalPurchaseId(data.purchaseId);
+          setShowPaymentModal(false);
           return;
         }
       } else {
@@ -335,6 +369,14 @@ export default function BookDetailPage() {
     toast.error(message);
   };
 
+  const handlePayPalSuccess = async () => {
+    resetPaypalPayment();
+    setHasPurchased(true);
+    setShowSuccessModal(true);
+    clearPromoCode();
+    setPurchasing(false);
+  };
+
   const handleShare = async () => {
     const url = window.location.href;
     if (navigator.share) {
@@ -379,6 +421,7 @@ export default function BookDetailPage() {
 
   // Show DC payment form if clientSecret is ready
   const showDcPaymentForm = dcClientSecret && dcStripePromise;
+  const showPaypalForm = !!(paypalOrderId && paypalClientId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -595,8 +638,28 @@ export default function BookDetailPage() {
                   </div>
                 )}
 
-                {/* DC Stripe Elements Payment Form */}
-                {showDcPaymentForm ? (
+                {/* PayPal Advanced Checkout Form */}
+                {showPaypalForm ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-foreground">Complete Payment</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground"
+                        onClick={resetPaypalPayment}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    <MarketplacePayPalForm
+                      paypalOrderId={paypalOrderId!}
+                      clientId={paypalClientId!}
+                      onSuccess={handlePayPalSuccess}
+                      onError={(msg) => toast.error(msg)}
+                    />
+                  </div>
+                ) : showDcPaymentForm ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-foreground">Complete Payment</h3>
@@ -856,33 +919,53 @@ export default function BookDetailPage() {
               </Button>
             ) : (
               <>
-                {book?.paymentProcessor !== "DIVINITYCOIN" && (
+                {book?.paymentProcessor === "PAYPAL" ? (
                   <Button
-                    variant="outline"
-                    className="h-16 justify-start"
-                    onClick={() => handlePurchase("stripe")}
+                    className="h-16 bg-[#003087] hover:bg-[#002070] justify-start"
+                    onClick={() => handlePurchase("paypal")}
                     disabled={purchasing}
                   >
-                    <CreditCard className="w-6 h-6 mr-4" />
+                    {purchasing ? (
+                      <Loader2 className="w-6 h-6 mr-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="w-6 h-6 mr-4" />
+                    )}
                     <div className="text-left">
-                      <div className="font-semibold">Credit/Debit Card</div>
-                      <div className="text-sm text-muted-foreground">Pay with Stripe</div>
+                      <div className="font-semibold text-white">PayPal</div>
+                      <div className="text-sm opacity-80 text-white">Pay with PayPal or card</div>
                     </div>
                   </Button>
+                ) : (
+                  <>
+                    {book?.paymentProcessor !== "DIVINITYCOIN" && (
+                      <Button
+                        variant="outline"
+                        className="h-16 justify-start"
+                        onClick={() => handlePurchase("stripe")}
+                        disabled={purchasing}
+                      >
+                        <CreditCard className="w-6 h-6 mr-4" />
+                        <div className="text-left">
+                          <div className="font-semibold">Credit/Debit Card</div>
+                          <div className="text-sm text-muted-foreground">Pay with Stripe</div>
+                        </div>
+                      </Button>
+                    )}
+                    <Button
+                      className="h-16 bg-[#0066FF] hover:bg-[#0052CC] justify-start"
+                      onClick={() => handlePurchase("divinitycoin")}
+                      disabled={purchasing}
+                    >
+                      <Coins className="w-6 h-6 mr-4" />
+                      <div className="text-left">
+                        <div className="font-semibold">DivinityCoin</div>
+                        <div className="text-sm opacity-80">
+                          Pay with credit or debit card
+                        </div>
+                      </div>
+                    </Button>
+                  </>
                 )}
-                <Button
-                  className="h-16 bg-[#0066FF] hover:bg-[#0052CC] justify-start"
-                  onClick={() => handlePurchase("divinitycoin")}
-                  disabled={purchasing}
-                >
-                  <Coins className="w-6 h-6 mr-4" />
-                  <div className="text-left">
-                    <div className="font-semibold">DivinityCoin</div>
-                    <div className="text-sm opacity-80">
-                      Pay with credit or debit card
-                    </div>
-                  </div>
-                </Button>
               </>
             )}
           </div>

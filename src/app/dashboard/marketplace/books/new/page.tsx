@@ -54,7 +54,7 @@ interface BookFormData {
   category: string;
   price: string;
   currency: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
   promoImageUrl: string;
   promoVideoUrl: string;
   pdfFileUrl: string;
@@ -835,7 +835,7 @@ function NewBookForm() {
                   checked={formData.isNsfw}
                   onCheckedChange={(checked) => {
                     updateForm("isNsfw", checked);
-                    if (checked && formData.paymentProcessor === "STRIPE") {
+                    if (checked && (formData.paymentProcessor === "STRIPE" || formData.paymentProcessor === "PAYPAL")) {
                       updateForm("paymentProcessor", "DIVINITYCOIN");
                     }
                   }}
@@ -955,7 +955,7 @@ function NewBookForm() {
                 <Label>Payment Processor</Label>
                 <Select
                   value={formData.paymentProcessor}
-                  onValueChange={(value: "STRIPE" | "DIVINITYCOIN") => updateForm("paymentProcessor", value)}
+                  onValueChange={(value: "STRIPE" | "DIVINITYCOIN" | "PAYPAL") => updateForm("paymentProcessor", value)}
                   disabled={formData.isNsfw}
                 >
                   <SelectTrigger>
@@ -963,6 +963,7 @@ function NewBookForm() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="STRIPE">Stripe (Credit/Debit Cards)</SelectItem>
+                    <SelectItem value="PAYPAL">PayPal (Card + PayPal Wallet)</SelectItem>
                     <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1032,8 +1033,14 @@ function NewBookForm() {
                     <span className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">
                       ${parseFloat(formData.price || "0").toFixed(2)}
                     </span>
-                    <Badge className={formData.paymentProcessor === "DIVINITYCOIN" ? "bg-purple-500/20 text-purple-600 dark:text-purple-300" : "bg-blue-500/20 text-blue-600 dark:text-blue-300"}>
-                      {formData.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : "Stripe"}
+                    <Badge className={
+                      formData.paymentProcessor === "DIVINITYCOIN"
+                        ? "bg-purple-500/20 text-purple-600 dark:text-purple-300"
+                        : formData.paymentProcessor === "PAYPAL"
+                        ? "bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                        : "bg-blue-500/20 text-blue-600 dark:text-blue-300"
+                    }>
+                      {formData.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : formData.paymentProcessor === "PAYPAL" ? "PayPal" : "Stripe"}
                     </Badge>
                   </div>
                 </div>

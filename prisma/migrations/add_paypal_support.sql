@@ -67,3 +67,6 @@ CREATE TABLE IF NOT EXISTS "PayPalPayout" (
 CREATE INDEX IF NOT EXISTS "PayPalPayout_payoutConfigId_idx" ON "PayPalPayout"("payoutConfigId");
 CREATE INDEX IF NOT EXISTS "PayPalPayout_projectId_idx" ON "PayPalPayout"("projectId");
 CREATE INDEX IF NOT EXISTS "PayPalPayout_status_idx" ON "PayPalPayout"("status");
+
+-- 7. Add paypalOrderId to MarketplacePurchase
+ALTER TABLE "MarketplacePurchase" ADD COLUMN IF NOT EXISTS "paypalOrderId" TEXT UNIQUE;
