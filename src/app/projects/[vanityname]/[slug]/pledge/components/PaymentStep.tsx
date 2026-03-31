@@ -28,7 +28,6 @@ interface PaymentStepProps {
   isProcessing: boolean;
   clientSecret: string | null;
   dcStripePromise: Promise<Stripe | null> | null;
-  intentType: "payment_intent" | "setup_intent";
   projectPath: string;
   paypalOrderId: string | null;
   paypalClientId: string | null;
@@ -99,7 +98,6 @@ export function PaymentStep({
   isProcessing,
   clientSecret,
   dcStripePromise,
-  intentType,
   projectPath,
   paypalOrderId,
   paypalClientId,

@@ -159,7 +159,6 @@ export default function PledgePage() {
                 isProcessing={pledge.isProcessing}
                 clientSecret={pledge.clientSecret}
                 dcStripePromise={pledge.dcStripePromise}
-                intentType={pledge.intentType}
                 projectPath={pledge.projectPath}
                 paypalOrderId={pledge.paypalOrderId}
                 paypalClientId={pledge.paypalClientId}

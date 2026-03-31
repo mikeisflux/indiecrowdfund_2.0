@@ -111,7 +111,6 @@ export default function BookDetailPage() {
 
   // PayPal state
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
-  const [paypalPurchaseId, setPaypalPurchaseId] = useState<string | null>(null);
   const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
 
   const fetchBook = useCallback(async () => {
@@ -195,7 +194,6 @@ export default function BookDetailPage() {
 
   const resetPaypalPayment = () => {
     setPaypalOrderId(null);
-    setPaypalPurchaseId(null);
   };
 
   const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin" | "paypal") => {
@@ -284,7 +282,6 @@ export default function BookDetailPage() {
 
         if (data.paypalOrderId) {
           setPaypalOrderId(data.paypalOrderId);
-          setPaypalPurchaseId(data.purchaseId);
           setShowPaymentModal(false);
           return;
         }

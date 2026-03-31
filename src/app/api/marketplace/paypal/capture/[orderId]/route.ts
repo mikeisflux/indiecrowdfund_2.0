@@ -14,15 +14,14 @@ const PAYPAL_FEE_FIXED = 0.49;    // $0.49 per transaction
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    const { orderId } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const { orderId } = params;
 
     // Find the pending purchase for this PayPal order
     const purchase = await db.marketplacePurchase.findUnique({
