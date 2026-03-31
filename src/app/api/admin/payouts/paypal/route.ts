@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic";
 
 // PayPal Advanced Checkout processing fee (passed through to creator)
 const PAYPAL_FEE_RATE = 0.0349;   // 3.49%
-const PAYPAL_FEE_FIXED = 0.49;    // $0.49 per transaction
+const PAYPAL_FEE_FIXED = 0.49;    // $0.49 per transaction (multiplied by pledge count)
 
-function calcPayoutAmounts(grossAmount: number, platformFeePercent: number) {
-  const paypalFee = Math.round((grossAmount * PAYPAL_FEE_RATE + PAYPAL_FEE_FIXED) * 100) / 100;
+function calcPayoutAmounts(grossAmount: number, platformFeePercent: number, pledgeCount: number) {
+  const paypalFee = Math.round((grossAmount * PAYPAL_FEE_RATE + PAYPAL_FEE_FIXED * pledgeCount) * 100) / 100;
   const platformFee = Math.round(grossAmount * (platformFeePercent / 100) * 100) / 100;
   const netAmount = Math.round((grossAmount - paypalFee - platformFee) * 100) / 100;
   return { paypalFee, platformFee, netAmount };
@@ -90,8 +90,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Count completed pledges to compute per-transaction fees correctly
+    const pledgeCount = await db.pledge.count({
+      where: { projectId: project.id, status: "COMPLETED", deletedAt: null },
+    });
+
     const grossAmount = data.grossAmount;
-    const { paypalFee, platformFee, netAmount } = calcPayoutAmounts(grossAmount, data.platformFeePercent);
+    const { paypalFee, platformFee, netAmount } = calcPayoutAmounts(grossAmount, data.platformFeePercent, pledgeCount);
 
     if (netAmount <= 0) {
       return NextResponse.json({ error: "Net payout amount is zero or negative" }, { status: 400 });

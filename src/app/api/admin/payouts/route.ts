@@ -178,7 +178,10 @@ export async function POST(request: NextRequest) {
     // Get the project with funding info
     const project = await db.project.findUnique({
       where: { id: projectId, deletedAt: null },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        paymentProcessor: true,
         pledges: {
           where: { status: "COMPLETED", deletedAt: null },
           select: { amount: true },
@@ -213,11 +216,16 @@ export async function POST(request: NextRequest) {
     const grossAmount = project.pledges.reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
     const pledgeCount = project.pledges.length;
     const platformFeeRate = 0.03; // 3% platform fee
-    const stripePercentRate = 0.029; // 2.9% per transaction
-    const stripeFixedFee = 0.30; // $0.30 per transaction
+
+    // Use processor-specific rates
+    // PayPal Advanced Checkout: 3.49% + $0.49/tx
+    // Stripe/DivinityCoin: 2.9% + $0.30/tx
+    const isPayPal = project.paymentProcessor === "PAYPAL";
+    const processorPercentRate = isPayPal ? 0.0349 : 0.029;
+    const processorFixedFee = isPayPal ? 0.49 : 0.30;
 
     const platformFees = Math.round(grossAmount * platformFeeRate * 100) / 100;
-    const processorFees = Math.round(((grossAmount * stripePercentRate) + (pledgeCount * stripeFixedFee)) * 100) / 100;
+    const processorFees = Math.round(((grossAmount * processorPercentRate) + (pledgeCount * processorFixedFee)) * 100) / 100;
     // Derive net as exact remainder so fees + net always equal gross (no accumulated rounding)
     const netAmount = Math.round((grossAmount - platformFees - processorFees) * 100) / 100;
 

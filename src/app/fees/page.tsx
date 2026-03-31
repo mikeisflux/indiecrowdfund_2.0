@@ -69,7 +69,7 @@ const paypalFeeBreakdown = [
     title: "PayPal Processing Fee",
     rate: "3.49% + $0.49",
     description: "Per-transaction fee charged by PayPal",
-    details: "PayPal Advanced Checkout processing fee. This covers secure card processing via PayPal's payment infrastructure and is passed through to the creator.",
+    details: "PayPal Advanced Checkout processing fee. IndieCrowdfund collects all pledges into our PayPal account on your behalf, then pays out your net earnings directly to your bank account after deducting this fee at settlement time.",
   },
   {
     title: "IndieCrowdfund Platform Fee",
@@ -313,16 +313,16 @@ export default function FeesPage() {
                       <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">How PayPal fees work</h3>
                       <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
                         PayPal Advanced Checkout lets backers pay with their PayPal wallet or any major credit/debit card inline — no redirects.
-                        The processing fee is passed through transparently.
+                        All pledges flow into IndieCrowdfund&apos;s PayPal account, and your net earnings are deposited directly to your bank account at settlement — no PayPal account required.
                       </p>
                       <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows (example: $100 pledge):</h4>
                       <ol className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1 list-decimal list-inside mb-4">
                         <li>Backer pays $100 via PayPal or card at checkout</li>
-                        <li>PayPal deposits $96.02 into IndieCrowdfund&apos;s account (deducted $3.98 fee)</li>
-                        <li>When your project funds, we pay out your earnings</li>
-                        <li>PayPal processing fee ($3.98) deducted from creator payout</li>
-                        <li>Platform fee (3% of $100 = $3.00) deducted from creator payout</li>
-                        <li>You receive <strong>$93.02</strong></li>
+                        <li>Full $100 collected into IndieCrowdfund&apos;s PayPal account</li>
+                        <li>When your campaign funds, we calculate your settlement</li>
+                        <li>PayPal processing fee ($3.98 for this pledge) deducted at settlement</li>
+                        <li>Platform fee (3% of $100 = $3.00) deducted at settlement</li>
+                        <li>You receive <strong>$93.02</strong> deposited directly to your bank account</li>
                       </ol>
                     </div>
                   </div>

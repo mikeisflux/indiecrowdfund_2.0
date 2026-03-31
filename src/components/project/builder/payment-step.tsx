@@ -13,7 +13,7 @@ import {
   ContentDeclarationSection,
   PaymentProcessorSection,
   DivinityCoinBankSection,
-  PayPalPayoutSection,
+  PayPalBankPayoutSection,
   RetailerAccessSection,
   ChargebackCardSection,
 } from "./payment-sections";
@@ -416,11 +416,11 @@ export function PaymentStep() {
         </>
       )}
 
-      {/* PayPal Payout Email - Only show when PayPal is selected */}
+      {/* PayPal Bank Payout Account - Only show when PayPal is selected */}
       {payment.paymentProcessor === "PAYPAL" && (
         <>
           <Separator />
-          <PayPalPayoutSection />
+          <PayPalBankPayoutSection />
         </>
       )}
 

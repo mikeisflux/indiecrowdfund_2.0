@@ -26,7 +26,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PayPalPayoutSection } from "@/components/project/builder/payment-sections/paypal-payout-section";
+import { PayPalBankPayoutSection } from "@/components/project/builder/payment-sections/paypal-bank-payout-section";
 
 interface PaymentsSectionProps {
   projectId?: string;
@@ -250,8 +250,8 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
       {/* Stripe Connect Section - DISABLED: Stripe replaced by PayPal */}
       {/* <Card>...</Card> */}
 
-      {/* PayPal Payout Email Section */}
-      <PayPalPayoutSection />
+      {/* PayPal Bank Payout Account Section */}
+      <PayPalBankPayoutSection />
 
       {/* DivinityCoin Bank Account Section */}
       <Card>

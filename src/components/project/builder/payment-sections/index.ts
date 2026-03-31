@@ -5,5 +5,6 @@ export { PaymentProcessorSection } from "./payment-processor-section";
 export { StripeConnectSection } from "./stripe-connect-section";
 export { DivinityCoinBankSection } from "./divinity-coin-bank-section";
 export { PayPalPayoutSection } from "./paypal-payout-section";
+export { PayPalBankPayoutSection } from "./paypal-bank-payout-section";
 export { RetailerAccessSection } from "./retailer-access-section";
 export { ChargebackCardSection } from "./chargeback-card-section";
