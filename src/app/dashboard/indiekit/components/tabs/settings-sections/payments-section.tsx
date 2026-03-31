@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -18,36 +17,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  CreditCard,
   Loader2,
   CheckCircle,
-  RefreshCw,
   Banknote,
   Lock,
   Building2,
   AlertTriangle,
-  ExternalLink,
-  Save,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PayPalPayoutSection } from "@/components/project/builder/payment-sections/paypal-payout-section";
 
 interface PaymentsSectionProps {
   projectId?: string;
 }
 
 export function PaymentsSection({ projectId }: PaymentsSectionProps) {
-  // Stripe Connect state
-  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
-  const [stripeStatus, setStripeStatus] = useState<{
-    connected: boolean;
-    onboarded: boolean;
-    loading: boolean;
-    error: string | null;
-  }>({ connected: false, onboarded: false, loading: true, error: null });
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const [isResettingStripe, setIsResettingStripe] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  // Stripe Connect state - DISABLED: Stripe replaced by PayPal
+  // const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+  // const [stripeStatus, setStripeStatus] = useState<{...}>({...});
+  // const [connectError, setConnectError] = useState<string | null>(null);
+  // const [isResettingStripe, setIsResettingStripe] = useState(false);
+  // const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // PayPal migration state
   const [projectProcessor, setProjectProcessor] = useState<string | null>(null);
@@ -91,55 +81,6 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     }
   };
 
-  // PayPal payout state
-  const [paypalEmail, setPaypalEmail] = useState("");
-  const [paypalEmailSaved, setPaypalEmailSaved] = useState<string | null>(null);
-  const [isSavingPaypalEmail, setIsSavingPaypalEmail] = useState(false);
-  const [paypalEmailMessage, setPaypalEmailMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  useEffect(() => {
-    async function fetchPaypalConfig() {
-      try {
-        const res = await fetch("/api/creator/paypal");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.config?.paypalEmail) {
-            setPaypalEmailSaved(data.config.paypalEmail);
-            setPaypalEmail(data.config.paypalEmail);
-          }
-        }
-      } catch {
-        // non-fatal
-      }
-    }
-    fetchPaypalConfig();
-  }, []);
-
-  const handleSavePaypalEmail = async () => {
-    if (!paypalEmail.trim()) {
-      setPaypalEmailMessage({ type: "error", text: "Please enter a PayPal email address" });
-      return;
-    }
-    setIsSavingPaypalEmail(true);
-    setPaypalEmailMessage(null);
-    try {
-      const res = await apiFetch("/api/creator/paypal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paypalEmail: paypalEmail.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save PayPal email");
-      setPaypalEmailSaved(paypalEmail.trim().toLowerCase());
-      setPaypalEmailMessage({ type: "success", text: data.message || "PayPal email saved" });
-      setTimeout(() => setPaypalEmailMessage(null), 4000);
-    } catch (err) {
-      setPaypalEmailMessage({ type: "error", text: err instanceof Error ? err.message : "Failed to save" });
-    } finally {
-      setIsSavingPaypalEmail(false);
-    }
-  };
-
   // DivinityCoin bank account state
   const [bankAccount, setBankAccount] = useState({
     bankName: "",
@@ -163,41 +104,8 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     failedNotifications: true,
   });
 
-  // Check Stripe connection status on mount
-  useEffect(() => {
-    async function checkStripeStatus() {
-      try {
-        const response = await fetch("/api/stripe/connect");
-        const data = await response.json();
-
-        if (!response.ok) {
-          setStripeStatus({
-            connected: false,
-            onboarded: false,
-            loading: false,
-            error: data.error || "Failed to check status",
-          });
-          return;
-        }
-
-        setStripeStatus({
-          connected: data.connected || false,
-          onboarded: data.onboarded || false,
-          loading: false,
-          error: null,
-        });
-      } catch (error) {
-        console.error("Failed to check Stripe status:", error);
-        setStripeStatus({
-          connected: false,
-          onboarded: false,
-          loading: false,
-          error: "Network error checking status"
-        });
-      }
-    }
-    checkStripeStatus();
-  }, []);
+  // Check Stripe connection status - DISABLED: Stripe replaced by PayPal
+  // useEffect(() => { async function checkStripeStatus() { ... } checkStripeStatus(); }, []);
 
   // Check DivinityCoin bank account status on mount
   useEffect(() => {
@@ -229,62 +137,8 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     checkBankAccountStatus();
   }, []);
 
-  const handleConnectStripe = async () => {
-    setIsConnectingStripe(true);
-    setConnectError(null);
-    try {
-      const response = await apiFetch("/api/stripe/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setConnectError(data.error || "Failed to connect Stripe");
-        return;
-      }
-
-      if (data.onboardingUrl) {
-        window.location.href = data.onboardingUrl;
-      }
-    } catch (error) {
-      console.error("Failed to initiate Stripe connection:", error);
-      setConnectError("Network error connecting to Stripe");
-    } finally {
-      setIsConnectingStripe(false);
-    }
-  };
-
-  const handleResetStripe = async () => {
-    setIsResettingStripe(true);
-    setConnectError(null);
-    try {
-      const response = await apiFetch("/api/stripe/connect/reset", {
-        method: "DELETE",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setConnectError(data.error || "Failed to reset Stripe");
-        return;
-      }
-
-      setStripeStatus({
-        connected: false,
-        onboarded: false,
-        loading: false,
-        error: null,
-      });
-      setShowResetConfirm(false);
-    } catch (error) {
-      console.error("Failed to reset Stripe connection:", error);
-      setConnectError("Network error resetting Stripe");
-    } finally {
-      setIsResettingStripe(false);
-    }
-  };
+  // handleConnectStripe - DISABLED: Stripe replaced by PayPal
+  // handleResetStripe - DISABLED: Stripe replaced by PayPal
 
   const handleSaveBankAccount = async () => {
     if (!bankAccount.bankName || !bankAccount.accountHolder ||
@@ -392,184 +246,11 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
         </div>
       )}
 
-      {/* Stripe Connect Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Connect Your Stripe Account</CardTitle>
-          <CardDescription>Connect or create a Stripe account to receive payouts</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Show errors if any */}
-          {(stripeStatus.error || connectError) && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Stripe Connection Issue</AlertTitle>
-              <AlertDescription className="space-y-3">
-                <span>{stripeStatus.error || connectError}</span>
-                {connectError?.includes("already connected") && (
-                  <div className="flex flex-col gap-2">
-                    <span>
-                      If you previously connected a Stripe account but never completed onboarding,
-                      you can reset your connection and try again.
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowResetConfirm(true)}
-                      disabled={isResettingStripe}
-                      className="w-fit"
-                    >
-                      {isResettingStripe ? (
-                        <>
-                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                          Resetting...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          Reset Stripe Connection
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className={`p-4 border rounded-lg ${stripeStatus.onboarded ? "border-green-500" : ""}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-start gap-4">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
-                  stripeStatus.onboarded ? "bg-green-500" : "bg-[#635BFF]"
-                }`}>
-                  {stripeStatus.onboarded ? (
-                    <CheckCircle className="h-6 w-6 text-white" />
-                  ) : (
-                    <CreditCard className="h-6 w-6 text-white" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium">
-                    {stripeStatus.onboarded ? "Stripe Connected" : "Stripe Connect"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {stripeStatus.loading ? (
-                      "Checking connection status..."
-                    ) : stripeStatus.onboarded ? (
-                      "Your Stripe account is connected and ready to receive payments."
-                    ) : stripeStatus.connected ? (
-                      "Your Stripe account is connected but onboarding is incomplete. Click to continue setup."
-                    ) : (
-                      "Connect or create a Stripe account to receive payouts. You'll complete identity verification through Stripe's secure process."
-                    )}
-                  </p>
-                </div>
-              </div>
-              {stripeStatus.onboarded ? (
-                <div className="flex items-center gap-2">
-                  <Badge variant="default" className="bg-green-500">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Connected
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowResetConfirm(true)}
-                    disabled={isResettingStripe}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    {isResettingStripe ? "Disconnecting..." : "Disconnect"}
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  onClick={handleConnectStripe}
-                  disabled={isConnectingStripe || stripeStatus.loading}
-                  className="bg-[#635BFF] hover:bg-[#5851ea]"
-                >
-                  {stripeStatus.loading ? "Checking..." : isConnectingStripe ? "Connecting..." : stripeStatus.connected ? "Complete Setup" : "Connect Stripe"}
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {!stripeStatus.onboarded && (
-            <p className="text-xs text-muted-foreground">
-              Don&apos;t have a Stripe account?{" "}
-              <a
-                href="https://stripe.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline"
-              >
-                Sign up for free
-              </a>
-              {" "}&bull; It only takes a few minutes to get started
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Stripe Connect Section - DISABLED: Stripe replaced by PayPal */}
+      {/* <Card>...</Card> */}
 
       {/* PayPal Payout Email Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-blue-600" />
-            PayPal Payout Email
-          </CardTitle>
-          <CardDescription>
-            Add your PayPal email to receive payouts from your campaigns and marketplace sales automatically.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {paypalEmailSaved && (
-            <div className="flex items-center gap-3 p-4 border rounded-lg border-green-500">
-              <div className="h-10 w-10 rounded-xl bg-[#003087] flex items-center justify-center shrink-0">
-                <CheckCircle className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium">PayPal Connected</p>
-                <p className="text-sm text-muted-foreground">{paypalEmailSaved}</p>
-              </div>
-              <Badge variant="default" className="bg-green-500">Connected</Badge>
-            </div>
-          )}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">PayPal Email Address</label>
-            <div className="flex gap-2">
-              <input
-                type="email"
-                value={paypalEmail}
-                onChange={(e) => setPaypalEmail(e.target.value)}
-                placeholder="your@paypal.com"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              <button
-                onClick={handleSavePaypalEmail}
-                disabled={isSavingPaypalEmail}
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-[#003087] text-white hover:bg-[#002070] h-10 px-4 py-2 gap-2"
-              >
-                {isSavingPaypalEmail ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                Save
-              </button>
-            </div>
-            {paypalEmailMessage && (
-              <p className={`text-xs ${paypalEmailMessage.type === "success" ? "text-green-500" : "text-destructive"}`}>
-                {paypalEmailMessage.text}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Payouts are sent to this PayPal email automatically after your campaign funds or marketplace sales.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <PayPalPayoutSection />
 
       {/* DivinityCoin Bank Account Section */}
       <Card>
@@ -794,16 +475,8 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
         </CardContent>
       </Card>
 
-      <ConfirmDialog
-        open={showResetConfirm}
-        onOpenChange={setShowResetConfirm}
-        title="Disconnect Stripe Account?"
-        description="Are you sure you want to disconnect your Stripe account? You will need to reconnect it to accept payments."
-        confirmText="Disconnect"
-        variant="destructive"
-        onConfirm={handleResetStripe}
-        loading={isResettingStripe}
-      />
+      {/* Stripe Disconnect ConfirmDialog - DISABLED: Stripe replaced by PayPal */}
+      {/* <ConfirmDialog ... /> */}
     </div>
   );
 }

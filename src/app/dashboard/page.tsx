@@ -315,9 +315,9 @@ export default function CreatorDashboard() {
         onProjectChange={handleProjectChange}
       />
 
-      {/* Stripe Account Status Alert */}
+      {/* PayPal Migration Alert — shown when selected project is still on Stripe */}
       <div className="pt-4">
-        <StripeAccountAlert />
+        <StripeAccountAlert projectId={selectedProjectId} />
       </div>
 
       <div className="container relative py-6">
