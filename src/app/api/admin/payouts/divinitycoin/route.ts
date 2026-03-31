@@ -260,11 +260,11 @@ export async function GET(request: NextRequest) {
       // (Full refunds are already excluded since pledge status is REFUNDED)
       const effectiveRevenue = Math.round((totalRaised - projectRefunds.partialRefundTotal) * 100) / 100;
 
-      // DivinityCoin Partner Fee: 6% + $0.30 per transaction (Stripe's per-transaction charge)
+      // DivinityCoin Partner Fee: 6% + $0.30 per transaction
       // IndieCrowdfund Platform Fee: 3%
       const partnerFeeRate = 0.06;
       const platformFeeRate = 0.03;
-      const stripePerTransactionFee = 0.30;
+      const stripePerTransactionFee = 0.30; // per-transaction processing fee
       const backerCount = project.pledges.length;
       const partnerFee = Math.round((effectiveRevenue * partnerFeeRate + stripePerTransactionFee * backerCount) * 100) / 100;
       const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;

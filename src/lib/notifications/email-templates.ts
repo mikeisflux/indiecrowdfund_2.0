@@ -480,7 +480,7 @@ export async function sendPayoutCreatedEmail(
                 <td style="text-align: right; padding: 5px 0;">${formatAmount(totalRaised)}</td>
               </tr>
               <tr>
-                <td style="padding: 5px 0;">DivinityCoin Partner Fee (6%):</td>
+                <td style="padding: 5px 0;">DivinityCoin Partner Fee:</td>
                 <td style="text-align: right; padding: 5px 0;">-${formatAmount(partnerFee)}</td>
               </tr>
               <tr>
