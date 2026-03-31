@@ -13,8 +13,16 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error("Page error:", error);
+    // Don't report transient network/connectivity errors — they're user-side issues
+    // and generate noise without being actionable (e.g. Firefox TypeError: network error)
+    const msg = error?.message?.toLowerCase() ?? "";
+    const isNetworkError =
+      msg.includes("network error") ||
+      msg.includes("failed to fetch") ||
+      msg.includes("load failed") ||
+      msg.includes("networkerror");
     // Report to self-hosted error tracker
-    if (error) {
+    if (error && !isNetworkError) {
       fetch("/api/error-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
