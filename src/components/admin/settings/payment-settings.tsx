@@ -32,6 +32,12 @@ interface PaymentSettingsProps {
     divinityCoinPartnerId: string;
     divinityCoinSettlementFrequency: string;
     divinityCoinStripePublishableKey: string;
+    // PayPal settings
+    paypalEnabled: boolean;
+    paypalClientId: string;
+    paypalClientSecret: string;
+    paypalWebhookId: string;
+    paypalMode: string;
     // reCAPTCHA settings
     recaptchaEnabled: boolean;
     recaptchaSiteKey: string;
@@ -253,6 +259,97 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
             <a href="https://divinitycoin.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Learn more about DivinityCoin →
             </a>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* PayPal Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>PayPal Configuration</CardTitle>
+              <CardDescription>Advanced Checkout with inline card fields + PayPal wallet. Payouts API for creator settlements.</CardDescription>
+            </div>
+            <Badge variant={settings.paypalEnabled ? "default" : "secondary"}>
+              {settings.paypalEnabled ? "Enabled" : "Disabled"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label>Enable PayPal</Label>
+              <p className="text-sm text-zinc-500">Allow creators to use PayPal as their payment processor</p>
+            </div>
+            <Switch
+              checked={settings.paypalEnabled}
+              onCheckedChange={(checked) => onSettingsChange({ ...settings, paypalEnabled: checked })}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Client ID</Label>
+              <SecureKeyInput
+                value={settings.paypalClientId}
+                onChange={(value) => onSettingsChange({ ...settings, paypalClientId: value })}
+                onSave={onSave}
+                hasExistingValue={settings.paypalClientId === "••••••••"}
+                placeholder="AXxxxx..."
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-zinc-500">Public client ID from PayPal Developer Dashboard</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Client Secret</Label>
+              <SecureKeyInput
+                value={settings.paypalClientSecret}
+                onChange={(value) => onSettingsChange({ ...settings, paypalClientSecret: value })}
+                onSave={onSave}
+                hasExistingValue={settings.paypalClientSecret === "••••••••"}
+                placeholder="EHxxxx..."
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-zinc-500">Private secret — never expose to clients</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Webhook ID</Label>
+              <Input
+                value={settings.paypalWebhookId}
+                onChange={(e) => onSettingsChange({ ...settings, paypalWebhookId: e.target.value })}
+                placeholder="From PayPal Dashboard → Webhooks"
+              />
+              <p className="text-xs text-zinc-500">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/paypal</code></p>
+            </div>
+            <div className="space-y-2">
+              <Label>Mode</Label>
+              <Select
+                value={settings.paypalMode}
+                onValueChange={(v) => onSettingsChange({ ...settings, paypalMode: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="live">Live</SelectItem>
+                  <SelectItem value="sandbox">Sandbox (testing)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+            <p className="font-medium">PayPal Setup:</p>
+            <ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
+              <li>Advanced Checkout: inline card fields + PayPal wallet button on pledge page</li>
+              <li>Payouts API: creators add their PayPal email, platform pays out on campaign end</li>
+              <li>Enable &quot;Payouts&quot; in your PayPal app permissions (Apps &amp; Credentials)</li>
+              <li>~2.9% + $0.30 processing fee + 3% platform fee</li>
+            </ul>
           </div>
         </CardContent>
       </Card>

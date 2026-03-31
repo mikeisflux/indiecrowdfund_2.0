@@ -30,6 +30,9 @@ model Pledge {
   // DivinityCoin fields
   divinityCoinPaymentId String?      @unique
 
+  // PayPal fields
+  paypalOrderId         String?      @unique
+
   // Payment retry tracking
   retryCount            Int          @default(0)
   nextRetryAt           DateTime?

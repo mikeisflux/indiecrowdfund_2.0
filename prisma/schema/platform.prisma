@@ -34,6 +34,13 @@ model PlatformSettings {
   divinityCoinSettlementFrequency String @default("weekly")
   divinityCoinStripePublishableKey String?  // DC's Stripe publishable key for rendering card form
 
+  // PayPal Settings
+  paypalEnabled         Boolean  @default(false)
+  paypalClientId        String?
+  paypalClientSecret    String?  @db.Text
+  paypalWebhookId       String?
+  paypalMode            String   @default("live")  // "live" or "sandbox"
+
   // Payout Settings
   autoPayouts           Boolean  @default(false)
 

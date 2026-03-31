@@ -81,6 +81,68 @@ model DivinityCoinBankAccount {
   @@index([userId])
 }
 
+// PayPal payout config per creator (their PayPal email for receiving payouts)
+model PayPalPayoutConfig {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  paypalEmail     String   // Creator's PayPal email to receive payouts
+  isVerified      Boolean  @default(false)
+  verifiedAt      DateTime?
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payouts         PayPalPayout[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// PayPal payout settlement record (per project/per creator)
+model PayPalPayout {
+  id              String   @id @default(cuid())
+  payoutConfigId  String
+  projectId       String?
+  projectName     String?  // Denormalized
+
+  // Payout details
+  grossAmount     Decimal  @db.Decimal(10, 2)  // Total collected
+  platformFee     Decimal  @db.Decimal(10, 2)  // Platform's 3%
+  netAmount       Decimal  @db.Decimal(10, 2)  // What creator receives
+  currency        String   @default("USD")
+
+  // PayPal tracking
+  paypalBatchId   String?  // PayPal payout batch ID
+  paypalItemId    String?  // Individual item ID within batch
+  status          PayPalPayoutStatus @default(PENDING)
+
+  // Processing
+  initiatedAt     DateTime?
+  completedAt     DateTime?
+  failedAt        DateTime?
+  failureReason   String?
+  adminNotes      String?  @db.Text
+  processedBy     String?
+
+  payoutConfig    PayPalPayoutConfig @relation(fields: [payoutConfigId], references: [id])
+  project         Project? @relation(fields: [projectId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([payoutConfigId])
+  @@index([projectId])
+  @@index([status])
+}
+
+enum PayPalPayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 // DivinityCoin settlement tracking for admin payouts
 model DivinityCoinSettlement {
   id                    String   @id @default(cuid())

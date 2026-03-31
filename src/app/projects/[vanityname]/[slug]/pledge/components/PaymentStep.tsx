@@ -8,6 +8,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
 import { StripePaymentForm } from "./StripePaymentForm";
+import { PayPalPaymentForm } from "./PayPalPaymentForm";
 import { apiFetch } from "@/lib/fetch-utils";
 
 interface PaymentStepProps {
@@ -30,6 +31,8 @@ interface PaymentStepProps {
   dcStripePromise: Promise<Stripe | null> | null;
   intentType: "payment_intent" | "setup_intent";
   projectPath: string;
+  paypalOrderId: string | null;
+  paypalClientId: string | null;
 }
 
 const isEmailVerificationError = (error: string | null) =>
@@ -100,6 +103,8 @@ export function PaymentStep({
   dcStripePromise,
   intentType,
   projectPath,
+  paypalOrderId,
+  paypalClientId,
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
@@ -195,8 +200,44 @@ export function PaymentStep({
             </div>
           )}
 
-          {/* Payment Form - DivinityCoin, Chain2Pay, or Stripe */}
-          {project?.paymentProcessor === "DIVINITYCOIN" ? (
+          {/* Payment Form - PayPal, DivinityCoin, or Stripe */}
+          {project?.paymentProcessor === "PAYPAL" ? (
+            /* PayPal Advanced Checkout - inline card fields + PayPal wallet button */
+            paypalOrderId && paypalClientId && currentPledgeId ? (
+              <PayPalPaymentForm
+                paypalOrderId={paypalOrderId}
+                pledgeId={currentPledgeId}
+                clientId={paypalClientId}
+                agreedToTerms={agreedToTerms}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+                total={displayTotal}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            ) : paymentError ? (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    setPaymentError(null);
+                    setClientSecret(null);
+                    setIsProcessing(false);
+                  }}
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">Loading PayPal...</p>
+              </div>
+            )
+          ) : project?.paymentProcessor === "DIVINITYCOIN" ? (
             /* DivinityCoin Payment - Card form via DC's Stripe account */
             clientSecret && dcStripePromise ? (
               <Elements

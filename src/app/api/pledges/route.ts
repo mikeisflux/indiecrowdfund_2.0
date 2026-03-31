@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { createStripePayment, checkAndUpdateStripeOnboarding } from "@/lib/payments/stripe";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import { createPayPalPayment } from "@/lib/payments/paypal";
 import { isEmailVerificationRequired } from "@/lib/email";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
@@ -306,6 +307,36 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // PayPal payment processor
+      if (project.paymentProcessor === "PAYPAL") {
+        try {
+          const result = await createPayPalPayment({
+            projectId: data.projectId,
+            rewardId: data.rewardId,
+            addons: addonsWithQuantity,
+            amount: data.amount,
+            userId: session.user.id,
+            sourceCampaignId,
+            shippingAmount: data.shippingAmount || 0,
+          });
+
+          metrics.pledgesCreated.inc({ status: "pending", processor: "paypal" });
+          return NextResponse.json({
+            paymentMethod: "PAYPAL",
+            type: "paypal_order",
+            paypalOrderId: result.paypalOrderId,
+            pledgeId: result.pledgeId,
+            chargedImmediately: true,
+          });
+        } catch (paypalError) {
+          pledgeLogger.error({ correlationId, err: paypalError instanceof Error ? paypalError.message : String(paypalError) }, "PayPal payment creation error");
+          return NextResponse.json(
+            { error: paypalError instanceof Error ? paypalError.message : "Failed to initialize PayPal payment" },
+            { status: 502 }
+          );
+        }
+      }
+
       // For Stripe projects, verify creator has Stripe configured
       const stripeConfig = project.creator.stripeConfig;
       if (!stripeConfig?.stripeAccountId) {
@@ -441,6 +472,8 @@ async function cleanupAbandonedCarts(projectId: string, olderThan: Date) {
       createdAt: { lt: olderThan },
       stripePaymentMethodId: null,
       confirmationEmailSent: false,
+      // Exclude PayPal pledges that have been approved but not yet captured
+      paypalOrderId: null,
     },
     select: { id: true },
   });

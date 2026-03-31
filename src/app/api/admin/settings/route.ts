@@ -88,6 +88,7 @@ export async function GET() {
       divinityCoinApiKey: settings.divinityCoinApiKey ? "••••••••" : null,
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey ? "••••••••" : null,
+      paypalClientSecret: settings.paypalClientSecret ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
@@ -164,6 +165,7 @@ export async function PATCH(req: NextRequest) {
     const secretFields = [
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret', 'stripeConnectWebhookSecret',
       'divinityCoinApiKey', 'divinityCoinWebhookSecret', 'divinityCoinStripePublishableKey',
+      'paypalClientId', 'paypalClientSecret', 'paypalWebhookId',
       'smtpPassword', 'sendgridApiKey', 'sendgridWebhookVerificationKey', 'mailgunApiKey', 'mailgunWebhookSigningKey',
       'anthropicApiKey', 'googlePlacesApiKey',
       'facebookAppSecret', 'facebookPageAccessToken',
@@ -197,6 +199,7 @@ export async function PATCH(req: NextRequest) {
         "stripeConnectWebhookSecret",
         "divinityCoinEnabled", "divinityCoinApiKey", "divinityCoinWebhookSecret",
         "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "divinityCoinStripePublishableKey",
+        "paypalEnabled", "paypalClientId", "paypalClientSecret", "paypalWebhookId", "paypalMode",
         "autoPayouts",
         "recaptchaEnabled", "recaptchaSiteKey", "recaptchaSecretKey"
       ],
@@ -361,6 +364,7 @@ export async function PATCH(req: NextRequest) {
       divinityCoinApiKey: settings.divinityCoinApiKey ? "••••••••" : null,
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey ? "••••••••" : null,
+      paypalClientSecret: settings.paypalClientSecret ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,

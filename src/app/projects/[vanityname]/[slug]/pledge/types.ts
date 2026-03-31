@@ -4,7 +4,7 @@ export interface ProjectData {
   title: string;
   slug: string;
   imageUrl: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
   hasAdultContent: boolean;
   hasControversialContent?: boolean;
   estimatedDelivery: string;

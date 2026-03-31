@@ -1,0 +1,210 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
+import { claimRewardSlot, assignBackerNumber } from "@/lib/payments/stripe";
+import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
+import { sendPledgeConfirmationEmail, isEmailTypeEnabled } from "@/lib/email";
+import { logger } from "@/lib/logger";
+
+const paypalCaptureLogger = logger.child({ module: "paypal-capture" });
+
+export const dynamic = "force-dynamic";
+
+// POST - Capture an approved PayPal order and complete the pledge
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ orderId: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { orderId } = await params;
+    if (!orderId) {
+      return NextResponse.json({ error: "Order ID required" }, { status: 400 });
+    }
+
+    // Find the pledge for this PayPal order
+    const pledge = await db.pledge.findUnique({
+      where: { paypalOrderId: orderId },
+      include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            imageUrl: true,
+            currency: true,
+            goalAmount: true,
+            currentAmount: true,
+            creatorId: true,
+            creator: { select: { vanityUrl: true } },
+          },
+        },
+        user: { select: { id: true, email: true, name: true } },
+        reward: { select: { id: true, title: true, amount: true } },
+        addons: {
+          select: {
+            quantity: true,
+            addon: { select: { title: true, amount: true } },
+          },
+        },
+      },
+    });
+
+    if (!pledge) {
+      return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    }
+
+    if (pledge.userId !== session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (pledge.status === "COMPLETED") {
+      return NextResponse.json({ success: true, alreadyCompleted: true });
+    }
+
+    if (pledge.status !== "PENDING") {
+      return NextResponse.json({ error: "Pledge is not in a capturable state" }, { status: 400 });
+    }
+
+    // Capture the PayPal order
+    const config = await getPayPalConfig();
+    const accessToken = await getPayPalAccessToken();
+
+    const captureRes = await fetch(`${config.baseUrl}/v2/checkout/orders/${orderId}/capture`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "PayPal-Request-Id": `capture_${pledge.id}`,
+      },
+    });
+
+    if (!captureRes.ok) {
+      const errBody = await captureRes.text();
+      paypalCaptureLogger.error({ pledgeId: pledge.id, orderId, err: errBody }, "PayPal capture failed");
+      return NextResponse.json({ error: "Payment capture failed. Please try again." }, { status: 502 });
+    }
+
+    const captureData = await captureRes.json();
+    const captureStatus = captureData.status;
+
+    if (captureStatus !== "COMPLETED") {
+      paypalCaptureLogger.warn({ pledgeId: pledge.id, orderId, captureStatus }, "PayPal capture not completed");
+      return NextResponse.json({ error: "Payment was not completed by PayPal." }, { status: 400 });
+    }
+
+    paypalCaptureLogger.info({ pledgeId: pledge.id, orderId }, "PayPal order captured successfully");
+
+    // Atomically mark as confirmed to prevent race conditions
+    const confirmResult = await db.pledge.updateMany({
+      where: { id: pledge.id, confirmationEmailSent: false },
+      data: {
+        status: "COMPLETED",
+        confirmationEmailSent: true,
+      },
+    });
+
+    if (confirmResult.count === 0) {
+      // Already confirmed (webhook may have beaten us)
+      return NextResponse.json({ success: true, alreadyCompleted: true });
+    }
+
+    // Update project stats
+    const updatedProject = await db.project.update({
+      where: { id: pledge.projectId },
+      data: {
+        currentAmount: { increment: pledge.amount },
+        backerCount: { increment: 1 },
+      },
+    });
+
+    // Claim reward slot atomically
+    if (pledge.reward?.id) {
+      const claimed = await claimRewardSlot(pledge.reward.id);
+      if (!claimed) {
+        paypalCaptureLogger.warn({ pledgeId: pledge.id }, "Reward sold out during PayPal capture");
+      }
+    }
+
+    // Assign backer number
+    let backerNumber: number | null = null;
+    try {
+      backerNumber = await assignBackerNumber(pledge.projectId, pledge.id);
+    } catch (err) {
+      paypalCaptureLogger.error({ err: String(err) }, "Failed to assign backer number");
+    }
+
+    // Notify creator
+    try {
+      await notifyPledgeReceived(
+        pledge.projectId,
+        pledge.project.creatorId,
+        pledge.user.name || "A backer",
+        pledge.amount
+      );
+    } catch (err) {
+      paypalCaptureLogger.error({ err: String(err) }, "Failed to notify creator");
+    }
+
+    // Check if project just hit funding goal
+    const projectIsFunded = Number(updatedProject.currentAmount) >= Number(updatedProject.goalAmount);
+    const justReachedGoal =
+      projectIsFunded &&
+      Number(updatedProject.currentAmount) - Number(pledge.amount) < Number(updatedProject.goalAmount);
+    if (justReachedGoal) {
+      try {
+        await notifyProjectFunded(pledge.projectId);
+      } catch (err) {
+        paypalCaptureLogger.error({ err: String(err) }, "Failed to notify project funded");
+      }
+    }
+
+    // Send confirmation email
+    const pledgeEmailEnabled = await isEmailTypeEnabled("pledgeConfirmation");
+    if (pledge.user.email && pledgeEmailEnabled) {
+      const addonsForEmail = pledge.addons?.map(ae => ({
+        title: ae.addon.title,
+        quantity: ae.quantity,
+        amount: Number(ae.addon.amount) * ae.quantity,
+      })) || [];
+
+      const projectUrlPath = pledge.project.creator?.vanityUrl
+        ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
+        : undefined;
+
+      try {
+        await sendPledgeConfirmationEmail(
+          pledge.user.email,
+          pledge.user.name || "Backer",
+          pledge.project.title,
+          pledge.project.slug,
+          Number(pledge.amount),
+          pledge.reward?.title || null,
+          true,
+          pledge.project.imageUrl,
+          pledge.project.currency || "USD",
+          addonsForEmail,
+          { name: null, address: null, city: null, state: null, postalCode: null, country: null },
+          projectUrlPath,
+          Number(pledge.rewardAmount) || undefined,
+          Number(pledge.shippingAmount) || undefined,
+          "PAYPAL",
+          backerNumber,
+          pledge.id
+        );
+      } catch (emailErr) {
+        paypalCaptureLogger.error({ err: String(emailErr) }, "Failed to send confirmation email");
+      }
+    }
+
+    return NextResponse.json({ success: true, pledgeId: pledge.id });
+  } catch (error) {
+    paypalCaptureLogger.error({ err: String(error) }, "PayPal capture error");
+    return NextResponse.json({ error: "Failed to process payment" }, { status: 500 });
+  }
+}

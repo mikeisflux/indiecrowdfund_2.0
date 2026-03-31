@@ -28,7 +28,7 @@ export async function sendPledgeConfirmationEmail(
   projectUrlPath?: string,
   rewardAmount?: number,
   shippingAmount?: number,
-  paymentMethod?: "STRIPE" | "DIVINITYCOIN",
+  paymentMethod?: "STRIPE" | "DIVINITYCOIN" | "PAYPAL",
   backerNumber?: number | null,
   confirmationNumber?: string
 ) {

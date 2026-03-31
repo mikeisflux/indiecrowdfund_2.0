@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const paymentSchema = z.object({
   projectType: z.enum(["INDIVIDUAL", "BUSINESS", "NONPROFIT"]).optional(),
-  paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN"]).optional(),
+  paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN", "PAYPAL"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),
   promoContentSfw: z.boolean().optional(),
@@ -84,9 +84,9 @@ export async function POST(
       // NSFW campaigns can NEVER switch to Stripe
       const isNsfw = (data.hasAdultContent ?? currentProject?.hasAdultContent) ||
                      (data.hasRiskyContent ?? currentProject?.hasRiskyContent);
-      if (data.paymentProcessor === "STRIPE" && isNsfw) {
+      if ((data.paymentProcessor === "STRIPE" || data.paymentProcessor === "PAYPAL") && isNsfw) {
         return NextResponse.json(
-          { error: "Projects with adult or controversial content cannot use Stripe" },
+          { error: "Projects with adult or controversial content cannot use Stripe or PayPal" },
           { status: 400 }
         );
       }
@@ -99,8 +99,9 @@ export async function POST(
       const hasAdult = data.hasAdultContent ?? false;
       const hasRisky = data.hasRiskyContent ?? false;
       if (hasAdult || hasRisky) {
-        // Only force-switch if currently on Stripe (leave DIVINITYCOIN as-is)
-        if (currentProject?.paymentProcessor === "STRIPE" && !updateData.paymentProcessor) {
+        // Only force-switch if currently on Stripe or PayPal (leave DIVINITYCOIN as-is)
+        const currentProcessor = currentProject?.paymentProcessor;
+        if ((currentProcessor === "STRIPE" || currentProcessor === "PAYPAL") && !updateData.paymentProcessor) {
           updateData.paymentProcessor = "DIVINITYCOIN";
         }
       }

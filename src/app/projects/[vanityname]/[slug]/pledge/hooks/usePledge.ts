@@ -76,6 +76,9 @@ export function usePledge() {
   const [intentType, setIntentType] = useState<"payment_intent" | "setup_intent">("setup_intent");
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [currentPledgeId, setCurrentPledgeId] = useState<string | null>(null);
+  // PayPal state
+  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
 
   const creatingPaymentRef = useRef(false);
 
@@ -160,6 +163,21 @@ export function usePledge() {
     initStripe();
   }, []);
 
+  // Load PayPal client ID when project uses PayPal
+  useEffect(() => {
+    if (!project || project.paymentProcessor !== "PAYPAL") return;
+    async function initPayPal() {
+      try {
+        const res = await fetch("/api/paypal/config");
+        const data = await res.json();
+        if (data.clientId) setPaypalClientId(data.clientId);
+      } catch (err) {
+        console.error("Failed to load PayPal config:", err);
+      }
+    }
+    initPayPal();
+  }, [project]);
+
   // Calculate totals
   const rewardAmount = pledgeWithoutReward ? customPledgeAmount : (selectedReward?.amount || 0);
   const rewardShipping = selectedReward
@@ -184,8 +202,8 @@ export function usePledge() {
 
   // Reset guard on state clear
   useEffect(() => {
-    if (!clientSecret && !paymentError && !isProcessing) creatingPaymentRef.current = false;
-  }, [clientSecret, paymentError, isProcessing]);
+    if (!clientSecret && !paypalOrderId && !paymentError && !isProcessing) creatingPaymentRef.current = false;
+  }, [clientSecret, paypalOrderId, paymentError, isProcessing]);
 
   const createAdditionalItemsPurchase = async () => {
     if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;
@@ -249,10 +267,15 @@ export function usePledge() {
     try {
       const result = await createPledgeAPI(project.id, selectedReward?.id || null, selectedAddons, total, totalShipping, shippingCountry);
       setCurrentPledgeId(result.pledgeId);
-      if (!result.clientSecret) throw new Error("Invalid payment response - missing client secret");
-      if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));
-      setClientSecret(result.clientSecret);
-      setIntentType((result.type || "setup_intent") as "payment_intent" | "setup_intent");
+      if (result.paypalOrderId) {
+        // PayPal flow: no clientSecret, use paypalOrderId directly
+        setPaypalOrderId(result.paypalOrderId);
+      } else {
+        if (!result.clientSecret) throw new Error("Invalid payment response - missing client secret");
+        if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));
+        setClientSecret(result.clientSecret);
+        setIntentType((result.type || "setup_intent") as "payment_intent" | "setup_intent");
+      }
       setIsProcessing(false);
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Failed to create pledge");
@@ -268,7 +291,7 @@ export function usePledge() {
     } else if (isAddItemsMode) {
       if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && Object.keys(selectedAddons).length > 0) createAdditionalItemsPurchase();
     } else {
-      if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) createPledgeForPayment();
+      if (step === "payment" && !clientSecret && !paypalOrderId && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) createPledgeForPayment();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, currentPledgeId, isProcessing, paymentError, isAddItemsMode, isModifyMode, selectedAddons]);
@@ -459,6 +482,8 @@ export function usePledge() {
     // Stripe
     stripePromise, dcStripePromise, clientSecret, setClientSecret,
     intentType, paymentError, setPaymentError, currentPledgeId,
+    // PayPal
+    paypalOrderId, paypalClientId,
     // Totals
     totalShipping, addonsShipping, total, addItemsTotal,
     // Handlers

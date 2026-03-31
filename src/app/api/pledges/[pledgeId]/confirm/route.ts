@@ -107,7 +107,22 @@ export async function POST(
     let paymentMethodId = pledge.stripePaymentMethodId;
     let paymentVerified = false;
 
-    if (pledge.chargedImmediately && pledge.paymentProcessor === "DIVINITYCOIN") {
+    if (pledge.chargedImmediately && pledge.paymentProcessor === "PAYPAL") {
+      // PayPal: completed by /api/paypal/capture before this is called
+      if (pledge.status === "COMPLETED") {
+        paymentVerified = true;
+        pledgesConfirmLogger.info(`[Confirm] PayPal pledge already completed for ${pledgeId}`);
+      } else if (pledge.paypalOrderId) {
+        // Order created but capture might be in-flight
+        paymentVerified = true;
+        pledgesConfirmLogger.info(`[Confirm] PayPal order ID present for pledge ${pledgeId}, assuming capture in-flight`);
+      } else {
+        return NextResponse.json({
+          success: false,
+          error: "PayPal payment not completed. Please try again.",
+        }, { status: 400 });
+      }
+    } else if (pledge.chargedImmediately && pledge.paymentProcessor === "DIVINITYCOIN") {
       // DivinityCoin: check for a transaction record
       const dcTransaction = await db.divinityCoinTransaction.findFirst({
         where: { pledgeId, type: "PAYMENT" },
@@ -377,7 +392,7 @@ export async function POST(
         projectUrlPath,
         Number(pledge.rewardAmount) || undefined,
         Number(pledge.shippingAmount) || undefined,
-        pledge.paymentProcessor as "STRIPE" | "DIVINITYCOIN",
+        pledge.paymentProcessor as "STRIPE" | "DIVINITYCOIN" | "PAYPAL",
         assignedBackerNumber,
         pledge.id
       );

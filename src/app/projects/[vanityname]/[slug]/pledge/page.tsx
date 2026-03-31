@@ -162,6 +162,8 @@ export default function PledgePage() {
                 dcStripePromise={pledge.dcStripePromise}
                 intentType={pledge.intentType}
                 projectPath={pledge.projectPath}
+                paypalOrderId={pledge.paypalOrderId}
+                paypalClientId={pledge.paypalClientId}
               />
             )}
           </div>

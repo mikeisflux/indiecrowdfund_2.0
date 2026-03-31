@@ -125,6 +125,7 @@ export async function createPledgeForPayment(
   clientSecret?: string;
   publishableKey?: string;
   type?: string;
+  paypalOrderId?: string;
 }> {
   const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
     id,
@@ -156,6 +157,7 @@ export async function createPledgeForPayment(
     clientSecret: data.clientSecret,
     publishableKey: data.publishableKey,
     type: data.type,
+    paypalOrderId: data.paypalOrderId,
   };
 }
 
