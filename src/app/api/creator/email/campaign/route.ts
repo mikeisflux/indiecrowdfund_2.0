@@ -10,6 +10,28 @@ export const dynamic = "force-dynamic";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 
+function addEmailTracking(html: string, campaignId: string, recipientEmail: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+  const encodedEmail = Buffer.from(recipientEmail).toString("base64");
+
+  const trackingPixel = `<img src="${baseUrl}/api/email/track/open?c=${campaignId}&e=${encodedEmail}" width="1" height="1" style="display:none;" alt="" />`;
+
+  let result = html;
+  if (result.includes("</body>")) {
+    result = result.replace("</body>", `${trackingPixel}</body>`);
+  } else {
+    result = result + trackingPixel;
+  }
+
+  const linkRegex = /href="(https?:\/\/(?:www\.)?indiecrowdfund\.com[^"]*)"/gi;
+  result = result.replace(linkRegex, (_match, url) => {
+    const encodedUrl = Buffer.from(url).toString("base64");
+    return `href="${baseUrl}/api/email/track/click?c=${campaignId}&e=${encodedEmail}&url=${encodedUrl}"`;
+  });
+
+  return result;
+}
+
 // POST - Send email campaign to creator's email list subscribers
 export async function POST(request: NextRequest) {
   try {
@@ -154,21 +176,40 @@ export async function POST(request: NextRequest) {
       </html>
     `;
 
-    // Queue emails for each subscriber (rate-limited sending via queue)
-    let queuedCount = 0;
-    const errors: string[] = [];
-
     // Get unique emails
     const uniqueEmails = Array.from(
       new Set(subscribers.map((s: { email: string; name: string | null }) => s.email).filter(Boolean))
     ) as string[];
 
+    // Create EmailCampaign record first so we have an ID for tracking pixels
+    const campaign = await db.emailCampaign.create({
+      data: {
+        name: resolvedSubject,
+        subject: resolvedSubject,
+        htmlContent: resolvedContent,
+        status: "SENDING",
+        recipientCount: uniqueEmails.length,
+        sentCount: 0,
+        openCount: 0,
+        clickCount: 0,
+        createdBy: session.user.id,
+        filters: projectId ? { projectId } : undefined,
+      },
+    });
+
+    // Queue emails for each subscriber (rate-limited sending via queue)
+    let queuedCount = 0;
+    const errors: string[] = [];
+
     for (const recipientEmail of uniqueEmails) {
       try {
+        // Inject per-recipient tracking pixel and click tracking
+        const trackedHtml = addEmailTracking(htmlBody, campaign.id, recipientEmail);
+
         const result = await queueEmail({
           to: recipientEmail,
           subject: resolvedSubject,
-          html: htmlBody,
+          html: trackedHtml,
           text: resolvedContent,
           fromEmail,
           fromName,
@@ -188,20 +229,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create EmailCampaign record to track this campaign
-    const campaign = await db.emailCampaign.create({
+    // Update campaign with final sent count and status
+    await db.emailCampaign.update({
+      where: { id: campaign.id },
       data: {
-        name: resolvedSubject,
-        subject: resolvedSubject,
-        htmlContent: resolvedContent,
         status: "SENT",
         sentAt: new Date(),
-        recipientCount: uniqueEmails.length,
         sentCount: queuedCount,
-        openCount: 0,
-        clickCount: 0,
-        createdBy: session.user.id,
-        filters: projectId ? { projectId } : undefined,
       },
     });
 
