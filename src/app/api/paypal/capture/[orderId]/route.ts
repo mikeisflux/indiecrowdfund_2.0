@@ -167,7 +167,7 @@ export async function POST(
     // Send confirmation email
     const pledgeEmailEnabled = await isEmailTypeEnabled("pledgeConfirmation");
     if (pledge.user.email && pledgeEmailEnabled) {
-      const addonsForEmail = pledge.addons?.map(ae => ({
+      const addonsForEmail = pledge.addons?.map((ae: { addon: { title: string; amount: unknown }; quantity: number }) => ({
         title: ae.addon.title,
         quantity: ae.quantity,
         amount: Number(ae.addon.amount) * ae.quantity,

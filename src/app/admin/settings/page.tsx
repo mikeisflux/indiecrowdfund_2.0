@@ -197,6 +197,12 @@ export default function SettingsPage() {
     divinityCoinPartnerId: "",
     divinityCoinSettlementFrequency: "weekly",
     divinityCoinStripePublishableKey: "",
+    // PayPal settings
+    paypalEnabled: true,
+    paypalClientId: "",
+    paypalClientSecret: "",
+    paypalWebhookId: "",
+    paypalMode: "sandbox",
     // reCAPTCHA settings
     recaptchaEnabled: false,
     recaptchaSiteKey: "",

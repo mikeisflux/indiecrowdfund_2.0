@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "PAYMENT.PAYOUTS-ITEM.SUCCEEDED": {
-        const resource = event.resource;
+        const resource = event.resource as { payout_item?: { sender_item_id?: string } };
         const senderItemId = resource.payout_item?.sender_item_id as string | undefined;
         if (!senderItemId) break;
 
@@ -218,9 +218,9 @@ export async function POST(req: NextRequest) {
       }
 
       case "PAYMENT.PAYOUTS-ITEM.FAILED": {
-        const resource = event.resource;
+        const resource = event.resource as { payout_item?: { sender_item_id?: string }; errors?: { message?: string } };
         const senderItemId = resource.payout_item?.sender_item_id as string | undefined;
-        const errorMessage = (resource.errors as { message?: string } | undefined)?.message || "Unknown error";
+        const errorMessage = resource.errors?.message || "Unknown error";
         if (!senderItemId) break;
 
         await db.payPalPayout.updateMany({
