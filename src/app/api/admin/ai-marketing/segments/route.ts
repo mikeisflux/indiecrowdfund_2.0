@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
+import type { SubscriberSegment } from "@prisma/client";
 
 async function requireAdmin() {
   const session = await auth();
@@ -49,7 +50,7 @@ export async function GET() {
 
     // Refresh counts for each segment
     const segmentsWithCounts = await Promise.all(
-      segments.map(async (seg) => {
+      segments.map(async (seg: SubscriberSegment) => {
         const rules = seg.rules as SegmentRule[];
         const count = await prisma.newsletterSubscriber.count({
           where: buildWhereFromRules(rules),
