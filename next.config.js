@@ -6,6 +6,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   // Allow custom build output directory for zero-downtime deployments
   distDir: process.env.NEXT_BUILD_OUTPUT || '.next',
+  async redirects() {
+    return [
+      { source: '/cookies', destination: '/privacy#cookies', permanent: true },
+    ];
+  },
   // Note: Shopify iframe headers are handled by middleware.ts for proper CSP frame-ancestors support
   // Externalize jsdom and isomorphic-dompurify so they're resolved from
   // node_modules at runtime. Without this, jsdom's __dirname resolves to
