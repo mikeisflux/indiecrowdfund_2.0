@@ -290,7 +290,7 @@ async function shouldSendCampaignToday(): Promise<{ send: boolean; reason: strin
 // ============================================
 
 interface CampaignPlan {
-  type: "weekly_discovery" | "new_projects" | "ending_soon" | "win_back";
+  type: "weekly_discovery" | "new_projects" | "ending_soon" | "win_back" | "abandoned_cart";
   audience: string;
   name: string;
   projects: Array<{
@@ -302,6 +302,8 @@ interface CampaignPlan {
     goalAmount: number;
     vanityUrl: string | null;
   }>;
+  // Only populated for abandoned_cart campaigns
+  abandonedPledgeUserIds?: string[];
 }
 
 async function planCampaigns(
