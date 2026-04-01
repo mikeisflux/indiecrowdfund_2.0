@@ -362,15 +362,16 @@ export async function POST(
         amount: Number(addonEntry.addon.amount) * addonEntry.quantity,
       })) || [];
 
-      // Get shipping info from pledge
-      const shippingInfo = {
-        name: pledge.shippingName || null,
-        address: pledge.shippingAddress || null,
-        city: pledge.shippingCity || null,
-        state: pledge.shippingState || null,
-        postalCode: pledge.shippingPostalCode || null,
-        country: pledge.shippingCountry || null,
-      };
+      // Parse shipping address from JSON field
+      const rawAddr = pledge.shippingAddress as Record<string, string> | null;
+      const shippingInfo = rawAddr ? {
+        name: rawAddr.name || null,
+        address: rawAddr.line1 || rawAddr.address1 || null,
+        city: rawAddr.city || null,
+        state: rawAddr.state || null,
+        postalCode: rawAddr.postalCode || rawAddr.zip || null,
+        country: rawAddr.country || null,
+      } : null;
 
       // Build project URL with vanity URL if available
       const projectUrlPath = pledge.project.creator?.vanityUrl
@@ -400,6 +401,21 @@ export async function POST(
 
       if (emailResult.success) {
         pledgesConfirmLogger.info(`[Confirm] Sent confirmation email for pledge ${pledgeId} to ${pledge.user.email}`);
+        try {
+          await db.emailLog.create({
+            data: {
+              userId: pledge.user.id,
+              projectId: pledge.project.id,
+              pledgeId,
+              type: "PLEDGE_CONFIRMATION",
+              subject: emailResult.subject,
+              recipientEmail: pledge.user.email,
+              htmlContent: emailResult.html,
+            },
+          });
+        } catch (logErr) {
+          pledgesConfirmLogger.error({ err: String(logErr) }, `[Confirm] Failed to log confirmation email for pledge ${pledgeId}:`);
+        }
       } else {
         pledgesConfirmLogger.error({ err: String(emailResult.error) }, `[Confirm] Failed to send confirmation email for pledge ${pledgeId}:`);
       }

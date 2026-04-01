@@ -372,7 +372,7 @@ export default function ReconcilePage() {
                             <Database className="h-4 w-4" /> Database
                           </div>
                           <div className="font-medium flex items-center gap-1">
-                            <CreditCard className="h-4 w-4" /> {result.paymentProcessor === "DIVINITYCOIN" ? "Verified (DC)" : "Stripe"}
+                            <CreditCard className="h-4 w-4" /> {result.paymentProcessor === "DIVINITYCOIN" ? "Verified (DC)" : result.paymentProcessor === "PAYPAL" ? "PayPal" : "Stripe"}
                           </div>
 
                           <div>Current Amount</div>

@@ -54,9 +54,6 @@ export async function POST(
         },
       },
     });
-    // Note: pledge also has shippingName, shippingAddress, shippingCity, shippingState,
-    // shippingPostalCode, shippingCountry, rewardAmount, shippingAmount fields available
-    // (selected via include above — they are scalar fields on the Pledge model)
 
     if (!pledge) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
@@ -180,8 +177,19 @@ export async function POST(
         ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
         : undefined;
 
+      // Parse shipping address from JSON field
+      const rawAddr = pledge.shippingAddress as Record<string, string> | null;
+      const shippingInfo = rawAddr ? {
+        name: rawAddr.name || null,
+        address: rawAddr.line1 || rawAddr.address1 || null,
+        city: rawAddr.city || null,
+        state: rawAddr.state || null,
+        postalCode: rawAddr.postalCode || rawAddr.zip || null,
+        country: rawAddr.country || null,
+      } : null;
+
       try {
-        await sendPledgeConfirmationEmail(
+        const emailResult = await sendPledgeConfirmationEmail(
           pledge.user.email,
           pledge.user.name || "Backer",
           pledge.project.title,
@@ -192,7 +200,7 @@ export async function POST(
           pledge.project.imageUrl,
           pledge.project.currency || "USD",
           addonsForEmail,
-          { name: null, address: null, city: null, state: null, postalCode: null, country: null },
+          shippingInfo,
           projectUrlPath,
           Number(pledge.rewardAmount) || undefined,
           Number(pledge.shippingAmount) || undefined,
@@ -200,6 +208,24 @@ export async function POST(
           backerNumber,
           pledge.id
         );
+
+        if (emailResult.success) {
+          try {
+            await db.emailLog.create({
+              data: {
+                userId: pledge.user.id,
+                projectId: pledge.project.id,
+                pledgeId: pledge.id,
+                type: "PLEDGE_CONFIRMATION",
+                subject: emailResult.subject,
+                recipientEmail: pledge.user.email,
+                htmlContent: emailResult.html,
+              },
+            });
+          } catch (logErr) {
+            paypalCaptureLogger.error({ err: String(logErr) }, "Failed to log confirmation email");
+          }
+        }
       } catch (emailErr) {
         paypalCaptureLogger.error({ err: String(emailErr) }, "Failed to send confirmation email");
       }

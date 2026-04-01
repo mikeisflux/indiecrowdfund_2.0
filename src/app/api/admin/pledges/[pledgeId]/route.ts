@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { sendPledgeConfirmationEmail } from "@/lib/email";
 import { isAdmin } from "@/lib/auth-helpers";
 
@@ -102,7 +103,8 @@ export async function GET(
         canCancel: pledge.status === "PENDING",
         canRefund: pledge.status === "COMPLETED" && (
           !!pledge.stripePaymentIntentId ||
-          pledge.paymentProcessor === "DIVINITYCOIN"
+          pledge.paymentProcessor === "DIVINITYCOIN" ||
+          pledge.paymentProcessor === "PAYPAL"
         ),
         isFunded,
       },
@@ -354,6 +356,86 @@ export async function PATCH(
           adminPledgesLogger.error({ err: String(dcError) }, "DivinityCoin admin refund error:");
           return NextResponse.json(
             { error: "Failed to process DivinityCoin refund" },
+            { status: 500 }
+          );
+        }
+      }
+
+      // PayPal refund
+      if (pledge.paymentProcessor === "PAYPAL") {
+        if (!pledge.paypalOrderId) {
+          return NextResponse.json(
+            { error: "No PayPal order ID found to refund" },
+            { status: 400 }
+          );
+        }
+
+        try {
+          const config = await getPayPalConfig();
+          const accessToken = await getPayPalAccessToken();
+
+          // Get the capture ID from the order details
+          const orderRes = await fetch(`${config.baseUrl}/v2/checkout/orders/${pledge.paypalOrderId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+
+          if (!orderRes.ok) {
+            throw new Error(`Failed to fetch PayPal order: ${await orderRes.text()}`);
+          }
+
+          const orderData = await orderRes.json();
+          const captureId = orderData?.purchase_units?.[0]?.payments?.captures?.[0]?.id;
+
+          if (!captureId) {
+            throw new Error("Could not find PayPal capture ID for refund");
+          }
+
+          // Issue the refund via PayPal
+          const refundRes = await fetch(`${config.baseUrl}/v2/payments/captures/${captureId}/refund`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+              "PayPal-Request-Id": `refund_${pledge.id}`,
+            },
+            body: JSON.stringify({
+              note_to_payer: reason || "Refunded by admin",
+            }),
+          });
+
+          if (!refundRes.ok) {
+            const errBody = await refundRes.text();
+            adminPledgesLogger.error({ pledgeId, err: errBody }, "PayPal refund API error");
+            throw new Error(`PayPal refund failed: ${errBody}`);
+          }
+
+          // Update pledge status
+          await db.$transaction(async (tx) => {
+            await tx.pledge.update({
+              where: { id: pledgeId },
+              data: {
+                status: "REFUNDED",
+                lastFailureReason: reason || "Refunded by admin",
+              },
+            });
+
+            await tx.project.update({
+              where: { id: pledge.projectId },
+              data: {
+                backerCount: { decrement: 1 },
+                currentAmount: { decrement: pledge.amount },
+              },
+            });
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: "PayPal refund processed successfully",
+          });
+        } catch (paypalError) {
+          adminPledgesLogger.error({ err: String(paypalError) }, "PayPal admin refund error:");
+          return NextResponse.json(
+            { error: String(paypalError) || "Failed to process PayPal refund" },
             { status: 500 }
           );
         }
