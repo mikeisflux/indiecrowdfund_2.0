@@ -84,8 +84,12 @@ export async function POST(req: NextRequest) {
             paymentProcessor: "DIVINITYCOIN",
             divinityCoinPaymentId: null,
           },
-          // PayPal pledges: never completed (no captured order ID)
-          // PayPal orders auto-expire after ~3 hours, so no API cancellation needed
+          // PayPal pledges: order was created but never captured after the cutoff window
+          {
+            paymentProcessor: "PAYPAL",
+            paypalOrderId: { not: null },
+          },
+          // PayPal pledges: checkout abandoned before an order was even created
           {
             paymentProcessor: "PAYPAL",
             paypalOrderId: null,
@@ -184,6 +188,10 @@ export async function GET(req: NextRequest) {
         {
           paymentProcessor: "DIVINITYCOIN",
           divinityCoinPaymentId: null,
+        },
+        {
+          paymentProcessor: "PAYPAL",
+          paypalOrderId: { not: null },
         },
         {
           paymentProcessor: "PAYPAL",
