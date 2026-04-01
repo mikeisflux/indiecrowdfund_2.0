@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
+import { randomUUID } from "crypto";
 
 interface SubscriberSegment {
   id: string;
@@ -62,19 +63,20 @@ async function buildWhereFromRules(rules: SegmentRule[]) {
 
   if (!clauses.length) return { isActive: true };
 
-  // Top-level between rules is always OR (union of all selected filters)
   return { isActive: true, OR: clauses };
 }
 
 // GET /api/admin/ai-marketing/segments
 export async function GET() {
-  const auth = await requireAdmin();
-  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const adminAuth = await requireAdmin();
+  if ("error" in adminAuth) return NextResponse.json({ error: adminAuth.error }, { status: adminAuth.status });
 
   try {
-    const segments = await prisma.subscriberSegment.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const segments = await prisma.$queryRaw<SubscriberSegment[]>`
+      SELECT id, name, description, rules, "cachedCount", "createdBy", "createdAt", "updatedAt"
+      FROM "SubscriberSegment"
+      ORDER BY "createdAt" DESC
+    `;
 
     // Refresh counts for each segment
     const segmentsWithCounts = await Promise.all(
@@ -84,10 +86,10 @@ export async function GET() {
           where: await buildWhereFromRules(rules),
         });
         if (count !== seg.cachedCount) {
-          await prisma.subscriberSegment.update({
-            where: { id: seg.id },
-            data: { cachedCount: count },
-          });
+          await prisma.$executeRaw`
+            UPDATE "SubscriberSegment" SET "cachedCount" = ${count}, "updatedAt" = NOW()
+            WHERE id = ${seg.id}
+          `;
         }
         return { ...seg, cachedCount: count };
       })
@@ -102,8 +104,8 @@ export async function GET() {
 
 // POST /api/admin/ai-marketing/segments
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin();
-  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const adminAuth = await requireAdmin();
+  if ("error" in adminAuth) return NextResponse.json({ error: adminAuth.error }, { status: adminAuth.status });
 
   try {
     const { name, description, rules } = await req.json();
@@ -119,15 +121,15 @@ export async function POST(req: NextRequest) {
       where: await buildWhereFromRules(rules as SegmentRule[]),
     });
 
-    const segment = await prisma.subscriberSegment.create({
-      data: {
-        name: name.trim(),
-        description: description?.trim() || null,
-        rules,
-        cachedCount: count,
-        createdBy: auth.userId,
-      },
-    });
+    const id = randomUUID();
+    const rulesJson = JSON.stringify(rules);
+    const descValue = description?.trim() || null;
+
+    const [segment] = await prisma.$queryRaw<SubscriberSegment[]>`
+      INSERT INTO "SubscriberSegment" (id, name, description, rules, "cachedCount", "createdBy", "createdAt", "updatedAt")
+      VALUES (${id}, ${name.trim()}, ${descValue}, ${rulesJson}::jsonb, ${count}, ${adminAuth.userId}, NOW(), NOW())
+      RETURNING id, name, description, rules, "cachedCount", "createdBy", "createdAt", "updatedAt"
+    `;
 
     return NextResponse.json({ segment }, { status: 201 });
   } catch (error) {
@@ -138,26 +140,29 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/admin/ai-marketing/segments
 export async function PATCH(req: NextRequest) {
-  const auth = await requireAdmin();
-  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const adminAuth = await requireAdmin();
+  if ("error" in adminAuth) return NextResponse.json({ error: adminAuth.error }, { status: adminAuth.status });
 
   try {
     const { id, name, description, rules } = await req.json();
-    if (!id) return NextResponse.json({ error: "Segment ID required" }, { status: 400 });
+    if (!id || !name?.trim() || !Array.isArray(rules)) {
+      return NextResponse.json({ error: "id, name, and rules are required" }, { status: 400 });
+    }
 
-    const count = rules
-      ? await prisma.newsletterSubscriber.count({ where: buildWhereFromRules(rules as SegmentRule[]) })
-      : undefined;
-
-    const segment = await prisma.subscriberSegment.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name: name.trim() }),
-        ...(description !== undefined && { description: description?.trim() || null }),
-        ...(rules !== undefined && { rules }),
-        ...(count !== undefined && { cachedCount: count }),
-      },
+    const count = await prisma.newsletterSubscriber.count({
+      where: await buildWhereFromRules(rules as SegmentRule[]),
     });
+
+    const rulesJson = JSON.stringify(rules);
+    const descValue = description?.trim() || null;
+
+    const [segment] = await prisma.$queryRaw<SubscriberSegment[]>`
+      UPDATE "SubscriberSegment"
+      SET name = ${name.trim()}, description = ${descValue}, rules = ${rulesJson}::jsonb,
+          "cachedCount" = ${count}, "updatedAt" = NOW()
+      WHERE id = ${id}
+      RETURNING id, name, description, rules, "cachedCount", "createdBy", "createdAt", "updatedAt"
+    `;
 
     return NextResponse.json({ segment });
   } catch (error) {
@@ -168,14 +173,14 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/admin/ai-marketing/segments
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin();
-  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const adminAuth = await requireAdmin();
+  if ("error" in adminAuth) return NextResponse.json({ error: adminAuth.error }, { status: adminAuth.status });
 
   try {
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: "Segment ID required" }, { status: 400 });
 
-    await prisma.subscriberSegment.delete({ where: { id } });
+    await prisma.$executeRaw`DELETE FROM "SubscriberSegment" WHERE id = ${id}`;
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting segment:", error);
