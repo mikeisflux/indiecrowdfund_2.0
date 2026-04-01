@@ -35,9 +35,7 @@ export async function GET(req: NextRequest) {
     const isFunded = Number(project.currentAmount) >= Number(project.goalAmount) || project.status === "FUNDED";
 
     // Find any CONFIRMED pledge for this user/project
-    // Includes COMPLETED pledges and PENDING pledges with payment method saved
-    // Note: For stats calculation, we use confirmationEmailSent, but for display
-    // we consider any pledge with a saved payment method as "backed"
+    // Includes COMPLETED pledges and PENDING pledges with payment method saved (Stripe or PayPal)
     const activePledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
@@ -47,8 +45,10 @@ export async function GET(req: NextRequest) {
           {
             status: "PENDING",
             stripePaymentMethodId: { not: null },
-            // Consider backed if: confirmationEmailSent OR created more than 5 min ago
-            // (handles backwards compatibility for pledges before this feature)
+          },
+          {
+            status: "PENDING",
+            paypalOrderId: { not: null },
           },
         ],
       },
