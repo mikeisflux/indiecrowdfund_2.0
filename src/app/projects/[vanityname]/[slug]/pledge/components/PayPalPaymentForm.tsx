@@ -41,7 +41,7 @@ export function PayPalPaymentForm({
   const [cardError, setCardError] = useState<string | null>(null);
   const initializedRef = useRef(false);
 
-  // Load PayPal JS SDK with card-fields + buttons components
+  // Load PayPal JS SDK — try with card-fields first, fall back to buttons-only
   useEffect(() => {
     if (!clientId) return;
     if (window.paypal) {
@@ -55,13 +55,28 @@ export function PayPalPaymentForm({
       return;
     }
 
-    const script = document.createElement("script");
-    script.id = "paypal-sdk";
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=card-fields,buttons&currency=USD`;
-    script.async = true;
-    script.onload = () => setSdkReady(true);
-    script.onerror = () => setLoadError("Failed to load PayPal SDK. Please refresh and try again.");
-    document.body.appendChild(script);
+    const loadSdk = (components: string) => {
+      // Remove any previous failed script
+      const prev = document.getElementById("paypal-sdk");
+      if (prev) prev.remove();
+
+      const script = document.createElement("script");
+      script.id = "paypal-sdk";
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=${components}&currency=USD`;
+      script.async = true;
+      script.onload = () => setSdkReady(true);
+      script.onerror = () => {
+        if (components === "card-fields,buttons") {
+          // card-fields not approved for this account — retry with buttons only
+          loadSdk("buttons");
+        } else {
+          setLoadError("Failed to load PayPal SDK. Please refresh and try again.");
+        }
+      };
+      document.body.appendChild(script);
+    };
+
+    loadSdk("card-fields,buttons");
   }, [clientId]);
 
   // Initialize card fields once SDK is ready
