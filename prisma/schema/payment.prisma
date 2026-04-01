@@ -81,6 +81,36 @@ model DivinityCoinBankAccount {
   @@index([userId])
 }
 
+// PayPal bank account for creator payouts (separate from DivinityCoin)
+model PayPalBankAccount {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+
+  // Encrypted bank details (AES-256 encrypted)
+  bankNameEncrypted     String   @db.Text
+  accountHolderEncrypted String  @db.Text
+  accountNumberEncrypted String  @db.Text
+  routingNumberEncrypted String  @db.Text
+
+  // Non-sensitive display data
+  bankNameDisplay       String?  // e.g., "Chase Bank"
+  accountLastFour       String?  // e.g., "4567"
+  accountType           String   @default("checking") // checking or savings
+
+  // Verification status
+  isVerified            Boolean  @default(false)
+  verifiedAt            DateTime?
+  verificationMethod    String?  // e.g., "micro_deposits", "instant"
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payouts               PayPalPayout[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
 // PayPal payout config per creator (their PayPal email for receiving payouts)
 model PayPalPayoutConfig {
   id              String   @id @default(cuid())
@@ -100,10 +130,11 @@ model PayPalPayoutConfig {
 
 // PayPal payout settlement record (per project/per creator)
 model PayPalPayout {
-  id              String   @id @default(cuid())
-  payoutConfigId  String
-  projectId       String?
-  projectName     String?  // Denormalized
+  id                  String   @id @default(cuid())
+  payoutConfigId      String?  // Legacy: PayPal email payout config (nullable for bank account payouts)
+  paypalBankAccountId String?  // Creator's bank account for direct deposit payouts
+  projectId           String?
+  projectName         String?  // Denormalized
 
   // Payout details
   grossAmount     Decimal  @db.Decimal(10, 2)  // Total collected
@@ -111,7 +142,7 @@ model PayPalPayout {
   netAmount       Decimal  @db.Decimal(10, 2)  // What creator receives
   currency        String   @default("USD")
 
-  // PayPal tracking
+  // PayPal tracking (for PayPal-initiated payouts)
   paypalBatchId   String?  // PayPal payout batch ID
   paypalItemId    String?  // Individual item ID within batch
   status          PayPalPayoutStatus @default(PENDING)
@@ -124,13 +155,15 @@ model PayPalPayout {
   adminNotes      String?  @db.Text
   processedBy     String?
 
-  payoutConfig    PayPalPayoutConfig @relation(fields: [payoutConfigId], references: [id])
-  project         Project? @relation(fields: [projectId], references: [id])
+  payoutConfig        PayPalPayoutConfig?  @relation(fields: [payoutConfigId], references: [id])
+  paypalBankAccount   PayPalBankAccount?   @relation(fields: [paypalBankAccountId], references: [id])
+  project             Project?             @relation(fields: [projectId], references: [id])
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([payoutConfigId])
+  @@index([paypalBankAccountId])
   @@index([projectId])
   @@index([status])
 }

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 
@@ -40,6 +39,15 @@ export async function GET() {
       take: 100,
       include: {
         payoutConfig: { select: { paypalEmail: true, user: { select: { name: true, email: true } } } },
+        paypalBankAccount: {
+          select: {
+            bankNameDisplay: true,
+            accountLastFour: true,
+            accountType: true,
+            isVerified: true,
+            user: { select: { name: true, email: true } },
+          },
+        },
         project: { select: { title: true, slug: true } },
       },
     });
@@ -62,7 +70,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = payoutSchema.parse(body);
 
-    // Get project + creator's PayPal config
+    // Get project + creator's PayPal bank account
     const project = await db.project.findUnique({
       where: { id: data.projectId },
       select: {
@@ -72,6 +80,16 @@ export async function POST(req: NextRequest) {
           select: {
             id: true,
             name: true,
+            email: true,
+            paypalBankAccount: {
+              select: {
+                id: true,
+                bankNameDisplay: true,
+                accountLastFour: true,
+                accountType: true,
+                isVerified: true,
+              },
+            },
             paypalPayoutConfig: { select: { id: true, paypalEmail: true } },
           },
         },
@@ -82,10 +100,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    const bankAccount = project.creator.paypalBankAccount;
     const payoutConfig = project.creator.paypalPayoutConfig;
-    if (!payoutConfig) {
+
+    if (!bankAccount) {
       return NextResponse.json(
-        { error: `Creator has not set up a PayPal payout email. Ask them to add it in their settings.` },
+        { error: `Creator has not added a bank account for PayPal payouts. Ask them to add it in their campaign settings.` },
         { status: 400 }
       );
     }
@@ -102,98 +122,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Net payout amount is zero or negative" }, { status: 400 });
     }
 
-    // Create a payout record in PROCESSING state
+    // Create a payout record linked to the creator's bank account
+    const feeNote = `PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}`;
     const payout = await db.payPalPayout.create({
       data: {
-        payoutConfigId: payoutConfig.id,
+        paypalBankAccountId: bankAccount.id,
+        ...(payoutConfig ? { payoutConfigId: payoutConfig.id } : {}),
         projectId: project.id,
         projectName: project.title,
         grossAmount,
-        platformFee: platformFee + paypalFee, // total fees retained by platform (platform fee + PayPal processing fee)
+        platformFee: platformFee + paypalFee,
         netAmount,
-        status: "PROCESSING",
+        status: "PENDING",
         initiatedAt: new Date(),
         processedBy: session.user.id,
-        adminNotes: data.note ? `${data.note} | PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}` : `PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}`,
-      },
-    });
-
-    // Call PayPal Payouts API
-    const config = await getPayPalConfig();
-    const accessToken = await getPayPalAccessToken();
-
-    const senderBatchId = `payout_${payout.id}_${Date.now()}`;
-    const payoutPayload = {
-      sender_batch_header: {
-        sender_batch_id: senderBatchId,
-        email_subject: `Your IndieCrowdfund payout for "${project.title}"`,
-        email_message: `Congratulations! Your campaign "${project.title}" has been funded. Here is your payout of $${netAmount.toFixed(2)} USD.`,
-      },
-      items: [
-        {
-          recipient_type: "EMAIL",
-          amount: { value: netAmount.toFixed(2), currency: "USD" },
-          receiver: payoutConfig.paypalEmail,
-          sender_item_id: payout.id,
-          note: data.note || `Payout for "${project.title}" campaign`,
-        },
-      ],
-    };
-
-    const payoutsRes = await fetch(`${config.baseUrl}/v1/payments/payouts`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payoutPayload),
-    });
-
-    if (!payoutsRes.ok) {
-      const errBody = await payoutsRes.text();
-      paypalPayoutsLogger.error({ payoutId: payout.id, err: errBody }, "PayPal Payouts API error");
-
-      await db.payPalPayout.update({
-        where: { id: payout.id },
-        data: {
-          status: "FAILED",
-          failedAt: new Date(),
-          failureReason: `PayPal API error: ${errBody.slice(0, 500)}`,
-        },
-      });
-
-      return NextResponse.json({ error: "PayPal Payouts API call failed", details: errBody }, { status: 502 });
-    }
-
-    const payoutsData = await payoutsRes.json();
-    const batchId = payoutsData.batch_header?.payout_batch_id as string | undefined;
-    const itemId = payoutsData.items?.[0]?.payout_item_id as string | undefined;
-
-    await db.payPalPayout.update({
-      where: { id: payout.id },
-      data: {
-        paypalBatchId: batchId,
-        paypalItemId: itemId,
-        status: "PROCESSING",
+        adminNotes: data.note ? `${data.note} | ${feeNote}` : feeNote,
       },
     });
 
     paypalPayoutsLogger.info(
-      { payoutId: payout.id, batchId, recipientEmail: payoutConfig.paypalEmail, netAmount },
-      "PayPal payout initiated"
+      {
+        payoutId: payout.id,
+        bankAccountId: bankAccount.id,
+        bankName: bankAccount.bankNameDisplay,
+        accountLastFour: bankAccount.accountLastFour,
+        netAmount,
+      },
+      "PayPal bank payout record created — pending manual ACH transfer"
     );
 
     return NextResponse.json({
       success: true,
       payout: {
         id: payout.id,
-        paypalBatchId: batchId,
-        paypalItemId: itemId,
         netAmount,
-        recipientEmail: payoutConfig.paypalEmail,
-        status: "PROCESSING",
+        status: "PENDING",
+        bankAccount: {
+          bankName: bankAccount.bankNameDisplay,
+          accountLastFour: bankAccount.accountLastFour,
+          accountType: bankAccount.accountType,
+          isVerified: bankAccount.isVerified,
+        },
+        creatorEmail: project.creator.email,
+        creatorName: project.creator.name,
       },
-      message: `Payout of $${netAmount.toFixed(2)} initiated to ${payoutConfig.paypalEmail}`,
+      message: `Payout of $${netAmount.toFixed(2)} recorded. Transfer to ${bankAccount.bankNameDisplay} ****${bankAccount.accountLastFour}.`,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

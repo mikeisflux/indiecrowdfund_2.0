@@ -42,7 +42,7 @@ export function PayPalBankPayoutSection() {
   useEffect(() => {
     async function fetchBankAccount() {
       try {
-        const res = await fetch("/api/creator/bank-account");
+        const res = await fetch("/api/creator/paypal-bank-account");
         if (res.ok) {
           const data = await res.json();
           if (data.exists) {
@@ -82,7 +82,7 @@ export function PayPalBankPayoutSection() {
 
     setIsSaving(true);
     try {
-      const res = await apiFetch("/api/creator/bank-account", {
+      const res = await apiFetch("/api/creator/paypal-bank-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bankAccount),
