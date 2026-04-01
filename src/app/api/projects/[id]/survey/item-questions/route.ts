@@ -78,7 +78,7 @@ export async function GET(
     });
 
     if (!survey) {
-      return NextResponse.json({ error: "Survey not found" }, { status: 404 });
+      return NextResponse.json({ itemQuestions: [] });
     }
 
     const itemQuestions = await db.surveyItemQuestion.findMany({
