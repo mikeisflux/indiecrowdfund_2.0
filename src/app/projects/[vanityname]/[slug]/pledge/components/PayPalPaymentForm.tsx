@@ -28,7 +28,7 @@ interface PayPalPaymentFormProps {
 export function PayPalPaymentForm({
   paypalOrderId,
   pledgeId,
-  clientId,
+  clientToken,
   paypalMode,
   agreedToTerms,
   isProcessing,
@@ -40,33 +40,42 @@ export function PayPalPaymentForm({
   const [loadError, setLoadError] = useState<string | null>(null);
   const initializedRef = useRef(false);
   const agreedToTermsRef = useRef(agreedToTerms);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Keep ref in sync so the click handler doesn't capture a stale closure
+  // Keep ref in sync so click handler doesn't capture stale closure
   useEffect(() => {
     agreedToTermsRef.current = agreedToTerms;
   }, [agreedToTerms]);
 
-  // Load PayPal JS SDK v6
+  // Load PayPal SDK v6 core script
   useEffect(() => {
-    if (!clientId) return;
+    const scriptId = "paypal-sdk-v6";
+
     if (window.paypal) {
       setSdkReady(true);
       return;
     }
 
-    const existingScript = document.getElementById("paypal-sdk");
+    const existingScript = document.getElementById(scriptId) as HTMLScriptElement | null;
     if (existingScript) {
-      existingScript.addEventListener("load", () => setSdkReady(true));
-      return;
+      const onLoad = () => setSdkReady(true);
+      const onErr = () => setLoadError("Failed to load PayPal SDK. Please refresh and try again.");
+      existingScript.addEventListener("load", onLoad);
+      existingScript.addEventListener("error", onErr);
+      return () => {
+        existingScript.removeEventListener("load", onLoad);
+        existingScript.removeEventListener("error", onErr);
+      };
     }
 
+    // SDK v6: clientId is NOT in the URL — passed to createInstance via clientToken
     const sdkUrl =
       paypalMode === "sandbox"
         ? "https://www.sandbox.paypal.com/web-sdk/v6/core"
         : "https://www.paypal.com/web-sdk/v6/core";
 
     const script = document.createElement("script");
-    script.id = "paypal-sdk";
+    script.id = scriptId;
     script.src = sdkUrl;
     script.async = true;
     script.onload = () => setSdkReady(true);
@@ -74,42 +83,54 @@ export function PayPalPaymentForm({
       setLoadError("Failed to load PayPal SDK. Please refresh and try again.");
     };
     document.body.appendChild(script);
-  }, [clientId, paypalMode]);
 
-  // Initialize PayPal session and render button once SDK is ready
+    // Timeout fallback in case onload/onerror never fires
+    const timeout = setTimeout(() => {
+      if (!window.paypal) {
+        setLoadError("PayPal SDK timed out. Please refresh and try again.");
+      }
+    }, 15000);
+
+    return () => clearTimeout(timeout);
+  }, [paypalMode]);
+
+  // Initialize PayPal v6 session and render button once SDK and clientToken are ready
   useEffect(() => {
-    if (!sdkReady || !window.paypal || initializedRef.current) return;
+    if (!sdkReady || !window.paypal || !clientToken || initializedRef.current || !containerRef.current) return;
     initializedRef.current = true;
 
-    const containerEl = document.getElementById("paypal-button-container");
-    if (!containerEl) return;
-    const container: HTMLElement = containerEl;
+    const container = containerRef.current;
 
     async function init() {
       try {
-        const handleApprove = async (orderId: string) => {
-          setIsProcessing(true);
-          try {
-            const res = await apiFetch(`/api/paypal/capture/${orderId}`, { method: "POST" });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Payment capture failed");
-            await apiFetch(`/api/pledges/${pledgeId}/confirm`, { method: "POST" });
-            onSuccess();
-          } catch (err) {
-            onError(err instanceof Error ? err.message : "Payment failed. Please try again.");
-            setIsProcessing(false);
-          }
-        };
-
+        // createInstance requires clientToken (not clientId) in v6
         const sdkInstance = await window.paypal.createInstance({
-          clientId,
+          clientToken,
           components: ["paypal-payments"],
           pageType: "checkout",
         });
 
-        const paymentSession = sdkInstance.createPayPalOneTimePaymentSession({
-          onApprove: async (data: { orderId: string }) => {
-            await handleApprove(data.orderId);
+        // Check eligibility before rendering button
+        const methods = await sdkInstance.findEligibleMethods({ currencyCode: "USD" });
+
+        if (!methods.isEligible("paypal")) {
+          setLoadError("PayPal is not available for this transaction. Please contact support.");
+          return;
+        }
+
+        const paypalSession = sdkInstance.createPayPalOneTimePaymentSession({
+          onApprove: async ({ orderId }: { orderId: string }) => {
+            setIsProcessing(true);
+            try {
+              const captureRes = await apiFetch(`/api/paypal/capture/${orderId}`, { method: "POST" });
+              const captureData = await captureRes.json();
+              if (!captureRes.ok) throw new Error(captureData.error || "Payment capture failed");
+              await apiFetch(`/api/pledges/${pledgeId}/confirm`, { method: "POST" });
+              onSuccess();
+            } catch (err) {
+              onError(err instanceof Error ? err.message : "Payment failed. Please try again.");
+              setIsProcessing(false);
+            }
           },
           onCancel: () => {
             setIsProcessing(false);
@@ -121,13 +142,13 @@ export function PayPalPaymentForm({
         });
 
         // Handle redirect return (for redirect-based flows)
-        if (paymentSession.hasReturned()) {
+        if (typeof paypalSession.hasReturned === "function" && paypalSession.hasReturned()) {
           setIsProcessing(true);
-          await paymentSession.resume();
+          await paypalSession.resume();
           return;
         }
 
-        // Render PayPal button
+        // Render the PayPal button web component
         const button = document.createElement("paypal-button");
         button.setAttribute("type", "pay");
         button.className = "paypal-gold";
@@ -140,9 +161,10 @@ export function PayPalPaymentForm({
           }
           setIsProcessing(true);
           try {
-            await paymentSession.start(
+            // Pass the pre-created order ID as a resolved promise
+            await paypalSession.start(
               { presentationMode: "auto" },
-              Promise.resolve({ orderId: paypalOrderId })
+              Promise.resolve(paypalOrderId)
             );
           } catch (err) {
             onError(err instanceof Error ? err.message : "Failed to start PayPal payment.");
@@ -158,7 +180,7 @@ export function PayPalPaymentForm({
 
     init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sdkReady, paypalOrderId, pledgeId, clientId]);
+  }, [sdkReady, clientToken]);
 
   if (loadError) {
     return (
@@ -169,7 +191,7 @@ export function PayPalPaymentForm({
     );
   }
 
-  if (!sdkReady) {
+  if (!sdkReady || !clientToken) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
@@ -182,8 +204,8 @@ export function PayPalPaymentForm({
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Pay with PayPal</p>
       <div
+        ref={containerRef}
         id="paypal-button-container"
-        className="min-h-[44px]"
         style={{ opacity: isProcessing ? 0.5 : 1, pointerEvents: isProcessing ? "none" : "auto" }}
       />
       {isProcessing && (
