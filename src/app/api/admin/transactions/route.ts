@@ -225,6 +225,7 @@ function computeStats(transactions: UnifiedTransaction[]): Record<string, any> {
     refundedTransactions: transactions.filter(t => t.status === "REFUNDED").length,
 
     stripeTransactions: transactions.filter(t => t.paymentProcessor === "STRIPE").length,
+    paypalTransactions: transactions.filter(t => t.paymentProcessor === "PAYPAL").length,
     dcTransactions: transactions.filter(t => t.paymentProcessor === "DIVINITYCOIN").length,
 
     todayTransactions: transactions.filter(t => new Date(t.createdAt) >= todayStart).length,
@@ -710,6 +711,7 @@ async function queryIndieKitAftersales(
   };
 
   if (processor === "STRIPE") where.paymentProcessor = "STRIPE";
+  if (processor === "PAYPAL") where.paymentProcessor = "PAYPAL";
   if (processor === "DIVINITYCOIN") where.paymentProcessor = "DIVINITYCOIN";
 
   if (search) {

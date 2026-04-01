@@ -44,6 +44,7 @@ export interface TransactionStats {
   failedTransactions: number;
   refundedTransactions: number;
   stripeTransactions: number;
+  paypalTransactions: number;
   dcTransactions: number;
   todayTransactions: number;
   todayVolume: number;

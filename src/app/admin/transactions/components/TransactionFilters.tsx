@@ -73,6 +73,7 @@ export function TransactionFilters({
               <SelectContent>
                 <SelectItem value="all">All Processors</SelectItem>
                 <SelectItem value="STRIPE">Stripe</SelectItem>
+                <SelectItem value="PAYPAL">PayPal</SelectItem>
                 <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
               </SelectContent>
             </Select>

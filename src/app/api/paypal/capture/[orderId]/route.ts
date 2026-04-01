@@ -54,6 +54,9 @@ export async function POST(
         },
       },
     });
+    // Note: pledge also has shippingName, shippingAddress, shippingCity, shippingState,
+    // shippingPostalCode, shippingCountry, rewardAmount, shippingAmount fields available
+    // (selected via include above — they are scalar fields on the Pledge model)
 
     if (!pledge) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });

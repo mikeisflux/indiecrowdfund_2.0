@@ -31,6 +31,13 @@ export function BreakdownCards({ stats }: BreakdownCardsProps) {
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-blue-400" />
+                <span className="text-sm">PayPal</span>
+              </div>
+              <Badge variant="secondary">{stats.paypalTransactions ?? 0}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <Coins className="h-4 w-4 text-amber-600" />
                 <span className="text-sm">DivinityCoin</span>
               </div>

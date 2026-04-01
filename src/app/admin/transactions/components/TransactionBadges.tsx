@@ -45,6 +45,14 @@ export const getProcessorBadge = (processor: string | null) => {
       </Badge>
     );
   }
+  if (processor === "PAYPAL") {
+    return (
+      <Badge variant="outline" className="gap-1">
+        <CreditCard className="h-3 w-3" />
+        PayPal
+      </Badge>
+    );
+  }
   return (
     <Badge variant="outline" className="gap-1">
       <Coins className="h-3 w-3" />

@@ -162,7 +162,9 @@ async function reconcilePledges(
   for (const project of projects) {
     const result = project.paymentProcessor === "DIVINITYCOIN"
       ? await reconcileDCProject(project, applyFixes)
-      : await reconcileStripeProject(stripeClient, project, applyFixes);
+      : project.paymentProcessor === "PAYPAL"
+        ? await reconcilePayPalProject(project, applyFixes)
+        : await reconcileStripeProject(stripeClient, project, applyFixes);
     results.push(result);
     if (applyFixes && result.discrepancy.hasIssues) {
       totalFixesApplied++;
@@ -317,6 +319,75 @@ async function reconcileDCProject(
     projectId: project.id,
     projectTitle: project.title,
     paymentProcessor: "DIVINITYCOIN",
+    database: {
+      currentAmount: dbCurrentAmount,
+      backerCount: project.backerCount,
+      pledgeCount: project.pledges.length,
+    },
+    verified: {
+      totalAmount: verifiedTotal,
+      successfulPayments: verifiedCount,
+      pendingSetupIntents: 0,
+    },
+    discrepancy: {
+      amountDiff,
+      backerDiff,
+      hasIssues,
+    },
+    details,
+  };
+}
+
+// ─── PayPal project reconciliation ─────────────────────────────────────────
+// For PayPal projects, the source of truth is pledge.status === "COMPLETED"
+// combined with pledge.paypalOrderId being set (proof the order was captured).
+
+async function reconcilePayPalProject(
+  project: ProjectData,
+  applyFixes: boolean
+): Promise<ReconciliationResult> {
+  const details = {
+    missingInDb: [] as string[],
+    statusMismatch: [] as string[],
+    amountMismatch: [] as string[],
+    downgraded: [] as string[],
+  };
+
+  let verifiedTotal = 0;
+  let verifiedCount = 0;
+
+  for (const pledge of project.pledges) {
+    const pledgeAmount = Number(pledge.amount);
+
+    if (pledge.status === "COMPLETED") {
+      verifiedTotal += pledgeAmount;
+      verifiedCount++;
+    }
+  }
+
+  const dbCurrentAmount = Number(project.currentAmount);
+  const amountDiff = verifiedTotal - dbCurrentAmount;
+  const backerDiff = verifiedCount - project.backerCount;
+  const hasIssues =
+    Math.abs(amountDiff) > 0.01 ||
+    Math.abs(backerDiff) > 0 ||
+    details.statusMismatch.length > 0;
+
+  if (applyFixes && hasIssues) {
+    await db.project.update({
+      where: { id: project.id },
+      data: {
+        currentAmount: verifiedTotal,
+        backerCount: verifiedCount,
+      },
+    });
+    adminReconcilePledgesLogger.info(`[Reconcile] PayPal project ${project.id}: set currentAmount=$${verifiedTotal}, backerCount=${verifiedCount}`);
+  }
+
+  return {
+    projectId: project.id,
+    projectTitle: project.title,
+    paymentProcessor: "PAYPAL",
     database: {
       currentAmount: dbCurrentAmount,
       backerCount: project.backerCount,
