@@ -98,6 +98,12 @@ interface PlatformSettings {
   welcomeEmailEnabled: boolean;
   pledgeConfirmationEnabled: boolean;
   projectUpdateNotifications: boolean;
+  // PayPal settings
+  paypalEnabled: boolean;
+  paypalClientId: string | null;
+  paypalClientSecret: string | null;
+  paypalWebhookId: string | null;
+  paypalMode: string;
   // Payment settings
   autoPayouts: boolean;
   // Social auto-posting settings
