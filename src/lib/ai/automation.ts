@@ -407,6 +407,57 @@ async function planCampaigns(
     });
   }
 
+  // ABANDONED CART — users with PENDING pledges older than 2 hours but younger than 48 hours
+  // Covers all payment processors: Stripe (no payment method saved), DivinityCoin (no payment ID),
+  // and PayPal (paypalOrderId set but order never captured).
+  if (!recentTypes.has("abandoned_cart")) {
+    const abandonedCutoffOld = new Date(Date.now() - 48 * 60 * 60 * 1000); // 48h ago — older than this are just stale
+    const abandonedCutoffRecent = new Date(Date.now() - 2 * 60 * 60 * 1000); // 2h ago — newer than this, still in-progress
+
+    const abandonedPledges = await db.pledge.findMany({
+      where: {
+        status: "PENDING",
+        deletedAt: null,
+        createdAt: { gte: abandonedCutoffOld, lte: abandonedCutoffRecent },
+        OR: [
+          // Stripe pledges where no payment method was ever saved
+          {
+            paymentProcessor: "STRIPE",
+            stripePaymentMethodId: null,
+          },
+          // DivinityCoin pledges where payment was never completed
+          {
+            paymentProcessor: "DIVINITYCOIN",
+            divinityCoinPaymentId: null,
+          },
+          // PayPal pledges where an order was created but never captured/approved
+          {
+            paymentProcessor: "PAYPAL",
+            paypalOrderId: { not: null },
+          },
+          // PayPal pledges where no order was even created (checkout was abandoned immediately)
+          {
+            paymentProcessor: "PAYPAL",
+            paypalOrderId: null,
+          },
+        ],
+      },
+      select: { userId: true },
+      distinct: ["userId"],
+    });
+
+    if (abandonedPledges.length >= 1) {
+      const abandonedUserIds = abandonedPledges.map((p: { userId: string }) => p.userId);
+      plans.push({
+        type: "abandoned_cart",
+        audience: "backer",
+        name: `Complete Your Pledge — ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+        projects: liveProjects.slice(0, 5).map(formatProject),
+        abandonedPledgeUserIds: abandonedUserIds,
+      });
+    }
+  }
+
   // Only send 1 campaign per run to avoid fatigue
   return plans.slice(0, 1);
 }
@@ -440,6 +491,10 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
     win_back: {
       audience: "Users who haven't been active in a while",
       tone: "Warm, welcoming back, highlighting what they've missed without guilt",
+    },
+    abandoned_cart: {
+      audience: "Users who started a pledge but didn't complete payment",
+      tone: "Helpful and gentle reminder, not pushy — offer to help them finish backing the project they chose",
     },
   };
 
@@ -491,32 +546,53 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
   // Get recipients
   const recipientMap = new Map<string, { email: string; name: string | null }>();
 
-  // Newsletter subscribers (excluding retailers)
-  const subscribers = await db.newsletterSubscriber.findMany({
-    where: {
-      isActive: true,
-      NOT: { source: { contains: "retailer", mode: "insensitive" } },
-    },
-    select: { email: true, name: true },
-  });
+  if (plan.type === "abandoned_cart" && plan.abandonedPledgeUserIds && plan.abandonedPledgeUserIds.length > 0) {
+    // Abandoned cart campaigns: send only to users with pending pledges
+    const abandonedUsers = await db.user.findMany({
+      where: {
+        id: { in: plan.abandonedPledgeUserIds },
+        emailVerified: { not: null },
+        deletedAt: null,
+      },
+      select: { id: true, email: true, name: true },
+    });
 
-  subscribers.forEach((s: { email: string; name: string | null }) => {
-    recipientMap.set(s.email.toLowerCase(), { email: s.email.toLowerCase(), name: s.name });
-  });
-
-  // Verified users
-  const users = await db.user.findMany({
-    where: { emailVerified: { not: null }, deletedAt: null },
-    select: { id: true, email: true, name: true },
-  });
-
-  for (const u of users) {
-    // Check frequency cap for registered users
-    const sendCheck = await canSendEmail(u.id);
-    if (sendCheck.canSend) {
-      const existing = recipientMap.get(u.email.toLowerCase());
-      if (!existing || (u.name && !existing.name)) {
+    for (const u of abandonedUsers) {
+      const sendCheck = await canSendEmail(u.id);
+      if (sendCheck.canSend) {
         recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
+      }
+    }
+  } else {
+    // Standard campaigns: newsletter subscribers + verified users
+
+    // Newsletter subscribers (excluding retailers)
+    const subscribers = await db.newsletterSubscriber.findMany({
+      where: {
+        isActive: true,
+        NOT: { source: { contains: "retailer", mode: "insensitive" } },
+      },
+      select: { email: true, name: true },
+    });
+
+    subscribers.forEach((s: { email: string; name: string | null }) => {
+      recipientMap.set(s.email.toLowerCase(), { email: s.email.toLowerCase(), name: s.name });
+    });
+
+    // Verified users
+    const users = await db.user.findMany({
+      where: { emailVerified: { not: null }, deletedAt: null },
+      select: { id: true, email: true, name: true },
+    });
+
+    for (const u of users) {
+      // Check frequency cap for registered users
+      const sendCheck = await canSendEmail(u.id);
+      if (sendCheck.canSend) {
+        const existing = recipientMap.get(u.email.toLowerCase());
+        if (!existing || (u.name && !existing.name)) {
+          recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
+        }
       }
     }
   }

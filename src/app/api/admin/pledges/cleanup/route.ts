@@ -31,16 +31,31 @@ export async function POST(req: NextRequest) {
     // Find stale PENDING pledges that:
     // 1. Are in PENDING status
     // 2. Were created before the cutoff time
-    // 3. Don't have a payment method (checkout never completed)
-    // 4. Don't have confirmationEmailSent (payment never succeeded)
+    // 3. Checkout never completed (no payment method/confirmation for each processor)
     const stalePledges = await db.pledge.findMany({
       where: {
         status: "PENDING",
         createdAt: { lt: cutoffTime },
-        stripePaymentMethodId: null,
-        confirmationEmailSent: false,
-        // Exclude pledges that might still be processing
-        lastFailureReason: null,
+        OR: [
+          // Stripe pledges: no payment method saved and no confirmation sent
+          {
+            paymentProcessor: "STRIPE",
+            stripePaymentMethodId: null,
+            confirmationEmailSent: false,
+            lastFailureReason: null,
+          },
+          // DivinityCoin pledges: no payment ID recorded
+          {
+            paymentProcessor: "DIVINITYCOIN",
+            divinityCoinPaymentId: null,
+          },
+          // PayPal pledges: no captured order ID
+          // PayPal orders auto-expire after ~3 hours; no API cancellation needed
+          {
+            paymentProcessor: "PAYPAL",
+            paypalOrderId: null,
+          },
+        ],
       },
       include: {
         project: {
@@ -74,11 +89,13 @@ export async function POST(req: NextRequest) {
           createdAt: p.createdAt,
           ageHours: Math.round((Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60)),
           project: p.project.title,
+          paymentProcessor: p.paymentProcessor,
           user: {
             name: p.user.name,
             email: p.user.email,
           },
           stripePaymentIntentId: p.stripePaymentIntentId,
+          paypalOrderId: p.paypalOrderId,
         })),
       });
     }
@@ -142,14 +159,27 @@ export async function GET(req: NextRequest) {
 
     const cutoffTime = new Date(Date.now() - hoursOld * 60 * 60 * 1000);
 
-    // Find stale PENDING pledges
+    // Find stale PENDING pledges (all processors)
     const stalePledges = await db.pledge.findMany({
       where: {
         status: "PENDING",
         createdAt: { lt: cutoffTime },
-        stripePaymentMethodId: null,
-        confirmationEmailSent: false,
-        lastFailureReason: null,
+        OR: [
+          {
+            paymentProcessor: "STRIPE",
+            stripePaymentMethodId: null,
+            confirmationEmailSent: false,
+            lastFailureReason: null,
+          },
+          {
+            paymentProcessor: "DIVINITYCOIN",
+            divinityCoinPaymentId: null,
+          },
+          {
+            paymentProcessor: "PAYPAL",
+            paypalOrderId: null,
+          },
+        ],
       },
       include: {
         project: {
@@ -192,6 +222,7 @@ export async function GET(req: NextRequest) {
         amount: Number(p.amount),
         createdAt: p.createdAt,
         ageHours: Math.round((Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60)),
+        paymentProcessor: p.paymentProcessor,
         project: {
           id: p.project.id,
           title: p.project.title,
@@ -203,6 +234,7 @@ export async function GET(req: NextRequest) {
           email: p.user.email,
         },
         stripePaymentIntentId: p.stripePaymentIntentId,
+        paypalOrderId: p.paypalOrderId,
       })),
     });
   } catch (error) {

@@ -211,46 +211,58 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    const stripe = await getStripeInstance();
     const actions: string[] = [];
 
-    // 1. Detach payment method if exists
-    if (pledge.stripePaymentMethodId) {
-      try {
-        await stripe.paymentMethods.detach(pledge.stripePaymentMethodId);
-        actions.push(`Detached payment method ${pledge.stripePaymentMethodId}`);
-      } catch (e) {
-        actions.push(`Could not detach payment method: ${e}`);
+    if (pledge.paymentProcessor === "PAYPAL") {
+      // PayPal orders auto-expire after ~3 hours — no explicit API cancellation needed.
+      // Just log the order ID for audit purposes if present.
+      if (pledge.paypalOrderId) {
+        actions.push(`PayPal order ${pledge.paypalOrderId} will expire automatically (no API cancellation required)`);
+      } else {
+        actions.push("PayPal pledge has no order ID — checkout was never initiated");
       }
-    }
+    } else {
+      // Stripe-specific cleanup
+      const stripe = await getStripeInstance();
 
-    // 2. Cancel SetupIntent if exists
-    if (pledge.stripeSetupIntentId) {
-      try {
-        const si = await stripe.setupIntents.retrieve(pledge.stripeSetupIntentId);
-        if (["requires_payment_method", "requires_confirmation", "requires_action"].includes(si.status)) {
-          await stripe.setupIntents.cancel(pledge.stripeSetupIntentId);
-          actions.push(`Cancelled SetupIntent ${pledge.stripeSetupIntentId}`);
-        } else {
-          actions.push(`SetupIntent ${pledge.stripeSetupIntentId} already in terminal state: ${si.status}`);
+      // 1. Detach payment method if exists
+      if (pledge.stripePaymentMethodId) {
+        try {
+          await stripe.paymentMethods.detach(pledge.stripePaymentMethodId);
+          actions.push(`Detached payment method ${pledge.stripePaymentMethodId}`);
+        } catch (e) {
+          actions.push(`Could not detach payment method: ${e}`);
         }
-      } catch (e) {
-        actions.push(`Could not cancel SetupIntent: ${e}`);
       }
-    }
 
-    // 3. Cancel PaymentIntent if exists and not yet charged
-    if (pledge.stripePaymentIntentId && pledge.status === "PENDING") {
-      try {
-        const pi = await stripe.paymentIntents.retrieve(pledge.stripePaymentIntentId);
-        if (["requires_payment_method", "requires_confirmation", "requires_action", "requires_capture", "processing"].includes(pi.status)) {
-          await stripe.paymentIntents.cancel(pledge.stripePaymentIntentId);
-          actions.push(`Cancelled PaymentIntent ${pledge.stripePaymentIntentId}`);
-        } else {
-          actions.push(`PaymentIntent ${pledge.stripePaymentIntentId} already in terminal state: ${pi.status}`);
+      // 2. Cancel SetupIntent if exists
+      if (pledge.stripeSetupIntentId) {
+        try {
+          const si = await stripe.setupIntents.retrieve(pledge.stripeSetupIntentId);
+          if (["requires_payment_method", "requires_confirmation", "requires_action"].includes(si.status)) {
+            await stripe.setupIntents.cancel(pledge.stripeSetupIntentId);
+            actions.push(`Cancelled SetupIntent ${pledge.stripeSetupIntentId}`);
+          } else {
+            actions.push(`SetupIntent ${pledge.stripeSetupIntentId} already in terminal state: ${si.status}`);
+          }
+        } catch (e) {
+          actions.push(`Could not cancel SetupIntent: ${e}`);
         }
-      } catch (e) {
-        actions.push(`Could not cancel PaymentIntent: ${e}`);
+      }
+
+      // 3. Cancel PaymentIntent if exists and not yet charged
+      if (pledge.stripePaymentIntentId && pledge.status === "PENDING") {
+        try {
+          const pi = await stripe.paymentIntents.retrieve(pledge.stripePaymentIntentId);
+          if (["requires_payment_method", "requires_confirmation", "requires_action", "requires_capture", "processing"].includes(pi.status)) {
+            await stripe.paymentIntents.cancel(pledge.stripePaymentIntentId);
+            actions.push(`Cancelled PaymentIntent ${pledge.stripePaymentIntentId}`);
+          } else {
+            actions.push(`PaymentIntent ${pledge.stripePaymentIntentId} already in terminal state: ${pi.status}`);
+          }
+        } catch (e) {
+          actions.push(`Could not cancel PaymentIntent: ${e}`);
+        }
       }
     }
 

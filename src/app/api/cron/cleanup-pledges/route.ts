@@ -60,12 +60,13 @@ export async function POST(req: NextRequest) {
     // Calculate the cutoff time
     const cutoffTime = new Date(Date.now() - hoursOld * 60 * 60 * 1000);
 
-    // Find stale PENDING pledges - includes both Stripe and DivinityCoin
+    // Find stale PENDING pledges - includes Stripe, DivinityCoin, and PayPal
     // A pledge is stale if:
     // 1. Status is PENDING
     // 2. Created more than N hours ago
     // 3. For Stripe: No payment method saved AND no confirmation sent AND no failure reason
     // 4. For DivinityCoin: No payment ID (never completed payment)
+    // 5. For PayPal: No order ID captured (never completed payment; PayPal orders auto-expire ~3h)
     const stalePledges = await db.pledge.findMany({
       where: {
         status: "PENDING",
@@ -83,6 +84,12 @@ export async function POST(req: NextRequest) {
             paymentProcessor: "DIVINITYCOIN",
             divinityCoinPaymentId: null,
           },
+          // PayPal pledges: never completed (no captured order ID)
+          // PayPal orders auto-expire after ~3 hours, so no API cancellation needed
+          {
+            paymentProcessor: "PAYPAL",
+            paypalOrderId: null,
+          },
         ],
       },
       select: {
@@ -90,6 +97,7 @@ export async function POST(req: NextRequest) {
         amount: true,
         createdAt: true,
         paymentProcessor: true,
+        paypalOrderId: true,
         project: {
           select: { title: true },
         },
@@ -159,7 +167,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get current count of stale pledges (both Stripe and DivinityCoin)
+  // Get current count of stale pledges (Stripe, DivinityCoin, and PayPal)
   const cutoffTime = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
   const staleCount = await db.pledge.count({
@@ -176,6 +184,10 @@ export async function GET(req: NextRequest) {
         {
           paymentProcessor: "DIVINITYCOIN",
           divinityCoinPaymentId: null,
+        },
+        {
+          paymentProcessor: "PAYPAL",
+          paypalOrderId: null,
         },
       ],
     },
