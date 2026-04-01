@@ -35,7 +35,9 @@ export async function GET(req: NextRequest) {
     const isFunded = Number(project.currentAmount) >= Number(project.goalAmount) || project.status === "FUNDED";
 
     // Find any CONFIRMED pledge for this user/project
-    // Includes COMPLETED pledges and PENDING pledges with payment method saved (Stripe or PayPal)
+    // Includes COMPLETED pledges and PENDING pledges with Stripe payment method saved
+    // Note: PayPal PENDING pledges are NOT included — paypalOrderId just means checkout
+    // was initiated, not that the user approved payment. Only COMPLETED counts for PayPal.
     const activePledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
@@ -45,10 +47,6 @@ export async function GET(req: NextRequest) {
           {
             status: "PENDING",
             stripePaymentMethodId: { not: null },
-          },
-          {
-            status: "PENDING",
-            paypalOrderId: { not: null },
           },
         ],
       },
@@ -117,16 +115,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Check for pledges in progress (checkout started, no payment method saved)
+    // Includes: Stripe intents in progress, or PayPal orders created but not yet approved
     const pendingCheckout = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
         projectId,
         status: "PENDING",
         stripePaymentMethodId: null,
-        // Has an intent (checkout was started)
+        // Has an intent or PayPal order (checkout was started)
         OR: [
           { stripeSetupIntentId: { not: null } },
           { stripePaymentIntentId: { not: null } },
+          { paypalOrderId: { not: null } },
         ],
         // Created within last 30 minutes
         createdAt: {
