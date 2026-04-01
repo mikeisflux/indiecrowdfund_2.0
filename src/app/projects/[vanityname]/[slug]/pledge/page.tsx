@@ -163,6 +163,7 @@ export default function PledgePage() {
                 paypalOrderId={pledge.paypalOrderId}
                 paypalClientId={pledge.paypalClientId}
                 paypalClientToken={pledge.paypalClientToken}
+                paypalMode={pledge.paypalMode}
               />
             )}
           </div>

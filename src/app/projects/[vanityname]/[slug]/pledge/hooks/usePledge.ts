@@ -79,6 +79,7 @@ export function usePledge() {
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
   const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
   const [paypalClientToken, setPaypalClientToken] = useState<string | null>(null);
+  const [paypalMode, setPaypalMode] = useState<string>("live");
 
   const creatingPaymentRef = useRef(false);
 
@@ -174,6 +175,7 @@ export function usePledge() {
         ]);
         const configData = await configRes.json();
         if (configData.clientId) setPaypalClientId(configData.clientId);
+        if (configData.mode) setPaypalMode(configData.mode);
         if (tokenRes.ok) {
           const tokenData = await tokenRes.json();
           if (tokenData.clientToken) setPaypalClientToken(tokenData.clientToken);
@@ -490,7 +492,7 @@ export function usePledge() {
     dcStripePromise, clientSecret, setClientSecret,
     intentType, paymentError, setPaymentError, currentPledgeId,
     // PayPal
-    paypalOrderId, paypalClientId, paypalClientToken,
+    paypalOrderId, paypalClientId, paypalClientToken, paypalMode,
     // Totals
     totalShipping, addonsShipping, total, addItemsTotal,
     // Handlers
