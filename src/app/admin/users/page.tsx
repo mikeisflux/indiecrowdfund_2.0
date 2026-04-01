@@ -1,8 +1,11 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useState, useEffect, useCallback } from "react";
-import { useUserDialog, useBanDialog, useEditUserDialog, useRoleDialog, usePasswordDialog } from "./hooks";
+import { useState, useEffect } from "react";
+import { useUserDialog, useBanDialog, useEditUserDialog, useRoleDialog, usePasswordDialog } from "./hooks/dialogs";
+import { useUserData } from "./hooks/useUserData";
+import { useRetailerActions } from "./hooks/useRetailerActions";
+import { usePledgeActions } from "./hooks/usePledgeActions";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,12 +17,6 @@ import { toast } from "sonner";
 
 import {
   User,
-  UserStats,
-  Pagination,
-  UserPledge,
-  EmailLogEntry,
-  Retailer,
-  RetailerStats,
   UserStatsCards,
   UserFilters,
   UserTable,
@@ -45,165 +42,100 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [retailerStatusFilter, setRetailerStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Dialog state hooks
   const { selectedUser, setSelectedUser, showUserDialog, setShowUserDialog, userDetailTab, setUserDetailTab } = useUserDialog();
   const { showBanDialog, setShowBanDialog, banReason, setBanReason, banningUser, setBanningUser } = useBanDialog();
   const { showEditUserDialog, setShowEditUserDialog, editUserData, setEditUserData, isUpdating, setIsUpdating } = useEditUserDialog();
   const { showRoleDialog, setShowRoleDialog, selectedRole, setSelectedRole } = useRoleDialog();
   const { showPasswordDialog, setShowPasswordDialog, newPassword, setNewPassword, confirmPassword, setConfirmPassword } = usePasswordDialog();
-  const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
-  const [showRetailerDialog, setShowRetailerDialog] = useState(false);
-  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
-  const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "request_info" | null>(null);
-  const [approvalNotes, setApprovalNotes] = useState("");
-  const [showEditRetailerDialog, setShowEditRetailerDialog] = useState(false);
-  const [isUpdatingRetailer, setIsUpdatingRetailer] = useState(false);
 
-  // User edit/action states (remaining)
+  // Add/create user state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSendEmailDialog, setShowSendEmailDialog] = useState(false);
   const [emailTargetUser, setEmailTargetUser] = useState<User | null>(null);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [newUserData, setNewUserData] = useState<NewUserData>({ name: "", email: "", password: "", confirmPassword: "", role: "USER", retailerAccess: false });
   const [isCreating, setIsCreating] = useState(false);
-  const [userPledges, setUserPledges] = useState<UserPledge[]>([]);
-  const [userEmails, setUserEmails] = useState<EmailLogEntry[]>([]);
-  const [loadingPledges, setLoadingPledges] = useState(false);
-  const [loadingEmails, setLoadingEmails] = useState(false);
-  const [viewingEmail, setViewingEmail] = useState<EmailLogEntry | null>(null);
-  const [showEmailPreview, setShowEmailPreview] = useState(false);
-  const [cancellingPledge, setCancellingPledge] = useState<string | null>(null);
-  const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
-  const [resendingReceipt, setResendingReceipt] = useState<string | null>(null);
-  const [zeroingWallet, setZeroingWallet] = useState(false);
-  const [isMergingDuplicates, setIsMergingDuplicates] = useState(false);
-  const [duplicateCount, setDuplicateCount] = useState<number | null>(null);
 
-  // Pledge action confirmation dialogs
-  const [cancelPledgeConfirm, setCancelPledgeConfirm] = useState<{ open: boolean; pledgeId: string }>({
-    open: false,
-    pledgeId: "",
-  });
-  const [refundPledgeConfirm, setRefundPledgeConfirm] = useState<{ open: boolean; pledgeId: string }>({
-    open: false,
-    pledgeId: "",
-  });
-  const [deletePledgeConfirm, setDeletePledgeConfirm] = useState<{ open: boolean; pledgeId: string }>({
-    open: false,
-    pledgeId: "",
-  });
-  const [resendReceiptConfirm, setResendReceiptConfirm] = useState<{ open: boolean; pledgeId: string }>({
-    open: false,
-    pledgeId: "",
-  });
+  // Data fetching hook
+  const {
+    users,
+    userStats,
+    pagination,
+    isLoading,
+    retailers,
+    retailerStats,
+    isLoadingRetailers,
+    isMergingDuplicates,
+    duplicateCount,
+    fetchUsers,
+    checkDuplicates,
+    mergeDuplicates,
+    fetchRetailers,
+    exportUsers,
+  } = useUserData(currentPage, searchQuery, roleFilter, retailerStatusFilter);
 
-  // API data state
-  const [users, setUsers] = useState<User[]>([]);
-  const [userStats, setUserStats] = useState<UserStats>({ total: 0, users: 0, admins: 0, superAdmins: 0 });
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  // Retailer actions hook
+  const {
+    selectedRetailer,
+    setSelectedRetailer,
+    showRetailerDialog,
+    setShowRetailerDialog,
+    showApprovalDialog,
+    setShowApprovalDialog,
+    approvalAction,
+    approvalNotes,
+    setApprovalNotes,
+    showEditRetailerDialog,
+    setShowEditRetailerDialog,
+    isUpdatingRetailer,
+    handleRetailerAction,
+    handleSendApprovalEmail,
+    handleEditRetailer,
+    submitEditRetailer,
+    submitApprovalAction,
+  } = useRetailerActions(fetchRetailers);
 
-  // Retailer state
-  const [retailers, setRetailers] = useState<Retailer[]>([]);
-  const [retailerStats, setRetailerStats] = useState<RetailerStats>({ pending: 0, underReview: 0, approved: 0, rejected: 0, total: 0 });
-  const [isLoadingRetailers, setIsLoadingRetailers] = useState(false);
-
-  // Fetch users from API
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams({
-        page: String(currentPage),
-        limit: "20",
-      });
-
-      if (searchQuery) {
-        params.append("search", searchQuery);
-      }
-      if (roleFilter !== "all") {
-        params.append("role", roleFilter);
-      }
-
-      const response = await fetch(`/api/admin/users?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.users || []);
-        setUserStats(data.stats || { total: 0, users: 0, admins: 0, superAdmins: 0 });
-        setPagination(data.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 });
-      }
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, searchQuery, roleFilter]);
-
-  // Check for duplicate accounts on load
-  const checkDuplicates = useCallback(async () => {
-    try {
-      const response = await fetch("/api/admin/users/merge-duplicates");
-      if (response.ok) {
-        const data = await response.json();
-        setDuplicateCount(data.totalGroups || 0);
-      }
-    } catch (error) {
-      console.error("Error checking duplicates:", error);
-    }
-  }, []);
-
-  const mergeDuplicates = async () => {
-    if (!confirm("This will merge all duplicate email accounts (case-insensitive). The most recently active account will be kept and all data will be transferred. Continue?")) {
-      return;
-    }
-
-    setIsMergingDuplicates(true);
-    try {
-      const response = await apiFetch("/api/admin/users/merge-duplicates", {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(data.message || "Duplicates merged successfully");
-        setDuplicateCount(0);
-        fetchUsers();
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to merge duplicates");
-      }
-    } catch (error) {
-      console.error("Error merging duplicates:", error);
-      toast.error("Failed to merge duplicates");
-    } finally {
-      setIsMergingDuplicates(false);
-    }
-  };
+  // Pledge/email actions hook
+  const {
+    userPledges,
+    userEmails,
+    setUserPledges,
+    setUserEmails,
+    loadingPledges,
+    loadingEmails,
+    viewingEmail,
+    showEmailPreview,
+    setShowEmailPreview,
+    cancellingPledge,
+    refundingPledge,
+    resendingReceipt,
+    zeroingWallet,
+    cancelPledgeConfirm,
+    setCancelPledgeConfirm,
+    refundPledgeConfirm,
+    setRefundPledgeConfirm,
+    deletePledgeConfirm,
+    setDeletePledgeConfirm,
+    resendReceiptConfirm,
+    setResendReceiptConfirm,
+    fetchUserPledges,
+    fetchUserEmails,
+    handleViewEmail,
+    handleCancelPledge,
+    handleRefundPledge,
+    handleDeletePledge,
+    handleResendReceipt,
+    handleDownloadEmail,
+    handleZeroWalletBalance,
+  } = usePledgeActions(selectedUser, setSelectedUser);
 
   useEffect(() => {
     fetchUsers();
     checkDuplicates();
   }, [fetchUsers, checkDuplicates]);
-
-  // Fetch retailers from API
-  const fetchRetailers = useCallback(async () => {
-    setIsLoadingRetailers(true);
-    try {
-      const params = new URLSearchParams({
-        status: retailerStatusFilter === "all" ? "all" : retailerStatusFilter.toUpperCase(),
-      });
-
-      const response = await fetch(`/api/admin/retailers?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setRetailers(data.retailers || []);
-        setRetailerStats(data.stats || { pending: 0, underReview: 0, approved: 0, rejected: 0, total: 0 });
-      }
-    } catch (error) {
-      console.error("Error fetching retailers:", error);
-    } finally {
-      setIsLoadingRetailers(false);
-    }
-  }, [retailerStatusFilter]);
 
   useEffect(() => {
     if (activeTab === "retailers") {
@@ -236,287 +168,6 @@ export default function UsersPage() {
   }, [searchQuery]);
 
   const pendingRetailerCount = retailerStats.pending + retailerStats.underReview;
-
-  // ============ Retailer Handlers ============
-
-  const handleRetailerAction = (retailer: Retailer, action: "approve" | "reject" | "request_info") => {
-    setSelectedRetailer(retailer);
-    setApprovalAction(action);
-    setApprovalNotes("");
-    setShowApprovalDialog(true);
-  };
-
-  const handleSendApprovalEmail = async (retailer: Retailer) => {
-    try {
-      const response = await apiFetch("/api/admin/retailers/resend-approval", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ retailerId: retailer.id }),
-      });
-
-      if (response.ok) {
-        toast.success(`Account setup email sent to ${retailer.email}`);
-      } else {
-        const data = await response.json().catch(() => ({}));
-        toast.error(data.error || "Failed to send account setup email");
-      }
-    } catch (error) {
-      console.error("Error sending approval email:", error);
-      toast.error("An error occurred while sending the email");
-    }
-  };
-
-  const handleEditRetailer = (retailer: Retailer) => {
-    setSelectedRetailer(retailer);
-    setShowEditRetailerDialog(true);
-  };
-
-  const submitEditRetailer = async (retailerId: string, data: Record<string, unknown>) => {
-    setIsUpdatingRetailer(true);
-    try {
-      const response = await apiFetch("/api/admin/retailers", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ retailerId, ...data }),
-      });
-
-      if (response.ok) {
-        fetchRetailers();
-        setShowEditRetailerDialog(false);
-        toast.success("Retailer updated successfully");
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to update retailer");
-      }
-    } catch (error) {
-      console.error("Error updating retailer:", error);
-      toast.error("Failed to update retailer");
-    } finally {
-      setIsUpdatingRetailer(false);
-    }
-  };
-
-  const submitApprovalAction = async () => {
-    if (!selectedRetailer || !approvalAction) return;
-
-    try {
-      const statusMap = {
-        approve: "APPROVED",
-        reject: "REJECTED",
-        request_info: "UNDER_REVIEW",
-      };
-
-      const response = await apiFetch("/api/admin/retailers", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
-          id: selectedRetailer.id,
-          status: statusMap[approvalAction],
-          verificationNotes: approvalNotes || undefined,
-        }),
-      });
-
-      if (response.ok) {
-        fetchRetailers();
-      }
-    } catch (error) {
-      console.error("Error updating retailer:", error);
-    }
-
-    setShowApprovalDialog(false);
-    setSelectedRetailer(null);
-    setApprovalAction(null);
-    setApprovalNotes("");
-  };
-
-  // ============ Pledge/Email Handlers ============
-
-  const fetchUserPledges = async (userId: string) => {
-    setLoadingPledges(true);
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/pledges`);
-      if (response.ok) {
-        const data = await response.json();
-        setUserPledges(data.pledges || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch user pledges:", error);
-    } finally {
-      setLoadingPledges(false);
-    }
-  };
-
-  const fetchUserEmails = async (userId: string) => {
-    setLoadingEmails(true);
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/emails`);
-      if (response.ok) {
-        const data = await response.json();
-        setUserEmails(data.emailLogs || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch user emails:", error);
-    } finally {
-      setLoadingEmails(false);
-    }
-  };
-
-  const handleViewEmail = (email: EmailLogEntry) => {
-    setViewingEmail(email);
-    setShowEmailPreview(true);
-  };
-
-  const handleCancelPledge = async () => {
-    if (!selectedUser) return;
-    const pledgeId = cancelPledgeConfirm.pledgeId;
-
-    setCancellingPledge(pledgeId);
-    try {
-      const response = await apiFetch(`/api/admin/pledges/${pledgeId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({ action: "cancel", reason: "Cancelled by admin" }),
-      });
-
-      if (response.ok) {
-        await fetchUserPledges(selectedUser.id);
-        toast.success("Pledge cancelled successfully");
-      } else {
-        const err = await response.json();
-        toast.error(err.error || "Failed to cancel pledge");
-      }
-    } catch (err) {
-      console.error("Failed to cancel pledge:", err);
-      toast.error("Failed to cancel pledge");
-    } finally {
-      setCancellingPledge(null);
-    }
-  };
-
-  const handleRefundPledge = async () => {
-    if (!selectedUser) return;
-    const pledgeId = refundPledgeConfirm.pledgeId;
-
-    setRefundingPledge(pledgeId);
-    try {
-      const response = await apiFetch(`/api/admin/pledges/${pledgeId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({ action: "refund", reason: "Refunded by admin" }),
-      });
-
-      if (response.ok) {
-        await fetchUserPledges(selectedUser.id);
-        toast.success("Pledge refunded successfully");
-      } else {
-        const err = await response.json();
-        toast.error(err.error || "Failed to refund pledge");
-      }
-    } catch (err) {
-      console.error("Failed to refund pledge:", err);
-      toast.error("Failed to refund pledge");
-    } finally {
-      setRefundingPledge(null);
-    }
-  };
-
-  const handleDeletePledge = async () => {
-    if (!selectedUser) return;
-    const pledgeId = deletePledgeConfirm.pledgeId;
-
-    setCancellingPledge(pledgeId);
-    try {
-      const response = await apiFetch(`/api/admin/pledges/${pledgeId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        await fetchUserPledges(selectedUser.id);
-        toast.success("Pledge deleted successfully");
-      } else {
-        const err = await response.json();
-        toast.error(err.error || "Failed to delete pledge");
-      }
-    } catch (err) {
-      console.error("Failed to delete pledge:", err);
-      toast.error("Failed to delete pledge");
-    } finally {
-      setCancellingPledge(null);
-    }
-  };
-
-  const handleResendReceipt = async () => {
-    if (!selectedUser) return;
-    const pledgeId = resendReceiptConfirm.pledgeId;
-
-    setResendingReceipt(pledgeId);
-    try {
-      const response = await apiFetch(`/api/admin/pledges/${pledgeId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({ action: "resend_receipt" }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success(data.message || "Receipt email sent successfully");
-        await Promise.all([
-          fetchUserPledges(selectedUser.id),
-          fetchUserEmails(selectedUser.id),
-        ]);
-      } else {
-        toast.error(data.error || "Failed to send receipt email");
-      }
-    } catch (err) {
-      console.error("Failed to resend receipt:", err);
-      toast.error("Failed to send receipt email");
-    } finally {
-      setResendingReceipt(null);
-    }
-  };
-
-  const handleDownloadEmail = async (emailId: string) => {
-    window.open(`/api/admin/emails/${emailId}?download=true`, "_blank");
-  };
-
-  const handleZeroWalletBalance = async (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    const confirmed = window.confirm(
-      `Are you sure you want to zero out the DivinityCoin wallet balance for ${user?.name || user?.email || "this user"}? This action cannot be undone.`
-    );
-    if (!confirmed) return;
-
-    setZeroingWallet(true);
-    try {
-      const res = await apiFetch("/api/admin/wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({ userId }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to zero wallet balance");
-
-      if (data.previousBalance > 0) {
-        toast.success(`Wallet balance zeroed (was $${Number(data.previousBalance).toFixed(2)})`);
-      } else {
-        toast.info("Wallet balance was already zero");
-      }
-
-      // Refresh users list to update the balance in the UI
-      fetchUsers();
-      // Update the selected user's balance locally for immediate feedback
-      if (selectedUser && selectedUser.id === userId) {
-        setSelectedUser({ ...selectedUser, divinityCoinBalance: 0 });
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to zero wallet balance");
-      console.error("Zero wallet balance error:", error);
-    } finally {
-      setZeroingWallet(false);
-    }
-  };
 
   // ============ User Handlers ============
 
@@ -876,54 +527,6 @@ export default function UsersPage() {
     }
   };
 
-  const exportUsers = async () => {
-    try {
-      const response = await fetch("/api/admin/users?limit=10000");
-      if (!response.ok) {
-        toast.error("Failed to fetch users for export");
-        return;
-      }
-
-      const data = await response.json();
-      const exportedUsers = data.users || [];
-
-      if (exportedUsers.length === 0) {
-        toast.error("No users to export");
-        return;
-      }
-
-      const csv = [
-        ["ID", "Name", "Email", "Role", "Email Verified", "Projects", "Pledges", "Created At"].join(","),
-        ...exportedUsers.map((user: User) =>
-          [
-            user.id,
-            `"${(user.name || "").replace(/"/g, '""')}"`,
-            `"${user.email}"`,
-            user.role,
-            user.emailVerified ? "Yes" : "No",
-            user.projectCount,
-            user.pledgeCount,
-            new Date(user.createdAt).toISOString(),
-          ].join(",")
-        ),
-      ].join("\n");
-
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `users-export-${new Date().toISOString().split("T")[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      toast.success("Users exported successfully");
-    } catch (error) {
-      console.error("Error exporting users:", error);
-      toast.error("Failed to export users");
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1048,7 +651,7 @@ export default function UsersPage() {
         onViewEmail={handleViewEmail}
         onDownloadEmail={handleDownloadEmail}
         onEditUser={handleEditUser}
-        onZeroWalletBalance={handleZeroWalletBalance}
+        onZeroWalletBalance={(userId) => handleZeroWalletBalance(userId, users)}
         zeroingWallet={zeroingWallet}
       />
 
