@@ -38,10 +38,17 @@ import {
 import { toast } from "sonner";
 
 interface SegmentRule {
-  type: "tag" | "source";
+  type: "tag" | "source" | "role";
   values: string[];
   operator: "AND" | "OR";
 }
+
+const ROLE_OPTIONS = [
+  { name: "USER", label: "User (standard)" },
+  { name: "CREATOR", label: "Creator" },
+  { name: "ADMIN", label: "Admin" },
+  { name: "SUPER_ADMIN", label: "Super Admin" },
+];
 
 interface Segment {
   id: string;
@@ -134,7 +141,7 @@ export function TagSegmentsTab() {
 
   const updateRule = (index: number, patch: Partial<SegmentRule>) => {
     setFormRules((prev) =>
-      prev.map((r, i) => (i === index ? { ...r, ...patch, values: patch.type && patch.type !== r.type ? [] : (patch.values ?? r.values) } : r))
+      prev.map((r, i) => (i === index ? { ...r, ...patch, values: patch.type !== undefined && patch.type !== r.type ? [] : (patch.values ?? r.values) } : r))
     );
   };
 
@@ -311,7 +318,7 @@ export function TagSegmentsTab() {
                           {i > 0 && <span className="text-xs text-muted-foreground font-medium">AND</span>}
                           <Badge variant="outline" className="text-xs gap-1">
                             {rule.type === "tag" ? <Tag className="h-2.5 w-2.5" /> : <Users className="h-2.5 w-2.5" />}
-                            {rule.type === "tag" ? "Tag" : "Source"}:{" "}
+                            {rule.type === "tag" ? "Tag" : rule.type === "role" ? "Role" : "Source"}:{" "}
                             <span className="font-medium">{rule.values.join(` ${rule.operator} `)}</span>
                           </Badge>
                         </div>
@@ -399,7 +406,7 @@ export function TagSegmentsTab() {
                       <Label className="text-xs text-muted-foreground">Filter by</Label>
                       <Select
                         value={rule.type}
-                        onValueChange={(v) => updateRule(index, { type: v as "tag" | "source" })}
+                        onValueChange={(v) => updateRule(index, { type: v as "tag" | "source" | "role" })}
                       >
                         <SelectTrigger className="h-8">
                           <SelectValue />
@@ -407,6 +414,7 @@ export function TagSegmentsTab() {
                         <SelectContent>
                           <SelectItem value="tag">Tag</SelectItem>
                           <SelectItem value="source">Source</SelectItem>
+                          <SelectItem value="role">User Role</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -437,10 +445,10 @@ export function TagSegmentsTab() {
                     )}
                   </div>
 
-                  {/* Tag/Source picker */}
+                  {/* Value picker */}
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">
-                      Select {rule.type === "tag" ? "tags" : "sources"}
+                      {rule.type === "role" ? "Select roles" : `Select ${rule.type === "tag" ? "tags" : "sources"}`}
                       {rule.values.length > 0 && (
                         <span className="ml-2 text-primary font-medium">
                           {rule.values.length} selected
@@ -448,28 +456,50 @@ export function TagSegmentsTab() {
                       )}
                     </Label>
                     <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1">
-                      {(rule.type === "tag" ? availableTags : availableSources).map((item) => {
-                        const selected = rule.values.includes(item.name);
-                        return (
-                          <button
-                            key={item.name}
-                            type="button"
-                            onClick={() => toggleValue(index, item.name)}
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border transition-colors ${
-                              selected
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-background hover:bg-muted border-border"
-                            }`}
-                          >
-                            {item.name}
-                            <span className={`text-[10px] ${selected ? "opacity-80" : "text-muted-foreground"}`}>
-                              ({item.count})
-                            </span>
-                          </button>
-                        );
-                      })}
-                      {(rule.type === "tag" ? availableTags : availableSources).length === 0 && (
-                        <p className="text-xs text-muted-foreground">No {rule.type === "tag" ? "tags" : "sources"} available yet</p>
+                      {rule.type === "role" ? (
+                        ROLE_OPTIONS.map((role) => {
+                          const selected = rule.values.includes(role.name);
+                          return (
+                            <button
+                              key={role.name}
+                              type="button"
+                              onClick={() => toggleValue(index, role.name)}
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border transition-colors ${
+                                selected
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-background hover:bg-muted border-border"
+                              }`}
+                            >
+                              {role.label}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <>
+                          {(rule.type === "tag" ? availableTags : availableSources).map((item) => {
+                            const selected = rule.values.includes(item.name);
+                            return (
+                              <button
+                                key={item.name}
+                                type="button"
+                                onClick={() => toggleValue(index, item.name)}
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border transition-colors ${
+                                  selected
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-background hover:bg-muted border-border"
+                                }`}
+                              >
+                                {item.name}
+                                <span className={`text-[10px] ${selected ? "opacity-80" : "text-muted-foreground"}`}>
+                                  ({item.count})
+                                </span>
+                              </button>
+                            );
+                          })}
+                          {(rule.type === "tag" ? availableTags : availableSources).length === 0 && (
+                            <p className="text-xs text-muted-foreground">No {rule.type === "tag" ? "tags" : "sources"} available yet</p>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

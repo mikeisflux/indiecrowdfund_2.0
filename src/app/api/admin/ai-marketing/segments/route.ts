@@ -27,22 +27,40 @@ async function requireAdmin() {
 }
 
 interface SegmentRule {
-  type: "tag" | "source";
+  type: "tag" | "source" | "role";
   values: string[];
   operator: "AND" | "OR";
 }
 
 /** Build a Prisma where clause from segment rules to count matching subscribers */
-function buildWhereFromRules(rules: SegmentRule[]) {
+async function buildWhereFromRules(rules: SegmentRule[]) {
   if (!rules.length) return { isActive: true };
 
-  const clauses = rules.flatMap((rule) =>
-    rule.values.map((v) =>
-      rule.type === "tag"
-        ? { tags: { has: v } }
-        : { source: { contains: v } }
-    )
-  );
+  const clauses: Record<string, unknown>[] = [];
+
+  for (const rule of rules) {
+    if (rule.type === "role") {
+      // Find all users with matching roles, then filter subscribers by email
+      const users = await prisma.user.findMany({
+        where: { role: { in: rule.values } },
+        select: { email: true },
+      });
+      const emails = users.map((u) => u.email).filter(Boolean) as string[];
+      if (emails.length > 0) {
+        clauses.push({ email: { in: emails } });
+      }
+    } else {
+      for (const v of rule.values) {
+        clauses.push(
+          rule.type === "tag"
+            ? { tags: { has: v } }
+            : { source: { contains: v } }
+        );
+      }
+    }
+  }
+
+  if (!clauses.length) return { isActive: true };
 
   // Top-level between rules is always OR (union of all selected filters)
   return { isActive: true, OR: clauses };
@@ -63,7 +81,7 @@ export async function GET() {
       segments.map(async (seg: SubscriberSegment) => {
         const rules = seg.rules as SegmentRule[];
         const count = await prisma.newsletterSubscriber.count({
-          where: buildWhereFromRules(rules),
+          where: await buildWhereFromRules(rules),
         });
         if (count !== seg.cachedCount) {
           await prisma.subscriberSegment.update({
@@ -98,7 +116,7 @@ export async function POST(req: NextRequest) {
     }
 
     const count = await prisma.newsletterSubscriber.count({
-      where: buildWhereFromRules(rules as SegmentRule[]),
+      where: await buildWhereFromRules(rules as SegmentRule[]),
     });
 
     const segment = await prisma.subscriberSegment.create({
