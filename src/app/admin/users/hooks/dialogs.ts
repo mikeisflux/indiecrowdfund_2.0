@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User } from "./components";
+import { User } from "../components/types";
 
 // ============ User Dialog Hook ============
 export function useUserDialog() {
