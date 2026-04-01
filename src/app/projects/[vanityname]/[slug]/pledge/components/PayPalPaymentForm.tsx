@@ -16,6 +16,7 @@ interface PayPalPaymentFormProps {
   paypalOrderId: string;
   pledgeId: string;
   clientId: string;
+  clientToken: string | null;
   agreedToTerms: boolean;
   isProcessing: boolean;
   setIsProcessing: (val: boolean) => void;
@@ -28,6 +29,7 @@ export function PayPalPaymentForm({
   paypalOrderId,
   pledgeId,
   clientId,
+  clientToken,
   agreedToTerms,
   isProcessing,
   setIsProcessing,
@@ -62,8 +64,11 @@ export function PayPalPaymentForm({
 
       const script = document.createElement("script");
       script.id = "paypal-sdk";
-      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=${components}&currency=USD`;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=${components}&currency=USD&intent=capture`;
       script.async = true;
+      if (clientToken && components.includes("card-fields")) {
+        script.setAttribute("data-client-token", clientToken);
+      }
       script.onload = () => setSdkReady(true);
       script.onerror = () => {
         if (components === "card-fields,buttons") {
@@ -77,7 +82,7 @@ export function PayPalPaymentForm({
     };
 
     loadSdk("card-fields,buttons");
-  }, [clientId]);
+  }, [clientId, clientToken]);
 
   // Initialize card fields once SDK is ready
   useEffect(() => {

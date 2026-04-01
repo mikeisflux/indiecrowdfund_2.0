@@ -31,6 +31,7 @@ interface PaymentStepProps {
   projectPath: string;
   paypalOrderId: string | null;
   paypalClientId: string | null;
+  paypalClientToken: string | null;
 }
 
 const isEmailVerificationError = (error: string | null) =>
@@ -101,6 +102,7 @@ export function PaymentStep({
   projectPath,
   paypalOrderId,
   paypalClientId,
+  paypalClientToken,
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
@@ -203,6 +205,7 @@ export function PaymentStep({
                 paypalOrderId={paypalOrderId}
                 pledgeId={currentPledgeId}
                 clientId={paypalClientId}
+                clientToken={paypalClientToken}
                 agreedToTerms={agreedToTerms}
                 isProcessing={isProcessing}
                 setIsProcessing={setIsProcessing}
