@@ -72,7 +72,7 @@ export interface Backer {
   rewardAmount: number;
   status: "not_pushed" | "push_errored" | "pushed" | "shipped";
   chargeStatus: "not_charged" | "errored" | "charged" | "paypal_collected";
-  paymentProcessor?: "STRIPE" | "DIVINITYCOIN";
+  paymentProcessor?: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
   surveyCompleted: boolean;
   addressComplete: boolean;
   pledgeDate?: string;

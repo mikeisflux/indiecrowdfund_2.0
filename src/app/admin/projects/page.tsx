@@ -4,32 +4,20 @@ import { fetchWithRetry, apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import Image from "next/image";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   FolderKanban,
-  Search,
   Clock,
   CheckCircle,
-  Eye,
   History,
   Flag,
   RefreshCw,
   Loader2,
   Zap,
   Sparkles,
-  Link2,
   Archive,
   FileEdit,
 } from "lucide-react";
@@ -38,7 +26,6 @@ import {
   ReviewHistory,
   Stats,
   getFlags,
-  getFlagBadge,
   ReviewStatsCards,
   ProjectListItem,
   ProjectDetailPanel,
@@ -48,7 +35,12 @@ import {
   RejectDialog,
   DeactivateDialog,
   MakeLiveDialog,
-  SetVanityUrlDialog,
+  ProjectsFilterBar,
+  PrelaunchProjectCard,
+  PrelaunchDetailPanel,
+  UnsubmittedProjectCard,
+  UnsubmittedDetailPanel,
+  FlaggedTab,
 } from "./components";
 
 export default function ProjectsPage() {
@@ -638,33 +630,13 @@ export default function ProjectsPage() {
 
         {/* Pending Review Tab */}
         <TabsContent value="pending" className="mt-6 space-y-4">
-          {/* Filters */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <Input
-                placeholder="Search projects..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Technology">Technology</SelectItem>
-                <SelectItem value="Film & Video">Film & Video</SelectItem>
-                <SelectItem value="Games">Games</SelectItem>
-                <SelectItem value="Design">Design</SelectItem>
-                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
-                <SelectItem value="Music">Music</SelectItem>
-                <SelectItem value="Art">Art</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <ProjectsFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            searchPlaceholder="Search projects..."
+          />
 
           {filteredProjects.length === 0 ? (
             <Card>
@@ -701,33 +673,13 @@ export default function ProjectsPage() {
 
         {/* Active Campaigns Tab */}
         <TabsContent value="active" className="mt-6 space-y-4">
-          {/* Filters */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <Input
-                placeholder="Search active campaigns..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Technology">Technology</SelectItem>
-                <SelectItem value="Film & Video">Film & Video</SelectItem>
-                <SelectItem value="Games">Games</SelectItem>
-                <SelectItem value="Design">Design</SelectItem>
-                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
-                <SelectItem value="Music">Music</SelectItem>
-                <SelectItem value="Art">Art</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <ProjectsFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            searchPlaceholder="Search active campaigns..."
+          />
 
           {activeProjects.length === 0 ? (
             <Card>
@@ -776,33 +728,13 @@ export default function ProjectsPage() {
 
         {/* Prelaunch Review Tab */}
         <TabsContent value="prelaunchReview" className="mt-6 space-y-4">
-          {/* Filters */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <Input
-                placeholder="Search prelaunch submissions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Technology">Technology</SelectItem>
-                <SelectItem value="Film & Video">Film & Video</SelectItem>
-                <SelectItem value="Games">Games</SelectItem>
-                <SelectItem value="Design">Design</SelectItem>
-                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
-                <SelectItem value="Music">Music</SelectItem>
-                <SelectItem value="Art">Art</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <ProjectsFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            searchPlaceholder="Search prelaunch submissions..."
+          />
 
           {filteredPrelaunchReviewProjects.length === 0 ? (
             <Card>
@@ -841,34 +773,14 @@ export default function ProjectsPage() {
 
         {/* Active Prelaunch Tab */}
         <TabsContent value="prelaunch" className="mt-6 space-y-4">
-          {/* Filters */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <Input
-                placeholder="Search prelaunch projects..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Technology">Technology</SelectItem>
-                <SelectItem value="Film & Video">Film & Video</SelectItem>
-                <SelectItem value="Games">Games</SelectItem>
-                <SelectItem value="Design">Design</SelectItem>
-                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
-                <SelectItem value="Music">Music</SelectItem>
-                <SelectItem value="Art">Art</SelectItem>
-                <SelectItem value="Comics">Comics</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <ProjectsFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            searchPlaceholder="Search prelaunch projects..."
+            includeComics
+          />
 
           {prelaunchProjects.length === 0 ? (
             <Card>
@@ -884,190 +796,36 @@ export default function ProjectsPage() {
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-4">
                 {filteredPrelaunchProjects.map((project) => (
-                  <Card
+                  <PrelaunchProjectCard
                     key={project.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      selectedProject?.id === project.id ? "ring-2 ring-amber-500 shadow-md" : ""
-                    }`}
+                    project={project}
+                    isSelected={selectedProject?.id === project.id}
                     onClick={() => setSelectedProject(project)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 relative overflow-hidden flex-shrink-0">
-                          {project.imageUrl ? (
-                            <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
-                          ) : (
-                            <Sparkles className="h-6 w-6 text-amber-400" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-semibold truncate">{project.title}</h4>
-                            <Badge variant="default" className="bg-amber-500 text-xs">Prelaunch</Badge>
-                            <Badge variant="outline" className="text-xs">{project.category}</Badge>
-                          </div>
-                          <p className="text-sm text-zinc-500 truncate">
-                            by {project.creator.name || project.creator.email}
-                          </p>
-                          <div className="flex items-center gap-4 mt-1 text-xs text-zinc-500">
-                            <span className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" />
-                              {project._count.followers || 0} followers
-                            </span>
-                            {project.launchDate && (
-                              <span>
-                                Launch: {new Date(project.launchDate).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  />
                 ))}
               </div>
 
-              {/* Prelaunch Detail Panel */}
-              <Card className="h-fit sticky top-4">
-                {selectedProject ? (
-                  <>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle>{selectedProject.title}</CardTitle>
-                          <CardDescription>
-                            by {selectedProject.creator.name || selectedProject.creator.email}
-                          </CardDescription>
-                        </div>
-                        <Badge variant="default" className="bg-amber-500">Prelaunch Active</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {selectedProject.imageUrl && (
-                        <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-100">
-                          <Image
-                            src={selectedProject.imageUrl}
-                            alt={selectedProject.title}
-                            fill
-                            sizes="(max-width: 768px) 100vw, 50vw"
-                            className="object-cover"
-                          />
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Category</p>
-                          <p className="font-medium">{selectedProject.category}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Followers</p>
-                          <p className="font-medium">{selectedProject._count.followers || 0}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Goal</p>
-                          <p className="font-medium">${Number(selectedProject.goalAmount).toLocaleString()}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Launch Date</p>
-                          <p className="font-medium">
-                            {selectedProject.launchDate
-                              ? new Date(selectedProject.launchDate).toLocaleDateString()
-                              : "Not set"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {selectedProject.subtitle && (
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Subtitle</p>
-                          <p className="text-sm">{selectedProject.subtitle}</p>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2 pt-4 border-t">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => window.open(prelaunchVanityUrl ? `/projects/${prelaunchVanityUrl}/${selectedProject.slug}/prelaunch` : `/projects/${selectedProject.slug}/prelaunch`, "_blank")}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Page
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setShowPrelaunchVanityDialog(true)}
-                        >
-                          <Link2 className="mr-2 h-4 w-4" />
-                          {prelaunchVanityUrl ? "Edit Vanity URL" : "Set Vanity URL"}
-                        </Button>
-                      </div>
-                      {prelaunchVanityUrl && (
-                        <p className="text-xs text-zinc-500 mt-2">
-                          Vanity URL: <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">{prelaunchVanityUrl}</code>
-                        </p>
-                      )}
-                    </CardContent>
-
-                    {/* Set Vanity URL Dialog for Prelaunch */}
-                    <SetVanityUrlDialog
-                      open={showPrelaunchVanityDialog}
-                      onOpenChange={setShowPrelaunchVanityDialog}
-                      creatorId={selectedProject.creator.id}
-                      creatorName={selectedProject.creator.name}
-                      currentVanityUrl={prelaunchVanityUrl}
-                      projectSlug={selectedProject.slug}
-                      projectTitle={selectedProject.title}
-                      onSuccess={(newVanityUrl) => setPrelaunchVanityUrl(newVanityUrl)}
-                    />
-                  </>
-                ) : (
-                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                    <Sparkles className="h-12 w-12 text-zinc-300 mb-4" />
-                    <h3 className="font-medium text-zinc-900 dark:text-white mb-2">Select a prelaunch page</h3>
-                    <p className="text-sm text-zinc-500">
-                      Click on a prelaunch page to see details
-                    </p>
-                  </CardContent>
-                )}
-              </Card>
+              <PrelaunchDetailPanel
+                selectedProject={selectedProject}
+                prelaunchVanityUrl={prelaunchVanityUrl}
+                showPrelaunchVanityDialog={showPrelaunchVanityDialog}
+                onShowPrelaunchVanityDialogChange={setShowPrelaunchVanityDialog}
+                onVanityUrlSuccess={(newVanityUrl) => setPrelaunchVanityUrl(newVanityUrl)}
+              />
             </div>
           )}
         </TabsContent>
 
         {/* Closed Campaigns Tab */}
         <TabsContent value="closed" className="mt-6 space-y-4">
-          {/* Filters */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <Input
-                placeholder="Search closed campaigns..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Technology">Technology</SelectItem>
-                <SelectItem value="Film & Video">Film & Video</SelectItem>
-                <SelectItem value="Games">Games</SelectItem>
-                <SelectItem value="Design">Design</SelectItem>
-                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
-                <SelectItem value="Music">Music</SelectItem>
-                <SelectItem value="Art">Art</SelectItem>
-                <SelectItem value="Comics">Comics</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <ProjectsFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            searchPlaceholder="Search closed campaigns..."
+            includeComics
+          />
 
           {closedProjects.length === 0 ? (
             <Card>
@@ -1117,34 +875,14 @@ export default function ProjectsPage() {
 
         {/* Unsubmitted Projects Tab */}
         <TabsContent value="unsubmitted" className="mt-6 space-y-4">
-          {/* Filters */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <Input
-                placeholder="Search unsubmitted projects..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Technology">Technology</SelectItem>
-                <SelectItem value="Film & Video">Film & Video</SelectItem>
-                <SelectItem value="Games">Games</SelectItem>
-                <SelectItem value="Design">Design</SelectItem>
-                <SelectItem value="Food & Drink">Food & Drink</SelectItem>
-                <SelectItem value="Music">Music</SelectItem>
-                <SelectItem value="Art">Art</SelectItem>
-                <SelectItem value="Comics">Comics</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <ProjectsFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            searchPlaceholder="Search unsubmitted projects..."
+            includeComics
+          />
 
           {filteredUnsubmittedProjects.length === 0 ? (
             <Card>
@@ -1160,202 +898,29 @@ export default function ProjectsPage() {
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-4">
                 {filteredUnsubmittedProjects.map((project) => (
-                  <Card
+                  <UnsubmittedProjectCard
                     key={project.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      selectedProject?.id === project.id ? "ring-2 ring-zinc-400 shadow-md" : ""
-                    }`}
+                    project={project}
+                    isSelected={selectedProject?.id === project.id}
                     onClick={() => setSelectedProject(project)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 relative overflow-hidden flex-shrink-0">
-                          {project.imageUrl ? (
-                            <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
-                          ) : (
-                            <FileEdit className="h-6 w-6 text-zinc-400" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-semibold truncate">{project.title}</h4>
-                            <Badge variant="secondary" className="text-xs">Draft</Badge>
-                            {project.category && (
-                              <Badge variant="outline" className="text-xs">{project.category}</Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-zinc-500 truncate">
-                            by {project.creator.name || project.creator.email}
-                          </p>
-                          <div className="flex items-center gap-4 mt-1 text-xs text-zinc-500">
-                            <span>
-                              Created: {new Date(project.createdAt).toLocaleDateString()}
-                            </span>
-                            {project.goalAmount && Number(project.goalAmount) > 0 && (
-                              <span>
-                                Goal: ${Number(project.goalAmount).toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  />
                 ))}
               </div>
 
-              {/* Unsubmitted Detail Panel */}
-              <Card className="h-fit sticky top-4">
-                {selectedProject ? (
-                  <>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle>{selectedProject.title}</CardTitle>
-                          <CardDescription>
-                            by {selectedProject.creator.name || selectedProject.creator.email}
-                          </CardDescription>
-                        </div>
-                        <Badge variant="secondary">Draft</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {selectedProject.imageUrl && (
-                        <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-100">
-                          <Image
-                            src={selectedProject.imageUrl}
-                            alt={selectedProject.title}
-                            fill
-                            sizes="(max-width: 768px) 100vw, 50vw"
-                            className="object-cover"
-                          />
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Category</p>
-                          <p className="font-medium">{selectedProject.category || "Not set"}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Goal</p>
-                          <p className="font-medium">
-                            {selectedProject.goalAmount && Number(selectedProject.goalAmount) > 0
-                              ? `$${Number(selectedProject.goalAmount).toLocaleString()}`
-                              : "Not set"}
-                          </p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Created</p>
-                          <p className="font-medium">{new Date(selectedProject.createdAt).toLocaleDateString()}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Creator Email</p>
-                          <p className="font-medium text-xs truncate">{selectedProject.creator.email}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Rewards</p>
-                          <p className="font-medium">{selectedProject.rewards?.length || 0}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Email Verified</p>
-                          <p className="font-medium">{selectedProject.creator.emailVerified ? "Yes" : "No"}</p>
-                        </div>
-                      </div>
-
-                      {selectedProject.subtitle && (
-                        <div className="space-y-1">
-                          <p className="text-xs text-zinc-500">Subtitle</p>
-                          <p className="text-sm">{selectedProject.subtitle}</p>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2 pt-4 border-t">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => window.open(`/projects/${selectedProject.slug}`, "_blank")}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Project
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </>
-                ) : (
-                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                    <FileEdit className="h-12 w-12 text-zinc-300 mb-4" />
-                    <h3 className="font-medium text-zinc-900 dark:text-white mb-2">Select a project</h3>
-                    <p className="text-sm text-zinc-500">
-                      Click on a project to see details
-                    </p>
-                  </CardContent>
-                )}
-              </Card>
+              <UnsubmittedDetailPanel selectedProject={selectedProject} />
             </div>
           )}
         </TabsContent>
 
         {/* Flagged Tab */}
         <TabsContent value="flagged" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Flagged Projects</CardTitle>
-              <CardDescription>Projects with issues requiring attention</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {flaggedProjects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <CheckCircle className="h-12 w-12 text-emerald-300 mb-4" />
-                  <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No flagged projects</h3>
-                  <p className="text-sm text-zinc-500">All projects look good!</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {flaggedProjects.map((project) => {
-                    const flags = getFlags(project);
-                    return (
-                      <div key={project.id} className="flex items-center gap-4 rounded-lg border border-red-200 bg-red-50/50 p-4 dark:bg-red-950/10">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 relative overflow-hidden">
-                          {project.imageUrl ? (
-                            <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
-                          ) : (
-                            <FolderKanban className="h-6 w-6 text-zinc-400" />
-                          )}
-                        </div>
-
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">{project.title}</h4>
-                            <Badge variant="outline">{project.category}</Badge>
-                          </div>
-                          <p className="text-sm text-zinc-500">by {project.creator.name || project.creator.email}</p>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {flags.map((flag) => getFlagBadge(flag))}
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedProject(project);
-                              setActiveTab("pending");
-                            }}
-                          >
-                            <Eye className="mr-1 h-4 w-4" />
-                            Review
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <FlaggedTab
+            flaggedProjects={flaggedProjects}
+            onReviewProject={(project) => {
+              setSelectedProject(project);
+              setActiveTab("pending");
+            }}
+          />
         </TabsContent>
 
         {/* History Tab */}
