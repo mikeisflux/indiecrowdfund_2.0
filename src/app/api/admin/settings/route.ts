@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { auditLog, computeChanges } from "@/lib/audit";
 import { logger } from "@/lib/logger";
+import { invalidatePayPalConfigCache } from "@/lib/payments/paypal";
 import { encryptSecret } from "@/lib/vault";
 
 const settingsLogger = logger.child({ module: "admin-settings" });
@@ -352,6 +353,11 @@ export async function PATCH(req: NextRequest) {
         changes,
         details: { section, fieldCount: Object.keys(changes).length },
       });
+    }
+
+    // Invalidate PayPal config cache if PayPal settings were changed
+    if (section === "payments") {
+      invalidatePayPalConfigCache();
     }
 
     // Mask sensitive fields in response
