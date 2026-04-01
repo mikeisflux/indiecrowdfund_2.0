@@ -90,7 +90,7 @@ export async function POST(request: Request) {
           );
         }
         // Validate Stripe Connect before reactivating (skip for DivinityCoin projects)
-        if (project.paymentProcessor !== "DIVINITYCOIN") {
+        if (project.paymentProcessor !== "DIVINITYCOIN" && project.paymentProcessor !== "PAYPAL") {
           const stripeValidation = await validateStripeConnectAccount(project.creator.id);
           if (!stripeValidation.isValid) {
             return NextResponse.json(
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
           );
         }
         // Validate Stripe Connect before making live (skip for DivinityCoin projects)
-        if (project.paymentProcessor !== "DIVINITYCOIN") {
+        if (project.paymentProcessor !== "DIVINITYCOIN" && project.paymentProcessor !== "PAYPAL") {
           const stripeValidation = await validateStripeConnectAccount(project.creator.id);
           if (!stripeValidation.isValid) {
             return NextResponse.json(
