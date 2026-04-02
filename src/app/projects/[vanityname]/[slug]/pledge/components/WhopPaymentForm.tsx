@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Loader2, AlertCircle } from "lucide-react";
+import { forwardRef, useEffect, useRef, useState } from "react";
+import { Loader2, AlertCircle, ShoppingBag } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/fetch-utils";
+
+interface WhopCheckoutEmbedControls {
+  submit: (opts?: unknown) => Promise<void>;
+  getEmail: (timeout?: number) => Promise<string>;
+  setEmail: (email: string, timeout?: number) => Promise<void>;
+  setAddress: (address: unknown, timeout?: number) => Promise<void>;
+  getAddress: (timeout?: number) => Promise<{ address: unknown; isComplete: boolean }>;
+}
 
 interface WhopPaymentFormProps {
   sessionId: string;
@@ -14,6 +23,7 @@ interface WhopPaymentFormProps {
   setIsProcessing: (val: boolean) => void;
   onSuccess: () => void;
   onError: (message: string) => void;
+  total: number;
 }
 
 export function WhopPaymentForm({
@@ -26,15 +36,12 @@ export function WhopPaymentForm({
   setIsProcessing,
   onSuccess,
   onError,
+  total,
 }: WhopPaymentFormProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
-  const agreedToTermsRef = useRef(agreedToTerms);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const checkoutRef = useRef<WhopCheckoutEmbedControls | null>(null);
   const mountedRef = useRef(false);
-
-  // Keep ref in sync
-  useEffect(() => {
-    agreedToTermsRef.current = agreedToTerms;
-  }, [agreedToTerms]);
 
   // Handle payment completion from Whop embed redirect
   useEffect(() => {
@@ -66,6 +73,24 @@ export function WhopPaymentForm({
       setLoadError("Payment was cancelled or failed. Please try again.");
     }
   }, [pledgeId, onSuccess, onError, setIsProcessing]);
+
+  const handlePayNow = async () => {
+    if (!agreedToTerms) {
+      onError("Please agree to the terms and conditions before completing your pledge.");
+      return;
+    }
+    if (!checkoutRef.current) {
+      onError("Checkout is not ready. Please wait a moment and try again.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await checkoutRef.current.submit();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Payment failed. Please try again.");
+      setIsSubmitting(false);
+    }
+  };
 
   if (!agreedToTerms) {
     return (
@@ -100,10 +125,12 @@ export function WhopPaymentForm({
   return (
     <div className="space-y-4">
       <WhopCheckoutEmbed
+        ref={checkoutRef}
         planId={planId}
         sessionId={sessionId}
         environment={environment}
         returnUrl={returnUrl}
+        hideSubmitButton={true}
         onComplete={() => {
           setIsProcessing(true);
           apiFetch(`/api/whop/confirm/${pledgeId}`, {
@@ -128,6 +155,24 @@ export function WhopPaymentForm({
           </div>
         }
       />
+      <Button
+        className="w-full"
+        size="lg"
+        onClick={handlePayNow}
+        disabled={isSubmitting || isProcessing}
+      >
+        {isSubmitting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Processing...
+          </>
+        ) : (
+          <>
+            <ShoppingBag className="h-4 w-4 mr-2" />
+            Pay now &middot; ${total.toFixed(2)}
+          </>
+        )}
+      </Button>
       <p className="text-xs text-muted-foreground text-center">
         Secure checkout powered by Whop
       </p>
@@ -135,51 +180,45 @@ export function WhopPaymentForm({
   );
 }
 
-// Dynamic import of WhopCheckoutEmbed to avoid SSR issues
-function WhopCheckoutEmbed({
-  planId,
-  sessionId,
-  environment,
-  returnUrl,
-  onComplete,
-  fallback,
-}: {
-  planId: string;
-  sessionId: string;
-  environment: "production" | "sandbox";
-  returnUrl: string;
-  onComplete: (planId: string, receiptId: string) => void;
-  fallback: React.ReactNode;
-}) {
-  const [Component, setComponent] = useState<React.ComponentType<{
+// Dynamic import wrapper that forwards the ref to the SDK component
+const WhopCheckoutEmbed = forwardRef<
+  WhopCheckoutEmbedControls,
+  {
     planId: string;
     sessionId: string;
     environment: "production" | "sandbox";
     returnUrl: string;
+    hideSubmitButton: boolean;
     onComplete: (planId: string, receiptId: string) => void;
     fallback: React.ReactNode;
-  }> | null>(null);
+  }
+>(function WhopCheckoutEmbedInner(props, ref) {
+  const [Component, setComponent] = useState<React.ForwardRefExoticComponent<
+    {
+      planId: string;
+      sessionId: string;
+      environment: "production" | "sandbox";
+      returnUrl: string;
+      hideSubmitButton: boolean;
+      onComplete: (planId: string, receiptId: string) => void;
+      fallback: React.ReactNode;
+    } & React.RefAttributes<WhopCheckoutEmbedControls>
+  > | null>(null);
 
   useEffect(() => {
     import("@whop/checkout/react")
       .then((mod) => {
-        setComponent(() => mod.WhopCheckoutEmbed as typeof Component);
+        setComponent(
+          () =>
+            mod.WhopCheckoutEmbed as typeof Component
+        );
       })
       .catch(() => {
         // Will show nothing — handled by parent error state
       });
   }, []);
 
-  if (!Component) return <>{fallback}</>;
+  if (!Component) return <>{props.fallback}</>;
 
-  return (
-    <Component
-      planId={planId}
-      sessionId={sessionId}
-      environment={environment}
-      returnUrl={returnUrl}
-      onComplete={onComplete}
-      fallback={fallback}
-    />
-  );
-}
+  return <Component ref={ref} {...props} />;
+});

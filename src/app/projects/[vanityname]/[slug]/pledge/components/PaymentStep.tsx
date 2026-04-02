@@ -220,6 +220,7 @@ export function PaymentStep({
                 setIsProcessing={setIsProcessing}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
+                total={displayTotal}
               />
             ) : paymentError ? (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
