@@ -158,6 +158,7 @@ enum PaymentProcessor {
   STRIPE
   DIVINITYCOIN
   PAYPAL
+  WHOP
 }
 
 // ============================================

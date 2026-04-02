@@ -38,6 +38,13 @@ interface PaymentSettingsProps {
     paypalClientSecret: string;
     paypalWebhookId: string;
     paypalMode: string;
+    // Whop settings
+    whopEnabled: boolean;
+    whopApiKey: string;
+    whopPlanId: string;
+    whopCompanyId: string;
+    whopWebhookSecret: string;
+    whopEnvironment: string;
     // reCAPTCHA settings
     recaptchaEnabled: boolean;
     recaptchaSiteKey: string;
@@ -349,6 +356,107 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               <li>Payouts API: creators add their PayPal email, platform pays out on campaign end</li>
               <li>Enable &quot;Payouts&quot; in your PayPal app permissions (Apps &amp; Credentials)</li>
               <li>~2.9% + $0.30 processing fee + 3% platform fee</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Whop Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Whop Configuration</CardTitle>
+              <CardDescription>Embedded checkout with card-to-USDC settlement. Seamless in-page payment flow.</CardDescription>
+            </div>
+            <Badge variant={settings.whopEnabled ? "default" : "secondary"}>
+              {settings.whopEnabled ? "Enabled" : "Disabled"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label>Enable Whop</Label>
+              <p className="text-sm text-zinc-500">Allow creators to use Whop as their payment processor</p>
+            </div>
+            <Switch
+              checked={settings.whopEnabled}
+              onCheckedChange={(checked) => onSettingsChange({ ...settings, whopEnabled: checked })}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>API Key</Label>
+              <SecureKeyInput
+                value={settings.whopApiKey}
+                onChange={(value) => onSettingsChange({ ...settings, whopApiKey: value })}
+                onSave={onSave}
+                hasExistingValue={settings.whopApiKey === "••••••••"}
+                placeholder="Company API key from Whop dashboard"
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-zinc-500">From Whop Dashboard → Developer → Company API keys</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Webhook Secret</Label>
+              <SecureKeyInput
+                value={settings.whopWebhookSecret}
+                onChange={(value) => onSettingsChange({ ...settings, whopWebhookSecret: value })}
+                onSave={onSave}
+                hasExistingValue={settings.whopWebhookSecret === "••••••••"}
+                placeholder="Webhook signing secret"
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-zinc-500">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/whop</code></p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Plan ID</Label>
+              <Input
+                value={settings.whopPlanId}
+                onChange={(e) => onSettingsChange({ ...settings, whopPlanId: e.target.value })}
+                placeholder="plan_xxxxxxxxxxxxx"
+              />
+              <p className="text-xs text-zinc-500">Base plan from Whop Dashboard → Checkout links</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Company ID</Label>
+              <Input
+                value={settings.whopCompanyId}
+                onChange={(e) => onSettingsChange({ ...settings, whopCompanyId: e.target.value })}
+                placeholder="biz_xxxxxxxxxxxxx"
+              />
+              <p className="text-xs text-zinc-500">Your platform company ID (visible in Whop dashboard URL)</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Environment</Label>
+            <Select
+              value={settings.whopEnvironment}
+              onValueChange={(v) => onSettingsChange({ ...settings, whopEnvironment: v })}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="production">Production</SelectItem>
+                <SelectItem value="sandbox">Sandbox (testing)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+            <p className="font-medium">Whop Setup:</p>
+            <ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
+              <li>Embedded in-page checkout — no redirect, no popup</li>
+              <li>Card payments settle to USDC automatically</li>
+              <li>Create a Plan in Checkout links (base template — price is overridden per pledge)</li>
+              <li>Subscribe to all webhook events at <code className="bg-muted px-1 rounded">Dashboard → Developer → Webhooks</code></li>
             </ul>
           </div>
         </CardContent>

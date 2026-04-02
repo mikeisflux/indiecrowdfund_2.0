@@ -104,6 +104,13 @@ interface PlatformSettings {
   paypalClientSecret: string | null;
   paypalWebhookId: string | null;
   paypalMode: string;
+  // Whop settings
+  whopEnabled: boolean;
+  whopApiKey: string | null;
+  whopPlanId: string | null;
+  whopCompanyId: string | null;
+  whopWebhookSecret: string | null;
+  whopEnvironment: string;
   // Payment settings
   autoPayouts: boolean;
   // Social auto-posting settings
@@ -209,6 +216,13 @@ export default function SettingsPage() {
     paypalClientSecret: "",
     paypalWebhookId: "",
     paypalMode: "sandbox",
+    // Whop settings
+    whopEnabled: false,
+    whopApiKey: "",
+    whopPlanId: "",
+    whopCompanyId: "",
+    whopWebhookSecret: "",
+    whopEnvironment: "production",
     // reCAPTCHA settings
     recaptchaEnabled: false,
     recaptchaSiteKey: "",
@@ -391,6 +405,12 @@ export default function SettingsPage() {
         paypalClientSecret: settings.paypalClientSecret || "",
         paypalWebhookId: settings.paypalWebhookId || "",
         paypalMode: settings.paypalMode || "sandbox",
+        whopEnabled: settings.whopEnabled || false,
+        whopApiKey: settings.whopApiKey || "",
+        whopPlanId: settings.whopPlanId || "",
+        whopCompanyId: settings.whopCompanyId || "",
+        whopWebhookSecret: settings.whopWebhookSecret || "",
+        whopEnvironment: settings.whopEnvironment || "production",
         recaptchaEnabled: settings.recaptchaEnabled || false,
         recaptchaSiteKey: settings.recaptchaSiteKey || "",
         recaptchaSecretKey: settings.recaptchaSecretKey || "",
@@ -644,6 +664,12 @@ export default function SettingsPage() {
             paypalClientSecret: currentPaymentSettings.paypalClientSecret,
             paypalWebhookId: currentPaymentSettings.paypalWebhookId,
             paypalMode: currentPaymentSettings.paypalMode,
+            whopEnabled: currentPaymentSettings.whopEnabled,
+            whopApiKey: currentPaymentSettings.whopApiKey,
+            whopPlanId: currentPaymentSettings.whopPlanId,
+            whopCompanyId: currentPaymentSettings.whopCompanyId,
+            whopWebhookSecret: currentPaymentSettings.whopWebhookSecret,
+            whopEnvironment: currentPaymentSettings.whopEnvironment,
             recaptchaEnabled: currentPaymentSettings.recaptchaEnabled,
             recaptchaSiteKey: currentPaymentSettings.recaptchaSiteKey,
             recaptchaSecretKey: currentPaymentSettings.recaptchaSecretKey,

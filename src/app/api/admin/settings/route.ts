@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { auditLog, computeChanges } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { invalidatePayPalConfigCache } from "@/lib/payments/paypal";
+import { invalidateWhopConfigCache } from "@/lib/payments/whop";
 import { encryptSecret } from "@/lib/vault";
 
 const settingsLogger = logger.child({ module: "admin-settings" });
@@ -90,6 +91,8 @@ export async function GET() {
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey ? "••••••••" : null,
       paypalClientSecret: settings.paypalClientSecret ? "••••••••" : null,
+      whopApiKey: settings.whopApiKey ? "••••••••" : null,
+      whopWebhookSecret: settings.whopWebhookSecret ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,
@@ -167,6 +170,7 @@ export async function PATCH(req: NextRequest) {
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret', 'stripeConnectWebhookSecret',
       'divinityCoinApiKey', 'divinityCoinWebhookSecret', 'divinityCoinStripePublishableKey',
       'paypalClientId', 'paypalClientSecret', 'paypalWebhookId',
+      'whopApiKey', 'whopWebhookSecret',
       'smtpPassword', 'sendgridApiKey', 'sendgridWebhookVerificationKey', 'mailgunApiKey', 'mailgunWebhookSigningKey',
       'anthropicApiKey', 'googlePlacesApiKey',
       'facebookAppSecret', 'facebookPageAccessToken',
@@ -201,6 +205,7 @@ export async function PATCH(req: NextRequest) {
         "divinityCoinEnabled", "divinityCoinApiKey", "divinityCoinWebhookSecret",
         "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "divinityCoinStripePublishableKey",
         "paypalEnabled", "paypalClientId", "paypalClientSecret", "paypalWebhookId", "paypalMode",
+        "whopEnabled", "whopApiKey", "whopPlanId", "whopCompanyId", "whopWebhookSecret", "whopEnvironment",
         "autoPayouts",
         "recaptchaEnabled", "recaptchaSiteKey", "recaptchaSecretKey"
       ],
@@ -355,9 +360,10 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    // Invalidate PayPal config cache if PayPal settings were changed
+    // Invalidate payment config caches if payment settings were changed
     if (section === "payments") {
       invalidatePayPalConfigCache();
+      invalidateWhopConfigCache();
     }
 
     // Mask sensitive fields in response
@@ -371,6 +377,8 @@ export async function PATCH(req: NextRequest) {
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey ? "••••••••" : null,
       paypalClientSecret: settings.paypalClientSecret ? "••••••••" : null,
+      whopApiKey: settings.whopApiKey ? "••••••••" : null,
+      whopWebhookSecret: settings.whopWebhookSecret ? "••••••••" : null,
       smtpPassword: settings.smtpPassword ? "••••••••" : null,
       sendgridApiKey: settings.sendgridApiKey ? "••••••••" : null,
       sendgridWebhookVerificationKey: settings.sendgridWebhookVerificationKey ? "••••••••" : null,

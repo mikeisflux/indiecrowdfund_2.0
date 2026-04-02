@@ -63,6 +63,8 @@
     "@types/jszip": "^3.4.0",
     "@uploadthing/react": "^7.3.3",
     "@upstash/redis": "^1.35.7",
+    "@whop/checkout": "^0.0.52",
+    "@whop/sdk": "^0.0.35",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

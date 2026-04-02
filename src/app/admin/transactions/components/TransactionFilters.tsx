@@ -75,6 +75,7 @@ export function TransactionFilters({
                 <SelectItem value="STRIPE">Stripe</SelectItem>
                 <SelectItem value="PAYPAL">PayPal</SelectItem>
                 <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
+                <SelectItem value="WHOP">Whop</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1">

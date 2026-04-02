@@ -33,6 +33,9 @@ model Pledge {
   // PayPal fields
   paypalOrderId         String?      @unique
 
+  // Whop fields
+  whopCheckoutId        String?      @unique
+
   // Payment retry tracking
   retryCount            Int          @default(0)
   nextRetryAt           DateTime?

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createStripePayment, checkAndUpdateStripeOnboarding } from "@/lib/payments/stripe";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { createPayPalPayment } from "@/lib/payments/paypal";
+import { createWhopPayment } from "@/lib/payments/whop";
 import { isEmailVerificationRequired } from "@/lib/email";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
@@ -332,6 +333,36 @@ export async function POST(req: NextRequest) {
           pledgeLogger.error({ correlationId, err: paypalError instanceof Error ? paypalError.message : String(paypalError) }, "PayPal payment creation error");
           return NextResponse.json(
             { error: paypalError instanceof Error ? paypalError.message : "Failed to initialize PayPal payment" },
+            { status: 502 }
+          );
+        }
+      }
+
+      // Whop payment processor
+      if (project.paymentProcessor === "WHOP") {
+        try {
+          const result = await createWhopPayment({
+            projectId: data.projectId,
+            rewardId: data.rewardId,
+            addons: addonsWithQuantity,
+            amount: data.amount,
+            userId: session.user.id,
+            sourceCampaignId,
+            shippingAmount: data.shippingAmount || 0,
+          });
+
+          metrics.pledgesCreated.inc({ status: "pending", processor: "whop" });
+          return NextResponse.json({
+            paymentMethod: "WHOP",
+            type: "whop_checkout",
+            whopSessionId: result.sessionId,
+            pledgeId: result.pledgeId,
+            chargedImmediately: true,
+          });
+        } catch (whopError) {
+          pledgeLogger.error({ correlationId, err: whopError instanceof Error ? whopError.message : String(whopError) }, "Whop payment creation error");
+          return NextResponse.json(
+            { error: whopError instanceof Error ? whopError.message : "Failed to initialize Whop payment" },
             { status: 502 }
           );
         }

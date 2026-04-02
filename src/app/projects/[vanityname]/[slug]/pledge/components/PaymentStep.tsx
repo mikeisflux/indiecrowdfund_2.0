@@ -9,6 +9,7 @@ import { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
 import { StripePaymentForm } from "./StripePaymentForm";
 import { PayPalPaymentForm } from "./PayPalPaymentForm";
+import { WhopPaymentForm } from "./WhopPaymentForm";
 import { apiFetch } from "@/lib/fetch-utils";
 
 interface PaymentStepProps {
@@ -33,6 +34,9 @@ interface PaymentStepProps {
   paypalClientId: string | null;
   paypalClientToken: string | null;
   paypalMode: string;
+  whopSessionId: string | null;
+  whopPlanId: string | null;
+  whopEnvironment: "production" | "sandbox";
 }
 
 const isEmailVerificationError = (error: string | null) =>
@@ -105,6 +109,9 @@ export function PaymentStep({
   paypalClientId,
   paypalClientToken,
   paypalMode,
+  whopSessionId,
+  whopPlanId,
+  whopEnvironment,
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
@@ -199,8 +206,43 @@ export function PaymentStep({
             </div>
           )} */}
 
-          {/* Payment Form - PayPal, DivinityCoin, or Stripe */}
-          {project?.paymentProcessor === "PAYPAL" ? (
+          {/* Payment Form - Whop, PayPal, DivinityCoin, or Stripe */}
+          {project?.paymentProcessor === "WHOP" ? (
+            /* Whop Embedded Checkout */
+            whopSessionId && whopPlanId && currentPledgeId ? (
+              <WhopPaymentForm
+                sessionId={whopSessionId}
+                planId={whopPlanId}
+                pledgeId={currentPledgeId}
+                environment={whopEnvironment}
+                agreedToTerms={agreedToTerms}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            ) : paymentError ? (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    setPaymentError(null);
+                    setIsProcessing(false);
+                  }}
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">Loading Whop checkout...</p>
+              </div>
+            )
+          ) : project?.paymentProcessor === "PAYPAL" ? (
             /* PayPal Advanced Checkout - inline card fields + PayPal wallet button */
             paypalOrderId && paypalClientId && currentPledgeId ? (
               <PayPalPaymentForm

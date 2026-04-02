@@ -227,6 +227,7 @@ function computeStats(transactions: UnifiedTransaction[]): Record<string, any> {
     stripeTransactions: transactions.filter(t => t.paymentProcessor === "STRIPE").length,
     paypalTransactions: transactions.filter(t => t.paymentProcessor === "PAYPAL").length,
     dcTransactions: transactions.filter(t => t.paymentProcessor === "DIVINITYCOIN").length,
+    whopTransactions: transactions.filter(t => t.paymentProcessor === "WHOP").length,
 
     todayTransactions: transactions.filter(t => new Date(t.createdAt) >= todayStart).length,
     todayVolume: transactions

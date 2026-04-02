@@ -41,6 +41,14 @@ model PlatformSettings {
   paypalWebhookId       String?
   paypalMode            String   @default("live")  // "live" or "sandbox"
 
+  // Whop Settings
+  whopEnabled           Boolean  @default(false)
+  whopApiKey            String?
+  whopPlanId            String?
+  whopCompanyId         String?
+  whopWebhookSecret     String?
+  whopEnvironment       String   @default("production")  // "production" or "sandbox"
+
   // Payout Settings
   autoPayouts           Boolean  @default(false)
 

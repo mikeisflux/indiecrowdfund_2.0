@@ -43,6 +43,13 @@ export function BreakdownCards({ stats }: BreakdownCardsProps) {
               </div>
               <Badge variant="secondary">{stats.dcTransactions}</Badge>
             </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-purple-600" />
+                <span className="text-sm">Whop</span>
+              </div>
+              <Badge variant="secondary">{stats.whopTransactions ?? 0}</Badge>
+            </div>
           </div>
         </CardContent>
       </Card>

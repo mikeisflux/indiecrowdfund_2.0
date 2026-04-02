@@ -164,6 +164,9 @@ export default function PledgePage() {
                 paypalClientId={pledge.paypalClientId}
                 paypalClientToken={pledge.paypalClientToken}
                 paypalMode={pledge.paypalMode}
+                whopSessionId={pledge.whopSessionId}
+                whopPlanId={pledge.whopPlanId}
+                whopEnvironment={pledge.whopEnvironment}
               />
             )}
           </div>

@@ -80,6 +80,10 @@ export function usePledge() {
   const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
   const [paypalClientToken, setPaypalClientToken] = useState<string | null>(null);
   const [paypalMode, setPaypalMode] = useState<string>("live");
+  // Whop state
+  const [whopSessionId, setWhopSessionId] = useState<string | null>(null);
+  const [whopPlanId, setWhopPlanId] = useState<string | null>(null);
+  const [whopEnvironment, setWhopEnvironment] = useState<"production" | "sandbox">("production");
 
   const creatingPaymentRef = useRef(false);
 
@@ -187,6 +191,23 @@ export function usePledge() {
     initPayPal();
   }, [project]);
 
+  // Load Whop plan ID and environment when project uses Whop
+  useEffect(() => {
+    if (!project || project.paymentProcessor !== "WHOP") return;
+    async function initWhop() {
+      try {
+        const res = await fetch("/api/whop/config");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.planId) setWhopPlanId(data.planId);
+        if (data.environment) setWhopEnvironment(data.environment as "production" | "sandbox");
+      } catch (err) {
+        console.error("Failed to load Whop config:", err);
+      }
+    }
+    initWhop();
+  }, [project]);
+
   // Calculate totals
   const rewardAmount = pledgeWithoutReward ? customPledgeAmount : (selectedReward?.amount || 0);
   const rewardShipping = selectedReward
@@ -211,7 +232,7 @@ export function usePledge() {
 
   // Reset guard on state clear
   useEffect(() => {
-    if (!clientSecret && !paypalOrderId && !paymentError && !isProcessing) creatingPaymentRef.current = false;
+    if (!clientSecret && !paypalOrderId && !whopSessionId && !paymentError && !isProcessing) creatingPaymentRef.current = false;
   }, [clientSecret, paypalOrderId, paymentError, isProcessing]);
 
   const createAdditionalItemsPurchase = async () => {
@@ -279,6 +300,9 @@ export function usePledge() {
       if (result.paypalOrderId) {
         // PayPal flow: no clientSecret, use paypalOrderId directly
         setPaypalOrderId(result.paypalOrderId);
+      } else if (result.whopSessionId) {
+        // Whop flow: use sessionId for embedded checkout
+        setWhopSessionId(result.whopSessionId);
       } else {
         if (!result.clientSecret) throw new Error("Invalid payment response - missing client secret");
         if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));
@@ -300,7 +324,7 @@ export function usePledge() {
     } else if (isAddItemsMode) {
       if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && Object.keys(selectedAddons).length > 0) createAdditionalItemsPurchase();
     } else {
-      if (step === "payment" && !clientSecret && !paypalOrderId && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) createPledgeForPayment();
+      if (step === "payment" && !clientSecret && !paypalOrderId && !whopSessionId && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) createPledgeForPayment();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, currentPledgeId, isProcessing, paymentError, isAddItemsMode, isModifyMode, selectedAddons]);
@@ -493,6 +517,8 @@ export function usePledge() {
     intentType, paymentError, setPaymentError, currentPledgeId,
     // PayPal
     paypalOrderId, paypalClientId, paypalClientToken, paypalMode,
+    // Whop
+    whopSessionId, whopPlanId, whopEnvironment,
     // Totals
     totalShipping, addonsShipping, total, addItemsTotal,
     // Handlers
