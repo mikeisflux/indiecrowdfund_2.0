@@ -12,7 +12,7 @@ export type ProjectType = "INDIVIDUAL" | "BUSINESS" | "NONPROFIT";
 
 export type DurationType = "FIXED_DAYS" | "END_DATE";
 
-export type PaymentProcessor = "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
+export type PaymentProcessor = "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP";
 
 // Reward types
 export type RewardType = "TIER" | "ADDON";

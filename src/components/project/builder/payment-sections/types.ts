@@ -30,6 +30,10 @@ export interface PaymentProcessorSectionProps {
   paypalFee: number;
   paypalTotalFees: number;
   paypalNetAmount: number;
+  // Whop-specific (3% Whop + 2.9% card processing)
+  whopFee: number;
+  whopTotalFees: number;
+  whopNetAmount: number;
 }
 
 export interface StripeConnectSectionProps {

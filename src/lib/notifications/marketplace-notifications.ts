@@ -17,7 +17,7 @@ const notificationsMarketplaceNotificationsLogger = logger.child({ module: "noti
  */
 export async function notifyMarketplacePurchase(
   purchaseId: string,
-  paymentMethod: "STRIPE" | "DIVINITYCOIN"
+  paymentMethod: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP"
 ) {
   const purchase = await db.marketplacePurchase.findUnique({
     where: { id: purchaseId },
@@ -73,7 +73,7 @@ export async function notifyMarketplacePurchase(
  */
 export async function notifyMarketplaceSale(
   purchaseId: string,
-  paymentMethod: "STRIPE" | "DIVINITYCOIN"
+  paymentMethod: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP"
 ) {
   const purchase = await db.marketplacePurchase.findUnique({
     where: { id: purchaseId },

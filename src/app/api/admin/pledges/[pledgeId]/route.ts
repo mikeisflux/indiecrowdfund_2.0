@@ -104,7 +104,8 @@ export async function GET(
         canRefund: pledge.status === "COMPLETED" && (
           !!pledge.stripePaymentIntentId ||
           pledge.paymentProcessor === "DIVINITYCOIN" ||
-          pledge.paymentProcessor === "PAYPAL"
+          pledge.paymentProcessor === "PAYPAL" ||
+          pledge.paymentProcessor === "WHOP"
         ),
         isFunded,
       },
@@ -436,6 +437,42 @@ export async function PATCH(
           adminPledgesLogger.error({ err: String(paypalError) }, "PayPal admin refund error:");
           return NextResponse.json(
             { error: String(paypalError) || "Failed to process PayPal refund" },
+            { status: 500 }
+          );
+        }
+      }
+
+      // Whop refund — mark as refunded in DB; actual payment reversal must be done via Whop dashboard
+      if (pledge.paymentProcessor === "WHOP") {
+        try {
+          await db.$transaction(async (tx) => {
+            await tx.pledge.update({
+              where: { id: pledgeId },
+              data: {
+                status: "REFUNDED",
+                lastFailureReason: reason || "Refunded by admin",
+              },
+            });
+
+            await tx.project.update({
+              where: { id: pledge.projectId },
+              data: {
+                backerCount: { decrement: 1 },
+                currentAmount: { decrement: pledge.amount },
+              },
+            });
+          });
+
+          adminPledgesLogger.info({ pledgeId, whopCheckoutId: pledge.whopCheckoutId }, "[Admin Whop Refund] Marked as refunded — process payment reversal in Whop dashboard");
+
+          return NextResponse.json({
+            success: true,
+            message: "Whop pledge marked as refunded. Please also process the payment reversal in your Whop dashboard.",
+          });
+        } catch (whopError) {
+          adminPledgesLogger.error({ err: String(whopError) }, "Whop admin refund error:");
+          return NextResponse.json(
+            { error: "Failed to process Whop refund" },
             { status: 500 }
           );
         }

@@ -267,7 +267,7 @@ export async function sendMarketplacePurchaseEmail(
   bookSlug: string,
   amount: number,
   currency: string,
-  paymentMethod: "STRIPE" | "DIVINITYCOIN",
+  paymentMethod: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP",
   coverImageUrl?: string | null
 ) {
   const libraryUrl = `${APP_URL}/dashboard/backer?tab=digital-library`;
@@ -352,7 +352,7 @@ export async function sendMarketplaceSaleEmail(
   platformFee: number,
   payout: number,
   currency: string,
-  paymentMethod: "STRIPE" | "DIVINITYCOIN",
+  paymentMethod: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP",
   buyerName: string
 ) {
   const dashboardUrl = `${APP_URL}/dashboard/marketplace`;

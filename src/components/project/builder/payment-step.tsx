@@ -293,9 +293,9 @@ export function PaymentStep() {
   // If adult/risky content is selected, Stripe is NOT allowed (must use DivinityCoin)
   const mustUseAltProcessor = payment.hasAdultContent || payment.hasRiskyContent;
 
-  // Auto-switch away from Stripe if adult content is selected
+  // Auto-switch away from Stripe/PayPal if adult content is selected (DivinityCoin and Whop are allowed)
   useEffect(() => {
-    if (mustUseAltProcessor && payment.paymentProcessor !== "DIVINITYCOIN") {
+    if (mustUseAltProcessor && payment.paymentProcessor !== "DIVINITYCOIN" && payment.paymentProcessor !== "WHOP") {
       updatePayment({ paymentProcessor: "DIVINITYCOIN" });
     }
   }, [mustUseAltProcessor, payment.paymentProcessor, updatePayment]);
@@ -314,6 +314,11 @@ export function PaymentStep() {
   const paypalFee = goalAmount * 0.0349 + numTransactions * 0.49;
   const paypalTotalFees = paypalFee + platformFee;
   const paypalNetAmount = goalAmount - paypalTotalFees;
+
+  // Whop: 3% per transaction
+  const whopFee = goalAmount * 0.03;
+  const whopTotalFees = whopFee + platformFee;
+  const whopNetAmount = goalAmount - whopTotalFees;
 
   // Stripe Connect handlers - DISABLED: Stripe replaced by PayPal
   // const handleConnectStripe = async () => { ... };
@@ -384,6 +389,9 @@ export function PaymentStep() {
         paypalFee={paypalFee}
         paypalTotalFees={paypalTotalFees}
         paypalNetAmount={paypalNetAmount}
+        whopFee={whopFee}
+        whopTotalFees={whopTotalFees}
+        whopNetAmount={whopNetAmount}
       />
 
       <Separator />
