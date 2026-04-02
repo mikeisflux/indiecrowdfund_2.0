@@ -7,6 +7,7 @@ import { pushOrdersToShopify } from "@/lib/shopify-push";
 import { decryptCredential } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
 import { chargeSavedPledge } from "@/lib/payments/stripe/charges";
+import { sendSurveyAvailableEmail } from "@/lib/email";
 
 const backersLogger = logger.child({ module: "indiekit-backers" });
 
@@ -22,7 +23,8 @@ const bulkActionSchema = z.object({
     "push_to_fulfillment",
     "mark_shipped",
   ]),
-  pledgeIds: z.array(z.string()).min(1),
+  pledgeIds: z.array(z.string()).optional(),
+  sendToAll: z.boolean().optional(),
   projectId: z.string(),
   idempotencyKey: z.string().optional(),
 });
@@ -36,7 +38,24 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { action, pledgeIds, projectId, idempotencyKey } = bulkActionSchema.parse(body);
+    const { action, pledgeIds: rawPledgeIds, sendToAll, projectId, idempotencyKey } = bulkActionSchema.parse(body);
+
+    // For non-survey actions, pledgeIds is required
+    if (action !== "send_survey_reminder" && (!rawPledgeIds || rawPledgeIds.length === 0)) {
+      return NextResponse.json({ error: "pledgeIds is required for this action" }, { status: 400 });
+    }
+
+    // For survey reminders with sendToAll, fetch all pending pledges for this project
+    let pledgeIds: string[] = rawPledgeIds || [];
+    if (action === "send_survey_reminder" && sendToAll) {
+      const allPledges = await db.pledge.findMany({
+        where: { projectId, status: "COMPLETED" },
+        select: { id: true },
+      });
+      pledgeIds = allPledges.map(p => p.id);
+    } else if (action === "send_survey_reminder" && pledgeIds.length === 0) {
+      return NextResponse.json({ error: "No backers selected" }, { status: 400 });
+    }
 
     // Idempotency check for charge_cards to prevent duplicate charges
     if (action === "charge_cards") {
@@ -108,36 +127,81 @@ export async function POST(req: NextRequest) {
         // Get survey for project
         const survey = await db.survey.findUnique({
           where: { projectId },
+          select: { id: true },
         });
 
         if (!survey) {
           return NextResponse.json({ error: "No survey found for this project" }, { status: 400 });
         }
 
-        // Get pledges that haven't completed survey
-        const surveyResponses = await db.surveyResponse.findMany({
+        // Find which pledges already have a completed survey response
+        const completedResponses = await db.surveyResponse.findMany({
+          where: { surveyId: survey.id, pledgeId: { in: pledgeIds }, isComplete: true },
+          select: { pledgeId: true },
+        });
+        const completedPledgeIds = new Set(completedResponses.map(sr => sr.pledgeId));
+
+        // Get the pending pledges with user data so we can email them
+        const pendingPledges = await db.pledge.findMany({
           where: {
-            surveyId: survey.id,
-            pledgeId: { in: pledgeIds },
-            isComplete: false,
+            id: { in: pledgeIds.filter(id => !completedPledgeIds.has(id)) },
+            status: "COMPLETED",
+          },
+          select: {
+            id: true,
+            user: { select: { email: true, name: true } },
           },
         });
 
-        const pendingPledgeIds = new Set(surveyResponses.map(sr => sr.pledgeId));
+        // Get project title and creator name for email
+        const projectForEmail = await db.project.findUnique({
+          where: { id: projectId },
+          select: {
+            title: true,
+            creator: { select: { name: true } },
+          },
+        });
+
+        const creatorName = projectForEmail?.creator?.name || "The Creator";
+        const projectTitle = projectForEmail?.title || "";
+
+        // Send reminder emails
+        let emailsSent = 0;
+        const emailErrors: string[] = [];
+
+        for (const pledge of pendingPledges) {
+          if (pledge.user?.email) {
+            try {
+              await sendSurveyAvailableEmail(
+                pledge.user.email,
+                pledge.user.name || "Backer",
+                projectTitle,
+                creatorName,
+                pledge.id
+              );
+              emailsSent++;
+            } catch (emailError) {
+              const errMsg = `Failed to email ${pledge.user.email}: ${String(emailError)}`;
+              backersLogger.error({ err: String(emailError) }, errMsg);
+              emailErrors.push(errMsg);
+            }
+          }
+        }
 
         // Log activity
         await db.fulfillmentActivity.create({
           data: {
             projectId,
             type: "SURVEY_REMINDER",
-            title: `Survey reminder sent to ${pendingPledgeIds.size} backers`,
-            affectedCount: pendingPledgeIds.size,
-            metadata: { pledgeIds: Array.from(pendingPledgeIds) },
+            title: `Survey reminder sent to ${emailsSent} backers`,
+            affectedCount: emailsSent,
+            metadata: { pledgeIds: pendingPledges.map(p => p.id) },
           },
         });
 
-        results.success = pendingPledgeIds.size;
-        results.failed = pledgeIds.length - pendingPledgeIds.size;
+        results.success = emailsSent;
+        results.failed = pledgeIds.length - emailsSent;
+        if (emailErrors.length > 0) results.errors = emailErrors;
         break;
       }
 
