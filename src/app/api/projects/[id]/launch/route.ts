@@ -96,8 +96,8 @@ export async function POST(
     }
 
     // Validate Stripe Connect account is fully set up before launching
-    // Skip this check for DivinityCoin projects - they don't need Stripe
-    if (project.paymentProcessor !== "DIVINITYCOIN") {
+    // Skip for non-Stripe processors — they handle payouts independently
+    if (project.paymentProcessor === "STRIPE") {
       const stripeValidation = await validateStripeConnectAccount(project.creatorId);
       if (!stripeValidation.isValid) {
         return NextResponse.json(
