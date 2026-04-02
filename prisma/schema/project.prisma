@@ -88,6 +88,7 @@ model Project {
   followers             ProjectFollower[]
   retailerPledges       RetailerPledge[]
   divinityCoinSettlements DivinityCoinSettlement[]
+  whopSettlements         WhopSettlement[]
   paypalPayouts           PayPalPayout[]
   digitalFiles          DigitalFile[]
   collectionItems       ProjectCollectionItem[]

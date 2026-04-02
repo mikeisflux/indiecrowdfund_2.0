@@ -31,6 +31,7 @@ async function requireAdmin() {
 }
 
 // GET - Fetch bank account details (for admin payout purposes)
+// Supports DivinityCoin, PayPal, and Whop bank accounts via ?type= query param
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -42,8 +43,116 @@ export async function GET(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type") || "divinitycoin";
 
-    // Get the bank account
+    // Whop bank account lookup
+    if (type === "whop") {
+      const bankAccount = await db.whopBankAccount.findUnique({
+        where: { id },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      });
+
+      if (!bankAccount) {
+        return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
+      }
+
+      let bankName = bankAccount.bankNameDisplay || "[Encrypted]";
+      let accountHolder = "[Encrypted]";
+      let accountNumber = "[Encrypted]";
+      let routingNumber = "[Encrypted]";
+
+      try {
+        if (bankAccount.bankNameEncrypted) bankName = decrypt(bankAccount.bankNameEncrypted);
+        if (bankAccount.accountHolderEncrypted) accountHolder = decrypt(bankAccount.accountHolderEncrypted);
+        if (bankAccount.accountNumberEncrypted) accountNumber = decrypt(bankAccount.accountNumberEncrypted);
+        if (bankAccount.routingNumberEncrypted) routingNumber = decrypt(bankAccount.routingNumberEncrypted);
+      } catch (error) {
+        adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting Whop bank account details:");
+      }
+
+      auditLog({
+        action: "BANK_ACCOUNT_VIEW",
+        actorId: authResult.user.id,
+        actorEmail: authResult.user.email || undefined,
+        targetId: id,
+        targetType: "USER",
+        details: { bankAccountUserId: bankAccount.userId, processor: "WHOP" },
+      });
+
+      return NextResponse.json({
+        id: bankAccount.id,
+        userId: bankAccount.userId,
+        user: bankAccount.user,
+        bankName,
+        bankNameDisplay: bankAccount.bankNameDisplay,
+        accountHolder,
+        accountNumber,
+        accountLastFour: bankAccount.accountLastFour,
+        routingNumber,
+        accountType: bankAccount.accountType,
+        isVerified: bankAccount.isVerified,
+        verifiedAt: bankAccount.verifiedAt,
+        verificationMethod: null,
+        createdAt: bankAccount.createdAt,
+        updatedAt: bankAccount.updatedAt,
+      });
+    }
+
+    // PayPal bank account lookup
+    if (type === "paypal") {
+      const bankAccount = await db.payPalBankAccount.findUnique({
+        where: { id },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      });
+
+      if (!bankAccount) {
+        return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
+      }
+
+      let bankName = bankAccount.bankNameDisplay || "[Encrypted]";
+      let accountHolder = "[Encrypted]";
+      let accountNumber = "[Encrypted]";
+      let routingNumber = "[Encrypted]";
+
+      try {
+        if (bankAccount.bankNameEncrypted) bankName = decrypt(bankAccount.bankNameEncrypted);
+        if (bankAccount.accountHolderEncrypted) accountHolder = decrypt(bankAccount.accountHolderEncrypted);
+        if (bankAccount.accountNumberEncrypted) accountNumber = decrypt(bankAccount.accountNumberEncrypted);
+        if (bankAccount.routingNumberEncrypted) routingNumber = decrypt(bankAccount.routingNumberEncrypted);
+      } catch (error) {
+        adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting PayPal bank account details:");
+      }
+
+      auditLog({
+        action: "BANK_ACCOUNT_VIEW",
+        actorId: authResult.user.id,
+        actorEmail: authResult.user.email || undefined,
+        targetId: id,
+        targetType: "USER",
+        details: { bankAccountUserId: bankAccount.userId, processor: "PAYPAL" },
+      });
+
+      return NextResponse.json({
+        id: bankAccount.id,
+        userId: bankAccount.userId,
+        user: bankAccount.user,
+        bankName,
+        bankNameDisplay: bankAccount.bankNameDisplay,
+        accountHolder,
+        accountNumber,
+        accountLastFour: bankAccount.accountLastFour,
+        routingNumber,
+        accountType: bankAccount.accountType,
+        isVerified: bankAccount.isVerified,
+        verifiedAt: bankAccount.verifiedAt,
+        verificationMethod: bankAccount.verificationMethod,
+        createdAt: bankAccount.createdAt,
+        updatedAt: bankAccount.updatedAt,
+      });
+    }
+
+    // Default: DivinityCoin bank account
     const bankAccount = await db.divinityCoinBankAccount.findUnique({
       where: { id },
       include: {

@@ -65,7 +65,33 @@ export default function PayoutsPage() {
   });
   const [selectedCreator, setSelectedCreator] = useState<CreatorBalance | null>(null);
   const [showCreatorBalanceDialog, setShowCreatorBalanceDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<"projects" | "balances">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "whop" | "balances">("projects");
+
+  // Whop projects state
+  const [whopProjects, setWhopProjects] = useState<CreatorProject[]>([]);
+  const [whopStats, setWhopStats] = useState<PayoutStats>({
+    totalProjects: 0, pendingPayouts: 0, processingPayouts: 0, settledPayouts: 0,
+    overpaidPayouts: 0, totalAmountOwed: 0, totalAmountSettled: 0, totalRemaining: 0,
+    totalRefunded: 0, totalOverpaid: 0, projectsWithoutBank: 0,
+  });
+  const [selectedWhopProject, setSelectedWhopProject] = useState<CreatorProject | null>(null);
+
+  // Fetch Whop projects
+  const fetchWhopProjects = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (searchQuery) params.set("search", searchQuery);
+      const response = await fetch(`/api/admin/payouts/whop?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch Whop payouts");
+      const data = await response.json();
+      setWhopProjects(data.projects || []);
+      setWhopStats(data.stats || whopStats);
+    } catch (error) {
+      console.error("Error fetching Whop payouts:", error);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, searchQuery]);
 
   // Fetch projects that need payouts
   const fetchProjects = useCallback(async () => {
@@ -116,7 +142,8 @@ export default function PayoutsPage() {
 
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+    fetchWhopProjects();
+  }, [fetchProjects, fetchWhopProjects]);
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -127,11 +154,14 @@ export default function PayoutsPage() {
   };
 
   // View bank account details
-  const viewBankDetails = async (bankAccountId: string) => {
+  const viewBankDetails = async (bankAccountId: string, type?: string) => {
     setLoadingBankDetails(true);
     setShowBankDetails(true);
     try {
-      const response = await fetch(`/api/admin/bank-accounts/${bankAccountId}`);
+      const url = type
+        ? `/api/admin/bank-accounts/${bankAccountId}?type=${type}`
+        : `/api/admin/bank-accounts/${bankAccountId}`;
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Failed to fetch bank account details");
       }
@@ -177,6 +207,37 @@ export default function PayoutsPage() {
     } catch (error) {
       console.error("Error creating settlement:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create settlement");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Create Whop settlement
+  const createWhopSettlement = async () => {
+    if (!selectedWhopProject || !settlementAmount) return;
+    setProcessing(true);
+    try {
+      const response = await apiFetch("/api/admin/payouts/whop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: selectedWhopProject.id,
+          amount: parseFloat(settlementAmount),
+          adminNotes,
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create settlement");
+      }
+      toast.success("Whop settlement created successfully");
+      setShowCreateSettlement(false);
+      setSettlementAmount("");
+      setAdminNotes("");
+      setSelectedWhopProject(null);
+      fetchWhopProjects();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create Whop settlement");
     } finally {
       setProcessing(false);
     }
@@ -324,6 +385,16 @@ export default function PayoutsPage() {
           Campaign Payouts ({stats.totalProjects})
         </button>
         <button
+          onClick={() => setActiveTab("whop")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "whop"
+              ? "border-teal-600 text-teal-600"
+              : "border-transparent text-zinc-500 hover:text-zinc-700"
+          }`}
+        >
+          Whop Campaigns ({whopStats.totalProjects})
+        </button>
+        <button
           onClick={() => setActiveTab("balances")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "balances"
@@ -345,6 +416,20 @@ export default function PayoutsPage() {
           setSearchQuery={setSearchQuery}
           setStatusFilter={setStatusFilter}
           onSelectProject={setSelectedProject}
+          formatCurrency={formatCurrency}
+        />
+      )}
+
+      {/* Whop Campaigns Tab Content */}
+      {activeTab === "whop" && (
+        <ProjectsTable
+          projects={whopProjects}
+          loading={false}
+          searchQuery={searchQuery}
+          statusFilter={statusFilter}
+          setSearchQuery={setSearchQuery}
+          setStatusFilter={setStatusFilter}
+          onSelectProject={setSelectedWhopProject}
           formatCurrency={formatCurrency}
         />
       )}
@@ -377,11 +462,23 @@ export default function PayoutsPage() {
         formatCurrency={formatCurrency}
       />
 
-      {/* Project Detail Dialog */}
+      {/* Project Detail Dialog (DivinityCoin) */}
       <ProjectDetailDialog
         selectedProject={selectedProject}
         onClose={() => setSelectedProject(null)}
         onViewBankDetails={viewBankDetails}
+        onCreateSettlement={(amount) => {
+          setSettlementAmount(amount);
+          setShowCreateSettlement(true);
+        }}
+        formatCurrency={formatCurrency}
+      />
+
+      {/* Whop Project Detail Dialog */}
+      <ProjectDetailDialog
+        selectedProject={selectedWhopProject}
+        onClose={() => setSelectedWhopProject(null)}
+        onViewBankDetails={(id) => viewBankDetails(id, "whop")}
         onCreateSettlement={(amount) => {
           setSettlementAmount(amount);
           setShowCreateSettlement(true);
@@ -401,13 +498,13 @@ export default function PayoutsPage() {
       <CreateSettlementDialog
         open={showCreateSettlement}
         onOpenChange={setShowCreateSettlement}
-        selectedProject={selectedProject}
+        selectedProject={selectedProject || selectedWhopProject}
         settlementAmount={settlementAmount}
         setSettlementAmount={setSettlementAmount}
         adminNotes={adminNotes}
         setAdminNotes={setAdminNotes}
         processing={processing}
-        onCreateSettlement={createSettlement}
+        onCreateSettlement={selectedWhopProject ? createWhopSettlement : createSettlement}
         formatCurrency={formatCurrency}
       />
     </div>

@@ -14,6 +14,7 @@ import {
   PaymentProcessorSection,
   DivinityCoinBankSection,
   PayPalBankPayoutSection,
+  WhopBankPayoutSection,
   RetailerAccessSection,
   ChargebackCardSection,
 } from "./payment-sections";
@@ -429,6 +430,14 @@ export function PaymentStep() {
         <>
           <Separator />
           <PayPalBankPayoutSection />
+        </>
+      )}
+
+      {/* Whop Bank Payout Account - Only show when Whop is selected */}
+      {payment.paymentProcessor === "WHOP" && (
+        <>
+          <Separator />
+          <WhopBankPayoutSection />
         </>
       )}
 

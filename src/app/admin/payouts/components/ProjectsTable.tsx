@@ -132,6 +132,9 @@ export function ProjectsTable({
                             {project.paymentProcessor === "DIVINITYCOIN" && (
                               <Badge variant="outline" className="text-xs text-purple-600 border-purple-600">DivinityCoin</Badge>
                             )}
+                            {project.paymentProcessor === "WHOP" && (
+                              <Badge variant="outline" className="text-xs text-zinc-800 border-zinc-800 dark:text-zinc-200 dark:border-zinc-200">Whop</Badge>
+                            )}
                           </div>
                           <p className="text-xs text-zinc-500">
                             {project.backerCount} backers

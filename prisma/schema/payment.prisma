@@ -226,7 +226,77 @@ enum DivinityCoinSettlementStatus {
   CANCELLED   // Cancelled by admin
 }
 
-// DivinityCoin credit redemption tracking
+// Whop bank account for creator payouts
+model WhopBankAccount {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+
+  // Encrypted bank details (AES-256 encrypted)
+  bankNameEncrypted     String   @db.Text
+  accountHolderEncrypted String  @db.Text
+  accountNumberEncrypted String  @db.Text
+  routingNumberEncrypted String  @db.Text
+
+  // Non-sensitive display data
+  bankNameDisplay       String?  // e.g., "Chase Bank"
+  accountLastFour       String?  // e.g., "4567"
+  accountType           String   @default("checking") // checking or savings
+
+  // Verification status
+  isVerified            Boolean  @default(false)
+  verifiedAt            DateTime?
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settlements           WhopSettlement[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Whop settlement tracking for admin payouts
+model WhopSettlement {
+  id              String   @id @default(cuid())
+  bankAccountId   String
+  projectId       String?
+  projectName     String?  // Denormalized for history
+
+  // Settlement details
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("USD")
+  status          WhopSettlementStatus @default(PENDING)
+
+  // Processing
+  initiatedAt     DateTime?
+  processedAt     DateTime?
+  completedAt     DateTime?
+  failedAt        DateTime?
+  failureReason   String?
+  adminNotes      String?  @db.Text
+  processedBy     String?
+
+  bankAccount     WhopBankAccount @relation(fields: [bankAccountId], references: [id])
+  project         Project?        @relation(fields: [projectId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([bankAccountId])
+  @@index([projectId])
+  @@index([status])
+}
+
+enum WhopSettlementStatus {
+  PENDING
+  INITIATED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+
 model DivinityCoinRedemption {
   id              String   @id @default(cuid())
   code            String   @unique // The redemption code
