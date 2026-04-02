@@ -174,9 +174,17 @@ export async function POST() {
       to: user.email,
       subject: `Verify your email address - ${APP_NAME}`,
       html: emailHtml,
+      skipUnsubscribeCheck: true, // Verification is transactional — must bypass unsubscribe list
     });
 
     if (!result.success) {
+      // If the email was auto-queued for retry, treat as soft success — user will receive it soon
+      if ("queued" in result && result.queued) {
+        return NextResponse.json({
+          success: true,
+          message: "Verification email sent! Please check your inbox.",
+        });
+      }
       return NextResponse.json(
         { error: result.error || "Failed to send verification email" },
         { status: 500 }
