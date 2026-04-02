@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
 
     for (const projectId of projectIds) {
       const projectRefundedPledges = refundedPledges.filter((p) => p.projectId === projectId);
-      const projectRefundActivities = refundActivities.filter((a) => a.projectId === projectId);
+      const projectRefundActivities = refundActivities.filter((a: { projectId: string }) => a.projectId === projectId);
       let fullRefundTotal = 0;
       let partialRefundTotal = 0;
       const refunds: Array<{ id: string; type: "full" | "partial"; amount: number; backerName: string | null; backerEmail: string; reason: string | null; date: string }> = [];
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
     }
 
     const formattedProjects = projects.map((project) => {
-      const totalRaised = project.pledges.reduce((sum, pledge) => sum + Number(pledge.amount), 0);
+      const totalRaised = project.pledges.reduce((sum: number, pledge: { id: string; amount: unknown }) => sum + Number(pledge.amount), 0);
       const projectRefunds = refundsByProject.get(project.id) || {
         fullRefundTotal: 0, fullRefundCount: 0, partialRefundTotal: 0, partialRefundCount: 0, totalRefunded: 0, refunds: [],
       };
@@ -173,9 +173,9 @@ export async function GET(request: NextRequest) {
       const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
 
       const settlements = project.whopSettlements || [];
-      const completedSettlements = settlements.filter((s) => s.status === "COMPLETED");
-      const amountSettled = completedSettlements.reduce((sum, s) => sum + Number(s.amount), 0);
-      const pendingSettlements = settlements.filter((s) => ["PENDING", "PROCESSING", "INITIATED"].includes(s.status));
+      const completedSettlements = settlements.filter((s: { status: string }) => s.status === "COMPLETED");
+      const amountSettled = completedSettlements.reduce((sum: number, s: { amount: unknown }) => sum + Number(s.amount), 0);
+      const pendingSettlements = settlements.filter((s: { status: string }) => ["PENDING", "PROCESSING", "INITIATED"].includes(s.status));
       const hasPendingSettlement = pendingSettlements.length > 0;
       const remainingAmount = Math.round((amountOwed - amountSettled) * 100) / 100;
 
@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
             ? { id: bankAccount.id, bankName: bankAccount.bankNameDisplay, accountLastFour: bankAccount.accountLastFour, accountType: bankAccount.accountType, isVerified: bankAccount.isVerified }
             : null,
         },
-        settlements: settlements.map((s) => ({
+        settlements: settlements.map((s: { id: string; amount: unknown; status: string; processedAt: Date | null; completedAt: Date | null }) => ({
           id: s.id,
           amount: Number(s.amount),
           status: s.status,
