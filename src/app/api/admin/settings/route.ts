@@ -81,7 +81,7 @@ export async function GET() {
     }
 
     // Mask sensitive fields for security (but indicate they exist)
-    const maskedSettings = {
+    const maskedSettings: Record<string, unknown> = {
       ...settings,
       stripePublishableKey: settings.stripePublishableKey ? "••••••••" : null,
       stripeSecretKey: settings.stripeSecretKey ? "••••••••" : null,
@@ -315,8 +315,13 @@ export async function PATCH(req: NextRequest) {
           value.startsWith("rk_") || value.startsWith("shpat_") ||
           value.startsWith("AIza");
         if (isPlaintext) {
-          updateData[field] = encryptSecret(value);
-          settingsLogger.info({ field }, "Encrypted secret before saving");
+          try {
+            updateData[field] = encryptSecret(value);
+            settingsLogger.info({ field }, "Encrypted secret before saving");
+          } catch (encryptErr) {
+            // Encryption key not configured — store plaintext with warning
+            settingsLogger.warn({ field, err: String(encryptErr) }, "Could not encrypt secret field — storing plaintext. Set CREDENTIALS_ENCRYPTION_KEY env var.");
+          }
         }
       }
     }
