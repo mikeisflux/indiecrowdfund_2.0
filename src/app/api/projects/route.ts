@@ -163,6 +163,45 @@ export async function GET(req: NextRequest) {
       db.project.count({ where }),
     ]);
 
+    // Live pledge aggregation — same logic as /stats endpoint to keep cards in sync
+    const projectIds = projects.map((p) => p.id);
+
+    const completedTotals = projectIds.length > 0
+      ? await db.pledge.groupBy({
+          by: ["projectId"],
+          where: { projectId: { in: projectIds }, status: "COMPLETED", deletedAt: null },
+          _sum: { amount: true },
+          _count: { id: true },
+        })
+      : [];
+
+    const completedMap = new Map(completedTotals.map((t) => [t.projectId, t]));
+
+    // For LIVE projects whose completed amount hasn't yet met their goal, include confirmed pending pledges
+    const liveUnfundedIds = projects
+      .filter((p) => {
+        if (p.status !== "LIVE") return false;
+        const completed = Number(completedMap.get(p.id)?._sum.amount ?? 0);
+        return completed < Number(p.goalAmount);
+      })
+      .map((p) => p.id);
+
+    const pendingTotals = liveUnfundedIds.length > 0
+      ? await db.pledge.groupBy({
+          by: ["projectId"],
+          where: {
+            projectId: { in: liveUnfundedIds },
+            status: "PENDING",
+            deletedAt: null,
+            confirmationEmailSent: true,
+          },
+          _sum: { amount: true },
+          _count: { id: true },
+        })
+      : [];
+
+    const pendingMap = new Map(pendingTotals.map((t) => [t.projectId, t]));
+
     // Format projects for frontend
     const formattedProjects = projects.map((project) => {
       let daysRemaining = 0;
@@ -182,6 +221,13 @@ export async function GET(req: NextRequest) {
         : `/projects/${project.slug}`;
       const projectUrl = isPrelaunch ? `${basePath}/prelaunch` : basePath;
 
+      const completedAmount = Number(completedMap.get(project.id)?._sum.amount ?? 0);
+      const pendingAmount = Number(pendingMap.get(project.id)?._sum.amount ?? 0);
+      const liveAmount = completedAmount + pendingAmount;
+      const completedBackers = completedMap.get(project.id)?._count.id ?? 0;
+      const pendingBackers = pendingMap.get(project.id)?._count.id ?? 0;
+      const liveBackerCount = completedBackers + pendingBackers;
+
       return {
         id: project.id,
         title: project.title,
@@ -195,8 +241,8 @@ export async function GET(req: NextRequest) {
           image: project.creator.image,
         },
         goalAmount: Number(project.goalAmount),
-        currentAmount: Number(project.currentAmount),
-        backerCount: project.backerCount,
+        currentAmount: liveAmount,
+        backerCount: liveBackerCount,
         followerCount: project.followerCount,
         daysRemaining,
         endDate: project.endDate?.toISOString() || null,
