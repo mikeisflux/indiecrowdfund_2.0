@@ -130,7 +130,7 @@ export function PaymentProcessorSection({
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
-                <span>~9% total fees (6% partner + 3% platform)</span>
+                <span>~6% total fees (3% partner + 3% platform)</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
@@ -138,7 +138,7 @@ export function PaymentProcessorSection({
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
-                <span>Supports adult/controversial content</span>
+                <span>All content types supported</span>
               </div>
             </div>
           </CardContent>
@@ -262,24 +262,24 @@ export function PaymentProcessorSection({
           </h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span>DivinityCoin partner fee (6%)</span>
-              <span className="font-medium">{formatCurrency(goalAmount * 0.06)}</span>
+              <span>DivinityCoin partner fee (3%)</span>
+              <span className="font-medium">{formatCurrency(goalAmount * 0.03)}</span>
             </div>
             <div className="flex justify-between">
               <span>Platform fee (3%)</span>
-              <span className="font-medium">{formatCurrency((goalAmount - goalAmount * 0.06) * 0.03)}</span>
+              <span className="font-medium">{formatCurrency((goalAmount - goalAmount * 0.03) * 0.03)}</span>
             </div>
             <Separator className="my-2" />
             <div className="flex justify-between font-semibold">
               <span>Total fees</span>
               <span className="text-[#0066FF]">
-                {formatCurrency(goalAmount * 0.06 + (goalAmount - goalAmount * 0.06) * 0.03)}
+                {formatCurrency(goalAmount * 0.03 + (goalAmount - goalAmount * 0.03) * 0.03)}
               </span>
             </div>
             <div className="flex justify-between font-semibold text-lg">
               <span>You receive</span>
               <span className="text-green-600">
-                {formatCurrency(goalAmount - goalAmount * 0.06 - (goalAmount - goalAmount * 0.06) * 0.03)}
+                {formatCurrency(goalAmount - goalAmount * 0.03 - (goalAmount - goalAmount * 0.03) * 0.03)}
               </span>
             </div>
           </div>

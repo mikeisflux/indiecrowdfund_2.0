@@ -180,7 +180,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable DivinityCoin</Label>
-              <p className="text-sm text-zinc-500">Accept payments via DivinityCoin credits (6% total partner fee)</p>
+              <p className="text-sm text-zinc-500">Accept payments via DivinityCoin credits (3% partner fee + 3% platform = ~6% total)</p>
             </div>
             <Switch
               checked={settings.divinityCoinEnabled}
@@ -259,8 +259,8 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
           <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">DivinityCoin Fee Structure:</p>
             <ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
-              <li>6% total partner fee (includes Stripe processing ~2.9% + $0.30)</li>
-              <li>Platform fee to creator: 3% (configurable)</li>
+              <li>3% partner fee (DivinityCoin processing)</li>
+              <li>Platform fee to creator: 3% (configurable) = ~6% total</li>
               <li>Settlements processed via wire transfer to your bank</li>
             </ul>
             <a href="https://divinitycoin.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">

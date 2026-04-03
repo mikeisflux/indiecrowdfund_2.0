@@ -260,9 +260,9 @@ export async function GET(request: NextRequest) {
       // (Full refunds are already excluded since pledge status is REFUNDED)
       const effectiveRevenue = Math.round((totalRaised - projectRefunds.partialRefundTotal) * 100) / 100;
 
-      // DivinityCoin Partner Fee: 6% + $0.30 per transaction
+      // DivinityCoin Partner Fee: 3%
       // IndieCrowdfund Platform Fee: 3%
-      const partnerFeeRate = 0.06;
+      const partnerFeeRate = 0.03;
       const platformFeeRate = 0.03;
       const perTransactionRate = 0.30;
       const backerCount = project.pledges.length;
@@ -593,7 +593,7 @@ export async function POST(request: NextRequest) {
       }),
     ]);
     const grossAmount = Number(totalRaised._sum.amount || 0);
-    const partnerFee = Math.round((grossAmount * 0.06 + 0.30 * backerCount) * 100) / 100;
+    const partnerFee = Math.round(grossAmount * 0.03 * 100) / 100;
     const platformFee = Math.round(grossAmount * 0.03 * 100) / 100;
 
     // Create the DivinityCoin settlement record as COMPLETED

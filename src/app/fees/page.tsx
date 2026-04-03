@@ -44,7 +44,7 @@ const stripeFeeBreakdown = [
 const divinityCoinFeeBreakdown = [
   {
     title: "DivinityCoin Partner Fee",
-    rate: "6%",
+    rate: "3%",
     description: "Total fee deducted at settlement",
     details: "Includes all payment processing fees handled by DivinityCoin. This covers secure card processing and compliance infrastructure.",
   },
@@ -52,13 +52,13 @@ const divinityCoinFeeBreakdown = [
     title: "IndieCrowdfund Platform Fee",
     rate: "3%",
     description: "Deducted from creator payouts",
-    details: "Applied when we pay out your earnings from DivinityCoin settlements. Creators receive ~91% of backer contributions.",
+    details: "Applied when we pay out your earnings from DivinityCoin settlements. Creators receive ~94% of backer contributions.",
   },
 ];
 
 const comparisonData = [
   { platform: "IndieCrowdfund (PayPal)", platformFee: "3%", paymentFee: "3.49% + $0.49", total: "~6.5%", highlight: true },
-  { platform: "IndieCrowdfund (DivinityCoin)", platformFee: "3%", paymentFee: "6% partner", total: "~9%", highlight: false },
+  { platform: "IndieCrowdfund (DivinityCoin)", platformFee: "3%", paymentFee: "3% partner", total: "~6%", highlight: false },
   { platform: "IndieCrowdfund (Whop)", platformFee: "3%", paymentFee: "3% Whop", total: "~6%", highlight: false },
   { platform: "IndieCrowdfund (Stripe – Legacy)", platformFee: "3%", paymentFee: "2.9% + $0.30", total: "~6%", highlight: false },
   { platform: "Kickstarter", platformFee: "5%", paymentFee: "3% + $0.20", total: "~8%", highlight: false },
@@ -157,8 +157,8 @@ const whopFeeBreakdown = [
 
 // Calculate fees for DivinityCoin payments
 function calculateDivinityCoinFees(amount: number) {
-  // DivinityCoin takes 6% total partner fee from the funds
-  const divinityPartnerFee = amount * 0.06;
+  // DivinityCoin takes 3% partner fee from the funds
+  const divinityPartnerFee = amount * 0.03;
   const amountAfterPartnerFee = amount - divinityPartnerFee;
 
   // Platform takes 3% from what's left
@@ -840,7 +840,7 @@ export default function FeesPage() {
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold text-zinc-900 dark:text-white">What&apos;s the difference between Stripe and DivinityCoin?</h3>
               <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-                Stripe is our default payment processor (~6% total). DivinityCoin is an alternative payment sub-processor (~9%) that supports all content types including NSFW/adult projects. Both accept credit and debit cards at checkout.
+                Stripe is our legacy payment processor (~6% total). DivinityCoin is an alternative payment sub-processor (~6% total: 3% partner + 3% platform) that supports all content types including NSFW/adult projects. Both accept credit and debit cards at checkout.
               </p>
             </div>
             <div className="rounded-lg border p-6">
