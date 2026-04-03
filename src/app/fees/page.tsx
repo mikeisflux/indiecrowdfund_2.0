@@ -187,7 +187,7 @@ function calculateWhopFees(amount: number) {
 
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]); // Default to $50,000
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal" | "divinitycoin" | "whop">("paypal");
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal" | "divinitycoin" | "whop">("whop");
   const amount = sliderValue[0];
   const stripeFees = calculateStripeFees(amount);
   const divinityFees = calculateDivinityCoinFees(amount);
@@ -255,8 +255,12 @@ export default function FeesPage() {
             </p>
           </div>
 
-          <Tabs defaultValue="paypal" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "paypal" | "divinitycoin" | "whop")}>
+          <Tabs defaultValue="whop" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "paypal" | "divinitycoin" | "whop")}>
             <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-8">
+              <TabsTrigger value="whop" className="flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Whop
+              </TabsTrigger>
               <TabsTrigger value="paypal" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 PayPal
@@ -265,15 +269,67 @@ export default function FeesPage() {
                 <Coins className="h-4 w-4" />
                 DivinityCoin
               </TabsTrigger>
-              <TabsTrigger value="whop" className="flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4" />
-                Whop
-              </TabsTrigger>
               <TabsTrigger value="stripe" className="flex items-center gap-2 opacity-50">
                 <CreditCard className="h-4 w-4" />
                 Stripe (Legacy)
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="whop">
+              <div className="grid gap-8 md:grid-cols-2 lg:max-w-4xl lg:mx-auto">
+                {whopFeeBreakdown.map((fee, index) => (
+                  <Card
+                    key={fee.title}
+                    className="glass-card border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                    style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
+                  >
+                    <CardHeader className="text-center pb-2">
+                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-black shadow-lg mb-4">
+                        <ShoppingBag className="h-8 w-8 text-white" />
+                      </div>
+                      <CardTitle className="text-2xl">{fee.title}</CardTitle>
+                      <div className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mt-2">{fee.rate}</div>
+                      <CardDescription className="text-base mt-2">{fee.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground text-center">{fee.details}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <Card className="mt-8 lg:max-w-4xl lg:mx-auto border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/10">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-900/30">
+                      <ShoppingBag className="h-6 w-6 text-zinc-700 dark:text-zinc-300" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is Whop?</h3>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                        Whop is an embedded checkout solution that supports all content types including NSFW/adult projects. Backers complete checkout via Whop&apos;s embedded form — no redirects needed.
+                      </p>
+                      <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows (example: $100 pledge):</h4>
+                      <ol className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1 list-decimal list-inside mb-4">
+                        <li>Backer completes checkout via Whop&apos;s embedded form</li>
+                        <li>Whop processes the $100 payment immediately</li>
+                        <li>Whop fee (~3% = $3.00) deducted at settlement</li>
+                        <li>Platform fee (3% of $97 = $2.91) deducted at settlement</li>
+                        <li>You receive <strong>$94.09</strong> deposited to your account</li>
+                      </ol>
+                      <p className="text-xs text-zinc-500">Whop only supports <strong>Keep It All</strong> campaigns — payments are collected immediately regardless of funding goal.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <div className="mt-8 text-center">
+                <div className="inline-flex items-center gap-2 rounded-full bg-zinc-50 dark:bg-zinc-900/20 px-6 py-3">
+                  <Calculator className="h-5 w-5 text-zinc-600" />
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                    Total fees with Whop: approximately 6% of funds raised
+                  </span>
+                </div>
+              </div>
+            </TabsContent>
 
             <TabsContent value="stripe">
               <div className="grid gap-8 md:grid-cols-2 lg:max-w-4xl lg:mx-auto">
@@ -440,61 +496,6 @@ export default function FeesPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="whop">
-              <div className="grid gap-8 md:grid-cols-2 lg:max-w-4xl lg:mx-auto">
-                {whopFeeBreakdown.map((fee, index) => (
-                  <Card
-                    key={fee.title}
-                    className="glass-card border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
-                    style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
-                  >
-                    <CardHeader className="text-center pb-2">
-                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-black shadow-lg mb-4">
-                        <ShoppingBag className="h-8 w-8 text-white" />
-                      </div>
-                      <CardTitle className="text-2xl">{fee.title}</CardTitle>
-                      <div className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mt-2">{fee.rate}</div>
-                      <CardDescription className="text-base mt-2">{fee.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground text-center">{fee.details}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              <Card className="mt-8 lg:max-w-4xl lg:mx-auto border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/10">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-900/30">
-                      <ShoppingBag className="h-6 w-6 text-zinc-700 dark:text-zinc-300" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is Whop?</h3>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
-                        Whop is an embedded checkout solution that supports all content types including NSFW/adult projects. Backers complete checkout via Whop&apos;s embedded form — no redirects needed.
-                      </p>
-                      <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows (example: $100 pledge):</h4>
-                      <ol className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1 list-decimal list-inside mb-4">
-                        <li>Backer completes checkout via Whop&apos;s embedded form</li>
-                        <li>Whop processes the $100 payment immediately</li>
-                        <li>Whop fee (~3% = $3.00) deducted at settlement</li>
-                        <li>Platform fee (3% of $97 = $2.91) deducted at settlement</li>
-                        <li>You receive <strong>$94.09</strong> deposited to your account</li>
-                      </ol>
-                      <p className="text-xs text-zinc-500">Whop only supports <strong>Keep It All</strong> campaigns — payments are collected immediately regardless of funding goal.</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <div className="mt-8 text-center">
-                <div className="inline-flex items-center gap-2 rounded-full bg-zinc-50 dark:bg-zinc-900/20 px-6 py-3">
-                  <Calculator className="h-5 w-5 text-zinc-600" />
-                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                    Total fees with Whop: approximately 6% of funds raised
-                  </span>
-                </div>
-              </div>
-            </TabsContent>
           </Tabs>
         </div>
       </section>
@@ -518,6 +519,17 @@ export default function FeesPage() {
               <div className="flex justify-center mb-6">
                 <div className="inline-flex rounded-lg border p-1 bg-white dark:bg-zinc-800">
                   <button
+                    onClick={() => setPaymentMethod("whop")}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      paymentMethod === "whop"
+                        ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"
+                        : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400"
+                    }`}
+                  >
+                    <ShoppingBag className="inline h-4 w-4 mr-1" />
+                    Whop
+                  </button>
+                  <button
                     onClick={() => setPaymentMethod("paypal")}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                       paymentMethod === "paypal"
@@ -538,17 +550,6 @@ export default function FeesPage() {
                   >
                     <Coins className="inline h-4 w-4 mr-1" />
                     DivinityCoin
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod("whop")}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      paymentMethod === "whop"
-                        ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"
-                        : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400"
-                    }`}
-                  >
-                    <ShoppingBag className="inline h-4 w-4 mr-1" />
-                    Whop
                   </button>
                   <button
                     onClick={() => setPaymentMethod("stripe")}
