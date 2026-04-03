@@ -24,28 +24,100 @@ import {
   Lock,
   Building2,
   AlertTriangle,
+  Wallet,
+  ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PayPalBankPayoutSection } from "@/components/project/builder/payment-sections/paypal-bank-payout-section";
 
 interface PaymentsSectionProps {
   projectId?: string;
 }
 
-export function PaymentsSection({ projectId }: PaymentsSectionProps) {
-  // Stripe Connect state - DISABLED: Stripe replaced by PayPal
-  // const [isConnectingStripe, setIsConnectingStripe] = useState(false);
-  // const [stripeStatus, setStripeStatus] = useState<{...}>({...});
-  // const [connectError, setConnectError] = useState<string | null>(null);
-  // const [isResettingStripe, setIsResettingStripe] = useState(false);
-  // const [showResetConfirm, setShowResetConfirm] = useState(false);
+type Processor = "PAYPAL" | "DIVINITYCOIN" | "WHOP" | "STRIPE";
 
-  // PayPal migration state
-  const [projectProcessor, setProjectProcessor] = useState<string | null>(null);
+interface BankAccountState {
+  bankName: string;
+  accountHolder: string;
+  accountNumber: string;
+  routingNumber: string;
+  accountType: "checking" | "savings";
+}
+
+interface BankStatus {
+  saved: boolean;
+  loading: boolean;
+  lastFour: string | null;
+  bankName?: string;
+}
+
+const PROCESSOR_META: Record<string, {
+  label: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  apiGet: string;
+  apiPost: string;
+  settlementNote: string;
+  accentColor: string;
+}> = {
+  PAYPAL: {
+    label: "PayPal",
+    icon: <Wallet className="h-5 w-5 text-white" />,
+    iconBg: "bg-[#003087]",
+    apiGet: "/api/creator/paypal-bank-account",
+    apiPost: "/api/creator/paypal-bank-account",
+    settlementNote: "Payouts are processed within 14 business days after your campaign funds successfully.",
+    accentColor: "",
+  },
+  DIVINITYCOIN: {
+    label: "DivinityCoin",
+    icon: <Banknote className="h-5 w-5 text-white" />,
+    iconBg: "bg-[#0066FF]",
+    apiGet: "/api/creator/bank-account",
+    apiPost: "/api/creator/bank-account",
+    settlementNote: "DivinityCoin settlements are processed within 14 business days after your campaign ends.",
+    accentColor: "bg-[#0066FF] hover:bg-[#0052CC]",
+  },
+  WHOP: {
+    label: "Whop",
+    icon: <ShoppingBag className="h-5 w-5 text-white" />,
+    iconBg: "bg-black",
+    apiGet: "/api/creator/whop-bank-account",
+    apiPost: "/api/creator/whop-bank-account",
+    settlementNote: "Whop payouts are processed after your campaign funds successfully.",
+    accentColor: "bg-black hover:bg-zinc-800",
+  },
+};
+
+export function PaymentsSection({ projectId }: PaymentsSectionProps) {
+  const [projectProcessor, setProjectProcessor] = useState<Processor | null>(null);
+  const [processorLoading, setProcessorLoading] = useState(true);
   const [isMigrating, setIsMigrating] = useState(false);
 
+  const [bankAccount, setBankAccount] = useState<BankAccountState>({
+    bankName: "",
+    accountHolder: "",
+    accountNumber: "",
+    routingNumber: "",
+    accountType: "checking",
+  });
+  const [bankStatus, setBankStatus] = useState<BankStatus>({
+    saved: false,
+    loading: true,
+    lastFour: null,
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSavingBank, setIsSavingBank] = useState(false);
+
+  const [isSavingPayments, setIsSavingPayments] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState({
+    autoRetry: true,
+    sendReceipts: true,
+    failedNotifications: true,
+  });
+
+  // Fetch project processor
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId) { setProcessorLoading(false); return; }
     async function fetchProcessor() {
       try {
         const res = await fetch(`/api/projects/${projectId}/payment`);
@@ -55,10 +127,47 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
         }
       } catch {
         // non-fatal
+      } finally {
+        setProcessorLoading(false);
       }
     }
     fetchProcessor();
   }, [projectId]);
+
+  // Fetch bank account status once we know the processor
+  useEffect(() => {
+    if (!projectProcessor || projectProcessor === "STRIPE") {
+      setBankStatus({ saved: false, loading: false, lastFour: null });
+      return;
+    }
+    const meta = PROCESSOR_META[projectProcessor];
+    if (!meta) { setBankStatus({ saved: false, loading: false, lastFour: null }); return; }
+
+    async function fetchBankStatus() {
+      try {
+        const res = await fetch(meta.apiGet);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.exists) {
+            setBankStatus({ saved: true, loading: false, lastFour: data.lastFour || null, bankName: data.bankName });
+            setBankAccount((prev) => ({
+              ...prev,
+              bankName: data.bankName || "",
+              accountHolder: data.accountHolder || "",
+              accountType: data.accountType || "checking",
+            }));
+          } else {
+            setBankStatus({ saved: false, loading: false, lastFour: null });
+          }
+        } else {
+          setBankStatus({ saved: false, loading: false, lastFour: null });
+        }
+      } catch {
+        setBankStatus({ saved: false, loading: false, lastFour: null });
+      }
+    }
+    fetchBankStatus();
+  }, [projectProcessor]);
 
   const handleMigrateToPayPal = async () => {
     if (!projectId) return;
@@ -82,77 +191,20 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     }
   };
 
-  // DivinityCoin bank account state
-  const [bankAccount, setBankAccount] = useState({
-    bankName: "",
-    accountHolder: "",
-    accountNumber: "",
-    routingNumber: "",
-    accountType: "checking" as "checking" | "savings",
-  });
-  const [bankAccountStatus, setBankAccountStatus] = useState<{
-    saved: boolean;
-    loading: boolean;
-    lastFour: string | null;
-  }>({ saved: false, loading: true, lastFour: null });
-  const [isSavingBank, setIsSavingBank] = useState(false);
-
-  // Payment collection settings
-  const [isSavingPayments, setIsSavingPayments] = useState(false);
-  const [paymentSettings, setPaymentSettings] = useState({
-    autoRetry: true,
-    sendReceipts: true,
-    failedNotifications: true,
-  });
-
-  // Check Stripe connection status - DISABLED: Stripe replaced by PayPal
-  // useEffect(() => { async function checkStripeStatus() { ... } checkStripeStatus(); }, []);
-
-  // Check DivinityCoin bank account status on mount
-  useEffect(() => {
-    async function checkBankAccountStatus() {
-      try {
-        const response = await fetch("/api/creator/bank-account");
-        if (response.ok) {
-          const data = await response.json();
-          setBankAccountStatus({
-            saved: data.exists,
-            loading: false,
-            lastFour: data.lastFour || null,
-          });
-          if (data.exists) {
-            setBankAccount(prev => ({
-              ...prev,
-              bankName: data.bankName || "",
-              accountHolder: data.accountHolder || "",
-              accountType: data.accountType || "checking",
-            }));
-          }
-        } else {
-          setBankAccountStatus({ saved: false, loading: false, lastFour: null });
-        }
-      } catch {
-        setBankAccountStatus({ saved: false, loading: false, lastFour: null });
-      }
-    }
-    checkBankAccountStatus();
-  }, []);
-
-  // handleConnectStripe - DISABLED: Stripe replaced by PayPal
-  // handleResetStripe - DISABLED: Stripe replaced by PayPal
-
   const handleSaveBankAccount = async () => {
+    if (!projectProcessor) return;
+    const meta = PROCESSOR_META[projectProcessor];
+    if (!meta) return;
+
     if (!bankAccount.bankName || !bankAccount.accountHolder ||
         !bankAccount.accountNumber || !bankAccount.routingNumber) {
       toast.error("Please fill in all bank account fields");
       return;
     }
-
     if (bankAccount.routingNumber.length !== 9) {
       toast.error("Routing number must be 9 digits");
       return;
     }
-
     if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
       toast.error("Please enter a valid account number");
       return;
@@ -160,31 +212,21 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
 
     setIsSavingBank(true);
     try {
-      const response = await apiFetch("/api/creator/bank-account", {
+      const res = await apiFetch(meta.apiPost, {
         method: "POST",
-        headers: { "Content-Type": "application/json", },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...bankAccount, projectId }),
       });
-
-      if (!response.ok) {
-        const data = await response.json();
+      if (!res.ok) {
+        const data = await res.json();
         throw new Error(data.error || "Failed to save bank account");
       }
-
-      const data = await response.json();
-      setBankAccountStatus({
-        saved: true,
-        loading: false,
-        lastFour: data.lastFour,
-      });
-      setBankAccount(prev => ({
-        ...prev,
-        accountNumber: "",
-        routingNumber: "",
-      }));
+      const data = await res.json();
+      setBankStatus({ saved: true, loading: false, lastFour: data.lastFour, bankName: bankAccount.bankName });
+      setBankAccount((prev) => ({ ...prev, accountNumber: "", routingNumber: "" }));
+      setIsEditing(false);
       toast.success("Bank account saved securely!");
     } catch (error) {
-      console.error("Failed to save bank account:", error);
       toast.error(error instanceof Error ? error.message : "Failed to save bank account");
     } finally {
       setIsSavingBank(false);
@@ -193,24 +235,17 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
 
   const handleSavePayments = async () => {
     if (!projectId) return;
-
     setIsSavingPayments(true);
     try {
       const res = await apiFetch("/api/creator/indiekit/settings", {
         method: "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
-          projectId,
-          section: "payments",
-          settings: paymentSettings,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, section: "payments", settings: paymentSettings }),
       });
-
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to save settings");
       }
-
       toast.success("Payment settings saved");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save settings");
@@ -219,10 +254,21 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     }
   };
 
+  if (processorLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const procMeta = projectProcessor ? PROCESSOR_META[projectProcessor] : null;
+  const showForm = isEditing || !bankStatus.saved;
+
   return (
     <div className="space-y-6">
-      {/* PayPal Migration Banner — shown when project is still on Stripe */}
-      {projectId && projectProcessor === "STRIPE" && (
+      {/* Legacy Stripe migration banner */}
+      {projectProcessor === "STRIPE" && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" />
           <div className="flex-1">
@@ -230,7 +276,7 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
               Your campaign is using Stripe (legacy processor)
             </p>
             <p className="text-sm text-amber-800 dark:text-amber-300 mt-0.5">
-              IndieCrowdfund has switched to PayPal as the primary payment processor. Switch your live campaign now — existing pledges are unaffected, and new pledges will use PayPal checkout immediately. Make sure your PayPal payout email is set below before switching.
+              IndieCrowdfund has switched to PayPal as the primary payment processor. Switch your live campaign now — existing pledges are unaffected, and new pledges will use PayPal checkout immediately.
             </p>
           </div>
           <Button
@@ -247,182 +293,189 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
         </div>
       )}
 
-      {/* Stripe Connect Section - DISABLED: Stripe replaced by PayPal */}
-      {/* <Card>...</Card> */}
+      {/* Processor locked indicator */}
+      {procMeta && projectProcessor !== "STRIPE" && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3">
+          <div className={`h-8 w-8 rounded-lg ${procMeta.iconBg} flex items-center justify-center shrink-0`}>
+            {procMeta.icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm">Payment Processor: {procMeta.label}</p>
+            <p className="text-xs text-muted-foreground">
+              Set at campaign creation — cannot be changed after launch.
+            </p>
+          </div>
+          <Badge variant="secondary" className="shrink-0">
+            <Lock className="h-3 w-3 mr-1" />
+            Locked
+          </Badge>
+        </div>
+      )}
 
-      {/* PayPal Bank Payout Account Section */}
-      <PayPalBankPayoutSection />
-
-      {/* DivinityCoin Bank Account Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Banknote className="h-5 w-5" />
-            DivinityCoin Settlement Account
-          </CardTitle>
-          <CardDescription>
-            Enter your bank account details for DivinityCoin settlements. All data is encrypted and stored securely.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {bankAccountStatus.loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : bankAccountStatus.saved ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg border-green-500">
-                <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-green-500 flex items-center justify-center shrink-0">
-                    <CheckCircle className="h-6 w-6 text-white" />
+      {/* Bank account section — only for the project's processor */}
+      {procMeta && projectProcessor !== "STRIPE" && (
+        <Card className={bankStatus.saved && !showForm ? "border-green-500" : ""}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <div className={`h-6 w-6 rounded ${procMeta.iconBg} flex items-center justify-center shrink-0`}>
+                {procMeta.icon}
+              </div>
+              {procMeta.label} — Payout Account
+            </CardTitle>
+            <CardDescription>
+              Your bank account for {procMeta.label} settlements. All data is AES-256 encrypted.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {bankStatus.loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : bankStatus.saved && !showForm ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg border-green-500">
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-green-500 flex items-center justify-center shrink-0">
+                      <CheckCircle className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Bank Account Connected</p>
+                      <p className="text-sm text-muted-foreground">
+                        {bankStatus.bankName} • Account ending in {bankStatus.lastFour}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {procMeta.settlementNote}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">Bank Account Connected</p>
-                    <p className="text-sm text-muted-foreground">
-                      {bankAccount.bankName} • Account ending in {bankAccountStatus.lastFour}
-                    </p>
+                  <Badge variant="default" className="bg-green-500">
+                    <Lock className="h-3 w-3 mr-1" />
+                    Secured
+                  </Badge>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  Update Bank Account
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <Lock className="h-4 w-4" />
+                  <AlertTitle>Secure &amp; Encrypted</AlertTitle>
+                  <AlertDescription>
+                    Your bank account information is encrypted using AES-256 before storage.
+                    We never store unencrypted account numbers.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="ik-bank-name">Bank Name</Label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="ik-bank-name"
+                        placeholder="e.g., Chase Bank, Bank of America"
+                        value={bankAccount.bankName}
+                        onChange={(e) => setBankAccount((prev) => ({ ...prev, bankName: e.target.value }))}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ik-account-holder">Account Holder Name</Label>
+                    <Input
+                      id="ik-account-holder"
+                      placeholder="Name as it appears on account"
+                      value={bankAccount.accountHolder}
+                      onChange={(e) => setBankAccount((prev) => ({ ...prev, accountHolder: e.target.value }))}
+                    />
                   </div>
                 </div>
-                <Badge variant="default" className="bg-green-500">
-                  <Lock className="h-3 w-3 mr-1" />
-                  Secured
-                </Badge>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setBankAccountStatus(prev => ({ ...prev, saved: false }))}
-              >
-                Update Bank Account
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                <Lock className="h-4 w-4" />
-                <AlertTitle>Secure & Encrypted</AlertTitle>
-                <AlertDescription>
-                  Your bank account information is encrypted using AES-256 encryption before storage.
-                  We never store unencrypted account numbers.
-                </AlertDescription>
-              </Alert>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="bank-name">Bank Name</Label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="ik-routing">Routing Number</Label>
                     <Input
-                      id="bank-name"
-                      placeholder="e.g., Chase Bank, Bank of America"
-                      value={bankAccount.bankName}
-                      onChange={(e) => setBankAccount(prev => ({ ...prev, bankName: e.target.value }))}
-                      className="pl-10"
+                      id="ik-routing"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={9}
+                      placeholder="9-digit routing number"
+                      value={bankAccount.routingNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "").slice(0, 9);
+                        setBankAccount((prev) => ({ ...prev, routingNumber: value }));
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">9 digits — bottom left of your checks</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ik-account-number">Account Number</Label>
+                    <Input
+                      id="ik-account-number"
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={17}
+                      placeholder="Your account number"
+                      value={bankAccount.accountNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "").slice(0, 17);
+                        setBankAccount((prev) => ({ ...prev, accountNumber: value }));
+                      }}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="account-holder">Account Holder Name</Label>
-                  <Input
-                    id="account-holder"
-                    placeholder="Name as it appears on account"
-                    value={bankAccount.accountHolder}
-                    onChange={(e) => setBankAccount(prev => ({ ...prev, accountHolder: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="routing-number">Routing Number</Label>
-                  <Input
-                    id="routing-number"
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={9}
-                    placeholder="9-digit routing number"
-                    value={bankAccount.routingNumber}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 9);
-                      setBankAccount(prev => ({ ...prev, routingNumber: value }));
-                    }}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    9 digits, found on the bottom left of your checks
-                  </p>
+                  <Label>Account Type</Label>
+                  <Select
+                    value={bankAccount.accountType}
+                    onValueChange={(v: "checking" | "savings") =>
+                      setBankAccount((prev) => ({ ...prev, accountType: v }))
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="checking">Checking</SelectItem>
+                      <SelectItem value="savings">Savings</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="account-number">Account Number</Label>
-                  <Input
-                    id="account-number"
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={17}
-                    placeholder="Your account number"
-                    value={bankAccount.accountNumber}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 17);
-                      setBankAccount(prev => ({ ...prev, accountNumber: value }));
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Account Type</Label>
-                <Select
-                  value={bankAccount.accountType}
-                  onValueChange={(value: "checking" | "savings") =>
-                    setBankAccount(prev => ({ ...prev, accountType: value }))
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="checking">Checking</SelectItem>
-                    <SelectItem value="savings">Savings</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <Button
-                  onClick={handleSaveBankAccount}
-                  disabled={isSavingBank}
-                  className="bg-[#0066FF] hover:bg-[#0052CC]"
-                >
-                  {isSavingBank ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Encrypting & Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="h-4 w-4 mr-2" />
-                      Save Bank Account
-                    </>
+                <div className="flex items-center gap-3 pt-2">
+                  <Button
+                    onClick={handleSaveBankAccount}
+                    disabled={isSavingBank}
+                    className={procMeta.accentColor || undefined}
+                  >
+                    {isSavingBank ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Encrypting &amp; Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Save Bank Account
+                      </>
+                    )}
+                  </Button>
+                  {isEditing && (
+                    <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
+                      Cancel
+                    </Button>
                   )}
-                </Button>
-              </div>
+                </div>
 
-              <p className="text-xs text-muted-foreground">
-                DivinityCoin settlements are processed within 14 business days after your campaign ends.{" "}
-                <a
-                  href="https://divinitycoin.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline"
-                >
-                  Learn more about DivinityCoin
-                </a>
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <p className="text-xs text-muted-foreground">{procMeta.settlementNote}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 
@@ -465,19 +518,13 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
           </div>
           <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSavePayments} disabled={isSavingPayments}>
             {isSavingPayments ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
             ) : (
               "Save Changes"
             )}
           </Button>
         </CardContent>
       </Card>
-
-      {/* Stripe Disconnect ConfirmDialog - DISABLED: Stripe replaced by PayPal */}
-      {/* <ConfirmDialog ... /> */}
     </div>
   );
 }
