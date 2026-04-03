@@ -52,7 +52,20 @@ import {
   Hash,
   Shield,
   FileText,
+  ChevronRight,
+  RefreshCw,
+  Trash2,
 } from "lucide-react";
+
+interface RewardOption {
+  id: string;
+  title: string;
+  description: string;
+  amount: number;
+  type: "TIER" | "ADDON";
+  quantityAvailable: number | null;
+  quantityClaimed: number;
+}
 
 interface PledgeDetails {
   id: string;
@@ -111,6 +124,15 @@ export default function ManagePledgePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [refundReason, setRefundReason] = useState("");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+
+  // Inline modify state
+  const [availableRewards, setAvailableRewards] = useState<RewardOption[]>([]);
+  const [availableAddons, setAvailableAddons] = useState<RewardOption[]>([]);
+  const [modifyMode, setModifyMode] = useState(false);
+  const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
+  const [selectedAddons, setSelectedAddons] = useState<Map<string, number>>(new Map());
+  const [isLoadingRewards, setIsLoadingRewards] = useState(false);
+  const [isSavingModify, setIsSavingModify] = useState(false);
 
   useEffect(() => {
     async function fetchPledge() {
@@ -190,6 +212,82 @@ export default function ManagePledgePage() {
       toast.error(err instanceof Error ? err.message : "Failed to submit refund request");
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const openModify = async () => {
+    if (!pledge) return;
+    setIsLoadingRewards(true);
+    try {
+      const res = await fetch(`/api/projects/${pledge.project.id}/rewards`);
+      if (res.ok) {
+        const data = await res.json();
+        const tiers = (data.rewards as RewardOption[]).filter(r => r.type === "TIER");
+        const addons = (data.rewards as RewardOption[]).filter(r => r.type === "ADDON");
+        setAvailableRewards(tiers);
+        setAvailableAddons(addons);
+        setSelectedRewardId(pledge.reward?.id ?? null);
+        const addonMap = new Map<string, number>();
+        pledge.addons.forEach(a => addonMap.set(a.id, a.quantity));
+        setSelectedAddons(addonMap);
+      }
+    } catch {
+      toast.error("Failed to load rewards");
+    } finally {
+      setIsLoadingRewards(false);
+      setModifyMode(true);
+    }
+  };
+
+  const handleSaveModify = async () => {
+    if (!pledge) return;
+    const addonList = Array.from(selectedAddons.entries())
+      .filter(([, qty]) => qty > 0)
+      .map(([id, quantity]) => ({ id, quantity }));
+
+    const rewardAmount = availableRewards.find(r => r.id === selectedRewardId)?.amount ?? 0;
+    const addonsTotal = addonList.reduce((sum, a) => {
+      const price = availableAddons.find(x => x.id === a.id)?.amount ?? 0;
+      return sum + price * a.quantity;
+    }, 0);
+    const newAmount = rewardAmount + addonsTotal;
+
+    if (newAmount <= 0) {
+      toast.error("Total must be greater than $0");
+      return;
+    }
+
+    setIsSavingModify(true);
+    try {
+      const res = await apiFetch(`/api/pledges/${pledgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "modify",
+          rewardId: selectedRewardId || "no-reward",
+          addons: addonList,
+          newAmount,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update pledge");
+
+      if (data.requiresPayment) {
+        // Redirect to pledge flow for upcharge
+        toast.info("Additional payment required — redirecting to checkout...");
+        router.push(`${pledge.project.projectUrl}/pledge?modify=${pledge.id}`);
+        return;
+      }
+
+      toast.success(data.message || "Pledge updated successfully");
+      setModifyMode(false);
+      // Refresh
+      const refreshRes = await fetch(`/api/pledges/${pledgeId}`);
+      if (refreshRes.ok) setPledge((await refreshRes.json()).pledge);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update pledge");
+    } finally {
+      setIsSavingModify(false);
     }
   };
 
@@ -305,6 +403,16 @@ export default function ManagePledgePage() {
   const isCompleted = pledge.status === "COMPLETED";
   const isCampaignLive = pledge.project.status === "LIVE";
   const hasReachedGoal = pledge.isFunded;
+
+  // Modify panel computed values
+  const modifyRewardAmount = availableRewards.find(r => r.id === selectedRewardId)?.amount ?? 0;
+  const modifyAddonsTotal = Array.from(selectedAddons.entries()).reduce((sum, [id, qty]) => {
+    const price = availableAddons.find(x => x.id === id)?.amount ?? 0;
+    return sum + price * qty;
+  }, 0);
+  const modifyNewTotal = modifyRewardAmount + modifyAddonsTotal;
+  const modifyDiff = modifyNewTotal - pledge.amount;
+  const isAonUnfunded = isPending && !hasReachedGoal;
 
   return (
     <div className="container max-w-2xl py-8">
@@ -439,25 +547,31 @@ export default function ManagePledgePage() {
               Modify Your Pledge
             </CardTitle>
             <CardDescription>
-              The campaign is still active and hasn&apos;t reached its funding goal yet. You can modify, add to, or cancel your pledge at any time before the campaign ends.
+              The campaign hasn&apos;t reached its goal yet — change anything you like with no charges or refunds.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Change Reward / Addons */}
-            <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-              <Label className="text-sm font-medium mb-2 block text-blue-700 dark:text-blue-300">
-                Change Your Reward or Add-ons
-              </Label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Want to select a different reward tier or modify your add-ons? You can change your selection while the campaign is still active.
-              </p>
-              <Link href={`${pledge.project.projectUrl}/pledge?modify=${pledge.id}`}>
-                <Button variant="outline" className="w-full border-blue-300 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Change Reward or Add-ons
-                </Button>
-              </Link>
-            </div>
+            {/* Inline Modify Panel */}
+            {pledge.canModify && (
+              <ModifyPanel
+                pledge={pledge}
+                modifyMode={modifyMode}
+                isLoadingRewards={isLoadingRewards}
+                isSavingModify={isSavingModify}
+                availableRewards={availableRewards}
+                availableAddons={availableAddons}
+                selectedRewardId={selectedRewardId}
+                setSelectedRewardId={setSelectedRewardId}
+                selectedAddons={selectedAddons}
+                setSelectedAddons={setSelectedAddons}
+                modifyNewTotal={modifyNewTotal}
+                modifyDiff={modifyDiff}
+                isAonUnfunded={isAonUnfunded}
+                onOpen={openModify}
+                onSave={handleSaveModify}
+                onCancel={() => setModifyMode(false)}
+              />
+            )}
 
             <Separator />
 
@@ -602,41 +716,28 @@ export default function ManagePledgePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Change Reward / Addons - show if campaign is still live */}
+            {/* Inline Modify Panel - show if campaign is still live */}
             {pledge.canModify && (
-              <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                <Label className="text-sm font-medium mb-2 block text-blue-700 dark:text-blue-300">
-                  Change Your Reward or Add-ons
-                </Label>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Want to swap your cover or change your add-ons? If the new selection costs more, you&apos;ll be charged the difference. If it costs less, you&apos;ll receive a refund.
-                </p>
-                <Link href={`${pledge.project.projectUrl}/pledge?modify=${pledge.id}`}>
-                  <Button variant="outline" className="w-full border-blue-300 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Change Reward or Add-ons
-                  </Button>
-                </Link>
-              </div>
+              <ModifyPanel
+                pledge={pledge}
+                modifyMode={modifyMode}
+                isLoadingRewards={isLoadingRewards}
+                isSavingModify={isSavingModify}
+                availableRewards={availableRewards}
+                availableAddons={availableAddons}
+                selectedRewardId={selectedRewardId}
+                setSelectedRewardId={setSelectedRewardId}
+                selectedAddons={selectedAddons}
+                setSelectedAddons={setSelectedAddons}
+                modifyNewTotal={modifyNewTotal}
+                modifyDiff={modifyDiff}
+                isAonUnfunded={isAonUnfunded}
+                onOpen={openModify}
+                onSave={handleSaveModify}
+                onCancel={() => setModifyMode(false)}
+              />
             )}
 
-            {/* Add Additional Items - only show if campaign is still live */}
-            {isCampaignLive && (
-              <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                <Label className="text-sm font-medium mb-2 block text-blue-700 dark:text-blue-300">
-                  Add Additional Items
-                </Label>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Want to add more items to your pledge? Browse available add-ons and increase your support. Additional items will be charged immediately.
-                </p>
-                <Link href={`${pledge.project.projectUrl}/pledge?addItems=${pledge.id}`}>
-                  <Button variant="outline" className="w-full border-blue-300 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900">
-                    <Package className="h-4 w-4 mr-2" />
-                    Browse Add-ons
-                  </Button>
-                </Link>
-              </div>
-            )}
 
             {/* Add to pledge if campaign still live */}
             {isCampaignLive && pledge.canIncrease && (
@@ -882,6 +983,230 @@ export default function ManagePledgePage() {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// ─── Inline Modify Panel ─────────────────────────────────────────────────────
+
+interface ModifyPanelProps {
+  pledge: {
+    id: string;
+    amount: number;
+    status: string;
+    reward: { id: string; title: string; amount: number } | null;
+    addons: Array<{ id: string; title: string; amount: number; quantity: number }>;
+    project: { projectUrl: string };
+  };
+  modifyMode: boolean;
+  isLoadingRewards: boolean;
+  isSavingModify: boolean;
+  availableRewards: RewardOption[];
+  availableAddons: RewardOption[];
+  selectedRewardId: string | null;
+  setSelectedRewardId: (id: string | null) => void;
+  selectedAddons: Map<string, number>;
+  setSelectedAddons: (m: Map<string, number>) => void;
+  modifyNewTotal: number;
+  modifyDiff: number;
+  isAonUnfunded: boolean;
+  onOpen: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+function ModifyPanel({
+  pledge,
+  modifyMode,
+  isLoadingRewards,
+  isSavingModify,
+  availableRewards,
+  availableAddons,
+  selectedRewardId,
+  setSelectedRewardId,
+  selectedAddons,
+  setSelectedAddons,
+  modifyNewTotal,
+  modifyDiff,
+  isAonUnfunded,
+  onOpen,
+  onSave,
+  onCancel,
+}: ModifyPanelProps) {
+  const setAddonQty = (id: string, qty: number) => {
+    const next = new Map(selectedAddons);
+    if (qty <= 0) next.delete(id);
+    else next.set(id, qty);
+    setSelectedAddons(next);
+  };
+
+  if (!modifyMode) {
+    return (
+      <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+        <div className="flex items-start justify-between mb-2">
+          <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">Modify Your Order</Label>
+        </div>
+        <p className="text-sm text-muted-foreground mb-3">
+          Change your reward tier or add-ons.{" "}
+          {isAonUnfunded
+            ? "Since the campaign hasn't reached its goal yet, there are no charges or refunds — we just update your selection."
+            : "If your new total is less you'll receive a refund; if it's more you'll pay the difference."}
+        </p>
+        <Button
+          variant="outline"
+          className="w-full border-blue-300 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900"
+          onClick={onOpen}
+          disabled={isLoadingRewards}
+        >
+          {isLoadingRewards ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Edit className="h-4 w-4 mr-2" />
+          )}
+          Change Reward or Add-ons
+        </Button>
+      </div>
+    );
+  }
+
+  const diffAbs = Math.abs(modifyDiff);
+  const diffLabel =
+    isAonUnfunded
+      ? "No charge — campaign hasn't reached its goal yet"
+      : modifyDiff === 0
+      ? "No price change"
+      : modifyDiff > 0
+      ? `You'll pay an additional $${diffAbs.toFixed(2)}`
+      : `You'll receive a $${diffAbs.toFixed(2)} refund`;
+
+  const diffColor =
+    isAonUnfunded || modifyDiff === 0
+      ? "text-muted-foreground"
+      : modifyDiff > 0
+      ? "text-amber-600 dark:text-amber-400"
+      : "text-green-600 dark:text-green-400";
+
+  return (
+    <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10 p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium text-sm flex items-center gap-2">
+          <Edit className="h-4 w-4" />
+          Modify Your Order
+        </h4>
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSavingModify}>
+          Cancel
+        </Button>
+      </div>
+
+      {/* Reward selection */}
+      {availableRewards.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reward Tier</Label>
+          <div className="space-y-2">
+            <div
+              onClick={() => setSelectedRewardId(null)}
+              className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                selectedRewardId === null
+                  ? "border-primary bg-primary/5"
+                  : "border-muted hover:border-muted-foreground/50"
+              }`}
+            >
+              <span className="text-sm">No reward</span>
+              {selectedRewardId === null && <CheckCircle className="h-4 w-4 text-primary" />}
+            </div>
+            {availableRewards.map(r => {
+              const soldOut = r.quantityAvailable !== null && r.quantityClaimed >= r.quantityAvailable && r.id !== pledge.reward?.id;
+              return (
+                <div
+                  key={r.id}
+                  onClick={() => !soldOut && setSelectedRewardId(r.id)}
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                    soldOut ? "opacity-50 cursor-not-allowed" :
+                    selectedRewardId === r.id
+                      ? "border-primary bg-primary/5 cursor-pointer"
+                      : "border-muted hover:border-muted-foreground/50 cursor-pointer"
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{r.title}</p>
+                    {soldOut && <p className="text-xs text-red-500">Sold out</p>}
+                  </div>
+                  <div className="flex items-center gap-2 ml-2 shrink-0">
+                    <span className="text-sm font-semibold">${r.amount.toFixed(2)}</span>
+                    {selectedRewardId === r.id && <CheckCircle className="h-4 w-4 text-primary" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Addon selection */}
+      {availableAddons.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Add-ons</Label>
+          <div className="space-y-2">
+            {availableAddons.map(a => {
+              const qty = selectedAddons.get(a.id) ?? 0;
+              return (
+                <div key={a.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{a.title}</p>
+                    <p className="text-xs text-muted-foreground">${a.amount.toFixed(2)} each</p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-2 shrink-0">
+                    <Button
+                      variant="outline" size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setAddonQty(a.id, qty - 1)}
+                      disabled={qty === 0}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                    <span className="w-6 text-center text-sm font-medium">{qty}</span>
+                    <Button
+                      variant="outline" size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setAddonQty(a.id, qty + 1)}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Summary */}
+      <div className="rounded-lg border p-3 bg-background space-y-1.5 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Current total</span>
+          <span>${pledge.amount.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between font-semibold">
+          <span>New total</span>
+          <span>${modifyNewTotal.toFixed(2)}</span>
+        </div>
+        <div className={`flex justify-between text-xs font-medium ${diffColor}`}>
+          <span>Difference</span>
+          <span>{diffLabel}</span>
+        </div>
+      </div>
+
+      <Button
+        className="w-full"
+        onClick={onSave}
+        disabled={isSavingModify || modifyNewTotal <= 0}
+      >
+        {isSavingModify ? (
+          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
+        ) : (
+          <><RefreshCw className="h-4 w-4 mr-2" />Save Changes</>
+        )}
+      </Button>
     </div>
   );
 }

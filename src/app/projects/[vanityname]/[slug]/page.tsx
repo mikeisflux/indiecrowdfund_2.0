@@ -522,7 +522,7 @@ export default function ProjectPage() {
                   No longer available
                 </Button>
               ) : existingPledge ? (
-                <Link href="/dashboard/backer">
+                <Link href={`/dashboard/pledges/${existingPledge.id}`}>
                   <Button className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg shadow-blue-500/20">
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Manage Pledge (${existingPledge.amount})
@@ -694,7 +694,7 @@ export default function ProjectPage() {
                       Pledged ${Number(existingPledge.amount).toFixed(2)} • {existingPledge.reward?.title || "No reward"}
                     </p>
                   </div>
-                  <Link href="/dashboard/backer" className="block">
+                  <Link href={`/dashboard/pledges/${existingPledge.id}`} className="block">
                     <Button className="w-full bg-gradient-to-r from-[#05ce78] to-emerald-500 hover:from-[#04b86a] hover:to-emerald-600 text-white font-medium shadow-lg shadow-[#05ce78]/20" size="lg">
                       Manage Your Pledge
                     </Button>
