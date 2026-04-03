@@ -296,6 +296,7 @@ export function PaymentStep() {
   const mustUseAltProcessor = payment.hasAdultContent || payment.hasRiskyContent;
 
   const campaignType = payment.campaignType || "ALL_OR_NOTHING";
+  const isLaunched = ["LIVE", "FUNDED", "FAILED", "CANCELLED"].includes(projectStatus || "");
 
   // Auto-switch away from Stripe/PayPal if adult content is selected (DivinityCoin and Whop are allowed)
   useEffect(() => {
@@ -409,6 +410,7 @@ export function PaymentStep() {
         updatePayment={updatePayment}
         mustUseAltProcessor={mustUseAltProcessor}
         campaignType={campaignType}
+        isLaunched={isLaunched}
         goalAmount={goalAmount}
         stripeFee={stripeFee}
         platformFee={platformFee}

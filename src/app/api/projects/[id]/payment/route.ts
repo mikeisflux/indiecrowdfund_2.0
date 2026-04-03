@@ -48,11 +48,11 @@ export async function POST(
     const body = await req.json();
     const data = paymentSchema.parse(body);
 
-    // For launched projects, allow retailer settings AND payment processor changes
-    // Payment processor can be switched without affecting campaign numbers or backer count
-    const launchedAllowedFields = ["allowRetailerPledges", "retailerDiscount", "retailerMinQuantity", "paymentProcessor"];
+    // For launched projects, only allow retailer settings changes (super admins can change anything)
+    const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+    const launchedAllowedFields = ["allowRetailerPledges", "retailerDiscount", "retailerMinQuantity"];
 
-    if (permission.isLaunched) {
+    if (permission.isLaunched && !isSuperAdmin) {
       const requestedFields = Object.keys(data).filter(key => data[key as keyof typeof data] !== undefined);
       const disallowedFields = requestedFields.filter(f => !launchedAllowedFields.includes(f));
 

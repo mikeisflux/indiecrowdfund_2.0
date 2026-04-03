@@ -13,6 +13,7 @@ export function PaymentProcessorSection({
   updatePayment,
   mustUseAltProcessor,
   campaignType,
+  isLaunched,
   goalAmount,
   platformFee,
   paypalFee,
@@ -31,6 +32,16 @@ export function PaymentProcessorSection({
         </p>
       </div>
 
+      {isLaunched && (
+        <Alert className="bg-amber-50/50 dark:bg-amber-900/20 border-amber-500/30">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle>Payment processor locked</AlertTitle>
+          <AlertDescription>
+            The payment processor cannot be changed once a campaign is live.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {mustUseAltProcessor && (
         <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
           <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
@@ -47,8 +58,8 @@ export function PaymentProcessorSection({
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "PAYPAL" ? "border-2 border-primary" : "border"
-          } ${mustUseAltProcessor ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => !mustUseAltProcessor && updatePayment({ paymentProcessor: "PAYPAL" })}
+          } ${mustUseAltProcessor || isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={() => !mustUseAltProcessor && !isLaunched && updatePayment({ paymentProcessor: "PAYPAL" })}
         >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -93,8 +104,8 @@ export function PaymentProcessorSection({
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "DIVINITYCOIN" ? "border-2 border-primary" : "border"
-          }`}
-          onClick={() => updatePayment({ paymentProcessor: "DIVINITYCOIN" })}
+          } ${isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={() => !isLaunched && updatePayment({ paymentProcessor: "DIVINITYCOIN" })}
         >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -137,8 +148,8 @@ export function PaymentProcessorSection({
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "WHOP" ? "border-2 border-primary" : "border"
-          } ${campaignType === "ALL_OR_NOTHING" ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => campaignType === "KEEP_IT_ALL" && updatePayment({ paymentProcessor: "WHOP" })}
+          } ${campaignType === "ALL_OR_NOTHING" || isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={() => campaignType === "KEEP_IT_ALL" && !isLaunched && updatePayment({ paymentProcessor: "WHOP" })}
         >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">

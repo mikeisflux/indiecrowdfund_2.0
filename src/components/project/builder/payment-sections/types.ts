@@ -22,6 +22,7 @@ export interface PaymentProcessorSectionProps {
   updatePayment: (data: Partial<ProjectPaymentData>) => void;
   mustUseAltProcessor: boolean | undefined;
   campaignType: "ALL_OR_NOTHING" | "KEEP_IT_ALL";
+  isLaunched?: boolean;
   goalAmount: number;
   stripeFee: number;
   platformFee: number;
