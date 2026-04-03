@@ -23,8 +23,7 @@ import {
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
-import { PayPalBankPayoutSection } from "@/components/project/builder/payment-sections/paypal-bank-payout-section";
-import { PaymentSettings } from "@/components/payment-settings";
+import { MarketplacePaymentSettings } from "@/components/marketplace/marketplace-payment-settings";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { StatsCard } from "./components/StatsCard";
@@ -462,13 +461,8 @@ export default function CreatorMarketplaceDashboard() {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
-            <div className="max-w-2xl space-y-6">
-              <PayPalBankPayoutSection />
-              <PaymentSettings
-                showStripe={false}
-                showDivinityCoin={true}
-                showWhop={true}
-              />
+            <div className="max-w-2xl">
+              <MarketplacePaymentSettings />
             </div>
           </TabsContent>
         </Tabs>
