@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -42,6 +51,7 @@ import {
   ShieldAlert,
   Hash,
   Shield,
+  FileText,
 } from "lucide-react";
 
 interface PledgeDetails {
@@ -74,9 +84,19 @@ interface PledgeDetails {
   }>;
   canCancel: boolean;
   canRefund: boolean;
+  canRequestRefund: boolean;
   canModify: boolean;
   canIncrease: boolean;
   isFunded: boolean;
+  campaignClosed: boolean;
+  refundRequest: {
+    id: string;
+    status: string;
+    reason: string;
+    creatorNote: string | null;
+    createdAt: string;
+    processedAt: string | null;
+  } | null;
 }
 
 export default function ManagePledgePage() {
@@ -89,6 +109,8 @@ export default function ManagePledgePage() {
   const [error, setError] = useState<string | null>(null);
   const [additionalAmount, setAdditionalAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 
   useEffect(() => {
     async function fetchPledge() {
@@ -134,6 +156,38 @@ export default function ManagePledgePage() {
       router.push("/dashboard/backer");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to cancel pledge");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRequestRefund = async () => {
+    if (!refundReason.trim()) {
+      toast.error("Please provide a reason for your refund request");
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      const response = await apiFetch(`/api/pledges/${pledgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", reason: refundReason }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit refund request");
+      }
+      toast.success("Refund request submitted. The creator will review it and respond.");
+      setRefundDialogOpen(false);
+      setRefundReason("");
+      // Refresh pledge data to show request status
+      const refreshResponse = await fetch(`/api/pledges/${pledgeId}`);
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        setPledge(refreshData.pledge);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to submit refund request");
     } finally {
       setIsProcessing(false);
     }
@@ -671,6 +725,73 @@ export default function ManagePledgePage() {
               </div>
             )}
 
+            {/* Refund Request for closed campaigns */}
+            {pledge.canRequestRefund && !pledge.refundRequest && (
+              <div className="p-4 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20">
+                <Label className="text-sm font-medium mb-2 block text-amber-700 dark:text-amber-300">
+                  Request a Refund
+                </Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  The campaign has closed. You can submit a refund request for the creator to review. Refunds are not guaranteed and are at the creator&apos;s discretion.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full border-amber-300 hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-900"
+                  onClick={() => setRefundDialogOpen(true)}
+                  disabled={isProcessing}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Submit Refund Request
+                </Button>
+              </div>
+            )}
+
+            {/* Existing refund request status */}
+            {pledge.refundRequest && (
+              <div className={`p-4 rounded-lg border ${
+                pledge.refundRequest.status === "APPROVED"
+                  ? "border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20"
+                  : pledge.refundRequest.status === "DENIED"
+                  ? "border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20"
+                  : "border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20"
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="font-medium text-sm">Refund Request</span>
+                  <Badge
+                    variant="outline"
+                    className={
+                      pledge.refundRequest.status === "APPROVED"
+                        ? "text-green-600 border-green-500/50"
+                        : pledge.refundRequest.status === "DENIED"
+                        ? "text-red-600 border-red-500/50"
+                        : "text-amber-600 border-amber-500/50"
+                    }
+                  >
+                    {pledge.refundRequest.status === "APPROVED" ? (
+                      <><CheckCircle className="w-3 h-3 mr-1" />Approved</>
+                    ) : pledge.refundRequest.status === "DENIED" ? (
+                      <><XCircle className="w-3 h-3 mr-1" />Denied</>
+                    ) : (
+                      <><Clock className="w-3 h-3 mr-1" />Pending Review</>
+                    )}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  <span className="font-medium">Your reason:</span> {pledge.refundRequest.reason}
+                </p>
+                {pledge.refundRequest.creatorNote && (
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium">Creator&apos;s note:</span> {pledge.refundRequest.creatorNote}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Submitted {new Date(pledge.refundRequest.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                  {pledge.refundRequest.processedAt && ` · Reviewed ${new Date(pledge.refundRequest.processedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`}
+                </p>
+              </div>
+            )}
+
             {/* Contact Creator */}
             <Link href={`/dashboard/messages?projectId=${pledge.project.id}&recipientId=${pledge.project.creatorId}`}>
               <Button variant="outline" className="w-full">
@@ -681,6 +802,39 @@ export default function ManagePledgePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Refund Request Dialog */}
+      <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit Refund Request</DialogTitle>
+            <DialogDescription>
+              Explain why you&apos;re requesting a refund for your ${Number(pledge?.amount).toFixed(2)} pledge to &quot;{pledge?.project.title}&quot;. The creator will review your request and respond.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="refund-reason">Reason for refund</Label>
+            <Textarea
+              id="refund-reason"
+              placeholder="Please explain why you are requesting a refund..."
+              value={refundReason}
+              onChange={(e) => setRefundReason(e.target.value)}
+              rows={4}
+              maxLength={1000}
+            />
+            <p className="text-xs text-muted-foreground text-right">{refundReason.length}/1000</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRefundDialogOpen(false)} disabled={isProcessing}>
+              Cancel
+            </Button>
+            <Button onClick={handleRequestRefund} disabled={isProcessing || !refundReason.trim()}>
+              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Refunded Pledge */}
       {pledge.status === "REFUNDED" && (

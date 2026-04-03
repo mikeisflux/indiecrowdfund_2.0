@@ -89,6 +89,7 @@ model Project {
   retailerPledges       RetailerPledge[]
   divinityCoinSettlements DivinityCoinSettlement[]
   whopSettlements         WhopSettlement[]
+  refundRequests          RefundRequest[]
   paypalPayouts           PayPalPayout[]
   digitalFiles          DigitalFile[]
   collectionItems       ProjectCollectionItem[]

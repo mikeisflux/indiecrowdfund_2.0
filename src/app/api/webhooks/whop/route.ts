@@ -93,13 +93,13 @@ export async function POST(req: NextRequest) {
 
         if (!pledge || pledge.status === "COMPLETED") break;
 
-        // Save Whop payment ID if available
+        // Save Whop checkout config ID and payment ID for refunds
         const whopPaymentId = data?.id as string | undefined;
-        if (whopPaymentId && checkoutConfigId) {
-          await db.pledge.update({
-            where: { id: pledgeId },
-            data: { whopCheckoutId: checkoutConfigId },
-          });
+        const updateData: Record<string, string> = {};
+        if (checkoutConfigId) updateData.whopCheckoutId = checkoutConfigId;
+        if (whopPaymentId) updateData.whopPaymentId = whopPaymentId;
+        if (Object.keys(updateData).length > 0) {
+          await db.pledge.update({ where: { id: pledgeId }, data: updateData });
         }
 
         // Atomically mark as confirmed

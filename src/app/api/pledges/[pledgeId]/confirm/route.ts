@@ -11,6 +11,7 @@ import {
   notifyProjectFunded,
 } from "@/lib/notifications";
 import { processPendingPledgesForProject, getStripeInstance, claimRewardSlot, assignBackerNumber } from "@/lib/payments/stripe";
+import { captureAuthorizedPaypalPledgesAsync } from "@/lib/payments/paypal/capture-authorized";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm
@@ -272,11 +273,12 @@ export async function POST(
         await notifyProjectFunded(pledge.projectId);
       }
 
-      // Process all pending pledges if project is funded (charge saved cards)
+      // Process all pending pledges if project is funded (charge saved cards + authorized PayPal)
       if (projectIsFunded) {
         pledgesConfirmLogger.info(`[Confirm] Project ${pledge.projectId} is funded, processing pending pledges...`);
         const chargeResults = await processPendingPledgesForProject(pledge.projectId);
         pledgesConfirmLogger.info(`[Confirm] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
+        captureAuthorizedPaypalPledgesAsync(pledge.projectId);
       }
     } else if (paymentVerified) {
       // PaymentIntent or DC pledge — payment was verified above, update stats now.

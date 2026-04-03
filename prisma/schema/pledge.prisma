@@ -31,10 +31,12 @@ model Pledge {
   divinityCoinPaymentId String?      @unique
 
   // PayPal fields
-  paypalOrderId         String?      @unique
+  paypalOrderId            String?      @unique
+  paypalAuthorizationId    String?      @unique  // Set when intent=AUTHORIZE (deferred capture)
 
   // Whop fields
   whopCheckoutId        String?      @unique
+  whopPaymentId         String?      @unique  // Whop payment ID for refunds (from payment.succeeded webhook)
 
   // Payment retry tracking
   retryCount            Int          @default(0)
@@ -69,6 +71,7 @@ model Pledge {
   modifierAssignments   PledgeModifierAssignment[]
   divinityCoinTransactions DivinityCoinTransaction[]
   emailLogs             EmailLog[]
+  refundRequest         RefundRequest?
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
   deletedAt             DateTime?    // Soft delete timestamp

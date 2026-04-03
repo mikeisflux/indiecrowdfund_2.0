@@ -8,6 +8,8 @@ import Stripe from "stripe";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI, getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
+import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
+import { getWhopClient } from "@/lib/payments/whop";
 
 export const dynamic = "force-dynamic";
 
@@ -137,6 +139,9 @@ export async function GET(
             },
           },
         },
+        refundRequest: {
+          select: { id: true, status: true, reason: true, creatorNote: true, createdAt: true },
+        },
       },
     });
 
@@ -145,6 +150,7 @@ export async function GET(
     }
 
     const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
+    const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status);
     const campaignActive = pledge.project.status === "LIVE" &&
       !(pledge.project.endDate && new Date(pledge.project.endDate) < new Date());
 
@@ -182,11 +188,14 @@ export async function GET(
           amount: Number(a.addon.amount),
           quantity: a.quantity,
         })),
-        canCancel: (!isFunded && pledge.status === "PENDING") || pledge.status === "COMPLETED",
-        canRefund: pledge.status === "COMPLETED",
+        canCancel: (!isFunded && pledge.status === "PENDING") || (pledge.status === "COMPLETED" && !campaignClosed),
+        canRefund: pledge.status === "COMPLETED" && !campaignClosed,
+        canRequestRefund: pledge.status === "COMPLETED" && campaignClosed && !pledge.refundRequest,
         canModify: campaignActive && (pledge.status === "PENDING" || pledge.status === "COMPLETED"),
         canIncrease: campaignActive,
         isFunded,
+        campaignClosed,
+        refundRequest: pledge.refundRequest ?? null,
       },
     });
   } catch (error) {
@@ -246,12 +255,42 @@ export async function PATCH(
 
     const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
     const campaignEnded = pledge.project.endDate && new Date(pledge.project.endDate) < new Date();
+    const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status);
+    const campaignLive = pledge.project.status === "LIVE" || pledge.project.status === "PAUSED";
 
     if (action === "cancel") {
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
 
-      // COMPLETED pledges: cancel with refund
+      // COMPLETED pledges: for closed campaigns, create a refund request (requires creator approval)
+      // For live campaigns, process the refund immediately
       if (pledge.status === "COMPLETED") {
+        if (campaignClosed) {
+          // Check if a refund request already exists
+          const existing = await db.refundRequest.findUnique({ where: { pledgeId: pledge.id } });
+          if (existing) {
+            return NextResponse.json(
+              { error: existing.status === "DENIED" ? "Your refund request was denied by the creator." : "A refund request has already been submitted for this pledge." },
+              { status: 400 }
+            );
+          }
+
+          await db.refundRequest.create({
+            data: {
+              pledgeId: pledge.id,
+              userId: session.user.id,
+              projectId: pledge.projectId,
+              reason: body.reason || "Backer requested refund",
+            },
+          });
+
+          return NextResponse.json({
+            success: true,
+            refundRequested: true,
+            message: "Refund request submitted. The creator will review it and you'll be notified of their decision.",
+          });
+        }
+
+        // Live campaign — process refund immediately
         if (paymentProcessor === "DIVINITYCOIN") {
           try {
             const dcResult = await callDivinityCoinAPI("refund", {
@@ -274,6 +313,79 @@ export async function PATCH(
               { error: "Failed to process refund" },
               { status: 500 }
             );
+          }
+        } else if (paymentProcessor === "PAYPAL") {
+          // PayPal: fetch order to get capture ID, then refund
+          // If pledge was authorized but not captured (AUTHORIZE intent), void the authorization instead
+          try {
+            if (pledge.paypalAuthorizationId && !pledge.chargedImmediately) {
+              // Void the authorization (no capture happened yet)
+              const ppConfig = await getPayPalConfig();
+              const ppToken = await getPayPalAccessToken();
+              const voidRes = await fetch(
+                `${ppConfig.baseUrl}/v2/payments/authorizations/${pledge.paypalAuthorizationId}/void`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${ppToken}`,
+                    "Content-Type": "application/json",
+                    "PayPal-Request-Id": `void_${pledge.id}`,
+                  },
+                }
+              );
+              if (!voidRes.ok && voidRes.status !== 422) {
+                const errBody = await voidRes.text();
+                pledgesLogger.error({ pledgeId: pledge.id, err: errBody }, "PayPal void failed");
+                return NextResponse.json({ error: "Failed to void PayPal authorization." }, { status: 502 });
+              }
+            } else if (pledge.paypalOrderId) {
+              // Captured order — issue a refund
+              const ppConfig = await getPayPalConfig();
+              const ppToken = await getPayPalAccessToken();
+              const orderRes = await fetch(`${ppConfig.baseUrl}/v2/checkout/orders/${pledge.paypalOrderId}`, {
+                headers: { Authorization: `Bearer ${ppToken}` },
+              });
+              if (!orderRes.ok) throw new Error("Failed to fetch PayPal order");
+              const orderData = await orderRes.json();
+              const captureId = orderData?.purchase_units?.[0]?.payments?.captures?.[0]?.id as string | undefined;
+              if (!captureId) {
+                return NextResponse.json({ error: "PayPal payment capture not found." }, { status: 400 });
+              }
+              const refundRes = await fetch(`${ppConfig.baseUrl}/v2/payments/captures/${captureId}/refund`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${ppToken}`,
+                  "Content-Type": "application/json",
+                  "PayPal-Request-Id": `refund_backer_${pledge.id}`,
+                },
+                body: JSON.stringify({ note_to_payer: body.reason || "Refund requested by backer" }),
+              });
+              if (!refundRes.ok) {
+                const errBody = await refundRes.text();
+                pledgesLogger.error({ pledgeId: pledge.id, err: errBody }, "PayPal refund failed");
+                return NextResponse.json({ error: "Failed to process PayPal refund." }, { status: 502 });
+              }
+            } else {
+              return NextResponse.json({ error: "No PayPal payment found to refund." }, { status: 400 });
+            }
+          } catch (ppError) {
+            pledgesLogger.error({ err: String(ppError) }, "PayPal refund/void error");
+            return NextResponse.json({ error: "Failed to process refund." }, { status: 500 });
+          }
+        } else if (paymentProcessor === "WHOP") {
+          // Whop: use SDK to refund the payment
+          if (!pledge.whopPaymentId) {
+            return NextResponse.json(
+              { error: "Whop payment ID not found. Please contact support to request a refund." },
+              { status: 400 }
+            );
+          }
+          try {
+            const whopClient = await getWhopClient();
+            await whopClient.payments.refund(pledge.whopPaymentId);
+          } catch (whopError) {
+            pledgesLogger.error({ err: String(whopError) }, "Whop refund error");
+            return NextResponse.json({ error: "Failed to process Whop refund." }, { status: 500 });
           }
         } else {
           // Stripe refund

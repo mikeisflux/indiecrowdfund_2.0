@@ -54,6 +54,7 @@ import {
   FolderKanban,
   FormInput,
   Lock,
+  ReceiptText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -120,6 +121,7 @@ import { PaymentsTab } from "./components/tabs/PaymentsTab";
 import { DigitalDeliveryTab } from "./components/tabs/DigitalDeliveryTab";
 import { PhysicalDeliveryTab } from "./components/tabs/PhysicalDeliveryTab";
 import { ReportsTab } from "./components/tabs/ReportsTab";
+import { RefundRequestsTab } from "./components/tabs/RefundRequestsTab";
 
 // Always-available tab config
 const ALWAYS_AVAILABLE_TABS: { id: AlwaysAvailableTab; label: string; icon: React.ElementType }[] = [
@@ -127,6 +129,7 @@ const ALWAYS_AVAILABLE_TABS: { id: AlwaysAvailableTab; label: string; icon: Reac
   { id: "backers", label: "Backers", icon: Users },
   { id: "email-marketing", label: "Email Marketing", icon: Mail },
   { id: "updates", label: "Updates", icon: FileText },
+  { id: "refund-requests", label: "Refund Requests", icon: ReceiptText },
   { id: "settings", label: "Settings", icon: Settings },
   { id: "account", label: "Account", icon: UserCircle },
   { id: "projects", label: "Projects", icon: FolderKanban },
@@ -689,6 +692,10 @@ export default function IndieKitV2Page() {
 
               {activeSection === "always" && activeAlwaysTab === "account" && (
                 <AccountSettingsTab />
+              )}
+
+              {activeSection === "always" && activeAlwaysTab === "refund-requests" && (
+                <RefundRequestsTab projectId={selectedProjectId} />
               )}
 
               {activeSection === "always" && activeAlwaysTab === "projects" && (

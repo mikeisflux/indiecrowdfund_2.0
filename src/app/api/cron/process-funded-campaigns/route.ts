@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
 import { db } from "@/lib/db";
 import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
+import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 
 /**
  * Sync payment methods from Stripe for pledges that have SetupIntents
@@ -202,6 +203,10 @@ export async function GET(req: NextRequest) {
     for (const project of projectsReadyToCharge) {
       try {
         const pledgeResults = await processPendingPledgesForProject(project.id);
+        // Also capture any authorized (deferred) PayPal pledges
+        await captureAuthorizedPaypalPledges(project.id).catch(err =>
+          cronProcessFundedCampaignsLogger.error({ err: String(err) }, `[Cron] PayPal capture error for project ${project.id}`)
+        );
 
         results.processed.push({
           projectId: project.id,

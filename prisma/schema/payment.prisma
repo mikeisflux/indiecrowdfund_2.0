@@ -1,4 +1,36 @@
 // ============================================
+// REFUND REQUESTS (backer-initiated, creator-approved for closed campaigns)
+// ============================================
+
+model RefundRequest {
+  id          String              @id @default(cuid())
+  pledgeId    String              @unique
+  userId      String
+  projectId   String
+  reason      String              @db.Text
+  status      RefundRequestStatus @default(PENDING)
+  creatorNote String?             @db.Text
+  processedAt DateTime?
+
+  pledge      Pledge   @relation(fields: [pledgeId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum RefundRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+// ============================================
 // PAYMENT PROCESSOR CONFIGURATION
 // ============================================
 

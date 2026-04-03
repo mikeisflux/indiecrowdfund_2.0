@@ -84,6 +84,7 @@ model User {
   divinityCoinBalance Decimal @default(0) @db.Decimal(10, 2)
   divinityCoinRedemptions DivinityCoinRedemption[]
   divinityCoinTransactions DivinityCoinTransaction[]
+  refundRequests    RefundRequest[]
   achievements      UserAchievement[]
   redemptionBonusLedgers RedemptionBonusLedger[]
   redemptionBonusApplications RedemptionBonusApplication[]

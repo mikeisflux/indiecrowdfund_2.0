@@ -1,3 +1,4 @@
+import Whop from "@whop/sdk";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
@@ -38,6 +39,12 @@ export async function getWhopConfig(): Promise<WhopConfig> {
     whopConfigLogger.error({ err: String(error) }, "Failed to load Whop config");
     throw error;
   }
+}
+
+/** Returns an initialized Whop SDK client using the stored API key */
+export async function getWhopClient(): Promise<InstanceType<typeof Whop>> {
+  const config = await getWhopConfig();
+  return new Whop({ apiKey: `Bearer ${config.apiKey}` });
 }
 
 export function invalidateWhopConfigCache() {

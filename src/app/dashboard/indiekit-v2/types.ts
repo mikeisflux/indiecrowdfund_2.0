@@ -27,6 +27,7 @@ export type AlwaysAvailableTab =
   | "backers"
   | "email-marketing"
   | "updates"
+  | "refund-requests"
   | "settings"
   | "account"
   | "projects";

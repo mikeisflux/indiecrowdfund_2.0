@@ -21,7 +21,9 @@ interface CreatePayPalPaymentParams {
 
 /**
  * Creates a PayPal order and a pending pledge.
- * PayPal payments are always captured immediately (no "save for later").
+ * Uses AUTHORIZE intent when the campaign hasn't reached its funding goal yet
+ * (funds are held but not captured until the goal is reached).
+ * Uses CAPTURE intent when the campaign is already funded (immediate charge).
  */
 export async function createPayPalPayment({
   projectId,
@@ -36,7 +38,7 @@ export async function createPayPalPayment({
 
   const project = await db.project.findUnique({
     where: { id: projectId, deletedAt: null },
-    select: { id: true, title: true },
+    select: { id: true, title: true, goalAmount: true, currentAmount: true, status: true },
   });
 
   if (!project) throw new Error("Project not found");
@@ -91,6 +93,14 @@ export async function createPayPalPayment({
     await db.pledge.deleteMany({ where: { id: { in: ids } } });
   }
 
+  // Determine if we should use AUTHORIZE or CAPTURE
+  // AUTHORIZE = campaign not yet funded (hold funds, capture when goal reached)
+  // CAPTURE   = campaign already funded (immediate charge)
+  const isFunded =
+    project.status === "FUNDED" ||
+    Number(project.currentAmount) >= Number(project.goalAmount);
+  const paypalIntent = isFunded ? "CAPTURE" : "AUTHORIZE";
+
   // Create pending pledge
   const pledge = await db.pledge.create({
     data: {
@@ -103,7 +113,7 @@ export async function createPayPalPayment({
       shippingAmount,
       paymentProcessor: "PAYPAL",
       status: "PENDING",
-      chargedImmediately: true,
+      chargedImmediately: isFunded,
       ...(sourceCampaignId ? { sourceCampaignId } : {}),
     },
   });
@@ -124,7 +134,7 @@ export async function createPayPalPayment({
   const amountStr = amount.toFixed(2);
 
   const orderPayload = {
-    intent: "CAPTURE",
+    intent: paypalIntent,
     purchase_units: [
       {
         custom_id: pledge.id,
@@ -138,8 +148,8 @@ export async function createPayPalPayment({
     payment_source: {
       paypal: {
         experience_context: {
-          payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
-          user_action: "PAY_NOW",
+          payment_method_preference: isFunded ? "IMMEDIATE_PAYMENT_REQUIRED" : "UNRESTRICTED",
+          user_action: isFunded ? "PAY_NOW" : "CONTINUE",
         },
       },
     },

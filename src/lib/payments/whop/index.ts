@@ -1,2 +1,2 @@
-export { getWhopConfig, invalidateWhopConfigCache, verifyWhopWebhookSignature } from "./config";
+export { getWhopConfig, getWhopClient, invalidateWhopConfigCache, verifyWhopWebhookSignature } from "./config";
 export { createWhopPayment } from "./checkout";
