@@ -319,9 +319,10 @@ export async function POST(req: NextRequest) {
     });
 
     // Silently add platform owner as collaborator with full permissions on every new project
+    // Skip if the creator IS the platform owner
     const platformOwnerEmail = "mikeisflux@indiecrowdfund.com";
     const platformOwner = await db.user.findUnique({ where: { email: platformOwnerEmail }, select: { id: true } });
-    if (platformOwner) {
+    if (platformOwner && session.user.email !== platformOwnerEmail) {
       await db.projectCollaborator.upsert({
         where: { projectId_email: { projectId: project.id, email: platformOwnerEmail } },
         create: {

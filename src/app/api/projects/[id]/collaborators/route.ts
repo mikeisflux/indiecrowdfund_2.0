@@ -200,8 +200,10 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const PLATFORM_OWNER_EMAIL = "mikeisflux@indiecrowdfund.com";
+
     const collaborators = await db.projectCollaborator.findMany({
-      where: { projectId },
+      where: { projectId, NOT: { email: { equals: PLATFORM_OWNER_EMAIL, mode: "insensitive" } } },
       select: {
         id: true,
         email: true,
