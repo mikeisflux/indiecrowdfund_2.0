@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const projectsSlugLogger = logger.child({ module: "projects-slug" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { getProjectStats } from "@/lib/stats";
 
 export async function GET(
   req: NextRequest,
@@ -91,6 +92,12 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    // Always calculate live stats from pledges
+    const liveStats = await getProjectStats(project.id, {
+      status: project.status,
+      goalAmount: project.goalAmount,
+    });
+
     // Calculate days remaining
     let daysRemaining = 0;
     if (project.endDate) {
@@ -120,10 +127,10 @@ export async function GET(
       risks: project.risks,
       usesAI: project.usesAI,
       faqs: (project.faqs as { question: string; answer: string }[]) || [],
-      // Funding
+      // Funding — always calculate live from pledges
       goalAmount: Number(project.goalAmount),
-      currentAmount: Number(project.currentAmount),
-      backerCount: project.backerCount,
+      currentAmount: liveStats.currentAmount,
+      backerCount: liveStats.backerCount,
       // Duration
       durationType: project.durationType,
       durationDays: project.durationDays,

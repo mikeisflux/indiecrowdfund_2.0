@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const projectsVanityLogger = logger.child({ module: "projects-vanity" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { getProjectStats } from "@/lib/stats";
 
 export async function GET(
   req: NextRequest,
@@ -113,6 +114,12 @@ export async function GET(
       daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
     }
 
+    // Always calculate live stats from pledges
+    const liveStats = await getProjectStats(project.id, {
+      status: project.status,
+      goalAmount: project.goalAmount,
+    });
+
     // Transform to the expected format - include ALL fields needed for editing
     const formattedProject = {
       id: project.id,
@@ -134,10 +141,10 @@ export async function GET(
       risks: project.risks,
       usesAI: project.usesAI,
       faqs: (project.faqs as { question: string; answer: string }[]) || [],
-      // Funding
+      // Funding — always calculate live from pledges (never use stale stored fields)
       goalAmount: Number(project.goalAmount),
-      currentAmount: Number(project.currentAmount),
-      backerCount: project.backerCount,
+      currentAmount: liveStats.currentAmount,
+      backerCount: liveStats.backerCount,
       // Duration
       durationType: project.durationType,
       durationDays: project.durationDays,

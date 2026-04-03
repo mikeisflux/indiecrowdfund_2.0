@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 
 const projectsSimilarLogger = logger.child({ module: "projects-similar" });
 import { db } from "@/lib/db";
+import { getBatchProjectStats } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +30,8 @@ export async function GET(req: NextRequest) {
         title: true,
         slug: true,
         imageUrl: true,
-        currentAmount: true,
         goalAmount: true,
-        backerCount: true,
+        status: true,
         category: true,
         endDate: true,
         creator: {
@@ -45,10 +45,14 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
+    const statsMap = await getBatchProjectStats(
+      projects.map((p) => ({ id: p.id, status: p.status, goalAmount: p.goalAmount }))
+    );
+
     const formattedProjects = projects.map((p) => {
       const goal = Number(p.goalAmount) || 1;
-      const current = Number(p.currentAmount) || 0;
-      const fundedPercent = Math.round((current / goal) * 100);
+      const liveStats = statsMap.get(p.id) ?? { currentAmount: 0, backerCount: 0 };
+      const fundedPercent = Math.round((liveStats.currentAmount / goal) * 100);
       const endDate = p.endDate ? p.endDate.toISOString() : null;
       const daysLeft = p.endDate
         ? Math.max(0, Math.ceil((p.endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -59,9 +63,9 @@ export async function GET(req: NextRequest) {
         title: p.title,
         slug: p.slug,
         imageUrl: p.imageUrl,
-        currentAmount: current,
+        currentAmount: liveStats.currentAmount,
         goalAmount: goal,
-        backerCount: p.backerCount,
+        backerCount: liveStats.backerCount,
         category: p.category,
         creator: p.creator?.name || "Creator",
         vanityUrl: p.creator?.vanityUrl || null,

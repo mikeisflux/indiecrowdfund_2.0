@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { getPlatformStats } from "@/lib/stats/actions";
 import { formatCurrency, formatNumber } from "@/lib/stats/utils";
+import { getBatchProjectStats } from "@/lib/stats";
 import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
@@ -54,17 +55,24 @@ async function getSuccessfulProjects() {
       take: 3,
     });
 
-    return projects.map((project) => ({
-      id: project.id,
-      title: project.title,
-      creator: project.creator.name || "Creator",
-      category: project.category,
-      raised: project.currentAmount,
-      goal: project.goalAmount,
-      backers: project.backerCount,
-      image: project.imageUrl || "",
-      highlight: `${Math.round((project.currentAmount / project.goalAmount) * 100)}% funded`,
-    }));
+    const statsMap = await getBatchProjectStats(
+      projects.map((p) => ({ id: p.id, status: p.status, goalAmount: p.goalAmount }))
+    );
+
+    return projects.map((project) => {
+      const liveStats = statsMap.get(project.id) ?? { currentAmount: 0, backerCount: 0 };
+      return {
+        id: project.id,
+        title: project.title,
+        creator: project.creator.name || "Creator",
+        category: project.category,
+        raised: liveStats.currentAmount,
+        goal: project.goalAmount,
+        backers: liveStats.backerCount,
+        image: project.imageUrl || "",
+        highlight: `${Math.round((liveStats.currentAmount / Number(project.goalAmount)) * 100)}% funded`,
+      };
+    });
   } catch (error) {
     console.error("Error fetching successful projects:", error);
     return [];

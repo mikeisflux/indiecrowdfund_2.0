@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const userPublicProfileLogger = logger.child({ module: "user-public-profile" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getBatchProjectStats } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
 
@@ -127,41 +128,60 @@ export async function GET(
     // Note: Follow functionality will be added in a future update
     const isFollowing = false;
 
+    // Collect all unique projects for batch stats lookup
+    const backedProjectsRaw = new Map<string, ProjectData>();
+    user.pledges.forEach((pledge: PledgeData) => {
+      if (!backedProjectsRaw.has(pledge.project.id)) {
+        backedProjectsRaw.set(pledge.project.id, pledge.project);
+      }
+    });
+
+    const allProjects = [
+      ...user.createdProjects,
+      ...Array.from(backedProjectsRaw.values()),
+    ];
+
+    const statsMap = await getBatchProjectStats(
+      allProjects.map((p) => ({ id: p.id, status: p.status, goalAmount: p.goalAmount }))
+    );
+
     // Format projects with full URLs
-    const createdProjects = user.createdProjects.map((project: ProjectData) => ({
-      id: project.id,
-      title: project.title,
-      slug: project.slug,
-      subtitle: project.subtitle,
-      imageUrl: project.imageUrl,
-      status: project.status,
-      fundingGoal: Number(project.goalAmount),
-      currentFunding: Number(project.currentAmount),
-      backerCount: project.backerCount,
-      projectUrl: project.creator?.vanityUrl
-        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
-        : `/projects/${project.slug}`,
-    }));
+    const createdProjects = user.createdProjects.map((project: ProjectData) => {
+      const liveStats = statsMap.get(project.id) ?? { currentAmount: 0, backerCount: 0 };
+      return {
+        id: project.id,
+        title: project.title,
+        slug: project.slug,
+        subtitle: project.subtitle,
+        imageUrl: project.imageUrl,
+        status: project.status,
+        fundingGoal: Number(project.goalAmount),
+        currentFunding: liveStats.currentAmount,
+        backerCount: liveStats.backerCount,
+        projectUrl: project.creator?.vanityUrl
+          ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+          : `/projects/${project.slug}`,
+      };
+    });
 
     // Get unique backed projects
     const backedProjectsMap = new Map();
-    user.pledges.forEach((pledge: PledgeData) => {
-      if (!backedProjectsMap.has(pledge.project.id)) {
-        backedProjectsMap.set(pledge.project.id, {
-          id: pledge.project.id,
-          title: pledge.project.title,
-          slug: pledge.project.slug,
-          subtitle: pledge.project.subtitle,
-          imageUrl: pledge.project.imageUrl,
-          status: pledge.project.status,
-          fundingGoal: Number(pledge.project.goalAmount),
-          currentFunding: Number(pledge.project.currentAmount),
-          backerCount: pledge.project.backerCount,
-          projectUrl: pledge.project.creator?.vanityUrl
-            ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
-            : `/projects/${pledge.project.slug}`,
-        });
-      }
+    backedProjectsRaw.forEach((project) => {
+      const liveStats = statsMap.get(project.id) ?? { currentAmount: 0, backerCount: 0 };
+      backedProjectsMap.set(project.id, {
+        id: project.id,
+        title: project.title,
+        slug: project.slug,
+        subtitle: project.subtitle,
+        imageUrl: project.imageUrl,
+        status: project.status,
+        fundingGoal: Number(project.goalAmount),
+        currentFunding: liveStats.currentAmount,
+        backerCount: liveStats.backerCount,
+        projectUrl: project.creator?.vanityUrl
+          ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+          : `/projects/${project.slug}`,
+      });
     });
 
     const response = {

@@ -25,6 +25,7 @@ import { HeroSlider } from "@/components/hero-slider";
 import { JsonLd } from "@/components/json-ld";
 import { HomeStatsPoller } from "@/components/home-stats-poller";
 import { getPlatformStats, getRetailerStats } from "@/lib/stats/actions";
+import { getBatchProjectStats } from "@/lib/stats";
 import { db } from "@/lib/db";
 import { formatTimeRemaining } from "@/lib/utils";
 import { auth } from "@/lib/auth";
@@ -136,6 +137,10 @@ async function getFeaturedProjects() {
       take: 6,
     });
 
+    const statsMap = await getBatchProjectStats(
+      projects.map((p) => ({ id: p.id, status: p.status, goalAmount: p.goalAmount }))
+    );
+
     return projects.map((project) => {
       // Calculate days remaining
       let daysRemaining = 0;
@@ -150,6 +155,8 @@ async function getFeaturedProjects() {
         ? `/projects/${project.creator.vanityUrl}/${project.slug}`
         : `/projects/${project.slug}`;
 
+      const liveStats = statsMap.get(project.id) ?? { currentAmount: 0, backerCount: 0 };
+
       return {
         id: project.id,
         slug: project.slug,
@@ -159,8 +166,8 @@ async function getFeaturedProjects() {
         imageUrl: project.imageUrl || "",
         creator: project.creator.name || "Creator",
         goalAmount: project.goalAmount,
-        currentAmount: project.currentAmount,
-        backerCount: project.backerCount,
+        currentAmount: liveStats.currentAmount,
+        backerCount: liveStats.backerCount,
         daysRemaining,
         endDate: project.endDate?.toISOString() || null,
         projectUrl,
@@ -272,10 +279,15 @@ async function getPastCampaigns() {
       take: 6,
     });
 
+    const statsMap = await getBatchProjectStats(
+      projects.map((p) => ({ id: p.id, status: p.status, goalAmount: p.goalAmount }))
+    );
+
     return projects.map((project) => {
-      // Calculate funding percentage
+      const liveStats = statsMap.get(project.id) ?? { currentAmount: 0, backerCount: 0 };
+
       const fundingPercentage = Number(project.goalAmount) > 0
-        ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100)
+        ? Math.round((liveStats.currentAmount / Number(project.goalAmount)) * 100)
         : 0;
       const wasSuccessful = fundingPercentage >= 100;
 
@@ -293,8 +305,8 @@ async function getPastCampaigns() {
         imageUrl: project.imageUrl || "",
         creator: project.creator.name || "Creator",
         goalAmount: project.goalAmount,
-        currentAmount: project.currentAmount,
-        backerCount: project.backerCount,
+        currentAmount: liveStats.currentAmount,
+        backerCount: liveStats.backerCount,
         fundingPercentage,
         wasSuccessful,
         endDate: project.endDate?.toISOString() || null,

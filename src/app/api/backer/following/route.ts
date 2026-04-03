@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const backerFollowingLogger = logger.child({ module: "backer-following" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getBatchProjectStats } from "@/lib/stats";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,6 +69,16 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
+    // Batch load live stats for all projects across all followed creators
+    const allProjects = following.flatMap((f: typeof following[0]) =>
+      f.creator.createdProjects.map((p: typeof f.creator.createdProjects[0]) => ({
+        id: p.id,
+        status: p.status,
+        goalAmount: p.goalAmount,
+      }))
+    );
+    const statsMap = await getBatchProjectStats(allProjects);
+
     // Transform data
     const creators = following.map((f: typeof following[0]) => ({
       id: f.creator.id,
@@ -79,46 +90,48 @@ export async function GET() {
       notifyUpdates: f.notifyUpdates,
       totalProjects: f.creator._count.createdProjects,
       memberSince: f.creator.createdAt,
-      recentProjects: f.creator.createdProjects.map((p: typeof f.creator.createdProjects[0]) => ({
-        id: p.id,
-        title: p.title,
-        slug: p.slug,
-        imageUrl: p.imageUrl,
-        status: p.status,
-        currentAmount: Number(p.currentAmount),
-        goalAmount: Number(p.goalAmount),
-        percentFunded: Math.round(
-          (Number(p.currentAmount) / Number(p.goalAmount)) * 100
-        ),
-        endDate: p.endDate,
-        category: p.category,
-        createdAt: p.createdAt,
-        backerCount: p.backerCount,
-      })),
+      recentProjects: f.creator.createdProjects.map((p: typeof f.creator.createdProjects[0]) => {
+        const liveStats = statsMap.get(p.id) ?? { currentAmount: 0, backerCount: 0 };
+        return {
+          id: p.id,
+          title: p.title,
+          slug: p.slug,
+          imageUrl: p.imageUrl,
+          status: p.status,
+          currentAmount: liveStats.currentAmount,
+          goalAmount: Number(p.goalAmount),
+          percentFunded: Math.round((liveStats.currentAmount / Number(p.goalAmount)) * 100),
+          endDate: p.endDate,
+          category: p.category,
+          createdAt: p.createdAt,
+          backerCount: liveStats.backerCount,
+        };
+      }),
     }));
 
     // Build activity feed from recent projects across all followed creators
     const allRecentProjects = following.flatMap((f: typeof following[0]) =>
-      f.creator.createdProjects.map((p: typeof f.creator.createdProjects[0]) => ({
-        id: p.id,
-        type: "new_project" as const,
-        title: p.title,
-        slug: p.slug,
-        imageUrl: p.imageUrl,
-        status: p.status,
-        currentAmount: Number(p.currentAmount),
-        goalAmount: Number(p.goalAmount),
-        percentFunded: Math.round(
-          (Number(p.currentAmount) / Number(p.goalAmount)) * 100
-        ),
-        category: p.category,
-        createdAt: p.createdAt,
-        creator: {
-          id: f.creator.id,
-          name: f.creator.name,
-          image: f.creator.image,
-        },
-      }))
+      f.creator.createdProjects.map((p: typeof f.creator.createdProjects[0]) => {
+        const liveStats = statsMap.get(p.id) ?? { currentAmount: 0, backerCount: 0 };
+        return {
+          id: p.id,
+          type: "new_project" as const,
+          title: p.title,
+          slug: p.slug,
+          imageUrl: p.imageUrl,
+          status: p.status,
+          currentAmount: liveStats.currentAmount,
+          goalAmount: Number(p.goalAmount),
+          percentFunded: Math.round((liveStats.currentAmount / Number(p.goalAmount)) * 100),
+          category: p.category,
+          createdAt: p.createdAt,
+          creator: {
+            id: f.creator.id,
+            name: f.creator.name,
+            image: f.creator.image,
+          },
+        };
+      })
     );
 
     // Sort by created date and take most recent
