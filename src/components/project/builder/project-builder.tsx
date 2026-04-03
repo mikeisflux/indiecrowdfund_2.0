@@ -266,6 +266,7 @@ export function ProjectBuilder() {
         : {
             projectType: payment.projectType || "INDIVIDUAL",
             paymentProcessor: payment.paymentProcessor,
+            campaignType: payment.campaignType || "ALL_OR_NOTHING",
             hasAdultContent: payment.hasAdultContent || false,
             hasRiskyContent: payment.hasRiskyContent || false,
             promoContentSfw: payment.promoContentSfw !== false,

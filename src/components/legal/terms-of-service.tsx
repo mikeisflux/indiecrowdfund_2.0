@@ -68,10 +68,17 @@ export function TermsOfServiceContent() {
         </ul>
         <p className="mb-6">IndieCrowdfund is not responsible for disputes between creators and backers.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">6. Fees and Payments</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">6. Fees, Payments, and Campaign Types</h3>
         <p className="mb-4">
           IndieCrowdfund charges platform and processing fees for funded projects. Fees are disclosed during project setup and may vary by region.
         </p>
+        <p className="mb-4">
+          Creators may choose between two campaign funding models:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li><strong>All or Nothing:</strong> Funds are only collected if the campaign reaches its stated funding goal by the deadline. If the goal is not reached, no money changes hands and backers are not charged.</li>
+          <li><strong>Keep It All:</strong> The creator keeps all pledges regardless of whether the funding goal is reached. Backers are charged immediately at the time of their pledge.</li>
+        </ul>
         <p className="mb-4">Creators authorize IndieCrowdfund and its payment partners to:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>Collect funds from backers</li>
@@ -91,7 +98,7 @@ export function TermsOfServiceContent() {
           <li><strong>Social Media & Online Presence Audit:</strong> We log and verify all social media accounts linked to the creator. Our team searches other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review the creator&apos;s previous campaign history.</li>
           <li><strong>Fulfillment History Review:</strong> We review backer comments, reviews, and public feedback on all prior campaigns across all platforms. We contact creators directly when discrepancies or concerns are identified.</li>
           <li><strong>Internal Documentation:</strong> All verification findings, correspondence, and review decisions are documented internally and retained for compliance and audit purposes.</li>
-          <li><strong>Payment Account Verification:</strong> Creators must add a valid PayPal payout email (for standard campaigns) or complete bank account setup through DivinityCoin (for NSFW/adult content campaigns) to receive payouts.</li>
+          <li><strong>Payment Account Verification:</strong> Creators must add a valid PayPal payout email (for standard campaigns), complete bank account setup through DivinityCoin (for NSFW/adult content campaigns), or connect a Whop account (for Whop-processed campaigns) to receive payouts.</li>
         </ul>
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
           <p className="text-red-800 dark:text-red-200 font-medium mb-2">Automatic Disqualification</p>

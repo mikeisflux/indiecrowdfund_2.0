@@ -87,6 +87,7 @@ export default function EditProjectPage() {
         updatePayment({
           contactEmail: project.contactEmail || "",
           projectType: project.projectType || "INDIVIDUAL",
+          campaignType: (project.campaignType as "ALL_OR_NOTHING" | "KEEP_IT_ALL") || "ALL_OR_NOTHING",
           hasAdultContent: project.hasAdultContent || false,
           hasRiskyContent: project.hasRiskyContent || false,
           promoContentSfw: project.promoContentSfw !== false,

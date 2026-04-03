@@ -6,6 +6,7 @@ import { getStripeInstance } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { getWhopClient } from "@/lib/payments/whop";
+import { notifyRefundRequestDecision } from "@/lib/notifications/pledge-notifications";
 
 const refundRequestLogger = logger.child({ module: "creator-refund-request" });
 
@@ -92,6 +93,9 @@ export async function PATCH(
           processedAt: new Date(),
         },
       });
+
+      // Fire-and-forget notification to backer
+      notifyRefundRequestDecision(refundRequest.pledge.id, "denied", creatorNote || null).catch(() => {});
 
       return NextResponse.json({ success: true, message: "Refund request denied." });
     }
@@ -228,6 +232,9 @@ export async function PATCH(
         data: { status: "APPROVED", creatorNote: creatorNote || null, processedAt: new Date() },
       }),
     ]);
+
+    // Fire-and-forget notification to backer
+    notifyRefundRequestDecision(pledge.id, "approved", creatorNote || null).catch(() => {});
 
     refundRequestLogger.info({ requestId, pledgeId: pledge.id }, "Refund request approved and processed");
     return NextResponse.json({ success: true, message: "Refund approved and processed successfully." });

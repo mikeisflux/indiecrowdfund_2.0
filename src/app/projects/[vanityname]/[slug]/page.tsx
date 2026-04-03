@@ -760,9 +760,19 @@ export default function ProjectPage() {
                 </div>
               </div>
 
-              {/* All or nothing note */}
+              {/* Campaign type note */}
               <p className="text-xs text-muted-foreground">
-                <Link href="#" className="underline hover:text-foreground">All or nothing.</Link> This project will only be funded if it reaches its goal by {formatDate(project.endDate)}.
+                {project.campaignType === "KEEP_IT_ALL" ? (
+                  <>
+                    <span className="font-medium">Keep it all.</span> This creator keeps all pledges regardless of funding goal.{" "}
+                    <span>Your payment is collected immediately.</span>
+                  </>
+                ) : (
+                  <>
+                    <Link href="#" className="underline hover:text-foreground">All or nothing.</Link>{" "}
+                    This project will only be funded if it reaches its goal by {formatDate(project.endDate)}.
+                  </>
+                )}
               </p>
               </div>
             </div>
@@ -795,7 +805,11 @@ export default function ProjectPage() {
                 <ShieldCheck className="h-5 w-5 text-black" />
               </div>
               <p className="text-sm">
-                {Number(project.currentAmount) >= Number(project.goalAmount) ? (
+                {project.campaignType === "KEEP_IT_ALL" ? (
+                  <>
+                    <strong>Your payment is collected immediately</strong> when you back this project — the creator keeps all pledges.
+                  </>
+                ) : Number(project.currentAmount) >= Number(project.goalAmount) ? (
                   <>
                     <strong>Your card is charged immediately</strong> when you back this funded project.
                   </>

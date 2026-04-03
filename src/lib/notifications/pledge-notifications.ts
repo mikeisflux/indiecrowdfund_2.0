@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { sendPledgeConfirmationEmail, sendPledgeModificationEmail, sendPledgeCancellationEmail } from "@/lib/email";
+import { sendRefundRequestDecisionEmail } from "@/lib/email/email-templates-pledge";
 import { createNotification } from "./core";
 import type { NotificationType } from "./types";
 
@@ -694,5 +695,75 @@ export async function notifyPledgeCancelled(
     }
   } catch (error) {
     notificationsPledgeNotificationsLogger.error({ err: error }, `[notifyPledgeCancelled] Error for pledge ${pledgeId}:`);
+  }
+}
+
+/**
+ * Notify backer when creator approves or denies their refund request
+ */
+export async function notifyRefundRequestDecision(
+  pledgeId: string,
+  decision: "approved" | "denied",
+  creatorNote?: string | null
+) {
+  try {
+    const pledge = await db.pledge.findUnique({
+      where: { id: pledgeId },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            currency: true,
+            creator: { select: { id: true, vanityUrl: true } },
+          },
+        },
+      },
+    });
+
+    if (!pledge?.user?.email) return;
+
+    const isApproved = decision === "approved";
+
+    // In-app notification
+    await createNotification({
+      userId: pledge.user.id,
+      type: "PLEDGE_RECEIVED" as NotificationType,
+      title: isApproved ? "Refund Request Approved" : "Refund Request Denied",
+      message: isApproved
+        ? `Your refund request for "${pledge.project.title}" was approved. $${Number(pledge.amount).toFixed(2)} will be returned to your payment method.`
+        : `Your refund request for "${pledge.project.title}" was reviewed but could not be approved at this time.`,
+      actionUrl: `/dashboard/pledges/${pledgeId}`,
+      projectId: pledge.project.id,
+    });
+
+    // Email
+    const emailResult = await sendRefundRequestDecisionEmail(
+      pledge.user.email,
+      pledge.user.name || "Backer",
+      pledge.project.title,
+      Number(pledge.amount),
+      decision,
+      creatorNote,
+      pledge.project.currency || "USD"
+    );
+
+    if (emailResult.success) {
+      await db.emailLog.create({
+        data: {
+          userId: pledge.user.id,
+          projectId: pledge.project.id,
+          pledgeId: pledge.id,
+          type: "PLEDGE_CANCELLATION",
+          subject: emailResult.subject,
+          recipientEmail: pledge.user.email,
+          htmlContent: emailResult.html,
+        },
+      });
+    }
+  } catch (error) {
+    notificationsPledgeNotificationsLogger.error({ err: error }, `[notifyRefundRequestDecision] Error for pledge ${pledgeId}:`);
   }
 }

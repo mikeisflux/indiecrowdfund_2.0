@@ -571,3 +571,79 @@ export async function sendBalanceDueEmail(
   const result = await sendEmail({ to: email, subject, html, skipUnsubscribeCheck: true });
   return { ...result, subject, html };
 }
+
+/**
+ * Send refund request decision email (approved or denied)
+ */
+export async function sendRefundRequestDecisionEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  amount: number,
+  decision: "approved" | "denied",
+  creatorNote?: string | null,
+  currency: string = "USD"
+) {
+  const currencySymbol = currency === "USD" ? "$" : currency;
+  const isApproved = decision === "approved";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Refund Request ${isApproved ? "Approved" : "Denied"}</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, ${isApproved ? "#10b981 0%, #059669 100%" : "#ef4444 0%, #dc2626 100%"}); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Refund Request ${isApproved ? "Approved" : "Denied"}</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">"${projectTitle}"</p>
+        </div>
+
+        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <p style="font-size: 16px;">Hi ${backerName || "Backer"},</p>
+
+          <p>The creator has reviewed your refund request for your <strong>${currencySymbol}${amount.toFixed(2)}</strong> pledge to "${projectTitle}".</p>
+
+          ${isApproved ? `
+          <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold; color: #065f46;">&#10003; Refund Approved &amp; Processed</p>
+            <p style="margin: 5px 0 0; font-size: 14px; color: #047857;">A full refund of <strong>${currencySymbol}${amount.toFixed(2)}</strong> has been issued to your original payment method. This typically takes 5–10 business days to appear on your statement.</p>
+          </div>
+          ` : `
+          <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold; color: #991b1b;">&#10007; Refund Request Denied</p>
+            <p style="margin: 5px 0 0; font-size: 14px; color: #b91c1c;">The creator has reviewed your request and was unable to approve a refund at this time. Your pledge remains active.</p>
+          </div>
+          `}
+
+          ${creatorNote ? `
+          <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold; color: #0c4a6e; font-size: 14px;">Message from the creator:</p>
+            <p style="margin: 5px 0 0; font-size: 14px; color: #0369a1;">${creatorNote}</p>
+          </div>
+          ` : ""}
+
+          <p style="color: #666; font-size: 14px;">If you have questions, you can reply directly to this email or contact the project creator through your backer dashboard.</p>
+
+          <div style="text-align: center; margin-top: 25px;">
+            <a href="${APP_URL}/dashboard/backer" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold;">View My Pledges</a>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because you submitted a refund request on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const subject = isApproved
+    ? `Refund approved — ${currencySymbol}${amount.toFixed(2)} for "${projectTitle}"`
+    : `Refund request update for "${projectTitle}"`;
+
+  const result = await sendEmail({ to: email, subject, html });
+  return { ...result, subject, html };
+}

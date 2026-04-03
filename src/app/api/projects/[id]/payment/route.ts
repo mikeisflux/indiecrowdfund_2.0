@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 const paymentSchema = z.object({
   projectType: z.enum(["INDIVIDUAL", "BUSINESS", "NONPROFIT"]).optional(),
   paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN", "PAYPAL", "WHOP"]).optional(),
+  campaignType: z.enum(["ALL_OR_NOTHING", "KEEP_IT_ALL"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),
   promoContentSfw: z.boolean().optional(),
@@ -72,6 +73,7 @@ export async function POST(
     const updateData: Record<string, unknown> = {};
 
     if (data.projectType !== undefined) updateData.projectType = data.projectType;
+    if (data.campaignType !== undefined) updateData.campaignType = data.campaignType;
     if (data.hasAdultContent !== undefined) updateData.hasAdultContent = data.hasAdultContent;
     if (data.hasRiskyContent !== undefined) updateData.hasRiskyContent = data.hasRiskyContent;
     if (data.promoContentSfw !== undefined) updateData.promoContentSfw = data.promoContentSfw;
@@ -93,13 +95,17 @@ export async function POST(
       updateData.paymentProcessor = data.paymentProcessor;
     }
 
-    // Automatically set payment processor based on content flags
-    // Adult or risky content cannot use Stripe - must use DivinityCoin
+    // Automatically set payment processor and campaign type based on content flags
+    // Adult or risky content cannot use Stripe/PayPal and must use Keep It All
     if (data.hasAdultContent !== undefined || data.hasRiskyContent !== undefined) {
       const hasAdult = data.hasAdultContent ?? false;
       const hasRisky = data.hasRiskyContent ?? false;
       if (hasAdult || hasRisky) {
-        // Only force-switch if currently on Stripe or PayPal (leave DIVINITYCOIN as-is)
+        // Force Keep It All campaign type for NSFW projects
+        if (!updateData.campaignType) {
+          updateData.campaignType = "KEEP_IT_ALL";
+        }
+        // Only force-switch if currently on Stripe or PayPal (leave DIVINITYCOIN/WHOP as-is)
         const currentProcessor = currentProject?.paymentProcessor;
         if ((currentProcessor === "STRIPE" || currentProcessor === "PAYPAL") && !updateData.paymentProcessor) {
           updateData.paymentProcessor = "DIVINITYCOIN";
@@ -114,6 +120,7 @@ export async function POST(
         id: true,
         projectType: true,
         paymentProcessor: true,
+        campaignType: true,
         hasAdultContent: true,
         hasRiskyContent: true,
         promoContentSfw: true,
@@ -175,6 +182,7 @@ export async function GET(
         contactEmail: true,
         projectType: true,
         paymentProcessor: true,
+        campaignType: true,
         hasAdultContent: true,
         hasRiskyContent: true,
         promoContentSfw: true,

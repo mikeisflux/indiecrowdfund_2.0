@@ -43,6 +43,7 @@ export interface ProjectData {
   updates: ProjectUpdate[];
   comments: number;
   paymentProcessor?: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
+  campaignType?: "ALL_OR_NOTHING" | "KEEP_IT_ALL";
 }
 
 export interface RewardItem {

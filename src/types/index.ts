@@ -632,6 +632,7 @@ export interface ProjectPaymentData {
   contactEmailConfirmed?: boolean;
   projectType: ProjectType;
   paymentProcessor: PaymentProcessor;
+  campaignType: "ALL_OR_NOTHING" | "KEEP_IT_ALL";
   hasAdultContent: boolean;
   hasRiskyContent: boolean;
   promoContentSfw: boolean; // Agrees that promotional video/image/title are SFW

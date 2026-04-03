@@ -38,7 +38,7 @@ export async function createPayPalPayment({
 
   const project = await db.project.findUnique({
     where: { id: projectId, deletedAt: null },
-    select: { id: true, title: true, goalAmount: true, currentAmount: true, status: true },
+    select: { id: true, title: true, goalAmount: true, currentAmount: true, status: true, campaignType: true },
   });
 
   if (!project) throw new Error("Project not found");
@@ -94,9 +94,11 @@ export async function createPayPalPayment({
   }
 
   // Determine if we should use AUTHORIZE or CAPTURE
-  // AUTHORIZE = campaign not yet funded (hold funds, capture when goal reached)
-  // CAPTURE   = campaign already funded (immediate charge)
+  // For "Keep It All" campaigns, always capture immediately
+  // For "All or Nothing" campaigns, authorize until goal is reached
+  const isKeepItAll = project.campaignType === "KEEP_IT_ALL";
   const isFunded =
+    isKeepItAll ||
     project.status === "FUNDED" ||
     Number(project.currentAmount) >= Number(project.goalAmount);
   const paypalIntent = isFunded ? "CAPTURE" : "AUTHORIZE";

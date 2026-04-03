@@ -12,6 +12,7 @@ export function PaymentProcessorSection({
   payment,
   updatePayment,
   mustUseAltProcessor,
+  campaignType,
   goalAmount,
   platformFee,
   paypalFee,
@@ -136,8 +137,8 @@ export function PaymentProcessorSection({
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "WHOP" ? "border-2 border-primary" : "border"
-          }`}
-          onClick={() => updatePayment({ paymentProcessor: "WHOP" })}
+          } ${campaignType === "ALL_OR_NOTHING" ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={() => campaignType === "KEEP_IT_ALL" && updatePayment({ paymentProcessor: "WHOP" })}
         >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -146,7 +147,9 @@ export function PaymentProcessorSection({
                   <ShoppingBag className="h-5 w-5 text-white" />
                 </div>
                 Whop
-                {mustUseAltProcessor && (
+                {campaignType === "ALL_OR_NOTHING" ? (
+                  <Badge variant="outline" className="ml-2 text-amber-600 border-amber-400">Keep It All only</Badge>
+                ) : (
                   <Badge variant="secondary" className="ml-2">Available</Badge>
                 )}
               </CardTitle>
@@ -155,7 +158,9 @@ export function PaymentProcessorSection({
               )}
             </div>
             <CardDescription>
-              Embedded checkout via Whop — supports all content types
+              {campaignType === "ALL_OR_NOTHING"
+                ? "Not available for All or Nothing campaigns"
+                : "Embedded checkout via Whop — supports all content types"}
             </CardDescription>
           </CardHeader>
           <CardContent>

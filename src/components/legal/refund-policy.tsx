@@ -133,7 +133,8 @@ export function RefundPolicyContent() {
         <p className="mb-6">Chargebacks should be used only when fraud or clear misuse is suspected.</p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">9. How to Request a Refund From a Creator</h3>
-        <p className="mb-4">Backers should contact the creator directly through:</p>
+        <p className="mb-4">For closed campaigns, backers may submit a refund request directly through the IndieCrowdfund platform. The creator will be notified and must approve or deny the request. Approved refunds are processed back to the original payment method.</p>
+        <p className="mb-4">Backers may also contact the creator directly through:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>The IndieCrowdfund messaging system</li>
           <li>The email address provided in the project profile</li>

@@ -47,3 +47,11 @@ ALTER TABLE "RefundRequest"
     FOREIGN KEY ("userId")   REFERENCES "User"("id")   ON DELETE CASCADE,
   ADD CONSTRAINT IF NOT EXISTS "RefundRequest_projectId_fkey"
     FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE;
+
+-- Add campaign type support
+DO $$ BEGIN
+  CREATE TYPE "CampaignType" AS ENUM ('ALL_OR_NOTHING', 'KEEP_IT_ALL');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE "Project"
+  ADD COLUMN IF NOT EXISTS "campaignType" "CampaignType" NOT NULL DEFAULT 'ALL_OR_NOTHING';

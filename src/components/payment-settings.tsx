@@ -2,6 +2,7 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
+import { WhopBankPayoutSection } from "@/components/project/builder/payment-sections/whop-bank-payout-section";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,8 @@ interface PaymentSettingsProps {
   showStripe?: boolean;
   /** Whether to show the DivinityCoin bank account section */
   showDivinityCoin?: boolean;
+  /** Whether to show the Whop bank payout section */
+  showWhop?: boolean;
   /** Custom title for the component */
   title?: string;
   /** Custom description */
@@ -70,6 +73,7 @@ export function PaymentSettings({
   projectId,
   showStripe = false,
   showDivinityCoin = true,
+  showWhop = false,
   title = "Payment Settings",
   description = "Connect your Stripe account to receive payments",
   className,
@@ -463,6 +467,11 @@ export function PaymentSettings({
           )}
         </CardContent>
       </Card>}
+
+      {/* Whop Bank Payout Section */}
+      {showWhop && (
+        <WhopBankPayoutSection />
+      )}
 
       {/* DivinityCoin Bank Account Section */}
       {showDivinityCoin && (

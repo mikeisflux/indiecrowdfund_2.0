@@ -467,6 +467,7 @@ export default function CreatorMarketplaceDashboard() {
               <PaymentSettings
                 showStripe={false}
                 showDivinityCoin={true}
+                showWhop={true}
               />
             </div>
           </TabsContent>

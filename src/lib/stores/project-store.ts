@@ -86,6 +86,7 @@ const initialState = {
   payment: {
     projectType: "INDIVIDUAL" as const,
     paymentProcessor: "PAYPAL" as const,
+    campaignType: "ALL_OR_NOTHING" as const,
     hasAdultContent: false,
     hasRiskyContent: false,
     promoContentSfw: true,

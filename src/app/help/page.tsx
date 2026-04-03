@@ -72,9 +72,9 @@ const categories = [
     color: "from-emerald-500 to-teal-500",
     articles: [
       "How fees are calculated",
-      "Stripe vs DivinityCoin payments",
+      "PayPal, DivinityCoin, and Whop payments",
       "When funds are released",
-      "Accepted payment methods (Card, DivinityCoin)",
+      "Accepted payment methods (Card, PayPal, DivinityCoin, Whop)",
     ],
     href: "/fees",
   },

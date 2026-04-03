@@ -1,3 +1,4 @@
+export { CampaignTypeSection } from "./campaign-type-section";
 export { ContactEmailSection } from "./contact-email-section";
 export { ProjectTypeSection } from "./project-type-section";
 export { ContentDeclarationSection } from "./content-declaration-section";

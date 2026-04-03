@@ -22,6 +22,7 @@ import {
   Coins,
   ExternalLink,
   ArrowLeft,
+  ShoppingBag,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 
@@ -58,6 +59,7 @@ const divinityCoinFeeBreakdown = [
 const comparisonData = [
   { platform: "IndieCrowdfund (PayPal)", platformFee: "3%", paymentFee: "3.49% + $0.49", total: "~6.5%", highlight: true },
   { platform: "IndieCrowdfund (DivinityCoin)", platformFee: "3%", paymentFee: "6% partner", total: "~9%", highlight: false },
+  { platform: "IndieCrowdfund (Whop)", platformFee: "3%", paymentFee: "3% Whop", total: "~6%", highlight: false },
   { platform: "IndieCrowdfund (Stripe – Legacy)", platformFee: "3%", paymentFee: "2.9% + $0.30", total: "~6%", highlight: false },
   { platform: "Kickstarter", platformFee: "5%", paymentFee: "3% + $0.20", total: "~8%", highlight: false },
   { platform: "Indiegogo", platformFee: "5%", paymentFee: "2.9% + $0.30", total: "~8%", highlight: false },
@@ -138,6 +140,21 @@ function calculateStripeFees(amount: number, averagePledge: number = 50) {
   };
 }
 
+const whopFeeBreakdown = [
+  {
+    title: "Whop Processing Fee",
+    rate: "~3%",
+    description: "Per-transaction fee charged by Whop",
+    details: "Whop's embedded checkout processing fee. Supports all content types including adult/NSFW projects. IndieCrowdfund collects pledges through Whop and pays out your net earnings after deducting this fee at settlement.",
+  },
+  {
+    title: "IndieCrowdfund Platform Fee",
+    rate: "3%",
+    description: "Charged on successfully funded campaigns only",
+    details: "Our platform fee covers hosting, tools, customer support, and payment infrastructure.",
+  },
+];
+
 // Calculate fees for DivinityCoin payments
 function calculateDivinityCoinFees(amount: number) {
   // DivinityCoin takes 6% total partner fee from the funds
@@ -159,14 +176,24 @@ function calculateDivinityCoinFees(amount: number) {
   };
 }
 
+function calculateWhopFees(amount: number) {
+  const whopFee = amount * 0.03;
+  const platformFee = (amount - whopFee) * 0.03;
+  const totalFees = whopFee + platformFee;
+  const youReceive = amount - totalFees;
+  const feePercentage = (totalFees / amount) * 100;
+  return { whopFee, platformFee, totalFees, youReceive, feePercentage };
+}
+
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]); // Default to $50,000
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal" | "divinitycoin">("paypal");
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal" | "divinitycoin" | "whop">("paypal");
   const amount = sliderValue[0];
   const stripeFees = calculateStripeFees(amount);
   const divinityFees = calculateDivinityCoinFees(amount);
   const paypalFees = calculatePayPalFees(amount);
-  const fees = paymentMethod === "stripe" ? stripeFees : paymentMethod === "paypal" ? paypalFees : divinityFees;
+  const whopFees = calculateWhopFees(amount);
+  const fees = paymentMethod === "stripe" ? stripeFees : paymentMethod === "paypal" ? paypalFees : paymentMethod === "whop" ? whopFees : divinityFees;
 
   return (
     <div className="relative min-h-screen bg-background overflow-hidden">
@@ -224,12 +251,12 @@ export default function FeesPage() {
               Payment Options
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              We offer two payment solutions to best fit your needs
+              We offer multiple payment solutions to best fit your needs
             </p>
           </div>
 
-          <Tabs defaultValue="paypal" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "paypal" | "divinitycoin")}>
-            <TabsList className="grid w-full max-w-xl mx-auto grid-cols-3 mb-8">
+          <Tabs defaultValue="paypal" className="w-full" onValueChange={(v) => setPaymentMethod(v as "stripe" | "paypal" | "divinitycoin" | "whop")}>
+            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-8">
               <TabsTrigger value="paypal" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 PayPal
@@ -237,6 +264,10 @@ export default function FeesPage() {
               <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" />
                 DivinityCoin
+              </TabsTrigger>
+              <TabsTrigger value="whop" className="flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Whop
               </TabsTrigger>
               <TabsTrigger value="stripe" className="flex items-center gap-2 opacity-50">
                 <CreditCard className="h-4 w-4" />
@@ -408,6 +439,62 @@ export default function FeesPage() {
                 </div>
               </div>
             </TabsContent>
+
+            <TabsContent value="whop">
+              <div className="grid gap-8 md:grid-cols-2 lg:max-w-4xl lg:mx-auto">
+                {whopFeeBreakdown.map((fee, index) => (
+                  <Card
+                    key={fee.title}
+                    className="glass-card border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                    style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
+                  >
+                    <CardHeader className="text-center pb-2">
+                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-black shadow-lg mb-4">
+                        <ShoppingBag className="h-8 w-8 text-white" />
+                      </div>
+                      <CardTitle className="text-2xl">{fee.title}</CardTitle>
+                      <div className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mt-2">{fee.rate}</div>
+                      <CardDescription className="text-base mt-2">{fee.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground text-center">{fee.details}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <Card className="mt-8 lg:max-w-4xl lg:mx-auto border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/10">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-900/30">
+                      <ShoppingBag className="h-6 w-6 text-zinc-700 dark:text-zinc-300" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is Whop?</h3>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                        Whop is an embedded checkout solution that supports all content types including NSFW/adult projects. Backers complete checkout via Whop&apos;s embedded form — no redirects needed.
+                      </p>
+                      <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows (example: $100 pledge):</h4>
+                      <ol className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1 list-decimal list-inside mb-4">
+                        <li>Backer completes checkout via Whop&apos;s embedded form</li>
+                        <li>Whop processes the $100 payment immediately</li>
+                        <li>Whop fee (~3% = $3.00) deducted at settlement</li>
+                        <li>Platform fee (3% of $97 = $2.91) deducted at settlement</li>
+                        <li>You receive <strong>$94.09</strong> deposited to your account</li>
+                      </ol>
+                      <p className="text-xs text-zinc-500">Whop only supports <strong>Keep It All</strong> campaigns — payments are collected immediately regardless of funding goal.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <div className="mt-8 text-center">
+                <div className="inline-flex items-center gap-2 rounded-full bg-zinc-50 dark:bg-zinc-900/20 px-6 py-3">
+                  <Calculator className="h-5 w-5 text-zinc-600" />
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                    Total fees with Whop: approximately 6% of funds raised
+                  </span>
+                </div>
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
       </section>
@@ -453,6 +540,17 @@ export default function FeesPage() {
                     DivinityCoin
                   </button>
                   <button
+                    onClick={() => setPaymentMethod("whop")}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      paymentMethod === "whop"
+                        ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"
+                        : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400"
+                    }`}
+                  >
+                    <ShoppingBag className="inline h-4 w-4 mr-1" />
+                    Whop
+                  </button>
+                  <button
                     onClick={() => setPaymentMethod("stripe")}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors opacity-60 ${
                       paymentMethod === "stripe"
@@ -495,7 +593,7 @@ export default function FeesPage() {
                 {/* Fee Breakdown */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-zinc-900 dark:text-white mb-4">
-                    Fee Breakdown ({paymentMethod === "paypal" ? "PayPal" : paymentMethod === "stripe" ? "Stripe (Legacy)" : "DivinityCoin"})
+                    Fee Breakdown ({paymentMethod === "paypal" ? "PayPal" : paymentMethod === "stripe" ? "Stripe (Legacy)" : paymentMethod === "whop" ? "Whop" : "DivinityCoin"})
                   </h3>
 
                   <div className="flex justify-between py-2 border-b">
@@ -523,6 +621,17 @@ export default function FeesPage() {
                       <div className="flex justify-between py-2 border-b">
                         <span className="text-zinc-600 dark:text-zinc-400">Stripe processing (2.9% + $0.30)</span>
                         <span className="text-red-500">-${stripeFees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    </>
+                  ) : paymentMethod === "whop" ? (
+                    <>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-zinc-600 dark:text-zinc-400">Whop processing fee (~3%)</span>
+                        <span className="text-red-500">-${whopFees.whopFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-zinc-600 dark:text-zinc-400">Platform fee (3% of net)</span>
+                        <span className="text-red-500">-${whopFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </>
                   ) : (
@@ -553,6 +662,8 @@ export default function FeesPage() {
                     ? "bg-blue-50 dark:bg-blue-900/20"
                     : paymentMethod === "stripe"
                     ? "bg-emerald-50 dark:bg-emerald-900/20"
+                    : paymentMethod === "whop"
+                    ? "bg-zinc-50 dark:bg-zinc-900/20"
                     : "bg-purple-50 dark:bg-purple-900/20"
                 }`}>
                   <span className={`text-sm font-medium mb-2 ${
@@ -560,6 +671,8 @@ export default function FeesPage() {
                       ? "text-blue-600 dark:text-blue-400"
                       : paymentMethod === "stripe"
                       ? "text-emerald-600 dark:text-emerald-400"
+                      : paymentMethod === "whop"
+                      ? "text-zinc-600 dark:text-zinc-400"
                       : "text-purple-600 dark:text-purple-400"
                   }`}>
                     You receive
@@ -569,6 +682,8 @@ export default function FeesPage() {
                       ? "text-blue-600 dark:text-blue-400"
                       : paymentMethod === "stripe"
                       ? "text-emerald-600 dark:text-emerald-400"
+                      : paymentMethod === "whop"
+                      ? "text-zinc-700 dark:text-zinc-300"
                       : "text-purple-600 dark:text-purple-400"
                   }`}>
                     ${fees.youReceive.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -578,6 +693,8 @@ export default function FeesPage() {
                       ? "text-blue-600/70 dark:text-blue-400/70"
                       : paymentMethod === "stripe"
                       ? "text-emerald-600/70 dark:text-emerald-400/70"
+                      : paymentMethod === "whop"
+                      ? "text-zinc-600/70 dark:text-zinc-400/70"
                       : "text-purple-600/70 dark:text-purple-400/70"
                   }`}>
                     {((fees.youReceive / amount) * 100).toFixed(1)}% of funds raised

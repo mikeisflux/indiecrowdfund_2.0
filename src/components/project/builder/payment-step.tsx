@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import {
+  CampaignTypeSection,
   ContactEmailSection,
   ProjectTypeSection,
   ContentDeclarationSection,
@@ -294,12 +295,28 @@ export function PaymentStep() {
   // If adult/risky content is selected, Stripe is NOT allowed (must use DivinityCoin)
   const mustUseAltProcessor = payment.hasAdultContent || payment.hasRiskyContent;
 
+  const campaignType = payment.campaignType || "ALL_OR_NOTHING";
+
   // Auto-switch away from Stripe/PayPal if adult content is selected (DivinityCoin and Whop are allowed)
   useEffect(() => {
     if (mustUseAltProcessor && payment.paymentProcessor !== "DIVINITYCOIN" && payment.paymentProcessor !== "WHOP") {
       updatePayment({ paymentProcessor: "DIVINITYCOIN" });
     }
   }, [mustUseAltProcessor, payment.paymentProcessor, updatePayment]);
+
+  // Auto-switch to KEEP_IT_ALL if NSFW content is selected (DivinityCoin/Whop don't support holds)
+  useEffect(() => {
+    if (mustUseAltProcessor && payment.campaignType !== "KEEP_IT_ALL") {
+      updatePayment({ campaignType: "KEEP_IT_ALL" });
+    }
+  }, [mustUseAltProcessor, payment.campaignType, updatePayment]);
+
+  // Auto-switch away from Whop if campaign type changes to ALL_OR_NOTHING
+  useEffect(() => {
+    if (payment.campaignType === "ALL_OR_NOTHING" && payment.paymentProcessor === "WHOP") {
+      updatePayment({ paymentProcessor: mustUseAltProcessor ? "DIVINITYCOIN" : "DIVINITYCOIN" });
+    }
+  }, [payment.campaignType, payment.paymentProcessor, mustUseAltProcessor, updatePayment]);
 
   // Fee calculations
   const avgPledgeSize = 50; // Assume average pledge
@@ -377,11 +394,21 @@ export function PaymentStep() {
 
       <Separator />
 
+      {/* Campaign Funding Model */}
+      <CampaignTypeSection
+        campaignType={campaignType}
+        onSelect={(type) => updatePayment({ campaignType: type })}
+        mustUseAltProcessor={!!mustUseAltProcessor}
+      />
+
+      <Separator />
+
       {/* Payment Processor Selection */}
       <PaymentProcessorSection
         payment={payment}
         updatePayment={updatePayment}
         mustUseAltProcessor={mustUseAltProcessor}
+        campaignType={campaignType}
         goalAmount={goalAmount}
         stripeFee={stripeFee}
         platformFee={platformFee}

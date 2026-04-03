@@ -61,14 +61,14 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
   'paypal': {
     title: 'Paying with PayPal',
     description: 'Everything about PayPal payments on IndieCrowdfund, including when you\'re charged.',
-    alert: { icon: Shield, title: 'Secure Payment Processing', text: 'Standard campaign payments are processed securely by PayPal. You can pay with your PayPal account, credit card, or debit card. Your card details are encrypted and never stored on our servers.', color: 'emerald' },
+    alert: { icon: Shield, title: 'Secure Payment Processing', text: 'Campaign payments are processed securely through PayPal, DivinityCoin, or Whop — depending on the creator\'s chosen processor. You can pay with your credit or debit card at checkout regardless of which processor is used. Your card details are encrypted and never stored on our servers.', color: 'emerald' },
     steps: [
       { title: 'Select Your Payment Method', description: 'At checkout you\'ll see the PayPal Advanced Checkout form — use your PayPal wallet, or enter a credit/debit card directly. No PayPal account required to pay by card.', tip: 'PayPal is trusted by hundreds of millions worldwide.' },
       { title: 'Enter Card or Use PayPal Wallet', description: 'Fill in your card details (Visa, Mastercard, Amex, Discover) or log into your PayPal account to use your saved payment method.', tip: 'Make sure your card won\'t expire before the campaign ends.' },
-      { title: 'Understand When You\'re Charged', description: 'You\'re NOT charged immediately. Your payment is processed and only captured if the project reaches its goal.', tip: 'All-or-nothing: if goal isn\'t reached, the payment authorization is cancelled.' },
+      { title: 'Understand Campaign Types', description: 'IndieCrowdfund supports two campaign models. "All or Nothing": payment is only captured if the project reaches its goal — if the goal isn\'t reached, the authorization is cancelled. "Keep It All": backers are charged immediately when pledging, regardless of whether the goal is reached.', tip: 'Check the campaign page to see which model the creator has chosen.' },
+      { title: 'Understand When You\'re Charged', description: 'For All or Nothing campaigns, you\'re NOT charged until the goal is reached. For Keep It All campaigns, your card is charged immediately at the time of your pledge.', tip: 'The campaign type is shown clearly on the project page before you confirm.' },
       { title: 'Confirm Your Pledge', description: 'Click "Pledge" to submit. You\'ll see confirmation and receive an email.', tip: 'Save your confirmation email.' },
-      { title: 'What Happens at Campaign End', description: 'If successful, payment is captured automatically. If not, any authorization is released.', tip: 'Ensure sufficient funds when campaign ends.' },
-      { title: 'Already-Funded Campaigns', description: 'If a campaign already reached its goal, your payment is captured immediately.', tip: 'Immediate charges are clearly indicated before you confirm.' },
+      { title: 'What Happens at Campaign End', description: 'All or Nothing: if successful, payment is captured automatically; if not, any authorization is released. Keep It All: funds are already collected — the campaign ends and the creator keeps everything pledged.', tip: 'Ensure sufficient funds are available when pledging to a Keep It All campaign.' },
     ]
   },
   'divinitycoin': {
@@ -78,10 +78,10 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
     steps: [
       { title: 'What is DivinityCoin?', description: 'DivinityCoin is an alternative payment sub-processor used by some creators on IndieCrowdfund. It is NOT a cryptocurrency or wallet system. When a creator uses DivinityCoin, you simply pay with your credit or debit card at checkout.', tip: 'Learn more at our "What is DivinityCoin?" page.' },
       { title: 'How It Works', description: 'At checkout, you\'ll see a secure card payment form. Enter your card details (Visa, Mastercard, Amex, Discover) and complete your pledge. DivinityCoin handles the payment processing behind the scenes.', tip: 'You\'ll see card brand logos (Visa, Mastercard, etc.) confirming accepted card types.' },
-      { title: 'Check if Project Uses DivinityCoin', description: 'Some creators choose DivinityCoin as their payment processor. You\'ll see the DivinityCoin indicator on the project page and at checkout.', tip: 'Creators choose their processor based on their needs - some content types require DivinityCoin.' },
+      { title: 'Check Which Payment Processor the Project Uses', description: 'Some creators choose DivinityCoin as their payment processor, while others may use Whop. You\'ll see the processor indicator on the project page and at checkout.', tip: 'Creators choose their processor based on their needs - some content types require DivinityCoin or Whop.' },
       { title: 'Secure Payment', description: 'Your card details are entered directly into a PCI-compliant payment form. IndieCrowdfund never sees or stores your card information. The payment is encrypted end-to-end.', tip: 'Look for the lock icon and "Secure Payment" header with card brand logos.' },
-      { title: 'Immediate Charge for Funded Projects', description: 'For campaigns that have already reached their goal, your card is charged immediately through DivinityCoin. For campaigns still in progress, charges may be held until the campaign funds.', tip: 'You\'ll see clear messaging about when you\'ll be charged before confirming.' },
-      { title: 'Refunds', description: 'If a campaign fails or your pledge is refunded, the refund is processed back to your original payment method through DivinityCoin.', tip: 'Refund processing times depend on your card issuer, typically 5-10 business days.' },
+      { title: 'Immediate Charge for Funded Projects or Keep It All Campaigns', description: 'For campaigns that have already reached their goal, your card is charged immediately. Keep It All campaigns also charge immediately when you pledge. For All or Nothing campaigns still in progress, charges are held until the campaign funds.', tip: 'You\'ll see clear messaging about when you\'ll be charged before confirming.' },
+      { title: 'Refunds', description: 'If a campaign fails or your pledge is refunded, the refund is processed back to your original payment method. For closed campaigns, backers can submit a refund request which the creator must approve.', tip: 'Refund processing times depend on your card issuer, typically 5-10 business days.' },
     ]
   },
   'rewards': {
@@ -115,7 +115,7 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
       { title: 'What is the Marketplace?', description: 'A storefront for completed digital works. Immediate purchase and instant download.', tip: 'Perfect for supporting creators and getting content right away.' },
       { title: 'Browsing', description: 'Explore Featured titles, Staff Picks, or all works. Use search for specific titles.', tip: 'Check out Staff Picks for hand-curated recommendations.' },
       { title: 'Understanding Pricing', description: 'Fixed prices in USD set by creators. You\'re directly supporting them.', tip: 'Digital often costs less than physical - no printing or shipping.' },
-      { title: 'Making a Purchase', description: 'Click "Purchase" to checkout. Pay via PayPal or DivinityCoin depending on the creator\'s chosen processor. Charged immediately.', tip: 'Unlike pledges, marketplace purchases are instant.' },
+      { title: 'Making a Purchase', description: 'Click "Purchase" to checkout. Pay via PayPal, DivinityCoin, or Whop depending on the creator\'s chosen processor. Charged immediately.', tip: 'Unlike pledges, marketplace purchases are instant.' },
       { title: 'Your Digital Library', description: 'Purchases added to your Digital Library in your dashboard. Access anytime.', tip: 'Bookmark your Digital Library for quick access.' },
       { title: 'Reading and Downloads', description: 'Read in browser or download as PDF for offline reading.', tip: 'Downloaded files are yours to keep. Back them up!' },
     ]
@@ -124,9 +124,10 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
     title: 'Frequently Asked Questions',
     description: 'Common questions about backing projects.',
     steps: [
-      { title: 'What if project doesn\'t reach its goal?', description: 'No money changes hands. Your payment is never captured, regardless of whether the project uses PayPal or DivinityCoin.', tip: 'All-or-nothing funding protects you.' },
-      { title: 'Can I get a refund after pledging?', description: 'Before campaign ends, cancel anytime in your dashboard. After, contact the creator directly.', tip: 'Refund policies are set by each creator.' },
-      { title: 'Is my payment information secure?', description: 'Yes! PayPal processes standard payments with PCI-DSS Level 1 certification. We never store full card numbers on our servers.', tip: 'Look for the PayPal secure checkout badge.' },
+      { title: 'What are the two campaign types?', description: '"All or Nothing" campaigns are only funded if the goal is reached — if not, no money changes hands. "Keep It All" campaigns let the creator keep all pledges regardless of the goal, and backers are charged immediately when pledging.', tip: 'The campaign type is shown on the project page before you pledge.' },
+      { title: 'What if an All or Nothing project doesn\'t reach its goal?', description: 'No money changes hands. Your payment is never captured, regardless of whether the project uses PayPal, DivinityCoin, or Whop.', tip: 'All-or-nothing funding protects you if the goal isn\'t reached.' },
+      { title: 'Can I get a refund after pledging?', description: 'Before campaign ends, cancel anytime in your dashboard. After the campaign closes, you can submit a refund request through the platform — the creator must approve it. Contact the creator directly if needed.', tip: 'Refund policies are set by each creator.' },
+      { title: 'Is my payment information secure?', description: 'Yes! PayPal processes standard payments with PCI-DSS Level 1 certification. DivinityCoin and Whop also use PCI-compliant processing. We never store full card numbers on our servers.', tip: 'Look for the secure checkout indicator at checkout.' },
       { title: 'What if my card is declined?', description: 'We retry automatically 3 times over 9 days. You\'ll get emails to update your card details.', tip: 'Keep card info updated to avoid failed payments.' },
       { title: 'How do I contact a creator?', description: 'Use "Contact" or "Ask a question" on the project page. Backers often have priority response.', tip: 'Always mention your backer email for pledge-specific issues.' },
       { title: 'What if a creator never delivers?', description: 'Crowdfunding carries risk. Creators are legally obligated to fulfill or refund. Report concerns to our support team.', tip: 'Our verification process helps, but due diligence is important.' },
