@@ -77,7 +77,6 @@ export function usePledge() {
   // PayPal state
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
   const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
-  const [paypalClientToken, setPaypalClientToken] = useState<string | null>(null);
   const [paypalMode, setPaypalMode] = useState<string>("live");
   // Whop state
   const [whopSessionId, setWhopSessionId] = useState<string | null>(null);
@@ -172,17 +171,10 @@ export function usePledge() {
     if (!project || project.paymentProcessor !== "PAYPAL") return;
     async function initPayPal() {
       try {
-        const [configRes, tokenRes] = await Promise.all([
-          fetch("/api/paypal/config"),
-          fetch("/api/paypal/client-token"),
-        ]);
+        const configRes = await fetch("/api/paypal/config");
         const configData = await configRes.json();
         if (configData.clientId) setPaypalClientId(configData.clientId);
         if (configData.mode) setPaypalMode(configData.mode);
-        if (tokenRes.ok) {
-          const tokenData = await tokenRes.json();
-          if (tokenData.clientToken) setPaypalClientToken(tokenData.clientToken);
-        }
       } catch (err) {
         console.error("Failed to load PayPal config:", err);
       }
@@ -515,7 +507,7 @@ export function usePledge() {
     dcStripePromise, clientSecret, setClientSecret,
     intentType, paymentError, setPaymentError, currentPledgeId,
     // PayPal
-    paypalOrderId, paypalClientId, paypalClientToken, paypalMode,
+    paypalOrderId, paypalClientId, paypalMode,
     // Whop
     whopSessionId, whopPlanId, whopEnvironment,
     // Totals

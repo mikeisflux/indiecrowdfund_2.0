@@ -32,7 +32,6 @@ interface PaymentStepProps {
   projectPath: string;
   paypalOrderId: string | null;
   paypalClientId: string | null;
-  paypalClientToken: string | null;
   paypalMode: string;
   whopSessionId: string | null;
   whopPlanId: string | null;
@@ -107,7 +106,6 @@ export function PaymentStep({
   projectPath,
   paypalOrderId,
   paypalClientId,
-  paypalClientToken,
   paypalMode,
   whopSessionId,
   whopPlanId,
@@ -250,7 +248,6 @@ export function PaymentStep({
                 paypalOrderId={paypalOrderId}
                 pledgeId={currentPledgeId}
                 clientId={paypalClientId}
-                clientToken={paypalClientToken}
                 paypalMode={paypalMode}
                 agreedToTerms={agreedToTerms}
                 isProcessing={isProcessing}

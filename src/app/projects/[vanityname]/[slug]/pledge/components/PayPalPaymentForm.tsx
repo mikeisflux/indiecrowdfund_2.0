@@ -15,7 +15,6 @@ interface PayPalPaymentFormProps {
   paypalOrderId: string;
   pledgeId: string;
   clientId: string;
-  clientToken: string | null;
   paypalMode: string;
   agreedToTerms: boolean;
   isProcessing: boolean;
