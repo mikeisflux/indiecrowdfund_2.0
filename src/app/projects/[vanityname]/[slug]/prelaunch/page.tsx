@@ -89,11 +89,7 @@ export default function PrelaunchPage() {
   const [followerCount, setFollowerCount] = useState<number | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
-  // Check if this is a legacy slug-only URL (vanityname = "_" from middleware rewrite)
-  const isLegacyUrl = vanityname === "_";
-
-  // Build the project path - use slug-only format for legacy URLs
-  const projectPath = isLegacyUrl ? `/projects/${slug}` : `/projects/${vanityname}/${slug}`;
+  const projectPath = `/projects/${vanityname}/${slug}`;
 
   // Scroll to top on mount
   useEffect(() => {
@@ -103,10 +99,7 @@ export default function PrelaunchPage() {
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        // Use appropriate API based on URL format
-        const apiUrl = isLegacyUrl
-          ? `/api/projects/slug/${slug}`
-          : `/api/projects/vanity/${vanityname}/${slug}`;
+        const apiUrl = `/api/projects/vanity/${vanityname}/${slug}`;
         const response = await fetch(apiUrl);
         if (!response.ok) {
           if (response.status === 404) {
@@ -165,7 +158,7 @@ export default function PrelaunchPage() {
     };
 
     fetchProject();
-  }, [vanityname, slug, session?.user?.id, session?.user?.role, projectPath, isLegacyUrl]);
+  }, [vanityname, slug, session?.user?.id, session?.user?.role, projectPath]);
 
   const handleSubscribe = async () => {
     if (!session?.user) {

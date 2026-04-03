@@ -23,8 +23,7 @@ export function usePledge() {
 
   const vanityname = (params?.vanityname as string) || "";
   const slug = (params?.slug as string) || "";
-  const isLegacyUrl = vanityname === "_";
-  const projectPath = isLegacyUrl ? `/projects/${slug}` : `/projects/${vanityname}/${slug}`;
+  const projectPath = `/projects/${vanityname}/${slug}`;
 
   const rewardId = searchParams?.get("reward") ?? null;
   const amountParam = searchParams?.get("amount") ?? null;
@@ -346,7 +345,7 @@ export function usePledge() {
     setIsLoading(true);
     setError(null);
     try {
-      const apiUrl = isLegacyUrl ? `/api/projects/slug/${slug}` : `/api/projects/vanity/${vanityname}/${slug}`;
+      const apiUrl = `/api/projects/vanity/${vanityname}/${slug}`;
       const projectRes = await fetch(apiUrl);
       if (!projectRes.ok) throw new Error("Project not found");
       const responseData = await projectRes.json();
@@ -429,7 +428,7 @@ export function usePledge() {
     } finally {
       setIsLoading(false);
     }
-  }, [slug, vanityname, isLegacyUrl, rewardId, modifyPledgeId]);
+  }, [slug, vanityname, rewardId, modifyPledgeId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

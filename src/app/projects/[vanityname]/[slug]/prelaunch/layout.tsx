@@ -9,54 +9,25 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { vanityname, slug } = await params;
 
-  // Handle legacy URL (vanityname = "_" from middleware rewrite)
-  const isLegacyUrl = vanityname === "_";
+  const creator = await db.user.findUnique({
+    where: { vanityUrl: vanityname },
+    select: { id: true },
+  });
 
-  let project;
-
-  if (isLegacyUrl) {
-    // For legacy URLs, look up project directly by slug
-    project = await db.project.findUnique({
-      where: { slug },
-      select: {
-        title: true,
-        subtitle: true,
-        prelaunchDescription: true,
-        imageUrl: true,
-        creator: {
-          select: { name: true, vanityUrl: true },
-        },
-      },
-    });
-  } else {
-    // First, find the creator by vanity URL
-    const creator = await db.user.findUnique({
-      where: { vanityUrl: vanityname },
-      select: { id: true },
-    });
-
-    if (!creator) {
-      return {
-        title: "Creator Not Found | IndieCrowdfund",
-      };
-    }
-
-    project = await db.project.findFirst({
-      where: {
-        slug,
-        creatorId: creator.id,
-      },
-      select: {
-        title: true,
-        subtitle: true,
-        prelaunchDescription: true,
-        imageUrl: true,
-        creator: {
-          select: { name: true, vanityUrl: true },
-        },
-      },
-    });
+  if (!creator) {
+    return { title: "Creator Not Found | IndieCrowdfund" };
   }
+
+  const project = await db.project.findFirst({
+    where: { slug, creatorId: creator.id },
+    select: {
+      title: true,
+      subtitle: true,
+      prelaunchDescription: true,
+      imageUrl: true,
+      creator: { select: { name: true, vanityUrl: true } },
+    },
+  });
 
   if (!project) {
     return {
