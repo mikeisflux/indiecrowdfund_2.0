@@ -77,8 +77,7 @@ export async function getProjectStats(
     resolved = row;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const meta = resolved!;
+  const meta = resolved as NonNullable<typeof resolved>;
   const goalAmount = Number(meta.goalAmount);
 
   const completed = await db.pledge.aggregate({

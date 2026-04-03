@@ -129,7 +129,7 @@ export default async function ProjectLayout({ params, children }: Props) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let project: any = await db.project.findFirst({
+  const project: any = await db.project.findFirst({
     where: { slug, creatorId: creator.id },
     select: projectSelectForJsonLd,
   });
