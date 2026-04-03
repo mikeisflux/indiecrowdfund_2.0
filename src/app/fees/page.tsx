@@ -706,25 +706,38 @@ export default function FeesPage() {
               {/* Quick comparison */}
               <div className="mt-8 pt-8 border-t">
                 <h4 className="text-sm font-medium text-zinc-500 mb-4">Compare with other platforms at ${amount.toLocaleString()}</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {/* Whop */}
+                  <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "whop" ? "ring-2 ring-zinc-400 bg-zinc-100 dark:bg-zinc-700" : "bg-zinc-100 dark:bg-zinc-800"}`}>
+                    <div className="text-xs text-zinc-500 mb-1">IndieCrowdfund (Whop)</div>
+                    <div className="font-bold text-zinc-700 dark:text-zinc-300">${whopFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  </div>
+                  {/* PayPal */}
+                  <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "paypal" ? "ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-900/30" : "bg-blue-50 dark:bg-blue-900/20"}`}>
                     <div className="text-xs text-zinc-500 mb-1">IndieCrowdfund (PayPal)</div>
                     <div className="font-bold text-blue-600">${paypalFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
-                  <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <div className="text-xs text-zinc-500 mb-1">IndieCrowdfund (DivinityCoin)</div>
-                    <div className="font-bold text-purple-600">${divinityFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                  </div>
+                  {/* Kickstarter */}
                   <div className="text-center p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
                     <div className="text-xs text-zinc-500 mb-1">Kickstarter</div>
                     <div className="font-bold text-zinc-600 dark:text-zinc-400">
                       ${(amount * 0.92).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>
                   </div>
+                  {/* Indiegogo */}
+                  <div className="text-center p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                    <div className="text-xs text-zinc-500 mb-1">Indiegogo</div>
+                    <div className="font-bold text-zinc-600 dark:text-zinc-400">
+                      ${(amount * 0.921).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  {/* Savings vs Kickstarter — updates with selected processor */}
                   <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <div className="text-xs text-zinc-500 mb-1">Your savings (PayPal vs Kickstarter)</div>
-                    <div className="font-bold text-green-600">
-                      +${(paypalFees.youReceive - (amount * 0.92)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <div className="text-xs text-zinc-500 mb-1">
+                      Your savings ({paymentMethod === "paypal" ? "PayPal" : paymentMethod === "whop" ? "Whop" : paymentMethod === "stripe" ? "Stripe" : "DivinityCoin"} vs Kickstarter)
+                    </div>
+                    <div className={`font-bold ${fees.youReceive - (amount * 0.92) >= 0 ? "text-green-600" : "text-red-500"}`}>
+                      {fees.youReceive - (amount * 0.92) >= 0 ? "+" : ""}${(fees.youReceive - (amount * 0.92)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>
                   </div>
                 </div>
