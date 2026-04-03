@@ -1,93 +1,50 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { db } from "@/lib/db";
+import { getPlatformTotals } from "@/lib/stats";
 
 const homeStatsLogger = logger.child({ module: "home-stats" });
-import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/home-stats
- * Lightweight endpoint for home page stat polling
- * Returns only the stats shown on the home page, calculated from COMPLETED pledges only
+ * Lightweight endpoint for home page stat polling.
+ * Delegates pledge/project aggregation to getPlatformTotals() then adds
+ * home-page-specific fields (backerPool, certifiedRetailers, successRate).
  */
 export async function GET() {
   try {
-    // Get all active project IDs
+    const [totals, backerPool, certifiedRetailers] = await Promise.all([
+      getPlatformTotals(),
+      db.user.count({ where: { deletedAt: null, lockedAt: null } }),
+      db.retailer.count({ where: { status: "APPROVED" } }).catch(() => 0),
+    ]);
+
+    // Success rate: funded projects / all projects that have ended
+    // Use projectsFunded from totals (projects that actually reached FUNDED status)
+    // and projectsTotal for the denominator of ended campaigns
     const activeProjects = await db.project.findMany({
-      where: {
-        status: { in: ["LIVE", "FUNDED", "FAILED"] },
-        deletedAt: null,
-      },
-      select: { id: true, goalAmount: true, endDate: true },
+      where: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+      select: { goalAmount: true, endDate: true, status: true },
     });
 
-    const projectIds = activeProjects.map(p => p.id);
-
-    // Total pledged from COMPLETED pledges only
-    const completedTotal = await db.pledge.aggregate({
-      where: {
-        projectId: { in: projectIds },
-        status: "COMPLETED",
-        deletedAt: null,
-      },
-      _sum: { amount: true },
-    });
-
-    const totalPledged = Number(completedTotal._sum.amount || 0);
-
-    // Per-project totals for funded count
-    const projectPledgeSums = await db.pledge.groupBy({
-      by: ["projectId"],
-      where: {
-        projectId: { in: projectIds },
-        status: "COMPLETED",
-        deletedAt: null,
-      },
-      _sum: { amount: true },
-    });
-
-    const pledgeSumByProject = new Map(
-      projectPledgeSums.map(p => [p.projectId, Number(p._sum.amount || 0)])
-    );
-
-    const projectsFunded = activeProjects.filter(p => {
-      const pledged = pledgeSumByProject.get(p.id) || 0;
-      return pledged >= Number(p.goalAmount);
-    }).length;
-
-    // Success rate from ended projects
     const now = new Date();
-    const endedProjects = activeProjects.filter(
-      p => p.endDate && new Date(p.endDate) < now
+    const endedProjects = activeProjects.filter((p) => p.endDate && new Date(p.endDate) < now);
+    const successfulEnded = endedProjects.filter((p) => p.status === "FUNDED").length;
+    const successRate =
+      endedProjects.length > 0 ? Math.round((successfulEnded / endedProjects.length) * 100) : 0;
+
+    return NextResponse.json(
+      {
+        totalPledged: totals.totalRaised,
+        projectsFunded: totals.projectsFunded,
+        successRate,
+        backerPool,
+        certifiedRetailers,
+      },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
     );
-    const successfulEnded = endedProjects.filter(p => {
-      const pledged = pledgeSumByProject.get(p.id) || 0;
-      return pledged >= Number(p.goalAmount);
-    }).length;
-    const successRate = endedProjects.length > 0
-      ? Math.round((successfulEnded / endedProjects.length) * 100)
-      : 0;
-
-    // Backer pool
-    const backerPool = await db.user.count({
-      where: { deletedAt: null, lockedAt: null },
-    });
-
-    // Certified retailers
-    const certifiedRetailers = await db.retailer.count({
-      where: { status: "APPROVED" },
-    }).catch(() => 0);
-
-    return NextResponse.json({
-      totalPledged,
-      projectsFunded,
-      successRate,
-      backerPool,
-      certifiedRetailers,
-    }, {
-      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
-    });
   } catch (error) {
     homeStatsLogger.error({ err: String(error) }, "Error fetching home stats:");
     return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
