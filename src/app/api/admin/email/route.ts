@@ -328,7 +328,8 @@ export async function PATCH(req: NextRequest) {
     if (htmlContent !== undefined) updateData.htmlContent = htmlContent;
     if (targetAudience !== undefined) updateData.targetAudience = targetAudience;
     if (filters !== undefined) updateData.filters = filters;
-    if (scheduledFor !== undefined) updateData.scheduledFor = new Date(scheduledFor);
+    if (scheduledFor !== undefined && scheduledFor !== null) updateData.scheduledFor = new Date(scheduledFor);
+    else if (scheduledFor === null) updateData.scheduledFor = null;
     if (status !== undefined) updateData.status = status;
 
     const campaign = await db.emailCampaign.update({

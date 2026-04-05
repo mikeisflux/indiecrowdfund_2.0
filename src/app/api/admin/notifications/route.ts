@@ -327,6 +327,9 @@ export async function POST(request: Request) {
     const adminId = authResult.user.id;
 
     if (action === "markRead") {
+      if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
+        return NextResponse.json({ error: "notificationIds array required" }, { status: 400 });
+      }
       // Store read notification IDs in admin settings
       await markNotificationsAsRead(adminId, notificationIds);
       return NextResponse.json({ success: true, marked: notificationIds.length });
