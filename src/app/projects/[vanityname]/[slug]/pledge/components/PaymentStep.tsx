@@ -1,16 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, MailCheck } from "lucide-react";
-import { Elements } from "@stripe/react-stripe-js";
-import { Stripe } from "@stripe/stripe-js";
+import { Stripe } from "@stripe/stripe-js/pure";
 import { ProjectData } from "../types";
-import { StripePaymentForm } from "./StripePaymentForm";
 import { PayPalPaymentForm } from "./PayPalPaymentForm";
 import { WhopPaymentForm } from "./WhopPaymentForm";
 import { apiFetch } from "@/lib/fetch-utils";
+
+// Dynamically import the DC/Stripe wrapper so Stripe.js only loads when payment is initiated
+const DCPaymentWrapper = dynamic(() => import("./DCPaymentWrapper"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col items-center justify-center py-8">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+      <p className="text-sm text-muted-foreground">Loading payment form...</p>
+    </div>
+  ),
+});
 
 interface PaymentStepProps {
   project: ProjectData | null;
@@ -292,61 +302,21 @@ export function PaymentStep({
               </div>
             )
           ) : project?.paymentProcessor === "DIVINITYCOIN" ? (
-            /* DivinityCoin Payment - Card form via DC's Stripe account */
+            /* DivinityCoin Payment - Card form via DC's Stripe account (lazily loaded) */
             clientSecret && dcStripePromise ? (
-              <Elements
-                key={clientSecret}
-                stripe={dcStripePromise}
-                options={{
-                  clientSecret,
-                  appearance: {
-                    theme: "stripe",
-                    variables: {
-                      colorPrimary: "#028858",
-                      fontFamily: "system-ui, -apple-system, sans-serif",
-                      borderRadius: "8px",
-                      spacingUnit: "5px",
-                    },
-                    rules: {
-                      ".Tab": {
-                        borderRadius: "8px",
-                        boxShadow: "none",
-                      },
-                      ".Tab--selected": {
-                        borderColor: "#028858",
-                        boxShadow: "0 0 0 1.5px #028858",
-                      },
-                      ".Input": {
-                        borderRadius: "8px",
-                        boxShadow: "none",
-                        padding: "10px 12px",
-                      },
-                      ".Input:focus": {
-                        borderColor: "#028858",
-                        boxShadow: "0 0 0 1.5px #028858",
-                      },
-                      ".Label": {
-                        fontWeight: "500",
-                        fontSize: "14px",
-                        marginBottom: "6px",
-                      },
-                    },
-                  },
-                }}
-              >
-                <StripePaymentForm
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                  agreedToTerms={agreedToTerms}
-                  isProcessing={isProcessing}
-                  setIsProcessing={setIsProcessing}
-                  total={displayTotal}
-                  intentType="payment_intent"
-                  pledgeId={currentPledgeId}
-                  projectPath={projectPath}
-                  buttonLabel={isModifyMode ? `Pay Additional $${displayTotal.toFixed(2)}` : undefined}
-                />
-              </Elements>
+              <DCPaymentWrapper
+                clientSecret={clientSecret}
+                dcStripePromise={dcStripePromise}
+                pledgeId={currentPledgeId}
+                projectPath={projectPath}
+                agreedToTerms={agreedToTerms}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+                displayTotal={displayTotal}
+                isModifyMode={isModifyMode}
+              />
             ) : (
               <div className="space-y-4">
                 {paymentError ? (

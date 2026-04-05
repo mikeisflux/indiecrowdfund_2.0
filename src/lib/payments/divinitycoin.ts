@@ -7,6 +7,7 @@ import {
 import { assignBackerNumber } from "@/lib/payments/stripe";
 import { logger } from "@/lib/logger";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import { decryptSecret } from "@/lib/vault";
 
 const paymentsDivinitycoinLogger = logger.child({ module: "payments-divinitycoin" });
 
@@ -40,8 +41,11 @@ export async function getDivinityCoinConfig(): Promise<DivinityCoinConfig> {
     });
 
     if (settings?.divinityCoinEnabled && settings.divinityCoinApiKey) {
+      // Decrypt API key if it was stored encrypted
+      let apiKey = settings.divinityCoinApiKey;
+      try { apiKey = decryptSecret(apiKey); } catch { /* stored as plaintext */ }
       cachedConfig = {
-        apiKey: settings.divinityCoinApiKey,
+        apiKey,
         partnerId: settings.divinityCoinPartnerId || "",
         webhookSecret: settings.divinityCoinWebhookSecret || "",
         baseUrl: process.env.DIVINITYCOIN_API_URL || "https://divinitycoin.com/internal",

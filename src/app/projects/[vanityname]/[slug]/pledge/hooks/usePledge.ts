@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
-import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { loadStripe, Stripe } from "@stripe/stripe-js/pure";
 import { ProjectData, RewardData, AddonData, Step } from "../types";
 import { detectUserCountry } from "../constants";
 import {
