@@ -529,7 +529,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
                         <span>Pledge Level</span>
                         <span>${Number(backer.balance?.pledgeLevelAmount || 0).toFixed(2)}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">${backer.rewardAmount} - {backer.reward}</p>
+                      <p className="text-xs text-muted-foreground">${Number(backer.rewardAmount || 0).toFixed(2)} - {backer.reward}</p>
                     </div>
                     <div className="flex justify-between">
                       <span>Add-ons</span>

@@ -300,7 +300,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
     } finally {
       setLoadingMessages(false);
     }
-  }, [selectedThread?.status]);
+  }, [selectedThread]);
 
   useEffect(() => {
     if (selectedThread) {

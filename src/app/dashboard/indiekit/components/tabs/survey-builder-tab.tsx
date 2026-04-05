@@ -337,7 +337,9 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
   };
 
   const addVariant = (rewardId: string) => {
-    const current = getOrCreateItemQuestion(rewards.find(r => r.id === rewardId)!);
+    const reward = rewards.find(r => r.id === rewardId);
+    if (!reward) return;
+    const current = getOrCreateItemQuestion(reward);
     const newVariant: ItemVariant = {
       variantType: "",
       options: [""],
@@ -347,21 +349,27 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
   };
 
   const updateVariant = (rewardId: string, index: number, updates: Partial<ItemVariant>) => {
-    const current = getOrCreateItemQuestion(rewards.find(r => r.id === rewardId)!);
+    const reward = rewards.find(r => r.id === rewardId);
+    if (!reward) return;
+    const current = getOrCreateItemQuestion(reward);
     const newVariants = [...current.variants];
     newVariants[index] = { ...newVariants[index], ...updates };
     updateItemQuestion(rewardId, { variants: newVariants });
   };
 
   const removeVariant = (rewardId: string, index: number) => {
-    const current = getOrCreateItemQuestion(rewards.find(r => r.id === rewardId)!);
+    const reward = rewards.find(r => r.id === rewardId);
+    if (!reward) return;
+    const current = getOrCreateItemQuestion(reward);
     updateItemQuestion(rewardId, {
       variants: current.variants.filter((_, i) => i !== index),
     });
   };
 
   const addCustomQuestion = (rewardId: string) => {
-    const current = getOrCreateItemQuestion(rewards.find(r => r.id === rewardId)!);
+    const reward = rewards.find(r => r.id === rewardId);
+    if (!reward) return;
+    const current = getOrCreateItemQuestion(reward);
     const newQuestion: ItemCustomQuestion = {
       question: "",
       questionType: "OPEN_TEXT",
@@ -373,14 +381,18 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
   };
 
   const updateCustomQuestion = (rewardId: string, index: number, updates: Partial<ItemCustomQuestion>) => {
-    const current = getOrCreateItemQuestion(rewards.find(r => r.id === rewardId)!);
+    const reward = rewards.find(r => r.id === rewardId);
+    if (!reward) return;
+    const current = getOrCreateItemQuestion(reward);
     const newQuestions = [...current.customQuestions];
     newQuestions[index] = { ...newQuestions[index], ...updates };
     updateItemQuestion(rewardId, { customQuestions: newQuestions });
   };
 
   const removeCustomQuestion = (rewardId: string, index: number) => {
-    const current = getOrCreateItemQuestion(rewards.find(r => r.id === rewardId)!);
+    const reward = rewards.find(r => r.id === rewardId);
+    if (!reward) return;
+    const current = getOrCreateItemQuestion(reward);
     updateItemQuestion(rewardId, {
       customQuestions: current.customQuestions.filter((_, i) => i !== index),
     });
