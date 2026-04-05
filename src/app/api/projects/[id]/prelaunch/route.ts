@@ -85,14 +85,24 @@ export async function POST(
         }
 
         if (project.prelaunchStatus !== "APPROVED") {
-          // Submit the prelaunch for review
+          // Submit the prelaunch for review — use updateMany with status guard to prevent
+          // duplicate review records from concurrent requests
           updateData.prelaunchStatus = "SUBMITTED";
 
-          // Update the project first
-          await db.project.update({
-            where: { id: projectId },
+          const updated = await db.project.updateMany({
+            where: { id: projectId, prelaunchStatus: { notIn: ["SUBMITTED", "APPROVED"] } },
             data: updateData,
           });
+
+          if (updated.count === 0) {
+            // Another concurrent request already submitted this — return as-if successful
+            return NextResponse.json({
+              success: true,
+              requiresApproval: true,
+              message: "Your pre-launch page is already submitted and pending review.",
+              project: { id: projectId, prelaunchStatus: "SUBMITTED" },
+            });
+          }
 
           // Create a project review record
           await db.projectReview.create({

@@ -113,9 +113,9 @@ export async function POST(req: NextRequest) {
       case "REJECTED":
         newStatus = "DRAFT"; // Reset to draft so they can't resubmit same content
         reviewAction = "REJECTED";
-        if (!rejectionReason) {
+        if (!rejectionReason || rejectionReason.trim().length < 10) {
           return NextResponse.json(
-            { error: "Rejection reason is required" },
+            { error: "Rejection reason must be at least 10 characters" },
             { status: 400 }
           );
         }

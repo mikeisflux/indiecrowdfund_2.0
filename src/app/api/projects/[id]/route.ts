@@ -208,7 +208,11 @@ async function handleCollaborators(
     select: { email: true, userId: true },
   });
 
-  const existingEmails = new Set(existingCollaborators.map((c: { email: string | null }) => c.email?.toLowerCase()));
+  const existingEmails = new Set(
+    existingCollaborators
+      .filter((c: { email: string | null }) => c.email !== null)
+      .map((c: { email: string }) => c.email.toLowerCase())
+  );
 
   for (const collab of collaborators) {
     const emailLower = collab.email.toLowerCase();
@@ -231,7 +235,7 @@ async function handleCollaborators(
           data: {
             projectId,
             userId: user.id,
-            email: collab.email,
+            email: emailLower,
             title: collab.title || null,
             canEditProject: collab.canEditProject || false,
             canManageCommunity: collab.canManageCommunity || false,
@@ -281,7 +285,7 @@ async function handleCollaborators(
         const collaboratorRecord = await db.projectCollaborator.create({
           data: {
             projectId,
-            email: collab.email,
+            email: emailLower,
             title: collab.title || null,
             canEditProject: collab.canEditProject || false,
             canManageCommunity: collab.canManageCommunity || false,
