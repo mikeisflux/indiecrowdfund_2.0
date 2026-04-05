@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const marketplacePurchaseConfirmLogger = logger.child({ module: "marketplace-purchase-confirm" });
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
+import { getStripeInstance } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { purchaseId } = body;
+    const { purchaseId, paymentIntentId } = body;
 
     if (!purchaseId) {
       return NextResponse.json({ error: "purchaseId is required" }, { status: 400 });
@@ -59,6 +60,29 @@ export async function POST(request: Request) {
       );
     }
 
+    // For paid Stripe purchases, verify the payment intent actually succeeded
+    // This prevents bypassing payment by calling /confirm without paying
+    if (Number(purchase.amount) > 0 && purchase.paymentProcessor === "STRIPE") {
+      if (!paymentIntentId) {
+        return NextResponse.json({ error: "paymentIntentId is required for Stripe purchases" }, { status: 400 });
+      }
+      try {
+        const stripe = await getStripeInstance();
+        const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        if (intent.status !== "succeeded") {
+          return NextResponse.json({ error: "Payment not confirmed by Stripe" }, { status: 400 });
+        }
+        const expectedCents = Math.round(Number(purchase.amount) * 100);
+        if (intent.amount !== expectedCents) {
+          marketplacePurchaseConfirmLogger.warn({ purchaseId, expectedCents, actualCents: intent.amount }, "Payment amount mismatch");
+          return NextResponse.json({ error: "Payment amount mismatch" }, { status: 400 });
+        }
+      } catch (stripeError) {
+        marketplacePurchaseConfirmLogger.error({ err: String(stripeError) }, "Failed to verify Stripe payment intent");
+        return NextResponse.json({ error: "Failed to verify payment" }, { status: 500 });
+      }
+    }
+
     // Mark purchase as completed atomically - use updateMany with status guard
     // to prevent race condition where two concurrent requests both increment purchaseCount
     const updated = await prisma.marketplacePurchase.updateMany({
@@ -67,6 +91,10 @@ export async function POST(request: Request) {
         status: "COMPLETED",
         completedAt: new Date(),
         deliveredAt: new Date(),
+        // Store verified payment intent ID for audit trail
+        ...(paymentIntentId && purchase.paymentProcessor === "STRIPE"
+          ? { stripePaymentIntentId: paymentIntentId }
+          : {}),
       },
     });
 
