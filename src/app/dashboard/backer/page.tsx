@@ -725,7 +725,7 @@ export default function BackerDashboard() {
                                 <div className="flex items-center gap-2">
                                   <DollarSign className="h-4 w-4 text-green-500" />
                                   <span className="text-muted-foreground">Your pledge:</span>
-                                  <span className="font-semibold">${project.pledge.amount}</span>
+                                  <span className="font-semibold">${Number(project.pledge.amount).toFixed(2)}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Gift className="h-4 w-4 text-purple-500" />

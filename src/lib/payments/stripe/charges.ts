@@ -28,20 +28,31 @@ const RETRY_INTERVAL_DAYS = 3;
 export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
   const stripeClient = await getStripeInstance();
 
-  const pledge = await db.pledge.findUnique({
+  // Fetch platform fee rate alongside the pledge
+  const [pledge, platformSettings] = await Promise.all([
+    db.pledge.findUnique({
     where: { id: pledgeId },
-    include: {
-      project: {
-        include: {
-          creator: {
-            include: {
-              stripeConfig: true,
+      include: {
+        project: {
+          include: {
+            creator: {
+              include: {
+                stripeConfig: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { platformFee: true },
+    }).catch(() => null),
+  ]);
+
+  const platformFeeRate = platformSettings?.platformFee
+    ? Number(platformSettings.platformFee) / 100
+    : 0.03; // default 3%
 
   if (!pledge) {
     throw new Error("Pledge not found");
@@ -199,7 +210,7 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
   }
 
   const amountInCents = Math.round(Number(pledge.amount) * 100);
-  const platformFee = Math.round(Number(pledge.amount) * 0.03 * 100);
+  const platformFee = Math.round(Number(pledge.amount) * platformFeeRate * 100);
 
   try {
     const idempotencyKey = `charge_pledge_${pledgeId}_v${pledge.retryCount}`;

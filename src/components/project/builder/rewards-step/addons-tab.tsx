@@ -116,7 +116,7 @@ function SortableAddonRow({
 
         {/* Pledge amount */}
         <div className="col-span-2">
-          <p className="font-bold text-lg">${addon.amount}</p>
+          <p className="font-bold text-lg">${Number(addon.amount).toFixed(2)}</p>
         </div>
 
         {/* Details */}

@@ -138,12 +138,12 @@ export function OrderSummary({
             {pledgeWithoutReward ? (
               <div className="flex justify-between">
                 <span className="font-medium">No reward</span>
-                <span className="font-semibold">${customPledgeAmount}</span>
+                <span className="font-semibold">${Number(customPledgeAmount).toFixed(2)}</span>
               </div>
             ) : selectedReward && (
               <div className="flex justify-between">
                 <span className="font-medium">{selectedReward.title}</span>
-                <span className="font-semibold">${selectedReward.amount}</span>
+                <span className="font-semibold">${Number(selectedReward.amount).toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -220,12 +220,12 @@ export function OrderSummary({
             {pledgeWithoutReward ? (
               <div className="flex justify-between">
                 <span className="font-medium">No reward</span>
-                <span className="font-semibold">${customPledgeAmount}</span>
+                <span className="font-semibold">${Number(customPledgeAmount).toFixed(2)}</span>
               </div>
             ) : selectedReward && (
               <div className="flex justify-between">
                 <span className="font-medium">{selectedReward.title}</span>
-                <span className="font-semibold">${selectedReward.amount}</span>
+                <span className="font-semibold">${Number(selectedReward.amount).toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -406,7 +406,7 @@ export function OrderSummary({
               <span className="font-medium">
                 {pledgeWithoutReward ? "No reward" : selectedReward?.title}
               </span>
-              <span>${pledgeWithoutReward ? customPledgeAmount : selectedReward?.amount}.00</span>
+              <span>${Number(pledgeWithoutReward ? customPledgeAmount : selectedReward?.amount ?? 0).toFixed(2)}</span>
             </div>
 
             {/* Add-ons */}

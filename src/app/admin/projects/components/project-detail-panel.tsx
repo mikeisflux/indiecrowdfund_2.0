@@ -267,7 +267,7 @@ export function ProjectDetailPanel({
                         {chargebackCard.brand} ending in {chargebackCard.lastFour}
                       </p>
                       <p className="text-sm text-zinc-500">
-                        Expires {String(chargebackCard.expMonth).padStart(2, "0")}/{chargebackCard.expYear}
+                        Expires {chargebackCard.expMonth != null ? String(chargebackCard.expMonth).padStart(2, "0") : "??"}/{chargebackCard.expYear ?? "??"}
                       </p>
                     </div>
                   </div>

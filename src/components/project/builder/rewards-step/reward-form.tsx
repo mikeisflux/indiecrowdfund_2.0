@@ -692,7 +692,7 @@ export function RewardForm({
                     <span className="text-muted-foreground">
                       {currentReward.title || "Reward title"}
                     </span>
-                    <span className="font-bold">${currentReward.amount || 1}</span>
+                    <span className="font-bold">${Number(currentReward.amount || 1).toFixed(2)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <div>

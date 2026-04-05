@@ -218,7 +218,7 @@ export function ImportAddonDialog({
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground">${reward.amount}</p>
+                    <p className="text-sm text-muted-foreground">${Number(reward.amount).toFixed(2)}</p>
                   </div>
                   <Copy className="h-4 w-4 text-muted-foreground" />
                 </div>

@@ -116,7 +116,7 @@ function SortableTierRow({
 
         {/* Pledge amount */}
         <div className="col-span-2">
-          <p className="font-bold text-lg">${tier.amount}</p>
+          <p className="font-bold text-lg">${Number(tier.amount).toFixed(2)}</p>
         </div>
 
         {/* Details */}

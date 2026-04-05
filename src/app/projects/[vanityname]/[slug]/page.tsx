@@ -515,7 +515,7 @@ export default function ProjectPage() {
                 <Link href={`/dashboard/pledges/${existingPledge.id}`}>
                   <Button className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg shadow-blue-500/20">
                     <CheckCircle className="mr-2 h-4 w-4" />
-                    Manage Pledge (${existingPledge.amount})
+                    Manage Pledge (${Number(existingPledge.amount).toFixed(2)})
                   </Button>
                 </Link>
               ) : (

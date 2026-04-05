@@ -32,7 +32,7 @@ export async function trackCampaignConversion(pledgeId: string, sourceCampaignId
           converted: false,
           OR: [
             { userId: pledge.userId },
-            { email: pledge.user.email },
+            { email: pledge.user?.email },
           ],
         },
         orderBy: { clickedAt: "desc" },

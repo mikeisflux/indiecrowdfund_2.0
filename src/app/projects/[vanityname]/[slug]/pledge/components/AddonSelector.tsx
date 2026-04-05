@@ -69,9 +69,9 @@ export function AddonSelector({
                       </h4>
 
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold">${addon.amount}</span>
+                        <span className="font-semibold">${Number(addon.amount).toFixed(2)}</span>
                         {shipping > 0 && (
-                          <span className="text-muted-foreground text-sm">+${shipping} shipping</span>
+                          <span className="text-muted-foreground text-sm">+${Number(shipping).toFixed(2)} shipping</span>
                         )}
                       </div>
 
@@ -118,7 +118,7 @@ export function AddonSelector({
                       <div className="md:hidden bg-gradient-to-r from-zinc-900 to-zinc-800 text-white px-4 py-2 flex items-center justify-between">
                         <span className="font-semibold text-lg">${addon.amount}</span>
                         {shipping > 0 && (
-                          <span className="text-zinc-300 text-sm">+${shipping} shipping</span>
+                          <span className="text-zinc-300 text-sm">+${Number(shipping).toFixed(2)} shipping</span>
                         )}
                       </div>
                       <div className="relative aspect-video md:aspect-square bg-zinc-100">
@@ -167,7 +167,7 @@ export function AddonSelector({
                           className="rounded-none h-12 font-medium bg-[#05ce78] hover:bg-[#05ce78]/90 text-white w-full"
                         >
                           <span className="md:hidden">Add</span>
-                          <span className="hidden md:inline">Add • ${addon.amount}</span>
+                          <span className="hidden md:inline">Add • ${Number(addon.amount).toFixed(2)}</span>
                         </Button>
                       )}
                     </div>

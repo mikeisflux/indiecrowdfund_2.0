@@ -130,10 +130,10 @@ export function RewardSelector({
 
                       {/* Price and shipping */}
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold">${reward.amount}</span>
+                        <span className="font-semibold">${Number(reward.amount).toFixed(2)}</span>
                         {shipping > 0 && (
                           <>
-                            <span className="text-muted-foreground text-sm">+${shipping} shipping</span>
+                            <span className="text-muted-foreground text-sm">+${Number(shipping).toFixed(2)} shipping</span>
                             <button className="text-muted-foreground hover:text-foreground">
                               <Info className="h-4 w-4" />
                             </button>
@@ -191,7 +191,7 @@ export function RewardSelector({
                       <div className="md:hidden bg-gradient-to-r from-zinc-900 to-zinc-800 text-white px-4 py-2 flex items-center justify-between">
                         <span className="font-semibold text-lg">${reward.amount}</span>
                         {shipping > 0 && (
-                          <span className="text-zinc-300 text-sm">+${shipping} shipping</span>
+                          <span className="text-zinc-300 text-sm">+${Number(shipping).toFixed(2)} shipping</span>
                         )}
                       </div>
                       {/* Image */}

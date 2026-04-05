@@ -404,7 +404,7 @@ export function BackersList({
                     </div>
                   </div>
                   <div className="truncate">{backer.reward}</div>
-                  <div className="font-bold text-primary">${backer.amount}</div>
+                  <div className="font-bold text-primary">${Number(backer.amount).toFixed(2)}</div>
                   <div>
                     <Badge
                       className={cn(

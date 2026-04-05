@@ -57,7 +57,7 @@ export function RecentBackersCard({ backers }: RecentBackersCardProps) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-primary">${backer.amount}</p>
+                  <p className="text-sm font-bold text-primary">${Number(backer.amount).toFixed(2)}</p>
                   <p className="text-xs text-muted-foreground">
                     {backer.time}
                   </p>
