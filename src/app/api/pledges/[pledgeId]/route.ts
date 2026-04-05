@@ -435,6 +435,14 @@ export async function PATCH(
           },
         });
 
+        // Release reward slot so it can be claimed by another backer
+        if (pledge.rewardId) {
+          await db.reward.update({
+            where: { id: pledge.rewardId },
+            data: { quantityClaimed: { decrement: 1 } },
+          }).catch(err => pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to decrement reward quantity"));
+        }
+
         // Send cancellation + refund notification (async, don't block response)
         notifyPledgeCancelled(pledgeId, true).catch(err =>
           pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to send refund notification:")
@@ -486,6 +494,14 @@ export async function PATCH(
             currentAmount: { decrement: pledge.amount },
           },
         });
+      }
+
+      // Release reward slot so it can be claimed by another backer
+      if (pledge.rewardId) {
+        await db.reward.update({
+          where: { id: pledge.rewardId },
+          data: { quantityClaimed: { decrement: 1 } },
+        }).catch(err => pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to decrement reward quantity"));
       }
 
       // Send cancellation notification (async, don't block response)
@@ -914,19 +930,22 @@ export async function PATCH(
         );
       }
 
-      // Not yet charged (PENDING) - just update the pledge amount and project total
+      // Not yet charged (PENDING) - just update the pledge amount
       await db.pledge.update({
         where: { id: pledgeId },
         data: { amount: newTotal },
       });
 
-      // Update project current amount to reflect the increase
-      await db.project.update({
-        where: { id: pledge.projectId },
-        data: {
-          currentAmount: { increment: additionalAmount },
-        },
-      });
+      // Only update project current amount if pledge was already confirmed
+      // (unconfirmed pledges will have their full new amount counted at confirmation)
+      if (pledge.confirmationEmailSent) {
+        await db.project.update({
+          where: { id: pledge.projectId },
+          data: {
+            currentAmount: { increment: additionalAmount },
+          },
+        });
+      }
 
       return NextResponse.json({
         success: true,
