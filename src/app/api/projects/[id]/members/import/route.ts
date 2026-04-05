@@ -164,7 +164,7 @@ async function syncToAdminNewsletter(
         data: {
           tags: combinedTags,
           // Reactivate if previously unsubscribed
-          isActive: existing.isActive || true,
+          isActive: true,
         },
       });
     } else {

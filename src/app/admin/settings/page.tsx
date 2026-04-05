@@ -456,7 +456,7 @@ export default function SettingsPage() {
         sessionDuration: String(settings.sessionTimeout || 7),
         maxLoginAttempts: String(settings.maxLoginAttempts || 5),
         passwordMinLength: String(settings.passwordMinLength || 8),
-        requireSpecialChar: settings.requireSpecialChars || true,
+        requireSpecialChar: settings.requireSpecialChars !== false,
         // Global Rate Limiting
         globalRateLimitEnabled: settings.globalRateLimitEnabled !== false,
         globalRateLimit: String(settings.globalRateLimitRequests || settings.ipRateLimitRequests || 100),

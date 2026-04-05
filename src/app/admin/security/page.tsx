@@ -87,8 +87,8 @@ export default function SecurityPage() {
             sessionTimeout: data.settings.sessionTimeout || 7,
             maxLoginAttempts: data.settings.maxLoginAttempts || 5,
             passwordMinLength: data.settings.passwordMinLength || 8,
-            requireSpecialChar: data.settings.requireSpecialChars || true,
-            ipRateLimitEnabled: data.settings.ipRateLimitEnabled || true,
+            requireSpecialChar: data.settings.requireSpecialChars !== false,
+            ipRateLimitEnabled: data.settings.ipRateLimitEnabled !== false,
             ipRateLimitRequests: data.settings.ipRateLimitRequests || 100,
             ipRateLimitWindow: data.settings.ipRateLimitWindow || 60,
           }));
