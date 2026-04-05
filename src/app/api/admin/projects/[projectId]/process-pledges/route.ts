@@ -113,7 +113,9 @@ export async function GET(
         select: { pledgeId: true },
       });
       dcTransactionsByPledge = Object.fromEntries(
-        dcTransactions.map((t: { pledgeId: string | null }) => [t.pledgeId!, true])
+        dcTransactions
+          .filter((t: { pledgeId: string | null }): t is { pledgeId: string } => t.pledgeId !== null)
+          .map((t) => [t.pledgeId, true])
       );
     }
 
