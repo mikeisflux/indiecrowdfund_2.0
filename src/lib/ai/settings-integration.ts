@@ -44,7 +44,23 @@ export async function getAISettings(): Promise<AISettings> {
     return settingsCache;
   }
 
-  const settings = await db.platformSettings.findFirst();
+  const settings = await db.platformSettings.findFirst({
+    select: {
+      aiEmailPersonalization: true,
+      aiPredictiveAnalytics: true,
+      aiSmartSegmentation: true,
+      aiSendTimeOptimization: true,
+      aiContentOptimization: true,
+      aiAbTesting: true,
+      aiAutoTagging: true,
+      aiAutoTagConfidence: true,
+      aiMaxTags: true,
+      aiEmailFrequencyCap: true,
+      aiDailyEmailLimit: true,
+      aiQuietHoursStart: true,
+      aiQuietHoursEnd: true,
+    },
+  });
 
   const aiSettings: AISettings = {
     emailPersonalization: settings?.aiEmailPersonalization ?? false,

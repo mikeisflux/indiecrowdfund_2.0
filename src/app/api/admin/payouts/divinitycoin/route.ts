@@ -611,8 +611,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Send email notification to creator (fire-and-forget, don't block response)
-    sendPayoutCreatedEmail(
-      project.creator.email!,
+    if (project.creator.email) sendPayoutCreatedEmail(
+      project.creator.email,
       project.creator.name || "Creator",
       project.title,
       `/projects/${project.slug}`,

@@ -488,7 +488,7 @@ export default function ManagePledgePage() {
                 <span className="font-medium">Reward Tier</span>
               </div>
               <p className="text-lg font-semibold">{pledge.reward.title}</p>
-              <p className="text-sm text-muted-foreground">Tier amount: ${pledge.reward.amount}</p>
+              <p className="text-sm text-muted-foreground">Tier amount: ${Number(pledge.reward.amount).toFixed(2)}</p>
             </div>
           )}
 
