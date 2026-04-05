@@ -351,11 +351,12 @@ export async function GET(req: NextRequest) {
         // Projects by status
         db.project.groupBy({
           by: ["status"],
+          where: { deletedAt: null },
           _count: true
         }),
         // Recent projects with details
         db.project.findMany({
-          where: { createdAt: { gte: startDate } },
+          where: { deletedAt: null, createdAt: { gte: startDate } },
           orderBy: { createdAt: "desc" },
           take: 20,
           select: {
@@ -484,7 +485,7 @@ export async function GET(req: NextRequest) {
             visits: c._count
           })),
           cities: cityData.map(c => ({
-            location: c.location,
+            location: c.location || "Unknown",
             projectCount: c._count
           })),
           userLocations: userLocations.map(u => ({

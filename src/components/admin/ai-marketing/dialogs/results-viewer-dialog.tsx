@@ -181,7 +181,7 @@ function PredictiveAnalyticsContent({ data, sortConfig, onSort }: { data: any; s
         </div>
         <div className="rounded-lg border bg-blue-50 p-3 dark:bg-blue-900/30">
           <p className="text-xs text-zinc-500">Predicted Revenue</p>
-          <p className="text-xl font-bold text-blue-600">${(summary.predictedRevenue || 0).toLocaleString()}</p>
+          <p className="text-xl font-bold text-blue-600">${Number(summary.predictedRevenue || 0).toFixed(2)}</p>
         </div>
       </div>
 

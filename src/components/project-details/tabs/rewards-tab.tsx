@@ -125,7 +125,7 @@ export function RewardsTab({
       <div className="flex-1 space-y-4">
         {tiers.map((reward) => {
           const isLimited = reward.quantityAvailable !== null;
-          const isSoldOut = isLimited && reward.quantityClaimed >= reward.quantityAvailable!;
+          const isSoldOut = isLimited && reward.quantityAvailable !== null && reward.quantityClaimed >= reward.quantityAvailable;
           const isUnavailable = isSoldOut || projectEnded;
           const isSelected = selectedRewardId === reward.id;
 
@@ -343,7 +343,7 @@ export function RewardsTab({
                           <span>{reward.items.length} item{reward.items.length !== 1 ? "s" : ""}</span>
                           <span>Est. {formatDeliveryDate(reward.estimatedDelivery)}</span>
                           {isLimited && !isSoldOut && (
-                            <span>{reward.quantityAvailable! - reward.quantityClaimed} left</span>
+                            <span>{(reward.quantityAvailable ?? 0) - reward.quantityClaimed} left</span>
                           )}
                           {isSoldOut && <span className="text-red-500 font-medium">Sold out</span>}
                         </div>

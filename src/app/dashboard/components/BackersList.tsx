@@ -268,8 +268,8 @@ export function BackersList({
       const fixedCols = [
         backer.name,
         backer.email || "",
-        backer.amount.toString(),
-        backer.shippingAmount.toString(),
+        Number(backer.amount).toFixed(2),
+        Number(backer.shippingAmount).toFixed(2),
         backer.fulfillmentStatus || "",
         backer.shippingAddress || "",
         backer.shippingCity || "",

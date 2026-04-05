@@ -171,7 +171,7 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
                   min="1"
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">ABOUT ${pledgeAmount}</p>
+              <p className="text-xs text-muted-foreground mt-2">ABOUT ${Number(pledgeAmount).toFixed(2)}</p>
             </div>
 
             <div className="rounded-lg bg-[#028858] text-white p-4">
@@ -198,7 +198,7 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
         {/* Reward Tiers */}
         {tiers.map((reward) => {
           const isLimited = reward.quantityAvailable !== null;
-          const remaining = isLimited ? reward.quantityAvailable! - reward.quantityClaimed : null;
+          const remaining = isLimited && reward.quantityAvailable !== null ? reward.quantityAvailable - reward.quantityClaimed : null;
           const isSoldOut = isLimited && remaining === 0;
 
           return (
@@ -220,7 +220,7 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
               <CardContent className="p-4">
                 <div className="mb-2">
                   <p className="text-lg font-semibold">
-                    Pledge ${reward.amount} or more
+                    Pledge ${Number(reward.amount).toFixed(2)} or more
                   </p>
                   <p className="font-medium text-primary">{reward.title}</p>
                 </div>

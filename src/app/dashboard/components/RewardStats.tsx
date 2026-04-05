@@ -301,7 +301,7 @@ export function RewardStats({ rewardStats, addonStats, projectUrl }: RewardStats
                       <p className="font-medium truncate">{item.title}</p>
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5 ml-7">
-                      ${Number(item.amount).toLocaleString()}
+                      ${Number(item.amount).toFixed(2)}
                     </p>
                   </div>
                   <div className="flex items-center gap-6 sm:gap-8 shrink-0">
@@ -317,7 +317,7 @@ export function RewardStats({ rewardStats, addonStats, projectUrl }: RewardStats
                     )}
                     <div className="text-center">
                       <p className="text-lg font-bold text-primary">
-                        ${Number(item.total).toLocaleString()}
+                        ${Number(item.total).toFixed(2)}
                       </p>
                       <p className="text-xs text-muted-foreground">Revenue</p>
                     </div>
@@ -349,7 +349,7 @@ export function RewardStats({ rewardStats, addonStats, projectUrl }: RewardStats
                         <DropdownMenuItem
                           onClick={() => {
                             navigator.clipboard.writeText(
-                              `${item.title} — $${item.amount}`
+                              `${item.title} — $${Number(item.amount).toFixed(2)}`
                             );
                             toast.success(`${isAddon ? "Add-on" : "Reward"} info copied`);
                           }}
