@@ -155,21 +155,21 @@ export async function GET(req: NextRequest) {
         source: "project",
         sourceId: p.id,
         title: p.title,
-        url: p.imageUrl!,
+        url: p.imageUrl as string,
         uploaderId: p.creatorId
       })),
       ...updateImages.map(u => ({
         source: "update",
         sourceId: u.id,
         title: u.title,
-        url: u.imageUrl!,
+        url: u.imageUrl as string,
         uploaderId: u.project.creatorId
       })),
       ...rewardImages.map(r => ({
         source: "reward",
         sourceId: r.id,
         title: r.title,
-        url: r.imageUrl!,
+        url: r.imageUrl as string,
         uploaderId: r.project.creatorId
       })),
     ];
@@ -298,19 +298,19 @@ export async function POST(req: NextRequest) {
 
       const allDbImages = [
         ...projectImages.map(p => ({
-          url: p.imageUrl!,
+          url: p.imageUrl as string,
           name: `project-${p.title}`,
           uploaderId: p.creatorId,
           tag: `project:${p.id}`
         })),
         ...updateImages.map(u => ({
-          url: u.imageUrl!,
+          url: u.imageUrl as string,
           name: `update-${u.title}`,
           uploaderId: u.project.creatorId,
           tag: `update:${u.id}`
         })),
         ...rewardImages.map(r => ({
-          url: r.imageUrl!,
+          url: r.imageUrl as string,
           name: `reward-${r.title}`,
           uploaderId: r.project.creatorId,
           tag: `reward:${r.id}`

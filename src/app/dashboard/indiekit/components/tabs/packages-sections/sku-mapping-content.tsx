@@ -227,7 +227,7 @@ export function SkuMappingContent({ projectId, fulfillmentMethod }: SkuMappingCo
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="font-medium">{item.sourceName}</TableCell>
-                                <TableCell>{item.amount ? `$${item.amount}` : "-"}</TableCell>
+                                <TableCell>{item.amount ? `$${Number(item.amount).toFixed(2)}` : "-"}</TableCell>
                                 <TableCell>{item.quantityClaimed ?? "-"}</TableCell>
                                 <TableCell>
                                   <Button
