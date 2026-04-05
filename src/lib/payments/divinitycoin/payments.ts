@@ -1,294 +1,99 @@
 import { db } from "@/lib/db";
-import crypto from "crypto";
 import {
   notifyPledgeReceived,
   notifyBackerPledgeConfirmed,
 } from "@/lib/notifications";
 import { assignBackerNumber } from "@/lib/payments/stripe";
-import { logger } from "@/lib/logger";
 import { circuitBreaker } from "@/lib/circuit-breaker";
-import { decryptSecret } from "@/lib/vault";
-
-const paymentsDivinitycoinLogger = logger.child({ module: "payments-divinitycoin" });
-
-// DivinityCoin API configuration
-interface DivinityCoinConfig {
-  apiKey: string;
-  partnerId: string;
-  webhookSecret: string;
-  baseUrl: string;
-}
-
-let cachedConfig: DivinityCoinConfig | null = null;
+import { getDivinityCoinConfig, paymentsDivinitycoinLogger } from "./config";
+import type {
+  DivinityCoinWebhookRequest,
+  RefundRequestResponse,
+  PaymentEventResponse,
+} from "./types";
 
 /**
- * Get DivinityCoin configuration from database or environment
+ * Notify DivinityCoin when a refund cannot be processed due to insufficient balance.
+ * This allows DivinityCoin to take appropriate action (e.g., flag the account,
+ * contact the user, or handle the refund differently).
  */
-export async function getDivinityCoinConfig(): Promise<DivinityCoinConfig> {
-  if (cachedConfig) {
-    return cachedConfig;
-  }
-
-  try {
-    const settings = await db.platformSettings.findUnique({
-      where: { id: "default" },
-      select: {
-        divinityCoinApiKey: true,
-        divinityCoinPartnerId: true,
-        divinityCoinWebhookSecret: true,
-        divinityCoinEnabled: true,
-      },
-    });
-
-    if (settings?.divinityCoinEnabled && settings.divinityCoinApiKey) {
-      // Decrypt API key if it was stored encrypted
-      let apiKey = settings.divinityCoinApiKey;
-      try { apiKey = decryptSecret(apiKey); } catch { /* stored as plaintext */ }
-      cachedConfig = {
-        apiKey,
-        partnerId: settings.divinityCoinPartnerId || "",
-        webhookSecret: settings.divinityCoinWebhookSecret || "",
-        baseUrl: process.env.DIVINITYCOIN_API_URL || "https://divinitycoin.com/internal",
-      };
-      return cachedConfig;
-    }
-  } catch (error) {
-    paymentsDivinitycoinLogger.warn({ data: error }, "Could not fetch DivinityCoin settings from database:");
-  }
-
-  // Fall back to environment variables
-  if (process.env.DIVINITYCOIN_API_KEY) {
-    cachedConfig = {
-      apiKey: process.env.DIVINITYCOIN_API_KEY,
-      partnerId: process.env.DIVINITYCOIN_PARTNER_ID || "",
-      webhookSecret: process.env.DIVINITYCOIN_WEBHOOK_SECRET || "",
-      baseUrl: process.env.DIVINITYCOIN_API_URL || "https://divinitycoin.com/internal",
-    };
-    return cachedConfig;
-  }
-
-  throw new Error("DivinityCoin not configured. Please set it in Admin Settings > Payments.");
-}
-
-/**
- * Get DivinityCoin webhook secret
- */
-export async function getDivinityCoinWebhookSecret(): Promise<string | null> {
-  try {
-    const settings = await db.platformSettings.findUnique({
-      where: { id: "default" },
-      select: { divinityCoinWebhookSecret: true, divinityCoinEnabled: true },
-    });
-
-    if (settings?.divinityCoinWebhookSecret && settings.divinityCoinEnabled) {
-      return settings.divinityCoinWebhookSecret;
-    }
-  } catch (error) {
-    paymentsDivinitycoinLogger.warn({ data: error }, "Could not fetch DivinityCoin webhook secret from database:");
-  }
-
-  return process.env.DIVINITYCOIN_WEBHOOK_SECRET || null;
-}
-
-// Webhook event types supported by DivinityCoin
-export type DivinityCoinEventType =
-  | "test.ping"
-  | "card.validate"
-  | "card.redeem"
-  | "refund.request"
-  | "payment.succeeded"
-  | "payment.failed"
-  | "refund.completed";
-
-// Webhook request structure from DivinityCoin
-export interface DivinityCoinWebhookRequest {
-  event: DivinityCoinEventType;
-  data?: {
-    cardCode?: string;
-    platformUserId?: string;
-    // Refund request fields
-    refundId?: string;
-    amount?: number;
-    reason?: string;
-    originalTransactionId?: string; // DivinityCoin's transaction ID from when the card was redeemed
-    originalCardCode?: string; // The card code that was redeemed
-    // Payment event fields (new seamless flow)
-    paymentId?: string; // DC's internal payment ID
-    pledgeId?: string; // IndieK's pledge ID
-    projectId?: string;
-    holdId?: string; // DC's hold ID for credits
-    stripePaymentIntentId?: string; // DC's Stripe PI ID
-    giftCardCode?: string; // Auto-generated gift card (for compliance)
-    email?: string;
-    [key: string]: unknown;
-  };
-}
-
-// Webhook response structures
-export interface TestPingResponse {
-  success: true;
-  message: string;
-  partnerId: string;
-  sandboxMode: boolean;
-}
-
-export interface CardValidateResponse {
-  valid: boolean;
-  status: string;
-  amount: number;
-  error?: string;
-}
-
-export interface CardRedeemResponse {
-  success: boolean;
-  amount: number;
-  newBalance?: number;
-  error?: string;
-}
-
-export interface RefundRequestResponse {
-  success: boolean;
-  refundId: string;
-  amountDeducted: number;
-  previousBalance: number;
-  newBalance: number;
-  userId?: string; // The user whose balance was affected
-  error?: string;
-  errorCode?: "INSUFFICIENT_BALANCE" | "USER_NOT_FOUND" | "REDEMPTION_NOT_FOUND" | "INVALID_AMOUNT" | "ALREADY_PROCESSED";
-}
-
-/**
- * Verify webhook signature from DivinityCoin
- * Format: X-Webhook-Signature: t=timestamp,v1=hmac_signature
- */
-export function verifyWebhookSignature(
-  payload: string,
-  signature: string,
-  secret: string
-): boolean {
-  // Parse signature header: t=timestamp,v1=signature
-  const parts = signature.split(",");
-  const timestampPart = parts.find((p) => p.startsWith("t="));
-  const signaturePart = parts.find((p) => p.startsWith("v1="));
-
-  if (!timestampPart || !signaturePart) {
-    paymentsDivinitycoinLogger.warn("[DivinityCoin] Invalid signature format");
-    return false;
-  }
-
-  const timestamp = timestampPart.substring(2);
-  const providedSignature = signaturePart.substring(3);
-
-  // Check timestamp is within 5 minutes (300 seconds)
-  const timestampAge = Math.abs(Date.now() / 1000 - parseInt(timestamp));
-  if (timestampAge > 300) {
-    paymentsDivinitycoinLogger.warn({ timestampAge }, "DivinityCoin webhook timestamp too old");
-    return false;
-  }
-
-  // Compute expected signature: HMAC-SHA256(timestamp.payload, secret)
-  const signedPayload = `${timestamp}.${payload}`;
-  const expectedSignature = crypto
-    .createHmac("sha256", secret)
-    .update(signedPayload)
-    .digest("hex");
-
-  // Constant-time comparison to prevent timing attacks
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(providedSignature),
-      Buffer.from(expectedSignature)
-    );
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Construct and verify a webhook event
- */
-export async function constructWebhookEvent(
-  payload: string,
-  signature: string
-): Promise<DivinityCoinWebhookRequest> {
-  const secret = await getDivinityCoinWebhookSecret();
-
-  if (!secret) {
-    throw new Error("DivinityCoin webhook secret not configured");
-  }
-
-  if (!verifyWebhookSignature(payload, signature, secret)) {
-    throw new Error("Invalid webhook signature");
-  }
-
-  return JSON.parse(payload) as DivinityCoinWebhookRequest;
-}
-
-/**
- * Handle test.ping webhook event
- */
-export async function handleTestPing(): Promise<TestPingResponse> {
-  let partnerId = "unknown";
+async function notifyDivinityCoinRefundFailed(
+  refundId: string,
+  platformUserId: string,
+  requestedAmount: number,
+  availableBalance: number,
+  originalCardCode?: string,
+  originalTransactionId?: string
+): Promise<void> {
   try {
     const config = await getDivinityCoinConfig();
-    partnerId = config.partnerId;
-  } catch {
-    // Config not available
-  }
 
-  return {
-    success: true,
-    message: "Webhook received successfully",
-    partnerId,
-    sandboxMode: process.env.NODE_ENV !== "production",
-  };
+    const response = await circuitBreaker.execute("divinitycoin", () =>
+      fetch(`${config.baseUrl}/webhooks/refund-failed`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.apiKey}`,
+          "X-Partner-ID": config.partnerId,
+        },
+        body: JSON.stringify({
+          refundId,
+          platformUserId,
+          originalCardCode: originalCardCode ? `${originalCardCode.substring(0, 4)}****` : null,
+          originalTransactionId,
+          requestedAmount,
+          availableBalance,
+          shortfall: requestedAmount - availableBalance,
+          timestamp: new Date().toISOString(),
+          platform: "indiecrowdfund",
+        }),
+      })
+    );
+
+    if (!response.ok) {
+      paymentsDivinitycoinLogger.warn(`[DivinityCoin] Failed to notify about refund failure. ` +
+        `Status: ${response.status}`);
+    } else {
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Successfully notified about refund failure: ${refundId}`);
+    }
+  } catch (error) {
+    // Don't throw - this is a best-effort notification
+    paymentsDivinitycoinLogger.warn({ data: error }, `[DivinityCoin] Error notifying about refund failure:`);
+  }
 }
 
 /**
- * Handle card.validate webhook event
- * DivinityCoin calls this to check if a card code is valid
+ * Safely extract a string identifier from a webhook field that may be:
+ * - a string (return as-is)
+ * - an object with an `id` field (return the id)
+ * - an object without `id` (return JSON stringified)
+ * - null/undefined (return undefined)
  */
-export async function handleCardValidate(
-  cardCode: string
-): Promise<CardValidateResponse> {
-  // TODO: Implement card validation logic based on your business rules
-  // This is where you'd check if the card code is valid in your system
-  paymentsDivinitycoinLogger.info(`[DivinityCoin] Validating card: ${cardCode.substring(0, 4)}****`);
-
-  // For now, return a placeholder response
-  // You'll need to implement actual validation based on your requirements
-  return {
-    valid: true,
-    status: "active",
-    amount: 0,
-  };
+export function extractId(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.id === "string") return obj.id;
+    // Return first string-valued field as fallback
+    for (const key of Object.keys(obj)) {
+      if (typeof obj[key] === "string") return obj[key];
+    }
+  }
+  return String(value);
 }
 
 /**
- * Handle card.redeem webhook event
- * DivinityCoin calls this when a card is being redeemed
+ * Safely serialize a webhook field for logging/metadata.
+ * Objects get JSON stringified, strings pass through.
  */
-export async function handleCardRedeem(
-  cardCode: string,
-  platformUserId?: string
-): Promise<CardRedeemResponse> {
-  paymentsDivinitycoinLogger.info(`[DivinityCoin] Card redemption: ${cardCode.substring(0, 4)}****` +
-    (platformUserId ? ` for user ${platformUserId}` : ""));
-
-  // In sandbox mode, just acknowledge without actual redemption
-  if (process.env.NODE_ENV !== "production") {
-    return {
-      success: true,
-      amount: 0,
-    };
+export function serializeField(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    try { return JSON.stringify(value); } catch { return "[unserializable]"; }
   }
-
-  // TODO: Implement actual card redemption logic
-  // This is where you'd credit the user's account, update balances, etc.
-  return {
-    success: true,
-    amount: 0,
-  };
+  return String(value);
 }
 
 /**
@@ -550,94 +355,89 @@ export async function handleRefundRequest(
 }
 
 /**
- * Notify DivinityCoin when a refund cannot be processed due to insufficient balance.
- * This allows DivinityCoin to take appropriate action (e.g., flag the account,
- * contact the user, or handle the refund differently).
+ * Handle payment.succeeded for marketplace purchases
+ * Confirms the purchase, increments purchase count, and delivers the book.
  */
-async function notifyDivinityCoinRefundFailed(
-  refundId: string,
-  platformUserId: string,
-  requestedAmount: number,
-  availableBalance: number,
-  originalCardCode?: string,
-  originalTransactionId?: string
-): Promise<void> {
+async function handleMarketplacePaymentSucceeded(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>,
+  purchaseId: string
+): Promise<PaymentEventResponse> {
+  // DC uses varying field names — check all known variants (hold/giftCard may be objects)
+  const paymentId = data.paymentId || (data.payment_id as string | undefined)
+    || (data.paymentIntentId as string | undefined);
+  const holdId = data.holdId || (data.hold_id as string | undefined)
+    || extractId(data.hold);
+  const giftCardCode = data.giftCardCode || (data.gift_card_code as string | undefined)
+    || extractId(data.giftCard);
+  const stripePI = data.stripePaymentIntentId || (data.stripe_payment_intent_id as string | undefined)
+    || (data.paymentIntentId as string | undefined);
+
+  paymentsDivinitycoinLogger.info(`[DivinityCoin] Marketplace payment succeeded: purchase=${purchaseId}, payment=${paymentId || stripePI || "none"}`);
+
   try {
-    const config = await getDivinityCoinConfig();
+    const purchase = await db.marketplacePurchase.findUnique({
+      where: { id: purchaseId },
+      select: { id: true, status: true, bookId: true, buyerId: true, amount: true },
+    });
 
-    const response = await circuitBreaker.execute("divinitycoin", () =>
-      fetch(`${config.baseUrl}/webhooks/refund-failed`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${config.apiKey}`,
-          "X-Partner-ID": config.partnerId,
+    if (!purchase) {
+      return { success: false, error: `Purchase ${purchaseId} not found` };
+    }
+
+    if (purchase.status !== "PENDING") {
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Purchase ${purchaseId} already ${purchase.status}, skipping`);
+      return { success: true, message: `Purchase already ${purchase.status}` };
+    }
+
+    await db.$transaction(async (tx) => {
+      // Mark purchase as completed
+      await tx.marketplacePurchase.update({
+        where: { id: purchaseId },
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date(),
+          deliveredAt: new Date(),
+          divinityCoinPaymentId: paymentId || stripePI || holdId || null,
         },
-        body: JSON.stringify({
-          refundId,
-          platformUserId,
-          originalCardCode: originalCardCode ? `${originalCardCode.substring(0, 4)}****` : null,
-          originalTransactionId,
-          requestedAmount,
-          availableBalance,
-          shortfall: requestedAmount - availableBalance,
-          timestamp: new Date().toISOString(),
-          platform: "indiecrowdfund",
-        }),
-      })
-    );
+      });
 
-    if (!response.ok) {
-      paymentsDivinitycoinLogger.warn(`[DivinityCoin] Failed to notify about refund failure. ` +
-        `Status: ${response.status}`);
-    } else {
-      paymentsDivinitycoinLogger.info(`[DivinityCoin] Successfully notified about refund failure: ${refundId}`);
-    }
+      // Increment purchase count on the book
+      await tx.marketplaceBook.update({
+        where: { id: purchase.bookId },
+        data: {
+          purchaseCount: { increment: 1 },
+        },
+      });
+
+      // Record the transaction
+      await tx.divinityCoinTransaction.create({
+        data: {
+          userId: purchase.buyerId,
+          amount: Number(purchase.amount),
+          type: "PAYMENT",
+          description: `Marketplace purchase via DivinityCoin`,
+          metadata: JSON.stringify({
+            purchaseId,
+            bookId: purchase.bookId,
+            paymentId,
+            holdId,
+            giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
+            stripePaymentIntentId: stripePI || null,
+            holdRaw: serializeField(data.hold),
+            paymentMethod: serializeField(data.paymentMethod),
+            processedAt: new Date().toISOString(),
+            source: "divinitycoin_webhook",
+          }),
+        },
+      });
+    });
+
+    paymentsDivinitycoinLogger.info(`[DivinityCoin] Purchase ${purchaseId} marked as COMPLETED via payment webhook`);
+    return { success: true, message: "Purchase completed" };
   } catch (error) {
-    // Don't throw - this is a best-effort notification
-    paymentsDivinitycoinLogger.warn({ data: error }, `[DivinityCoin] Error notifying about refund failure:`);
+    paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling payment.succeeded for purchase ${purchaseId}:`);
+    throw error;
   }
-}
-
-// Response for payment events
-export interface PaymentEventResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
-}
-
-/**
- * Safely extract a string identifier from a webhook field that may be:
- * - a string (return as-is)
- * - an object with an `id` field (return the id)
- * - an object without `id` (return JSON stringified)
- * - null/undefined (return undefined)
- */
-function extractId(value: unknown): string | undefined {
-  if (value == null) return undefined;
-  if (typeof value === "string") return value;
-  if (typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    if (typeof obj.id === "string") return obj.id;
-    // Return first string-valued field as fallback
-    for (const key of Object.keys(obj)) {
-      if (typeof obj[key] === "string") return obj[key];
-    }
-  }
-  return String(value);
-}
-
-/**
- * Safely serialize a webhook field for logging/metadata.
- * Objects get JSON stringified, strings pass through.
- */
-function serializeField(value: unknown): string | null {
-  if (value == null) return null;
-  if (typeof value === "string") return value;
-  if (typeof value === "object") {
-    try { return JSON.stringify(value); } catch { return "[unserializable]"; }
-  }
-  return String(value);
 }
 
 /**
@@ -826,92 +626,6 @@ export async function handlePaymentSucceeded(
     return { success: true, message: "Pledge completed" };
   } catch (error) {
     paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling payment.succeeded for pledge ${pledgeId}:`);
-    throw error;
-  }
-}
-
-/**
- * Handle payment.succeeded for marketplace purchases
- * Confirms the purchase, increments purchase count, and delivers the book.
- */
-async function handleMarketplacePaymentSucceeded(
-  data: NonNullable<DivinityCoinWebhookRequest["data"]>,
-  purchaseId: string
-): Promise<PaymentEventResponse> {
-  // DC uses varying field names — check all known variants (hold/giftCard may be objects)
-  const paymentId = data.paymentId || (data.payment_id as string | undefined)
-    || (data.paymentIntentId as string | undefined);
-  const holdId = data.holdId || (data.hold_id as string | undefined)
-    || extractId(data.hold);
-  const giftCardCode = data.giftCardCode || (data.gift_card_code as string | undefined)
-    || extractId(data.giftCard);
-  const stripePI = data.stripePaymentIntentId || (data.stripe_payment_intent_id as string | undefined)
-    || (data.paymentIntentId as string | undefined);
-
-  paymentsDivinitycoinLogger.info(`[DivinityCoin] Marketplace payment succeeded: purchase=${purchaseId}, payment=${paymentId || stripePI || "none"}`);
-
-  try {
-    const purchase = await db.marketplacePurchase.findUnique({
-      where: { id: purchaseId },
-      select: { id: true, status: true, bookId: true, buyerId: true, amount: true },
-    });
-
-    if (!purchase) {
-      return { success: false, error: `Purchase ${purchaseId} not found` };
-    }
-
-    if (purchase.status !== "PENDING") {
-      paymentsDivinitycoinLogger.info(`[DivinityCoin] Purchase ${purchaseId} already ${purchase.status}, skipping`);
-      return { success: true, message: `Purchase already ${purchase.status}` };
-    }
-
-    await db.$transaction(async (tx) => {
-      // Mark purchase as completed
-      await tx.marketplacePurchase.update({
-        where: { id: purchaseId },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
-          deliveredAt: new Date(),
-          divinityCoinPaymentId: paymentId || stripePI || holdId || null,
-        },
-      });
-
-      // Increment purchase count on the book
-      await tx.marketplaceBook.update({
-        where: { id: purchase.bookId },
-        data: {
-          purchaseCount: { increment: 1 },
-        },
-      });
-
-      // Record the transaction
-      await tx.divinityCoinTransaction.create({
-        data: {
-          userId: purchase.buyerId,
-          amount: Number(purchase.amount),
-          type: "PAYMENT",
-          description: `Marketplace purchase via DivinityCoin`,
-          metadata: JSON.stringify({
-            purchaseId,
-            bookId: purchase.bookId,
-            paymentId,
-            holdId,
-            giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
-            stripePaymentIntentId: stripePI || null,
-            holdRaw: serializeField(data.hold),
-            paymentMethod: serializeField(data.paymentMethod),
-            processedAt: new Date().toISOString(),
-            source: "divinitycoin_webhook",
-          }),
-        },
-      });
-    });
-
-    paymentsDivinitycoinLogger.info(`[DivinityCoin] Purchase ${purchaseId} marked as COMPLETED via payment webhook`);
-    return { success: true, message: "Purchase completed" };
-  } catch (error) {
-    paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling payment.succeeded for purchase ${purchaseId}:`);
     throw error;
   }
 }
@@ -1133,144 +847,5 @@ export async function handleRefundCompleted(
   } catch (error) {
     paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error handling refund.completed for pledge ${pledgeId}:`);
     throw error;
-  }
-}
-
-/**
- * Call DivinityCoin Partner API
- * Used for making outbound API calls to DC (refund, release, capture, etc.)
- */
-export async function callDivinityCoinAPI(
-  action: string,
-  payload: Record<string, unknown>
-): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
-  try {
-    const config = await getDivinityCoinConfig();
-
-    const response = await circuitBreaker.execute("divinitycoin", () =>
-      fetch(`${config.baseUrl}?action=${action}`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${config.apiKey}`,
-          "Content-Type": "application/json",
-          "X-Partner-ID": config.partnerId,
-        },
-        body: JSON.stringify(payload),
-      })
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      paymentsDivinitycoinLogger.error({ err: result }, `[DivinityCoin API] ${action} failed:`);
-      return {
-        success: false,
-        error: result.error || `DC API ${action} failed with status ${response.status}`,
-      };
-    }
-
-    return { success: true, data: result };
-  } catch (error) {
-    paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin API] ${action} error:`);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "DivinityCoin API call failed",
-    };
-  }
-}
-
-/**
- * Main webhook event handler
- * Processes incoming webhook requests from DivinityCoin
- */
-export async function handleDivinityCoinWebhook(
-  request: DivinityCoinWebhookRequest
-): Promise<TestPingResponse | CardValidateResponse | CardRedeemResponse | RefundRequestResponse | PaymentEventResponse> {
-  // Note: event is already logged in the route handler — no duplicate log here
-
-  switch (request.event) {
-    case "test.ping":
-      return handleTestPing();
-
-    case "card.validate":
-      if (!request.data?.cardCode) {
-        return {
-          valid: false,
-          status: "error",
-          amount: 0,
-          error: "Card code is required",
-        };
-      }
-      return handleCardValidate(request.data.cardCode);
-
-    case "card.redeem":
-      if (!request.data?.cardCode) {
-        return {
-          success: false,
-          amount: 0,
-          error: "Card code is required",
-        };
-      }
-      return handleCardRedeem(
-        request.data.cardCode,
-        request.data.platformUserId
-      );
-
-    case "refund.request":
-      if (!request.data?.refundId || !request.data?.amount) {
-        return {
-          success: false,
-          refundId: request.data?.refundId || "unknown",
-          amountDeducted: 0,
-          previousBalance: 0,
-          newBalance: 0,
-          error: "Missing required fields: refundId and amount are required",
-          errorCode: "INVALID_AMOUNT",
-        };
-      }
-      if (!request.data?.originalCardCode && !request.data?.originalTransactionId) {
-        return {
-          success: false,
-          refundId: request.data.refundId,
-          amountDeducted: 0,
-          previousBalance: 0,
-          newBalance: 0,
-          error: "Either originalCardCode or originalTransactionId is required to identify the redemption",
-          errorCode: "REDEMPTION_NOT_FOUND",
-        };
-      }
-      return handleRefundRequest(
-        request.data.refundId,
-        request.data.amount,
-        request.data.originalCardCode,
-        request.data.originalTransactionId,
-        request.data.reason
-      );
-
-    case "payment.succeeded":
-      if (!request.data) {
-        return { success: false, error: "Payment data is required" };
-      }
-      return handlePaymentSucceeded(request.data);
-
-    case "payment.failed":
-      if (!request.data) {
-        return { success: false, error: "Payment data is required" };
-      }
-      return handlePaymentFailed(request.data);
-
-    case "refund.completed":
-      if (!request.data) {
-        return { success: false, error: "Refund data is required" };
-      }
-      return handleRefundCompleted(request.data);
-
-    default:
-      paymentsDivinitycoinLogger.warn(`[DivinityCoin Webhook] Unknown event type: ${request.event}`);
-      return {
-        success: false,
-        amount: 0,
-        error: `Unknown event type: ${request.event}`,
-      } as CardRedeemResponse;
   }
 }
