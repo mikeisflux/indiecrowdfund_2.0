@@ -298,10 +298,10 @@ export function PaymentStep() {
   const campaignType = payment.campaignType || "ALL_OR_NOTHING";
   const isLaunched = ["LIVE", "FUNDED", "FAILED", "CANCELLED"].includes(projectStatus || "");
 
-  // Auto-switch away from Stripe if adult/controversial content is selected (PayPal/DivinityCoin/Whop are all allowed)
+  // Auto-switch away from Stripe/PayPal if adult/controversial content is selected (DivinityCoin and Whop only)
   useEffect(() => {
-    if (mustUseAltProcessor && payment.paymentProcessor === "STRIPE") {
-      updatePayment({ paymentProcessor: "PAYPAL" });
+    if (mustUseAltProcessor && payment.paymentProcessor !== "DIVINITYCOIN" && payment.paymentProcessor !== "WHOP") {
+      updatePayment({ paymentProcessor: "DIVINITYCOIN" });
     }
   }, [mustUseAltProcessor, payment.paymentProcessor, updatePayment]);
 

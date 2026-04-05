@@ -101,7 +101,7 @@ export function CampaignTypeSection({
         <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800 dark:text-amber-300">
-            <strong>Note:</strong> Projects with adult or controversial content require <strong>Keep It All</strong> campaign style. Backers are charged immediately and payments cannot be held for an end-of-campaign authorization.
+            <strong>Note:</strong> Projects with adult or controversial content require <strong>Keep It All</strong> campaign style. Payment processors that support NSFW content (DivinityCoin and Whop) process payments immediately and cannot hold authorizations like standard processors.
           </AlertDescription>
         </Alert>
       )}

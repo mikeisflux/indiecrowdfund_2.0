@@ -43,12 +43,12 @@ export function PaymentProcessorSection({
       )}
 
       {mustUseAltProcessor && (
-        <Alert className="bg-amber-50/50 dark:bg-amber-900/20 border-amber-500/30">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertTitle>Stripe Not Available</AlertTitle>
+        <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
+          <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
+          <AlertTitle>Alternative Processor Required</AlertTitle>
           <AlertDescription>
-            Projects with adult or controversial content cannot use Stripe for payment processing.
-            PayPal, DivinityCoin, and Whop are all available and fully supported.
+            Projects with adult or controversial content must use DivinityCoin or Whop for payment processing.
+            Stripe and PayPal do not process payments for this type of content.
           </AlertDescription>
         </Alert>
       )}
@@ -58,8 +58,8 @@ export function PaymentProcessorSection({
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "PAYPAL" ? "border-2 border-primary" : "border"
-          } ${isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => !isLaunched && updatePayment({ paymentProcessor: "PAYPAL" })}
+          } ${mustUseAltProcessor || isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={() => !mustUseAltProcessor && !isLaunched && updatePayment({ paymentProcessor: "PAYPAL" })}
         >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -68,13 +68,19 @@ export function PaymentProcessorSection({
                   <Wallet className="h-5 w-5 text-white" />
                 </div>
                 PayPal
-                <Badge variant="secondary" className="ml-2">Recommended</Badge>
+                {!mustUseAltProcessor && (
+                  <Badge variant="secondary" className="ml-2">Recommended</Badge>
+                )}
               </CardTitle>
               {payment.paymentProcessor === "PAYPAL" && (
                 <CheckCircle className="h-5 w-5 text-primary" />
               )}
             </div>
-            <CardDescription>PayPal & card payments</CardDescription>
+            <CardDescription>
+              {mustUseAltProcessor
+                ? "Not available for adult/controversial content"
+                : "PayPal & card payments"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
@@ -108,6 +114,9 @@ export function PaymentProcessorSection({
                   <Banknote className="h-5 w-5 text-white" />
                 </div>
                 DivinityCoin
+                {mustUseAltProcessor && (
+                  <Badge variant="default" className="ml-2 bg-[#0066FF]">Required</Badge>
+                )}
               </CardTitle>
               {payment.paymentProcessor === "DIVINITYCOIN" && (
                 <CheckCircle className="h-5 w-5 text-primary" />
