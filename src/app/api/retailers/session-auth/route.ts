@@ -75,8 +75,14 @@ export async function POST() {
 
     if (!retailer) {
       // User has retailerAccess but no linked retailer - try to find by email
+      if (!user.email) {
+        return NextResponse.json(
+          { error: "No retailer profile found.", requiresApplication: true },
+          { status: 404 }
+        );
+      }
       const retailerByEmail = await db.retailer.findUnique({
-        where: { email: user.email! }
+        where: { email: user.email }
       });
 
       if (!retailerByEmail) {

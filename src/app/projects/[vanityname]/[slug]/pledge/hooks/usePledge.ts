@@ -238,7 +238,8 @@ export function usePledge() {
       const result = await createAdditionalItemsAPI(existingPledgeId, selectedAddons, addItemsTotal);
       setCurrentPledgeId(result.pledgeId);
       if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));
-      setClientSecret(result.clientSecret!);
+      if (!result.clientSecret) throw new Error("Invalid payment response - missing client secret");
+      setClientSecret(result.clientSecret);
       setIntentType((result.type || "payment_intent") as "payment_intent" | "setup_intent");
       setIsProcessing(false);
     } catch (err) {

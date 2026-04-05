@@ -454,13 +454,13 @@ export default function ReconcilePage() {
                               </div>
                             )}
 
-                            {(result.details.downgraded?.length ?? 0) > 0 && (
+                            {result.details.downgraded && result.details.downgraded.length > 0 && (
                               <div className="text-sm">
                                 <p className="text-red-600 font-medium">
-                                  Downgraded — No Verified Payment ({result.details.downgraded!.length}):
+                                  Downgraded — No Verified Payment ({result.details.downgraded.length}):
                                 </p>
                                 <ul className="list-disc list-inside text-xs text-muted-foreground">
-                                  {result.details.downgraded!.map((item: string, i: number) => (
+                                  {result.details.downgraded.map((item: string, i: number) => (
                                     <li key={i}>{item}</li>
                                   ))}
                                 </ul>
