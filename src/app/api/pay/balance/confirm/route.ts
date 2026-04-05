@@ -38,10 +38,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Already confirmed" });
     }
 
-    // Calculate balance due
+    // Calculate balance due — prefer the stored value (set by order edits or balance adjustments)
+    const storedBalanceDue = meta.balanceDue != null ? Number(meta.balanceDue) : null;
     const pledgeTotal = Number(pledge.amount);
     const expectedTotal = Number(pledge.rewardAmount) + Number(pledge.addonsAmount) + Number(pledge.shippingAmount);
-    const balanceDue = Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
+    const balanceDue = storedBalanceDue !== null
+      ? Math.max(0, Math.round(storedBalanceDue * 100) / 100)
+      : Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
 
     // Update the pledge: add balance to pledge amount and mark as paid
     await db.pledge.update({

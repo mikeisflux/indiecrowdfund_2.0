@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { syncProjectStats } from "@/lib/stats";
 
@@ -10,10 +11,30 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id: projectId } = await params;
 
-    const exists = await db.project.findUnique({
-      where: { id: projectId },
+    // Verify user is the project creator, a collaborator, or an admin
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+
+    const exists = await db.project.findFirst({
+      where: {
+        id: projectId,
+        ...(!isAdmin ? {
+          OR: [
+            { creatorId: session.user.id },
+            { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+          ],
+        } : {}),
+      },
       select: { id: true },
     });
 
