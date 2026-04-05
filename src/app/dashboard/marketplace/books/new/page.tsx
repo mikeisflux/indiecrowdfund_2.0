@@ -671,16 +671,24 @@ function NewBookForm() {
           return false;
         }
         return true;
-      case 3:
-        if (!formData.price || parseFloat(formData.price) <= 0) {
+      case 3: {
+        const priceVal = parseFloat(formData.price);
+        if (!formData.price || isNaN(priceVal) || priceVal <= 0) {
           toast.error("Please enter a valid price");
           return false;
         }
+        if (priceVal > 99999.99) {
+          toast.error("Price cannot exceed $99,999.99");
+          return false;
+        }
         return true;
+      }
       default:
         return true;
     }
   };
+
+  const currencySymbol = formData.currency === "EUR" ? "€" : formData.currency === "GBP" ? "£" : "$";
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
@@ -980,15 +988,15 @@ function NewBookForm() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Your Price</span>
-                    <span>${parseFloat(formData.price || "0").toFixed(2)}</span>
+                    <span>{currencySymbol}{parseFloat(formData.price || "0").toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Platform Fee (3%)</span>
-                    <span>-${(parseFloat(formData.price || "0") * 0.03).toFixed(2)}</span>
+                    <span>-{currencySymbol}{(parseFloat(formData.price || "0") * 0.03).toFixed(2)}</span>
                   </div>
                   <div className="border-t border-border pt-2 flex justify-between font-semibold text-emerald-500 dark:text-emerald-400">
                     <span>You Receive</span>
-                    <span>${(parseFloat(formData.price || "0") * 0.97).toFixed(2)}</span>
+                    <span>{currencySymbol}{(parseFloat(formData.price || "0") * 0.97).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -1028,10 +1036,10 @@ function NewBookForm() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <p className="text-muted-foreground text-sm line-clamp-3">{formData.description || "No description"}</p>
+                  <p className="text-muted-foreground text-sm line-clamp-3">{(formData.description || "No description").replace(/<[^>]*>/g, "").trim() || "No description"}</p>
                   <div className="flex items-center justify-between mt-4">
                     <span className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">
-                      ${parseFloat(formData.price || "0").toFixed(2)}
+                      {currencySymbol}{parseFloat(formData.price || "0").toFixed(2)}
                     </span>
                     <Badge className={
                       formData.paymentProcessor === "DIVINITYCOIN"

@@ -140,7 +140,7 @@ export async function GET(
           },
         },
         refundRequest: {
-          select: { id: true, status: true, reason: true, creatorNote: true, createdAt: true },
+          select: { id: true, status: true, reason: true, creatorNote: true, createdAt: true, processedAt: true },
         },
       },
     });

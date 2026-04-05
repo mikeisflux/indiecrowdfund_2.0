@@ -179,8 +179,12 @@ export function ChatRoom() {
       }
 
       if (isPolling && data.messages.length > 0) {
-        // Append new messages
-        setMessages((prev) => [...prev, ...data.messages]);
+        // Append new messages (deduplicate to handle race conditions)
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map(m => m.id));
+          const newMessages = data.messages.filter((m: { id: string }) => !existingIds.has(m.id));
+          return newMessages.length > 0 ? [...prev, ...newMessages] : prev;
+        });
         scrollToBottom();
       } else if (!isPolling) {
         // Initial load

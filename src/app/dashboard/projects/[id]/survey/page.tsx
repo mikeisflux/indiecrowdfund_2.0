@@ -196,9 +196,13 @@ export default function SurveyBuilderPage() {
 
       if (response.ok) {
         await fetchSurvey();
+        toast.success("Survey created");
+      } else {
+        toast.error("Failed to create survey");
       }
     } catch (error) {
       console.error("Error creating survey:", error);
+      toast.error("Failed to create survey");
     } finally {
       setIsSaving(false);
     }
@@ -220,9 +224,13 @@ export default function SurveyBuilderPage() {
 
       if (response.ok) {
         await fetchSurvey();
+        toast.success("Survey saved");
+      } else {
+        toast.error("Failed to save survey");
       }
     } catch (error) {
       console.error("Error updating survey:", error);
+      toast.error("Failed to save survey");
     } finally {
       setIsSaving(false);
     }
