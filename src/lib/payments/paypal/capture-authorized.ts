@@ -80,6 +80,10 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
       const captureData = await captureRes.json();
       if (captureData.status !== "COMPLETED") {
         captureLogger.warn({ pledgeId: pledge.id, status: captureData.status }, "PayPal capture not COMPLETED");
+        await db.pledge.update({
+          where: { id: pledge.id },
+          data: { status: "FAILED", lastFailureReason: `PayPal capture returned status: ${captureData.status}` },
+        });
         failed++;
         continue;
       }

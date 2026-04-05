@@ -1063,8 +1063,31 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         backerId={backer.id}
         backerName={backer.name}
         currentBalance={backer.balance?.balanceDue || 0}
-        onSave={(adjustment) => {
-          console.log("Balance adjustment:", adjustment);
+        onSave={async (adjustment) => {
+          if (!backer.projectId) return;
+          try {
+            const res = await apiFetch("/api/creator/indiekit/orders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "adjust_balance",
+                pledgeId: backer.id,
+                projectId: backer.projectId,
+                adjustmentType: adjustment.type,
+                amount: adjustment.amount,
+                reason: adjustment.reason,
+              }),
+            });
+            if (!res.ok) {
+              const data = await res.json();
+              toast.error(data.error || "Failed to save balance adjustment");
+            } else {
+              toast.success(`Balance ${adjustment.type === "credit" ? "credit" : "charge"} of $${adjustment.amount.toFixed(2)} applied`);
+              onRefresh?.();
+            }
+          } catch {
+            toast.error("Failed to save balance adjustment");
+          }
         }}
       />
 
@@ -1095,8 +1118,35 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         orderId={backer.id}
         backerName={backer.name}
         backerEmail={backer.email}
-        onSave={(tracking) => {
-          console.log("Tracking added:", tracking);
+        onSave={async (tracking) => {
+          if (!backer.projectId) return;
+          try {
+            const res = await apiFetch("/api/creator/indiekit/orders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "add_tracking",
+                pledgeId: backer.id,
+                projectId: backer.projectId,
+                carrier: tracking.carrier,
+                trackingNumber: tracking.trackingNumber,
+                notifyBacker: tracking.notifyBacker,
+                markAsShipped: tracking.markAsShipped,
+              }),
+            });
+            if (!res.ok) {
+              const data = await res.json();
+              toast.error(data.error || "Failed to save tracking info");
+            } else {
+              toast.success("Tracking information saved");
+              if (tracking.notifyBacker) {
+                toast.info(`Shipping notification sent to ${backer.email}`);
+              }
+              onRefresh?.();
+            }
+          } catch {
+            toast.error("Failed to save tracking info");
+          }
         }}
       />
 

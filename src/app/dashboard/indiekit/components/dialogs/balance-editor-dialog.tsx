@@ -68,9 +68,7 @@ export function BalanceEditorDialog({
       reason: `${category ? `[${category}] ` : ""}${reason}`,
     });
 
-    toast.success(`Balance ${adjustmentType === "credit" ? "credit" : "charge"} of $${parsedAmount.toFixed(2)} applied`);
-
-    // Reset and close
+    // Reset and close (success toast shown by parent after API call)
     setAmount("");
     setReason("");
     setCategory("");

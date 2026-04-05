@@ -82,13 +82,7 @@ export function TrackingDialog({
       markAsShipped,
     });
 
-    toast.success("Tracking information saved");
-
-    if (notifyBacker) {
-      toast.info(`Notification sent to ${backerEmail}`);
-    }
-
-    // Reset and close
+    // Reset and close (success/notification toasts shown by parent after API call)
     setCarrier("");
     setTrackingNumber("");
     onOpenChange(false);

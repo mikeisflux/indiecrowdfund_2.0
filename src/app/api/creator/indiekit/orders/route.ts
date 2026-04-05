@@ -5,6 +5,7 @@ const creatorIndiekitOrdersLogger = logger.child({ module: "creator-indiekit-ord
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -331,5 +332,176 @@ export async function PATCH(req: NextRequest) {
       { error: "Failed to update order" },
       { status: 500 }
     );
+  }
+}
+
+const addTrackingSchema = z.object({
+  action: z.literal("add_tracking"),
+  pledgeId: z.string(),
+  projectId: z.string(),
+  carrier: z.string().min(1),
+  trackingNumber: z.string().min(1),
+  notifyBacker: z.boolean().optional().default(false),
+  markAsShipped: z.boolean().optional().default(true),
+});
+
+const adjustBalanceSchema = z.object({
+  action: z.literal("adjust_balance"),
+  pledgeId: z.string(),
+  projectId: z.string(),
+  adjustmentType: z.enum(["credit", "charge"]),
+  amount: z.number().positive(),
+  reason: z.string().optional(),
+});
+
+// POST - Add tracking info or adjust balance for a pledge
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { action } = body;
+
+    if (action === "add_tracking") {
+      const data = addTrackingSchema.parse(body);
+
+      // Verify creator access
+      const project = await db.project.findFirst({
+        where: {
+          id: data.projectId,
+          OR: [
+            { creatorId: session.user.id },
+            { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+          ],
+        },
+        select: { id: true, title: true },
+      });
+      if (!project) {
+        return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+      }
+
+      const pledge = await db.pledge.findFirst({
+        where: { id: data.pledgeId, projectId: data.projectId, status: "COMPLETED" },
+        include: { user: { select: { email: true, name: true } } },
+      });
+      if (!pledge) {
+        return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+      }
+
+      const existingMeta = (pledge.metadata as Record<string, unknown>) || {};
+      const tracking = {
+        carrier: data.carrier,
+        trackingNumber: data.trackingNumber,
+        addedAt: new Date().toISOString(),
+        addedBy: session.user.id,
+      };
+
+      await db.pledge.update({
+        where: { id: data.pledgeId },
+        data: {
+          metadata: { ...existingMeta, tracking },
+          ...(data.markAsShipped ? { fulfillmentStatus: "SHIPPED" } : {}),
+        },
+      });
+
+      // Send backer notification email
+      if (data.notifyBacker && pledge.user.email) {
+        try {
+          await sendEmail({
+            to: pledge.user.email,
+            subject: `Your order has shipped!`,
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2>Your order is on its way!</h2>
+                <p>Hi ${pledge.user.name || "Backer"},</p>
+                <p>Great news! Your order for <strong>${project.title}</strong> has shipped.</p>
+                <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                  <p style="margin: 0;"><strong>Carrier:</strong> ${data.carrier.toUpperCase()}</p>
+                  <p style="margin: 8px 0 0;"><strong>Tracking Number:</strong> <code>${data.trackingNumber}</code></p>
+                </div>
+                <p>Thank you for your support!</p>
+              </div>
+            `,
+          });
+        } catch (emailErr) {
+          creatorIndiekitOrdersLogger.error({ err: String(emailErr) }, "Failed to send tracking notification email");
+        }
+      }
+
+      return NextResponse.json({ success: true, tracking });
+    }
+
+    if (action === "adjust_balance") {
+      const data = adjustBalanceSchema.parse(body);
+
+      // Verify creator access
+      const project = await db.project.findFirst({
+        where: {
+          id: data.projectId,
+          OR: [
+            { creatorId: session.user.id },
+            { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!project) {
+        return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+      }
+
+      const pledge = await db.pledge.findFirst({
+        where: { id: data.pledgeId, projectId: data.projectId, status: "COMPLETED" },
+      });
+      if (!pledge) {
+        return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+      }
+
+      const existingMeta = (pledge.metadata as Record<string, unknown>) || {};
+
+      // Compute current balanceDue (same logic as compute-stats.ts)
+      const storedBalanceDue = existingMeta.balanceDue != null ? Number(existingMeta.balanceDue) : null;
+      const pledgeTotal = Number(pledge.amount);
+      const expectedTotal = Number(pledge.rewardAmount) + Number(pledge.addonsAmount) + Number(pledge.shippingAmount);
+      const computedBalanceDue = storedBalanceDue !== null ? storedBalanceDue : Math.max(0, expectedTotal - pledgeTotal);
+
+      // Apply adjustment: credit reduces balance, charge increases it
+      const delta = data.adjustmentType === "credit" ? -data.amount : data.amount;
+      const newBalanceDue = Math.round((computedBalanceDue + delta) * 100) / 100;
+
+      // Record adjustment history
+      const adjustments = Array.isArray(existingMeta.adjustments) ? existingMeta.adjustments : [];
+      adjustments.push({
+        type: data.adjustmentType,
+        amount: data.amount,
+        reason: data.reason || "",
+        previousBalance: computedBalanceDue,
+        newBalance: newBalanceDue,
+        adjustedAt: new Date().toISOString(),
+        adjustedBy: session.user.id,
+      });
+
+      await db.pledge.update({
+        where: { id: data.pledgeId },
+        data: {
+          metadata: { ...existingMeta, balanceDue: newBalanceDue, adjustments },
+        },
+      });
+
+      return NextResponse.json({ success: true, newBalanceDue });
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid request data", details: error.issues },
+        { status: 400 }
+      );
+    }
+    creatorIndiekitOrdersLogger.error({ err: String(error) }, "Orders POST error:");
+    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }
