@@ -292,16 +292,16 @@ export function PaymentStep() {
   const goalAmount = basics.goalAmount || 10000;
   const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
 
-  // If adult/risky content is selected, Stripe is NOT allowed (must use DivinityCoin)
+  // If adult/risky content is selected, Stripe is NOT allowed (PayPal/DivinityCoin/Whop are all fine)
   const mustUseAltProcessor = payment.hasAdultContent || payment.hasRiskyContent;
 
   const campaignType = payment.campaignType || "ALL_OR_NOTHING";
   const isLaunched = ["LIVE", "FUNDED", "FAILED", "CANCELLED"].includes(projectStatus || "");
 
-  // Auto-switch away from Stripe/PayPal if adult content is selected (DivinityCoin and Whop are allowed)
+  // Auto-switch away from Stripe if adult/controversial content is selected (PayPal/DivinityCoin/Whop are all allowed)
   useEffect(() => {
-    if (mustUseAltProcessor && payment.paymentProcessor !== "DIVINITYCOIN" && payment.paymentProcessor !== "WHOP") {
-      updatePayment({ paymentProcessor: "DIVINITYCOIN" });
+    if (mustUseAltProcessor && payment.paymentProcessor === "STRIPE") {
+      updatePayment({ paymentProcessor: "PAYPAL" });
     }
   }, [mustUseAltProcessor, payment.paymentProcessor, updatePayment]);
 

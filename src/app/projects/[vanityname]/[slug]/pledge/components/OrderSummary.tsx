@@ -560,12 +560,8 @@ export function OrderSummary({
               </Label>
             </div>
 
-            {/* Status message - different for DivinityCoin vs Stripe */}
-            {project?.paymentProcessor === "DIVINITYCOIN" ? (
-              <p className="text-xs text-center text-muted-foreground py-2">
-                Use DivinityCoin to complete your pledge.
-              </p>
-            ) : !clientSecret ? (
+            {/* Status message - show spinner while payment is being set up */}
+            {!clientSecret ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>
@@ -579,11 +575,13 @@ export function OrderSummary({
             <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
               By submitting your pledge, you agree to IndieCrowdfund&apos;s{" "}
               <Link href="/terms" className="underline">Terms of Use</Link>
-              , and{" "}
+              {" "}and{" "}
               <Link href="/privacy" className="underline">Privacy Policy</Link>
               {project?.paymentProcessor === "DIVINITYCOIN"
                 ? ", and for DivinityCoin to process your payment."
-                : ", and for our payment processor, Stripe, to charge your payment method."
+                : project?.paymentProcessor === "WHOP"
+                ? ", and for Whop to process your payment."
+                : ", and for PayPal to process your payment."
               }
             </p>
           </div>

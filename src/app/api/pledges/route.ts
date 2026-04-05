@@ -255,22 +255,30 @@ export async function POST(req: NextRequest) {
             select: { email: true, name: true },
           });
 
-          const dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${dcConfig.apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              amount: Math.round(data.amount * 100),
-              currency: "usd",
-              platformUserId: session.user.id,
-              email: userRecord?.email || "",
-              name: userRecord?.name || "",
-              pledgeId: pledge.id,
-              projectId: data.projectId,
-            }),
-          });
+          const dcAbortController = new AbortController();
+          const dcTimeout = setTimeout(() => dcAbortController.abort(), 15000); // 15s timeout
+          let dcResponse: Response;
+          try {
+            dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${dcConfig.apiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                amount: Math.round(data.amount * 100),
+                currency: "usd",
+                platformUserId: session.user.id,
+                email: userRecord?.email || "",
+                name: userRecord?.name || "",
+                pledgeId: pledge.id,
+                projectId: data.projectId,
+              }),
+              signal: dcAbortController.signal,
+            });
+          } finally {
+            clearTimeout(dcTimeout);
+          }
 
           const dcResult = await dcResponse.json();
           if (!dcResponse.ok || !dcResult.success) {
@@ -298,13 +306,16 @@ export async function POST(req: NextRequest) {
             chargedImmediately: true,
           });
         } catch (dcError) {
-          pledgeLogger.error({ correlationId, pledgeId: pledge.id, err: dcError instanceof Error ? dcError.message : String(dcError) }, "DivinityCoin API error");
+          const isTimeout = dcError instanceof Error && dcError.name === "AbortError";
+          pledgeLogger.error({ correlationId, pledgeId: pledge.id, err: dcError instanceof Error ? dcError.message : String(dcError), isTimeout }, "DivinityCoin API error");
           await db.pledgeAddon.deleteMany({ where: { pledgeId: pledge.id } });
           await db.pledge.delete({ where: { id: pledge.id } });
-          return NextResponse.json(
-            { error: "Failed to connect to payment processor" },
-            { status: 502 }
-          );
+          const errMsg = isTimeout
+            ? "Payment processor timed out. Please try again."
+            : dcError instanceof Error && dcError.message.includes("not configured")
+            ? "Payment processor not configured. Please contact support."
+            : "Failed to connect to payment processor. Please try again.";
+          return NextResponse.json({ error: errMsg }, { status: 502 });
         }
       }
 

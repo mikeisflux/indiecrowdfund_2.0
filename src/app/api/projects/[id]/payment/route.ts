@@ -86,9 +86,9 @@ export async function POST(
       // NSFW campaigns can NEVER switch to Stripe
       const isNsfw = (data.hasAdultContent ?? currentProject?.hasAdultContent) ||
                      (data.hasRiskyContent ?? currentProject?.hasRiskyContent);
-      if ((data.paymentProcessor === "STRIPE" || data.paymentProcessor === "PAYPAL") && isNsfw) {
+      if (data.paymentProcessor === "STRIPE" && isNsfw) {
         return NextResponse.json(
-          { error: "Projects with adult or controversial content cannot use Stripe or PayPal" },
+          { error: "Projects with adult or controversial content cannot use Stripe" },
           { status: 400 }
         );
       }
@@ -96,7 +96,7 @@ export async function POST(
     }
 
     // Automatically set payment processor and campaign type based on content flags
-    // Adult or risky content cannot use Stripe/PayPal and must use Keep It All
+    // Adult or risky content cannot use Stripe — PayPal/DivinityCoin/Whop are all allowed
     if (data.hasAdultContent !== undefined || data.hasRiskyContent !== undefined) {
       const hasAdult = data.hasAdultContent ?? false;
       const hasRisky = data.hasRiskyContent ?? false;
@@ -105,10 +105,10 @@ export async function POST(
         if (!updateData.campaignType) {
           updateData.campaignType = "KEEP_IT_ALL";
         }
-        // Only force-switch if currently on Stripe or PayPal (leave DIVINITYCOIN/WHOP as-is)
+        // Only force-switch if currently on Stripe (PayPal/DivinityCoin/Whop are all fine)
         const currentProcessor = currentProject?.paymentProcessor;
-        if ((currentProcessor === "STRIPE" || currentProcessor === "PAYPAL") && !updateData.paymentProcessor) {
-          updateData.paymentProcessor = "DIVINITYCOIN";
+        if (currentProcessor === "STRIPE" && !updateData.paymentProcessor) {
+          updateData.paymentProcessor = "PAYPAL";
         }
       }
     }
