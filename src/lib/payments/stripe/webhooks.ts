@@ -146,7 +146,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         await notifyPledgeReceived(
           pledge.projectId,
           pledge.project.creatorId,
-          pledge.user.name || "A backer",
+          pledge.user?.name || "A backer",
           Number(pledge.amount)
         );
       } catch (notifyError) {

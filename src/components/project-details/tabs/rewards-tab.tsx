@@ -278,7 +278,7 @@ export function RewardsTab({
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1 min-w-0">
                                     <p className="font-medium text-sm">{addon.title}</p>
-                                    <p className="text-sm text-[#05ce78]">+${addon.amount}</p>
+                                    <p className="text-sm text-[#05ce78]">+${Number(addon.amount).toFixed(2)}</p>
                                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                                       {addon.description}
                                       {addon.description.length > 80 && (
