@@ -96,6 +96,12 @@ export async function POST() {
 
     for (const row of rows) {
       try {
+        // Skip rows missing required name field
+        if (!row.name?.trim()) {
+          skipped++;
+          continue;
+        }
+
         // Generate unique slug
         const baseSlug = generateSlug(row.name, row.city, row.state);
         let slug = baseSlug;

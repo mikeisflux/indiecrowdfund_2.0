@@ -1039,7 +1039,7 @@ export function BackersTab({
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
                         {backer.avatar && <AvatarImage src={backer.avatar} />}
-                        <AvatarFallback>{backer.name[0]}</AvatarFallback>
+                        <AvatarFallback>{backer.name?.[0] ?? "?"}</AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium">{backer.name}</p>
