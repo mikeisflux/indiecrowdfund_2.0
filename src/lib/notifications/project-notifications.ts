@@ -133,9 +133,9 @@ export async function notifyProjectLaunched(projectId: string) {
 
   // Notify all followers (except the creator) - in-app notifications
   const notifications = project.followers
-    .filter((f: { userId: string | null }) => f.userId && f.userId !== project.creatorId)
-    .map((follower: { userId: string | null }) => ({
-      userId: follower.userId!,
+    .filter((f: { userId: string | null }): f is { userId: string } => f.userId !== null && f.userId !== project.creatorId)
+    .map((follower: { userId: string }) => ({
+      userId: follower.userId,
       type: "PROJECT_LAUNCHED" as NotificationType,
       title: "Project Launched!",
       message: `"${project.title}" is now live!`,

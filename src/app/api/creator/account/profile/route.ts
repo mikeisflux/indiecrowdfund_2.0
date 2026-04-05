@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     // Check if email is being changed and if it's already taken
     if (email && email !== session.user.email?.toLowerCase()) {
       const existingUser = await db.user.findFirst({
-        where: { email: { equals: email, mode: "insensitive" } },
+        where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
       });
 
       if (existingUser && existingUser.id !== session.user.id) {

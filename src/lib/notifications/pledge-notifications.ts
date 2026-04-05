@@ -165,7 +165,7 @@ export async function notifyBackerPledgeConfirmed(
     },
   });
 
-  if (!pledge || !pledge.user.email) return;
+  if (!pledge || !pledge.user?.email) return;
 
   // Check if confirmation email was already sent (prevent duplicates)
   if (pledge.confirmationEmailSent) {
@@ -430,7 +430,7 @@ export async function processUnsentConfirmationEmails() {
   };
 
   for (const pledge of allUnsent) {
-    if (!pledge.user.email) {
+    if (!pledge.user?.email) {
       results.failed++;
       continue;
     }

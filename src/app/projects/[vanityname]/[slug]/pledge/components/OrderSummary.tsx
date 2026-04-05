@@ -88,7 +88,7 @@ export function OrderSummary({
             <div className="py-4 border-b">
               <div className="flex justify-between text-sm">
                 <span>Shipping from {project?.creator?.location || "creator"}</span>
-                <span>${addonsShipping}</span>
+                <span>${Number(addonsShipping).toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -505,7 +505,7 @@ export function OrderSummary({
               <span className="font-medium uppercase text-sm">
                 {pledgeWithoutReward ? "No reward" : selectedReward?.title}
               </span>
-              <span className="font-semibold">${pledgeWithoutReward ? customPledgeAmount : selectedReward?.amount}.00</span>
+              <span className="font-semibold">${Number(pledgeWithoutReward ? customPledgeAmount : selectedReward?.amount ?? 0).toFixed(2)}</span>
             </div>
           </div>
 

@@ -77,7 +77,7 @@ export function RewardSelector({
                 onClick={handlePledgeWithoutReward}
                 className="bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white whitespace-nowrap shadow-lg shadow-[#028858]/20"
               >
-                Pledge ${customPledgeAmount}
+                Pledge ${Number(customPledgeAmount).toFixed(2)}
               </Button>
             </div>
           </div>
@@ -189,7 +189,7 @@ export function RewardSelector({
                     <div className="w-full md:w-44 flex-shrink-0 flex flex-col border-t md:border-t-0 md:border-l order-1 md:order-2">
                       {/* Mobile price badge - visible only on mobile since content reorders */}
                       <div className="md:hidden bg-gradient-to-r from-zinc-900 to-zinc-800 text-white px-4 py-2 flex items-center justify-between">
-                        <span className="font-semibold text-lg">${reward.amount}</span>
+                        <span className="font-semibold text-lg">${Number(reward.amount).toFixed(2)}</span>
                         {shipping > 0 && (
                           <span className="text-zinc-300 text-sm">+${Number(shipping).toFixed(2)} shipping</span>
                         )}
@@ -218,7 +218,7 @@ export function RewardSelector({
                         onClick={() => handleSelectReward(reward)}
                         className="rounded-b-xl md:rounded-none h-12 bg-gradient-to-r from-[#028858] to-emerald-600 hover:from-[#026d47] hover:to-emerald-700 text-white font-medium shadow-lg shadow-[#028858]/20"
                       >
-                        Pledge ${reward.amount}
+                        Pledge ${Number(reward.amount).toFixed(2)}
                       </Button>
                     </div>
                   </div>
