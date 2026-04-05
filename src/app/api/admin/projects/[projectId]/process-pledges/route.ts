@@ -114,8 +114,8 @@ export async function GET(
       });
       dcTransactionsByPledge = Object.fromEntries(
         dcTransactions
-          .filter((t: { pledgeId: string | null }): t is { pledgeId: string } => t.pledgeId !== null)
-          .map((t) => [t.pledgeId, true])
+          .filter((t: { pledgeId: string | null }) => t.pledgeId !== null)
+          .map((t: { pledgeId: string | null }) => [t.pledgeId as string, true])
       );
     }
 
@@ -412,8 +412,8 @@ async function processDivinityCoinPendingPledges(projectId: string, specificPled
 
   const dcTransactionMap = new Map(
     dcTransactions
-      .filter((t: { pledgeId: string | null }): t is { pledgeId: string } & typeof t => t.pledgeId !== null)
-      .map((t) => [t.pledgeId, t])
+      .filter((t: { pledgeId: string | null }) => t.pledgeId !== null)
+      .map((t: { pledgeId: string | null }) => [t.pledgeId as string, t])
   );
 
   const results = {
@@ -532,8 +532,8 @@ async function verifyDivinityCoinPledges(projectId: string) {
 
   const dcTransactionMap = new Map(
     dcTransactions
-      .filter((t: { pledgeId: string | null }): t is { pledgeId: string } & typeof t => t.pledgeId !== null)
-      .map((t) => [t.pledgeId, t])
+      .filter((t: { pledgeId: string | null }) => t.pledgeId !== null)
+      .map((t: { pledgeId: string | null }) => [t.pledgeId as string, t])
   );
 
   const results = {

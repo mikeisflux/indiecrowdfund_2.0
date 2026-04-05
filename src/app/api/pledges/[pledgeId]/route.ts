@@ -519,6 +519,13 @@ export async function PATCH(
 
       const { rewardId, addonIds, addons, newAmount } = body;
 
+      // Validate newAmount
+      if (newAmount !== undefined && newAmount !== null) {
+        if (typeof newAmount !== "number" || isNaN(newAmount) || newAmount < 0) {
+          return NextResponse.json({ error: "Invalid pledge amount" }, { status: 400 });
+        }
+      }
+
       // Support both new format (addons with quantities) and legacy format (addonIds)
       const addonsWithQuantity: { id: string; quantity: number }[] = addons ||
         (addonIds ? addonIds.map((id: string) => ({ id, quantity: 1 })) : []);
@@ -814,14 +821,13 @@ export async function PATCH(
         );
       }
 
-      if (!amount || amount <= 0) {
+      const additionalAmount = typeof amount === "number" ? amount : parseFloat(amount);
+      if (!additionalAmount || isNaN(additionalAmount) || additionalAmount <= 0) {
         return NextResponse.json(
-          { error: "Additional amount must be positive" },
+          { error: "Additional amount must be a positive number" },
           { status: 400 }
         );
       }
-
-      const additionalAmount = parseFloat(amount);
       const newTotal = Number(pledge.amount) + additionalAmount;
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
       const isCharged = pledge.status === "COMPLETED";
@@ -900,12 +906,26 @@ export async function PATCH(
             );
           }
         }
+
+        // No payment method available for upcharge on completed pledges
+        return NextResponse.json(
+          { error: "To increase your pledge amount, please use 'Change Reward or Add-ons' from your pledge dashboard." },
+          { status: 400 }
+        );
       }
 
-      // Not yet charged (PENDING) - just update the pledge amount
+      // Not yet charged (PENDING) - just update the pledge amount and project total
       await db.pledge.update({
         where: { id: pledgeId },
         data: { amount: newTotal },
+      });
+
+      // Update project current amount to reflect the increase
+      await db.project.update({
+        where: { id: pledge.projectId },
+        data: {
+          currentAmount: { increment: additionalAmount },
+        },
       });
 
       return NextResponse.json({

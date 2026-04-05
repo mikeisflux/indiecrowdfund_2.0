@@ -14,13 +14,7 @@ async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
     where: {
       creatorId: userId,
       deletedAt: null,
-      OR: [
-        { status: "FUNDED" },
-        // Also check projects that reached their goal but may still be LIVE
-        {
-          status: { in: ["LIVE", "FUNDED"] },
-        },
-      ],
+      status: { in: ["LIVE", "FUNDED"] },
     },
     select: {
       id: true,
@@ -351,7 +345,7 @@ export async function GET(
       },
     });
 
-    if (!project) {
+    if (!project || project.deletedAt) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
@@ -389,10 +383,10 @@ export async function PATCH(
 
     const project = await db.project.findUnique({
       where: { id },
-      select: { creatorId: true, status: true, prelaunchStatus: true },
+      select: { creatorId: true, status: true, prelaunchStatus: true, deletedAt: true },
     });
 
-    if (!project) {
+    if (!project || project.deletedAt) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
@@ -665,7 +659,7 @@ export async function PATCH(
                 estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
                 shippingType: reward.shippingType,
                 shippingCountries: reward.shippingCountries || [],
-                shippingCost: reward.shippingCost || 0,
+                shippingCost: reward.shippingCost || {},
                 quantityAvailable: reward.quantityAvailable ?? null,
                 isEnded: reward.isEnded || false,
               };
