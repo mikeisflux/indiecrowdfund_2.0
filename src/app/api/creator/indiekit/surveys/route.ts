@@ -226,6 +226,11 @@ export async function PATCH(req: NextRequest) {
           },
         ],
       },
+      include: {
+        creator: {
+          select: { name: true },
+        },
+      },
     });
 
     if (!project) {
@@ -295,7 +300,7 @@ export async function PATCH(req: NextRequest) {
                 pledge.user.email,
                 pledge.user.name || "Backer",
                 project.title,
-                session.user.name || "The Creator",
+                project.creator?.name || "The Creator",
                 pledge.id
               );
               emailsSent++;
@@ -387,7 +392,7 @@ export async function PATCH(req: NextRequest) {
                 pledge.user.email,
                 pledge.user.name || "Backer",
                 project.title,
-                session.user.name || "The Creator",
+                project.creator?.name || "The Creator",
                 pledge.id
               );
               emailsSent++;
@@ -459,7 +464,7 @@ export async function PATCH(req: NextRequest) {
                 pledge.user.email,
                 pledge.user.name || "Backer",
                 project.title,
-                session.user.name || "The Creator",
+                project.creator?.name || "The Creator",
                 pledge.id
               );
               emailsSent++;
