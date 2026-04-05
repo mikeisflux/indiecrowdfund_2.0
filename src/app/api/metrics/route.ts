@@ -16,13 +16,16 @@ export async function GET(req: Request) {
     }
   }
 
-  const body = serializeMetrics();
-
-  return new Response(body, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
-      "Cache-Control": "no-cache, no-store",
-    },
-  });
+  try {
+    const body = serializeMetrics();
+    return new Response(body, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
+        "Cache-Control": "no-cache, no-store",
+      },
+    });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to serialize metrics", details: String(error) }, { status: 500 });
+  }
 }
