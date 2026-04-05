@@ -148,6 +148,23 @@ export async function POST(request: Request) {
       updateData.prelaunchActive = false;
       updateData.prelaunchDescription = null;
       updateData.prelaunchStatus = "DRAFT";
+
+      // Set launch dates if not already set (admin MAKE_LIVE or REACTIVATE)
+      if (!project.launchedAt) {
+        const now = new Date();
+        updateData.launchDate = now;
+        updateData.launchedAt = now;
+
+        // Calculate endDate if not already set
+        if (!project.endDate) {
+          if (project.durationType === "FIXED_DAYS" && project.durationDays) {
+            const endDate = new Date(now);
+            endDate.setDate(endDate.getDate() + project.durationDays);
+            updateData.endDate = endDate;
+          }
+          // If durationType is END_DATE, the creator already set endDate in the builder
+        }
+      }
     }
 
     const updatedProject = await db.project.update({

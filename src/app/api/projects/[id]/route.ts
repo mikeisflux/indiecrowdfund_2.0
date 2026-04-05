@@ -589,8 +589,13 @@ export async function PATCH(
       if (projectData.googleAnalyticsId !== undefined) updateData.googleAnalyticsId = projectData.googleAnalyticsId;
       if (projectData.metaPixelId !== undefined) updateData.metaPixelId = projectData.metaPixelId;
 
-      // Status
-      if (projectData.status !== undefined) updateData.status = projectData.status;
+      // Status - only allow DRAFT→SUBMITTED transition via the dedicated /submit endpoint
+      // The PATCH endpoint should not allow status changes to prevent bypassing submission validations
+      // (AI moderation, fraud detection, field completeness checks)
+      if (projectData.status !== undefined && projectData.status === "DRAFT" && project.status === "SUBMITTED") {
+        // Allow reverting from SUBMITTED back to DRAFT (creator wants to make changes)
+        updateData.status = projectData.status;
+      }
     }
 
     // Update project using transaction if we have rewards to handle

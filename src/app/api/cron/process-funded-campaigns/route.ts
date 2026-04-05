@@ -123,6 +123,7 @@ export async function GET(req: NextRequest) {
         title: true,
         currentAmount: true,
         goalAmount: true,
+        campaignType: true,
         _count: {
           select: {
             pledges: {
@@ -137,10 +138,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Filter to only projects that are actually funded and have pending pledges
+    // Filter to only projects that are funded (or KEEP_IT_ALL) and have pending pledges
     const projectsToProcess = fundedProjectsWithPendingPledges.filter(
       (project) =>
-        Number(project.currentAmount) >= Number(project.goalAmount) &&
+        (project.campaignType === "KEEP_IT_ALL" || Number(project.currentAmount) >= Number(project.goalAmount)) &&
         project._count.pledges > 0
     );
 

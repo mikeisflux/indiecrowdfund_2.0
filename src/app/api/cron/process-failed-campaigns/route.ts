@@ -48,15 +48,21 @@ export async function GET(req: NextRequest) {
         goalAmount: true,
         paymentProcessor: true,
         fundedAt: true,
+        campaignType: true,
       },
     });
 
-    // Separate into funded (met goal) and failed (didn't meet goal)
+    // Separate into funded and failed
+    // KEEP_IT_ALL campaigns are always considered "funded" regardless of goal
     const fundedProjects = endedProjects.filter(
-      (project) => Number(project.currentAmount) >= Number(project.goalAmount)
+      (project) =>
+        project.campaignType === "KEEP_IT_ALL" ||
+        Number(project.currentAmount) >= Number(project.goalAmount)
     );
     const failedProjects = endedProjects.filter(
-      (project) => Number(project.currentAmount) < Number(project.goalAmount)
+      (project) =>
+        project.campaignType !== "KEEP_IT_ALL" &&
+        Number(project.currentAmount) < Number(project.goalAmount)
     );
 
     const results = {
