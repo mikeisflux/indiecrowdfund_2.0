@@ -80,35 +80,6 @@ async function buildNewsletterWhere(rules: SegmentRule[]) {
   return { isActive: true, OR: clauses };
 }
 
-/** Build a Prisma where clause from segment rules to count matching subscribers (used for newsletter-only lookups) */
-async function buildWhereFromRules(rules: SegmentRule[]) {
-  if (!rules.length) return { isActive: true };
-
-  const clauses: Record<string, unknown>[] = [];
-
-  for (const rule of rules) {
-    if (rule.type === "role") {
-      const users = await prisma.user.findMany({
-        where: { role: { in: rule.values } },
-        select: { email: true },
-      });
-      const emails = users.map((u) => u.email).filter(Boolean) as string[];
-      if (emails.length > 0) {
-        clauses.push({ email: { in: emails } });
-      }
-    } else {
-      for (const v of rule.values) {
-        clauses.push(
-          rule.type === "tag" ? { tags: { has: v } } : { source: { contains: v } }
-        );
-      }
-    }
-  }
-
-  if (!clauses.length) return { isActive: true };
-  return { isActive: true, OR: clauses };
-}
-
 // GET /api/admin/ai-marketing/segments
 export async function GET() {
   const adminAuth = await requireAdmin();

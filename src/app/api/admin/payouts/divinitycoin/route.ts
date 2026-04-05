@@ -583,7 +583,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate fee breakdown for the email
-    const [totalRaised, backerCount] = await Promise.all([
+    const [totalRaised] = await Promise.all([
       db.pledge.aggregate({
         where: { projectId, status: "COMPLETED", deletedAt: null },
         _sum: { amount: true },

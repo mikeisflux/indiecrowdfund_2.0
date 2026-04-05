@@ -52,7 +52,6 @@ import {
   Hash,
   Shield,
   FileText,
-  ChevronRight,
   RefreshCw,
   Trash2,
 } from "lucide-react";

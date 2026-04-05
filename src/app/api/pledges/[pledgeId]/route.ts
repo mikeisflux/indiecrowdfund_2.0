@@ -256,8 +256,6 @@ export async function PATCH(
     const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
     const campaignEnded = pledge.project.endDate && new Date(pledge.project.endDate) < new Date();
     const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status);
-    const campaignLive = pledge.project.status === "LIVE" || pledge.project.status === "PAUSED";
-
     if (action === "cancel") {
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
 

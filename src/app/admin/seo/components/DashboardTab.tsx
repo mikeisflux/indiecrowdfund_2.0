@@ -22,7 +22,6 @@ export function DashboardTab({
   auditHistory,
   isFixingAll,
   isFixingPage,
-  isRunningAudit,
   onFixPage,
   onFixAll,
   onEditMeta,

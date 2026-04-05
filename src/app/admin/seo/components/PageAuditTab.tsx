@@ -37,7 +37,6 @@ export function PageAuditTab({
   isFixingAll,
   isFixingPage,
   isRunningAudit,
-  pages,
   onFixAll,
   onFixPage,
   onRunAudit,

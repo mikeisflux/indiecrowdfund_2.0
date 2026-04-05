@@ -149,7 +149,7 @@ export function PaymentSettings({
       setStripeStatus(newStatus);
       onStripeStatusChange?.(newStatus);
     }
-  }, [onStripeStatusChange]);
+  }, [onStripeStatusChange, showStripe]);
 
   // Check DivinityCoin bank account status
   const checkBankAccountStatus = useCallback(async () => {

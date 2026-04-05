@@ -4,7 +4,8 @@ import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
-import { loadStripe, Stripe } from "@stripe/stripe-js/pure";
+import { loadStripe } from "@stripe/stripe-js/pure";
+import type { Stripe } from "@stripe/stripe-js";
 import { ProjectData, RewardData, AddonData, Step } from "../types";
 import { detectUserCountry } from "../constants";
 import {
@@ -224,7 +225,7 @@ export function usePledge() {
   // Reset guard on state clear
   useEffect(() => {
     if (!clientSecret && !paypalOrderId && !whopSessionId && !paymentError && !isProcessing) creatingPaymentRef.current = false;
-  }, [clientSecret, paypalOrderId, paymentError, isProcessing]);
+  }, [clientSecret, paypalOrderId, whopSessionId, paymentError, isProcessing]);
 
   const createAdditionalItemsPurchase = async () => {
     if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;

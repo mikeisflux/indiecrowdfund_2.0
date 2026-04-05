@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   FolderKanban,
   Clock,
-  CheckCircle,
   History,
   Flag,
   RefreshCw,

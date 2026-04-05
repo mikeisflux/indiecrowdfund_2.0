@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, MailCheck } from "lucide-react";
-import { Stripe } from "@stripe/stripe-js/pure";
+import type { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
 import { PayPalPaymentForm } from "./PayPalPaymentForm";
 import { WhopPaymentForm } from "./WhopPaymentForm";
