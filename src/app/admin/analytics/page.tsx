@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
       case "overview":
         if (overviewData) {
           csvContent = "Metric,Current,Previous,Growth\n";
-          csvContent += `Revenue,$${overviewData.revenue.current},$${overviewData.revenue.previous},${overviewData.revenue.growth}%\n`;
+          csvContent += `Revenue,$${Number(overviewData.revenue.current).toFixed(2)},$${Number(overviewData.revenue.previous).toFixed(2)},${overviewData.revenue.growth}%\n`;
           csvContent += `Users,${overviewData.users.current},${overviewData.users.previous},${overviewData.users.growth}%\n`;
           csvContent += `Page Views,${overviewData.visits.current},${overviewData.visits.previous},${overviewData.visits.growth}%\n`;
           csvContent += `Conversion Rate,${overviewData.conversionRate}%,,\n`;
@@ -185,7 +185,7 @@ export default function AnalyticsPage() {
           if (categoryData.length > 0) {
             csvContent += "\nCategory,Project Count,Total Funding\n";
             categoryData.forEach(cat => {
-              csvContent += `${cat.category},${cat.count},$${cat.totalFunding}\n`;
+              csvContent += `${cat.category},${cat.count},$${Number(cat.totalFunding).toFixed(2)}\n`;
             });
           }
         }
@@ -195,17 +195,17 @@ export default function AnalyticsPage() {
         if (revenueData) {
           csvContent = "Date,Total Revenue,Pledge Count\n";
           revenueData.byDay.forEach(day => {
-            csvContent += `${day.date},$${day.total},${day.count}\n`;
+            csvContent += `${day.date},$${Number(day.total).toFixed(2)},${day.count}\n`;
           });
 
           csvContent += "\nTop Projects\nRank,Title,Current Amount,Goal Amount,Backers\n";
           revenueData.topProjects.forEach((project, i) => {
-            csvContent += `${i + 1},"${project.title.replace(/"/g, '""')}",$${project.currentAmount},$${project.goalAmount},${project.backerCount}\n`;
+            csvContent += `${i + 1},"${project.title.replace(/"/g, '""')}",$${Number(project.currentAmount).toFixed(2)},$${Number(project.goalAmount).toFixed(2)},${project.backerCount}\n`;
           });
 
           csvContent += "\nPledges by Status\nStatus,Count,Total\n";
           revenueData.byStatus.forEach(status => {
-            csvContent += `${status.status},${status.count},$${status.total}\n`;
+            csvContent += `${status.status},${status.count},$${Number(status.total).toFixed(2)}\n`;
           });
         }
         break;
@@ -243,7 +243,7 @@ export default function AnalyticsPage() {
 
           csvContent += "\nRecent Projects\nTitle,Status,Category,Current Amount,Goal Amount,Backers,Created\n";
           projectsData.recent.forEach(project => {
-            csvContent += `"${project.title.replace(/"/g, '""')}",${project.status},${project.category},$${project.currentAmount},$${project.goalAmount},${project.backerCount},${project.createdAt}\n`;
+            csvContent += `"${project.title.replace(/"/g, '""')}",${project.status},${project.category},$${Number(project.currentAmount).toFixed(2)},$${Number(project.goalAmount).toFixed(2)},${project.backerCount},${project.createdAt}\n`;
           });
         }
         break;

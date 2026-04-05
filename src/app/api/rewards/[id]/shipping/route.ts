@@ -125,6 +125,7 @@ export async function GET(
       select: {
         id: true,
         title: true,
+        projectId: true,
         shippingType: true,
         shippingCost: true,
         shippingCountries: true,
