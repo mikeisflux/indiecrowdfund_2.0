@@ -86,8 +86,9 @@ class Histogram {
         lines.push(`${this.name}_bucket{${labelsPrefix}le="${this.buckets[i]}"} ${d.buckets[i]}`);
       }
       lines.push(`${this.name}_bucket{${labelsPrefix}le="+Inf"} ${d.count}`);
-      lines.push(`${this.name}_sum{${key ? key : ""}} ${d.sum}`);
-      lines.push(`${this.name}_count{${key ? key : ""}} ${d.count}`);
+      const labelsStr = key ? `{${key}}` : "";
+      lines.push(`${this.name}_sum${labelsStr} ${d.sum}`);
+      lines.push(`${this.name}_count${labelsStr} ${d.count}`);
     }
     return lines.join("\n");
   }
