@@ -63,6 +63,12 @@ export async function POST(request: Request) {
     }
 
     // Verify payment method matches book's requirements
+    if (book.paymentProcessor === "STRIPE" && paymentMethod !== "stripe") {
+      return NextResponse.json(
+        { error: "This book requires Stripe payment" },
+        { status: 400 }
+      );
+    }
     if (book.paymentProcessor === "DIVINITYCOIN" && paymentMethod !== "divinitycoin") {
       return NextResponse.json(
         { error: "This book requires DivinityCoin payment" },
