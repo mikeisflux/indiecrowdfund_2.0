@@ -6,7 +6,10 @@ export const dynamic = "force-dynamic";
 // GET - Return PayPal client ID for frontend SDK initialization
 export async function GET() {
   try {
-    const settings = await db.platformSettings.findUnique({ where: { id: "default" } });
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { paypalClientId: true, paypalMode: true },
+    });
     const clientId = settings?.paypalClientId || process.env.PAYPAL_CLIENT_ID || "";
     const mode = settings?.paypalMode || process.env.PAYPAL_MODE || "live";
 

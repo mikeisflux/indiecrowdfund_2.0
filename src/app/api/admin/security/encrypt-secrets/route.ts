@@ -67,6 +67,16 @@ export async function POST() {
 
   const settings = await db.platformSettings.findUnique({
     where: { id: "default" },
+    select: {
+      stripeSecretKey: true, stripePublishableKey: true, stripeWebhookSecret: true, stripeConnectWebhookSecret: true,
+      sendgridApiKey: true, sendgridWebhookVerificationKey: true, mailgunApiKey: true, mailgunWebhookSigningKey: true,
+      anthropicApiKey: true, googlePlacesApiKey: true, divinityCoinApiKey: true, divinityCoinWebhookSecret: true,
+      divinityCoinStripePublishableKey: true, smtpPassword: true, facebookAppSecret: true, facebookPageAccessToken: true,
+      youtubeClientSecret: true, youtubeApiKey: true, twitterApiKey: true, twitterApiSecret: true,
+      twitterBearerToken: true, twitterAccessToken: true, twitterAccessSecret: true,
+      stabilityApiKey: true, shuftiSecretKey: true, r2AccessKeyId: true, r2SecretAccessKey: true,
+      recaptchaSiteKey: true, recaptchaSecretKey: true,
+    },
   });
 
   if (!settings) {

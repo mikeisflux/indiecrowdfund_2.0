@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const settings = await db.platformSettings.findUnique({ where: { id: "default" } });
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { whopEnabled: true, whopPlanId: true, whopEnvironment: true },
+    });
 
     if (!settings?.whopEnabled) {
       return NextResponse.json({ error: "Whop not enabled" }, { status: 404 });

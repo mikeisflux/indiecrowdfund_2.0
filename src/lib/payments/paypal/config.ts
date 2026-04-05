@@ -18,7 +18,10 @@ export async function getPayPalConfig(): Promise<PayPalConfig> {
   if (cachedConfig && Date.now() < cacheExpiry) return cachedConfig;
 
   try {
-    const settings = await db.platformSettings.findUnique({ where: { id: "default" } });
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { paypalClientId: true, paypalClientSecret: true, paypalWebhookId: true, paypalMode: true },
+    });
 
     const clientId = settings?.paypalClientId || process.env.PAYPAL_CLIENT_ID || "";
     const clientSecret = settings?.paypalClientSecret || process.env.PAYPAL_CLIENT_SECRET || "";

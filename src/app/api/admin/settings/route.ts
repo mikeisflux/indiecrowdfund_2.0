@@ -55,7 +55,55 @@ export async function GET() {
     let settings;
     try {
       settings = await db.platformSettings.findUnique({
-        where: { id: "default" }
+        where: { id: "default" },
+        select: {
+          id: true, siteName: true, siteDescription: true, supportEmail: true, timezone: true,
+          currency: true, platformFee: true, maintenanceMode: true, googlePlacesApiKey: true,
+          logoUrl: true, faviconUrl: true,
+          stripeEnabled: true, stripePublishableKey: true, stripeSecretKey: true, stripeWebhookSecret: true, stripeConnectWebhookSecret: true,
+          divinityCoinEnabled: true, divinityCoinApiKey: true, divinityCoinWebhookSecret: true, divinityCoinPartnerId: true,
+          divinityCoinSettlementFrequency: true, divinityCoinStripePublishableKey: true,
+          paypalEnabled: true, paypalClientId: true, paypalClientSecret: true, paypalWebhookId: true, paypalMode: true,
+          whopEnabled: true, whopApiKey: true, whopPlanId: true, whopCompanyId: true, whopWebhookSecret: true, whopEnvironment: true,
+          autoPayouts: true,
+          recaptchaEnabled: true, recaptchaSiteKey: true, recaptchaSecretKey: true,
+          emailProvider: true, smtpHost: true, smtpPort: true, smtpUser: true, smtpPassword: true,
+          smtpFromEmail: true, smtpFromName: true, smtpReplyToEmail: true,
+          sendgridApiKey: true, sendgridWebhookVerificationKey: true,
+          mailgunApiKey: true, mailgunDomain: true, mailgunWebhookSigningKey: true,
+          emailVerificationRequired: true, welcomeEmailEnabled: true, pledgeConfirmationEnabled: true, projectUpdateNotifications: true,
+          twitterHandle: true, facebookUrl: true, instagramHandle: true, youtubeUrl: true, discordUrl: true,
+          facebookAppId: true, facebookAppSecret: true, facebookPageAccessToken: true,
+          youtubeClientId: true, youtubeClientSecret: true, youtubeApiKey: true,
+          twitterApiKey: true, twitterApiSecret: true, twitterBearerToken: true, twitterAccessToken: true, twitterAccessSecret: true,
+          stabilityApiKey: true, autoPostEnabled: true, postApprovalRequired: true,
+          aiProvider: true, anthropicApiKey: true, aiAutoModeration: true, aiAutoTagging: true, aiContentGeneration: true, aiFraudDetection: true,
+          aiAutoTagConfidence: true, aiMaxTags: true, aiEmailPersonalization: true, aiBehaviorTracking: true,
+          aiPredictiveAnalytics: true, aiSmartSegmentation: true, aiAutoOptimization: true, aiSendTimeOptimization: true,
+          aiContentOptimization: true, aiAbTesting: true, aiEmailFrequencyCap: true,
+          aiDailyEmailLimit: true, aiQuietHoursStart: true, aiQuietHoursEnd: true,
+          aiTrackPageViews: true, aiTrackScrollDepth: true, aiTrackTimeOnPage: true,
+          aiTrackClicks: true, aiTrackHovers: true, aiTrackFormInteractions: true,
+          aiTrackVideoEngagement: true, aiTrackRewardComparisons: true, aiTrackAbandonedCarts: true,
+          aiSessionRecording: true, aiHeatmaps: true, aiFunnelAnalysis: true, aiRetentionDays: true, aiCronSchedules: true,
+          twoFactorRequired: true, sessionTimeout: true, maxLoginAttempts: true,
+          passwordMinLength: true, requireSpecialChars: true,
+          globalRateLimitEnabled: true, globalRateLimitRequests: true, globalRateLimitWindow: true,
+          loginRateLimitEnabled: true, loginRateLimitRequests: true, loginRateLimitWindow: true,
+          passwordResetRateLimitRequests: true, passwordResetRateLimitWindow: true,
+          ipRateLimitEnabled: true, ipRateLimitRequests: true, ipRateLimitWindow: true,
+          csrfProtection: true, contentSecurityPolicy: true,
+          idVerificationEnabled: true, shuftiClientId: true, shuftiSecretKey: true,
+          shuftiCallbackUrl: true, shuftiRedirectUrl: true, idVerificationMinAge: true, idVerificationMode: true,
+          primaryColor: true, secondaryColor: true, accentColor: true,
+          backgroundColor: true, textColor: true, fontFamily: true, borderRadius: true,
+          r2Enabled: true, r2AccountId: true, r2AccessKeyId: true, r2SecretAccessKey: true,
+          r2BucketName: true, r2PublicDomain: true, r2Region: true,
+          maxProjectStorageMB: true, signedUrlExpirationMinutes: true,
+          maxFileSizeMB: true, allowedFileTypes: true, digitalDownloadsEnabled: true,
+          gaEnabled: true, googleAnalyticsId: true, gtmEnabled: true, googleTagManagerId: true,
+          createdAt: true, updatedAt: true,
+        },
       });
     } catch (dbError) {
       settingsLogger.error({ err: String(dbError) }, "Database error fetching settings");
@@ -331,7 +379,8 @@ export async function PATCH(req: NextRequest) {
 
     // Ensure settings record exists
     const existing = await db.platformSettings.findUnique({
-      where: { id: "default" }
+      where: { id: "default" },
+      select: { id: true },
     });
 
     if (!existing) {
@@ -340,8 +389,13 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    // Capture old values for audit logging
-    const currentSettings = existing || await db.platformSettings.findUnique({ where: { id: "default" } });
+    // Capture old values for audit logging - build select from updateData keys
+    const auditSelectFields: Record<string, true> = { id: true };
+    for (const key of Object.keys(updateData)) { auditSelectFields[key] = true; }
+    const currentSettings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: auditSelectFields,
+    });
     const oldValues: Record<string, unknown> = {};
     if (currentSettings) {
       for (const key of Object.keys(updateData)) {

@@ -76,6 +76,15 @@ async function getEmailSettings() {
   try {
     const settings = await db.platformSettings.findUnique({
       where: { id: "default" },
+      select: {
+        emailProvider: true,
+        smtpHost: true, smtpPort: true, smtpUser: true, smtpPassword: true,
+        smtpFromEmail: true, smtpFromName: true, smtpReplyToEmail: true,
+        sendgridApiKey: true, sendgridWebhookVerificationKey: true,
+        mailgunApiKey: true, mailgunDomain: true, mailgunWebhookSigningKey: true,
+        emailVerificationRequired: true, welcomeEmailEnabled: true,
+        pledgeConfirmationEnabled: true, projectUpdateNotifications: true,
+      },
     });
     return settings;
   } catch {

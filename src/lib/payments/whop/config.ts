@@ -20,7 +20,10 @@ export async function getWhopConfig(): Promise<WhopConfig> {
   if (cachedConfig && Date.now() < cacheExpiry) return cachedConfig;
 
   try {
-    const settings = await db.platformSettings.findUnique({ where: { id: "default" } });
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { whopApiKey: true, whopPlanId: true, whopCompanyId: true, whopWebhookSecret: true, whopEnvironment: true },
+    });
 
     const apiKey = settings?.whopApiKey || process.env.WHOP_API_KEY || "";
     const planId = settings?.whopPlanId || process.env.WHOP_PLAN_ID || "";
