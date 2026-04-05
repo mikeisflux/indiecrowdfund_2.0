@@ -437,7 +437,7 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">{backer.reward}</TableCell>
-                  <TableCell>${backer.pledgeAmount.toLocaleString()}</TableCell>
+                  <TableCell>${Number(backer.pledgeAmount).toFixed(2)}</TableCell>
                   <TableCell>
                     <Badge className={surveyStatusColors[backer.surveyCompleted ? "completed" : "pending"]}>
                       <span className="flex items-center gap-1">
@@ -577,7 +577,7 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
-                  <span>${selectedBacker?.pledgeAmount?.toLocaleString() || "0"}</span>
+                  <span>${Number(selectedBacker?.pledgeAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Items</span>

@@ -604,7 +604,7 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
                     <TableRow key={backer.id}>
                       <TableCell className="font-medium">{backer.name}</TableCell>
                       <TableCell className="text-muted-foreground">{backer.email}</TableCell>
-                      <TableCell className="text-right">${backer.pledgeAmount}</TableCell>
+                      <TableCell className="text-right">${Number(backer.pledgeAmount).toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                   {viewingBackers.length === 0 && !isLoadingBackers && (

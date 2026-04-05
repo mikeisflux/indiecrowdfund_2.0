@@ -228,7 +228,7 @@ export function AddonsTab({ stats, backers, surveyAddons, onOpenAddonDialog, onO
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{addon.description}</p>
                   <div className="flex items-center gap-4 mt-2 text-sm">
-                    <span className="font-medium text-teal-600">${addon.price}</span>
+                    <span className="font-medium text-teal-600">${Number(addon.price).toFixed(2)}</span>
                     <span className="text-muted-foreground">
                       {addon.purchasedCount} purchased
                     </span>

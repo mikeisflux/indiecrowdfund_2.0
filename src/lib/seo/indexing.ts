@@ -95,7 +95,9 @@ export function notifyProjectPublished(
   Promise.allSettled([
     submitToIndexNow([url]),
     pingSitemapCrawlers(),
-  ]).catch(() => {});
+  ]).catch((err) => {
+    indexingLogger.warn({ err: String(err) }, "Unexpected error notifying search engines");
+  });
 }
 
 /**
@@ -107,7 +109,9 @@ export function notifyBookPublished(bookSlug: string): void {
   Promise.allSettled([
     submitToIndexNow([url]),
     pingSitemapCrawlers(),
-  ]).catch(() => {});
+  ]).catch((err) => {
+    indexingLogger.warn({ err: String(err) }, "Unexpected error notifying search engines");
+  });
 }
 
 /**
@@ -126,5 +130,7 @@ export function notifyPrelaunchPublished(
   Promise.allSettled([
     submitToIndexNow([url]),
     pingSitemapCrawlers(),
-  ]).catch(() => {});
+  ]).catch((err) => {
+    indexingLogger.warn({ err: String(err) }, "Unexpected error notifying search engines");
+  });
 }

@@ -372,7 +372,7 @@ function SurveyCard({ survey, index, isPending }: SurveyCardProps) {
             <FileText className="h-3 w-3" />
             {survey.rewardTitle}
           </span>
-          <span>${survey.pledgeAmount}</span>
+          <span>${Number(survey.pledgeAmount).toFixed(2)}</span>
           {survey.questionCount > 0 && (
             <span className="flex items-center gap-1">
               <ClipboardList className="h-3 w-3" />
