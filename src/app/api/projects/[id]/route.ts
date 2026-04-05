@@ -515,7 +515,10 @@ export async function PATCH(
         if (!canActivate) {
           // User needs approval - check if prelaunch is already approved or pending
           if (project.prelaunchStatus === "SUBMITTED") {
-            // Already submitted, just return success without creating duplicate records
+            // Already submitted — save any other field changes but don't re-submit prelaunch
+            if (Object.keys(updateData).length > 0) {
+              await db.project.update({ where: { id }, data: updateData });
+            }
             return NextResponse.json({
               success: true,
               requiresApproval: true,

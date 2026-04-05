@@ -442,14 +442,22 @@ async function processDivinityCoinPendingPledges(projectId: string, specificPled
 
     if (hasDcTransaction) {
       // This pledge has a verified DC transaction record — payment actually went through
-      await db.pledge.update({
-        where: { id: pledge.id },
+      // Use updateMany with confirmationEmailSent: false as atomic guard against concurrent runs
+      const updateResult = await db.pledge.updateMany({
+        where: { id: pledge.id, confirmationEmailSent: false },
         data: {
           status: "COMPLETED",
           chargedImmediately: true,
           confirmationEmailSent: true,
         },
       });
+
+      if (updateResult.count === 0) {
+        // Already processed (concurrent admin run or webhook beat us)
+        detail.action = "Skipped — already reconciled by concurrent process";
+        results.details.push(detail);
+        continue;
+      }
 
       totalReconciled++;
       results.reconciled++;
