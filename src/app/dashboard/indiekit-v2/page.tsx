@@ -806,6 +806,7 @@ export default function IndieKitV2Page() {
         open={isBackerDialogOpen}
         onOpenChange={setIsBackerDialogOpen}
         backer={selectedBacker}
+        onRefresh={fetchData}
       />
 
       <UploadDialog

@@ -20,7 +20,6 @@ import {
   Check,
   Edit,
 } from "lucide-react";
-import { toast } from "sonner";
 
 interface Address {
   line1: string;
@@ -76,7 +75,6 @@ export function AddressValidationDialog({
 
     if (finalAddress) {
       onConfirm?.(finalAddress);
-      toast.success("Address updated successfully");
     }
     onOpenChange(false);
   };

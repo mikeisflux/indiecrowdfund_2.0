@@ -1033,8 +1033,27 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
           postalCode: backer.shippingAddress.postalCode,
           country: backer.shippingAddress.country,
         } : null}
-        onConfirm={(address) => {
-          console.log("Address updated:", address);
+        onConfirm={async (address) => {
+          if (!backer.projectId) return;
+          try {
+            const res = await apiFetch("/api/creator/indiekit/address", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                projectId: backer.projectId,
+                pledgeId: backer.id,
+                address,
+              }),
+            });
+            if (!res.ok) {
+              const data = await res.json();
+              toast.error(data.error || "Failed to save address");
+            } else {
+              onRefresh?.();
+            }
+          } catch {
+            toast.error("Failed to save address");
+          }
         }}
       />
 
