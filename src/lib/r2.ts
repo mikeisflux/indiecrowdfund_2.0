@@ -156,14 +156,18 @@ export class R2Storage {
     key: string,
     options: PresignedUrlOptions = {}
   ): Promise<string> {
-    const command = new GetObjectCommand({
-      Bucket: this.config.bucketName,
-      Key: key,
-    });
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.config.bucketName,
+        Key: key,
+      });
 
-    return getSignedUrl(this.client, command, {
-      expiresIn: options.expiresIn || 3600,
-    });
+      return await getSignedUrl(this.client, command, {
+        expiresIn: options.expiresIn || 3600,
+      });
+    } catch (error) {
+      throw new Error(`Failed to generate download URL for key "${key}": ${String(error)}`);
+    }
   }
 
   /**

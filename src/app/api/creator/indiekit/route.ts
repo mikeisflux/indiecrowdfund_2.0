@@ -136,9 +136,9 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Select project
-    const selectedProjectId = projectId || projects[0].id;
-    const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
+    // Select project — always resolve to a project the user actually owns
+    const selectedProject = (projectId ? projects.find(p => p.id === projectId) : null) || projects[0];
+    const selectedProjectId = selectedProject.id;
 
     // Compute post-campaign sales across creator projects that have ENDED (FUNDED status)
     // Post-campaign = add-ons purchased via IndieKit survey after the campaign closed

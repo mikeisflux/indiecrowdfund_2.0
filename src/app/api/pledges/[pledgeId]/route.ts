@@ -290,6 +290,9 @@ export async function PATCH(
 
         // Live campaign — process refund immediately
         if (paymentProcessor === "DIVINITYCOIN") {
+          if (!pledge.divinityCoinPaymentId) {
+            return NextResponse.json({ error: "DivinityCoin payment ID not found for this pledge" }, { status: 400 });
+          }
           try {
             const dcResult = await callDivinityCoinAPI("refund", {
               pledgeId: pledge.id,
@@ -713,6 +716,9 @@ export async function PATCH(
         const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
 
         if (paymentProcessor === "DIVINITYCOIN") {
+          if (!pledge.divinityCoinPaymentId) {
+            return NextResponse.json({ error: "DivinityCoin payment ID not found for this pledge" }, { status: 400 });
+          }
           try {
             const dcResult = await callDivinityCoinAPI("refund", {
               pledgeId: pledge.id,
