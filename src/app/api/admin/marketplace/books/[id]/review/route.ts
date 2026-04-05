@@ -5,6 +5,7 @@ const adminMarketplaceBooksReviewLogger = logger.child({ module: "admin-marketpl
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { notifyMarketplaceBookReview } from "@/lib/notifications";
+import { notifyBookPublished } from "@/lib/seo/indexing";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,11 @@ export async function POST(
         where: { id: book.creator.id },
         data: { role: "CREATOR" },
       });
+    }
+
+    // Notify search engines when a book is approved (fire-and-forget)
+    if (action === "approve") {
+      notifyBookPublished(book.slug);
     }
 
     // Send notification to creator (don't await to avoid blocking response)

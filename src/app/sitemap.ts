@@ -230,5 +230,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("Sitemap: Error fetching marketplace books:", error);
   }
 
-  return [...staticPages, ...projectPages, ...prelaunchPages, ...bookPages];
+  // Creator profile pages (users with a vanity URL)
+  let creatorPages: MetadataRoute.Sitemap = [];
+  try {
+    const creators = await db.user.findMany({
+      where: {
+        vanityUrl: { not: null },
+        role: { in: ["CREATOR", "ADMIN", "SUPER_ADMIN"] },
+      },
+      select: {
+        vanityUrl: true,
+        updatedAt: true,
+      },
+    });
+
+    creatorPages = creators
+      .filter((c): c is { vanityUrl: string; updatedAt: Date } => !!c.vanityUrl)
+      .map((creator) => ({
+        url: `${SITE_URL}/${creator.vanityUrl}`,
+        lastModified: creator.updatedAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      }));
+  } catch (error) {
+    console.error("Sitemap: Error fetching creator profiles:", error);
+  }
+
+  return [...staticPages, ...projectPages, ...prelaunchPages, ...bookPages, ...creatorPages];
 }

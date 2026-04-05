@@ -11,6 +11,7 @@ import {
   sendProjectChangesRequestedEmail,
 } from "@/lib/email";
 import { auditLog } from "@/lib/audit";
+import { notifyProjectPublished, notifyPrelaunchPublished } from "@/lib/seo/indexing";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
         prelaunchStatus: true,
         contactEmail: true, // Email from payment settings
         creator: {
-          select: { id: true, email: true, name: true, role: true },
+          select: { id: true, email: true, name: true, role: true, vanityUrl: true },
         },
       },
     });
@@ -251,6 +252,16 @@ export async function POST(req: NextRequest) {
         targetType: "PROJECT",
         details: { action, previousStatus, newStatus, rejectionReason },
       });
+    }
+
+    // Notify search engines about newly approved/published content (fire-and-forget)
+    if (action === "APPROVED") {
+      const vanityUrl = project.creator.vanityUrl ?? null;
+      if (isPrelaunch) {
+        notifyPrelaunchPublished(project.slug, vanityUrl);
+      } else {
+        notifyProjectPublished(project.slug, vanityUrl);
+      }
     }
 
     return NextResponse.json({

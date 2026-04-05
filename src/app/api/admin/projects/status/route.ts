@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { validateStripeConnectAccount } from "@/lib/payments/stripe";
 import { auditLog } from "@/lib/audit";
+import { notifyProjectPublished } from "@/lib/seo/indexing";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
             id: true,
             name: true,
             email: true,
+            vanityUrl: true,
           },
         },
       },
@@ -167,6 +169,11 @@ export async function POST(request: Request) {
         flagsRaised: [],
       },
     });
+
+    // Notify search engines when a project goes live (fire-and-forget)
+    if (newStatus === "LIVE") {
+      notifyProjectPublished(project.slug, project.creator.vanityUrl ?? null);
+    }
 
     // Send email notification if sendEmail is true
     if (sendEmail && project.creator.email) {
