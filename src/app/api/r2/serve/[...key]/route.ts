@@ -56,7 +56,7 @@ export async function GET(
               buyerId: session.user.id,
               status: "COMPLETED",
               book: {
-                pdfFileUrl: { contains: key },
+                pdfFileUrl: key,
               },
             },
           });

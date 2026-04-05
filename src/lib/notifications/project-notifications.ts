@@ -64,15 +64,20 @@ export async function notifyProjectFunded(projectId: string) {
 
     const uniqueEmails = Array.from(new Set(backers.map((b) => b.email)));
 
-    // Send emails in batches
+    // Send emails in batches; use allSettled so one bad address doesn't abort the batch
     const batchSize = 10;
     for (let i = 0; i < uniqueEmails.length; i += batchSize) {
       const batch = uniqueEmails.slice(i, i + batchSize);
-      await Promise.all(
+      const results = await Promise.allSettled(
         batch.map((email) =>
           sendProjectFundedEmail(email, project.title, projectUrlPath, project.imageUrl)
         )
       );
+      results.forEach((r, idx) => {
+        if (r.status === "rejected") {
+          notificationsProjectNotificationsLogger.error({ err: String(r.reason), email: batch[idx] }, "Failed to send project funded email");
+        }
+      });
     }
 
     if (uniqueEmails.length > 0) {
@@ -161,11 +166,11 @@ export async function notifyProjectLaunched(projectId: string) {
   const uniqueEmails = Array.from(new Set(emailsToSend));
   const creatorName = project.creator?.name || "Creator";
 
-  // Send emails in parallel (but not all at once to avoid rate limits)
+  // Send emails in batches; use allSettled so one bad address doesn't abort the batch
   const batchSize = 10;
   for (let i = 0; i < uniqueEmails.length; i += batchSize) {
     const batch = uniqueEmails.slice(i, i + batchSize);
-    await Promise.all(
+    const results = await Promise.allSettled(
       batch.map((email) =>
         sendProjectLaunchEmail(
           email,
@@ -176,6 +181,11 @@ export async function notifyProjectLaunched(projectId: string) {
         )
       )
     );
+    results.forEach((r, idx) => {
+      if (r.status === "rejected") {
+        notificationsProjectNotificationsLogger.error({ err: String(r.reason), email: batch[idx] }, "Failed to send project launch email");
+      }
+    });
   }
 
   // Log the email sends
@@ -272,11 +282,11 @@ export async function notifyProjectUpdate(
   const uniqueEmails = Array.from(new Set(emailsToSend));
   const creatorName = project.creator?.name || "Creator";
 
-  // Send emails in batches
+  // Send emails in batches; use allSettled so one bad address doesn't abort the batch
   const batchSize = 10;
   for (let i = 0; i < uniqueEmails.length; i += batchSize) {
     const batch = uniqueEmails.slice(i, i + batchSize);
-    await Promise.all(
+    const results = await Promise.allSettled(
       batch.map((email) =>
         sendProjectUpdateEmail(
           email,
@@ -289,6 +299,11 @@ export async function notifyProjectUpdate(
         )
       )
     );
+    results.forEach((r, idx) => {
+      if (r.status === "rejected") {
+        notificationsProjectNotificationsLogger.error({ err: String(r.reason), email: batch[idx] }, "Failed to send project update email");
+      }
+    });
   }
 
   if (uniqueEmails.length > 0) {

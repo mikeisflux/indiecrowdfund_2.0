@@ -39,7 +39,7 @@ export async function GET(
     const uploadsDir = path.resolve(UPLOADS_BASE);
     const resolvedPath = path.resolve(filePath);
 
-    if (!resolvedPath.startsWith(uploadsDir)) {
+    if (!resolvedPath.startsWith(uploadsDir + path.sep) && resolvedPath !== uploadsDir) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
 

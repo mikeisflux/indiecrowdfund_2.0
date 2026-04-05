@@ -176,16 +176,16 @@ export async function GET() {
     }, {} as Record<string, number>);
 
     // Get pledges by day for chart (last 7 days, exclude deleted)
-    const pledgesByDay = await db.pledge.groupBy({
-      by: ["createdAt"],
-      where: {
-        deletedAt: null,
-        createdAt: { gte: sevenDaysAgo },
-        status: "COMPLETED"
-      },
-      _sum: { amount: true },
-      _count: true
-    });
+    // Use raw SQL to group by calendar date instead of exact timestamp
+    const pledgesByDay = await db.$queryRaw<Array<{ date: Date; total: number; count: bigint }>>`
+      SELECT DATE("createdAt") as date, SUM(amount) as total, COUNT(*) as count
+      FROM "Pledge"
+      WHERE "deletedAt" IS NULL
+        AND "createdAt" >= ${sevenDaysAgo}
+        AND status = 'COMPLETED'
+      GROUP BY DATE("createdAt")
+      ORDER BY date ASC
+    `;
 
     return NextResponse.json({
       stats: {
