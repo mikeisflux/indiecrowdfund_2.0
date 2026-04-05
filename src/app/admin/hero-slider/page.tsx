@@ -172,10 +172,14 @@ export default function HeroSliderPage() {
         setNeedsMigration(false);
       } else {
         // Check if it's a database error (table doesn't exist)
-        const data = await response.json();
-        if (data.error?.includes("does not exist") || data.error?.includes("relation")) {
-          setNeedsMigration(true);
-        } else {
+        try {
+          const data = await response.json();
+          if (data.error?.includes("does not exist") || data.error?.includes("relation")) {
+            setNeedsMigration(true);
+          } else {
+            toast.error("Failed to load slides");
+          }
+        } catch {
           toast.error("Failed to load slides");
         }
       }

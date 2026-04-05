@@ -544,7 +544,7 @@ export default function DivinityCoinRedemptionsPage() {
                           txn.amount >= 0 ? "text-emerald-600" : "text-red-600"
                         }`}
                       >
-                        {txn.amount >= 0 ? "+" : ""}
+                        {txn.amount >= 0 ? "+" : "-"}
                         {formatCurrency(txn.amount)}
                       </span>
                     </TableCell>
@@ -654,7 +654,7 @@ export default function DivinityCoinRedemptionsPage() {
                         selectedTransaction.amount >= 0 ? "text-emerald-600" : "text-red-600"
                       }`}
                     >
-                      {selectedTransaction.amount >= 0 ? "+" : ""}
+                      {selectedTransaction.amount >= 0 ? "+" : "-"}
                       {formatCurrency(selectedTransaction.amount)}
                     </p>
                   </div>
@@ -904,7 +904,7 @@ export default function DivinityCoinRedemptionsPage() {
               <div className="flex justify-between">
                 <span className="text-zinc-500">Amount</span>
                 <span className="font-bold">
-                  {deleteTarget.amount >= 0 ? "+" : ""}
+                  {deleteTarget.amount >= 0 ? "+" : "-"}
                   {formatCurrency(deleteTarget.amount)}
                 </span>
               </div>

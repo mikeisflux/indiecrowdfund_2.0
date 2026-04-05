@@ -977,7 +977,7 @@ export default function AIMarketingPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">{segment.count.toLocaleString()} users</p>
-                  <p className="text-sm text-zinc-500">Avg spend: ${segment.avgSpend}</p>
+                  <p className="text-sm text-zinc-500">Avg spend: ${Number(segment.avgSpend).toFixed(2)}</p>
                 </div>
               </div>
             ))}

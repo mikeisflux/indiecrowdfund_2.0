@@ -610,7 +610,7 @@ export default function AboutUsPage() {
   const displayStats = [
     {
       label: "Projects Funded",
-      value: stats ? formatNumber(stats.projectsFunded + stats.projectsLive) : "...",
+      value: stats ? formatNumber(stats.projectsFunded) : "...",
       icon: Rocket
     },
     {
