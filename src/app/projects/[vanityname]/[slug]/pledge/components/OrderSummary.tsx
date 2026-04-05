@@ -72,7 +72,7 @@ export function OrderSummary({
                 return (
                   <div key={id} className="flex justify-between text-sm py-1">
                     <span>{addon.title} x{qty}</span>
-                    <span>${Number(addon.amount) * qty}</span>
+                    <span>${(Number(addon.amount) * qty).toFixed(2)}</span>
                   </div>
                 );
               })}
@@ -158,7 +158,7 @@ export function OrderSummary({
                 return (
                   <div key={id} className="flex justify-between text-sm">
                     <span>{addon.title} x{qty}</span>
-                    <span>${Number(addon.amount) * qty}</span>
+                    <span>${(Number(addon.amount) * qty).toFixed(2)}</span>
                   </div>
                 );
               })}
@@ -240,7 +240,7 @@ export function OrderSummary({
                 return (
                   <div key={id} className="flex justify-between text-sm">
                     <span>{addon.title} x{qty}</span>
-                    <span>${Number(addon.amount) * qty}</span>
+                    <span>${(Number(addon.amount) * qty).toFixed(2)}</span>
                   </div>
                 );
               })}

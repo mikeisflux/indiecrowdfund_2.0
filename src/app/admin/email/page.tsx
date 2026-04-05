@@ -134,17 +134,18 @@ export default function EmailPage() {
       const response = await fetch("/api/admin/mailboxes");
       if (response.ok) {
         const data = await response.json();
-        setMailboxes(data.mailboxes || []);
-        // Auto-select first mailbox or default
-        if (data.mailboxes?.length > 0 && !selectedMailbox) {
-          const defaultMailbox = data.mailboxes.find((m: Mailbox) => m.isDefault) || data.mailboxes[0];
-          setSelectedMailbox(defaultMailbox);
-        }
+        const mailboxList: Mailbox[] = data.mailboxes || [];
+        setMailboxes(mailboxList);
+        // Auto-select first mailbox or default (only if none selected yet)
+        setSelectedMailbox(prev => {
+          if (prev || mailboxList.length === 0) return prev;
+          return mailboxList.find((m: Mailbox) => m.isDefault) || mailboxList[0];
+        });
       }
     } catch (error) {
       console.error("Error fetching mailboxes:", error);
     }
-  }, [selectedMailbox]);
+  }, []);
 
   const fetchEmails = useCallback(async () => {
     if (!selectedMailbox) return;

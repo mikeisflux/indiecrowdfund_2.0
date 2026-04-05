@@ -166,7 +166,7 @@ export async function GET(req: NextRequest) {
           },
           conversionRate: currentVisits > 0
             ? ((currentPledges._count / currentVisits) * 100).toFixed(2)
-            : 0
+            : "0.00"
         },
         projectsByCategory: projectsByCategory.map(p => ({
           category: p.category,
