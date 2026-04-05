@@ -5,6 +5,7 @@ export interface ProjectData {
   slug: string;
   imageUrl: string;
   paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP";
+  campaignType: "ALL_OR_NOTHING" | "KEEP_IT_ALL";
   hasAdultContent: boolean;
   hasControversialContent?: boolean;
   estimatedDelivery: string;

@@ -545,7 +545,10 @@ export function OrderSummary({
           {/* Disclaimer */}
           <div className="py-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Backing means supporting a creative project, regardless of the outcome.
+              {project?.campaignType === "KEEP_IT_ALL"
+                ? "Your payment is collected immediately. The creator keeps all pledges regardless of the funding outcome."
+                : "Backing means supporting a creative project, regardless of the outcome."
+              }
             </p>
 
             <div className="flex items-start gap-3 mb-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3">

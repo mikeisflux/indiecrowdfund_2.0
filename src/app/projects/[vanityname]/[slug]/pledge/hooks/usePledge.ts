@@ -346,6 +346,7 @@ export function usePledge() {
       const formattedProject: ProjectData = {
         id: projectData.id, title: projectData.title, slug: projectData.slug,
         imageUrl: projectData.imageUrl || "", paymentProcessor: projectData.paymentProcessor || "STRIPE",
+        campaignType: projectData.campaignType || "ALL_OR_NOTHING",
         hasAdultContent: projectData.hasAdultContent || false, estimatedDelivery: projectData.estimatedDelivery || "",
         currentAmount: projectData.currentAmount || 0, goalAmount: projectData.goalAmount || 0,
         endDate: projectData.endDate || null,

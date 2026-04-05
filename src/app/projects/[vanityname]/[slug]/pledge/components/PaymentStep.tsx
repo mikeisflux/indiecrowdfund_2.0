@@ -130,8 +130,21 @@ export function PaymentStep({
             Your payment method will be charged immediately for these additional items.
             You&apos;ll receive a confirmation email when your purchase is successfully processed.
           </p>
+        ) : project?.campaignType === "KEEP_IT_ALL" ? (
+          // Keep It All - always charged immediately regardless of funding progress
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              This is a <strong>Keep It All</strong> campaign — your payment method will be charged immediately
+              when you complete your pledge. The creator keeps all pledges regardless of whether the funding goal is reached.
+              You&apos;ll receive a confirmation email when your pledge is successfully processed.
+            </p>
+            <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+              Any shipping costs and applicable taxes will be charged separately, when the creator is ready to
+              begin fulfillment.
+            </p>
+          </>
         ) : project && Number(project.currentAmount) >= Number(project.goalAmount) ? (
-          // Campaign already funded - charged immediately
+          // All or Nothing - campaign already funded - charged immediately
           <>
             <p className="text-sm text-muted-foreground leading-relaxed">
               This project has already reached its funding goal! Your payment method will be charged immediately
@@ -143,7 +156,7 @@ export function PaymentStep({
             </p>
           </>
         ) : (
-          // Campaign not yet funded - card saved for later
+          // All or Nothing - not yet funded - card saved for later
           <>
             <p className="text-sm text-muted-foreground leading-relaxed">
               We won&apos;t charge you at this time. If the project reaches its funding goal, your payment method will
