@@ -1048,7 +1048,7 @@ export function BackersTab({
                     </div>
                   </TableCell>
                   <TableCell onClick={() => onOpenBackerDetail(backer)}>{backer.reward}</TableCell>
-                  <TableCell onClick={() => onOpenBackerDetail(backer)}>${backer.pledgeAmount}</TableCell>
+                  <TableCell onClick={() => onOpenBackerDetail(backer)}>${Number(backer.pledgeAmount).toFixed(2)}</TableCell>
                   <TableCell onClick={() => onOpenBackerDetail(backer)}>
                     {backer.surveyCompleted ? (
                       <Badge variant="outline" className="text-green-600 border-green-200">

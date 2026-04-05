@@ -97,7 +97,7 @@ export function OrderSummary({
           <div className="pt-4">
             <div className="flex justify-between items-center">
               <span className="font-semibold">Total</span>
-              <span className="text-xl font-bold">${addItemsTotal}</span>
+              <span className="text-xl font-bold">${addItemsTotal.toFixed(2)}</span>
             </div>
           </div>
 
@@ -170,7 +170,7 @@ export function OrderSummary({
             <div className="py-4 border-b">
               <div className="flex justify-between text-sm">
                 <span>Shipping from {project?.creator?.location || "creator"}</span>
-                <span>${totalShipping}</span>
+                <span>${totalShipping.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -179,7 +179,7 @@ export function OrderSummary({
           <div className="py-3 border-b">
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">New total</span>
-              <span className="font-medium">${total}</span>
+              <span className="font-medium">${total.toFixed(2)}</span>
             </div>
           </div>
 
@@ -273,7 +273,7 @@ export function OrderSummary({
             <div className="py-4 border-b">
               <div className="flex justify-between text-sm">
                 <span>Shipping from {project?.creator?.location || "creator"}</span>
-                <span>${totalShipping}</span>
+                <span>${totalShipping.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -282,7 +282,7 @@ export function OrderSummary({
           <div className="pt-4">
             <div className="flex justify-between items-center">
               <span className="font-semibold">Total</span>
-              <span className="text-xl font-bold">${total}</span>
+              <span className="text-xl font-bold">${total.toFixed(2)}</span>
             </div>
           </div>
 
@@ -316,7 +316,7 @@ export function OrderSummary({
               return (
                 <div key={id} className="flex justify-between text-sm py-1">
                   <span>{addon.title} x{qty}</span>
-                  <span>${Number(addon.amount) * qty}.00</span>
+                  <span>${(Number(addon.amount) * qty).toFixed(2)}</span>
                 </div>
               );
             })}
@@ -327,7 +327,7 @@ export function OrderSummary({
             <div className="py-4 border-b">
               <div className="flex justify-between text-sm">
                 <span>Shipping from {project?.creator?.location || "creator"}</span>
-                <span>${addonsShipping}.00</span>
+                <span>${addonsShipping.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -336,7 +336,7 @@ export function OrderSummary({
           <div className="py-4 border-b">
             <div className="flex justify-between items-center">
               <span className="font-semibold">Total amount</span>
-              <span className="text-xl font-bold">${addItemsTotal}.00</span>
+              <span className="text-xl font-bold">${addItemsTotal.toFixed(2)}</span>
             </div>
           </div>
 
@@ -518,7 +518,7 @@ export function OrderSummary({
                 return (
                   <div key={id} className="flex justify-between text-sm">
                     <span>{addon.title} x{qty}</span>
-                    <span>${Number(addon.amount) * qty}.00</span>
+                    <span>${(Number(addon.amount) * qty).toFixed(2)}</span>
                   </div>
                 );
               })}
@@ -530,7 +530,7 @@ export function OrderSummary({
             <p className="text-xs font-medium text-muted-foreground mb-1">Shipping</p>
             <div className="flex justify-between text-sm">
               <span>From {project?.creator?.location || "creator"}</span>
-              <span>${totalShipping}.00</span>
+              <span>${totalShipping.toFixed(2)}</span>
             </div>
           </div>
 
@@ -538,7 +538,7 @@ export function OrderSummary({
           <div className="py-4 border-b">
             <div className="flex justify-between items-center">
               <span className="font-semibold">Total amount</span>
-              <span className="text-xl font-bold">${total}.00</span>
+              <span className="text-xl font-bold">${total.toFixed(2)}</span>
             </div>
           </div>
 

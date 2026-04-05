@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
           paypalWebhookLogger.error({ err: String(err) }, "assignBackerNumber failed")
         );
 
-        await notifyPledgeReceived(pledge.projectId, pledge.project.creatorId, "A backer", pledge.amount).catch(
+        await notifyPledgeReceived(pledge.projectId, pledge.project?.creatorId ?? "", "A backer", pledge.amount).catch(
           err => paypalWebhookLogger.error({ err: String(err) }, "notifyPledgeReceived failed")
         );
 

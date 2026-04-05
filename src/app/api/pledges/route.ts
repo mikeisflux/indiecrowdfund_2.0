@@ -528,7 +528,7 @@ async function cleanupAbandonedCarts(projectId: string, olderThan: Date) {
     where: { pledgeId: { in: ids }, type: "PAYMENT" },
     select: { pledgeId: true },
   });
-  const dcPaidIds = new Set(dcTransactions.map((t: { pledgeId: string | null }) => t.pledgeId));
+  const dcPaidIds = new Set(dcTransactions.map((t: { pledgeId: string | null }) => t.pledgeId).filter((id): id is string => id !== null));
   const toDelete = ids.filter((id) => !dcPaidIds.has(id));
 
   if (toDelete.length === 0) return;

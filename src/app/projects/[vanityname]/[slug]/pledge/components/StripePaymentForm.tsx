@@ -172,7 +172,7 @@ export function StripePaymentForm({
     }
   };
 
-  const label = buttonLabel || (intentType === "setup_intent" ? `Pledge $${total}` : `Pay $${total}`);
+  const label = buttonLabel || (intentType === "setup_intent" ? `Pledge $${Number(total).toFixed(2)}` : `Pay $${Number(total).toFixed(2)}`);
 
   return (
     <div className="space-y-4">
