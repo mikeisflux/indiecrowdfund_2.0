@@ -170,7 +170,7 @@ export async function calculateUserInterests(userId: string): Promise<UserIntere
   // Extract search interests
   const searchQueries = behaviors
     .filter((b) => b.eventType === "SEARCH" && b.searchQuery)
-    .map((b) => b.searchQuery!.toLowerCase())
+    .map((b) => (b.searchQuery || "").toLowerCase())
     .reduce((acc: string[], query) => {
       // Extract keywords (simple tokenization)
       const words = query.split(/\s+/).filter((w: string) => w.length > 2);
@@ -404,7 +404,8 @@ export async function findMatchingProjectsForUser(
     if (!newProfile) return [];
   }
 
-  const userProfile = profile || (await db.userInterestProfile.findUnique({ where: { userId } }))!;
+  const userProfile = profile ?? await db.userInterestProfile.findUnique({ where: { userId } });
+  if (!userProfile) return [];
 
   // Get user's backed project IDs if excluding
   let backedProjectIds: string[] = [];

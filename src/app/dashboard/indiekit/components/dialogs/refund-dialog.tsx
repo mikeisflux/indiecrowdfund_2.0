@@ -215,7 +215,7 @@ export function RefundDialog({
               </div>
               {hasSuggestion && (
                 <p className="text-xs text-blue-600">
-                  Suggested refund based on order edit: ${suggestedAmount!.toFixed(2)}
+                  Suggested refund based on order edit: ${suggestedAmount?.toFixed(2)}
                 </p>
               )}
             </div>

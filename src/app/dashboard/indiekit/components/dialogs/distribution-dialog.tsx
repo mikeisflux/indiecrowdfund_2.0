@@ -115,13 +115,13 @@ export function DistributionDialog({
       case "rewards":
         return rewards.map(r => ({
           id: `reward:${r.id}`,
-          name: `${r.name} ($${r.amount})`,
+          name: `${r.name} ($${Number(r.amount).toFixed(2)})`,
           type: "reward" as const
         }));
       case "addons":
         return addons.map(a => ({
           id: `addon:${a.id}`,
-          name: `${a.name} ($${a.price})`,
+          name: `${a.name} ($${Number(a.price).toFixed(2)})`,
           type: "addon" as const
         }));
       case "all":
@@ -129,12 +129,12 @@ export function DistributionDialog({
         return [
           ...rewards.map(r => ({
             id: `reward:${r.id}`,
-            name: `${r.name} ($${r.amount})`,
+            name: `${r.name} ($${Number(r.amount).toFixed(2)})`,
             type: "reward" as const
           })),
           ...addons.map(a => ({
             id: `addon:${a.id}`,
-            name: `${a.name} ($${a.price})`,
+            name: `${a.name} ($${Number(a.price).toFixed(2)})`,
             type: "addon" as const
           })),
         ];

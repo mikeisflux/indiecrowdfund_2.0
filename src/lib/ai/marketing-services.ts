@@ -832,8 +832,10 @@ export async function analyzeABTestResults(test: ABTest): Promise<{
   return {
     winner: hasWinner ? winner.id : null,
     confidence,
-    analysis: `After ${totalSamples} sends, "${winner.name}" leads with ${(winner.openRate * 100).toFixed(1)}% open rate and ${(winner.clickRate * 100).toFixed(1)}% click rate.`,
-    recommendation: hasWinner
+    analysis: winner
+      ? `After ${totalSamples} sends, "${winner.name}" leads with ${(winner.openRate * 100).toFixed(1)}% open rate and ${(winner.clickRate * 100).toFixed(1)}% click rate.`
+      : `Not enough data yet (${totalSamples} sends).`,
+    recommendation: hasWinner && winner
       ? `Deploy "${winner.name}" as the winner with ${(confidence * 100).toFixed(0)}% confidence.`
       : `Continue testing. Need ${Math.ceil((0.95 - confidence) * 1000)} more samples for statistical significance.`,
   };
