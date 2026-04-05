@@ -20,6 +20,7 @@ import {
   Cloud,
   MessageSquare,
   CreditCard,
+  BarChart3,
 } from "lucide-react";
 import {
   GeneralSettings,
@@ -33,6 +34,7 @@ import {
   DatabaseSettings,
   StorageSettings,
   CommunicationSettings,
+  AnalyticsSettings,
 } from "@/components/admin/settings";
 
 interface PlatformSettings {
@@ -172,12 +174,17 @@ interface PlatformSettings {
   allowedFileTypes: string;
   digitalDownloadsEnabled: boolean;
   signedUrlExpirationMinutes: number;
+  // Google Analytics / Tag Manager
+  gaEnabled: boolean;
+  googleAnalyticsId: string | null;
+  gtmEnabled: boolean;
+  googleTagManagerId: string | null;
 }
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get("tab") ?? null;
-  const validTabs = ["general", "payments", "email", "communication", "social", "ai", "security", "idverify", "storage", "api", "database"];
+  const validTabs = ["general", "payments", "email", "communication", "social", "ai", "security", "idverify", "storage", "analytics", "api", "database"];
   const initialTab = tabParam && validTabs.includes(tabParam) ? tabParam : "general";
 
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -356,6 +363,13 @@ export default function SettingsPage() {
     storageSettingsRef.current = storageSettings;
   }, [storageSettings]);
 
+  const [analyticsSettings, setAnalyticsSettings] = useState({
+    gaEnabled: false,
+    googleAnalyticsId: "",
+    gtmEnabled: false,
+    googleTagManagerId: "",
+  });
+
   // Fetch settings from API
   const fetchSettings = useCallback(async () => {
     try {
@@ -526,6 +540,14 @@ export default function SettingsPage() {
         allowedFileTypes: settings.allowedFileTypes || "pdf,epub,zip,mp3",
         digitalDownloadsEnabled: settings.digitalDownloadsEnabled || false,
         signedUrlExpirationMinutes: String(settings.signedUrlExpirationMinutes || 60),
+      });
+
+      // Load analytics settings
+      setAnalyticsSettings({
+        gaEnabled: settings.gaEnabled || false,
+        googleAnalyticsId: settings.googleAnalyticsId || "",
+        gtmEnabled: settings.gtmEnabled || false,
+        googleTagManagerId: settings.googleTagManagerId || "",
       });
     } catch (err) {
       console.error("Error fetching settings:", err);
@@ -784,6 +806,15 @@ export default function SettingsPage() {
             signedUrlExpirationMinutes: parseInt(currentStorageSettings.signedUrlExpirationMinutes) || 60,
           };
           break;
+        case "analytics":
+          section = "analytics";
+          data = {
+            gaEnabled: analyticsSettings.gaEnabled,
+            googleAnalyticsId: analyticsSettings.googleAnalyticsId,
+            gtmEnabled: analyticsSettings.gtmEnabled,
+            googleTagManagerId: analyticsSettings.googleTagManagerId,
+          };
+          break;
         default:
           // For tabs without database storage (API, Database)
           setSaveMessage("Settings saved successfully");
@@ -855,7 +886,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6 lg:grid-cols-11 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-6 lg:grid-cols-12 lg:w-auto lg:inline-grid">
           <TabsTrigger value="general">
             <Settings className="mr-2 h-4 w-4" />
             General
@@ -891,6 +922,10 @@ export default function SettingsPage() {
           <TabsTrigger value="storage">
             <Cloud className="mr-2 h-4 w-4" />
             Storage
+          </TabsTrigger>
+          <TabsTrigger value="analytics">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Analytics
           </TabsTrigger>
           <TabsTrigger value="api">
             <Key className="mr-2 h-4 w-4" />
@@ -958,6 +993,12 @@ export default function SettingsPage() {
           onSettingsChange={setStorageSettings}
           onSave={handleSave}
           onTestR2={testR2}
+        />
+
+        <AnalyticsSettings
+          settings={analyticsSettings}
+          onSettingsChange={setAnalyticsSettings}
+          onSave={handleSave}
         />
 
         <ApiSettings />

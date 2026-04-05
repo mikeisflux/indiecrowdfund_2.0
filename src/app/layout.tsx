@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/site-header";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { ScreenReaderAnnouncer } from "@/components/ui/screen-reader-announcer";
 import { ErrorReporter } from "@/components/error-reporter";
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import "./globals.css";
@@ -112,13 +113,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Fetch auth and announcements in parallel to minimize TTFB
+  // Fetch auth, announcements, and analytics settings in parallel to minimize TTFB
   let session = null;
   let announcements: { id: string; text: string; linkUrl: string | null; linkText: string | null; backgroundColor: string; textColor: string; dismissible: boolean }[] = [];
+  let ga4Id: string | null = null;
+  let gtmId: string | null = null;
 
   try {
     const now = new Date();
-    [session, announcements] = await Promise.all([
+    let platformSettings: { gaEnabled: boolean; googleAnalyticsId: string | null; gtmEnabled: boolean; googleTagManagerId: string | null } | null = null;
+    [session, announcements, platformSettings] = await Promise.all([
       auth().catch((error) => {
         console.error("Layout auth error:", error);
         return null;
@@ -144,7 +148,21 @@ export default async function RootLayout({
           dismissible: true,
         },
       }).catch(() => []),
+      db.platformSettings.findUnique({
+        where: { id: "default" },
+        select: { gaEnabled: true, googleAnalyticsId: true, gtmEnabled: true, googleTagManagerId: true },
+      }).catch(() => null),
     ]);
+
+    if (platformSettings) {
+      if (platformSettings.gtmEnabled && platformSettings.googleTagManagerId) {
+        gtmId = platformSettings.googleTagManagerId;
+      }
+      // Only inject GA4 directly if GTM is not active (avoid double-tracking)
+      if (platformSettings.gaEnabled && platformSettings.googleAnalyticsId && !gtmId) {
+        ga4Id = platformSettings.googleAnalyticsId;
+      }
+    }
   } catch (error) {
     console.error("Layout data fetch error:", error);
   }
@@ -153,6 +171,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <GoogleAnalytics ga4Id={ga4Id} gtmId={gtmId} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}

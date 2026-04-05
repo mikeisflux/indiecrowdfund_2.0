@@ -182,6 +182,12 @@ model PlatformSettings {
   recaptchaSiteKey      String?
   recaptchaSecretKey    String?
 
+  // Google Analytics / Tag Manager
+  gaEnabled             Boolean  @default(false)
+  googleAnalyticsId     String?  // GA4 Measurement ID (G-XXXXXXXXXX)
+  gtmEnabled            Boolean  @default(false)
+  googleTagManagerId    String?  // GTM Container ID (GTM-XXXXXXX)
+
   // Theme Settings
   primaryColor          String   @default("#0066FF")
   secondaryColor        String   @default("#6366F1")

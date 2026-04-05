@@ -262,6 +262,9 @@ export async function PATCH(req: NextRequest) {
         "r2BucketName", "r2PublicDomain", "r2Region",
         "maxProjectStorageMB", "signedUrlExpirationMinutes",
         "maxFileSizeMB", "allowedFileTypes", "digitalDownloadsEnabled"
+      ],
+      analytics: [
+        "gaEnabled", "googleAnalyticsId", "gtmEnabled", "googleTagManagerId"
       ]
     };
 
