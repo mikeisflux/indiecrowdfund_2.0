@@ -256,9 +256,25 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Include backer count for each reward
+    // Determine if caller has edit access (owners/collaborators/admins see SECRET rewards)
+    const session = await auth();
+    let canViewSecret = false;
+    if (session?.user?.id) {
+      const project = await db.project.findUnique({
+        where: { id: projectId },
+        select: { creatorId: true },
+      });
+      if (project) {
+        canViewSecret = await canUserEditProject(projectId, session.user.id, project.creatorId);
+      }
+    }
+
+    // Include backer count for each reward; non-owners only see PUBLIC rewards
     const rewards = await db.reward.findMany({
-      where: { projectId },
+      where: {
+        projectId,
+        ...(canViewSecret ? {} : { visibility: "PUBLIC" }),
+      },
       include: {
         items: true,
         _count: { select: { pledges: true } },

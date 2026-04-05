@@ -105,7 +105,8 @@ export async function POST(req: NextRequest) {
           break;
 
         case "account.application.deauthorized":
-          await handleAccountDeauthorized(event.data.object as Stripe.Application, correlationId);
+          // event.account is the connected account ID that was deauthorized
+          await handleAccountDeauthorized(event.account || "", correlationId);
           break;
 
         default:
@@ -158,8 +159,29 @@ async function handleAccountUpdate(account: Stripe.Account, correlationId: strin
 
 /**
  * Handle account.application.deauthorized event
- * Cleans up when a user disconnects their Stripe account
+ * Cleans up when a user disconnects their Stripe account from the platform
  */
-async function handleAccountDeauthorized(application: Stripe.Application, correlationId: string) {
-  connectLogger.info({ correlationId, applicationId: application.id }, "Handling account.application.deauthorized");
+async function handleAccountDeauthorized(accountId: string, correlationId: string) {
+  connectLogger.info({ correlationId, accountId }, "Handling account.application.deauthorized");
+
+  if (!accountId) {
+    connectLogger.warn({ correlationId }, "No accountId in deauthorized event");
+    return;
+  }
+
+  const config = await db.stripeConfig.findFirst({
+    where: { stripeAccountId: accountId },
+  });
+
+  if (!config) {
+    connectLogger.info({ correlationId, accountId }, "No config found for deauthorized account");
+    return;
+  }
+
+  await db.stripeConfig.update({
+    where: { id: config.id },
+    data: { isOnboarded: false, isActive: false },
+  });
+
+  connectLogger.info({ correlationId, accountId, userId: config.userId }, "Marked Stripe account as deauthorized");
 }

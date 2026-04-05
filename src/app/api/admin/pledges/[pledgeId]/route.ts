@@ -517,23 +517,23 @@ export async function PATCH(
         );
       }
 
-      // Update pledge status
-      await db.pledge.update({
-        where: { id: pledgeId },
-        data: {
-          status: "REFUNDED",
-          lastFailureReason: reason || "Refunded by admin",
-        },
-      });
-
-      // Update project backer count and amount
-      await db.project.update({
-        where: { id: pledge.projectId },
-        data: {
-          backerCount: { decrement: 1 },
-          currentAmount: { decrement: pledge.amount },
-        },
-      });
+      // Atomically update pledge status and project stats so they can't diverge
+      await db.$transaction([
+        db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            status: "REFUNDED",
+            lastFailureReason: reason || "Refunded by admin",
+          },
+        }),
+        db.project.update({
+          where: { id: pledge.projectId },
+          data: {
+            backerCount: { decrement: 1 },
+            currentAmount: { decrement: pledge.amount },
+          },
+        }),
+      ]);
 
       return NextResponse.json({
         success: true,
