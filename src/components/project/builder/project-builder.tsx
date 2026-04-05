@@ -192,7 +192,7 @@ export function ProjectBuilder() {
                   if (result.success && result.reward?.id && idx < rewards.length) {
                     const existingReward = rewards[idx];
                     if (!existingReward.id) {
-                      updateReward(idx, { ...existingReward, id: result.reward!.id });
+                      updateReward(idx, { ...existingReward, id: result.reward.id });
                     }
                   }
                 });

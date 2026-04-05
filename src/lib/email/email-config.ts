@@ -669,7 +669,9 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
 
       // Demote retryable failures to RETRY priority (-1) so they don't block the main queue
       // This creates a "secondary queue" effect - fresh emails always process first
-      const isRateLimited = result.error?.toLowerCase().includes("ratelimit") || result.error?.toLowerCase().includes("rate limit");
+      const isRateLimited = result.error
+        ? (result.error.toLowerCase().includes("ratelimit") || result.error.toLowerCase().includes("rate limit"))
+        : false;
       const demotePriority = !shouldFail && (isRateLimited || newAttempts > 1);
 
       await db.emailQueue.update({

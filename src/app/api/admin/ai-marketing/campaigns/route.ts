@@ -282,7 +282,7 @@ export async function POST(request: Request) {
                 NOT: { source: { contains: "retailer", mode: "insensitive" } },
               },
             }),
-            db.user.count({ where: { emailVerified: { not: null } } }),
+            db.user.count({ where: { emailVerified: { not: null }, deletedAt: null } }),
           ]);
           // Estimate combined (some overlap expected)
           recipientCount = nlSubCount + verifiedCount;
@@ -298,7 +298,7 @@ export async function POST(request: Request) {
         break;
       default:
         recipientCount = await db.user.count({
-          where: { emailVerified: { not: null } }
+          where: { emailVerified: { not: null }, deletedAt: null }
         });
     }
 

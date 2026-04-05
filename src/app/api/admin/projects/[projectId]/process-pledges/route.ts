@@ -67,7 +67,7 @@ export async function GET(
 
     // Get all pledges for this project
     const pledges = await db.pledge.findMany({
-      where: { projectId },
+      where: { projectId, deletedAt: null },
       select: {
         id: true,
         amount: true,
@@ -369,8 +369,8 @@ export async function POST(
  */
 async function processDivinityCoinPendingPledges(projectId: string, specificPledgeId?: string) {
   const where = specificPledgeId
-    ? { id: specificPledgeId, projectId, status: "PENDING" as const }
-    : { projectId, status: "PENDING" as const };
+    ? { id: specificPledgeId, projectId, status: "PENDING" as const, deletedAt: null }
+    : { projectId, status: "PENDING" as const, deletedAt: null };
 
   const pendingPledges = await db.pledge.findMany({
     where,
@@ -409,7 +409,9 @@ async function processDivinityCoinPendingPledges(projectId: string, specificPled
   });
 
   const dcTransactionMap = new Map(
-    dcTransactions.map((t: { pledgeId: string | null }) => [t.pledgeId!, t])
+    dcTransactions
+      .filter((t: { pledgeId: string | null }): t is { pledgeId: string } & typeof t => t.pledgeId !== null)
+      .map((t) => [t.pledgeId, t])
   );
 
   const results = {
@@ -527,7 +529,9 @@ async function verifyDivinityCoinPledges(projectId: string) {
   });
 
   const dcTransactionMap = new Map(
-    dcTransactions.map((t: { pledgeId: string | null }) => [t.pledgeId!, t])
+    dcTransactions
+      .filter((t: { pledgeId: string | null }): t is { pledgeId: string } & typeof t => t.pledgeId !== null)
+      .map((t) => [t.pledgeId, t])
   );
 
   const results = {
@@ -805,7 +809,9 @@ async function deleteAbandonedCarts(projectId: string) {
     select: { pledgeId: true },
   });
   const dcPaidPledgeIds = new Set(
-    dcTransactions.map((t: { pledgeId: string | null }) => t.pledgeId)
+    dcTransactions
+      .filter((t: { pledgeId: string | null }) => t.pledgeId !== null)
+      .map((t: { pledgeId: string | null }) => t.pledgeId as string)
   );
 
   const results = {

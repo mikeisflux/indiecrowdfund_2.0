@@ -872,7 +872,7 @@ export async function GET(req: NextRequest) {
           type: "survey_completed",
           time: formatTime(completedAt),
           title: "Survey Completed",
-          detail: `${pledge?.user.name || "A backer"} completed their survey`,
+          detail: `${pledge?.user?.name || "A backer"} completed their survey`,
           date: formatDateLabel(completedAt),
           sortDate: completedAt,
         });
@@ -935,13 +935,13 @@ export async function GET(req: NextRequest) {
         let triggerProductName = "All Backers";
         if (rule.triggerType === "SPECIFIC_REWARD" && rule.triggerRewardId) {
           const reward = await db.reward.findUnique({
-            where: { id: rule.triggerRewardId },
+            where: { id: rule.triggerRewardId, projectId: selectedProjectId },
             select: { title: true },
           });
           triggerProductName = reward?.title || "Unknown Reward";
         } else if (rule.triggerType === "SPECIFIC_ADDON" && rule.triggerAddonId) {
           const addon = await db.reward.findUnique({
-            where: { id: rule.triggerAddonId },
+            where: { id: rule.triggerAddonId, projectId: selectedProjectId },
             select: { title: true },
           });
           triggerProductName = addon?.title || "Unknown Add-on";

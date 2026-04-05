@@ -46,8 +46,8 @@ export async function GET(req: NextRequest) {
     const reviewerIds = Array.from(
       new Set(
         reviews
-          .filter((r: { reviewerId: string | null }) => r.reviewerId)
-          .map((r: { reviewerId: string | null }) => r.reviewerId!)
+          .filter((r: { reviewerId: string | null }): r is { reviewerId: string } => r.reviewerId !== null)
+          .map((r: { reviewerId: string }) => r.reviewerId)
       )
     );
 

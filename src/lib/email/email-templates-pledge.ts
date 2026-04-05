@@ -70,10 +70,10 @@ export async function sendPledgeConfirmationEmail(
     <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
       <h3 style="margin-top: 0;">Shipping Address</h3>
       <p style="margin: 0; color: #333;">
-        ${shippingInfo!.name || backerName}<br>
-        ${shippingInfo!.address || ""}<br>
-        ${[shippingInfo!.city, shippingInfo!.state, shippingInfo!.postalCode].filter(Boolean).join(", ")}<br>
-        ${shippingInfo!.country || ""}
+        ${shippingInfo?.name || backerName}<br>
+        ${shippingInfo?.address || ""}<br>
+        ${[shippingInfo?.city, shippingInfo?.state, shippingInfo?.postalCode].filter(Boolean).join(", ")}<br>
+        ${shippingInfo?.country || ""}
       </p>
     </div>
   ` : "";

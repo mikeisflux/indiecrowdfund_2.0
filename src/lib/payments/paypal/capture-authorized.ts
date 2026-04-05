@@ -23,6 +23,7 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
       paymentProcessor: "PAYPAL",
       status: "PENDING",
       paypalAuthorizationId: { not: null },
+      deletedAt: null,
     },
     include: {
       project: {
@@ -109,7 +110,7 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
             [],
             null,
             pledge.project.creator?.vanityUrl
-              ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
+              ? `/projects/${pledge.project.creator?.vanityUrl}/${pledge.project.slug}`
               : undefined,
             undefined,
             undefined,
