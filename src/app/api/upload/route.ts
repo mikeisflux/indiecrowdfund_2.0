@@ -44,7 +44,7 @@ function generateFilename(originalName: string, convertToWebP: boolean): string 
 // Check if user can upload to a project (creator or collaborator with edit permission)
 async function canUploadToProject(projectId: string, userId: string): Promise<boolean> {
   const project = await db.project.findUnique({
-    where: { id: projectId },
+    where: { id: projectId, deletedAt: null },
     select: { creatorId: true },
   });
 
@@ -121,14 +121,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create directory structure: /uploads/projects/{projectId}/{type}/
-    const uploadType = type || "misc";
+    // Sanitize uploadType to prevent path traversal - only allow alphanumeric, hyphens, underscores
+    const rawType = type || "misc";
+    const uploadType = rawType.replace(/[^a-zA-Z0-9_-]/g, "") || "misc";
+
+    // Sanitize effectiveProjectId - only allow alphanumeric and hyphens (CUID chars + "temp")
+    const safeProjectId = effectiveProjectId.replace(/[^a-zA-Z0-9-]/g, "") || "temp";
+
     const uploadDir = path.join(
       UPLOADS_BASE,
       "projects",
-      effectiveProjectId,
+      safeProjectId,
       uploadType
     );
+
+    // Guard against path traversal: ensure uploadDir stays within UPLOADS_BASE
+    const resolvedBase = path.resolve(UPLOADS_BASE);
+    const resolvedDir = path.resolve(uploadDir);
+    if (!resolvedDir.startsWith(resolvedBase + path.sep) && resolvedDir !== resolvedBase) {
+      return NextResponse.json({ error: "Invalid upload path" }, { status: 400 });
+    }
 
     // Ensure directory exists
     if (!existsSync(uploadDir)) {
