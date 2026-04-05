@@ -28,6 +28,7 @@ export type AuditAction =
   | "PAYOUT_PROCESS"
   | "PAYOUT_COMPLETE"
   | "PAYOUT_FAIL"
+  | "PAYOUT_RETRY"
   | "PAYOUT_CANCEL"
   | "BANK_ACCOUNT_VIEW"
   | "IP_BLOCK"

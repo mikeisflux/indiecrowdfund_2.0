@@ -3,7 +3,7 @@ import {
   notifyPledgeReceived,
   notifyBackerPledgeConfirmed,
 } from "@/lib/notifications";
-import { assignBackerNumber } from "@/lib/payments/stripe";
+import { assignBackerNumber, claimRewardSlot } from "@/lib/payments/stripe";
 import { circuitBreaker } from "@/lib/circuit-breaker";
 import { getDivinityCoinConfig, paymentsDivinitycoinLogger } from "./config";
 import type {
@@ -486,6 +486,7 @@ export async function handlePaymentSucceeded(
       where: { id: pledgeId },
       select: {
         id: true, status: true, projectId: true, amount: true, userId: true, metadata: true,
+        rewardId: true,
         project: { select: { creatorId: true } },
         user: { select: { name: true } },
       },
@@ -592,6 +593,17 @@ export async function handlePaymentSucceeded(
         },
       });
       paymentsDivinitycoinLogger.info(`[DivinityCoin] Updated project stats for pledge ${pledgeId}: +$${pledge.amount}`);
+      // Claim reward slot to prevent overselling (parallel to Stripe/PayPal)
+      if (pledge.rewardId) {
+        try {
+          const claimed = await claimRewardSlot(pledge.rewardId);
+          if (!claimed) {
+            paymentsDivinitycoinLogger.warn(`[DivinityCoin] Reward ${pledge.rewardId} sold out for pledge ${pledgeId}`);
+          }
+        } catch (rewardErr) {
+          paymentsDivinitycoinLogger.error({ err: rewardErr }, `[DivinityCoin] Failed to claim reward slot for pledge ${pledgeId}`);
+        }
+      }
     } else {
       paymentsDivinitycoinLogger.info(`[DivinityCoin] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);
     }

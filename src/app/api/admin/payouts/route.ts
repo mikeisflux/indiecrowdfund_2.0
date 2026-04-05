@@ -391,6 +391,7 @@ export async function PATCH(request: NextRequest) {
       PROCESS: "PAYOUT_PROCESS",
       COMPLETE: "PAYOUT_COMPLETE",
       FAIL: "PAYOUT_FAIL",
+      RETRY: "PAYOUT_RETRY",
     };
     if (payoutAuditMap[action]) {
       auditLog({
