@@ -3,7 +3,7 @@ import {
   notifyPledgeReceived,
   notifyBackerPledgeConfirmed,
 } from "@/lib/notifications";
-import { assignBackerNumber, claimRewardSlot } from "@/lib/payments/stripe";
+import { assignBackerNumber, claimRewardSlot, claimAddonSlots } from "@/lib/payments/stripe";
 import { circuitBreaker } from "@/lib/circuit-breaker";
 import { getDivinityCoinConfig, paymentsDivinitycoinLogger } from "./config";
 import type {
@@ -603,6 +603,22 @@ export async function handlePaymentSucceeded(
         } catch (rewardErr) {
           paymentsDivinitycoinLogger.error({ err: rewardErr }, `[DivinityCoin] Failed to claim reward slot for pledge ${pledgeId}`);
         }
+      }
+
+      // Claim addon slots (prevents overselling limited addons)
+      try {
+        const pledgeAddons = await db.pledgeAddon.findMany({
+          where: { pledgeId },
+          select: { addonId: true, quantity: true },
+        });
+        if (pledgeAddons.length > 0) {
+          const claimed = await claimAddonSlots(pledgeAddons.map(a => ({ id: a.addonId, quantity: a.quantity })));
+          if (!claimed) {
+            paymentsDivinitycoinLogger.warn(`[DivinityCoin] One or more addons sold out for pledge ${pledgeId}`);
+          }
+        }
+      } catch (addonErr) {
+        paymentsDivinitycoinLogger.error({ err: addonErr }, `[DivinityCoin] Failed to claim addon slots for pledge ${pledgeId}`);
       }
     } else {
       paymentsDivinitycoinLogger.info(`[DivinityCoin] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);

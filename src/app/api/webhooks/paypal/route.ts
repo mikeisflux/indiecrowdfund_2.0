@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
-import { claimRewardSlot, assignBackerNumber } from "@/lib/payments/stripe";
+import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/stripe";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
 import { logger } from "@/lib/logger";
 
@@ -122,6 +122,21 @@ export async function POST(req: NextRequest) {
           await claimRewardSlot(pledge.rewardId).catch(err =>
             paypalWebhookLogger.error({ err: String(err) }, "claimRewardSlot failed")
           );
+        }
+
+        // Claim addon slots (prevents overselling limited addons)
+        const pledgeAddons = await db.pledgeAddon.findMany({
+          where: { pledgeId: pledge.id },
+          select: { addonId: true, quantity: true },
+        });
+        if (pledgeAddons.length > 0) {
+          const claimed = await claimAddonSlots(pledgeAddons.map(a => ({ id: a.addonId, quantity: a.quantity }))).catch(err => {
+            paypalWebhookLogger.error({ err: String(err) }, "claimAddonSlots failed");
+            return false;
+          });
+          if (!claimed) {
+            paypalWebhookLogger.warn(`[PayPal] One or more addons sold out for pledge ${pledge.id}`);
+          }
         }
 
         await assignBackerNumber(pledge.projectId, pledge.id).catch(err =>

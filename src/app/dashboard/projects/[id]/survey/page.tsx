@@ -265,9 +265,14 @@ export default function SurveyBuilderPage() {
       if (response.ok) {
         setShowLockDialog(false);
         await fetchSurvey();
+        toast.success("Addresses locked successfully");
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error || "Failed to lock addresses");
       }
     } catch (error) {
       console.error("Error locking survey:", error);
+      toast.error("Failed to lock addresses");
     }
   };
 
@@ -286,9 +291,14 @@ export default function SurveyBuilderPage() {
         setShowItemDialog(false);
         setEditingItem(null);
         await fetchSurvey();
+        toast.success("Question saved");
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error || "Failed to save question");
       }
     } catch (error) {
       console.error("Error saving item question:", error);
+      toast.error("Failed to save question");
     }
   };
 
@@ -303,9 +313,13 @@ export default function SurveyBuilderPage() {
 
       if (response.ok) {
         await fetchSurvey();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error || "Failed to delete question");
       }
     } catch (error) {
       console.error("Error deleting item question:", error);
+      toast.error("Failed to delete question");
     } finally {
       setIsDeletingItem(false);
     }
@@ -326,9 +340,14 @@ export default function SurveyBuilderPage() {
         setShowBackerDialog(false);
         setEditingBacker(null);
         await fetchSurvey();
+        toast.success("Question saved");
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error || "Failed to save question");
       }
     } catch (error) {
       console.error("Error saving backer question:", error);
+      toast.error("Failed to save question");
     }
   };
 
@@ -343,9 +362,13 @@ export default function SurveyBuilderPage() {
 
       if (response.ok) {
         await fetchSurvey();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error || "Failed to delete question");
       }
     } catch (error) {
       console.error("Error deleting backer question:", error);
+      toast.error("Failed to delete question");
     } finally {
       setIsDeletingBacker(false);
     }

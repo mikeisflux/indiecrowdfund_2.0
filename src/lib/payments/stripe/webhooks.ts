@@ -9,7 +9,7 @@ import {
   notifyMarketplaceSale,
 } from "@/lib/notifications";
 import { addToCreatorEmailList } from "@/lib/email";
-import { trackCampaignConversion, claimRewardSlot, assignBackerNumber } from "./rewards";
+import { trackCampaignConversion, claimRewardSlot, claimAddonSlots, assignBackerNumber } from "./rewards";
 import { processPendingPledgesForProject, schedulePaymentRetry } from "./charges";
 
 const webhookLogger = logger.child({ module: "stripe-webhook" });
@@ -138,6 +138,18 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         const claimed = await claimRewardSlot(pledge.rewardId);
         if (!claimed) {
           webhookLogger.warn(`[Webhook] Reward ${pledge.rewardId} sold out for pledge ${pledgeId} - payment completed but reward unavailable`);
+        }
+      }
+
+      // Claim addon slots (prevents overselling limited addons)
+      const pledgeAddons = await db.pledgeAddon.findMany({
+        where: { pledgeId },
+        select: { addonId: true, quantity: true },
+      });
+      if (pledgeAddons.length > 0) {
+        const claimed = await claimAddonSlots(pledgeAddons.map(a => ({ id: a.addonId, quantity: a.quantity })));
+        if (!claimed) {
+          webhookLogger.warn(`[Webhook] One or more addons sold out for pledge ${pledgeId}`);
         }
       }
 
@@ -327,6 +339,18 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
       const claimed = await claimRewardSlot(existingPledge.rewardId);
       if (!claimed) {
         webhookLogger.warn(`[SetupIntent] Reward ${existingPledge.rewardId} sold out for pledge ${pledgeId} - payment completed but reward unavailable`);
+      }
+    }
+
+    // Claim addon slots (prevents overselling limited addons)
+    const setupPledgeAddons = await db.pledgeAddon.findMany({
+      where: { pledgeId },
+      select: { addonId: true, quantity: true },
+    });
+    if (setupPledgeAddons.length > 0) {
+      const claimed = await claimAddonSlots(setupPledgeAddons.map(a => ({ id: a.addonId, quantity: a.quantity })));
+      if (!claimed) {
+        webhookLogger.warn(`[SetupIntent] One or more addons sold out for pledge ${pledgeId}`);
       }
     }
 
