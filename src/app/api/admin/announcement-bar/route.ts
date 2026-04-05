@@ -212,6 +212,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Announcement ID is required" }, { status: 400, headers: corsHeaders });
     }
 
+    const existing = await db.announcementBar.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Announcement not found" }, { status: 404, headers: corsHeaders });
+    }
+
     await db.announcementBar.delete({
       where: { id },
     });

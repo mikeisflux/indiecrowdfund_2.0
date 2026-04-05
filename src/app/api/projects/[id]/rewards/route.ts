@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { randomBytes } from "crypto";
 
 const projectsRewardsLogger = logger.child({ module: "projects-rewards" });
 import { auth } from "@/lib/auth";
@@ -82,7 +83,7 @@ async function saveReward(projectId: string, reward: RewardData) {
   // Generate secret token for SECRET visibility if not provided
   let secretToken = reward.secretToken || null;
   if (reward.visibility === "SECRET" && !secretToken) {
-    secretToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    secretToken = randomBytes(16).toString("hex");
   }
   // Clear secret token if visibility is not SECRET
   if (reward.visibility !== "SECRET") {
@@ -371,7 +372,7 @@ export async function PATCH(
     // Handle secret token for SECRET visibility
     let secretToken = reward.secretToken || existingReward?.secretToken || null;
     if (reward.visibility === "SECRET" && !secretToken) {
-      secretToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+      secretToken = randomBytes(16).toString("hex");
     }
     // Clear secret token if visibility is not SECRET
     if (reward.visibility !== "SECRET") {

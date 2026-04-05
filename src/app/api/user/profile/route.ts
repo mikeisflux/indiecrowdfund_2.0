@@ -74,24 +74,10 @@ export async function PATCH(request: Request) {
 
     // Validate vanity URL if provided
     if (vanityUrl) {
-      // Check format
-      if (!/^[a-z0-9-_]+$/.test(vanityUrl)) {
+      // Check format: must start with a letter, then letters/numbers/hyphens/underscores, 3-30 chars total
+      if (!/^[a-z][a-z0-9_-]{2,29}$/.test(vanityUrl)) {
         return NextResponse.json(
-          { error: "Username can only contain lowercase letters, numbers, hyphens, and underscores" },
-          { status: 400 }
-        );
-      }
-
-      if (vanityUrl.length < 3) {
-        return NextResponse.json(
-          { error: "Username must be at least 3 characters" },
-          { status: 400 }
-        );
-      }
-
-      if (vanityUrl.length > 30) {
-        return NextResponse.json(
-          { error: "Username must be less than 30 characters" },
+          { error: "Username must start with a letter and contain only lowercase letters, numbers, hyphens, and underscores (3-30 characters)" },
           { status: 400 }
         );
       }

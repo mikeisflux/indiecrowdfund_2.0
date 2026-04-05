@@ -101,8 +101,39 @@ export async function PATCH(request: Request) {
       emailPreferences,
     } = body;
 
+    // Validate bio length
+    if (bio !== undefined && bio !== null && typeof bio === "string" && bio.length > 500) {
+      return NextResponse.json({ error: "Bio must be 500 characters or less" }, { status: 400 });
+    }
+
+    // Validate name length
+    if (name !== undefined && name !== null && typeof name === "string" && name.length > 100) {
+      return NextResponse.json({ error: "Name must be 100 characters or less" }, { status: 400 });
+    }
+
+    // Validate websites array
+    if (websites !== undefined && websites !== null) {
+      if (!Array.isArray(websites)) {
+        return NextResponse.json({ error: "Websites must be an array" }, { status: 400 });
+      }
+      if (websites.length > 10) {
+        return NextResponse.json({ error: "Maximum 10 websites allowed" }, { status: 400 });
+      }
+      for (const site of websites) {
+        if (typeof site !== "string" || site.length > 255) {
+          return NextResponse.json({ error: "Each website URL must be a string of 255 characters or less" }, { status: 400 });
+        }
+      }
+    }
+
     // Validate vanity URL if provided
     if (vanityUrl) {
+      if (!/^[a-z][a-z0-9_-]{2,29}$/.test(vanityUrl)) {
+        return NextResponse.json(
+          { error: "Username must start with a letter and contain only lowercase letters, numbers, hyphens, and underscores (3-30 characters)" },
+          { status: 400 }
+        );
+      }
       const existing = await db.user.findFirst({
         where: {
           vanityUrl,

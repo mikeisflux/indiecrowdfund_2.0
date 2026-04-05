@@ -106,6 +106,16 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    // Restrict access to DRAFT/SUBMITTED projects — only creator or admin may preview
+    const isCreatorOrAdmin =
+      userId === project.creatorId ||
+      userRole === "ADMIN" ||
+      userRole === "SUPER_ADMIN";
+
+    if ((project.status === "DRAFT" || project.status === "SUBMITTED") && !isCreatorOrAdmin) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
     // Calculate days remaining
     let daysRemaining = 0;
     if (project.endDate) {

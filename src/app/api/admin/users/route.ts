@@ -261,10 +261,22 @@ export async function PATCH(req: NextRequest) {
         break;
 
       case "TOGGLE_RETAILER_ACCESS":
+        if (authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can toggle retailer access" },
+            { status: 403 }
+          );
+        }
         updateData.retailerAccess = data?.retailerAccess === true;
         break;
 
       case "VERIFY_EMAIL":
+        if (authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can verify emails directly" },
+            { status: 403 }
+          );
+        }
         updateData.emailVerified = new Date();
         break;
 
