@@ -229,7 +229,7 @@ export async function POST(request: Request) {
 
     const statusAuditMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {
       DEACTIVATE: "PROJECT_DEACTIVATE",
-      SEND_TO_REVIEW: "PROJECT_DEACTIVATE",
+      SEND_TO_REVIEW: "PROJECT_SEND_TO_REVIEW",
       REACTIVATE: "PROJECT_REACTIVATE",
       MAKE_LIVE: "PROJECT_MAKE_LIVE",
     };

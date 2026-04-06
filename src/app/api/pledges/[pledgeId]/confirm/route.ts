@@ -241,7 +241,7 @@ export async function POST(
       updatedProject = await db.project.update({
         where: { id: pledge.projectId },
         data: {
-          currentAmount: { increment: pledge.amount },
+          currentAmount: { increment: Number(pledge.amount) },
           backerCount: { increment: 1 },
         },
       });
@@ -287,7 +287,7 @@ export async function POST(
       updatedProject = await db.project.update({
         where: { id: pledge.projectId },
         data: {
-          currentAmount: { increment: pledge.amount },
+          currentAmount: { increment: Number(pledge.amount) },
           backerCount: { increment: 1 },
         },
       });

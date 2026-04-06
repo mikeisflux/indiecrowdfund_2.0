@@ -237,6 +237,7 @@ export async function POST(req: NextRequest) {
     const reviewAuditMap: Record<string, Parameters<typeof auditLog>[0]["action"]> = {
       APPROVED: "PROJECT_APPROVE",
       REJECTED: "PROJECT_REJECT",
+      REQUESTED_CHANGES: "PROJECT_REQUEST_CHANGES",
     };
     if (reviewAuditMap[action]) {
       auditLog({

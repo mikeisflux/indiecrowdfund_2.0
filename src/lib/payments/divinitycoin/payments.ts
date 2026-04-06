@@ -588,7 +588,7 @@ export async function handlePaymentSucceeded(
       await db.project.update({
         where: { id: pledge.projectId },
         data: {
-          currentAmount: { increment: pledge.amount },
+          currentAmount: { increment: Number(pledge.amount) },
           backerCount: { increment: 1 },
         },
       });
@@ -864,7 +864,7 @@ export async function handleRefundCompleted(
           where: { id: pledge.projectId },
           data: {
             backerCount: { decrement: 1 },
-            currentAmount: { decrement: pledge.amount },
+            currentAmount: { decrement: Number(pledge.amount) },
           },
         });
       }

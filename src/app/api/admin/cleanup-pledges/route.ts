@@ -286,7 +286,7 @@ export async function POST(req: NextRequest) {
           where: { id: pledge.projectId },
           data: {
             backerCount: { decrement: 1 },
-            currentAmount: { decrement: pledge.amount },
+            currentAmount: { decrement: Number(pledge.amount) },
           },
         });
         actions.push("Decremented project stats");
@@ -301,7 +301,7 @@ export async function POST(req: NextRequest) {
           where: { id: pledge.projectId },
           data: {
             backerCount: { decrement: 1 },
-            currentAmount: { decrement: pledge.amount },
+            currentAmount: { decrement: Number(pledge.amount) },
           },
         });
         actions.push("Decremented project stats");
