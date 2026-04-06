@@ -342,7 +342,7 @@ export function CollectionsTab() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                   {selectedCollection.projects.map((project, index) => {
-                    const fundingPercent = (project.currentAmount / project.goalAmount) * 100;
+                    const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
                     return (
                       <Card
                         key={project.id}

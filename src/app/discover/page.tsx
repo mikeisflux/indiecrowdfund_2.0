@@ -169,7 +169,7 @@ function DiscoverContent() {
         let filteredData = data.projects;
         if (!showFunded) {
           filteredData = data.projects.filter((p: Project) => {
-            const percent = (p.currentAmount / p.goalAmount) * 100;
+            const percent = (Number(p.currentAmount) / Number(p.goalAmount)) * 100;
             return percent < 100;
           });
         }

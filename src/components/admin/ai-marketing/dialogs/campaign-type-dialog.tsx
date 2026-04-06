@@ -577,7 +577,7 @@ export function CampaignTypeDialog({
                       <div className="flex-1">
                         <p className="font-medium">{project.title}</p>
                         <p className="text-xs text-zinc-500">
-                          {project.category} • ${(project.currentAmount / 100).toLocaleString()} raised
+                          {project.category} • ${Number(project.currentAmount).toLocaleString()} raised
                         </p>
                       </div>
                       {selectedProjects.includes(project.id) && (

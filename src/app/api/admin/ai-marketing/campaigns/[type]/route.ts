@@ -246,7 +246,11 @@ export async function GET(
       description,
       recipientCount,
       sampleRecipients: recipients.slice(0, 10),
-      projects,
+      projects: projects.map((p) => ({
+        ...p,
+        goalAmount: Number(p.goalAmount),
+        currentAmount: Number(p.currentAmount),
+      })),
       aiSettings: {
         emailPersonalization: aiSettings.emailPersonalization,
         sendTimeOptimization: aiSettings.sendTimeOptimization,
