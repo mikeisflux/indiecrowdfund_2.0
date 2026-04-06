@@ -22,8 +22,8 @@ function escapeHtml(str: string): string {
 const createMessageSchema = z.object({
   projectId: z.string(),
   recipientId: z.string(),
-  subject: z.string().optional(),
-  content: z.string().min(1),
+  subject: z.string().max(500).optional(),
+  content: z.string().min(1).max(50000),
 });
 
 export async function POST(req: NextRequest) {

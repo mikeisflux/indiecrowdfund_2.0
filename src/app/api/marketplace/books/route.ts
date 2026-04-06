@@ -198,12 +198,24 @@ export async function POST(request: Request) {
       companyId,
     } = body;
 
-    // Validate required fields
+    // Validate required fields and lengths
     if (!title || !description || !price || !pdfFileUrl) {
       return NextResponse.json(
         { error: "Missing required fields: title, description, price, pdfFileUrl" },
         { status: 400 }
       );
+    }
+    if (typeof title !== "string" || title.length > 500) {
+      return NextResponse.json({ error: "Title must be 500 characters or less" }, { status: 400 });
+    }
+    if (typeof description !== "string" || description.length > 100000) {
+      return NextResponse.json({ error: "Description must be 100000 characters or less" }, { status: 400 });
+    }
+    if (shortDescription && (typeof shortDescription !== "string" || shortDescription.length > 1000)) {
+      return NextResponse.json({ error: "Short description must be 1000 characters or less" }, { status: 400 });
+    }
+    if (!Array.isArray(tags) || tags.length > 20 || tags.some((t: unknown) => typeof t !== "string" || t.length > 100)) {
+      return NextResponse.json({ error: "Tags must be an array of up to 20 strings (max 100 chars each)" }, { status: 400 });
     }
 
     // Generate slug

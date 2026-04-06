@@ -118,7 +118,7 @@ export async function POST(request: Request) {
         name: name.trim(),
         slug: slug.toLowerCase(),
         tagline: tagline?.trim() || null,
-        about: about || null,
+        about: about ? String(about).substring(0, 5000) : null,
         logoUrl: logo || null,
         bannerImageUrl: banner || null,
         website: website?.trim() || null,
@@ -198,7 +198,7 @@ export async function PUT(request: Request) {
       data: {
         name: name.trim(),
         tagline: tagline?.trim() || null,
-        about: about || null,
+        about: about ? String(about).substring(0, 5000) : null,
         logoUrl: logo || null,
         bannerImageUrl: banner || null,
         website: website?.trim() || null,
