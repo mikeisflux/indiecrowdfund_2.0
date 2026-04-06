@@ -402,16 +402,17 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/creator/marketplace/files/upload/route.ts` ✅
 - [x] `src/app/api/creator/marketplace/route.ts` ✅
 - [x] `src/app/api/creator/media/upload/route.ts` ✅
-- [ ] `src/app/api/creator/paypal-bank-account/route.ts` ⬜
-- [ ] `src/app/api/creator/paypal/route.ts` ⬜
-- [ ] `src/app/api/creator/pledges/[pledgeId]/route.ts` ⬜
+- [x] `src/app/api/creator/paypal-bank-account/route.ts` ✅
+- [x] `src/app/api/creator/paypal/route.ts` ✅
+- [x] `src/app/api/creator/pledges/[pledgeId]/route.ts` ✅
 - [ ] `src/app/api/creator/pledges/bulk-delete/route.ts` ⬜ Fixed missing deletedAt:null in pledge query
-- [ ] `src/app/api/creator/prelaunch-pages/route.ts` ⬜
-- [ ] `src/app/api/creator/projects-for-import/route.ts` ⬜
-- [ ] `src/app/api/creator/refund-requests/[requestId]/route.ts` ⬜
-- [ ] `src/app/api/creator/refund-requests/route.ts` ⬜
-- [ ] `src/app/api/creator/stripe/portal/route.ts` ⬜
-- [ ] `src/app/api/creator/whop-bank-account/route.ts` ⬜
+- [x] `src/app/api/creator/prelaunch-pages/route.ts` ✅
+- [x] `src/app/api/creator/projects-for-import/route.ts` ✅
+- [x] `src/app/api/creator/refund-requests/[requestId]/route.ts` 🔧
+  - Fixed: Race condition where refund payment API was called before atomic status guard, allowing double-refunds on concurrent requests. Moved atomic claim (PENDING→APPROVED) before payment processor call; reverts to PENDING on payment failure.
+- [x] `src/app/api/creator/refund-requests/route.ts` ✅
+- [x] `src/app/api/creator/stripe/portal/route.ts` ✅
+- [x] `src/app/api/creator/whop-bank-account/route.ts` ✅
 - [ ] `src/app/api/cron/ai-marketing/route.ts` ⬜ Added POST handler for consistency with other cron endpoints
 - [ ] `src/app/api/cron/cleanup-pledges/route.ts` ⬜
 - [ ] `src/app/api/cron/cleanup-projects/route.ts` ⬜
