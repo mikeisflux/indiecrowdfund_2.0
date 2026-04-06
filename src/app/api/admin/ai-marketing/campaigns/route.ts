@@ -12,6 +12,11 @@ import {
   generateSegmentsIfEnabled,
 } from "@/lib/ai/settings-integration";
 
+/** Escape HTML special characters to prevent injection in email templates */
+function esc(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
 
@@ -464,11 +469,11 @@ function generateEmailHtml(
 
       return `
         <div style="margin-bottom: 24px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
-          <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 18px;">${project.title}</h3>
-          <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">${rec.recommendationReason}</p>
+          <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 18px;">${esc(project.title)}</h3>
+          <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">${esc(rec.recommendationReason)}</p>
           <a href="{{SITE_URL}}${projectUrl}"
              style="display: inline-block; padding: 10px 20px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
-            ${rec.callToAction}
+            ${esc(rec.callToAction)}
           </a>
         </div>
       `;
@@ -552,8 +557,8 @@ function generateEmailText(
         : `/projects/${project.slug}`;
 
       return `
-${project.title}
-${rec.recommendationReason}
+${esc(project.title)}
+${esc(rec.recommendationReason)}
 View project: {{SITE_URL}}${projectUrl}
 `;
     }).join("\n---\n");
