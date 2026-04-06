@@ -120,6 +120,14 @@ export async function PATCH(
       updateData.inStock = item.inStock;
     }
 
+    // Verify the item belongs to this project (prevents cross-project IDOR)
+    const existingItem = await db.projectItem.findFirst({
+      where: { id: item.id, projectId },
+    });
+    if (!existingItem) {
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    }
+
     const updated = await db.projectItem.update({
       where: { id: item.id },
       data: updateData,
