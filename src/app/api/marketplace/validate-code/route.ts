@@ -4,12 +4,23 @@ import { logger } from "@/lib/logger";
 const marketplaceValidateCodeLogger = logger.child({ module: "marketplace-validate-code" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { rateLimiter } from "@/lib/rate-limiter";
 
 export const dynamic = "force-dynamic";
 
 // POST: Validate a discount code for a specific book
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 10 attempts per user per minute to prevent brute-forcing codes
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rlResult = await rateLimiter.check("validate-code", ip, { limit: 10, windowSec: 60 });
+    if (!rlResult.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait before trying again." },
+        { status: 429, headers: { "Retry-After": String(rlResult.resetAt - Math.floor(Date.now() / 1000)) } }
+      );
+    }
+
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Please sign in to use a promo code" }, { status: 401 });
