@@ -33,8 +33,8 @@ async function requireAdmin() {
     select: { role: true },
   });
 
-  if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
-    return { error: "Forbidden - Admin access required", status: 403 };
+  if (user?.role !== "SUPER_ADMIN") {
+    return { error: "Forbidden - Super Admin access required for database restore", status: 403 };
   }
 
   return { user: session.user };

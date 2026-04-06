@@ -6,8 +6,22 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { exec } from "child_process";
 import { promisify } from "util";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 
 const execAsync = promisify(exec);
+
+/** Write crontab safely by passing content via a temp file, avoiding shell injection */
+async function writeCrontab(content: string): Promise<void> {
+  const tmpFile = path.join(os.tmpdir(), `crontab_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  try {
+    await fs.promises.writeFile(tmpFile, content, { mode: 0o600 });
+    await execAsync(`crontab "${tmpFile}"`);
+  } finally {
+    await fs.promises.unlink(tmpFile).catch(() => {});
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -86,13 +100,13 @@ export async function PUT(req: NextRequest) {
     const content = crontab.endsWith("\n") ? crontab : crontab + "\n";
 
     try {
-      await execAsync(`echo ${JSON.stringify(content)} | crontab -`);
+      await writeCrontab(content);
     } catch (error) {
       adminCronLogger.error({ err: String(error) }, "Error writing crontab:");
       // Try to restore backup if write failed
       if (backup) {
         try {
-          await execAsync(`echo ${JSON.stringify(backup)} | crontab -`);
+          await writeCrontab(backup);
         } catch {
           // Restoration failed too
         }

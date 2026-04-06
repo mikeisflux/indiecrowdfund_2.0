@@ -17,8 +17,11 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search");
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "25");
-    const sortBy = searchParams.get("sortBy") || "lastSeen";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
+    const ALLOWED_SORT_FIELDS = ["lastSeen", "createdAt", "eventCount", "title", "level"] as const;
+    type SortField = typeof ALLOWED_SORT_FIELDS[number];
+    const requestedSort = searchParams.get("sortBy") || "lastSeen";
+    const sortBy: SortField = ALLOWED_SORT_FIELDS.includes(requestedSort as SortField) ? (requestedSort as SortField) : "lastSeen";
+    const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
