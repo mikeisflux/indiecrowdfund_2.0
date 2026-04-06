@@ -64,6 +64,15 @@ export async function createStripePayment({
   // Check if campaign is already funded
   const isCampaignFunded = Number(project.currentAmount) >= Number(project.goalAmount);
 
+  // Read platform fee from settings (consistent with charges.ts deferred-charge path)
+  const platformSettings = await db.platformSettings.findUnique({
+    where: { id: "default" },
+    select: { platformFee: true },
+  }).catch(() => null);
+  const platformFeeRate = platformSettings?.platformFee
+    ? Number(platformSettings.platformFee) / 100
+    : 0.03; // default 3%
+
   // Get or create Stripe customer
   const customerId = await getOrCreateStripeCustomer(
     stripeClient,
@@ -336,7 +345,7 @@ export async function createStripePayment({
   }
 
   const amountInCents = Math.round(amount * 100);
-  const platformFee = Math.round(amount * 0.03 * 100); // 3% platform fee
+  const platformFee = Math.round(amount * platformFeeRate * 100);
 
   if (isCampaignFunded) {
     // Campaign already funded - charge immediately

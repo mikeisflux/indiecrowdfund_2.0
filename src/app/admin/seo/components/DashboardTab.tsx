@@ -23,7 +23,6 @@ export function DashboardTab({
   isFixingAll,
   isFixingPage,
   onFixPage,
-  onFixAll,
   onEditMeta,
 }: DashboardTabProps) {
   return (
