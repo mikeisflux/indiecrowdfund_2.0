@@ -21,12 +21,14 @@ const geistSans = localFont({
   variable: "--font-geist-sans",
   weight: "100 900",
   display: "swap",
+  preload: false,
 });
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
   display: "swap",
+  preload: false,
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.com";
