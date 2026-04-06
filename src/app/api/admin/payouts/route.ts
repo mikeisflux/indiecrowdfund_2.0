@@ -309,6 +309,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     let updateData: Record<string, unknown> = {};
+    // statusFilter enforces the expected current status atomically in updateMany
+    let statusFilter: Record<string, unknown> | undefined;
 
     switch (action) {
       case "PROCESS":
@@ -319,6 +321,7 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: { in: ["PENDING", "FAILED"] } };
         updateData = {
           status: "PROCESSING",
         };
@@ -332,6 +335,7 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: "PROCESSING" };
         updateData = {
           status: "COMPLETED",
           sentAt: new Date(),
@@ -348,6 +352,7 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: "PROCESSING" };
         updateData = {
           status: "FAILED",
         };
@@ -361,6 +366,7 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: "FAILED" };
         updateData = {
           status: "PENDING",
         };
@@ -373,9 +379,22 @@ export async function PATCH(request: NextRequest) {
         );
     }
 
-    const updatedPayout = await db.payout.update({
+    // Atomic update: only proceed if status hasn't changed since we fetched it
+    if (statusFilter) {
+      const result = await db.payout.updateMany({
+        where: { id: payoutId, ...statusFilter },
+        data: updateData,
+      });
+      if (result.count === 0) {
+        return NextResponse.json(
+          { error: "Payout status has changed — please refresh and try again" },
+          { status: 409 }
+        );
+      }
+    }
+
+    const updatedPayout = await db.payout.findUnique({
       where: { id: payoutId },
-      data: updateData,
       include: {
         project: {
           select: {

@@ -224,24 +224,24 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/mailboxes/[id]/emails/route.ts`
 - [ ] `src/app/api/admin/mailboxes/[id]/route.ts`
 - [ ] `src/app/api/admin/mailboxes/route.ts`
-- [ ] `src/app/api/admin/marketplace/books/[id]/feature/route.ts`
-- [ ] `src/app/api/admin/marketplace/books/[id]/review/route.ts`
+- [x] `src/app/api/admin/marketplace/books/[id]/feature/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/[id]/review/route.ts` ✅
 - [ ] `src/app/api/admin/marketplace/books/[id]/route.ts`
-- [ ] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts`
-- [ ] `src/app/api/admin/marketplace/books/reorder/route.ts`
-- [ ] `src/app/api/admin/marketplace/books/route.ts`
-- [ ] `src/app/api/admin/marketplace/history/route.ts`
-- [ ] `src/app/api/admin/marketplace/pdf-management/route.ts`
-- [ ] `src/app/api/admin/marketplace/transactions/route.ts`
+- [x] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/reorder/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/history/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/pdf-management/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/transactions/route.ts` ✅
 - [ ] `src/app/api/admin/media/route.ts`
 - [ ] `src/app/api/admin/media/scan/route.ts`
 - [ ] `src/app/api/admin/media/upload/route.ts`
 - [ ] `src/app/api/admin/notifications/route.ts`
 - [ ] `src/app/api/admin/pages/route.ts`
-- [ ] `src/app/api/admin/payouts/divinitycoin/route.ts`
-- [ ] `src/app/api/admin/payouts/paypal/route.ts`
-- [ ] `src/app/api/admin/payouts/route.ts`
-- [ ] `src/app/api/admin/payouts/whop/route.ts`
+- [x] `src/app/api/admin/payouts/divinitycoin/route.ts` ✅
+- [x] `src/app/api/admin/payouts/paypal/route.ts` ✅
+- [x] `src/app/api/admin/payouts/route.ts` 🔧 Fixed race condition in PATCH — atomic updateMany with status guard
+- [x] `src/app/api/admin/payouts/whop/route.ts` ✅
 - [ ] `src/app/api/admin/pledges/[pledgeId]/route.ts`
 - [ ] `src/app/api/admin/pledges/cleanup/route.ts`
 - [ ] `src/app/api/admin/prelaunch/route.ts`
@@ -273,7 +273,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/sidebar-stats/route.ts`
 - [ ] `src/app/api/admin/sync-all-project-stats/route.ts`
 - [ ] `src/app/api/admin/transactions/[id]/route.ts`
-- [ ] `src/app/api/admin/transactions/route.ts`
+- [x] `src/app/api/admin/transactions/route.ts` 🔧 Fixed null crash on bankAccount.user in querySettlements (orphaned FK)
 - [ ] `src/app/api/admin/transactions/stripe-lookup/route.ts`
 - [ ] `src/app/api/admin/users/[userId]/emails/route.ts`
 - [ ] `src/app/api/admin/users/[userId]/pledges/route.ts`
