@@ -58,6 +58,11 @@ const GOOGLE_CRAWLER_UA_PATTERNS = [
   "google-site-verification",
   "google-structured-data-testing-tool",
   "google page speed",
+  "google-tag-manager",
+  "google-structured-data",
+  "google favicon",
+  "googleweblight",
+  "google-read-aloud",
 ];
 
 // Representative Google IP prefixes (covers Googlebot + AdsBot + infrastructure)
