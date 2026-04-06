@@ -354,20 +354,19 @@ export async function POST(
       );
     }
 
+    const body = await req.json();
+    const data = responseSchema.parse(body);
+
     // Check if address is locked
     if (existingResponse.addressLocked || survey.addressesLocked) {
       // Can still update non-address fields, but not address
-      const body = await req.json();
-      if (body.shippingAddress && JSON.stringify(body.shippingAddress) !== JSON.stringify(existingResponse.shippingAddress)) {
+      if (data.shippingAddress && JSON.stringify(data.shippingAddress) !== JSON.stringify(existingResponse.shippingAddress)) {
         return NextResponse.json(
           { error: "Address has been locked and cannot be changed" },
           { status: 400 }
         );
       }
     }
-
-    const body = await req.json();
-    const data = responseSchema.parse(body);
 
     // Validate required fields if submitting
     if (data.submit) {

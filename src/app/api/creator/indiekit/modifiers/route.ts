@@ -287,7 +287,6 @@ export async function POST(req: NextRequest) {
           id: pledgeId,
           deletedAt: null,
           projectId,
-          deletedAt: null,
         },
         include: {
           addons: true,
@@ -305,6 +304,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           { error: "Backer does not have this modifier addon" },
           { status: 400 }
+        );
+      }
+
+      // Verify the target reward belongs to this project
+      const reward = await db.reward.findFirst({
+        where: { id: rewardId, projectId },
+        select: { id: true },
+      });
+      if (!reward) {
+        return NextResponse.json(
+          { error: "Reward not found in this project" },
+          { status: 404 }
         );
       }
 
