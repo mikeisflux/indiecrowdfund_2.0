@@ -26,12 +26,6 @@ function verifyCronAuth(req: NextRequest): boolean {
     }
   }
 
-  // Allow localhost requests (for internal cron)
-  const host = req.headers.get("host") || "";
-  if (host.startsWith("localhost") || host.startsWith("127.0.0.1")) {
-    return true;
-  }
-
   return false;
 }
 

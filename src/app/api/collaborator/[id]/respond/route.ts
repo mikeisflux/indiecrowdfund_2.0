@@ -90,14 +90,20 @@ export async function POST(
       : null;
 
     if (action === "accept") {
-      // Accept the collaboration
-      await db.projectCollaborator.update({
-        where: { id },
+      // Accept the collaboration — atomic guard prevents double-acceptance
+      const acceptResult = await db.projectCollaborator.updateMany({
+        where: { id, status: "PENDING" },
         data: {
           status: "ACCEPTED",
           acceptedAt: new Date(),
         },
       });
+      if (acceptResult.count === 0) {
+        return NextResponse.json(
+          { error: "This invitation has already been responded to" },
+          { status: 400 }
+        );
+      }
 
       // Notify the project creator
       await db.notification.create({
@@ -121,13 +127,19 @@ export async function POST(
         canEditProject: collaborator.canEditProject,
       });
     } else {
-      // Decline the collaboration
-      await db.projectCollaborator.update({
-        where: { id },
+      // Decline the collaboration — atomic guard prevents double-decline
+      const declineResult = await db.projectCollaborator.updateMany({
+        where: { id, status: "PENDING" },
         data: {
           status: "DECLINED",
         },
       });
+      if (declineResult.count === 0) {
+        return NextResponse.json(
+          { error: "This invitation has already been responded to" },
+          { status: 400 }
+        );
+      }
 
       // Notify the project creator
       await db.notification.create({
