@@ -404,7 +404,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/creator/paypal-bank-account/route.ts` ✅
 - [x] `src/app/api/creator/paypal/route.ts` ✅
 - [x] `src/app/api/creator/pledges/[pledgeId]/route.ts` ✅
-- [x] `src/app/api/creator/pledges/bulk-delete/route.ts` ✅
+- [x] `src/app/api/creator/pledges/bulk-delete/route.ts` 🔧 Fixed missing deletedAt:null in pledge query
 - [x] `src/app/api/creator/prelaunch-pages/route.ts` ✅
 - [x] `src/app/api/creator/projects-for-import/route.ts` 🔧
 - [x] `src/app/api/creator/refund-requests/[requestId]/route.ts` 🔧

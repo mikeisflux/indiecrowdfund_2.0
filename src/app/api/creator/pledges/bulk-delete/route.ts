@@ -36,6 +36,7 @@ export async function DELETE(req: Request) {
       where: {
         id: { in: pledgeIds },
         status: "PENDING", // Only allow deleting PENDING pledges
+        deletedAt: null,
       },
       include: {
         project: {
