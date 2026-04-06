@@ -232,7 +232,7 @@ export async function GET(request: Request) {
     for (const pledge of largePledges) {
       const notifId = `pledge-large-${pledge.id}`;
       if (!type || type === "payment") {
-        const amount = (Number(pledge.amount) / 100).toFixed(2);
+        const amount = Number(pledge.amount).toFixed(2);
         notifications.push({
           id: notifId,
           type: "payment",
