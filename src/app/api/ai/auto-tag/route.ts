@@ -24,6 +24,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (typeof title !== "string" || title.length > 300) {
+      return NextResponse.json({ error: "Title must be 300 characters or less" }, { status: 400 });
+    }
+    if (typeof description !== "string" || description.length > 10000) {
+      return NextResponse.json({ error: "Description must be 10000 characters or less" }, { status: 400 });
+    }
+
     const result = await autoTagProject({
       title,
       description,
