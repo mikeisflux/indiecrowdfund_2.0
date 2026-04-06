@@ -18,7 +18,7 @@ function generateAccessCode(): string {
   for (let s = 0; s < 3; s++) {
     let segment = "";
     for (let i = 0; i < 4; i++) {
-      segment += chars.charAt(Math.floor(Math.random() * chars.length));
+      segment += chars.charAt(crypto.randomInt(chars.length));
     }
     segments.push(segment);
   }
