@@ -449,7 +449,7 @@ async function mergeUser(oldUserId: string, keeperUserId: string) {
         where: { id: keeperUserId },
         data: {
           divinityCoinBalance: {
-            increment: oldUserData.divinityCoinBalance,
+            increment: Number(oldUserData.divinityCoinBalance),
           },
         },
       });
