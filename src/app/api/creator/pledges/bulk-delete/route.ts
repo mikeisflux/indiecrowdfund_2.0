@@ -24,6 +24,13 @@ export async function DELETE(req: Request) {
       );
     }
 
+    if (pledgeIds.length > 100) {
+      return NextResponse.json(
+        { error: "Cannot delete more than 100 pledges at once" },
+        { status: 400 }
+      );
+    }
+
     // Verify all pledges belong to projects owned by this user and are PENDING
     const pledges = await db.pledge.findMany({
       where: {

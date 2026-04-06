@@ -28,6 +28,10 @@ export async function PATCH(
     const body = await req.json();
     const { action, creatorNote } = body as { action: "approve" | "deny"; creatorNote?: string };
 
+    if (creatorNote && creatorNote.length > 1000) {
+      return NextResponse.json({ error: "Creator note must be 1000 characters or less" }, { status: 400 });
+    }
+
     if (!["approve", "deny"].includes(action)) {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }

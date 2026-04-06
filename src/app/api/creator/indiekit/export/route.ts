@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
             projectId,
             status: { in: ["COMPLETED", "PENDING"] },
           },
+          take: 50000,
           include: {
             user: {
               select: {
