@@ -12,6 +12,15 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export const dynamic = "force-dynamic";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Helper to check if user owns the project that the pledge belongs to
 async function isProjectOwnerOrCollaborator(userId: string, pledgeId: string): Promise<{ allowed: boolean; pledge: unknown }> {
   const pledge = await db.pledge.findUnique({
@@ -204,8 +213,15 @@ export async function PATCH(
 
       // Determine refund amount: use explicit amount if provided (partial), otherwise full
       const totalPaid = Number(typedPledge.amount);
-      const refundAmount = refundRequestAmount != null
-        ? Math.min(parseFloat(refundRequestAmount), totalPaid)
+      const parsedRefundRequest = refundRequestAmount != null ? parseFloat(refundRequestAmount) : null;
+      if (parsedRefundRequest !== null && (!isFinite(parsedRefundRequest) || isNaN(parsedRefundRequest))) {
+        return NextResponse.json(
+          { error: "Invalid refund amount" },
+          { status: 400 }
+        );
+      }
+      const refundAmount = parsedRefundRequest != null
+        ? Math.min(parsedRefundRequest, totalPaid)
         : totalPaid;
 
       if (refundAmount <= 0) {
@@ -326,7 +342,7 @@ export async function PATCH(
                       <p style="margin: 0 0 8px 0;"><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
                       <p style="margin: 0;"><strong>Refunded To:</strong> Original payment method (credit/debit card)</p>
                     </div>
-                    ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
+                    ${reason ? `<p><strong>Reason:</strong> ${escapeHtml(reason)}</p>` : ""}
                     <p>Please allow 5-10 business days for the refund to appear on your statement.</p>
                     <p style="margin-top: 20px;">
                       <a href="${APP_URL}/dashboard/backer" style="background: #0066FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View Your Dashboard</a>
@@ -468,7 +484,7 @@ export async function PATCH(
                     <p style="margin: 0 0 8px 0;"><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
                     <p style="margin: 0;"><strong>Refunded To:</strong> Original payment method</p>
                   </div>
-                  ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
+                  ${reason ? `<p><strong>Reason:</strong> ${escapeHtml(reason)}</p>` : ""}
                   <p>Please allow 5-10 business days for the refund to appear on your statement, depending on your bank.</p>
                   <p style="margin-top: 20px;">
                     <a href="${APP_URL}/dashboard/backer" style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View Your Dashboard</a>

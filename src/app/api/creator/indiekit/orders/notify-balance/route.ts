@@ -77,40 +77,52 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No balance due for this pledge" }, { status: 400 });
     }
 
-    // Duplicate prevention: reject if a notification was sent within the last 60 seconds
-    const lastSentAt = pledgeMeta.balanceNotificationSentAt;
-    if (lastSentAt) {
-      const lastSentTime = new Date(lastSentAt as string).getTime();
-      const secondsSince = (Date.now() - lastSentTime) / 1000;
-      if (secondsSince < 60) {
-        return NextResponse.json({
-          success: true,
-          balanceDue,
-          emailSent: true,
-          deduplicated: true,
-          message: `Notification already sent ${Math.round(secondsSince)}s ago`,
-        });
-      }
-    }
-
     // Generate a secure payment token
     const paymentToken = crypto.randomBytes(32).toString("hex");
     const tokenExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-    // Store the token in pledge metadata
-    const existingMeta = (pledge.metadata as Record<string, unknown>) || {};
-    await db.pledge.update({
-      where: { id: pledgeId },
-      data: {
-        metadata: {
-          ...existingMeta,
-          balancePaymentToken: paymentToken,
-          balancePaymentTokenExpiry: tokenExpiry.toISOString(),
-          balanceNotificationSentAt: new Date().toISOString(),
-          balanceDueAmount: balanceDue,
+    // Atomically check dedup and write new token to prevent duplicate sends under concurrent requests
+    const updated = await db.$transaction(async (tx) => {
+      const current = await tx.pledge.findUnique({
+        where: { id: pledgeId },
+        select: { metadata: true },
+      });
+      if (!current) return null;
+      const currentMeta = (current.metadata as Record<string, unknown>) || {};
+      const lastSentAt = currentMeta.balanceNotificationSentAt;
+      if (lastSentAt) {
+        const secondsSince = (Date.now() - new Date(lastSentAt as string).getTime()) / 1000;
+        if (secondsSince < 60) {
+          return { deduplicated: true, secondsSince: Math.round(secondsSince) };
+        }
+      }
+      await tx.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          metadata: {
+            ...currentMeta,
+            balancePaymentToken: paymentToken,
+            balancePaymentTokenExpiry: tokenExpiry.toISOString(),
+            balanceNotificationSentAt: new Date().toISOString(),
+            balanceDueAmount: balanceDue,
+          },
         },
-      },
+      });
+      return { deduplicated: false };
     });
+
+    if (!updated) {
+      return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    }
+    if (updated.deduplicated) {
+      return NextResponse.json({
+        success: true,
+        balanceDue,
+        emailSent: true,
+        deduplicated: true,
+        message: `Notification already sent ${updated.secondsSince}s ago`,
+      });
+    }
 
     // Send the email
     const backerEmail = pledge.user.email;
