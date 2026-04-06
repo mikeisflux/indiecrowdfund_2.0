@@ -124,6 +124,17 @@ export async function POST(req: NextRequest) {
       // Use the new addons format if provided, otherwise convert legacy addonIds
       const addonsWithQuantity = data.addons || data.addonIds.map(id => ({ id, quantity: 1 }));
 
+      // Validate all addons belong to this project and are of type ADDON (prevents cross-project abuse)
+      if (addonsWithQuantity.length > 0) {
+        const addonIdList = addonsWithQuantity.map((a: { id: string }) => a.id);
+        const validAddonCount = await db.reward.count({
+          where: { id: { in: addonIdList }, projectId: data.projectId, type: "ADDON" },
+        });
+        if (validAddonCount !== addonIdList.length) {
+          return NextResponse.json({ error: "One or more invalid addons" }, { status: 400 });
+        }
+      }
+
       // Clean up stale abandoned carts for this project (older than 1 hour, no payment evidence)
       // This runs in the background and doesn't block pledge creation
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
