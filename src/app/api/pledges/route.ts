@@ -135,6 +135,31 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Server-side amount validation: prevent underselling (user cannot submit less than reward+addon prices)
+      {
+        const rewardMin = reward ? Number(reward.amount) : 0;
+        let addonsMin = 0;
+        if (addonsWithQuantity.length > 0) {
+          const addonIdList = addonsWithQuantity.map((a: { id: string }) => a.id);
+          const addonPrices = await db.reward.findMany({
+            where: { id: { in: addonIdList } },
+            select: { id: true, amount: true },
+          });
+          const addonPriceMap = new Map(addonPrices.map(a => [a.id, Number(a.amount)]));
+          addonsMin = addonsWithQuantity.reduce((sum: number, addon: { id: string; quantity: number }) => {
+            return sum + (addonPriceMap.get(addon.id) || 0) * addon.quantity;
+          }, 0);
+        }
+        const expectedMinimum = rewardMin + addonsMin;
+        // Allow a 1-cent tolerance for floating-point rounding from client
+        if (expectedMinimum > 0 && data.amount < expectedMinimum - 0.01) {
+          return NextResponse.json(
+            { error: `Pledge amount must be at least $${expectedMinimum.toFixed(2)}` },
+            { status: 400 }
+          );
+        }
+      }
+
       // Clean up stale abandoned carts for this project (older than 1 hour, no payment evidence)
       // This runs in the background and doesn't block pledge creation
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
