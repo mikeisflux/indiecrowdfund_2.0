@@ -229,12 +229,14 @@ export default function ManagePledgePage() {
         const addonMap = new Map<string, number>();
         pledge.addons.forEach(a => addonMap.set(a.id, a.quantity));
         setSelectedAddons(addonMap);
+        setModifyMode(true);
+      } else {
+        toast.error("Failed to load rewards");
       }
     } catch {
       toast.error("Failed to load rewards");
     } finally {
       setIsLoadingRewards(false);
-      setModifyMode(true);
     }
   };
 

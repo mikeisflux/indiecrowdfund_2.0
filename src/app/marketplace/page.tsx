@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -291,6 +292,7 @@ export default function MarketplacePage() {
       }
     } catch (error) {
       console.error("Error fetching marketplace data:", error);
+      toast.error("Failed to load marketplace");
     } finally {
       setLoading(false);
     }
