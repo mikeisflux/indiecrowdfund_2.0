@@ -118,11 +118,13 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Select project - use provided projectId or first active project
-    const selectedProjectId = projectId ||
-      projects.find(p => p.status === "LIVE")?.id ||
-      projects[0].id;
+    // Select project - use provided projectId only if it belongs to the user
+    const projectIds = projects.map(p => p.id);
+    const validatedProjectId = (projectId && projectIds.includes(projectId))
+      ? projectId
+      : projects.find(p => p.status === "LIVE")?.id || projects[0].id;
 
+    const selectedProjectId = validatedProjectId;
     const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
 
     // Calculate date range

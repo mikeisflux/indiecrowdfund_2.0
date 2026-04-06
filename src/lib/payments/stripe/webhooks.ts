@@ -332,7 +332,7 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     const updatedProject = await db.project.update({
       where: { id: existingPledge.projectId },
       data: {
-        currentAmount: { increment: existingPledge.amount },
+        currentAmount: { increment: Number(existingPledge.amount) },
         backerCount: { increment: 1 },
       },
     });
