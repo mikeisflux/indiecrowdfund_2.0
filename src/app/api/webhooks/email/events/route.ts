@@ -24,9 +24,8 @@ async function verifyMailgunSignature(
 
     const signingKey = settings?.mailgunWebhookSigningKey;
     if (!signingKey) {
-      // No signing key configured - allow through but log warning
-      webhooksEmailEventsLogger.warn("[Webhook] Mailgun webhook signing key not configured - skipping verification");
-      return true;
+      webhooksEmailEventsLogger.error("[Webhook] Mailgun webhook signing key not configured — rejecting webhook");
+      return false;
     }
 
     const encodedToken = crypto
@@ -335,28 +334,24 @@ export async function POST(request: NextRequest) {
             select: { sendgridWebhookVerificationKey: true },
           });
 
-          if (settings?.sendgridWebhookVerificationKey) {
-            const key = settings.sendgridWebhookVerificationKey;
-            webhooksEmailEventsLogger.info(`[Webhook] Verifying SendGrid signature - key length: ${key.length}, key prefix: ${key.substring(0, 20)}...`);
-            webhooksEmailEventsLogger.info(`[Webhook] Signature: ${sgSignature.substring(0, 30)}..., Timestamp: ${sgTimestamp}`);
-            webhooksEmailEventsLogger.info(`[Webhook] Raw body length: ${rawBody.length}, body prefix: ${rawBody.substring(0, 80)}`);
-
-            const isValid = await verifySendGridSignature(
-              key,
-              rawBody,
-              sgSignature,
-              sgTimestamp
-            );
-
-            if (!isValid) {
-              webhooksEmailEventsLogger.error("[Webhook] SendGrid signature verification failed");
-              webhooksEmailEventsLogger.error({ err: key.substring(0, 30) }, "[Webhook] Key used (first 30 chars):");
-              return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-            }
-            webhooksEmailEventsLogger.info("[Webhook] SendGrid signature verification passed!");
-          } else {
-            webhooksEmailEventsLogger.warn("[Webhook] No sendgridWebhookVerificationKey in DB, skipping verification");
+          if (!settings?.sendgridWebhookVerificationKey) {
+            webhooksEmailEventsLogger.error("[Webhook] No sendgridWebhookVerificationKey configured — rejecting webhook");
+            return NextResponse.json({ error: "SendGrid verification key not configured" }, { status: 500 });
           }
+
+          const key = settings.sendgridWebhookVerificationKey;
+          const isValid = await verifySendGridSignature(
+            key,
+            rawBody,
+            sgSignature,
+            sgTimestamp
+          );
+
+          if (!isValid) {
+            webhooksEmailEventsLogger.error("[Webhook] SendGrid signature verification failed");
+            return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+          }
+          webhooksEmailEventsLogger.info("[Webhook] SendGrid signature verification passed!");
         }
 
         sendGridEvents = payload as SendGridEventData[];

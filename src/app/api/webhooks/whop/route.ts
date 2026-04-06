@@ -12,18 +12,18 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
 
-  // Verify webhook signature
+  // Verify webhook signature — require secret to be configured; reject if missing
   try {
     const config = await getWhopConfig();
-    if (config.webhookSecret) {
-      const signature = req.headers.get("whop-signature") || req.headers.get("x-whop-signature");
-      const isValid = await verifyWhopWebhookSignature(rawBody, signature, config.webhookSecret);
-      if (!isValid) {
-        whopWebhookLogger.warn("Whop webhook signature verification failed");
-        return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
-      }
-    } else {
-      whopWebhookLogger.warn("Whop webhook secret not configured, skipping verification");
+    if (!config.webhookSecret) {
+      whopWebhookLogger.error("Whop webhook secret not configured — rejecting unauthenticated webhook");
+      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+    }
+    const signature = req.headers.get("whop-signature") || req.headers.get("x-whop-signature");
+    const isValid = await verifyWhopWebhookSignature(rawBody, signature, config.webhookSecret);
+    if (!isValid) {
+      whopWebhookLogger.warn("Whop webhook signature verification failed");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
   } catch (configErr) {
     whopWebhookLogger.error({ err: String(configErr) }, "Failed to load Whop config for webhook");
