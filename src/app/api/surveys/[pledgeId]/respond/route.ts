@@ -468,19 +468,43 @@ export async function POST(
     // (POST /api/pledges/[pledgeId]/add-items → payment → confirm-add-items)
     // The survey page submits selectedAddons info so we can return it for the frontend payment step
 
-    // Update response
-    const updatedResponse = await db.surveyResponse.update({
-      where: { pledgeId },
-      data: {
-        itemResponses: data.itemResponses || existingResponse.itemResponses,
-        backerResponses: data.backerResponses || existingResponse.backerResponses,
-        shippingAddress: data.shippingAddress !== undefined
-          ? data.shippingAddress
-          : existingResponse.shippingAddress,
-        isComplete: data.submit ? true : existingResponse.isComplete,
-        completedAt: data.submit ? new Date() : existingResponse.completedAt,
-      },
-    });
+    // Update response — when submitting, guard against concurrent double-submission
+    // by requiring isComplete: false in the where clause (atomic check-and-set)
+    let updatedResponse;
+    if (data.submit) {
+      const result = await db.surveyResponse.updateMany({
+        where: { pledgeId, isComplete: false },
+        data: {
+          itemResponses: data.itemResponses || existingResponse.itemResponses,
+          backerResponses: data.backerResponses || existingResponse.backerResponses,
+          shippingAddress: data.shippingAddress !== undefined
+            ? data.shippingAddress
+            : existingResponse.shippingAddress,
+          isComplete: true,
+          completedAt: new Date(),
+        },
+      });
+      if (result.count === 0) {
+        return NextResponse.json(
+          { error: "Survey has already been submitted. Contact the creator if you need to make changes." },
+          { status: 400 }
+        );
+      }
+      updatedResponse = await db.surveyResponse.findUnique({ where: { pledgeId } });
+    } else {
+      updatedResponse = await db.surveyResponse.update({
+        where: { pledgeId },
+        data: {
+          itemResponses: data.itemResponses || existingResponse.itemResponses,
+          backerResponses: data.backerResponses || existingResponse.backerResponses,
+          shippingAddress: data.shippingAddress !== undefined
+            ? data.shippingAddress
+            : existingResponse.shippingAddress,
+          isComplete: existingResponse.isComplete,
+          completedAt: existingResponse.completedAt,
+        },
+      });
+    }
 
     // Update pledge survey status
     if (data.submit) {

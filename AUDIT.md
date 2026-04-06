@@ -316,10 +316,10 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/chat/messages/route.ts`
 - [ ] `src/app/api/chat/presence/route.ts`
 - [ ] `src/app/api/chat/stickers/route.ts`
-- [ ] `src/app/api/collaborations/[id]/route.ts`
-- [ ] `src/app/api/collaborations/route.ts`
-- [ ] `src/app/api/collaborator/[id]/respond/route.ts`
-- [ ] `src/app/api/collaborator/[id]/route.ts`
+- [x] `src/app/api/collaborations/[id]/route.ts` ✅
+- [x] `src/app/api/collaborations/route.ts` ✅
+- [x] `src/app/api/collaborator/[id]/respond/route.ts` ✅
+- [x] `src/app/api/collaborator/[id]/route.ts` ✅
 - [ ] `src/app/api/consent-banner/route.ts`
 - [ ] `src/app/api/contact/route.ts`
 - [ ] `src/app/api/creator/account/avatar/route.ts`
@@ -462,9 +462,9 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/privacy/ccpa-opt-out/route.ts`
 - [x] `src/app/api/projects/[id]/basics/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/chargeback-card/route.ts`
-- [ ] `src/app/api/projects/[id]/collaborators/me/route.ts`
-- [ ] `src/app/api/projects/[id]/collaborators/route.ts`
-- [ ] `src/app/api/projects/[id]/comments/route.ts`
+- [x] `src/app/api/projects/[id]/collaborators/me/route.ts` ✅
+- [x] `src/app/api/projects/[id]/collaborators/route.ts` 🔧 Fixed IDOR in DELETE: added projectId to where clause so project owners cannot delete collaborators from other projects
+- [x] `src/app/api/projects/[id]/comments/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/contact-email/route.ts`
 - [ ] `src/app/api/projects/[id]/items/[itemId]/end/route.ts`
 - [ ] `src/app/api/projects/[id]/items/route.ts`
@@ -474,17 +474,17 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/projects/[id]/payment/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/prelaunch/route.ts`
 - [ ] `src/app/api/projects/[id]/promotion/route.ts`
-- [ ] `src/app/api/projects/[id]/reviews/route.ts`
+- [x] `src/app/api/projects/[id]/reviews/route.ts` ✅
 - [x] `src/app/api/projects/[id]/rewards/route.ts` ✅
 - [x] `src/app/api/projects/[id]/route.ts` ✅
 - [x] `src/app/api/projects/[id]/story/route.ts` ✅
 - [x] `src/app/api/projects/[id]/submit/route.ts` ✅
-- [ ] `src/app/api/projects/[id]/survey/backer-questions/route.ts`
+- [x] `src/app/api/projects/[id]/survey/backer-questions/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/survey/item-questions/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/lock/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/responses/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/send/route.ts`
+- [x] `src/app/api/projects/[id]/survey/lock/route.ts` ✅
+- [x] `src/app/api/projects/[id]/survey/responses/route.ts` ✅
+- [x] `src/app/api/projects/[id]/survey/route.ts` ✅
+- [x] `src/app/api/projects/[id]/survey/send/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/sync-stats/route.ts`
 - [x] `src/app/api/projects/route.ts` ✅
 - [ ] `src/app/api/projects/similar/route.ts`
@@ -517,8 +517,8 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/stripe/connect/reset/route.ts` ✅
 - [x] `src/app/api/stripe/connect/route.ts` ✅
 - [x] `src/app/api/stripe/connect/status/route.ts` ✅
-- [ ] `src/app/api/surveys/[pledgeId]/respond/route.ts`
-- [ ] `src/app/api/surveys/route.ts`
+- [x] `src/app/api/surveys/[pledgeId]/respond/route.ts` 🔧 Fixed race condition on survey submit: atomic updateMany with isComplete:false guard prevents double-submission
+- [x] `src/app/api/surveys/route.ts` ✅
 - [ ] `src/app/api/track/route.ts`
 - [ ] `src/app/api/tracking/route.ts`
 - [ ] `src/app/api/unsubscribe/route.ts`

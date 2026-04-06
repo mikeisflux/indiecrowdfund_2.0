@@ -265,9 +265,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await db.projectCollaborator.delete({
-      where: { id: collaboratorId },
+    // Ensure collaborator belongs to this project (prevents cross-project IDOR)
+    const deleted = await db.projectCollaborator.deleteMany({
+      where: { id: collaboratorId, projectId },
     });
+
+    if (deleted.count === 0) {
+      return NextResponse.json({ error: "Collaborator not found" }, { status: 404 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
