@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
       where: {
         userId: session.user.id,
         projectId,
+        deletedAt: null,
         OR: [
           { status: "COMPLETED" },
           {
@@ -121,6 +122,7 @@ export async function GET(req: NextRequest) {
         userId: session.user.id,
         projectId,
         status: "PENDING",
+        deletedAt: null,
         stripePaymentMethodId: null,
         // Has an intent or PayPal order (checkout was started)
         OR: [

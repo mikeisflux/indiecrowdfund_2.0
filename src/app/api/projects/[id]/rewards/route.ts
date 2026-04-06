@@ -47,7 +47,7 @@ const rewardSchema = z.object({
   type: z.enum(["TIER", "ADDON"]).default("TIER"),
   title: z.string().min(1),
   description: z.string().optional().default(""),
-  amount: z.number().min(0).max(999999.99),
+  amount: z.number().positive().max(999999.99),
   imageUrl: z.string().optional().nullable(),
   estimatedDelivery: z.string().optional().nullable(),
   shippingType: z.enum(["NO_SHIPPING", "WORLDWIDE", "SELECTED_COUNTRIES"]).default("NO_SHIPPING"),

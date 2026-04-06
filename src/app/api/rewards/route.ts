@@ -261,7 +261,7 @@ export async function GET(req: NextRequest) {
     let canViewSecret = false;
     if (session?.user?.id) {
       const project = await db.project.findUnique({
-        where: { id: projectId },
+        where: { id: projectId, deletedAt: null },
         select: { creatorId: true },
       });
       if (project) {

@@ -565,7 +565,7 @@ export async function notifyPledgeModified(
     const addonsList = pledge.addons.map((a: { addon: { title: string; amount: number }; quantity: number }) => ({
       title: a.addon.title,
       quantity: a.quantity,
-      amount: Number(a.addon.amount),
+      amount: Number(a.addon.amount) * a.quantity,
     }));
 
     // In-app notification
