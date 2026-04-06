@@ -228,7 +228,7 @@ export async function DELETE(request: NextRequest) {
         project: {
           select: {
             creatorId: true,
-            collaborators: { select: { userId: true } },
+            collaborators: { where: { status: "ACCEPTED" }, select: { userId: true } },
           },
         },
       },

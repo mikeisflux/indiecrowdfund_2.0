@@ -269,8 +269,10 @@ export async function POST(request: NextRequest) {
       const pledgeAddonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
 
       if (fileRewardIds.length === 0 && fileAddonIds.length === 0) {
-        // No restrictions configured — allow any backer
-        hasAccess = true;
+        // No reward/addon IDs configured for a restriction-based accessType —
+        // deny access (file is not yet distributed to anyone specifically).
+        // Use accessType=ALL_BACKERS to grant unrestricted access.
+        hasAccess = false;
       } else {
         // Union check: backer qualifies if they match ANY reward OR addon.
         // Handles files with multiple distribution rules (reward + addon) correctly.
