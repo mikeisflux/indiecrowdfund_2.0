@@ -47,7 +47,7 @@ const rewardSchema = z.object({
   type: z.enum(["TIER", "ADDON"]).default("TIER"),
   title: z.string().min(1),
   description: z.string().optional().default(""),
-  amount: z.number().min(0),
+  amount: z.number().min(0).max(999999.99),
   imageUrl: z.string().optional().nullable(),
   estimatedDelivery: z.string().optional().nullable(),
   shippingType: z.enum(["NO_SHIPPING", "WORLDWIDE", "SELECTED_COUNTRIES"]).default("NO_SHIPPING"),
@@ -57,7 +57,7 @@ const rewardSchema = z.object({
     z.record(z.string(), z.number()),
     z.number().transform((n) => ({ default: n })),
   ]).optional().default({}),
-  quantityAvailable: z.number().optional().nullable(),
+  quantityAvailable: z.number().int().min(1).optional().nullable(),
   visibility: z.enum(["PUBLIC", "SECRET"]).optional().default("PUBLIC"),
   secretToken: z.string().optional().nullable(),
   isEnded: z.boolean().optional().default(false),
@@ -507,13 +507,17 @@ export async function DELETE(
       );
     }
 
-    // Check if reward has backers
-    const reward = await db.reward.findUnique({
-      where: { id: rewardId },
+    // Check if reward has backers — also verify the reward belongs to this project (IDOR prevention)
+    const reward = await db.reward.findFirst({
+      where: { id: rewardId, projectId },
       select: { quantityClaimed: true },
     });
 
-    if (reward && reward.quantityClaimed > 0) {
+    if (!reward) {
+      return NextResponse.json({ error: "Reward not found" }, { status: 404 });
+    }
+
+    if (reward.quantityClaimed > 0) {
       return NextResponse.json(
         { error: "Cannot delete reward with backers" },
         { status: 400 }

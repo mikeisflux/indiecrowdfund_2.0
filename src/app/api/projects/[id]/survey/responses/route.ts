@@ -213,38 +213,34 @@ export async function POST(
       return NextResponse.json({ error: "Survey not found" }, { status: 404 });
     }
 
-    // Get all responses with full details
+    // Get all responses with full details (capped at 10000 to prevent memory exhaustion)
     const responses = await db.surveyResponse.findMany({
       where: { surveyId: survey.id },
+      take: 10000,
+      include: {
+        pledge: {
+          include: {
+            user: { select: { name: true, email: true } },
+            reward: { select: { title: true, amount: true } },
+          },
+        },
+      },
     });
 
-    const responsesWithDetails = await Promise.all(
-      responses.map(async (response) => {
-        const pledge = await db.pledge.findUnique({
-          where: { id: response.pledgeId },
-          include: {
-            user: {
-              select: { name: true, email: true },
-            },
-            reward: {
-              select: { title: true, amount: true },
-            },
-          },
-        });
-
-        return {
-          backerName: pledge?.user.name || "Unknown",
-          backerEmail: pledge?.user.email || "Unknown",
-          rewardTitle: pledge?.reward.title || "Unknown",
-          pledgeAmount: Number(pledge?.amount) || 0,
-          isComplete: response.isComplete,
-          completedAt: response.completedAt,
-          itemResponses: response.itemResponses,
-          backerResponses: response.backerResponses,
-          shippingAddress: response.shippingAddress,
-        };
-      })
-    );
+    const responsesWithDetails = responses.map((response) => {
+      const pledge = response.pledge;
+      return {
+        backerName: pledge?.user.name || "Unknown",
+        backerEmail: pledge?.user.email || "Unknown",
+        rewardTitle: pledge?.reward?.title || "Unknown",
+        pledgeAmount: Number(pledge?.amount) || 0,
+        isComplete: response.isComplete,
+        completedAt: response.completedAt,
+        itemResponses: response.itemResponses,
+        backerResponses: response.backerResponses,
+        shippingAddress: response.shippingAddress,
+      };
+    });
 
     if (format === "csv") {
       // Build CSV

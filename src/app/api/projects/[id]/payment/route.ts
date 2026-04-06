@@ -17,8 +17,8 @@ const paymentSchema = z.object({
   hasRiskyContent: z.boolean().optional(),
   promoContentSfw: z.boolean().optional(),
   allowRetailerPledges: z.boolean().optional(),
-  retailerDiscount: z.number().optional(),
-  retailerMinQuantity: z.number().optional(),
+  retailerDiscount: z.number().min(0).max(100).optional(),
+  retailerMinQuantity: z.number().int().min(1).optional(),
 });
 
 // POST - Update project payment settings

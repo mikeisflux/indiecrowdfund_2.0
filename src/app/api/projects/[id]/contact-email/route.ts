@@ -9,7 +9,7 @@ import { z } from "zod";
 export const dynamic = "force-dynamic";
 
 const emailSchema = z.object({
-  contactEmail: z.string().email("Please enter a valid email address"),
+  contactEmail: z.string().email("Please enter a valid email address").max(254),
 });
 
 // POST - Save contact email for a project
