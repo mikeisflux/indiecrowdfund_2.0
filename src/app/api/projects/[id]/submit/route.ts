@@ -43,10 +43,10 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Check if project can be submitted
-    if (project.status !== "DRAFT") {
+    // Check if project can be submitted (DRAFT for initial submission, APPROVED for re-review after edits)
+    if (project.status !== "DRAFT" && project.status !== "APPROVED") {
       return NextResponse.json(
-        { error: "Only draft projects can be submitted for review" },
+        { error: "Only draft or approved projects can be submitted for review" },
         { status: 400 }
       );
     }

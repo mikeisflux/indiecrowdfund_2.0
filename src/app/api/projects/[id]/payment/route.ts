@@ -98,8 +98,8 @@ export async function POST(
     // Automatically set payment processor and campaign type based on content flags
     // Adult or risky content cannot use Stripe/PayPal — must use DivinityCoin or Whop
     if (data.hasAdultContent !== undefined || data.hasRiskyContent !== undefined) {
-      const hasAdult = data.hasAdultContent ?? false;
-      const hasRisky = data.hasRiskyContent ?? false;
+      const hasAdult = data.hasAdultContent ?? currentProject?.hasAdultContent ?? false;
+      const hasRisky = data.hasRiskyContent ?? currentProject?.hasRiskyContent ?? false;
       if (hasAdult || hasRisky) {
         // Force Keep It All campaign type for NSFW projects
         if (!updateData.campaignType) {

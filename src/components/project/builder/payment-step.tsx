@@ -315,7 +315,7 @@ export function PaymentStep() {
   // Auto-switch away from Whop if campaign type changes to ALL_OR_NOTHING
   useEffect(() => {
     if (payment.campaignType === "ALL_OR_NOTHING" && payment.paymentProcessor === "WHOP") {
-      updatePayment({ paymentProcessor: mustUseAltProcessor ? "DIVINITYCOIN" : "DIVINITYCOIN" });
+      updatePayment({ paymentProcessor: mustUseAltProcessor ? "DIVINITYCOIN" : "PAYPAL" });
     }
   }, [payment.campaignType, payment.paymentProcessor, mustUseAltProcessor, updatePayment]);
 

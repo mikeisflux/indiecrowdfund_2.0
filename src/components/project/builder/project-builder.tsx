@@ -255,10 +255,9 @@ export function ProjectBuilder() {
         })
       );
 
-      // Save payment settings - for launched projects, only send retailer settings + payment processor
+      // Save payment settings - for launched projects, only send retailer settings
       const paymentPayload = isLive
         ? {
-            paymentProcessor: payment.paymentProcessor,
             allowRetailerPledges: payment.allowRetailerPledges || false,
             retailerDiscount: Number(payment.retailerDiscount) || 50,
             retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,

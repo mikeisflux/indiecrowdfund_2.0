@@ -62,7 +62,7 @@ export function ContactEmailSection({ payment, updatePayment, projectId }: Conta
         const response = await fetch(`/api/projects/${projectId}/contact-email`);
         if (response.ok) {
           const data = await response.json();
-          if (data.contactEmail && data.contactEmail !== payment.contactEmail) {
+          if (data.contactEmail && !payment.contactEmail) {
             updatePayment({ contactEmail: data.contactEmail, contactEmailConfirmed: true });
             setEmailSaved(true);
           }
