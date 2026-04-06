@@ -1,6 +1,7 @@
 import Whop from "@whop/sdk";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import crypto from "crypto";
 
 const whopConfigLogger = logger.child({ module: "whop-config" });
 
@@ -76,7 +77,14 @@ export async function verifyWhopWebhookSignature(
     const expectedSig = Buffer.from(signatureBuffer).toString("hex");
     const receivedSig = signature.startsWith("sha256=") ? signature.slice(7) : signature;
 
-    return expectedSig === receivedSig;
+    try {
+      const nodeExpected = Buffer.from(expectedSig, "hex");
+      const nodeReceived = Buffer.from(receivedSig, "hex");
+      if (nodeExpected.length !== nodeReceived.length) return false;
+      return crypto.timingSafeEqual(nodeExpected, nodeReceived);
+    } catch {
+      return false;
+    }
   } catch {
     return false;
   }

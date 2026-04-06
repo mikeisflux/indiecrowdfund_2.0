@@ -30,7 +30,11 @@ async function verifyMailgunInboundSignature(
       .update(timestamp.concat(token))
       .digest("hex");
 
-    return encodedToken === signature;
+    try {
+      return crypto.timingSafeEqual(Buffer.from(encodedToken), Buffer.from(signature));
+    } catch {
+      return false;
+    }
   } catch (error) {
     webhooksEmailInboundLogger.error({ err: error }, "[Inbound Email] Error verifying Mailgun signature:");
     return false;

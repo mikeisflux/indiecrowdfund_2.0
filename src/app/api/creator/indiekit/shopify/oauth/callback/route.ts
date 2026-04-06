@@ -22,7 +22,11 @@ function verifySignedState(state: string): { valid: boolean; data?: { userId: st
 
     const expectedSignature = crypto.createHmac("sha256", secret).update(payload).digest("hex");
 
-    if (signature !== expectedSignature) {
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+        return { valid: false };
+      }
+    } catch {
       return { valid: false };
     }
 

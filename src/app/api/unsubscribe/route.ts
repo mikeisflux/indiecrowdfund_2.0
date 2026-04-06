@@ -31,8 +31,12 @@ function verifyUnsubscribeToken(token: string): string | null {
     const expectedData = `${email}:${getUnsubscribeSecret()}`;
     const expectedHash = crypto.createHash("sha256").update(expectedData).digest("hex").slice(0, 32);
 
-    if (hash === expectedHash) {
-      return email;
+    try {
+      if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expectedHash))) {
+        return email;
+      }
+    } catch {
+      // Buffer lengths differ — hashes don't match
     }
     return null;
   } catch {
