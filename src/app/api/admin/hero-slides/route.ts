@@ -302,8 +302,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "slideIds must be an array" }, { status: 400, headers: corsHeaders });
     }
 
-    // Update sort order for each slide
-    await Promise.all(
+    // Update sort order for each slide atomically
+    await db.$transaction(
       slideIds.map((id: string, index: number) =>
         db.heroSlide.update({
           where: { id },
