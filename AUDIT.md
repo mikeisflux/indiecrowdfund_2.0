@@ -1027,103 +1027,106 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/components/ui/tooltip.tsx` ⬜
 - [ ] `src/components/user-profile-dropdown.tsx` ⬜
 - [ ] `src/instrumentation.ts` ⬜
-- [ ] `src/lib/ai/anthropic.ts` ⬜
-- [ ] `src/lib/ai/automation.ts` ⬜
-- [ ] `src/lib/ai/index.ts` ⬜
-- [ ] `src/lib/ai/marketing-services.ts` ⬜
-- [ ] `src/lib/ai/settings-integration.ts` ⬜
-- [ ] `src/lib/ai/user-interests.ts` ⬜
-- [ ] `src/lib/api-error.ts` ⬜
-- [ ] `src/lib/audit.ts` ⬜
-- [ ] `src/lib/auth-helpers.ts` ⬜
+- [x] `src/lib/ai/anthropic.ts` ✅
+- [x] `src/lib/ai/automation.ts` ✅
+- [x] `src/lib/ai/index.ts` ✅
+- [x] `src/lib/ai/marketing-services.ts` ✅
+- [x] `src/lib/ai/settings-integration.ts` ✅
+- [x] `src/lib/ai/user-interests.ts` ✅
+- [x] `src/lib/api-error.ts` ✅
+- [x] `src/lib/audit.ts` ✅
+- [x] `src/lib/auth-helpers.ts` ✅
 - [x] `src/lib/auth/actions.ts` 🔧
   - Fixed: Open redirect — callbackUrl from URL params now validated to relative paths only via sanitizeRedirectUrl()
   - Fixed: Locked account bypass — login now checks user.lockedAt and rejects locked accounts before verifying password
-- [ ] `src/lib/auth/constants.ts` ⬜
-- [ ] `src/lib/auth/email-access.ts` ⬜
-- [ ] `src/lib/auth/index.ts` ⬜
-- [ ] `src/lib/auth/rate-limit.ts` ⬜
-- [ ] `src/lib/auth/recaptcha.ts` ⬜
+- [x] `src/lib/auth/constants.ts` ✅
+- [x] `src/lib/auth/email-access.ts` ✅
+- [x] `src/lib/auth/index.ts` ✅
+- [x] `src/lib/auth/rate-limit.ts` ✅
+- [x] `src/lib/auth/recaptcha.ts` ✅
 - [x] `src/lib/auth/session.ts` 🔧
   - Fixed: validateSessionToken() was missing deletedAt check — soft-deleted users with valid session tokens could still authenticate
-- [ ] `src/lib/bot-blocker.ts` ⬜
-- [ ] `src/lib/circuit-breaker.ts` ⬜
-- [ ] `src/lib/consent.ts` ⬜
-- [ ] `src/lib/correlation.ts` ⬜
-- [ ] `src/lib/csrf.ts` ⬜
-- [ ] `src/lib/db/index.ts` ⬜
-- [ ] `src/lib/email.ts` ⬜
-- [ ] `src/lib/email/email-config.ts` ⬜
-- [ ] `src/lib/email/email-templates-auth.ts` ⬜
-- [ ] `src/lib/email/email-templates-misc.ts` ⬜
-- [ ] `src/lib/email/email-templates-pledge.ts` ⬜
-- [ ] `src/lib/email/email-templates-project.ts` ⬜
-- [ ] `src/lib/email/sendgrid-verify.ts` ⬜
-- [ ] `src/lib/encryption.ts` ⬜
-- [ ] `src/lib/error-tracker.ts` ⬜
-- [ ] `src/lib/feature-flags.ts` ⬜
-- [ ] `src/lib/fetch-utils.ts` ⬜
-- [ ] `src/lib/gdpr/execute-deletions.ts` ⬜
-- [ ] `src/lib/local-books-db.ts` ⬜
-- [ ] `src/lib/logger.ts` ⬜
-- [ ] `src/lib/metrics.ts` ⬜
-- [ ] `src/lib/notifications.ts` ⬜
-- [ ] `src/lib/notifications/core.ts` ⬜
-- [ ] `src/lib/notifications/email-templates.ts` ⬜
-- [ ] `src/lib/notifications/index.ts` ⬜
-- [ ] `src/lib/notifications/marketplace-notifications.ts` ⬜
-- [ ] `src/lib/notifications/pledge-notifications.ts` ⬜
-- [ ] `src/lib/notifications/project-notifications.ts` ⬜ Fixed: add deletedAt:null to user queries in notifications
-- [ ] `src/lib/notifications/social-notifications.ts` ⬜
-- [ ] `src/lib/notifications/types.ts` ⬜
-- [ ] `src/lib/oauth/config.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/cards.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/client.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/config.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/index.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/payments.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/types.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/webhooks.ts` ⬜
-- [ ] `src/lib/payments/paypal/capture-authorized.ts` ⬜
-- [ ] `src/lib/payments/paypal/checkout.ts` ⬜
-- [ ] `src/lib/payments/paypal/config.ts` ⬜
-- [ ] `src/lib/payments/paypal/index.ts` ⬜
-- [ ] `src/lib/payments/stripe/charges.ts` ⬜
-- [ ] `src/lib/payments/stripe/checkout.ts` ⬜
-- [ ] `src/lib/payments/stripe/config.ts` ⬜
-- [ ] `src/lib/payments/stripe/connect.ts` ⬜
-- [ ] `src/lib/payments/stripe/customers.ts` ⬜
-- [ ] `src/lib/payments/stripe/index.ts` ⬜
-- [ ] `src/lib/payments/stripe/intents.ts` ⬜
-- [ ] `src/lib/payments/stripe/rewards.ts` ⬜
-- [ ] `src/lib/payments/stripe/webhooks.ts` ⬜
-- [ ] `src/lib/payments/whop/checkout.ts` ⬜
-- [ ] `src/lib/payments/whop/config.ts` ⬜
-- [ ] `src/lib/payments/whop/index.ts` ⬜
-- [ ] `src/lib/pdf-cover-extractor.ts` ⬜
-- [ ] `src/lib/project-auth.ts` ⬜
-- [ ] `src/lib/project-permissions.ts` ⬜
-- [ ] `src/lib/r2.ts` ⬜
-- [ ] `src/lib/rate-limiter.ts` ⬜
-- [ ] `src/lib/recommendations/engine.ts` ⬜
-- [ ] `src/lib/retailer-auth.ts` ⬜
-- [ ] `src/lib/seo-audit.ts` ⬜
-- [ ] `src/lib/seo-defaults.ts` ⬜
-- [ ] `src/lib/seo/indexing.ts` ⬜
-- [ ] `src/lib/shopify-push.ts` ⬜
-- [ ] `src/lib/shufti.ts` ⬜
-- [ ] `src/lib/stats.ts` ⬜
-- [ ] `src/lib/stats/actions.ts` ⬜
-- [ ] `src/lib/stats/index.ts` ⬜
-- [ ] `src/lib/stats/utils.ts` ⬜
-- [ ] `src/lib/stores/project-store.ts` ⬜
-- [ ] `src/lib/tracking.ts` ⬜
-- [ ] `src/lib/tracking/index.ts` ⬜
-- [ ] `src/lib/usePdfAsImages.ts` ⬜
-- [ ] `src/lib/utils.ts` ⬜
-- [ ] `src/lib/utils/api-params.ts` ⬜
-- [ ] `src/lib/utils/sanitize.ts` ⬜
-- [ ] `src/lib/vault.ts` ⬜
+- [x] `src/lib/bot-blocker.ts` ✅
+- [x] `src/lib/circuit-breaker.ts` ✅
+- [x] `src/lib/consent.ts` ✅
+- [x] `src/lib/correlation.ts` ✅
+- [x] `src/lib/csrf.ts` ✅
+- [x] `src/lib/db/index.ts` ✅
+- [x] `src/lib/email.ts` ✅
+- [x] `src/lib/email/email-config.ts` ✅
+- [x] `src/lib/email/email-templates-auth.ts` ✅
+- [x] `src/lib/email/email-templates-misc.ts` ✅
+- [x] `src/lib/email/email-templates-pledge.ts` ✅
+- [x] `src/lib/email/email-templates-project.ts` ✅
+- [x] `src/lib/email/sendgrid-verify.ts` ✅
+- [x] `src/lib/encryption.ts` ✅
+- [x] `src/lib/error-tracker.ts` ✅
+- [x] `src/lib/feature-flags.ts` ✅
+- [x] `src/lib/fetch-utils.ts` ✅
+- [x] `src/lib/gdpr/execute-deletions.ts` ✅
+- [x] `src/lib/local-books-db.ts` ✅
+- [x] `src/lib/logger.ts` ✅
+- [x] `src/lib/metrics.ts` ✅
+- [x] `src/lib/notifications.ts` ✅
+- [x] `src/lib/notifications/core.ts` ✅
+- [x] `src/lib/notifications/email-templates.ts` ✅
+- [x] `src/lib/notifications/index.ts` ✅
+- [x] `src/lib/notifications/marketplace-notifications.ts` ✅
+- [x] `src/lib/notifications/pledge-notifications.ts` 🔧
+  - Fixed: processUnsentConfirmationEmails() — both Pledge queries (completed and pending) were missing `deletedAt: null`, allowing soft-deleted pledges to be processed and confirmation emails re-sent
+- [x] `src/lib/notifications/project-notifications.ts` ✅
+- [x] `src/lib/notifications/social-notifications.ts` ✅
+- [x] `src/lib/notifications/types.ts` ✅
+- [x] `src/lib/oauth/config.ts` ✅
+- [x] `src/lib/payments/divinitycoin/cards.ts` ✅
+- [x] `src/lib/payments/divinitycoin/client.ts` ✅
+- [x] `src/lib/payments/divinitycoin/config.ts` ✅
+- [x] `src/lib/payments/divinitycoin/index.ts` ✅
+- [x] `src/lib/payments/divinitycoin/payments.ts` ✅
+- [x] `src/lib/payments/divinitycoin/types.ts` ✅
+- [x] `src/lib/payments/divinitycoin/webhooks.ts` ✅
+- [x] `src/lib/payments/paypal/capture-authorized.ts` ✅
+- [x] `src/lib/payments/paypal/checkout.ts` ✅
+- [x] `src/lib/payments/paypal/config.ts` ✅
+- [x] `src/lib/payments/paypal/index.ts` ✅
+- [x] `src/lib/payments/stripe/charges.ts` 🔧
+  - Fixed: processPaymentRetries() Pledge query missing `deletedAt: null` — soft-deleted pledges would be incorrectly included in retry processing and potentially re-charged
+- [x] `src/lib/payments/stripe/checkout.ts` ✅
+- [x] `src/lib/payments/stripe/config.ts` ✅
+- [x] `src/lib/payments/stripe/connect.ts` ✅
+- [x] `src/lib/payments/stripe/customers.ts` ✅
+- [x] `src/lib/payments/stripe/index.ts` ✅
+- [x] `src/lib/payments/stripe/intents.ts` ✅
+- [x] `src/lib/payments/stripe/rewards.ts` ✅
+- [x] `src/lib/payments/stripe/webhooks.ts` ✅
+- [x] `src/lib/payments/whop/checkout.ts` ✅
+- [x] `src/lib/payments/whop/config.ts` ✅
+- [x] `src/lib/payments/whop/index.ts` ✅
+- [x] `src/lib/pdf-cover-extractor.ts` ✅
+- [x] `src/lib/project-auth.ts` ✅
+- [x] `src/lib/project-permissions.ts` ✅
+- [x] `src/lib/r2.ts` ✅
+- [x] `src/lib/rate-limiter.ts` ✅
+- [x] `src/lib/recommendations/engine.ts` ✅
+- [x] `src/lib/retailer-auth.ts` ✅
+- [x] `src/lib/seo-audit.ts` ✅
+- [x] `src/lib/seo-defaults.ts` ✅
+- [x] `src/lib/seo/indexing.ts` ✅
+- [x] `src/lib/shopify-push.ts` ✅
+- [x] `src/lib/shufti.ts` ✅
+- [x] `src/lib/stats.ts` 🔧
+  - Fixed: getPlatformTotals() called `db.user.count()` without `deletedAt: null`, causing soft-deleted users to inflate the totalUsers platform stat
+- [x] `src/lib/stats/actions.ts` ✅
+- [x] `src/lib/stats/index.ts` ✅
+- [x] `src/lib/stats/utils.ts` ✅
+- [x] `src/lib/stores/project-store.ts` ✅
+- [x] `src/lib/tracking.ts` ✅
+- [x] `src/lib/tracking/index.ts` ✅
+- [x] `src/lib/usePdfAsImages.ts` ✅
+- [x] `src/lib/utils.ts` ✅
+- [x] `src/lib/utils/api-params.ts` ✅
+- [x] `src/lib/utils/sanitize.ts` ✅
+- [x] `src/lib/vault.ts` ✅
 - [x] `src/middleware.ts` ✅
 - [ ] `src/types/api.ts` ⬜
 - [ ] `src/types/index.ts` ⬜
