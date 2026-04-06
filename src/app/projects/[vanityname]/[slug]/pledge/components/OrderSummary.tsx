@@ -359,14 +359,14 @@ export function OrderSummary({
             </div>
 
             {/* Status message */}
-            {!clientSecret ? (
+            {!clientSecret && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>
               </div>
             ) : (
               <p className="text-xs text-center text-muted-foreground">
-                Enter your card details above to complete your purchase.
+                Complete your payment in the form above to finish your purchase.
               </p>
             )}
 
@@ -469,14 +469,14 @@ export function OrderSummary({
               </Label>
             </div>
 
-            {!clientSecret ? (
+            {!clientSecret && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>
               </div>
             ) : (
               <p className="text-xs text-center text-muted-foreground">
-                Enter your card details above to complete the modification.
+                Complete your payment in the form above to finish the modification.
               </p>
             )}
 
@@ -564,14 +564,14 @@ export function OrderSummary({
             </div>
 
             {/* Status message - show spinner while payment is being set up */}
-            {!clientSecret ? (
+            {!clientSecret && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>
               </div>
             ) : (
               <p className="text-xs text-center text-muted-foreground">
-                Enter your card details above to complete your pledge.
+                Complete your payment in the form above to finish your pledge.
               </p>
             )}
 
