@@ -71,9 +71,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This promo code requires payment" }, { status: 400 });
     }
 
-    // Get the book
-    const book = await db.marketplaceBook.findUnique({
-      where: { id: bookId },
+    // Get the book (excluding soft-deleted)
+    const book = await db.marketplaceBook.findFirst({
+      where: { id: bookId, deletedAt: null },
       select: {
         id: true,
         title: true,

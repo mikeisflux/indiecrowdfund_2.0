@@ -336,6 +336,22 @@ export async function schedulePaymentRetry(pledgeId: string, failureReason: stri
       },
     });
 
+    // Reverse project stats if they were previously counted (SetupIntent pledges).
+    // These pledges had stats incremented when the SetupIntent was confirmed.
+    // Now that payment ultimately failed, we must undo those counts.
+    if (pledge.confirmationEmailSent) {
+      await db.project.update({
+        where: { id: pledge.projectId },
+        data: {
+          backerCount: { decrement: 1 },
+          currentAmount: { decrement: Number(pledge.amount) },
+        },
+      });
+    }
+    if (pledge.rewardId) {
+      await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
+    }
+
     const pledgeWithProject = await db.pledge.findUnique({
       where: { id: pledgeId },
       include: {

@@ -97,9 +97,10 @@ export async function POST(
       );
     }
 
-    await assignBackerNumber(pledge.projectId, pledge.id).catch(err =>
-      whopConfirmLogger.error({ err: String(err) }, "assignBackerNumber failed")
-    );
+    const whopBackerNumber = await assignBackerNumber(pledge.projectId, pledge.id).catch(err => {
+      whopConfirmLogger.error({ err: String(err) }, "assignBackerNumber failed");
+      return null;
+    });
 
     await notifyPledgeReceived(pledge.projectId, pledge.project.creatorId, pledge.user.name || "A backer", Number(pledge.amount)).catch(
       err => whopConfirmLogger.error({ err: String(err) }, "notifyPledgeReceived failed")
@@ -150,7 +151,8 @@ export async function POST(
             : undefined,
           undefined,
           undefined,
-          "PAYPAL" // closest analog for Whop (card payment)
+          "PAYPAL", // closest analog for Whop (card payment)
+          whopBackerNumber ?? undefined
         );
 
         await db.emailLog.create({
