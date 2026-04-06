@@ -210,6 +210,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     let updateData: Record<string, unknown> = {};
+    // statusFilter is used in the atomic updateMany to guard against concurrent status changes
+    let statusFilter: Record<string, unknown> | undefined;
 
     switch (action) {
       case "INITIATE":
@@ -219,6 +221,7 @@ export async function PATCH(req: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: "PENDING" };
         updateData = {
           status: "INITIATED",
           initiatedAt: new Date(),
@@ -233,6 +236,7 @@ export async function PATCH(req: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: "INITIATED" };
         updateData = {
           status: "PROCESSING",
           processedAt: new Date(),
@@ -246,6 +250,7 @@ export async function PATCH(req: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: { in: ["INITIATED", "PROCESSING"] } };
         updateData = {
           status: "COMPLETED",
           completedAt: new Date(),
@@ -267,6 +272,7 @@ export async function PATCH(req: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: "FAILED" };
         updateData = {
           status: "PENDING",
           failedAt: null,
@@ -284,6 +290,7 @@ export async function PATCH(req: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: { in: ["PENDING", "INITIATED"] } };
         updateData = {
           status: "CANCELLED",
           adminNotes: notes
@@ -299,6 +306,7 @@ export async function PATCH(req: NextRequest) {
             { status: 400 }
           );
         }
+        statusFilter = { status: "PENDING" };
         if (notes) {
           let parsed;
           try {
@@ -318,6 +326,23 @@ export async function PATCH(req: NextRequest) {
           { error: "Invalid action" },
           { status: 400 }
         );
+    }
+
+    // Atomic update: if statusFilter is set, enforce the expected status in the WHERE
+    // clause to prevent concurrent requests from causing invalid state transitions
+    if (statusFilter) {
+      const result = await db.divinityCoinSettlement.updateMany({
+        where: { id: settlementId, ...statusFilter },
+        data: updateData,
+      });
+      if (result.count === 0) {
+        return NextResponse.json(
+          { error: "Settlement status has changed — please refresh and try again" },
+          { status: 409 }
+        );
+      }
+      const updated = await db.divinityCoinSettlement.findUnique({ where: { id: settlementId } });
+      return NextResponse.json({ success: true, settlement: updated });
     }
 
     const updated = await db.divinityCoinSettlement.update({

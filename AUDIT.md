@@ -190,22 +190,22 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/api-keys/route.ts` ✅
 - [x] `src/app/api/admin/backfill-backer-numbers/route.ts` ✅
 - [x] `src/app/api/admin/bank-accounts/[id]/route.ts` ✅
-- [ ] `src/app/api/admin/build-backup/download/route.ts`
-- [ ] `src/app/api/admin/build-backup/route.ts`
+- [x] `src/app/api/admin/build-backup/download/route.ts` ✅
+- [x] `src/app/api/admin/build-backup/route.ts` ✅
 - [ ] `src/app/api/admin/changelog/extract/route.ts`
 - [ ] `src/app/api/admin/changelog/route.ts`
 - [x] `src/app/api/admin/cleanup-duplicate-rewards/route.ts` 🔧 Fixed missing deletedAt:null in reward queries (cleanup tool operated on soft-deleted rewards)
 - [x] `src/app/api/admin/cleanup-pledges/route.ts` 🔧 Fixed missing deletedAt:null in base pledge where clause (admin cleanup could see deleted pledges)
 - [x] `src/app/api/admin/consent-banner/route.ts` ✅
-- [ ] `src/app/api/admin/cron/route.ts`
+- [x] `src/app/api/admin/cron/route.ts` ✅
 - [x] `src/app/api/admin/dashboard/route.ts` ✅
 - [ ] `src/app/api/admin/database/backup/download/route.ts`
-- [ ] `src/app/api/admin/database/backup/restore/route.ts`
-- [ ] `src/app/api/admin/database/backup/route.ts`
-- [ ] `src/app/api/admin/database/status/route.ts`
-- [ ] `src/app/api/admin/divinity-payouts/route.ts`
-- [ ] `src/app/api/admin/divinitycoin-redemptions/route.ts`
-- [ ] `src/app/api/admin/email-blocklist/[id]/route.ts`
+- [x] `src/app/api/admin/database/backup/restore/route.ts` ✅
+- [x] `src/app/api/admin/database/backup/route.ts` ✅
+- [x] `src/app/api/admin/database/status/route.ts` 🔧 Fixed count queries missing deletedAt:null (inflated stats including soft-deleted records)
+- [x] `src/app/api/admin/divinity-payouts/route.ts` 🔧 Fixed race condition in PATCH — now uses atomic updateMany with status guard
+- [x] `src/app/api/admin/divinitycoin-redemptions/route.ts` ✅
+- [x] `src/app/api/admin/email-blocklist/[id]/route.ts` ✅
 - [ ] `src/app/api/admin/email-blocklist/purge/route.ts`
 - [ ] `src/app/api/admin/email-blocklist/route.ts`
 - [ ] `src/app/api/admin/email-queue/route.ts`

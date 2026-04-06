@@ -42,10 +42,10 @@ export async function GET() {
       pledgeCount,
       mediaCount,
     ] = await Promise.all([
-      db.user.count(),
-      db.project.count(),
-      db.pledge.count(),
-      db.mediaFile.count(),
+      db.user.count({ where: { deletedAt: null } }),
+      db.project.count({ where: { deletedAt: null } }),
+      db.pledge.count({ where: { deletedAt: null } }),
+      db.mediaFile.count({ where: { deletedAt: null } }),
     ]);
 
     // Get database provider from DATABASE_URL
