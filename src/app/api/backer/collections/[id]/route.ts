@@ -95,9 +95,9 @@ export async function GET(
           status: item.project.status,
           currentAmount: Number(item.project.currentAmount),
           goalAmount: Number(item.project.goalAmount),
-          percentFunded: Math.round(
-            (Number(item.project.currentAmount) / Number(item.project.goalAmount)) * 100
-          ),
+          percentFunded: Number(item.project.goalAmount) > 0
+            ? Math.round((Number(item.project.currentAmount) / Number(item.project.goalAmount)) * 100)
+            : 0,
           endDate: item.project.endDate,
           category: item.project.category,
           creatorName: item.project.creator.name,
