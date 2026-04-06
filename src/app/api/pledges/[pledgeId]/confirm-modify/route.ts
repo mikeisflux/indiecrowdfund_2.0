@@ -121,10 +121,7 @@ export async function POST(
     await db.$transaction(async (tx) => {
       // If changing reward, update claimed counts
       if (pledge.rewardId && pledge.rewardId !== rewardId) {
-        await tx.reward.update({
-          where: { id: pledge.rewardId },
-          data: { quantityClaimed: { decrement: 1 } },
-        });
+        await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
       }
 
       if (rewardId && rewardId !== "no-reward" && pledge.rewardId !== rewardId) {

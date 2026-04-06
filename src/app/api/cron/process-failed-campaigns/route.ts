@@ -231,12 +231,7 @@ async function refundDivinityCoinPledges(projectId: string, projectTitle: string
 
         // Decrement reward quantity if applicable
         if (pledge.rewardId) {
-          await tx.reward.update({
-            where: { id: pledge.rewardId },
-            data: {
-              quantityClaimed: { decrement: 1 },
-            },
-          });
+          await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
         }
 
         // Create refund transaction record
@@ -305,12 +300,7 @@ async function cancelStripePledges(projectId: string) {
 
         // Decrement reward quantity if applicable
         if (pledge.rewardId) {
-          await tx.reward.update({
-            where: { id: pledge.rewardId },
-            data: {
-              quantityClaimed: { decrement: 1 },
-            },
-          });
+          await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
         }
       });
     } catch (error) {

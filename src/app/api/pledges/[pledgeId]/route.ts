@@ -25,10 +25,7 @@ async function applyModificationChanges(
 ) {
   // If changing reward, update claimed counts
   if (pledge.rewardId && pledge.rewardId !== rewardId) {
-    await db.reward.update({
-      where: { id: pledge.rewardId },
-      data: { quantityClaimed: { decrement: 1 } },
-    });
+    await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
   }
 
   if (rewardId && rewardId !== "no-reward" && pledge.rewardId !== rewardId) {
@@ -439,10 +436,8 @@ export async function PATCH(
 
         // Release reward slot so it can be claimed by another backer
         if (pledge.rewardId) {
-          await db.reward.update({
-            where: { id: pledge.rewardId },
-            data: { quantityClaimed: { decrement: 1 } },
-          }).catch(err => pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to decrement reward quantity"));
+          db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`
+            .catch(err => pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to decrement reward quantity"));
         }
 
         // Send cancellation + refund notification (async, don't block response)
@@ -500,10 +495,8 @@ export async function PATCH(
 
       // Release reward slot so it can be claimed by another backer
       if (pledge.rewardId) {
-        await db.reward.update({
-          where: { id: pledge.rewardId },
-          data: { quantityClaimed: { decrement: 1 } },
-        }).catch(err => pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to decrement reward quantity"));
+        db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`
+          .catch(err => pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to decrement reward quantity"));
       }
 
       // Send cancellation notification (async, don't block response)

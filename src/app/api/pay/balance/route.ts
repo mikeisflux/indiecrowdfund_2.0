@@ -180,8 +180,15 @@ export async function POST(req: NextRequest) {
       if (!stripe) {
         return NextResponse.json({ error: "Payment system unavailable" }, { status: 500 });
       }
+      const platformSettings = await db.platformSettings.findUnique({
+        where: { id: "default" },
+        select: { platformFee: true },
+      });
+      const platformFeeRate = platformSettings?.platformFee
+        ? Number(platformSettings.platformFee) / 100
+        : 0.03;
       const amountInCents = Math.round(balanceDue * 100);
-      const platformFee = Math.round(balanceDue * 0.03 * 100); // 3% platform fee
+      const platformFee = Math.round(balanceDue * platformFeeRate * 100);
 
       // Create a PaymentIntent for the balance amount
       const paymentIntent = await stripe.paymentIntents.create({
