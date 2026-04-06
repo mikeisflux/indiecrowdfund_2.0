@@ -290,9 +290,9 @@ export async function PATCH(req: NextRequest) {
             { status: 403 }
           );
         }
-        if (!data?.password || data.password.length < 8) {
+        if (!data?.password || data.password.length < 8 || data.password.length > 1000) {
           return NextResponse.json(
-            { error: "Password must be at least 8 characters" },
+            { error: "Password must be between 8 and 1000 characters" },
             { status: 400 }
           );
         }
@@ -543,9 +543,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!password || password.length < 8) {
+    if (!password || password.length < 8 || password.length > 1000) {
       return NextResponse.json(
-        { error: "Password must be at least 8 characters" },
+        { error: "Password must be between 8 and 1000 characters" },
         { status: 400 }
       );
     }

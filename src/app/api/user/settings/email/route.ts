@@ -19,6 +19,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { newEmail, password } = body;
 
+    // Cap password length to prevent bcrypt DoS
+    if (password && (typeof password !== "string" || password.length > 1000)) {
+      return NextResponse.json({ error: "Invalid password" }, { status: 400 });
+    }
+
     if (!newEmail) {
       return NextResponse.json(
         { error: "New email is required" },

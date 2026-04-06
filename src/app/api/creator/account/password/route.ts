@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Both passwords required" }, { status: 400 });
     }
 
-    if (newPassword.length < 8) {
-      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+    if (newPassword.length < 8 || newPassword.length > 1000) {
+      return NextResponse.json({ error: "Password must be between 8 and 1000 characters" }, { status: 400 });
     }
 
     // Get user with password hash

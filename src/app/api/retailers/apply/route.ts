@@ -90,9 +90,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hash password if provided
+    // Hash password if provided (cap length to prevent bcrypt DoS)
     let passwordHash = null;
     if (password) {
+      if (typeof password !== "string" || password.length > 1000) {
+        return NextResponse.json({ error: "Password must be 1000 characters or less" }, { status: 400 });
+      }
       passwordHash = await hash(password, 12);
     }
 
