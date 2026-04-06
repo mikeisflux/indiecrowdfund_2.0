@@ -578,20 +578,26 @@ export async function handlePaymentSucceeded(
 
     // Atomically claim the right to update project stats using confirmationEmailSent.
     // This prevents double-counting between this webhook and the /confirm endpoint.
-    const statsClaimResult = await db.pledge.updateMany({
-      where: { id: pledgeId, confirmationEmailSent: false },
-      data: { confirmationEmailSent: true },
+    // Both the flag set and the stats increment are in the same transaction so that
+    // if the stats update fails, the flag rolls back and a retry can try again.
+    const statsClaimResult = await db.$transaction(async (tx) => {
+      const claimResult = await tx.pledge.updateMany({
+        where: { id: pledgeId, confirmationEmailSent: false },
+        data: { confirmationEmailSent: true },
+      });
+      if (claimResult.count > 0) {
+        await tx.project.update({
+          where: { id: pledge.projectId },
+          data: {
+            currentAmount: { increment: Number(pledge.amount) },
+            backerCount: { increment: 1 },
+          },
+        });
+      }
+      return claimResult;
     });
 
     if (statsClaimResult.count > 0) {
-      // We won the race — update project stats
-      await db.project.update({
-        where: { id: pledge.projectId },
-        data: {
-          currentAmount: { increment: Number(pledge.amount) },
-          backerCount: { increment: 1 },
-        },
-      });
       paymentsDivinitycoinLogger.info(`[DivinityCoin] Updated project stats for pledge ${pledgeId}: +$${pledge.amount}`);
       // Claim reward slot to prevent overselling (parallel to Stripe/PayPal)
       if (pledge.rewardId) {
