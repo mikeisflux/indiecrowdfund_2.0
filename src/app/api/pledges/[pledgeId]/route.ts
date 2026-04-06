@@ -435,7 +435,8 @@ export async function PATCH(
         }
 
         // Release reward slot so it can be claimed by another backer
-        if (pledge.rewardId) {
+        // Only if the pledge was confirmed (slot was actually claimed)
+        if (pledge.confirmationEmailSent && pledge.rewardId) {
           db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`
             .catch(err => pledgesLogger.error({ err: String(err) }, "[Cancel] Failed to decrement reward quantity"));
         }
