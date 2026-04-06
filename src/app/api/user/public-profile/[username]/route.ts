@@ -65,6 +65,7 @@ export async function GET(
             status: {
               in: ["LIVE", "FUNDED", "PAUSED"],
             },
+            deletedAt: null,
           },
           orderBy: { createdAt: "desc" },
           take: 20,
@@ -88,10 +89,12 @@ export async function GET(
         pledges: {
           where: {
             status: "COMPLETED",
+            deletedAt: null,
             project: {
               status: {
                 in: ["LIVE", "FUNDED", "PAUSED"],
               },
+              deletedAt: null,
             },
           },
           orderBy: { createdAt: "desc" },

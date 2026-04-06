@@ -25,8 +25,8 @@ export async function POST(req: NextRequest) {
     const data = createUpdateSchema.parse(body);
 
     // Verify project ownership
-    const project = await db.project.findUnique({
-      where: { id: data.projectId },
+    const project = await db.project.findFirst({
+      where: { id: data.projectId, deletedAt: null },
       select: { creatorId: true },
     });
 

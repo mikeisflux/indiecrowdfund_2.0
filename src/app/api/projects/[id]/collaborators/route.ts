@@ -29,8 +29,8 @@ export async function POST(
     const { id: projectId } = await params;
 
     // Verify project ownership
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: {
         creatorId: true,
         title: true,
@@ -179,8 +179,8 @@ export async function GET(
     const { id: projectId } = await params;
 
     // Verify project ownership or collaboration
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { creatorId: true },
     });
 
@@ -252,8 +252,8 @@ export async function DELETE(
     }
 
     // Verify project ownership
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { creatorId: true },
     });
 

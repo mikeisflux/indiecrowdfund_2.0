@@ -336,6 +336,14 @@ export async function PATCH(req: NextRequest) {
             );
           }
 
+          auditLog({
+            action: "USER_PASSWORD_RESET",
+            actorId: authResult.user.id,
+            actorEmail: authResult.user.email || undefined,
+            targetId: userId,
+            targetType: "USER",
+            details: { action },
+          });
           return NextResponse.json({
             success: true,
             message: `Password reset email sent to ${user.email}`,
@@ -498,7 +506,7 @@ export async function PATCH(req: NextRequest) {
       SET_PASSWORD: "USER_PASSWORD_SET",
       SEND_RESET_EMAIL: "USER_PASSWORD_RESET",
       VERIFY_EMAIL: "USER_EMAIL_VERIFY",
-      UPDATE_INFO: "USER_EMAIL_CHANGE",
+      UPDATE_INFO: data?.email ? "USER_EMAIL_CHANGE" : "USER_INFO_UPDATE",
     };
     if (auditActionMap[action]) {
       try {
