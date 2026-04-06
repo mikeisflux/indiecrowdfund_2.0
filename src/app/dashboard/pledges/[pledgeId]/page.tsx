@@ -163,7 +163,7 @@ export default function ManagePledgePage() {
         body: JSON.stringify({ action: "cancel", reason }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to cancel pledge");
@@ -194,7 +194,7 @@ export default function ManagePledgePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "cancel", reason: refundReason }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.error || "Failed to submit refund request");
       }
@@ -284,7 +284,10 @@ export default function ManagePledgePage() {
       setModifyMode(false);
       // Refresh
       const refreshRes = await fetch(`/api/pledges/${pledgeId}`);
-      if (refreshRes.ok) setPledge((await refreshRes.json()).pledge);
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json().catch(() => null);
+        if (refreshData?.pledge) setPledge(refreshData.pledge);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update pledge");
     } finally {

@@ -224,9 +224,10 @@ export default function BackerDashboard() {
     fetchDashboardData();
   }, []);
 
-  // Poll for updated stats every 30 seconds
+  // Poll for updated stats every 30 seconds (only while data has loaded)
+  const hasData = !!data;
   useEffect(() => {
-    if (!data) return;
+    if (!hasData) return;
 
     const pollStats = async () => {
       try {
@@ -253,7 +254,7 @@ export default function BackerDashboard() {
       clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [data]);
+  }, [hasData]);
 
   // Fetch unread messages count
   useEffect(() => {
