@@ -41,6 +41,7 @@ async function verifyProjectAccess(projectId: string, userId: string) {
   return db.project.findFirst({
     where: {
       id: projectId,
+      deletedAt: null,
       OR: [
         { creatorId: userId },
         { collaborators: { some: { userId, status: "ACCEPTED" } } },

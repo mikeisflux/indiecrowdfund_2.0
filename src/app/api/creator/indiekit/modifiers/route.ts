@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
@@ -166,6 +167,7 @@ export async function POST(req: NextRequest) {
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
@@ -283,6 +285,7 @@ export async function POST(req: NextRequest) {
       const pledge = await db.pledge.findFirst({
         where: {
           id: pledgeId,
+          deletedAt: null,
           projectId,
           deletedAt: null,
         },
@@ -395,6 +398,7 @@ export async function POST(req: NextRequest) {
       const addon = await db.reward.findFirst({
         where: {
           id: addonId,
+          deletedAt: null,
           projectId,
           type: "ADDON",
         },

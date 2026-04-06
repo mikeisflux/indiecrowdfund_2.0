@@ -159,8 +159,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
     }
 
-    const project = await db.project.findUnique({
-      where: { id: projectId, deletedAt: null },
+    const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
       select: {
         id: true,
         title: true,

@@ -247,7 +247,7 @@ export async function POST(
           { status: 409 }
         );
       }
-      updatedProject = await db.project.findUnique({ where: { id: projectId } });
+      updatedProject = await db.project.findFirst({ where: { id: projectId , deletedAt: null } });
     } catch (dbError) {
       projectsLaunchLogger.error({ err: String(dbError) }, "Failed to update project status:");
       throw new Error(`Failed to update project: ${dbError instanceof Error ? dbError.message : "Unknown DB error"}`);

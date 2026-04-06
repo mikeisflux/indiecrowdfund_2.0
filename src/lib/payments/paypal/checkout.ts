@@ -36,8 +36,7 @@ export async function createPayPalPayment({
 }: CreatePayPalPaymentParams) {
   const config = await getPayPalConfig();
 
-  const project = await db.project.findUnique({
-    where: { id: projectId, deletedAt: null },
+  const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
     select: { id: true, title: true, goalAmount: true, currentAmount: true, status: true, campaignType: true },
   });
 
@@ -71,7 +70,7 @@ export async function createPayPalPayment({
 
   // Block if user already has a completed pledge
   const existingCompleted = await db.pledge.findFirst({
-    where: { userId, projectId, status: "COMPLETED" },
+    where: { userId, projectId, deletedAt: null, status: "COMPLETED" },
   });
   if (existingCompleted) {
     throw new Error("You have already backed this project. Visit your backer dashboard to manage your pledge.");

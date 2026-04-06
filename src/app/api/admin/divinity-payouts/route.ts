@@ -153,8 +153,7 @@ export async function POST(req: NextRequest) {
     // Get project name if projectId provided
     let projectName = null;
     if (projectId) {
-      const project = await db.project.findUnique({
-        where: { id: projectId, deletedAt: null },
+      const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
         select: { title: true },
       });
       projectName = project?.title || null;

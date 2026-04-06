@@ -43,8 +43,7 @@ function generateFilename(originalName: string, convertToWebP: boolean): string 
 
 // Check if user can upload to a project (creator or collaborator with edit permission)
 async function canUploadToProject(projectId: string, userId: string): Promise<boolean> {
-  const project = await db.project.findUnique({
-    where: { id: projectId, deletedAt: null },
+  const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
     select: { creatorId: true },
   });
 

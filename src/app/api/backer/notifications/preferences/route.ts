@@ -70,6 +70,7 @@ export async function GET() {
     const backedProjects = await db.pledge.findMany({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         status: "COMPLETED",
       },
       select: {
@@ -164,6 +165,7 @@ export async function POST(request: NextRequest) {
     const pledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         projectId,
         status: "COMPLETED",
       },

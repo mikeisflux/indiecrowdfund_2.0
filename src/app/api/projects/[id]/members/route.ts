@@ -13,6 +13,7 @@ async function verifyProjectAccess(projectId: string, userId: string) {
   let project = await db.project.findFirst({
     where: {
       id: projectId,
+      deletedAt: null,
       creatorId: userId,
     },
     select: { id: true },
@@ -241,6 +242,7 @@ export async function DELETE(
     const member = await db.emailListSubscriber.findFirst({
       where: {
         id: memberId,
+        deletedAt: null,
         creatorId: session.user.id,
       },
     });

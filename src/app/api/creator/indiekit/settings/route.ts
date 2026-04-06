@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },

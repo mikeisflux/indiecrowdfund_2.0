@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const project = await db.project.findFirst({
-    where: { slug, creatorId: creator.id },
+    where: { slug, creatorId: creator.id, deletedAt: null },
     select: {
       title: true,
       subtitle: true,

@@ -275,6 +275,7 @@ export async function POST(
       parentComment = await db.comment.findFirst({
         where: {
           id: parentId,
+          deletedAt: null,
           projectId,
         },
         select: {
@@ -298,6 +299,7 @@ export async function POST(
         const root = await db.comment.findFirst({
           where: {
             id: parentComment.parentId,
+            deletedAt: null,
             projectId,
           },
           select: {
@@ -325,6 +327,7 @@ export async function POST(
           const pledge = await db.pledge.findFirst({
             where: {
               userId: session.user.id,
+              deletedAt: null,
               projectId,
               status: "COMPLETED",
             },
@@ -344,6 +347,7 @@ export async function POST(
         const pledge = await db.pledge.findFirst({
           where: {
             userId: session.user.id,
+            deletedAt: null,
             projectId,
             status: "COMPLETED",
           },
@@ -389,6 +393,7 @@ export async function POST(
     const backedProjectsCount = await db.pledge.count({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         status: "COMPLETED",
       },
     });

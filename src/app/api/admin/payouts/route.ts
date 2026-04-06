@@ -176,8 +176,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the project with funding info
-    const project = await db.project.findUnique({
-      where: { id: projectId, deletedAt: null },
+    const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
       select: {
         id: true,
         title: true,

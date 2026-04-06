@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
     const pledge = await db.pledge.findFirst({
       where: {
         id: pledgeId,
+        deletedAt: null,
         projectId,
         status: "COMPLETED",
         deletedAt: null,
@@ -83,8 +85,8 @@ export async function POST(req: NextRequest) {
 
     // Atomically check dedup and write new token to prevent duplicate sends under concurrent requests
     const updated = await db.$transaction(async (tx) => {
-      const current = await tx.pledge.findUnique({
-        where: { id: pledgeId },
+      const current = await tx.pledge.findFirst({
+        where: { id: pledgeId , deletedAt: null },
         select: { metadata: true },
       });
       if (!current) return null;

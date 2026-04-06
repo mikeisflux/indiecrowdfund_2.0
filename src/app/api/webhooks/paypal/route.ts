@@ -84,8 +84,8 @@ export async function POST(req: NextRequest) {
         if (!customId) break;
 
         // customId is the pledgeId
-        const pledge = await db.pledge.findUnique({
-          where: { id: customId },
+        const pledge = await db.pledge.findFirst({
+          where: { id: customId , deletedAt: null },
           select: {
             id: true,
             status: true,

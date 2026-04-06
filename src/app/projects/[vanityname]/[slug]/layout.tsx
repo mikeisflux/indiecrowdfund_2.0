@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const project = await db.project.findFirst({
-    where: { slug, creatorId: creator.id },
+    where: { slug, creatorId: creator.id, deletedAt: null },
     select: {
       title: true,
       subtitle: true,
@@ -130,14 +130,14 @@ export default async function ProjectLayout({ params, children }: Props) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const project: any = await db.project.findFirst({
-    where: { slug, creatorId: creator.id },
+    where: { slug, creatorId: creator.id, deletedAt: null },
     select: projectSelectForJsonLd,
   });
 
   if (!project) {
     // Slug may have moved to a different creator — redirect to correct URL
     const projectBySlug = await db.project.findUnique({
-      where: { slug },
+      where: { slug, deletedAt: null },
       select: { creator: { select: { vanityUrl: true } } },
     });
     if (projectBySlug?.creator?.vanityUrl) {

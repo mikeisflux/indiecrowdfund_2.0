@@ -96,6 +96,7 @@ export async function GET(
     const pledge = await db.pledge.findFirst({
       where: {
         id: pledgeId,
+        deletedAt: null,
         userId: session.user.id,
       },
       include: {
@@ -223,6 +224,7 @@ export async function PATCH(
     const pledge = await db.pledge.findFirst({
       where: {
         id: pledgeId,
+        deletedAt: null,
         userId: session.user.id,
       },
       include: {
@@ -984,6 +986,7 @@ export async function DELETE(
     const pledge = await db.pledge.findFirst({
       where: {
         id: pledgeId,
+        deletedAt: null,
         userId: session.user.id,
       },
       include: {

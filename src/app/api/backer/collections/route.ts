@@ -154,8 +154,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify the project exists
-      const projectExists = await db.project.findUnique({
-        where: { id: projectId },
+      const projectExists = await db.project.findFirst({
+        where: { id: projectId , deletedAt: null },
         select: { id: true },
       });
       if (!projectExists) {

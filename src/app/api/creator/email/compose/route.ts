@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
     let project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         creatorId: session.user.id,
         deletedAt: null,
         OR: [

@@ -22,6 +22,7 @@ export async function checkEmailAccess(userId: string): Promise<{ allowed: boole
 
   const eligibleProject = await db.project.findFirst({
     where: {
+      deletedAt: null,
       AND: [
         {
           OR: [

@@ -24,6 +24,7 @@ export async function POST(
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           {
@@ -50,6 +51,7 @@ export async function POST(
     const item = await db.projectItem.findFirst({
       where: {
         id: itemId,
+        deletedAt: null,
         projectId,
       },
     });

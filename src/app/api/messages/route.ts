@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
     const data = createMessageSchema.parse(body);
 
     // Verify project exists
-    const project = await db.project.findUnique({
-      where: { id: data.projectId },
+    const project = await db.project.findFirst({
+      where: { id: data.projectId , deletedAt: null },
       select: { id: true, creatorId: true },
     });
 
@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
     });
 
     // Get project title for context
-    const projectForEmail = await db.project.findUnique({
-      where: { id: data.projectId },
+    const projectForEmail = await db.project.findFirst({
+      where: { id: data.projectId , deletedAt: null },
       select: { title: true, slug: true },
     });
 

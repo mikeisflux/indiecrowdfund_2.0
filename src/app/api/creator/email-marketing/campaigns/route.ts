@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
       ? await db.project.findFirst({
           where: {
             id: projectId,
+            deletedAt: null,
             creatorId: session.user.id,
             deletedAt: null,
           },
@@ -118,6 +119,7 @@ export async function POST(request: NextRequest) {
       : await db.project.findFirst({
           where: {
             creatorId: session.user.id,
+            deletedAt: null,
             status: { in: ["LIVE", "FUNDED", "SUBMITTED"] },
             deletedAt: null,
           },

@@ -70,6 +70,7 @@ export async function POST(
       project = await db.project.findFirst({
         where: {
           id: projectId,
+          deletedAt: null,
           creatorId: session.user.id,
         },
         select: { id: true, title: true },

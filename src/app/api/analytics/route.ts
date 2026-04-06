@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify project ownership
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: { creatorId: true },
     });
 

@@ -27,8 +27,8 @@ async function healStuckPendingPledge(pledgeId: string, stripePaymentIntentId: s
         : paymentIntent.payment_method?.id;
 
       // Get pledge to check if backer number already assigned
-      const pledge = await db.pledge.findUnique({
-        where: { id: pledgeId },
+      const pledge = await db.pledge.findFirst({
+        where: { id: pledgeId , deletedAt: null },
         select: { projectId: true, backerNumber: true },
       });
 
@@ -95,6 +95,7 @@ export async function POST(
     const pledge = await db.pledge.findFirst({
       where: {
         id: pledgeId,
+        deletedAt: null,
         userId: session.user.id,
         deletedAt: null,
       },

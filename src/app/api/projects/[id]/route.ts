@@ -187,8 +187,8 @@ async function handleCollaborators(
   creatorName: string
 ) {
   // Get project title for notification
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: { title: true, slug: true },
   });
 
@@ -320,8 +320,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const project = await db.project.findUnique({
-      where: { id },
+    const project = await db.project.findFirst({
+      where: { id, deletedAt: null },
       include: {
         creator: {
           select: {
@@ -411,12 +411,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await db.project.findUnique({
-      where: { id },
-      select: { creatorId: true, status: true, prelaunchStatus: true, deletedAt: true },
+    const project = await db.project.findFirst({
+      where: { id, deletedAt: null },
+      select: { creatorId: true, status: true, prelaunchStatus: true },
     });
 
-    if (!project || project.deletedAt) {
+    if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
@@ -563,8 +563,8 @@ export async function PATCH(
             updateData.prelaunchStatus = "SUBMITTED";
 
             // Get the full project data to include in review
-            const fullProject = await db.project.findUnique({
-              where: { id: id },
+            const fullProject = await db.project.findFirst({
+              where: { id: id , deletedAt: null },
               select: { title: true, creatorId: true, creator: { select: { name: true, email: true } } },
             });
 
@@ -842,8 +842,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: {
         creatorId: true,
         status: true,

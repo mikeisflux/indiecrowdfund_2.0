@@ -13,6 +13,7 @@ async function verifyProjectAccess(projectId: string, userId: string) {
   let project = await db.project.findFirst({
     where: {
       id: projectId,
+      deletedAt: null,
       creatorId: userId,
     },
     select: { id: true, title: true },

@@ -73,8 +73,7 @@ export async function POST(req: NextRequest) {
       const data = createPledgeSchema.parse(body);
 
       // Get project to determine payment processor
-      const project = await db.project.findUnique({
-        where: { id: data.projectId, deletedAt: null },
+      const project = await db.project.findFirst({ where: { id: data.projectId, deletedAt: null },
         include: {
           creator: {
             include: {
@@ -190,6 +189,7 @@ export async function POST(req: NextRequest) {
         const completedPledge = await db.pledge.findFirst({
           where: {
             userId: session.user.id,
+            deletedAt: null,
             projectId: data.projectId,
             paymentProcessor: "DIVINITYCOIN",
             status: "COMPLETED",
@@ -207,6 +207,7 @@ export async function POST(req: NextRequest) {
         const pendingPledges = await db.pledge.findMany({
           where: {
             userId: session.user.id,
+            deletedAt: null,
             projectId: data.projectId,
             paymentProcessor: "DIVINITYCOIN",
             status: "PENDING",

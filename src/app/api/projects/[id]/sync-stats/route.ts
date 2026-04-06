@@ -28,6 +28,7 @@ export async function POST(
     const exists = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         ...(!isAdmin ? {
           OR: [
             { creatorId: session.user.id },

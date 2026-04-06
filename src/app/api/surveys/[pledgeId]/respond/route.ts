@@ -499,8 +499,8 @@ export async function POST(
 
       // Send survey completion confirmation email
       try {
-        const pledgeWithDetails = await db.pledge.findUnique({
-          where: { id: pledgeId },
+        const pledgeWithDetails = await db.pledge.findFirst({
+          where: { id: pledgeId , deletedAt: null },
           select: {
             user: { select: { email: true, name: true } },
             project: { select: { title: true, slug: true, creator: { select: { vanityUrl: true } } } },

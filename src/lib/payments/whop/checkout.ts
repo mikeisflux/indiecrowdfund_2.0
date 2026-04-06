@@ -35,8 +35,7 @@ export async function createWhopPayment({
 }: CreateWhopPaymentParams) {
   const config = await getWhopConfig();
 
-  const project = await db.project.findUnique({
-    where: { id: projectId, deletedAt: null },
+  const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
     select: { id: true, title: true },
   });
 
@@ -70,7 +69,7 @@ export async function createWhopPayment({
 
   // Block if user already has a completed pledge
   const existingCompleted = await db.pledge.findFirst({
-    where: { userId, projectId, status: "COMPLETED" },
+    where: { userId, projectId, deletedAt: null, status: "COMPLETED" },
   });
   if (existingCompleted) {
     throw new Error("You have already backed this project. Visit your backer dashboard to manage your pledge.");

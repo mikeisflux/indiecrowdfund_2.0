@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
     const pledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         projectId: file.projectId,
         status: { in: ["PENDING", "COMPLETED"] },
         deletedAt: null,

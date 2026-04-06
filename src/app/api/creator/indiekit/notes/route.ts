@@ -30,8 +30,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify access via pledge's project
-    const pledge = await db.pledge.findFirst({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({ where: { id: pledgeId, deletedAt: null },
       include: {
         project: {
           select: { creatorId: true },
@@ -106,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     // Verify access via pledge's project
     const pledge = await db.pledge.findFirst({
-      where: { id: validatedData.pledgeId },
+      where: { id: validatedData.pledgeId, deletedAt: null },
       include: {
         project: {
           select: { id: true, creatorId: true },

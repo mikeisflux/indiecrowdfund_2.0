@@ -22,7 +22,7 @@ export async function GET(
     }
 
     const project = await db.project.findFirst({
-      where: { slug, creatorId: creator.id },
+      where: { slug, creatorId: creator.id, deletedAt: null },
       select: { id: true, goalAmount: true, status: true },
     });
 

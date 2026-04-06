@@ -23,8 +23,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get project to check if funded
-    const project = await db.project.findUnique({
-      where: { id: projectId, deletedAt: null },
+    const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
       select: { currentAmount: true, goalAmount: true, status: true },
     });
 

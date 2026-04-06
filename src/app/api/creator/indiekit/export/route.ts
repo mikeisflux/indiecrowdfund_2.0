@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           {

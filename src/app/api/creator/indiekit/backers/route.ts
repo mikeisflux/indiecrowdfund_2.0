@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           {
@@ -155,8 +156,8 @@ export async function POST(req: NextRequest) {
         });
 
         // Get project title and creator name for email
-        const projectForEmail = await db.project.findUnique({
-          where: { id: projectId },
+        const projectForEmail = await db.project.findFirst({
+          where: { id: projectId , deletedAt: null },
           select: {
             title: true,
             creator: { select: { name: true } },
@@ -269,8 +270,8 @@ export async function POST(req: NextRequest) {
 
         if (!hasShopifyIntegration) {
           // Get the project creator's Shopify credentials (collaborators use creator's connection)
-          const projectWithCreator = await db.project.findUnique({
-            where: { id: projectId },
+          const projectWithCreator = await db.project.findFirst({
+            where: { id: projectId , deletedAt: null },
             select: {
               creatorId: true,
               creator: {

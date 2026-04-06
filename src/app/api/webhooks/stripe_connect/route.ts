@@ -136,7 +136,7 @@ async function handleAccountUpdate(account: Stripe.Account) {
 
   // First, try to find in StripeConfig (user-level)
   const config = await db.stripeConfig.findFirst({
-    where: { stripeAccountId: account.id },
+    where: { stripeAccountId: account.id, deletedAt: null },
   });
 
   if (config) {
@@ -150,7 +150,7 @@ async function handleAccountUpdate(account: Stripe.Account) {
 
   // Fallback: Check if this account is linked to a project directly
   const project = await db.project.findFirst({
-    where: { stripeAccountId: account.id },
+    where: { stripeAccountId: account.id, deletedAt: null },
     select: { id: true, title: true, creatorId: true },
   });
 

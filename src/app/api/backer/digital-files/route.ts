@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     const pledges = await db.pledge.findMany({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         status: { in: ["PENDING", "COMPLETED"] },
         deletedAt: null,
         ...(projectId ? { projectId } : {}),
@@ -228,6 +229,7 @@ export async function POST(request: NextRequest) {
     const pledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         projectId: file.projectId,
         status: { in: ["PENDING", "COMPLETED"] },
         deletedAt: null,

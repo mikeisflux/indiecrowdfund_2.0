@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           {
@@ -111,6 +112,7 @@ export async function PATCH(req: NextRequest) {
     const project = await db.project.findFirst({
       where: {
         id: projectId,
+        deletedAt: null,
         OR: [
           { creatorId: session.user.id },
           {
@@ -133,6 +135,7 @@ export async function PATCH(req: NextRequest) {
     const pledge = await db.pledge.findFirst({
       where: {
         id: pledgeId,
+        deletedAt: null,
         projectId,
         status: "COMPLETED",
       },
@@ -278,8 +281,8 @@ export async function PATCH(req: NextRequest) {
     });
 
     // Return updated pledge data
-    const updatedPledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const updatedPledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
       include: {
         addons: {
           include: {
@@ -372,6 +375,7 @@ export async function POST(req: NextRequest) {
       const project = await db.project.findFirst({
         where: {
           id: data.projectId,
+          deletedAt: null,
           OR: [
             { creatorId: session.user.id },
             { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
@@ -384,7 +388,7 @@ export async function POST(req: NextRequest) {
       }
 
       const pledge = await db.pledge.findFirst({
-        where: { id: data.pledgeId, projectId: data.projectId, status: "COMPLETED" },
+        where: { id: data.pledgeId, projectId: data.projectId, deletedAt: null, status: "COMPLETED" },
         include: { user: { select: { email: true, name: true } } },
       });
       if (!pledge) {
@@ -441,6 +445,7 @@ export async function POST(req: NextRequest) {
       const project = await db.project.findFirst({
         where: {
           id: data.projectId,
+          deletedAt: null,
           OR: [
             { creatorId: session.user.id },
             { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
@@ -453,7 +458,7 @@ export async function POST(req: NextRequest) {
       }
 
       const pledge = await db.pledge.findFirst({
-        where: { id: data.pledgeId, projectId: data.projectId, status: "COMPLETED" },
+        where: { id: data.pledgeId, projectId: data.projectId, deletedAt: null, status: "COMPLETED" },
       });
       if (!pledge) {
         return NextResponse.json({ error: "Pledge not found" }, { status: 404 });

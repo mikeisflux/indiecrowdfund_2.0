@@ -36,8 +36,7 @@ export async function createStripePayment({
   const stripeClient = await getStripeInstance();
 
   // Get project and creator's Stripe account
-  const project = await db.project.findUnique({
-    where: { id: projectId, deletedAt: null },
+  const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
     include: {
       creator: {
         include: {
@@ -117,6 +116,7 @@ export async function createStripePayment({
   const existingCompletedPledge = await db.pledge.findFirst({
     where: {
       userId,
+      deletedAt: null,
       projectId,
       status: "COMPLETED",
     },
@@ -130,6 +130,7 @@ export async function createStripePayment({
   const existingActivePendingPledge = await db.pledge.findFirst({
     where: {
       userId,
+      deletedAt: null,
       projectId,
       status: "PENDING",
       stripePaymentMethodId: { not: null },
@@ -145,6 +146,7 @@ export async function createStripePayment({
   const existingCheckoutInProgress = await db.pledge.findFirst({
     where: {
       userId,
+      deletedAt: null,
       projectId,
       status: "PENDING",
       stripePaymentMethodId: null,
@@ -288,6 +290,7 @@ export async function createStripePayment({
   const stalePendingPledge = await db.pledge.findFirst({
     where: {
       userId,
+      deletedAt: null,
       projectId,
       status: "PENDING",
       stripePaymentMethodId: null,

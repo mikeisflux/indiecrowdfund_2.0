@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     // Use a transaction to atomically mark as confirmed and prevent double-processing
     const confirmed = await db.$transaction(async (tx) => {
       // Re-fetch the pledge with a lock to guard against concurrent requests
-      const current = await tx.pledge.findUnique({ where: { id: pledge.id } });
+      const current = await tx.pledge.findFirst({ where: { id: pledge.id, deletedAt: null } });
       if (!current) return false;
       const currentMeta = (current.metadata as Record<string, unknown>) || {};
       if (currentMeta.balancePaymentCompletedAt) return false; // Already done
