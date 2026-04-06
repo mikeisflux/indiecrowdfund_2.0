@@ -89,32 +89,35 @@ async function canActivatePrelaunchImmediately(userId: string): Promise<boolean>
 // Schema for reward items
 const rewardItemSchema = z.object({
   id: z.string().optional(),
-  title: z.string(),
-  description: z.string().optional(),
-  imageUrl: z.string().optional(),
+  title: z.string().max(200),
+  description: z.string().max(1000).optional(),
+  imageUrl: z.string().max(2048).optional(),
 });
 
 // Schema for rewards
 const rewardSchema = z.object({
   id: z.string().optional(),
   type: z.enum(["TIER", "ADDON"]),
-  title: z.string(),
-  description: z.string().optional().nullable(),
+  title: z.string().max(200),
+  description: z.string().max(5000).optional().nullable(),
   amount: z.number(),
-  imageUrl: z.string().optional().nullable(),
-  estimatedDelivery: z.string().optional().nullable(),
+  imageUrl: z.string().max(2048).optional().nullable(),
+  estimatedDelivery: z.string().max(100).optional().nullable(),
   shippingType: z.enum(["WORLDWIDE", "SELECTED_COUNTRIES", "NO_SHIPPING"]),
-  shippingCountries: z.array(z.string()).optional(),
-  shippingCost: z.union([z.number(), z.record(z.string(), z.number())]).optional(),
+  shippingCountries: z.array(z.string().max(10)).max(250).optional(),
+  shippingCost: z.union([
+    z.number().min(0).max(9999),
+    z.record(z.string(), z.number().min(0).max(9999)),
+  ]).optional(),
   quantityAvailable: z.number().optional().nullable(),
-  items: z.array(rewardItemSchema).optional(),
+  items: z.array(rewardItemSchema).max(100).optional(),
   isEnded: z.boolean().optional(),
 });
 
 // Schema for collaborators
 const collaboratorSchema = z.object({
-  email: z.string().email(),
-  title: z.string().optional(),
+  email: z.string().email().max(254),
+  title: z.string().max(100).optional(),
   canEditProject: z.boolean().optional(),
   canManageCommunity: z.boolean().optional(),
   canCoordinateFulfillment: z.boolean().optional(),
@@ -124,16 +127,16 @@ const collaboratorSchema = z.object({
 // Full update schema including all project data
 const updateProjectSchema = z.object({
   // Basics
-  title: z.string().optional(),
-  subtitle: z.string().optional(),
+  title: z.string().max(200).optional(),
+  subtitle: z.string().max(500).optional(),
   slug: z.string().min(3).max(100).regex(/^[a-z0-9-]+$/).optional(),
-  category: z.string().optional(),
-  subcategory: z.string().optional().nullable(),
-  secondaryCategory: z.string().optional().nullable(),
-  secondarySubcategory: z.string().optional().nullable(),
-  location: z.string().optional().nullable(),
-  imageUrl: z.string().optional().nullable(),
-  videoUrl: z.string().optional().nullable(),
+  category: z.string().max(100).optional(),
+  subcategory: z.string().max(100).optional().nullable(),
+  secondaryCategory: z.string().max(100).optional().nullable(),
+  secondarySubcategory: z.string().max(100).optional().nullable(),
+  location: z.string().max(200).optional().nullable(),
+  imageUrl: z.string().max(2048).optional().nullable(),
+  videoUrl: z.string().max(2048).optional().nullable(),
   goalAmount: z.number().optional(),
   durationType: z.enum(["FIXED_DAYS", "END_DATE"]).optional(),
   durationDays: z.number().optional().nullable(),
@@ -141,30 +144,30 @@ const updateProjectSchema = z.object({
   launchDate: z.string().optional().nullable(),
 
   // Story
-  description: z.string().optional(),
-  risks: z.string().optional(),
+  description: z.string().max(100000).optional(),
+  risks: z.string().max(10000).optional(),
   usesAI: z.boolean().optional(),
   faqs: z.array(z.object({
-    question: z.string(),
-    answer: z.string(),
-  })).optional(),
+    question: z.string().min(1).max(500),
+    answer: z.string().min(1).max(5000),
+  })).max(50).optional(),
 
   // Payment
-  contactEmail: z.union([z.string().email(), z.literal("")]).optional(),
+  contactEmail: z.union([z.string().email().max(254), z.literal("")]).optional(),
   projectType: z.enum(["INDIVIDUAL", "BUSINESS", "NONPROFIT"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),
   promoContentSfw: z.boolean().optional(),
   allowRetailerPledges: z.boolean().optional(),
-  retailerDiscount: z.number().optional(),
-  retailerMinQuantity: z.number().optional(),
+  retailerDiscount: z.number().min(0).max(100).optional(),
+  retailerMinQuantity: z.number().int().min(1).optional(),
 
   // Promotion
   prelaunchActive: z.boolean().optional(),
-  prelaunchDescription: z.string().optional().nullable(),
-  customReferralTags: z.array(z.string()).optional(),
-  googleAnalyticsId: z.string().optional().nullable(),
-  metaPixelId: z.string().optional().nullable(),
+  prelaunchDescription: z.string().max(5000).optional().nullable(),
+  customReferralTags: z.array(z.string().max(100)).max(20).optional(),
+  googleAnalyticsId: z.string().max(50).optional().nullable(),
+  metaPixelId: z.string().max(20).optional().nullable(),
 
   // Rewards (array to replace all rewards)
   rewards: z.array(rewardSchema).optional(),
