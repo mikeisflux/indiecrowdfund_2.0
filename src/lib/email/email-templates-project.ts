@@ -41,8 +41,8 @@ export async function sendProjectSubmittedEmail(
           </div>
 
           <h2 style="margin-top: 0; color: #0369a1; text-align: center;">Project Submitted!</h2>
-          <p>Hi ${creatorName || "Creator"},</p>
-          <p>Your project <strong>"${projectTitle}"</strong> has been submitted for review.</p>
+          <p>Hi ${escapeHtml(creatorName || "Creator")},</p>
+          <p>Your project <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong> has been submitted for review.</p>
 
           <div style="background: white; border-radius: 6px; padding: 15px; margin: 20px 0; border-left: 4px solid #0ea5e9;">
             <p style="margin: 0; color: #666; font-size: 14px;"><strong>What happens next?</strong></p>
@@ -71,7 +71,7 @@ export async function sendProjectSubmittedEmail(
 
   return sendEmail({
     to: email,
-    subject: `Your project "${projectTitle}" is under review`,
+    subject: `Your project "${projectTitle.replace(/[\r\n]/g, " ")}" is under review`,
     html,
   });
 }
@@ -135,7 +135,7 @@ export async function sendProjectApprovedEmail(
 
   return sendEmail({
     to: email,
-    subject: `🎉 Your project "${projectTitle}" has been approved!`,
+    subject: `🎉 Your project "${projectTitle.replace(/[\r\n]/g, " ")}" has been approved!`,
     html,
   });
 }
@@ -213,7 +213,7 @@ export async function sendProjectRejectedEmail(
 
   return sendEmail({
     to: email,
-    subject: `Update on your project "${projectTitle}"`,
+    subject: `Update on your project "${projectTitle.replace(/[\r\n]/g, " ")}"`,
     html,
   });
 }
@@ -277,7 +277,7 @@ export async function sendProjectChangesRequestedEmail(
 
   return sendEmail({
     to: email,
-    subject: `Changes requested for "${projectTitle}"`,
+    subject: `Changes requested for "${projectTitle.replace(/[\r\n]/g, " ")}"`,
     html,
   });
 }
@@ -308,10 +308,10 @@ export async function sendCollaboratorInviteEmail(
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
           <h2 style="margin-top: 0; color: #333;">You've Been Invited to Collaborate!</h2>
-          <p><strong>${inviterName}</strong> has invited you to collaborate on the project:</p>
+          <p><strong>${escapeHtml(inviterName || "")}</strong> has invited you to collaborate on the project:</p>
 
           <div style="background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
-            <h3 style="margin: 0 0 10px 0; color: #333;">${projectTitle}</h3>
+            <h3 style="margin: 0 0 10px 0; color: #333;">${escapeHtml(projectTitle || "")}</h3>
           </div>
 
           <p>As a collaborator, you'll be able to help manage this project based on the permissions granted to you.</p>
@@ -337,7 +337,7 @@ export async function sendCollaboratorInviteEmail(
     </html>
   `;
 
-  const subject = `${inviterName} invited you to collaborate on "${projectTitle}"`;
+  const subject = `${inviterName.replace(/[\r\n]/g, " ")} invited you to collaborate on "${projectTitle.replace(/[\r\n]/g, " ")}"`;
 
   const result = await sendEmail({
     to: email,

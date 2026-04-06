@@ -3,6 +3,15 @@ import { sendEmail } from "./email-config";
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${APP_URL}/reset-password?token=${token}`;
 
@@ -80,7 +89,7 @@ export async function sendWelcomeEmail(
 
         <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
           <h2 style="margin-top: 0; color: white; text-align: center;">Welcome to ${APP_NAME}!</h2>
-          <p style="text-align: center;">Hi ${userName || "there"},</p>
+          <p style="text-align: center;">Hi ${escapeHtml(userName || "there")},</p>
           <p style="text-align: center;">Thank you for joining our community! You're now part of a platform where creators bring their ideas to life and backers help make them happen.</p>
         </div>
 
@@ -143,7 +152,7 @@ export async function sendVerificationEmail(
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
           <h2 style="margin-top: 0; color: #333;">Verify Your Email Address</h2>
-          <p>Hi ${userName || "there"},</p>
+          <p>Hi ${escapeHtml(userName || "there")},</p>
           <p>Please click the button below to verify your email address and complete your registration.</p>
 
           <div style="text-align: center; margin: 30px 0;">

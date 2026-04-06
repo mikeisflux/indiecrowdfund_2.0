@@ -65,7 +65,7 @@ export async function sendPledgeConfirmationEmail(
   // Build addons HTML
   const addonsHtml = addons.length > 0 ? addons.map(addon => `
     <tr>
-      <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Add-on: ${addon.title}${addon.quantity > 1 ? ` × ${addon.quantity}` : ""}</td>
+      <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Add-on: ${escapeHtml(addon.title || "")}${addon.quantity > 1 ? ` × ${addon.quantity}` : ""}</td>
       <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${formatCurrency(addon.amount)}</td>
     </tr>
   `).join("") : "";
@@ -79,10 +79,10 @@ export async function sendPledgeConfirmationEmail(
     <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
       <h3 style="margin-top: 0;">Shipping Address</h3>
       <p style="margin: 0; color: #333;">
-        ${shippingInfo?.name || backerName}<br>
-        ${shippingInfo?.address || ""}<br>
-        ${[shippingInfo?.city, shippingInfo?.state, shippingInfo?.postalCode].filter(Boolean).join(", ")}<br>
-        ${shippingInfo?.country || ""}
+        ${escapeHtml(shippingInfo?.name || backerName || "")}<br>
+        ${escapeHtml(shippingInfo?.address || "")}<br>
+        ${escapeHtml([shippingInfo?.city, shippingInfo?.state, shippingInfo?.postalCode].filter(Boolean).join(", "))}<br>
+        ${escapeHtml(shippingInfo?.country || "")}
       </p>
     </div>
   ` : "";
@@ -125,7 +125,7 @@ export async function sendPledgeConfirmationEmail(
             ${addonsHtml}
             ${shippingAmount && shippingAmount > 0 ? `
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Shipping${shippingInfo?.country ? ` (${shippingInfo.country})` : ""}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Shipping${shippingInfo?.country ? ` (${escapeHtml(shippingInfo.country)})` : ""}</td>
               <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${formatCurrency(shippingAmount)}</td>
             </tr>
             ` : ""}
@@ -190,7 +190,7 @@ export async function sendPledgeConfirmationEmail(
     </html>
   `;
 
-  const subject = `Your pledge for "${projectTitle}" is confirmed!`;
+  const subject = `Your pledge for "${projectTitle.replace(/[\r\n]/g, " ")}" is confirmed!`;
   const result = await sendEmail({
     to: email,
     subject,
@@ -301,10 +301,10 @@ export async function sendPledgeModificationEmail(
   `;
 
   const subject = changeType === "refund"
-    ? `Pledge updated — ${currencySymbol}${Math.abs(amountDifference).toFixed(2)} refund for "${projectTitle}"`
+    ? `Pledge updated — ${currencySymbol}${Math.abs(amountDifference).toFixed(2)} refund for "${projectTitle.replace(/[\r\n]/g, " ")}"`
     : changeType === "upcharge"
-    ? `Pledge updated — ${currencySymbol}${Math.abs(amountDifference).toFixed(2)} additional charge for "${projectTitle}"`
-    : `Your pledge for "${projectTitle}" has been updated`;
+    ? `Pledge updated — ${currencySymbol}${Math.abs(amountDifference).toFixed(2)} additional charge for "${projectTitle.replace(/[\r\n]/g, " ")}"`
+    : `Your pledge for "${projectTitle.replace(/[\r\n]/g, " ")}" has been updated`;
 
   const result = await sendEmail({ to: email, subject, html });
   return { ...result, subject, html };
@@ -371,8 +371,8 @@ export async function sendPledgeCancellationEmail(
   `;
 
   const subject = wasRefunded
-    ? `Pledge cancelled — ${currencySymbol}${amount.toFixed(2)} refund for "${projectTitle}"`
-    : `Your pledge for "${projectTitle}" has been cancelled`;
+    ? `Pledge cancelled — ${currencySymbol}${amount.toFixed(2)} refund for "${projectTitle.replace(/[\r\n]/g, " ")}"`
+    : `Your pledge for "${projectTitle.replace(/[\r\n]/g, " ")}" has been cancelled`;
 
   const result = await sendEmail({ to: email, subject, html });
   return { ...result, subject, html };
@@ -459,7 +459,8 @@ export async function sendSurveyCompletionEmail(
     </html>
   `;
 
-  const subject = `Survey completed for "${projectTitle}"`;
+  const subject = `Survey completed for "${projectTitle.replace(/[\r\n]/g, " ")}"`;
+
   const result = await sendEmail({
     to: email,
     subject,
@@ -501,13 +502,13 @@ export async function sendBalanceDueEmail(
       <table style="width: 100%; border-collapse: collapse;">
         ${rewardTitle ? `
         <tr>
-          <td style="padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px;">${rewardTitle}</td>
+          <td style="padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px;">${escapeHtml(rewardTitle)}</td>
           <td style="padding: 6px 0; border-bottom: 1px solid #eee; text-align: right; font-size: 14px;">Reward</td>
         </tr>
         ` : ""}
         ${addons.map(a => `
         <tr>
-          <td style="padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px;">${a.title} x${a.quantity}</td>
+          <td style="padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px;">${escapeHtml(a.title)} x${a.quantity}</td>
           <td style="padding: 6px 0; border-bottom: 1px solid #eee; text-align: right; font-size: 14px;">${formatCurrency(a.amount * a.quantity)}</td>
         </tr>
         `).join("")}
@@ -536,7 +537,7 @@ export async function sendBalanceDueEmail(
           </div>
           <h2 style="margin-top: 0; color: white; text-align: center;">Balance Due on Your Order</h2>
           <p style="text-align: center; margin-bottom: 0; color: rgba(255,255,255,0.9);">
-            Hi ${backerName || "there"}, your order for <strong>${projectTitle}</strong> has been updated and there is an outstanding balance.
+            Hi ${escapeHtml(backerName || "there")}, your order for <strong>${escapeHtml(projectTitle)}</strong> has been updated and there is an outstanding balance.
           </p>
         </div>
 
@@ -569,14 +570,15 @@ export async function sendBalanceDueEmail(
         </div>
 
         <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
-          <p>You received this email because you backed "${projectTitle}" on ${APP_NAME}.</p>
+          <p>You received this email because you backed &ldquo;${escapeHtml(projectTitle)}&rdquo; on ${APP_NAME}.</p>
           <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
         </div>
       </body>
     </html>
   `;
 
-  const subject = `Balance due: ${formattedBalance} for "${projectTitle}"`;
+  const subject = `Balance due: ${formattedBalance} for "${projectTitle.replace(/[\r\n]/g, " ")}"`;
+
   const result = await sendEmail({ to: email, subject, html, skipUnsubscribeCheck: true });
   return { ...result, subject, html };
 }
@@ -650,8 +652,8 @@ export async function sendRefundRequestDecisionEmail(
   `;
 
   const subject = isApproved
-    ? `Refund approved — ${currencySymbol}${amount.toFixed(2)} for "${projectTitle}"`
-    : `Refund request update for "${projectTitle}"`;
+    ? `Refund approved — ${currencySymbol}${amount.toFixed(2)} for "${projectTitle.replace(/[\r\n]/g, " ")}"`
+    : `Refund request update for "${projectTitle.replace(/[\r\n]/g, " ")}""`;
 
   const result = await sendEmail({ to: email, subject, html });
   return { ...result, subject, html };
