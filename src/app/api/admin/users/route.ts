@@ -219,6 +219,13 @@ export async function PATCH(req: NextRequest) {
         break;
 
       case "UPDATE_INFO":
+        // Prevent non-SUPER_ADMINs from modifying SUPER_ADMIN accounts
+        if (user.role === "SUPER_ADMIN" && authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can modify super admin accounts" },
+            { status: 403 }
+          );
+        }
         if (data?.name !== undefined) updateData.name = data.name;
         if (data?.email !== undefined) {
           const newEmail = data.email.toLowerCase().trim();

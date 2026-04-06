@@ -96,7 +96,7 @@ export const validateSession = cache(async (): Promise<Session | null> => {
     }
 
     // Extend session if it's more than halfway through
-    const halfLife = SESSION_MAX_AGE * 500; // Half of max age in ms
+    const halfLife = SESSION_MAX_AGE * 1000 / 2; // Half of max age in ms
     if (session.expires.getTime() - Date.now() < halfLife) {
       const newExpires = new Date(Date.now() + SESSION_MAX_AGE * 1000);
       try {

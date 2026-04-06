@@ -240,7 +240,7 @@ export async function POST(
 
       case "backer":
         const backerPledges = await db.pledge.findMany({
-          where: { status: "COMPLETED" },
+          where: { status: "COMPLETED", deletedAt: null },
           select: { userId: true },
           distinct: ["userId"],
         });
@@ -318,6 +318,7 @@ export async function POST(
 
     let queuedCount = 0;
     let failedCount = 0;
+    const emailLogBatch: { recipientEmail: string; subject: string; htmlContent: string; sentAt: Date; type: string }[] = [];
 
     // Queue emails for rate-limited sending
     for (const recipient of recipients) {
@@ -341,15 +342,12 @@ export async function POST(
         });
 
         if (result.success) {
-          // Log the queued email
-          await db.emailLog.create({
-            data: {
-              recipientEmail: recipient.email,
-              subject: personalizedSubject,
-              htmlContent: personalizedHtml,
-              sentAt: new Date(),
-              type: "WEEKLY_DISCOVERY",
-            },
+          emailLogBatch.push({
+            recipientEmail: recipient.email,
+            subject: personalizedSubject,
+            htmlContent: personalizedHtml,
+            sentAt: new Date(),
+            type: "WEEKLY_DISCOVERY",
           });
           queuedCount++;
         } else {
@@ -360,6 +358,11 @@ export async function POST(
         failedCount++;
         adminAiMarketingCampaignsManageSendLogger.error({ err: String(err) }, `Error queueing email to ${recipient.email}:`);
       }
+    }
+
+    // Batch insert all email logs (avoids N+1 queries)
+    if (emailLogBatch.length > 0) {
+      await db.emailLog.createMany({ data: emailLogBatch });
     }
 
     adminAiMarketingCampaignsManageSendLogger.info(`Campaign "${campaign.name}" queued: ${queuedCount} queued, ${failedCount} failed`);

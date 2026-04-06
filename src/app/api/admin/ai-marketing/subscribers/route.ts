@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       }),
       db.user.count(), // Total registered users (backer pool)
       db.pledge.findMany({
-        where: { status: "COMPLETED" },
+        where: { status: "COMPLETED", deletedAt: null },
         select: { userId: true },
         distinct: ["userId"],
       }).then(pledges => pledges.length),
@@ -206,7 +206,7 @@ export async function GET(req: NextRequest) {
 
     if (category === "all" || category === "backers") {
       const backerUserIds = await db.pledge.findMany({
-        where: { status: "COMPLETED" },
+        where: { status: "COMPLETED", deletedAt: null },
         select: { userId: true },
         distinct: ["userId"],
       });

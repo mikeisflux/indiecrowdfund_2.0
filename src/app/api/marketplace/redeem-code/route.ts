@@ -155,13 +155,22 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Increment the usage count
-      await tx.marketplaceDiscountCode.update({
-        where: { id: discountCode.id },
-        data: {
-          usageCount: { increment: 1 },
-        },
-      });
+      // Increment the usage count atomically (race condition guard)
+      if (discountCode.maxRedemptions > 0) {
+        // Only increment if we haven't exceeded the limit yet (atomic check-and-update)
+        const updated = await tx.marketplaceDiscountCode.updateMany({
+          where: { id: discountCode.id, usageCount: { lt: discountCode.maxRedemptions } },
+          data: { usageCount: { increment: 1 } },
+        });
+        if (updated.count === 0) {
+          throw new Error("This promo code has reached its usage limit");
+        }
+      } else {
+        await tx.marketplaceDiscountCode.update({
+          where: { id: discountCode.id },
+          data: { usageCount: { increment: 1 } },
+        });
+      }
 
       // Increment the book's purchase count
       await tx.marketplaceBook.update({
@@ -190,6 +199,9 @@ export async function POST(request: NextRequest) {
       purchaseId: result.purchase.id,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "This promo code has reached its usage limit") {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     marketplaceRedeemCodeLogger.error({ err: String(error) }, "Error redeeming promo code:");
     return NextResponse.json(
       { error: "Failed to redeem promo code" },
