@@ -532,7 +532,7 @@ export async function PATCH(
 
       // Validate newAmount
       if (newAmount !== undefined && newAmount !== null) {
-        if (typeof newAmount !== "number" || isNaN(newAmount) || newAmount < 0) {
+        if (typeof newAmount !== "number" || isNaN(newAmount) || newAmount <= 0) {
           return NextResponse.json({ error: "Invalid pledge amount" }, { status: 400 });
         }
       }
