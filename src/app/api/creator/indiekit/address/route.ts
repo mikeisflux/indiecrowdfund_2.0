@@ -34,6 +34,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
+    // Verify the pledge belongs to this project
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, projectId },
+    });
+
+    if (!pledge) {
+      return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+    }
+
     // Update the survey response with new address
     const surveyResponse = await db.surveyResponse.findFirst({
       where: { pledgeId },
