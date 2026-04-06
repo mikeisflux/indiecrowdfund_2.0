@@ -37,6 +37,10 @@ export async function handleStripeWebhook(
     case "checkout.session.completed":
       await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
       break;
+
+    case "charge.refunded":
+      await handleChargeRefunded(event.data.object as Stripe.Charge);
+      break;
   }
 }
 
@@ -414,6 +418,85 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     const chargeResults = await processPendingPledgesForProject(existingPledge.projectId);
     webhookLogger.info(`[SetupIntent] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
   }
+}
+
+/**
+ * Safety net: handle charge.refunded events from Stripe.
+ *
+ * This fires whenever a refund is created (via API or dashboard). It ensures
+ * the pledge is marked REFUNDED and project stats decremented even if the
+ * direct DB update in the refund endpoint failed (e.g. network timeout after
+ * Stripe call succeeded).
+ */
+async function handleChargeRefunded(charge: Stripe.Charge) {
+  const paymentIntentId = typeof charge.payment_intent === "string"
+    ? charge.payment_intent
+    : charge.payment_intent?.id;
+
+  if (!paymentIntentId) {
+    webhookLogger.info(`[ChargeRefunded] No payment_intent on charge ${charge.id}, skipping`);
+    return;
+  }
+
+  // Only act when the charge is fully refunded
+  if (charge.refunded !== true) {
+    webhookLogger.info(`[ChargeRefunded] Charge ${charge.id} not fully refunded yet, skipping`);
+    return;
+  }
+
+  const pledge = await db.pledge.findFirst({
+    where: {
+      stripePaymentIntentId: paymentIntentId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      status: true,
+      amount: true,
+      projectId: true,
+      confirmationEmailSent: true,
+    },
+  });
+
+  if (!pledge) {
+    webhookLogger.info(`[ChargeRefunded] No pledge found for PaymentIntent ${paymentIntentId}`);
+    return;
+  }
+
+  if (pledge.status === "REFUNDED" || pledge.status === "CANCELLED") {
+    webhookLogger.info(`[ChargeRefunded] Pledge ${pledge.id} already in terminal state ${pledge.status}, skipping`);
+    return;
+  }
+
+  if (pledge.status !== "COMPLETED") {
+    webhookLogger.info(`[ChargeRefunded] Pledge ${pledge.id} is ${pledge.status} (not COMPLETED), skipping`);
+    return;
+  }
+
+  webhookLogger.warn(`[ChargeRefunded] Pledge ${pledge.id} still COMPLETED after refund — updating DB (missed by direct handler)`);
+
+  await db.$transaction([
+    db.pledge.update({
+      where: { id: pledge.id },
+      data: {
+        status: "REFUNDED",
+        lastFailureReason: "Refund processed via Stripe webhook (charge.refunded)",
+      },
+    }),
+    ...(pledge.confirmationEmailSent
+      ? [
+          db.project.update({
+            where: { id: pledge.projectId },
+            data: {
+              backerCount: { decrement: 1 },
+              currentAmount: { decrement: Number(pledge.amount) },
+            },
+          }),
+        ]
+      : []),
+  ]);
+
+  webhookLogger.info(`[ChargeRefunded] Pledge ${pledge.id} marked REFUNDED via webhook safety net`);
 }
 
 async function handleAccountUpdate(account: Stripe.Account) {
