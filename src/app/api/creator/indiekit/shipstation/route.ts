@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
                 country: shippingAddress.country,
               },
               items,
-              amountPaid: pledge.amount / 100,
+              amountPaid: Number(pledge.amount) / 100,
               internalNotes: `IndieKit pledge from ${project.title}`,
             };
 
