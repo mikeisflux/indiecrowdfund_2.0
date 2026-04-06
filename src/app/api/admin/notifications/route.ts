@@ -119,6 +119,7 @@ export async function GET(request: Request) {
       db.project.findMany({
         where: {
           status: "SUBMITTED",
+          deletedAt: null,
         },
         orderBy: { createdAt: "desc" },
         take: 10,

@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
     const where: Record<string, any> = {
       status: "LIVE",
       allowRetailerPledges: true,
+      deletedAt: null,
     };
 
     if (category && category !== "All Categories") {

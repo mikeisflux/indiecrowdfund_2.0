@@ -452,6 +452,7 @@ async function repairAllPledges(projectId: string) {
     where: {
       projectId,
       status: "PENDING",
+      deletedAt: null,
       stripePaymentIntentId: { not: null },
     },
   });

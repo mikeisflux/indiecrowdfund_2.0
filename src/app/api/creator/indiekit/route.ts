@@ -185,6 +185,7 @@ export async function GET(req: NextRequest) {
         where: {
           projectId: selectedProjectId,
           status: "COMPLETED",
+          deletedAt: null,
         },
         include: {
           user: {
