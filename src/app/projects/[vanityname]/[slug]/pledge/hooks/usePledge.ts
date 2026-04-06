@@ -49,7 +49,7 @@ export function usePledge() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pledgeWithoutReward, setPledgeWithoutReward] = useState(false);
-  const [customPledgeAmount, setCustomPledgeAmount] = useState(amountParam ? parseInt(amountParam) : 10);
+  const [customPledgeAmount, setCustomPledgeAmount] = useState(amountParam ? Math.max(1, parseFloat(amountParam) || 1) : 10);
 
   // UI state
   const [step, setStep] = useState<Step>(rewardId || addItemsParam || modifyParam ? "addons" : "rewards");
@@ -119,7 +119,12 @@ export function usePledge() {
         const data = await res.json();
         const existingPledge = data.pledge;
         setOriginalPledgeAmount(existingPledge.amount);
-        if (existingPledge.reward) setSelectedReward(null);
+        // NOTE: reward is restored by fetchData via getExistingPledgeRewardId — do NOT clear it here
+        if (!existingPledge.reward) {
+          // Pledge had no reward tier (custom amount pledge)
+          setPledgeWithoutReward(true);
+          setCustomPledgeAmount(existingPledge.amount);
+        }
         if (existingPledge.addons?.length > 0) {
           const addonMap: Record<string, number> = {};
           for (const addon of existingPledge.addons) addonMap[addon.id] = addon.quantity;
@@ -281,7 +286,7 @@ export function usePledge() {
 
   const createPledgeForPayment = async () => {
     if (!project || (!selectedReward && !pledgeWithoutReward)) return;
-    if (clientSecret) return;
+    if (clientSecret || paypalOrderId || whopSessionId) return;
     if (currentPledgeId) return;
     if (creatingPaymentRef.current) return;
     creatingPaymentRef.current = true;

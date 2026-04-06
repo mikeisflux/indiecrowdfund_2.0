@@ -569,6 +569,7 @@ async function cleanupAbandonedCarts(projectId: string, olderThan: Date) {
 
   if (toDelete.length === 0) return;
 
+  await db.pledgeAddon.deleteMany({ where: { pledgeId: { in: toDelete } } });
   await db.emailLog.deleteMany({ where: { pledgeId: { in: toDelete } } });
   await db.pledge.deleteMany({ where: { id: { in: toDelete } } });
 
