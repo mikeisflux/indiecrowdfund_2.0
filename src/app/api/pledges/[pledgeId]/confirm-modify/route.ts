@@ -26,8 +26,8 @@ export async function POST(
 
     const { pledgeId } = await params;
 
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
       include: {
         project: {
           select: {

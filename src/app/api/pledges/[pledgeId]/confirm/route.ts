@@ -44,8 +44,8 @@ export async function POST(
     const { pledgeId } = await params;
 
     // Get the pledge with project, user, addons, and shipping info
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
       include: {
         project: {
           select: {

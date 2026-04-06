@@ -76,6 +76,7 @@ export async function GET(
             userId: session.user.id,
             projectId: projectIdFromKey,
             status: "COMPLETED",
+            deletedAt: null,
           },
         });
 

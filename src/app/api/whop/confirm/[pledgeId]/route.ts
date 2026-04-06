@@ -25,8 +25,8 @@ export async function POST(
       return NextResponse.json({ error: "Pledge ID required" }, { status: 400 });
     }
 
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
       include: {
         project: {
           select: {
