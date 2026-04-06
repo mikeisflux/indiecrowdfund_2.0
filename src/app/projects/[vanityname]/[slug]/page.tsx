@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
@@ -205,6 +206,8 @@ export default function ProjectPage() {
         });
         if (response.ok) {
           setIsFollowing(false);
+        } else {
+          toast.error("Failed to unfollow project");
         }
       } else {
         // Follow
@@ -219,10 +222,13 @@ export default function ProjectPage() {
           // User not logged in - redirect to sign in
           window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.href)}`;
           return;
+        } else {
+          toast.error("Failed to follow project");
         }
       }
     } catch (err) {
       console.error("Error toggling follow:", err);
+      toast.error("Something went wrong");
     } finally {
       setIsFollowLoading(false);
     }

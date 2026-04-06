@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-
+import { toast } from "sonner";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -278,9 +278,12 @@ export default function SurveyResponsesPage() {
           window.URL.revokeObjectURL(url);
           document.body.removeChild(a);
         }
+      } else {
+        toast.error("Failed to export responses");
       }
     } catch (error) {
       console.error("Error exporting:", error);
+      toast.error("Failed to export responses");
     } finally {
       setIsExporting(false);
     }
