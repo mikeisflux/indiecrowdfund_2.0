@@ -123,7 +123,7 @@ export async function notifyProjectLaunched(projectId: string) {
 
   if (userIds.length > 0) {
     const users = await db.user.findMany({
-      where: { id: { in: userIds } },
+      where: { id: { in: userIds }, deletedAt: null },
       select: { email: true },
     });
     users.forEach((u) => emailsToSend.push(u.email));
@@ -266,7 +266,7 @@ export async function notifyProjectUpdate(
   const allUserIds = Array.from(userIds);
   if (allUserIds.length > 0) {
     const users = await db.user.findMany({
-      where: { id: { in: allUserIds } },
+      where: { id: { in: allUserIds }, deletedAt: null },
       select: { email: true },
     });
     users.forEach((u) => emailsToSend.push(u.email));

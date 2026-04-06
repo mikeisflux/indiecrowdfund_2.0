@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -455,7 +456,7 @@ export default function EmailCampaignEditPage() {
                       {htmlContent ? (
                         <div
                           className="prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{ __html: getPreviewContent() }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(getPreviewContent()) }}
                         />
                       ) : (
                         <p className="text-muted-foreground text-center py-12">

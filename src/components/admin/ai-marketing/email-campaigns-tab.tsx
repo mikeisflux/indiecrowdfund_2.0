@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -938,7 +939,7 @@ export function EmailCampaignsTab({
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-zinc-500">Email Preview</p>
                     <div className="border rounded-lg p-4 bg-white max-h-[300px] overflow-y-auto">
-                      <div dangerouslySetInnerHTML={{ __html: selectedCampaign.htmlContent }} />
+                      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedCampaign.htmlContent) }} />
                     </div>
                   </div>
                 </>
