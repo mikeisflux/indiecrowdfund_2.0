@@ -5,6 +5,7 @@ const projectsCommentsLogger = logger.child({ module: "projects-comments" });
 import { db } from "@/lib/db";
 import { validateSession } from "@/lib/auth/session";
 import { notifyCommentReply } from "@/lib/notifications";
+import { stripHtml } from "@/lib/utils/sanitize";
 
 type CommentWithUser = {
   id: string;
@@ -375,7 +376,7 @@ export async function POST(
       data: {
         projectId,
         userId: session.user.id,
-        content: content.trim(),
+        content: stripHtml(content.trim()),
         parentId: actualParentId,
       },
       include: {
