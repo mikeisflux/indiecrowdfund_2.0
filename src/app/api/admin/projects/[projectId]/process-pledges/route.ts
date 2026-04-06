@@ -34,8 +34,8 @@ export async function GET(
     const { projectId } = await params;
 
     // Get project info
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: {
         id: true,
         title: true,
@@ -265,8 +265,8 @@ export async function POST(
     const { pledgeId, force, action } = body as { pledgeId?: string; force?: boolean; action?: string };
 
     // Get project info
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: {
         id: true,
         title: true,

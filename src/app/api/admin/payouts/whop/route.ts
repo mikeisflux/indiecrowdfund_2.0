@@ -283,8 +283,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "projectId and amount are required" }, { status: 400 });
     }
 
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       include: {
         creator: {
           select: {

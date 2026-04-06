@@ -555,8 +555,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the project with creator bank account
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       include: {
         creator: {
           include: {

@@ -71,8 +71,8 @@ export async function POST(req: NextRequest) {
     const data = payoutSchema.parse(body);
 
     // Get project + creator's PayPal bank account
-    const project = await db.project.findUnique({
-      where: { id: data.projectId },
+    const project = await db.project.findFirst({
+      where: { id: data.projectId , deletedAt: null },
       select: {
         id: true,
         title: true,

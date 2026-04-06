@@ -90,8 +90,8 @@ export async function POST(
     }
 
     // Get the pledge
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       select: {
         id: true,
         userId: true,

@@ -204,8 +204,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "action must be 'cancel', 'delete', 'repair', or 'repair-all'" }, { status: 400 });
     }
 
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       include: {
         project: { select: { id: true } },
       },
@@ -341,8 +341,8 @@ export async function POST(req: NextRequest) {
 async function repairSinglePledge(pledgeId: string) {
   const stripe = await getStripeInstance();
 
-  const pledge = await db.pledge.findUnique({
-    where: { id: pledgeId },
+  const pledge = await db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
   });
 
   if (!pledge) {

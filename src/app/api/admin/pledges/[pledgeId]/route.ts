@@ -29,8 +29,8 @@ export async function GET(
 
     const { pledgeId } = await params;
 
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       include: {
         user: {
           select: {
@@ -138,8 +138,8 @@ export async function PATCH(
     const body = await req.json();
     const { action, reason } = body;
 
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       include: {
         project: {
           select: {
@@ -607,8 +607,8 @@ export async function DELETE(
 
     const { pledgeId } = await params;
 
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       include: {
         project: {
           select: {
