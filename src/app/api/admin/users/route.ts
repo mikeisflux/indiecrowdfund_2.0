@@ -48,7 +48,9 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
 
     const search = searchParams.get("search") || "";
-    const role = searchParams.get("role") || "all";
+    const allowedRoles = ["all", "USER", "CREATOR", "COOL_KIDS", "ADMIN", "SUPER_ADMIN"];
+    const requestedRole = searchParams.get("role") || "all";
+    const role = allowedRoles.includes(requestedRole) ? requestedRole : "all";
 
     // Whitelist allowed sort fields to prevent information disclosure
     const allowedSortFields = ["createdAt", "name", "email", "role"];
