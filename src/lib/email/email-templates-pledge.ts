@@ -3,6 +3,15 @@ import { sendEmail } from "./email-config";
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 /**
  * Send pledge confirmation email to backer
  */
@@ -94,15 +103,15 @@ export async function sendPledgeConfirmationEmail(
         <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
           <h2 style="margin-top: 0; color: white; text-align: center;">Thank You for Your Pledge!</h2>
 
-          ${absoluteImageUrl ? `<img src="${absoluteImageUrl}" alt="${projectTitle}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
+          ${absoluteImageUrl ? `<img src="${absoluteImageUrl}" alt="${escapeHtml(projectTitle)}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
 
           <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0;">
-            <h3 style="margin: 0 0 10px 0; color: white;">${projectTitle}</h3>
-            ${rewardTitle ? `<p style="margin: 0; color: rgba(255,255,255,0.9);">Reward: ${rewardTitle}</p>` : `<p style="margin: 0; color: rgba(255,255,255,0.9);">Pledge without reward</p>`}
+            <h3 style="margin: 0 0 10px 0; color: white;">${escapeHtml(projectTitle)}</h3>
+            ${rewardTitle ? `<p style="margin: 0; color: rgba(255,255,255,0.9);">Reward: ${escapeHtml(rewardTitle)}</p>` : `<p style="margin: 0; color: rgba(255,255,255,0.9);">Pledge without reward</p>`}
             ${addons.length > 0 ? `<p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.9);">+ ${addons.length} add-on${addons.length > 1 ? "s" : ""}</p>` : ""}
           </div>
 
-          <p style="text-align: center; margin-bottom: 0;">Hi ${backerName || "there"},</p>
+          <p style="text-align: center; margin-bottom: 0;">Hi ${escapeHtml(backerName || "there")},</p>
           <p style="text-align: center;">${chargeMessage}</p>
         </div>
 
@@ -110,7 +119,7 @@ export async function sendPledgeConfirmationEmail(
           <h3 style="margin-top: 0;">Pledge Breakdown</h3>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">${rewardTitle || "Pledge (no reward)"}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">${escapeHtml(rewardTitle || "Pledge (no reward)")}</td>
               <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">${rewardAmount !== undefined ? formatCurrency(rewardAmount) : "—"}</td>
             </tr>
             ${addonsHtml}
@@ -233,11 +242,11 @@ export async function sendPledgeModificationEmail(
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 24px;">Pledge Updated</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">Your pledge for "${projectTitle}" has been modified</p>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">Your pledge for &ldquo;${escapeHtml(projectTitle)}&rdquo; has been modified</p>
         </div>
 
         <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <p style="font-size: 16px;">Hi ${backerName || "Backer"},</p>
+          <p style="font-size: 16px;">Hi ${escapeHtml(backerName || "Backer")},</p>
 
           <p>Your pledge selections have been updated successfully.</p>
 
@@ -263,14 +272,14 @@ export async function sendPledgeModificationEmail(
           ${newRewardTitle ? `
           <div style="margin: 15px 0;">
             <p style="font-weight: bold; margin-bottom: 5px;">Reward Tier:</p>
-            <p style="color: #666; margin: 0;">${newRewardTitle}</p>
+            <p style="color: #666; margin: 0;">${escapeHtml(newRewardTitle)}</p>
           </div>
           ` : ""}
 
           ${newAddons.length > 0 ? `
           <div style="margin: 15px 0;">
             <p style="font-weight: bold; margin-bottom: 5px;">Add-ons:</p>
-            ${newAddons.map(a => `<p style="color: #666; margin: 2px 0;">${a.title} x${a.quantity} — ${currencySymbol}${(a.amount * a.quantity).toFixed(2)}</p>`).join("")}
+            ${newAddons.map(a => `<p style="color: #666; margin: 2px 0;">${escapeHtml(a.title)} x${a.quantity} — ${currencySymbol}${(a.amount * a.quantity).toFixed(2)}</p>`).join("")}
           </div>
           ` : ""}
 
@@ -327,13 +336,13 @@ export async function sendPledgeCancellationEmail(
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
         <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 24px;">Pledge Cancelled</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">"${projectTitle}"</p>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">&ldquo;${escapeHtml(projectTitle)}&rdquo;</p>
         </div>
 
         <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <p style="font-size: 16px;">Hi ${backerName || "Backer"},</p>
+          <p style="font-size: 16px;">Hi ${escapeHtml(backerName || "Backer")},</p>
 
-          <p>Your pledge of <strong>${currencySymbol}${amount.toFixed(2)}</strong> for "${projectTitle}" has been cancelled.</p>
+          <p>Your pledge of <strong>${currencySymbol}${amount.toFixed(2)}</strong> for &ldquo;${escapeHtml(projectTitle)}&rdquo; has been cancelled.</p>
 
           ${wasRefunded ? `
           <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
@@ -404,7 +413,7 @@ export async function sendSurveyCompletionEmail(
           </div>
           <h2 style="margin-top: 0; color: white; text-align: center;">Survey Completed!</h2>
           <p style="text-align: center; margin-bottom: 0; color: rgba(255,255,255,0.9);">
-            Hi ${backerName || "there"}, we've received your survey response for <strong>${projectTitle}</strong>.
+            Hi ${escapeHtml(backerName || "there")}, we've received your survey response for <strong>${escapeHtml(projectTitle)}</strong>.
           </p>
         </div>
 
@@ -413,12 +422,12 @@ export async function sendSurveyCompletionEmail(
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; color: #666;">Project</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 500;">${projectTitle}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 500;">${escapeHtml(projectTitle)}</td>
             </tr>
             ${rewardTitle ? `
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; color: #666;">Reward Tier</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 500;">${rewardTitle}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right; font-weight: 500;">${escapeHtml(rewardTitle)}</td>
             </tr>
             ` : ""}
             <tr>
@@ -598,13 +607,13 @@ export async function sendRefundRequestDecisionEmail(
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
         <div style="background: linear-gradient(135deg, ${isApproved ? "#10b981 0%, #059669 100%" : "#ef4444 0%, #dc2626 100%"}); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 24px;">Refund Request ${isApproved ? "Approved" : "Denied"}</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">"${projectTitle}"</p>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">&ldquo;${escapeHtml(projectTitle)}&rdquo;</p>
         </div>
 
         <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <p style="font-size: 16px;">Hi ${backerName || "Backer"},</p>
+          <p style="font-size: 16px;">Hi ${escapeHtml(backerName || "Backer")},</p>
 
-          <p>The creator has reviewed your refund request for your <strong>${currencySymbol}${amount.toFixed(2)}</strong> pledge to "${projectTitle}".</p>
+          <p>The creator has reviewed your refund request for your <strong>${currencySymbol}${amount.toFixed(2)}</strong> pledge to &ldquo;${escapeHtml(projectTitle)}&rdquo;.</p>
 
           ${isApproved ? `
           <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
@@ -621,7 +630,7 @@ export async function sendRefundRequestDecisionEmail(
           ${creatorNote ? `
           <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 0 8px 8px 0; margin: 20px 0;">
             <p style="margin: 0; font-weight: bold; color: #0c4a6e; font-size: 14px;">Message from the creator:</p>
-            <p style="margin: 5px 0 0; font-size: 14px; color: #0369a1;">${creatorNote}</p>
+            <p style="margin: 5px 0 0; font-size: 14px; color: #0369a1;">${escapeHtml(creatorNote)}</p>
           </div>
           ` : ""}
 

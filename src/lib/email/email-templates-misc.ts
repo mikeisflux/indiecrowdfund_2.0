@@ -9,6 +9,15 @@ const emailEmailTemplatesMiscLogger = logger.child({ module: "email-email-templa
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 /**
  * Send bug report resolution email to the reporter
  */
@@ -44,15 +53,15 @@ export async function sendBugReportResolutionEmail(
 
           <h2 style="margin-top: 0; color: #15803d; text-align: center;">Your Bug Report Has Been Addressed</h2>
 
-          <p>Hi ${reporterName || "there"},</p>
+          <p>Hi ${escapeHtml(reporterName || "there")},</p>
 
           <p>Thank you so much for taking the time to report this issue. Your dedication to improving ${APP_NAME} makes a real difference, and we truly appreciate community members like you who help us build a better platform for everyone. Contributors like you are the backbone of what makes this community so special.</p>
 
-          <p>We wanted to let you know that your bug report <strong>"${bugTitle}"</strong> has been reviewed and addressed by our team. Below you'll find the details of the resolution:</p>
+          <p>We wanted to let you know that your bug report <strong>&ldquo;${escapeHtml(bugTitle)}&rdquo;</strong> has been reviewed and addressed by our team. Below you'll find the details of the resolution:</p>
 
           <div style="background: white; border-radius: 6px; padding: 20px; margin: 20px 0; border-left: 4px solid ${statusColor};">
             <p style="margin: 0 0 8px 0; color: #666; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Resolution</p>
-            <p style="margin: 0; color: #333; font-size: 15px; line-height: 1.7;">${resolution}</p>
+            <p style="margin: 0; color: #333; font-size: 15px; line-height: 1.7;">${escapeHtml(resolution)}</p>
           </div>
 
           <p>If you notice that the issue persists or if you encounter anything else, please don't hesitate to submit another report. Every piece of feedback helps us improve.</p>
@@ -117,8 +126,8 @@ export async function sendSurveyAvailableEmail(
           </div>
 
           <h2 style="margin-top: 0; color: white; text-align: center;">Action Required</h2>
-          <p style="text-align: center;">Hi ${backerName || "there"},</p>
-          <p style="text-align: center;"><strong>${creatorName}</strong> has sent you a survey for your pledge to <strong>"${projectTitle}"</strong>.</p>
+          <p style="text-align: center;">Hi ${escapeHtml(backerName || "there")},</p>
+          <p style="text-align: center;"><strong>${escapeHtml(creatorName)}</strong> has sent you a survey for your pledge to <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong>.</p>
         </div>
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
@@ -196,8 +205,8 @@ export async function sendSurveyUpdateRequestEmail(
           </div>
 
           <h2 style="margin-top: 0; color: white; text-align: center;">Please Review Your Survey</h2>
-          <p style="text-align: center;">Hi ${backerName || "there"},</p>
-          <p style="text-align: center;"><strong>${creatorName}</strong> has updated the survey for <strong>"${projectTitle}"</strong> and is requesting that you review and update your responses.</p>
+          <p style="text-align: center;">Hi ${escapeHtml(backerName || "there")},</p>
+          <p style="text-align: center;"><strong>${escapeHtml(creatorName)}</strong> has updated the survey for <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong> and is requesting that you review and update your responses.</p>
         </div>
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
@@ -270,8 +279,8 @@ export async function sendRetailerApprovalEmail(
               ✓ APPROVED
             </div>
           </div>
-          <h2 style="margin-top: 0; color: white; text-align: center;">Congratulations, ${contactName || businessName}!</h2>
-          <p style="text-align: center;">Your retailer application for <strong>${businessName}</strong> has been approved! An account has been created for you.</p>
+          <h2 style="margin-top: 0; color: white; text-align: center;">Congratulations, ${escapeHtml(contactName || businessName)}!</h2>
+          <p style="text-align: center;">Your retailer application for <strong>${escapeHtml(businessName)}</strong> has been approved! An account has been created for you.</p>
         </div>
 
         ${passwordSetupUrl ? `
@@ -360,13 +369,13 @@ export async function sendRetailerRejectionEmail(
 
         <div style="background: #fef2f2; border-radius: 8px; padding: 30px; margin-bottom: 20px; border: 1px solid #fecaca;">
           <h2 style="margin-top: 0; color: #dc2626;">Application Not Approved</h2>
-          <p>Hi ${contactName || businessName},</p>
-          <p>Thank you for your interest in becoming a certified retailer with ${APP_NAME}. After reviewing your application for <strong>${businessName}</strong>, we were unable to approve it at this time.</p>
+          <p>Hi ${escapeHtml(contactName || businessName)},</p>
+          <p>Thank you for your interest in becoming a certified retailer with ${APP_NAME}. After reviewing your application for <strong>${escapeHtml(businessName)}</strong>, we were unable to approve it at this time.</p>
 
           ${reason ? `
           <div style="background: white; border-radius: 6px; padding: 15px; margin: 20px 0; border-left: 4px solid #dc2626;">
             <p style="margin: 0; color: #666; font-size: 14px;"><strong>Feedback:</strong></p>
-            <p style="margin: 10px 0 0 0;">${reason}</p>
+            <p style="margin: 10px 0 0 0;">${escapeHtml(reason)}</p>
           </div>
           ` : ""}
 

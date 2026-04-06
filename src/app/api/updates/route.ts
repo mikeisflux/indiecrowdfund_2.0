@@ -8,8 +8,8 @@ import { z } from "zod";
 
 const createUpdateSchema = z.object({
   projectId: z.string(),
-  title: z.string().min(1),
-  content: z.string().min(1),
+  title: z.string().min(1).max(300),
+  content: z.string().min(1).max(100000),
   visibility: z.enum(["PUBLIC", "BACKERS_ONLY"]).default("PUBLIC"),
   publish: z.boolean().default(false),
 });

@@ -39,6 +39,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Backer IDs required" }, { status: 400 });
       }
 
+      const validStatuses = ["NOT_STARTED", "IN_PROGRESS", "SHIPPED", "DELIVERED"];
+      const effectiveStatus = status || "IN_PROGRESS";
+      if (!validStatuses.includes(effectiveStatus)) {
+        return NextResponse.json({ error: "Invalid fulfillment status" }, { status: 400 });
+      }
+
       // Update fulfillment status for pledges
       await db.pledge.updateMany({
         where: {
@@ -46,7 +52,7 @@ export async function POST(req: NextRequest) {
           projectId,
         },
         data: {
-          fulfillmentStatus: status || "IN_PROGRESS",
+          fulfillmentStatus: effectiveStatus,
         },
       });
 

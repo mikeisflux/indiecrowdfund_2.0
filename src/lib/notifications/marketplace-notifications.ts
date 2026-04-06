@@ -11,6 +11,15 @@ import { logger } from "@/lib/logger";
 
 const notificationsMarketplaceNotificationsLogger = logger.child({ module: "notifications-marketplace-notifications" });
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 
 /**
  * Notify buyer when their marketplace purchase is confirmed
@@ -191,9 +200,9 @@ export async function notifyMarketplaceBookReview(
                 <h1>🎉 Your Book is Live!</h1>
               </div>
               <div class="content">
-                <p>Hi ${creatorName},</p>
+                <p>Hi ${escapeHtml(creatorName)},</p>
                 <p>Great news! Your book has been approved and is now live on the marketplace:</p>
-                <p class="book-title">"${book.title}"</p>
+                <p class="book-title">&ldquo;${escapeHtml(book.title)}&rdquo;</p>
                 <p>Readers can now discover and purchase your book. Share the link with your audience to start making sales!</p>
                 <p style="text-align: center;">
                   <a href="${APP_URL}${bookUrl}" class="button">View Your Book</a>
@@ -241,14 +250,14 @@ export async function notifyMarketplaceBookReview(
                 <h1>Book Review Update</h1>
               </div>
               <div class="content">
-                <p>Hi ${creatorName},</p>
+                <p>Hi ${escapeHtml(creatorName)},</p>
                 <p>We've reviewed your book submission:</p>
-                <p class="book-title">"${book.title}"</p>
+                <p class="book-title">&ldquo;${escapeHtml(book.title)}&rdquo;</p>
                 <p>Unfortunately, we were unable to approve it at this time.</p>
                 ${rejectionReason ? `
                 <div class="reason-box">
                   <strong>Feedback:</strong><br>
-                  ${rejectionReason}
+                  ${escapeHtml(rejectionReason)}
                 </div>
                 ` : ""}
                 <p>You can make changes to your book and resubmit it for review. We're here to help you succeed!</p>
