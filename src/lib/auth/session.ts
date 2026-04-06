@@ -47,7 +47,7 @@ export async function createSession(userId: string): Promise<string> {
 
   // Set the cookie
   // Use secure cookies only if explicitly enabled or if we detect HTTPS
-  const useSecureCookies = process.env.SECURE_COOKIES === "true";
+  const useSecureCookies = process.env.SECURE_COOKIES !== "false" && process.env.NODE_ENV === "production";
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
@@ -105,7 +105,7 @@ export const validateSession = cache(async (): Promise<Session | null> => {
           data: { expires: newExpires },
         });
 
-        const useSecureCookies = process.env.SECURE_COOKIES === "true";
+        const useSecureCookies = process.env.SECURE_COOKIES !== "false" && process.env.NODE_ENV === "production";
         const updatedCookieStore = await cookies();
         updatedCookieStore.set(SESSION_COOKIE_NAME, token, {
           httpOnly: true,
