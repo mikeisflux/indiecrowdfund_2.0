@@ -81,6 +81,7 @@ export async function GET(req: NextRequest) {
             launchDate: true,
             launchedAt: true,
             createdAt: true,
+            deletedAt: true,
             creator: {
               select: {
                 vanityUrl: true,
@@ -91,11 +92,12 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Combine own projects and collaborated projects (avoiding duplicates)
+    // Combine own projects and collaborated projects (avoiding duplicates and soft-deleted projects)
     const ownProjectIds = new Set(ownProjects.map(p => p.id));
     type ProjectType = typeof ownProjects[number];
     const collaboratedProjects = collaborations
-      .map((c: { project: ProjectType }) => c.project)
+      .filter((c: { project: ProjectType & { deletedAt: Date | null } }) => !c.project.deletedAt)
+      .map((c: { project: ProjectType & { deletedAt: Date | null } }) => c.project)
       .filter((p: ProjectType) => !ownProjectIds.has(p.id));
 
     const projects = [...ownProjects, ...collaboratedProjects].sort((a, b) => {

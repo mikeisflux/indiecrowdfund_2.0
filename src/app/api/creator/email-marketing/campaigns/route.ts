@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
       where: {
         projectId: project.id,
         status: "COMPLETED",
+        deletedAt: null,
       },
       include: {
         user: {
