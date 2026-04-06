@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
     const stalePledges = await db.pledge.findMany({
       where: {
         status: "PENDING",
+        deletedAt: null,
         createdAt: { lt: cutoffTime },
         OR: [
           // Stripe pledges: no payment method, no confirmation, no failure

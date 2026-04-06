@@ -21,6 +21,7 @@ async function syncPaymentMethodsFromStripe(projectId: string) {
     where: {
       projectId,
       status: "PENDING", // SAFETY: Only PENDING pledges
+      deletedAt: null,
       stripeSetupIntentId: { not: null },
       stripePaymentMethodId: null,
     },
@@ -34,8 +35,8 @@ async function syncPaymentMethodsFromStripe(projectId: string) {
   for (const pledge of pledgesNeedingSync) {
     try {
       // SAFETY: Re-verify pledge is still PENDING before syncing
-      const currentPledge = await db.pledge.findUnique({
-        where: { id: pledge.id },
+      const currentPledge = await db.pledge.findFirst({
+        where: { id: pledge.id, deletedAt: null },
         select: { status: true },
       });
 
@@ -114,6 +115,7 @@ export async function GET(req: NextRequest) {
       where: {
         // Only active/published projects (LIVE = running campaign, FUNDED = reached goal)
         status: { in: ["LIVE", "FUNDED"] },
+        deletedAt: null,
         // Campaign must be funded (currentAmount >= goalAmount)
         // Using raw query comparison since Prisma doesn't support field comparison directly
       },

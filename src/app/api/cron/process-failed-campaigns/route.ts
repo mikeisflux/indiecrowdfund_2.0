@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
     const endedProjects = await db.project.findMany({
       where: {
         status: "LIVE",
+        deletedAt: null,
         endDate: {
           lt: now, // End date has passed
         },
@@ -200,6 +201,7 @@ async function refundDivinityCoinPledges(projectId: string, projectTitle: string
       projectId,
       paymentProcessor: "DIVINITYCOIN",
       status: "COMPLETED",
+      deletedAt: null,
     },
     select: {
       id: true,
