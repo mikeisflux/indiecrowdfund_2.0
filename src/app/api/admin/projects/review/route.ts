@@ -138,6 +138,8 @@ export async function POST(req: NextRequest) {
 
     const previousStatus = isPrelaunch ? project.prelaunchStatus : project.status;
 
+    const shouldPromoteCreator = isPrelaunch && action === "APPROVED" && project.creator?.role === "USER";
+
     const [updatedProject, review] = await db.$transaction([
       // Update project status
       db.project.update({
@@ -160,19 +162,12 @@ export async function POST(req: NextRequest) {
           flagsRaised: isPrelaunch ? ["prelaunch_review"] : [],
         },
       }),
-    ]);
 
-    // Auto-promote user to CREATOR role when prelaunch is approved
-    if (
-      isPrelaunch &&
-      action === "APPROVED" &&
-      project.creator?.role === "USER"
-    ) {
-      await db.user.update({
-        where: { id: project.creator.id },
-        data: { role: "CREATOR" },
-      });
-    }
+      // Auto-promote user to CREATOR role when prelaunch is approved (inside transaction for consistency)
+      ...(shouldPromoteCreator
+        ? [db.user.update({ where: { id: project.creator!.id }, data: { role: "CREATOR" } })]
+        : []),
+    ]);
 
     // Send email notification if enabled
     if (sendEmail) {

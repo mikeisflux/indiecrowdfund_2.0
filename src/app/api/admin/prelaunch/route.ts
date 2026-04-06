@@ -232,40 +232,37 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
-    // Update the project
-    const updatedProject = await db.project.update({
-      where: { id: projectId },
-      data: updateData,
-      select: {
-        id: true,
-        prelaunchStatus: true,
-        prelaunchActive: true,
-      },
-    });
+    const newPrelaunchStatus = (updateData.prelaunchStatus as string | undefined) ?? project.prelaunchStatus;
+    const willActivate = !!(updateData.prelaunchActive);
+    const shouldPromoteCreator = willActivate && project.creator?.role === "USER" && project.creatorId;
 
-    // Auto-promote user to CREATOR role when prelaunch is activated
-    if (
-      updatedProject.prelaunchActive &&
-      project.creator?.role === "USER" &&
-      project.creatorId
-    ) {
-      await db.user.update({
-        where: { id: project.creatorId },
-        data: { role: "CREATOR" },
-      });
-    }
+    // Atomically update project, create review record, and optionally promote creator role
+    const [updatedProject] = await db.$transaction([
+      db.project.update({
+        where: { id: projectId },
+        data: updateData,
+        select: {
+          id: true,
+          prelaunchStatus: true,
+          prelaunchActive: true,
+        },
+      }),
 
-    // Create a review record
-    await db.projectReview.create({
-      data: {
-        projectId,
-        action: action === "APPROVE" ? "APPROVED" : action === "REJECT" ? "REJECTED" : "REVIEWED",
-        previousStatus: project.status,
-        newStatus: project.status,
-        notes: reviewNotes,
-        flagsRaised: ["prelaunch_admin_action"],
-      },
-    });
+      db.projectReview.create({
+        data: {
+          projectId,
+          action: action === "APPROVE" ? "APPROVED" : action === "REJECT" ? "REJECTED" : "REVIEWED",
+          previousStatus: project.prelaunchStatus,
+          newStatus: newPrelaunchStatus,
+          notes: reviewNotes,
+          flagsRaised: ["prelaunch_admin_action"],
+        },
+      }),
+
+      ...(shouldPromoteCreator
+        ? [db.user.update({ where: { id: project.creatorId! }, data: { role: "CREATOR" } })]
+        : []),
+    ]);
 
     return NextResponse.json({
       success: true,
