@@ -88,8 +88,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Sanitize filename
+    // Sanitize filename: strip path components and reject any shell-special characters
     const sanitizedFilename = path.basename(filename);
+    if (!/^[\w.\-]+$/.test(sanitizedFilename)) {
+      return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
+    }
     let filePath = path.join(BACKUP_DIR, sanitizedFilename);
 
     // Check if file exists
