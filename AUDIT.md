@@ -9,14 +9,14 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/__tests__/json-ld.test.tsx` ⬜
 - [ ] `src/__tests__/setup.ts` ⬜
 - [ ] `src/__tests__/utils.test.ts` ⬜
-- [ ] `src/app/(auth)/choose-role/page.tsx` ⬜
-- [ ] `src/app/(auth)/forgot-password/page.tsx` ⬜
-- [ ] `src/app/(auth)/layout.tsx` ⬜
-- [ ] `src/app/(auth)/login/loading.tsx` ⬜
-- [ ] `src/app/(auth)/login/page.tsx` ⬜
-- [ ] `src/app/(auth)/register/loading.tsx` ⬜
-- [ ] `src/app/(auth)/register/page.tsx` ⬜
-- [ ] `src/app/(auth)/reset-password/page.tsx` ⬜
+- [x] `src/app/(auth)/choose-role/page.tsx` ✅
+- [x] `src/app/(auth)/forgot-password/page.tsx` ✅
+- [x] `src/app/(auth)/layout.tsx` ✅
+- [x] `src/app/(auth)/login/loading.tsx` ✅
+- [x] `src/app/(auth)/login/page.tsx` ✅
+- [x] `src/app/(auth)/register/loading.tsx` ✅
+- [x] `src/app/(auth)/register/page.tsx` ✅
+- [x] `src/app/(auth)/reset-password/page.tsx` ✅
 - [ ] `src/app/[vanityname]/[slug]/page.tsx` ⬜
 - [ ] `src/app/about-us/layout.tsx` ⬜
 - [ ] `src/app/about-us/page.tsx` ⬜
@@ -287,9 +287,9 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/analytics/route.ts` ⬜
 - [ ] `src/app/api/announcement-bar/route.ts` ⬜
 - [ ] `src/app/api/auth/config/route.ts` ⬜
-- [ ] `src/app/api/auth/logout/route.ts` ⬜
+- [x] `src/app/api/auth/logout/route.ts` ✅
 - [ ] `src/app/api/auth/recaptcha/route.ts` ⬜
-- [ ] `src/app/api/auth/session/route.ts` ⬜
+- [x] `src/app/api/auth/session/route.ts` ✅
 - [ ] `src/app/api/auth/social/[provider]/callback/route.ts` ⬜
 - [ ] `src/app/api/auth/social/[provider]/route.ts` ⬜
 - [ ] `src/app/api/auth/social/connections/route.ts` ⬜
@@ -898,9 +898,9 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/components/admin/settings/storage-settings.tsx` ⬜
 - [ ] `src/components/announcement-bar.tsx` ⬜
 - [ ] `src/components/auth/forgot-password-form.tsx` ⬜
-- [ ] `src/components/auth/login-form.tsx` ⬜
+- [x] `src/components/auth/login-form.tsx` ✅
 - [ ] `src/components/auth/recaptcha.tsx` ⬜
-- [ ] `src/components/auth/register-form.tsx` ⬜
+- [x] `src/components/auth/register-form.tsx` ✅
 - [ ] `src/components/auth/reset-password-form.tsx` ⬜
 - [ ] `src/components/back-to-top.tsx` ⬜
 - [ ] `src/components/chat/chat-room.tsx` ⬜
@@ -1036,13 +1036,16 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/lib/api-error.ts` ⬜
 - [ ] `src/lib/audit.ts` ⬜
 - [ ] `src/lib/auth-helpers.ts` ⬜
-- [ ] `src/lib/auth/actions.ts` ⬜ Fixed info disclosure: password reset "User not found" message now uses generic error
+- [x] `src/lib/auth/actions.ts` 🔧
+  - Fixed: Open redirect — callbackUrl from URL params now validated to relative paths only via sanitizeRedirectUrl()
+  - Fixed: Locked account bypass — login now checks user.lockedAt and rejects locked accounts before verifying password
 - [ ] `src/lib/auth/constants.ts` ⬜
 - [ ] `src/lib/auth/email-access.ts` ⬜
 - [ ] `src/lib/auth/index.ts` ⬜
 - [ ] `src/lib/auth/rate-limit.ts` ⬜
 - [ ] `src/lib/auth/recaptcha.ts` ⬜
-- [ ] `src/lib/auth/session.ts` ⬜ Fixed soft-deleted users remaining authenticated (added deletedAt:null filter + null user check)
+- [x] `src/lib/auth/session.ts` 🔧
+  - Fixed: validateSessionToken() was missing deletedAt check — soft-deleted users with valid session tokens could still authenticate
 - [ ] `src/lib/bot-blocker.ts` ⬜
 - [ ] `src/lib/circuit-breaker.ts` ⬜
 - [ ] `src/lib/consent.ts` ⬜
@@ -1121,6 +1124,6 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/lib/utils/api-params.ts` ⬜
 - [ ] `src/lib/utils/sanitize.ts` ⬜
 - [ ] `src/lib/vault.ts` ⬜
-- [ ] `src/middleware.ts` ⬜
+- [x] `src/middleware.ts` ✅
 - [ ] `src/types/api.ts` ⬜
 - [ ] `src/types/index.ts` ⬜

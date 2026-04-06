@@ -25,6 +25,19 @@ const authActionsLogger = logger.child({ module: "auth-actions" });
 
 
 /**
+ * Validate a redirect URL to prevent open redirect attacks.
+ * Only allows relative URLs (starting with /) that stay on the same origin.
+ */
+function sanitizeRedirectUrl(url: string | null | undefined, fallback: string): string {
+  if (!url) return fallback;
+  // Only allow relative URLs — reject anything with a protocol or protocol-relative URLs
+  if (!url.startsWith("/") || url.startsWith("//")) return fallback;
+  // Reject URLs with embedded newlines or other control characters (CRLF injection)
+  if (/[\r\n]/.test(url)) return fallback;
+  return url;
+}
+
+/**
  * Get client IP address from request headers
  */
 async function getClientIP(): Promise<string | null> {
@@ -184,7 +197,7 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
     }
 
     // Determine redirect destination - go back to where they came from
-    const redirectTo = callbackUrl || "/dashboard";
+    const redirectTo = sanitizeRedirectUrl(callbackUrl, "/dashboard");
 
     // Return success with redirect URL - let client handle navigation
     // This ensures the Set-Cookie header is properly sent before redirect
@@ -227,13 +240,18 @@ export async function login(formData: FormData, callbackUrl?: string) {
   // (e.g. failedLoginAttempts before migration is run)
   const user = await db.user.findFirst({
     where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
-    select: { id: true, password: true, role: true },
+    select: { id: true, password: true, role: true, lockedAt: true },
   });
 
   if (!user || !user.password) {
     // Record failed attempt (even for non-existent users to prevent enumeration timing attacks)
     await recordLoginAttempt(clientIP, email, false);
     return { error: { _form: ["Invalid email or password"] } };
+  }
+
+  // Check if account is locked
+  if (user.lockedAt) {
+    return { error: { _form: ["Your account has been locked. Please contact support."] } };
   }
 
   // Verify password
@@ -270,10 +288,11 @@ export async function login(formData: FormData, callbackUrl?: string) {
   await createSession(user.id);
 
   // Determine redirect destination based on role
-  let redirectTo = callbackUrl || "/choose-role";
+  const safeCallbackUrl = sanitizeRedirectUrl(callbackUrl, "");
+  let redirectTo = safeCallbackUrl || "/choose-role";
 
   // SUPER_ADMIN goes to admin panel by default
-  if (user.role === "SUPER_ADMIN" && !callbackUrl) {
+  if (user.role === "SUPER_ADMIN" && !safeCallbackUrl) {
     redirectTo = "/admin";
   }
 

@@ -191,6 +191,7 @@ export async function validateSessionToken(
           name: true,
           image: true,
           role: true,
+          deletedAt: true,
         },
       },
     },
@@ -200,5 +201,11 @@ export async function validateSessionToken(
     return null;
   }
 
-  return session.user;
+  // Reject soft-deleted users
+  if (!session.user || session.user.deletedAt !== null) {
+    return null;
+  }
+
+  const { deletedAt: _deletedAt, ...userWithoutDeletedAt } = session.user;
+  return userWithoutDeletedAt;
 }
