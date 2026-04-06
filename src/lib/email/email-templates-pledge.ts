@@ -653,7 +653,7 @@ export async function sendRefundRequestDecisionEmail(
 
   const subject = isApproved
     ? `Refund approved — ${currencySymbol}${amount.toFixed(2)} for "${projectTitle.replace(/[\r\n]/g, " ")}"`
-    : `Refund request update for "${projectTitle.replace(/[\r\n]/g, " ")}""`;
+    : `Refund request update for "${projectTitle.replace(/[\r\n]/g, " ")}"`;
 
   const result = await sendEmail({ to: email, subject, html });
   return { ...result, subject, html };
