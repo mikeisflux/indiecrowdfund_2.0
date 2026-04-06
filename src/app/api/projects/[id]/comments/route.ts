@@ -116,6 +116,16 @@ export async function GET(
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")));
     const skip = (page - 1) * limit;
 
+    // Verify project exists before fetching comments
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      select: { creatorId: true },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
     // Get total count for pagination metadata
     const totalCount = await db.comment.count({
       where: { projectId, parentId: null },
@@ -152,16 +162,6 @@ export async function GET(
       skip,
       take: limit,
     });
-
-    // Get project to check for creator
-    const project = await db.project.findUnique({
-      where: { id: projectId },
-      select: { creatorId: true },
-    });
-
-    if (!project) {
-      return NextResponse.json([]);
-    }
 
     // Collect all user IDs from comments and replies for batch superbacker lookup
     const allUserIds: string[] = [];

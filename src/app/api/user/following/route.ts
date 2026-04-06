@@ -295,12 +295,19 @@ export async function DELETE(request: Request) {
     const creatorId = searchParams.get("creatorId");
 
     if (projectId) {
-      await db.projectFollower.deleteMany({
+      const deleted = await db.projectFollower.deleteMany({
         where: {
           projectId,
           userId: session.user.id,
         },
       });
+      // Decrement follower count if a record was actually removed
+      if (deleted.count > 0) {
+        await db.project.update({
+          where: { id: projectId },
+          data: { followerCount: { decrement: 1 } },
+        });
+      }
       return NextResponse.json({ success: true });
     }
 
