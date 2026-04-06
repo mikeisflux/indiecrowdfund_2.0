@@ -141,7 +141,7 @@ export function UserDetailsDialog({
                 <div>
                   <p className="text-sm text-zinc-500">DivinityCoin Wallet Balance</p>
                   <p className="text-lg font-bold text-emerald-600">
-                    ${user.divinityCoinBalance.toFixed(2)}
+                    ${Number(user.divinityCoinBalance).toFixed(2)}
                   </p>
                 </div>
                 <Button
@@ -214,7 +214,7 @@ export function UserDetailsDialog({
                           </p>
                           <p className="text-lg font-semibold mt-2">
                             <DollarSign className="inline h-4 w-4" />
-                            {pledge.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {Number(pledge.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                         </div>
                         <div className="flex flex-col gap-2">

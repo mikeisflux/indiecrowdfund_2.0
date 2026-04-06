@@ -52,21 +52,21 @@ export function TransactionsTab({
             <DollarSign className="w-4 h-4" />
             <span className="text-sm font-medium">Total Revenue</span>
           </div>
-          <p className="text-2xl font-bold mt-1">${transactionStats.totalRevenue.toFixed(2)}</p>
+          <p className="text-2xl font-bold mt-1">${Number(transactionStats.totalRevenue).toFixed(2)}</p>
         </div>
         <div className="p-4 rounded-xl bg-card border">
           <div className="flex items-center gap-2 text-purple-600">
             <ArrowUpRight className="w-4 h-4" />
             <span className="text-sm font-medium">Platform Fees</span>
           </div>
-          <p className="text-2xl font-bold mt-1">${transactionStats.totalPlatformFees.toFixed(2)}</p>
+          <p className="text-2xl font-bold mt-1">${Number(transactionStats.totalPlatformFees).toFixed(2)}</p>
         </div>
         <div className="p-4 rounded-xl bg-card border">
           <div className="flex items-center gap-2 text-blue-600">
             <ArrowDownRight className="w-4 h-4" />
             <span className="text-sm font-medium">Creator Payouts</span>
           </div>
-          <p className="text-2xl font-bold mt-1">${transactionStats.totalCreatorPayouts.toFixed(2)}</p>
+          <p className="text-2xl font-bold mt-1">${Number(transactionStats.totalCreatorPayouts).toFixed(2)}</p>
         </div>
         <div className="p-4 rounded-xl bg-card border">
           <div className="flex items-center gap-2 text-cyan-600">
@@ -80,14 +80,14 @@ export function TransactionsTab({
             <DollarSign className="w-4 h-4" />
             <span className="text-sm font-medium">Today Revenue</span>
           </div>
-          <p className="text-2xl font-bold mt-1">${transactionStats.todayRevenue.toFixed(2)}</p>
+          <p className="text-2xl font-bold mt-1">${Number(transactionStats.todayRevenue).toFixed(2)}</p>
         </div>
         <div className="p-4 rounded-xl bg-card border">
           <div className="flex items-center gap-2 text-pink-600">
             <ArrowUpRight className="w-4 h-4" />
             <span className="text-sm font-medium">Today Fees</span>
           </div>
-          <p className="text-2xl font-bold mt-1">${transactionStats.todayPlatformFees.toFixed(2)}</p>
+          <p className="text-2xl font-bold mt-1">${Number(transactionStats.todayPlatformFees).toFixed(2)}</p>
         </div>
         <div className="p-4 rounded-xl bg-card border">
           <div className="flex items-center gap-2 text-indigo-600">
@@ -216,13 +216,13 @@ export function TransactionsTab({
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className="font-semibold text-emerald-600">${tx.amount.toFixed(2)}</span>
+                      <span className="font-semibold text-emerald-600">${Number(tx.amount).toFixed(2)}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className="text-purple-600">${tx.platformFee.toFixed(2)}</span>
+                      <span className="text-purple-600">${Number(tx.platformFee).toFixed(2)}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className="text-blue-600">${tx.creatorPayout.toFixed(2)}</span>
+                      <span className="text-blue-600">${Number(tx.creatorPayout).toFixed(2)}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Badge variant="outline" className="text-xs">

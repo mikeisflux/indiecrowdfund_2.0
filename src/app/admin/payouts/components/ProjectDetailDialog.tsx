@@ -336,7 +336,7 @@ export function ProjectDetailDialog({
             <DialogFooter className="mt-6">
               {selectedProject.hasBank && selectedProject.remainingAmount > 0 && (
                 <Button
-                  onClick={() => onCreateSettlement(selectedProject.remainingAmount.toFixed(2))}
+                  onClick={() => onCreateSettlement(Number(selectedProject.remainingAmount).toFixed(2))}
                   className="bg-teal-600 hover:bg-teal-700"
                 >
                   <DollarSign className="w-4 h-4 mr-2" />

@@ -41,7 +41,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
           <DollarSign className="w-4 h-4" />
           <span className="text-sm font-medium">Total Revenue</span>
         </div>
-        <p className="text-2xl font-bold mt-1">${stats.totalRevenue.toFixed(0)}</p>
+        <p className="text-2xl font-bold mt-1">${Number(stats.totalRevenue).toFixed(0)}</p>
       </div>
       <div className="p-4 rounded-xl bg-card border">
         <div className="flex items-center gap-2 text-cyan-600">

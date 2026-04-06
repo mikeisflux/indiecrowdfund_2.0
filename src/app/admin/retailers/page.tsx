@@ -565,7 +565,7 @@ export default function RetailersPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <p className="text-2xl font-bold">{surveyStats.avgRating.toFixed(1)}</p>
+                <p className="text-2xl font-bold">{Number(surveyStats.avgRating).toFixed(1)}</p>
                 <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
               </div>
               <p className="text-xs text-zinc-500">Average Rating</p>
