@@ -38,8 +38,15 @@ export function verifyWebhookSignature(
   const timestamp = timestampPart.substring(2);
   const providedSignature = signaturePart.substring(3);
 
-  // Check timestamp is within 5 minutes (300 seconds)
-  const timestampAge = Math.abs(Date.now() / 1000 - parseInt(timestamp));
+  // Reject future timestamps and timestamps older than 5 minutes
+  const now = Date.now() / 1000;
+  const webhookTime = parseInt(timestamp, 10);
+  const timestampAge = now - webhookTime;
+  if (timestampAge < -30) {
+    // Allow up to 30s clock skew but reject clearly future timestamps
+    paymentsDivinitycoinLogger.warn({ timestampAge }, "DivinityCoin webhook has future timestamp");
+    return false;
+  }
   if (timestampAge > 300) {
     paymentsDivinitycoinLogger.warn({ timestampAge }, "DivinityCoin webhook timestamp too old");
     return false;
