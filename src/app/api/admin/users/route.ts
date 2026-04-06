@@ -497,16 +497,18 @@ export async function PATCH(req: NextRequest) {
       UPDATE_INFO: "USER_EMAIL_CHANGE",
     };
     if (auditActionMap[action]) {
-      await auditLog({
-        action: auditActionMap[action],
-        actorId: authResult.user.id,
-        actorEmail: authResult.user.email || undefined,
-        targetId: userId,
-        targetType: "USER",
-        details: { action, role: data?.role, reason: data?.reason },
-      }).catch((auditErr: unknown) => {
+      try {
+        auditLog({
+          action: auditActionMap[action],
+          actorId: authResult.user.id,
+          actorEmail: authResult.user.email || undefined,
+          targetId: userId,
+          targetType: "USER",
+          details: { action, role: data?.role, reason: data?.reason },
+        });
+      } catch (auditErr: unknown) {
         adminUsersLogger.error({ correlationId, err: String(auditErr) }, "Failed to log audit event");
-      });
+      }
     }
 
     return NextResponse.json({
