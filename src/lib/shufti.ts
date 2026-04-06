@@ -430,8 +430,8 @@ export async function requiresIdVerification(
   userId?: string
 ): Promise<{ required: boolean; verified: boolean; reason?: string }> {
   // Get project content flags
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       hasAdultContent: true,
       hasRiskyContent: true,

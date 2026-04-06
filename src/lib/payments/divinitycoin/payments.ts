@@ -482,8 +482,8 @@ export async function handlePaymentSucceeded(
   paymentsDivinitycoinLogger.info(`[DivinityCoin] Payment succeeded: pledge=${pledgeId}, payment=${paymentRef}${holdId ? `, hold=${holdId}` : ""}${paymentMethodStr ? `, method=${paymentMethodStr}` : ""}`);
 
   try {
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       select: {
         id: true, status: true, projectId: true, amount: true, userId: true, metadata: true,
         rewardId: true,
@@ -712,8 +712,8 @@ export async function handlePaymentFailed(
   paymentsDivinitycoinLogger.info(`[DivinityCoin] Payment failed: pledge=${pledgeId}, payment=${paymentId}, reason=${reason}`);
 
   try {
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       select: { id: true, status: true },
     });
 
@@ -823,8 +823,8 @@ export async function handleRefundCompleted(
   paymentsDivinitycoinLogger.info(`[DivinityCoin] Refund completed: pledge=${pledgeId}, refund=${refundId}, amount=${amount}`);
 
   try {
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       select: { id: true, status: true, userId: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
     });
 

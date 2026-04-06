@@ -17,8 +17,8 @@ const notificationsProjectNotificationsLogger = logger.child({ module: "notifica
  * Notify backers when a project is funded
  */
 export async function notifyProjectFunded(projectId: string) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       title: true,
       slug: true,
@@ -90,8 +90,8 @@ export async function notifyProjectFunded(projectId: string) {
  * Notify followers when a project launches
  */
 export async function notifyProjectLaunched(projectId: string) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       title: true,
       slug: true,
@@ -203,8 +203,8 @@ export async function notifyProjectUpdate(
   updateContent?: string,
   updateId?: string
 ) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       title: true,
       slug: true,
@@ -315,8 +315,8 @@ export async function notifyProjectUpdate(
  * Notify backers when their project ends
  */
 export async function notifyProjectEnded(projectId: string) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       title: true,
       slug: true,

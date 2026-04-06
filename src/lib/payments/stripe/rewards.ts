@@ -19,8 +19,8 @@ export async function trackCampaignConversion(pledgeId: string, sourceCampaignId
 
     // Find and mark the most recent click from this campaign as converted
     // Use the pledge's user to find their click
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       select: { userId: true, user: { select: { email: true } } },
     });
 
@@ -176,8 +176,8 @@ export async function assignBackerNumber(projectId: string, pledgeId: string): P
     await tx.$executeRaw`SELECT id FROM "Project" WHERE id = ${projectId} FOR UPDATE`;
 
     // Check if already assigned (idempotent - safe to call multiple times)
-    const existing = await tx.pledge.findUnique({
-      where: { id: pledgeId },
+    const existing = await tx.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
       select: { backerNumber: true },
     });
     if (existing?.backerNumber) {

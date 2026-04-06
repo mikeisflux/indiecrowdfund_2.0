@@ -216,8 +216,8 @@ export async function pushOrdersToShopify(
   shopifyPushLogger.info({ data: credentials.shopDomain }, "[pushOrdersToShopify] Using credentials for shop:");
 
   // Get project title for line items
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: { title: true },
   });
 

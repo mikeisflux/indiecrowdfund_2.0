@@ -18,8 +18,8 @@ export async function notifyPledgeReceived(
   backerName: string,
   amount: number
 ) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       title: true,
       slug: true,
@@ -79,8 +79,8 @@ export async function notifyPledgeShipped(
   trackingNumber?: string,
   projectUrlPath?: string
 ) {
-  const pledge = await db.pledge.findUnique({
-    where: { id: pledgeId },
+  const pledge = await db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
     select: { userId: true, projectId: true },
   });
 
@@ -110,8 +110,8 @@ export async function notifyPledgeDelivered(
   projectSlug: string,
   projectUrlPath?: string
 ) {
-  const pledge = await db.pledge.findUnique({
-    where: { id: pledgeId },
+  const pledge = await db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
     select: { userId: true, projectId: true },
   });
 
@@ -137,8 +137,8 @@ export async function notifyBackerPledgeConfirmed(
   pledgeId: string,
   chargedImmediately: boolean
 ) {
-  const pledge = await db.pledge.findUnique({
-    where: { id: pledgeId },
+  const pledge = await db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
     include: {
       project: {
         select: {
@@ -255,8 +255,8 @@ export async function notifyBackerPledgeConfirmed(
  * Notify backers when a survey is sent
  */
 export async function notifySurveySent(projectId: string, projectTitle: string) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       slug: true,
       pledges: {
@@ -286,8 +286,8 @@ export async function notifySurveySent(projectId: string, projectTitle: string) 
  * Notify backers that the survey has been updated and needs re-review
  */
 export async function notifySurveyUpdateRequested(projectId: string, projectTitle: string) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       slug: true,
       pledges: {
@@ -317,8 +317,8 @@ export async function notifySurveyUpdateRequested(projectId: string, projectTitl
  * Notify backers with a survey reminder
  */
 export async function notifySurveyReminder(projectId: string, projectTitle: string) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       slug: true,
       pledges: {
@@ -533,8 +533,8 @@ export async function notifyPledgeModified(
   changeType: "upcharge" | "refund" | "no_change"
 ) {
   try {
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       include: {
         user: { select: { id: true, email: true, name: true } },
         project: {
@@ -625,8 +625,8 @@ export async function notifyPledgeCancelled(
   wasRefunded: boolean
 ) {
   try {
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       include: {
         user: { select: { id: true, email: true, name: true } },
         project: {
@@ -707,8 +707,8 @@ export async function notifyRefundRequestDecision(
   creatorNote?: string | null
 ) {
   try {
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       include: {
         user: { select: { id: true, email: true, name: true } },
         project: {

@@ -474,8 +474,8 @@ export async function findMatchingUsersForProject(
   const { limit = 100, minMatchScore = 30, minProfileScore = 20 } = options;
 
   // Get project details
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: {
       category: true,
       subcategory: true,

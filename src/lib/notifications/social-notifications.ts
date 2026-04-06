@@ -17,8 +17,8 @@ export async function notifyMessageReceived(
   projectId: string,
   subject: string
 ) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: { title: true, slug: true },
   });
 

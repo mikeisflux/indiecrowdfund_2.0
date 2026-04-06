@@ -55,8 +55,8 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   webhookLogger.info(`[Webhook] Processing payment success for pledge ${pledgeId}`);
 
   // Check if pledge is already completed (idempotency - webhook may fire after direct update)
-  const existingPledge = await db.pledge.findUnique({
-    where: { id: pledgeId },
+  const existingPledge = await db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
     select: { status: true, projectId: true, backerNumber: true, sourceCampaignId: true },
   });
 
@@ -185,8 +185,8 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     } else {
       // /confirm endpoint already updated stats — just re-read project for funding check
       webhookLogger.info(`[Webhook] Stats already updated by /confirm for pledge ${pledgeId}, skipping stat update`);
-      const freshProject = await db.project.findUnique({
-        where: { id: pledge.projectId },
+      const freshProject = await db.project.findFirst({
+        where: { id: pledge.projectId , deletedAt: null },
         select: { currentAmount: true, goalAmount: true },
       });
       if (freshProject) {
@@ -196,8 +196,8 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   } else {
     // SetupIntent pledge — stats were already counted when SetupIntent was confirmed.
     // Don't double-count. Just check if stats need a funding check.
-    const freshProject = await db.project.findUnique({
-      where: { id: pledge.projectId },
+    const freshProject = await db.project.findFirst({
+      where: { id: pledge.projectId , deletedAt: null },
       select: { currentAmount: true, goalAmount: true },
     });
     if (freshProject) {
@@ -261,8 +261,8 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
   if (!paymentMethodId) return;
 
   // Get the pledge with project info
-  const existingPledge = await db.pledge.findUnique({
-    where: { id: pledgeId },
+  const existingPledge = await db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
     select: {
       stripePaymentMethodId: true,
       status: true,
@@ -397,8 +397,8 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
   } else if (statsClaimResult.count === 0) {
     // /confirm endpoint already handled stats — re-read current project amount for funding check
     webhookLogger.info(`[SetupIntent] Stats already updated by /confirm for pledge ${pledgeId}`);
-    const freshProject = await db.project.findUnique({
-      where: { id: existingPledge.projectId },
+    const freshProject = await db.project.findFirst({
+      where: { id: existingPledge.projectId , deletedAt: null },
       select: { currentAmount: true },
     });
     if (freshProject) {

@@ -30,8 +30,8 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
 
   // Fetch platform fee rate alongside the pledge
   const [pledge, platformSettings] = await Promise.all([
-    db.pledge.findUnique({
-    where: { id: pledgeId },
+    db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
       include: {
         project: {
           include: {
@@ -195,8 +195,8 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
   }
 
   // SAFETY: Re-verify pledge status right before charging (prevents race conditions)
-  const freshPledge = await db.pledge.findUnique({
-    where: { id: pledgeId },
+  const freshPledge = await db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
     select: { status: true, stripePaymentMethodId: true },
   });
   if (freshPledge?.status !== "PENDING" || !freshPledge.stripePaymentMethodId) {
@@ -317,8 +317,8 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
  * Schedule a payment retry
  */
 export async function schedulePaymentRetry(pledgeId: string, failureReason: string) {
-  const pledge = await db.pledge.findUnique({
-    where: { id: pledgeId },
+  const pledge = await db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
   });
 
   if (!pledge) return;
@@ -352,8 +352,8 @@ export async function schedulePaymentRetry(pledgeId: string, failureReason: stri
       await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
     }
 
-    const pledgeWithProject = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledgeWithProject = await db.pledge.findFirst({
+      where: { id: pledgeId , deletedAt: null },
       include: {
         project: {
           select: {

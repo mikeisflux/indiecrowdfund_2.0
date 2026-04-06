@@ -69,8 +69,8 @@ export async function getProjectStats(
   let resolved = projectMeta;
 
   if (!resolved) {
-    const row = await db.project.findUnique({
-      where: { id: projectId },
+    const row = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: { status: true, goalAmount: true },
     });
     if (!row) throw new Error(`Project not found: ${projectId}`);
@@ -180,8 +180,8 @@ export async function getBatchProjectStats(
  * Recalculate a project's stats and write them back to the DB if they differ.
  */
 export async function syncProjectStats(projectId: string): Promise<SyncResult> {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId , deletedAt: null },
     select: { id: true, currentAmount: true, backerCount: true, goalAmount: true, status: true },
   });
 
