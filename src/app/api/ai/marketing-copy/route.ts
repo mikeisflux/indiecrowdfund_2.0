@@ -24,6 +24,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Enforce input size limits to prevent prompt injection and cost abuse
+    if (typeof title !== "string" || title.length > 300) {
+      return NextResponse.json({ error: "Title must be 300 characters or less" }, { status: 400 });
+    }
+    if (typeof description !== "string" || description.length > 10000) {
+      return NextResponse.json({ error: "Description must be 10000 characters or less" }, { status: 400 });
+    }
+
     // Different actions for different AI features
     if (action === "improve") {
       // Improve description

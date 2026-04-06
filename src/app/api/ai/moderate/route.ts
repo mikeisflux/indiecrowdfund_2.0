@@ -27,6 +27,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Enforce input size limits to prevent prompt injection and cost abuse
+    if (type === "comment") {
+      if (typeof content !== "string" || content.length > 5000) {
+        return NextResponse.json({ error: "Comment content must be 5000 characters or less" }, { status: 400 });
+      }
+    } else if (typeof content === "object" && content !== null) {
+      if (typeof content.description === "string" && content.description.length > 50000) {
+        return NextResponse.json({ error: "Description exceeds maximum length" }, { status: 400 });
+      }
+      if (typeof content.title === "string" && content.title.length > 300) {
+        return NextResponse.json({ error: "Title exceeds maximum length" }, { status: 400 });
+      }
+    }
+
     let result;
 
     switch (type) {

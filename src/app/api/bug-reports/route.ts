@@ -14,7 +14,7 @@ const bugReportSchema = z.object({
   name: z.string().optional(),
   email: z.string().email("Valid email is required"),
   title: z.string().min(1, "Title is required").max(200),
-  description: z.string().min(1, "Description is required"),
+  description: z.string().min(1, "Description is required").max(20000),
   category: z.enum([
     "UI_VISUAL",
     "FUNCTIONALITY",
@@ -27,12 +27,12 @@ const bugReportSchema = z.object({
     "OTHER",
   ]).default("OTHER"),
   severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).default("MEDIUM"),
-  pageUrl: z.string().optional(),
-  browser: z.string().optional(),
-  device: z.string().optional(),
-  steps: z.string().optional(),
-  expectedBehavior: z.string().optional(),
-  actualBehavior: z.string().optional(),
+  pageUrl: z.string().url().max(2048).optional(),
+  browser: z.string().max(200).optional(),
+  device: z.string().max(200).optional(),
+  steps: z.string().max(5000).optional(),
+  expectedBehavior: z.string().max(5000).optional(),
+  actualBehavior: z.string().max(5000).optional(),
 });
 
 // POST - Submit a new bug report
