@@ -74,19 +74,19 @@ export const validateSession = cache(async (): Promise<Session | null> => {
       where: { sessionToken: token },
       include: {
         user: {
-          where: { deletedAt: null },
           select: {
             id: true,
             email: true,
             name: true,
             image: true,
             role: true,
+            deletedAt: true,
           },
         },
       },
     });
 
-    if (!session || !session.user) {
+    if (!session || !session.user || session.user.deletedAt !== null) {
       // Session not found or user was soft-deleted
       await db.session.delete({ where: { sessionToken: token } }).catch(() => {});
       return null;
@@ -122,8 +122,10 @@ export const validateSession = cache(async (): Promise<Session | null> => {
       }
     }
 
+    // Strip deletedAt before returning — it's not part of SessionUser type
+    const { deletedAt: _deletedAt, ...userWithoutDeletedAt } = session.user;
     return {
-      user: session.user,
+      user: userWithoutDeletedAt,
       expires: session.expires,
     };
   } catch (error) {
