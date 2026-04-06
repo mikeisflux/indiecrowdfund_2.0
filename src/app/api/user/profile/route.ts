@@ -82,10 +82,11 @@ export async function PATCH(request: Request) {
         );
       }
 
-      // Check if taken
+      // Check if taken by an active (non-deleted) user
       const existing = await db.user.findFirst({
         where: {
           vanityUrl,
+          deletedAt: null,
           NOT: { id: session.user.id },
         },
       });

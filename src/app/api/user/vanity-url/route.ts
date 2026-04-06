@@ -155,10 +155,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if already taken by another user
+    // Check if already taken by another active (non-deleted) user
     const existing = await db.user.findFirst({
       where: {
         vanityUrl: normalizedUrl,
+        deletedAt: null,
         NOT: { id: session.user.id },
       },
     });
@@ -224,10 +225,11 @@ export async function PUT(request: Request) {
       });
     }
 
-    // Check if already taken
+    // Check if already taken by another active (non-deleted) user
     const existing = await db.user.findFirst({
       where: {
         vanityUrl: normalizedUrl,
+        deletedAt: null,
         NOT: { id: session.user.id },
       },
     });

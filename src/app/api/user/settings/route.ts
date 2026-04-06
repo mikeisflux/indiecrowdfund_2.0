@@ -137,6 +137,7 @@ export async function PATCH(request: Request) {
       const existing = await db.user.findFirst({
         where: {
           vanityUrl,
+          deletedAt: null,
           NOT: { id: session.user.id },
         },
       });
