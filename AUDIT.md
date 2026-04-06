@@ -6,1121 +6,1121 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 
 ---
 
-- [x] `src/__tests__/json-ld.test.tsx` ✅
-- [x] `src/__tests__/setup.ts` ✅
-- [x] `src/__tests__/utils.test.ts` ✅
-- [x] `src/app/(auth)/choose-role/page.tsx` ✅
-- [x] `src/app/(auth)/forgot-password/page.tsx` ✅
-- [x] `src/app/(auth)/layout.tsx` ✅
-- [x] `src/app/(auth)/login/loading.tsx` ✅
-- [x] `src/app/(auth)/login/page.tsx` ✅
-- [x] `src/app/(auth)/register/loading.tsx` ✅
-- [x] `src/app/(auth)/register/page.tsx` ✅
-- [x] `src/app/(auth)/reset-password/page.tsx` ✅
-- [x] `src/app/[vanityname]/[slug]/page.tsx` ✅
-- [x] `src/app/about-us/layout.tsx` ✅
-- [x] `src/app/about-us/page.tsx` ✅
-- [x] `src/app/access-denied/page.tsx` ✅
-- [x] `src/app/admin/ai-marketing/page.tsx` ✅
-- [x] `src/app/admin/ai/components/ResultsViewerDialog.tsx` ✅
-- [x] `src/app/admin/ai/components/StatusBadges.tsx` ✅
-- [x] `src/app/admin/ai/components/index.ts` ✅
-- [x] `src/app/admin/ai/page.tsx` ✅
-- [x] `src/app/admin/ai/types.ts` ✅
-- [x] `src/app/admin/analytics/page.tsx` ✅
-- [x] `src/app/admin/announcement-bar/page.tsx` ✅
-- [x] `src/app/admin/bug-reports/page.tsx` ✅
-- [x] `src/app/admin/changelog/page.tsx` ✅
-- [x] `src/app/admin/consent-banner/page.tsx` ✅
-- [x] `src/app/admin/cron/page.tsx` ✅
-- [x] `src/app/admin/divinitycoin-redemptions/page.tsx` ✅
-- [x] `src/app/admin/email-queue/page.tsx` ✅
-- [x] `src/app/admin/email/components/ComposeEmailDialog.tsx` ✅
-- [x] `src/app/admin/email/components/MailboxDialog.tsx` ✅
-- [x] `src/app/admin/email/components/index.ts` ✅
-- [x] `src/app/admin/email/components/types.ts` ✅
-- [x] `src/app/admin/email/page.tsx` ✅
-- [x] `src/app/admin/error-logs/page.tsx` ✅
-- [x] `src/app/admin/error.tsx` ✅
-- [x] `src/app/admin/hero-slider/page.tsx` ✅
-- [x] `src/app/admin/layout.tsx` ✅
-- [x] `src/app/admin/lcs-locator/page.tsx` ✅
-- [x] `src/app/admin/link-sanitizer/page.tsx` ✅
-- [x] `src/app/admin/loading.tsx` ✅
-- [x] `src/app/admin/marketplace/components/AddToCategoryDialog.tsx` ✅
-- [x] `src/app/admin/marketplace/components/AllBooksTab.tsx` ✅
-- [x] `src/app/admin/marketplace/components/BookDetailPanel.tsx` ✅
-- [x] `src/app/admin/marketplace/components/BookListItem.tsx` ✅
-- [x] `src/app/admin/marketplace/components/BookListPanel.tsx` ✅
-- [x] `src/app/admin/marketplace/components/CategoryBookItem.tsx` ✅
-- [x] `src/app/admin/marketplace/components/CategoryManagementTab.tsx` ✅
-- [x] `src/app/admin/marketplace/components/HistoryTab.tsx` ✅
-- [x] `src/app/admin/marketplace/components/PdfManagementTab.tsx` ✅
-- [x] `src/app/admin/marketplace/components/RejectDialog.tsx` ✅
-- [x] `src/app/admin/marketplace/components/StatsCards.tsx` ✅
-- [x] `src/app/admin/marketplace/components/StatusBadges.tsx` ✅
-- [x] `src/app/admin/marketplace/components/TransactionsTab.tsx` ✅
-- [x] `src/app/admin/marketplace/page.tsx` ✅
-- [x] `src/app/admin/marketplace/types.ts` ✅
-- [x] `src/app/admin/media/components/EditFileDialog.tsx` ✅
-- [x] `src/app/admin/media/components/MoveFilesDialog.tsx` ✅
-- [x] `src/app/admin/media/components/NewFolderDialog.tsx` ✅
-- [x] `src/app/admin/media/components/ScanImportDialog.tsx` ✅
-- [x] `src/app/admin/media/components/UploadDialog.tsx` ✅
-- [x] `src/app/admin/media/components/index.ts` ✅
-- [x] `src/app/admin/media/page.tsx` ✅
-- [x] `src/app/admin/media/types.ts` ✅
-- [x] `src/app/admin/moderation/page.tsx` ✅
-- [x] `src/app/admin/notifications/page.tsx` ✅
-- [x] `src/app/admin/page-builder/page.tsx` ✅
-- [x] `src/app/admin/page.tsx` ✅
-- [x] `src/app/admin/payouts/components/BankDetailsDialog.tsx` ✅
-- [x] `src/app/admin/payouts/components/CreateSettlementDialog.tsx` ✅
-- [x] `src/app/admin/payouts/components/CreatorBalancePayoutDialog.tsx` ✅
-- [x] `src/app/admin/payouts/components/CreatorBalancesTable.tsx` ✅
-- [x] `src/app/admin/payouts/components/PayoutStatsCards.tsx` ✅
-- [x] `src/app/admin/payouts/components/ProjectDetailDialog.tsx` ✅
-- [x] `src/app/admin/payouts/components/ProjectsTable.tsx` ✅
-- [x] `src/app/admin/payouts/components/SettlementBadge.tsx` ✅
-- [x] `src/app/admin/payouts/components/types.ts` ✅
-- [x] `src/app/admin/payouts/page.tsx` ✅
-- [x] `src/app/admin/prelaunch/page.tsx` ✅
-- [x] `src/app/admin/projects/components/active-project-panel.tsx` ✅
-- [x] `src/app/admin/projects/components/dialogs/adjust-end-date-dialog.tsx` ✅
-- [x] `src/app/admin/projects/components/dialogs/deactivate-dialog.tsx` ✅
-- [x] `src/app/admin/projects/components/dialogs/index.ts` ✅
-- [x] `src/app/admin/projects/components/dialogs/make-live-dialog.tsx` ✅
-- [x] `src/app/admin/projects/components/dialogs/reject-dialog.tsx` ✅
-- [x] `src/app/admin/projects/components/dialogs/review-dialog.tsx` ✅
-- [x] `src/app/admin/projects/components/dialogs/set-vanity-url-dialog.tsx` ✅
-- [x] `src/app/admin/projects/components/flagged-tab.tsx` ✅
-- [x] `src/app/admin/projects/components/index.ts` ✅
-- [x] `src/app/admin/projects/components/prelaunch-tab.tsx` ✅
-- [x] `src/app/admin/projects/components/project-detail-panel.tsx` ✅
-- [x] `src/app/admin/projects/components/project-list-item.tsx` ✅
-- [x] `src/app/admin/projects/components/projects-filter-bar.tsx` ✅
-- [x] `src/app/admin/projects/components/review-history-tab.tsx` ✅
-- [x] `src/app/admin/projects/components/review-stats-cards.tsx` ✅
-- [x] `src/app/admin/projects/components/types.ts` ✅
-- [x] `src/app/admin/projects/components/unsubmitted-tab.tsx` ✅
-- [x] `src/app/admin/projects/components/utils.tsx` ✅
-- [x] `src/app/admin/projects/page.tsx` ✅
-- [x] `src/app/admin/promo-popup/page.tsx` ✅
-- [x] `src/app/admin/reconcile/page.tsx` ✅
-- [x] `src/app/admin/retailers/components/ActionConfirmDialog.tsx` ✅
-- [x] `src/app/admin/retailers/components/RetailerDetailDialog.tsx` ✅
-- [x] `src/app/admin/retailers/components/StarRating.tsx` ✅
-- [x] `src/app/admin/retailers/components/StatusBadges.tsx` ✅
-- [x] `src/app/admin/retailers/components/SurveyDetailDialog.tsx` ✅
-- [x] `src/app/admin/retailers/components/index.ts` ✅
-- [x] `src/app/admin/retailers/page.tsx` ✅
-- [x] `src/app/admin/retailers/types.ts` ✅
-- [x] `src/app/admin/security/page.tsx` ✅
-- [x] `src/app/admin/seo/components/AiSuggestionsTab.tsx` ✅
-- [x] `src/app/admin/seo/components/CronTab.tsx` ✅
-- [x] `src/app/admin/seo/components/DashboardTab.tsx` ✅
-- [x] `src/app/admin/seo/components/KeywordsTab.tsx` ✅
-- [x] `src/app/admin/seo/components/MetaTagsTab.tsx` ✅
-- [x] `src/app/admin/seo/components/PageAuditTab.tsx` ✅
-- [x] `src/app/admin/seo/components/RedirectsTab.tsx` ✅
-- [x] `src/app/admin/seo/components/helpers.tsx` ✅
-- [x] `src/app/admin/seo/components/index.ts` ✅
-- [x] `src/app/admin/seo/components/types.ts` ✅
-- [x] `src/app/admin/seo/page.tsx` ✅
-- [x] `src/app/admin/settings/page.tsx` ✅
-- [x] `src/app/admin/themes/page.tsx` ✅
-- [x] `src/app/admin/transactions/components/BreakdownCards.tsx` ✅
-- [x] `src/app/admin/transactions/components/StatsCards.tsx` ✅
-- [x] `src/app/admin/transactions/components/StripeLookupDialog.tsx` ✅
-- [x] `src/app/admin/transactions/components/TransactionBadges.tsx` ✅
-- [x] `src/app/admin/transactions/components/TransactionDetailDialog.tsx` ✅
-- [x] `src/app/admin/transactions/components/TransactionFilters.tsx` ✅
-- [x] `src/app/admin/transactions/components/TransactionTable.tsx` ✅
-- [x] `src/app/admin/transactions/components/index.ts` ✅
-- [x] `src/app/admin/transactions/components/types.ts` ✅
-- [x] `src/app/admin/transactions/components/utils.ts` ✅
-- [x] `src/app/admin/transactions/page.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/add-user-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/approval-action-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/delete-user-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/edit-retailer-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/edit-user-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/email-preview-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/index.ts` ✅
-- [x] `src/app/admin/users/components/dialogs/password-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/retailer-details-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/role-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/send-email-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/dialogs/user-details-dialog.tsx` ✅
-- [x] `src/app/admin/users/components/index.ts` ✅
-- [x] `src/app/admin/users/components/retailer-stats-cards.tsx` ✅
-- [x] `src/app/admin/users/components/retailer-table.tsx` ✅
-- [x] `src/app/admin/users/components/types.ts` ✅
-- [x] `src/app/admin/users/components/user-filters.tsx` ✅
-- [x] `src/app/admin/users/components/user-stats-cards.tsx` ✅
-- [x] `src/app/admin/users/components/user-table.tsx` ✅
-- [x] `src/app/admin/users/components/utils.tsx` ✅
-- [x] `src/app/admin/users/hooks.ts` ✅
-- [x] `src/app/admin/users/hooks/dialogs.ts` ✅
-- [x] `src/app/admin/users/hooks/index.ts` ✅
-- [x] `src/app/admin/users/hooks/usePledgeActions.ts` ✅
-- [x] `src/app/admin/users/hooks/useRetailerActions.ts` ✅
-- [x] `src/app/admin/users/hooks/useUserData.ts` ✅
-- [x] `src/app/admin/users/page.tsx` ✅
-- [x] `src/app/api/admin/ai-marketing/auto-tag/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/behavior/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/campaigns/[type]/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/campaigns/fix-images/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/abort/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/duplicate/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` 🔧
-- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/test/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/campaigns/route.ts` 🔧
-- [x] `src/app/api/admin/ai-marketing/run/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/segments/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/services/route.ts` 🔧
-- [x] `src/app/api/admin/ai-marketing/stats/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/subscribers/import/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/subscribers/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/subscribers/tags/route.ts` ✅
-- [x] `src/app/api/admin/ai-marketing/user-interests/route.ts` ✅
-- [x] `src/app/api/admin/analytics/route.ts` ✅
-- [x] `src/app/api/admin/announcement-bar/route.ts` ✅
-- [x] `src/app/api/admin/api-keys/route.ts` ✅
-- [x] `src/app/api/admin/backfill-backer-numbers/route.ts` ✅
-- [x] `src/app/api/admin/bank-accounts/[id]/route.ts` ✅
-- [x] `src/app/api/admin/build-backup/download/route.ts` ✅
-- [x] `src/app/api/admin/build-backup/route.ts` ✅
-- [x] `src/app/api/admin/changelog/extract/route.ts` ✅
-- [x] `src/app/api/admin/changelog/route.ts` ✅
-- [x] `src/app/api/admin/cleanup-duplicate-rewards/route.ts` 🔧 Fixed missing deletedAt:null in reward queries (cleanup tool operated on soft-deleted rewards)
-- [x] `src/app/api/admin/cleanup-pledges/route.ts` 🔧 Fixed missing deletedAt:null in base pledge where clause (admin cleanup could see deleted pledges)
-- [x] `src/app/api/admin/consent-banner/route.ts` ✅
-- [x] `src/app/api/admin/cron/route.ts` ✅
-- [x] `src/app/api/admin/dashboard/route.ts` ✅
-- [x] `src/app/api/admin/database/backup/download/route.ts` ✅
-- [x] `src/app/api/admin/database/backup/restore/route.ts` ✅
-- [x] `src/app/api/admin/database/backup/route.ts` ✅
-- [x] `src/app/api/admin/database/status/route.ts` 🔧 Fixed count queries missing deletedAt:null (inflated stats including soft-deleted records)
-- [x] `src/app/api/admin/divinity-payouts/route.ts` 🔧 Fixed race condition in PATCH — now uses atomic updateMany with status guard
-- [x] `src/app/api/admin/divinitycoin-redemptions/route.ts` ✅
-- [x] `src/app/api/admin/email-blocklist/[id]/route.ts` ✅
-- [x] `src/app/api/admin/email-blocklist/purge/route.ts` ✅
-- [x] `src/app/api/admin/email-blocklist/route.ts` ✅
-- [x] `src/app/api/admin/email-queue/route.ts` ✅
-- [x] `src/app/api/admin/email/route.ts` 🔧
-- [x] `src/app/api/admin/emails/[emailId]/route.ts` ✅
-- [x] `src/app/api/admin/error-logs/[id]/route.ts` ✅
-- [x] `src/app/api/admin/error-logs/route.ts` ✅
-- [x] `src/app/api/admin/feature-flags/route.ts` ✅
-- [x] `src/app/api/admin/hero-slides/migrate/route.ts` ✅
-- [x] `src/app/api/admin/hero-slides/route.ts` ✅
-- [x] `src/app/api/admin/lcs-locator/cleanup-emails/route.ts` ✅
-- [x] `src/app/api/admin/lcs-locator/shops/route.ts` ✅
-- [x] `src/app/api/admin/link-sanitizer/route.ts` ✅
-- [x] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/attachments/[attachmentId]/route.ts` ✅
-- [x] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/route.ts` ✅
-- [x] `src/app/api/admin/mailboxes/[id]/emails/route.ts` ✅
-- [x] `src/app/api/admin/mailboxes/[id]/route.ts` ✅
-- [x] `src/app/api/admin/mailboxes/route.ts` ✅
-- [x] `src/app/api/admin/marketplace/books/[id]/feature/route.ts` ✅
-- [x] `src/app/api/admin/marketplace/books/[id]/review/route.ts` ✅
-- [x] `src/app/api/admin/marketplace/books/[id]/route.ts` ✅
-- [x] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts` ✅
-- [x] `src/app/api/admin/marketplace/books/reorder/route.ts` ✅
-- [x] `src/app/api/admin/marketplace/books/route.ts` ✅
-- [x] `src/app/api/admin/marketplace/history/route.ts` ✅
-- [x] `src/app/api/admin/marketplace/pdf-management/route.ts` ✅
-- [x] `src/app/api/admin/marketplace/transactions/route.ts` ✅
-- [x] `src/app/api/admin/media/route.ts` ✅
-- [x] `src/app/api/admin/media/scan/route.ts` ✅
-- [x] `src/app/api/admin/media/upload/route.ts` ✅
-- [x] `src/app/api/admin/notifications/route.ts` 🔧
-- [x] `src/app/api/admin/pages/route.ts` ✅
-- [x] `src/app/api/admin/payouts/divinitycoin/route.ts` ✅
-- [x] `src/app/api/admin/payouts/paypal/route.ts` ✅
-- [x] `src/app/api/admin/payouts/route.ts` 🔧 Fixed race condition in PATCH — atomic updateMany with status guard
-- [x] `src/app/api/admin/payouts/whop/route.ts` ✅
-- [x] `src/app/api/admin/pledges/[pledgeId]/route.ts` ✅
-- [x] `src/app/api/admin/pledges/cleanup/route.ts` ✅
-- [x] `src/app/api/admin/prelaunch/route.ts` ✅
-- [x] `src/app/api/admin/projects/[projectId]/adjust-end-date/route.ts` ✅
-- [x] `src/app/api/admin/projects/[projectId]/backfill-backer-numbers/route.ts` ✅
-- [x] `src/app/api/admin/projects/[projectId]/process-pledges/route.ts` ✅
-- [x] `src/app/api/admin/projects/history/route.ts` ✅
-- [x] `src/app/api/admin/projects/link-preview/route.ts` ✅
-- [x] `src/app/api/admin/projects/review/route.ts` ✅
-- [x] `src/app/api/admin/projects/status/route.ts` ✅
-- [x] `src/app/api/admin/promo-popup/route.ts` ✅
-- [x] `src/app/api/admin/recalculate-pledge-amounts/route.ts` 🔧
-- [x] `src/app/api/admin/reconcile-pledges/route.ts` ✅
-- [x] `src/app/api/admin/reports/route.ts` ✅
-- [x] `src/app/api/admin/retailers/resend-approval/route.ts` ✅
-- [x] `src/app/api/admin/retailers/route.ts` ✅
-- [x] `src/app/api/admin/retailers/surveys/route.ts` ✅
-- [x] `src/app/api/admin/security/encrypt-secrets/route.ts` ✅
-- [x] `src/app/api/admin/security/stats/route.ts` ✅
-- [x] `src/app/api/admin/seo/audit/route.ts` ✅
-- [x] `src/app/api/admin/seo/cron/route.ts` ✅
-- [x] `src/app/api/admin/seo/fix-all/route.ts` ✅
-- [x] `src/app/api/admin/seo/keywords/route.ts` ✅
-- [x] `src/app/api/admin/seo/pages/route.ts` ✅
-- [x] `src/app/api/admin/seo/redirects/route.ts` ✅
-- [x] `src/app/api/admin/seo/route.ts` ✅
-- [x] `src/app/api/admin/settings/route.ts` ✅
-- [x] `src/app/api/admin/settings/test-r2/route.ts` ✅
-- [x] `src/app/api/admin/sidebar-stats/route.ts` ✅
-- [x] `src/app/api/admin/sync-all-project-stats/route.ts` ✅
-- [x] `src/app/api/admin/transactions/[id]/route.ts` ✅
-- [x] `src/app/api/admin/transactions/route.ts` 🔧 Fixed null crash on bankAccount.user in querySettlements (orphaned FK)
-- [x] `src/app/api/admin/transactions/stripe-lookup/route.ts` ✅
-- [x] `src/app/api/admin/users/[userId]/emails/route.ts` ✅
-- [x] `src/app/api/admin/users/[userId]/pledges/route.ts` 🔧 Fixed missing deletedAt:null in user pledges query (showed soft-deleted pledges)
-- [x] `src/app/api/admin/users/[userId]/vanity-url/route.ts` ✅
-- [x] `src/app/api/admin/users/merge-duplicates/route.ts` ✅
-- [x] `src/app/api/admin/users/route.ts` 🔧 Fixed UPDATE_ROLE missing CREATOR in valid roles list (admins could not set CREATOR role)
-- [x] `src/app/api/admin/wallet/route.ts` ✅
-- [x] `src/app/api/ai/auto-tag/route.ts` ✅
-- [x] `src/app/api/ai/marketing-copy/route.ts` ✅
-- [x] `src/app/api/ai/moderate/route.ts` ✅
-- [x] `src/app/api/analytics/route.ts` 🔧
-- [x] `src/app/api/announcement-bar/route.ts` ✅
-- [x] `src/app/api/auth/config/route.ts` ✅
-- [x] `src/app/api/auth/logout/route.ts` ✅
-- [x] `src/app/api/auth/recaptcha/route.ts` ✅
-- [x] `src/app/api/auth/session/route.ts` ✅
-- [x] `src/app/api/auth/social/[provider]/callback/route.ts` ✅
-- [x] `src/app/api/auth/social/[provider]/route.ts` ✅
-- [x] `src/app/api/auth/social/connections/route.ts` ✅
-- [x] `src/app/api/backer/addresses/[id]/route.ts` ✅
-- [x] `src/app/api/backer/addresses/route.ts` ✅
-- [x] `src/app/api/backer/analytics/export/route.ts` ✅
-- [x] `src/app/api/backer/analytics/route.ts` 🔧
-- [x] `src/app/api/backer/collections/[id]/route.ts` ✅
-- [x] `src/app/api/backer/collections/route.ts` ✅
-- [x] `src/app/api/backer/dashboard/route.ts` ✅
-- [x] `src/app/api/backer/digital-files/extract-cover/route.ts` ✅
-- [x] `src/app/api/backer/digital-files/progress/route.ts` ✅
-- [x] `src/app/api/backer/digital-files/route.ts` ✅
-- [x] `src/app/api/backer/digital-files/stream/route.ts` ✅
-- [x] `src/app/api/backer/digital-library/route.ts` ✅
-- [x] `src/app/api/backer/following/route.ts` ✅
-- [x] `src/app/api/backer/marketplace-purchases/[id]/download/route.ts` 🔧 Removed debug log that leaked other users buyerId/status on unauthorized access attempts
-- [x] `src/app/api/backer/notifications/preferences/route.ts` ✅
-- [x] `src/app/api/backer/surveys/route.ts` ✅
-- [x] `src/app/api/blocked/route.ts` ✅
-- [x] `src/app/api/bug-reports/route.ts` ✅
-- [x] `src/app/api/chat/admin/ban/route.ts` ✅
-- [x] `src/app/api/chat/admin/delete/route.ts` ✅
-- [x] `src/app/api/chat/messages/route.ts` ✅
-- [x] `src/app/api/chat/presence/route.ts` ✅
-- [x] `src/app/api/chat/stickers/route.ts` ✅
-- [x] `src/app/api/collaborations/[id]/route.ts` ✅
-- [x] `src/app/api/collaborations/route.ts` ✅
-- [x] `src/app/api/collaborator/[id]/respond/route.ts` ✅
-- [x] `src/app/api/collaborator/[id]/route.ts` ✅
-- [x] `src/app/api/consent-banner/route.ts` ✅
-- [x] `src/app/api/contact/route.ts` ✅
-- [x] `src/app/api/creator/account/avatar/route.ts` ✅
-- [x] `src/app/api/creator/account/password/route.ts` ✅
-- [x] `src/app/api/creator/account/preferences/route.ts` ✅
-- [x] `src/app/api/creator/account/profile/route.ts` ✅
-- [x] `src/app/api/creator/bank-account/route.ts` ✅
-- [x] `src/app/api/creator/dashboard/route.ts` ✅
-- [x] `src/app/api/creator/digital-files/route.ts` ✅
-- [x] `src/app/api/creator/email-marketing/campaigns/route.ts` ✅
-- [x] `src/app/api/creator/email-marketing/subscribers/[id]/route.ts` ✅
-- [x] `src/app/api/creator/email-marketing/subscribers/import/route.ts` ✅
-- [x] `src/app/api/creator/email-marketing/subscribers/route.ts` ✅
-- [x] `src/app/api/creator/email/campaign/route.ts` ✅
-- [x] `src/app/api/creator/email/compose/route.ts` ✅
-- [x] `src/app/api/creator/email/send-test/route.ts` ✅
-- [x] `src/app/api/creator/email/setup/route.ts` ✅
-- [x] `src/app/api/creator/email/threads/[threadId]/archive/route.ts` ✅
-- [x] `src/app/api/creator/email/threads/[threadId]/delete/route.ts` ✅
-- [x] `src/app/api/creator/email/threads/[threadId]/forward/route.ts` ✅
-- [x] `src/app/api/creator/email/threads/[threadId]/messages/route.ts` ✅
-- [x] `src/app/api/creator/email/threads/[threadId]/read/route.ts` ✅
-- [x] `src/app/api/creator/email/threads/[threadId]/reply/route.ts` ✅
-- [x] `src/app/api/creator/email/threads/[threadId]/star/route.ts` ✅
-- [x] `src/app/api/creator/email/threads/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/addons/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/address/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/backers/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/campaigns/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/digital/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/easypost/route.ts` 🔧
-- [x] `src/app/api/creator/indiekit/export/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/feedback/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/fulfillment/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/build-package-groups.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/compute-stats.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/format-digital-files.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/format-distribution-rules.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/format-email-campaigns.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/format-products.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/format-segments.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/format-timeline.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/index.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/post-campaign-sales.ts` 🔧
-- [x] `src/app/api/creator/indiekit/helpers/process-backers.ts` ✅
-- [x] `src/app/api/creator/indiekit/helpers/workflow.ts` ✅
-- [x] `src/app/api/creator/indiekit/integrations/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/modifiers/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/notes/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/orders/notify-balance/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/orders/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/products/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/segments/backers/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/segments/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/settings/image/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/settings/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/shipping-providers/credentials/route.ts` 🔧
-- [x] `src/app/api/creator/indiekit/shipping/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/shippo/route.ts` 🔧
-- [x] `src/app/api/creator/indiekit/shipstation/route.ts` 🔧
-- [x] `src/app/api/creator/indiekit/shopify/credentials/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/shopify/oauth/authorize/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/shopify/oauth/callback/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/shopify/route.ts` 🔧
-- [x] `src/app/api/creator/indiekit/shopify/sku-mapping/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/stamps/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/surveys/[pledgeId]/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/surveys/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/timeline/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/transactions/route.ts` ✅
-- [x] `src/app/api/creator/indiekit/updates/route.ts` ✅
-- [x] `src/app/api/creator/marketplace/books/[id]/route.ts` ✅
-- [x] `src/app/api/creator/marketplace/books/[id]/submit/route.ts` ✅
-- [x] `src/app/api/creator/marketplace/books/route.ts` ✅
-- [x] `src/app/api/creator/marketplace/company/route.ts` ✅
-- [x] `src/app/api/creator/marketplace/discount-codes/route.ts` ✅
-- [x] `src/app/api/creator/marketplace/files/route.ts` ✅
-- [x] `src/app/api/creator/marketplace/files/upload/route.ts` ✅
-- [x] `src/app/api/creator/marketplace/route.ts` ✅
-- [x] `src/app/api/creator/media/upload/route.ts` ✅
-- [x] `src/app/api/creator/paypal-bank-account/route.ts` ✅
-- [x] `src/app/api/creator/paypal/route.ts` ✅
-- [x] `src/app/api/creator/pledges/[pledgeId]/route.ts` ✅
-- [x] `src/app/api/creator/pledges/bulk-delete/route.ts` 🔧 Fixed missing deletedAt:null in pledge query
-- [x] `src/app/api/creator/prelaunch-pages/route.ts` ✅
-- [x] `src/app/api/creator/projects-for-import/route.ts` 🔧
-- [x] `src/app/api/creator/refund-requests/[requestId]/route.ts` 🔧
-- [x] `src/app/api/creator/refund-requests/route.ts` ✅
-- [x] `src/app/api/creator/stripe/portal/route.ts` ✅
-- [x] `src/app/api/creator/whop-bank-account/route.ts` ✅
-- [x] `src/app/api/cron/ai-marketing/route.ts` 🔧 Added POST handler for consistency with other cron endpoints
-- [x] `src/app/api/cron/cleanup-pledges/route.ts` ✅
-- [x] `src/app/api/cron/cleanup-projects/route.ts` ✅
-- [x] `src/app/api/cron/email-queue/route.ts` ✅
-- [x] `src/app/api/cron/email-retries/route.ts` ✅
-- [x] `src/app/api/cron/payment-retries/route.ts` ✅
-- [x] `src/app/api/cron/process-failed-campaigns/route.ts` ✅
-- [x] `src/app/api/cron/process-funded-campaigns/route.ts` ✅
-- [x] `src/app/api/cron/scheduled-campaigns/route.ts` 🔧 Added POST handler for consistency with other cron endpoints
-- [x] `src/app/api/diagnostics/payment/route.ts` ✅
-- [x] `src/app/api/divinitycoin/config/route.ts` ✅
-- [x] `src/app/api/email/track/click/route.ts` ✅
-- [x] `src/app/api/email/track/open/route.ts` ✅
-- [x] `src/app/api/error-report/route.ts` ✅
-- [x] `src/app/api/health/route.ts` ✅
-- [x] `src/app/api/hero-slides/route.ts` ✅
-- [x] `src/app/api/home-stats/route.ts` ✅
-- [x] `src/app/api/internal/blocked-ips/route.ts` ✅
-- [x] `src/app/api/lcs-locator/import/route.ts` ✅
-- [x] `src/app/api/lcs-locator/route.ts` ✅
-- [x] `src/app/api/marketplace/books/[slug]/route.ts` ✅
-- [x] `src/app/api/marketplace/books/route.ts` ✅
-- [x] `src/app/api/marketplace/checkout/route.ts` ✅
-- [x] `src/app/api/marketplace/checkout/verify/route.ts` ✅
-- [x] `src/app/api/marketplace/companies/[slug]/route.ts` ✅
-- [x] `src/app/api/marketplace/companies/route.ts` ✅
-- [x] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts` ✅
-- [x] `src/app/api/marketplace/purchase/confirm/route.ts` ✅
-- [x] `src/app/api/marketplace/purchase/route.ts` ✅
-- [x] `src/app/api/marketplace/redeem-code/route.ts` ✅
-- [x] `src/app/api/marketplace/validate-code/route.ts` 🔧 Fixed missing deletedAt:null on book lookup (soft-deleted books could be used for code validation)
-- [x] `src/app/api/messages/route.ts` ✅
-- [x] `src/app/api/messages/user-info/route.ts` 🔧
-- [x] `src/app/api/metrics/route.ts` ✅
-- [x] `src/app/api/og/route.tsx` ✅
-- [x] `src/app/api/pay/balance/confirm/route.ts` ✅
-- [x] `src/app/api/pay/balance/route.ts` ✅
-- [x] `src/app/api/paypal/capture/[orderId]/route.ts` ✅
-- [x] `src/app/api/paypal/client-token/route.ts` ✅
-- [x] `src/app/api/paypal/config/route.ts` ✅
-- [x] `src/app/api/platform-stats/route.ts` ✅
-- [x] `src/app/api/pledges/[pledgeId]/add-items/route.ts` ✅
-- [x] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts` ✅
-- [x] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ✅
-- [x] `src/app/api/pledges/[pledgeId]/confirm/route.ts` ✅
-- [x] `src/app/api/pledges/[pledgeId]/route.ts` 🔧 Fixed race condition: second modification request now blocked while pendingModification awaits payment
-- [x] `src/app/api/pledges/check/route.ts` ✅
-- [x] `src/app/api/pledges/route.ts` ✅
-- [x] `src/app/api/privacy/ccpa-opt-out/route.ts` ✅
-- [x] `src/app/api/projects/[id]/basics/route.ts` ✅
-- [x] `src/app/api/projects/[id]/chargeback-card/route.ts` ✅
-- [x] `src/app/api/projects/[id]/collaborators/me/route.ts` ✅
-- [x] `src/app/api/projects/[id]/collaborators/route.ts` 🔧 Fixed IDOR in DELETE: added projectId to where clause so project owners cannot delete collaborators from other projects
-- [x] `src/app/api/projects/[id]/comments/route.ts` ✅
-- [x] `src/app/api/projects/[id]/contact-email/route.ts` ✅
-- [x] `src/app/api/projects/[id]/items/[itemId]/end/route.ts` 🔧
-- [x] `src/app/api/projects/[id]/items/route.ts` ✅
-- [x] `src/app/api/projects/[id]/launch/route.ts` ✅
-- [x] `src/app/api/projects/[id]/members/import/route.ts` ✅
-- [x] `src/app/api/projects/[id]/members/route.ts` ✅
-- [x] `src/app/api/projects/[id]/payment/route.ts` ✅
-- [x] `src/app/api/projects/[id]/prelaunch/route.ts` ✅
-- [x] `src/app/api/projects/[id]/promotion/route.ts` ✅
-- [x] `src/app/api/projects/[id]/reviews/route.ts` ✅
-- [x] `src/app/api/projects/[id]/rewards/route.ts` ✅
-- [x] `src/app/api/projects/[id]/route.ts` ✅
-- [x] `src/app/api/projects/[id]/story/route.ts` ✅
-- [x] `src/app/api/projects/[id]/submit/route.ts` ✅
-- [x] `src/app/api/projects/[id]/survey/backer-questions/route.ts` ✅
-- [x] `src/app/api/projects/[id]/survey/item-questions/route.ts` ✅
-- [x] `src/app/api/projects/[id]/survey/lock/route.ts` ✅
-- [x] `src/app/api/projects/[id]/survey/responses/route.ts` ✅
-- [x] `src/app/api/projects/[id]/survey/route.ts` ✅
-- [x] `src/app/api/projects/[id]/survey/send/route.ts` ✅
-- [x] `src/app/api/projects/[id]/sync-stats/route.ts` ✅
-- [x] `src/app/api/projects/route.ts` ✅
-- [x] `src/app/api/projects/similar/route.ts` ✅
-- [x] `src/app/api/projects/slug/[slug]/check/route.ts` ✅
-- [x] `src/app/api/projects/slug/[slug]/route.ts` ✅
-- [x] `src/app/api/projects/slug/[slug]/stats/route.ts` ✅
-- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts` ✅
-- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts` ✅
-- [x] `src/app/api/promo-popup/route.ts` ✅
-- [x] `src/app/api/r2/serve/[...key]/route.ts` ✅
-- [x] `src/app/api/recommendations/route.ts` ✅
-- [x] `src/app/api/retailers/account/route.ts` ✅
-- [x] `src/app/api/retailers/apply/route.ts` ✅
-- [x] `src/app/api/retailers/forgot-password/route.ts` ✅
-- [x] `src/app/api/retailers/invoices/route.ts` ✅
-- [x] `src/app/api/retailers/login/route.ts` ✅
-- [x] `src/app/api/retailers/logout/route.ts` ✅
-- [x] `src/app/api/retailers/me/route.ts` ✅
-- [x] `src/app/api/retailers/orders/route.ts` ✅
-- [x] `src/app/api/retailers/projects/[id]/route.ts` ✅
-- [x] `src/app/api/retailers/projects/route.ts` ✅
-- [x] `src/app/api/retailers/reset-password/route.ts` ✅
-- [x] `src/app/api/retailers/session-auth/route.ts` ✅
-- [x] `src/app/api/rewards/[id]/copy-to-addon/route.ts` ✅
-- [x] `src/app/api/rewards/[id]/end/route.ts` ✅
-- [x] `src/app/api/rewards/[id]/shipping/route.ts` ✅
-- [x] `src/app/api/rewards/route.ts` ✅
-- [x] `src/app/api/stripe/config/route.ts` ✅
-- [x] `src/app/api/stripe/connect/refresh/route.ts` ✅
-- [x] `src/app/api/stripe/connect/reset/route.ts` ✅
-- [x] `src/app/api/stripe/connect/route.ts` ✅
-- [x] `src/app/api/stripe/connect/status/route.ts` ✅
-- [x] `src/app/api/surveys/[pledgeId]/respond/route.ts` 🔧 Fixed race condition on survey submit: atomic updateMany with isComplete:false guard prevents double-submission
-- [x] `src/app/api/surveys/route.ts` ✅
-- [x] `src/app/api/track/route.ts` ✅
-- [x] `src/app/api/tracking/route.ts` ✅
-- [x] `src/app/api/unsubscribe/route.ts` ✅
-- [x] `src/app/api/updates/route.ts` ✅
-- [x] `src/app/api/upload/route.ts` ✅
-- [x] `src/app/api/uploads/[...path]/route.ts` ✅
-- [x] `src/app/api/user/activity/route.ts` ✅
-- [x] `src/app/api/user/data-deletion/route.ts` ✅
-- [x] `src/app/api/user/data-export/route.ts` ✅
-- [x] `src/app/api/user/following/route.ts` ✅
-- [x] `src/app/api/user/me/route.ts` ✅
-- [x] `src/app/api/user/notifications/route.ts` ✅
-- [x] `src/app/api/user/profile-dropdown/route.ts` 🔧
-- [x] `src/app/api/user/profile/route.ts` ✅
-- [x] `src/app/api/user/public-profile/[username]/route.ts` ✅
-- [x] `src/app/api/user/settings/email/route.ts` ✅
-- [x] `src/app/api/user/settings/route.ts` ✅
-- [x] `src/app/api/user/vanity-url/route.ts` ✅
-- [x] `src/app/api/user/verify-email/route.ts` ✅
-- [x] `src/app/api/verify-id/callback/route.ts` ✅
-- [x] `src/app/api/verify-id/check/route.ts` ✅
-- [x] `src/app/api/verify-id/route.ts` ✅
-- [x] `src/app/api/webhooks/divinitycoin/route.ts` ✅
-- [x] `src/app/api/webhooks/email/events/route.ts` ✅
-- [x] `src/app/api/webhooks/email/inbound/route.ts` ✅
-- [x] `src/app/api/webhooks/paypal/route.ts` 🔧 Added processedWebhookEvent deduplication (PayPal retries could double-count backers/amounts)
-- [x] `src/app/api/webhooks/stripe/connect/route.ts` ✅
-- [x] `src/app/api/webhooks/stripe/route.ts` ✅
-- [x] `src/app/api/webhooks/stripe_connect/route.ts` ✅
-- [x] `src/app/api/webhooks/whop/route.ts` ✅
-- [x] `src/app/api/whop/config/route.ts` ✅
-- [x] `src/app/api/whop/confirm/[pledgeId]/route.ts` ✅
-- [x] `src/app/backer-handbook/layout.tsx` ✅
-- [x] `src/app/backer-handbook/page.tsx` ✅
-- [x] `src/app/bug-report/layout.tsx` ✅
-- [x] `src/app/bug-report/page.tsx` ✅
-- [x] `src/app/cart/page.tsx` ✅
-- [x] `src/app/changelog/page.tsx` ✅
-- [x] `src/app/chat/page.tsx` ✅
-- [x] `src/app/collaborate/[id]/page.tsx` ✅
-- [x] `src/app/collaborate/layout.tsx` ✅
-- [x] `src/app/contact/layout.tsx` ✅
-- [x] `src/app/contact/page.tsx` ✅
-- [x] `src/app/creator-handbook/layout.tsx` ✅
-- [x] `src/app/creator-handbook/page.tsx` ✅
-- [x] `src/app/dashboard/activity/page.tsx` ✅
-- [x] `src/app/dashboard/backer/components/address-management-tab.tsx` ✅
-- [x] `src/app/dashboard/backer/components/animated-bar-chart.tsx` ✅
-- [x] `src/app/dashboard/backer/components/circular-progress.tsx` ✅
-- [x] `src/app/dashboard/backer/components/collections-tab.tsx` ✅
-- [x] `src/app/dashboard/backer/components/digital-downloads-tab.tsx` ✅
-- [x] `src/app/dashboard/backer/components/digital-library-sections/constants.ts` ✅
-- [x] `src/app/dashboard/backer/components/digital-library-sections/index.ts` ✅
-- [x] `src/app/dashboard/backer/components/digital-library-sections/library-card.tsx` ✅
-- [x] `src/app/dashboard/backer/components/digital-library-sections/library-toolbar.tsx` ✅
-- [x] `src/app/dashboard/backer/components/digital-library-sections/reader-view.tsx` ✅
-- [x] `src/app/dashboard/backer/components/digital-library-sections/types.ts` ✅
-- [x] `src/app/dashboard/backer/components/digital-library-tab.tsx` ✅
-- [x] `src/app/dashboard/backer/components/download-card.tsx` ✅
-- [x] `src/app/dashboard/backer/components/following-tab.tsx` ✅
-- [x] `src/app/dashboard/backer/components/fulfillment-pipeline.tsx` ✅
-- [x] `src/app/dashboard/backer/components/glowing-stat-card.tsx` ✅
-- [x] `src/app/dashboard/backer/components/index.ts` ✅
-- [x] `src/app/dashboard/backer/components/messages-tab.tsx` ✅
-- [x] `src/app/dashboard/backer/components/notification-preferences-tab.tsx` ✅
-- [x] `src/app/dashboard/backer/components/spending-analytics-tab.tsx` ✅
-- [x] `src/app/dashboard/backer/components/survey-hub-tab.tsx` ✅
-- [x] `src/app/dashboard/backer/page.tsx` ✅
-- [x] `src/app/dashboard/components/AnimatedBarChart.tsx` ✅
-- [x] `src/app/dashboard/components/BackersList.tsx` ✅
-- [x] `src/app/dashboard/components/CircularProgress.tsx` ✅
-- [x] `src/app/dashboard/components/CollaborationsTab.tsx` ✅
-- [x] `src/app/dashboard/components/EmailTab.tsx` ✅
-- [x] `src/app/dashboard/components/FundingChart.tsx` ✅
-- [x] `src/app/dashboard/components/GlowingStatCard.tsx` ✅
-- [x] `src/app/dashboard/components/IndieKitV2Tab.tsx` ✅
-- [x] `src/app/dashboard/components/MarketplaceTab.tsx` ✅
-- [x] `src/app/dashboard/components/PostUpdatesTab.tsx` ✅
-- [x] `src/app/dashboard/components/ProductionOrderView.tsx` ✅
-- [x] `src/app/dashboard/components/ProjectSelector.tsx` ✅
-- [x] `src/app/dashboard/components/QuickStats.tsx` ✅
-- [x] `src/app/dashboard/components/RecentBackersCard.tsx` ✅
-- [x] `src/app/dashboard/components/RewardStats.tsx` ✅
-- [x] `src/app/dashboard/components/SocialHubTab.tsx` ✅
-- [x] `src/app/dashboard/components/StatsCards.tsx` ✅
-- [x] `src/app/dashboard/components/StripeAccountAlert.tsx` ✅
-- [x] `src/app/dashboard/components/TrafficSources.tsx` ✅
-- [x] `src/app/dashboard/components/index.ts` ✅
-- [x] `src/app/dashboard/error.tsx` ✅
-- [x] `src/app/dashboard/following/page.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/layout/PhaseSelector.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/layout/WorkflowProgress.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/DashboardTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/DigitalDeliveryTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/EmailMarketingTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/FinalizeTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/PaymentsTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/PhysicalDeliveryTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/RefundRequestsTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/ReportsTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/SetupTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/components/tabs/SurveysTab.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/constants.ts` ✅
-- [x] `src/app/dashboard/indiekit-v2/page.tsx` ✅
-- [x] `src/app/dashboard/indiekit-v2/types.ts` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/addon-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/address-validation-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/backer-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/balance-editor-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/confirm-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/distribution-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/edit-order-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/email-composer-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/email-dialog.tsx` 🔧
-- [x] `src/app/dashboard/indiekit/components/dialogs/export-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/import-addon-from-project-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/import-email-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/index.ts` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/notes-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/nps-feedback-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/packing-slip-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/refund-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/segment-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/tracking-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/dialogs/upload-dialog.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/account-settings-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/addons-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/backers-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/counts-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/digital-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/email-list-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/emails-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/export-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/inbox-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/index.ts` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/manage-survey-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/overview-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/packages-sections/index.ts` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/packages-sections/instructions-content.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/packages-sections/package-group-card.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/packages-sections/packages-dialogs.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/packages-sections/sku-mapping-content.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/packages-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/preorders-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/products-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/projects-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/segments-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/general-section.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/index.ts` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/integrations-section.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/notifications-section.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/payments-section.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/shipping-providers-section.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/shipping-section.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/shopify-credentials-section.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/survey-section.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-sections/team-section.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/settings-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/shipping-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/index.ts` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/modifier-combination-row.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/modifier-combinations-card.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/sku-input-field.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/sku-item-row.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/types.ts` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/sku-mapping-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/support-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/survey-builder-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/teaser-pages-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/timeline-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/transaction-history-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/tabs/updates-tab.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/ui/charts.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/ui/empty-states.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/ui/global-search.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/ui/help-tooltip.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/ui/index.ts` ✅
-- [x] `src/app/dashboard/indiekit/components/ui/keyboard-shortcuts.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/ui/skeleton.tsx` ✅
-- [x] `src/app/dashboard/indiekit/components/whats-next-banner.tsx` ✅
-- [x] `src/app/dashboard/indiekit/constants.ts` ✅
-- [x] `src/app/dashboard/indiekit/emails/[id]/edit/page.tsx` 🔧 Fixed XSS: sanitize email preview HTML
-- [x] `src/app/dashboard/indiekit/page.tsx` ✅
-- [x] `src/app/dashboard/indiekit/shopify/app/page.tsx` ✅
-- [x] `src/app/dashboard/indiekit/shopify/install/page.tsx` ✅
-- [x] `src/app/dashboard/indiekit/survey/[pledgeId]/page.tsx` ✅
-- [x] `src/app/dashboard/indiekit/types.ts` ✅
-- [x] `src/app/dashboard/layout.tsx` ✅
-- [x] `src/app/dashboard/loading.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/components/FileUpload.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/components/PDFFilePicker.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/components/StatusBanner.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/components/StepBasicInfo.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/components/StepIndicator.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/components/StepMedia.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/components/StepPricing.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/components/StepReview.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/components/types.ts` ✅
-- [x] `src/app/dashboard/marketplace/books/[id]/edit/page.tsx` ✅
-- [x] `src/app/dashboard/marketplace/books/new/page.tsx` ✅
-- [x] `src/app/dashboard/marketplace/company/page.tsx` ✅
-- [x] `src/app/dashboard/marketplace/components/AnalyticsTab.tsx` ✅
-- [x] `src/app/dashboard/marketplace/components/BookCard.tsx` ✅
-- [x] `src/app/dashboard/marketplace/components/BooksGrid.tsx` ✅
-- [x] `src/app/dashboard/marketplace/components/CompanyProfileCard.tsx` ✅
-- [x] `src/app/dashboard/marketplace/components/PromoCodesTab.tsx` ✅
-- [x] `src/app/dashboard/marketplace/components/StatsCard.tsx` ✅
-- [x] `src/app/dashboard/marketplace/components/StatusBadge.tsx` ✅
-- [x] `src/app/dashboard/marketplace/components/types.ts` ✅
-- [x] `src/app/dashboard/marketplace/page.tsx` ✅
-- [x] `src/app/dashboard/messages/page.tsx` ✅
-- [x] `src/app/dashboard/notifications/page.tsx` ✅
-- [x] `src/app/dashboard/page.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/page.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/QuestionInput.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyAddonsStep.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyAddressStep.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyErrorState.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyHeader.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyIntroStep.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyItemsStep.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyLockedState.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyPaymentStep.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyQuestionsStep.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyReviewStep.tsx` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/types.ts` ✅
-- [x] `src/app/dashboard/pledges/[pledgeId]/survey/page.tsx` ✅
-- [x] `src/app/dashboard/profile/page.tsx` ✅
-- [x] `src/app/dashboard/projects/[id]/survey/page.tsx` ✅
-- [x] `src/app/dashboard/projects/[id]/survey/responses/page.tsx` ✅
-- [x] `src/app/dashboard/projects/page.tsx` ✅
-- [x] `src/app/dashboard/settings/components/AccountCard.tsx` ✅
-- [x] `src/app/dashboard/settings/components/ConnectedServicesCard.tsx` ✅
-- [x] `src/app/dashboard/settings/components/EmailChangeDialog.tsx` ✅
-- [x] `src/app/dashboard/settings/components/LoadingState.tsx` ✅
-- [x] `src/app/dashboard/settings/components/PaypalCard.tsx` ✅
-- [x] `src/app/dashboard/settings/components/PrivacyCard.tsx` ✅
-- [x] `src/app/dashboard/settings/components/ProfileCard.tsx` ✅
-- [x] `src/app/dashboard/settings/components/SettingsHeader.tsx` ✅
-- [x] `src/app/dashboard/settings/components/SubscriptionsCard.tsx` ✅
-- [x] `src/app/dashboard/settings/components/types.ts` ✅
-- [x] `src/app/dashboard/settings/page.tsx` ✅
-- [x] `src/app/dashboard/social/page.tsx` ✅
-- [x] `src/app/dashboard/types.ts` ✅
-- [x] `src/app/dashboard/updates/page.tsx` ✅
-- [x] `src/app/discover/layout.tsx` ✅
-- [x] `src/app/discover/loading.tsx` ✅
-- [x] `src/app/discover/page.tsx` ✅
-- [x] `src/app/error.tsx` ✅
-- [x] `src/app/explore/page.tsx` ✅
-- [x] `src/app/faq/layout.tsx` ✅
-- [x] `src/app/faq/page.tsx` ✅
-- [x] `src/app/fees/calculations.ts` ✅
-- [x] `src/app/fees/data.ts` ✅
-- [x] `src/app/fees/layout.tsx` ✅
-- [x] `src/app/fees/page.tsx` ✅
-- [x] `src/app/fulfillment/page.tsx` ✅
-- [x] `src/app/global-error.tsx` ✅
-- [x] `src/app/help/page.tsx` ✅
-- [x] `src/app/help/whitelist/page.tsx` ✅
-- [x] `src/app/indiekit-handbook/layout.tsx` ✅
-- [x] `src/app/indiekit-handbook/page.tsx` ✅
-- [x] `src/app/layout.tsx` ✅
-- [x] `src/app/lcs-locator/layout.tsx` ✅
-- [x] `src/app/lcs-locator/page.tsx` ✅
-- [x] `src/app/marketplace-handbook/backers/page.tsx` ✅
-- [x] `src/app/marketplace-handbook/creators/page.tsx` ✅
-- [x] `src/app/marketplace-handbook/layout.tsx` ✅
-- [x] `src/app/marketplace/books/[slug]/layout.tsx` ✅
-- [x] `src/app/marketplace/books/[slug]/page.tsx` ✅
-- [x] `src/app/marketplace/books/featured/page.tsx` ✅
-- [x] `src/app/marketplace/books/layout.tsx` ✅
-- [x] `src/app/marketplace/books/page.tsx` ✅
-- [x] `src/app/marketplace/books/staff-picks/page.tsx` ✅
-- [x] `src/app/marketplace/checkout/success/page.tsx` ✅
-- [x] `src/app/marketplace/companies/[slug]/layout.tsx` ✅
-- [x] `src/app/marketplace/companies/[slug]/page.tsx` ✅
-- [x] `src/app/marketplace/components/MarketplacePayPalForm.tsx` ✅
-- [x] `src/app/marketplace/layout.tsx` ✅
-- [x] `src/app/marketplace/page.tsx` ✅
-- [x] `src/app/marketplace/physical-media/layout.tsx` ✅
-- [x] `src/app/marketplace/physical-media/page.tsx` ✅
-- [x] `src/app/not-found.tsx` ✅
-- [x] `src/app/page.tsx` ✅
-- [x] `src/app/pay/balance/[token]/page.tsx` ✅
-- [x] `src/app/privacy/layout.tsx` ✅
-- [x] `src/app/privacy/page.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/edit/page.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/layout.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/loading.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/page.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/AddonSelector.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/AddressWarning.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/Breadcrumb.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/DCPaymentWrapper.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/ErrorState.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/FAQSection.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/LoadingState.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/OrderSummary.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/PayPalPaymentForm.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/PaymentStep.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/RewardSelector.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/SuccessPage.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/constants.ts` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/hooks/usePledge.ts` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/page.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/types.ts` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/pledge/utils.ts` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/prelaunch/layout.tsx` ✅
-- [x] `src/app/projects/[vanityname]/[slug]/prelaunch/page.tsx` ✅
-- [x] `src/app/projects/new/page.tsx` ✅
-- [x] `src/app/projects/page.tsx` ✅
-- [x] `src/app/retailers/account/page.tsx` ✅
-- [x] `src/app/retailers/apply/page.tsx` ✅
-- [x] `src/app/retailers/dashboard/components/RetailerAccountTab.tsx` ✅
-- [x] `src/app/retailers/dashboard/components/RetailerInvoicesTab.tsx` ✅
-- [x] `src/app/retailers/dashboard/components/RetailerOrdersTab.tsx` ✅
-- [x] `src/app/retailers/dashboard/components/RetailerProjectsTab.tsx` ✅
-- [x] `src/app/retailers/dashboard/page.tsx` ✅
-- [x] `src/app/retailers/forgot-password/page.tsx` ✅
-- [x] `src/app/retailers/invoices/page.tsx` ✅
-- [x] `src/app/retailers/layout.tsx` ✅
-- [x] `src/app/retailers/login/page.tsx` ✅
-- [x] `src/app/retailers/orders/page.tsx` ✅
-- [x] `src/app/retailers/page.tsx` ✅
-- [x] `src/app/retailers/projects/[id]/page.tsx` ✅
-- [x] `src/app/retailers/projects/page.tsx` ✅
-- [x] `src/app/retailers/reset-password/page.tsx` ✅
-- [x] `src/app/robots.ts` ✅
-- [x] `src/app/settings/payment/page.tsx` ✅
-- [x] `src/app/settings/payment/stripe/complete/page.tsx` ✅
-- [x] `src/app/settings/payment/stripe/refresh/page.tsx` ✅
-- [x] `src/app/sitemap.ts` ✅
-- [x] `src/app/success-stories/page.tsx` ✅
-- [x] `src/app/survey/preview/page.tsx` ✅
-- [x] `src/app/term/page.tsx` ✅
-- [x] `src/app/terms/layout.tsx` ✅
-- [x] `src/app/terms/page.tsx` ✅
-- [x] `src/app/trust-safety/layout.tsx` ✅
-- [x] `src/app/trust-safety/page.tsx` ✅
-- [x] `src/app/u/[username]/layout.tsx` ✅
-- [x] `src/app/u/[username]/page.tsx` ✅
-- [x] `src/app/verification-complete/page.tsx` ✅
-- [x] `src/app/verify-email/page.tsx` ✅
-- [x] `src/app/what-is-divinitycoin/layout.tsx` ✅
-- [x] `src/app/what-is-divinitycoin/page.tsx` ✅
-- [x] `src/components/PdfPageFlipReader.tsx` ✅
-- [x] `src/components/PdfThumbnail.tsx` ✅
-- [x] `src/components/admin/ai-marketing/ai-settings-tab.tsx` ✅
-- [x] `src/components/admin/ai-marketing/auto-tagging-tab.tsx` ✅
-- [x] `src/components/admin/ai-marketing/behavior-analytics-tab.tsx` ✅
-- [x] `src/components/admin/ai-marketing/dialogs/campaign-dialog.tsx` ✅
-- [x] `src/components/admin/ai-marketing/dialogs/campaign-type-dialog.tsx` ✅
-- [x] `src/components/admin/ai-marketing/dialogs/csv-import-dialog.tsx` ✅
-- [x] `src/components/admin/ai-marketing/dialogs/index.ts` ✅
-- [x] `src/components/admin/ai-marketing/dialogs/results-viewer-dialog.tsx` ✅
-- [x] `src/components/admin/ai-marketing/dialogs/tag-review-dialog.tsx` ✅
-- [x] `src/components/admin/ai-marketing/email-campaigns-tab.tsx` 🔧 Fixed XSS: sanitize campaign HTML preview
-- [x] `src/components/admin/ai-marketing/index.ts` ✅
-- [x] `src/components/admin/ai-marketing/overview-tab.tsx` ✅
-- [x] `src/components/admin/ai-marketing/subscriber-list-tab.tsx` ✅
-- [x] `src/components/admin/ai-marketing/tag-segments-tab.tsx` ✅
-- [x] `src/components/admin/settings/ai-settings.tsx` ✅
-- [x] `src/components/admin/settings/analytics-settings.tsx` ✅
-- [x] `src/components/admin/settings/api-settings.tsx` ✅
-- [x] `src/components/admin/settings/communication-settings.tsx` ✅
-- [x] `src/components/admin/settings/database-settings.tsx` ✅
-- [x] `src/components/admin/settings/email-settings.tsx` ✅
-- [x] `src/components/admin/settings/general-settings.tsx` ✅
-- [x] `src/components/admin/settings/id-verification-settings.tsx` ✅
-- [x] `src/components/admin/settings/index.ts` ✅
-- [x] `src/components/admin/settings/payment-settings.tsx` ✅
-- [x] `src/components/admin/settings/security-settings.tsx` ✅
-- [x] `src/components/admin/settings/social-settings.tsx` ✅
-- [x] `src/components/admin/settings/storage-settings.tsx` ✅
-- [x] `src/components/announcement-bar.tsx` ✅
-- [x] `src/components/auth/forgot-password-form.tsx` ✅
-- [x] `src/components/auth/login-form.tsx` ✅
-- [x] `src/components/auth/recaptcha.tsx` ✅
-- [x] `src/components/auth/register-form.tsx` ✅
-- [x] `src/components/auth/reset-password-form.tsx` ✅
-- [x] `src/components/back-to-top.tsx` ✅
-- [x] `src/components/chat/chat-room.tsx` ✅
-- [x] `src/components/consent-banner.tsx` ✅
-- [x] `src/components/email-verification-banner.tsx` ✅
-- [x] `src/components/error-reporter.tsx` ✅
-- [x] `src/components/footer.tsx` ✅
-- [x] `src/components/google-analytics.tsx` 🔧 Fixed: validate ga4Id format before script injection
-- [x] `src/components/hero-slider.tsx` ✅
-- [x] `src/components/home-stats-poller.tsx` ✅
-- [x] `src/components/json-ld.tsx` 🔧 Fixed: escape </script> in JSON-LD output
-- [x] `src/components/legal/ai-policy.tsx` ✅
-- [x] `src/components/legal/backer-agreement.tsx` ✅
-- [x] `src/components/legal/chargebacks-policy.tsx` ✅
-- [x] `src/components/legal/content-guidelines.tsx` ✅
-- [x] `src/components/legal/cookie-policy.tsx` ✅
-- [x] `src/components/legal/creator-agreement.tsx` ✅
-- [x] `src/components/legal/data-deletion-policy.tsx` ✅
-- [x] `src/components/legal/dmca-policy.tsx` ✅
-- [x] `src/components/legal/fraud-policy.tsx` ✅
-- [x] `src/components/legal/gdpr-ccpa-policy.tsx` ✅
-- [x] `src/components/legal/index.ts` ✅
-- [x] `src/components/legal/nsfw-policy.tsx` ✅
-- [x] `src/components/legal/pci-compliance.tsx` ✅
-- [x] `src/components/legal/privacy-policy.tsx` ✅
-- [x] `src/components/legal/refund-policy.tsx` ✅
-- [x] `src/components/legal/shipping-policy.tsx` ✅
-- [x] `src/components/legal/terms-of-service.tsx` ✅
-- [x] `src/components/marketplace/marketplace-payment-settings.tsx` ✅
-- [x] `src/components/messaging/messages-panel.tsx` ✅
-- [x] `src/components/mobile-profile-links.tsx` ✅
-- [x] `src/components/notifications/notifications-dropdown.tsx` ✅
-- [x] `src/components/payment-settings.tsx` ✅
-- [x] `src/components/project-details/index.ts` ✅
-- [x] `src/components/project-details/social-icons.tsx` ✅
-- [x] `src/components/project-details/tabs/campaign-tab.tsx` ✅
-- [x] `src/components/project-details/tabs/comments-tab.tsx` ✅
-- [x] `src/components/project-details/tabs/community-tab.tsx` ✅
-- [x] `src/components/project-details/tabs/creator-tab.tsx` ✅
-- [x] `src/components/project-details/tabs/faq-tab.tsx` ✅
-- [x] `src/components/project-details/tabs/index.ts` ✅
-- [x] `src/components/project-details/tabs/rewards-tab.tsx` ✅
-- [x] `src/components/project-details/tabs/updates-tab.tsx` ✅
-- [x] `src/components/project-details/types.ts` ✅
-- [x] `src/components/project-details/utils.ts` ✅
-- [x] `src/components/project/builder/basics-step.tsx` ✅
-- [x] `src/components/project/builder/new-project-wrapper.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/campaign-type-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/chargeback-card-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/contact-email-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/content-declaration-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/divinity-coin-bank-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/index.ts` ✅
-- [x] `src/components/project/builder/payment-sections/payment-processor-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/paypal-bank-payout-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/paypal-payout-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/project-type-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/retailer-access-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/stripe-connect-section.tsx` ✅
-- [x] `src/components/project/builder/payment-sections/types.ts` ✅
-- [x] `src/components/project/builder/payment-sections/whop-bank-payout-section.tsx` ✅
-- [x] `src/components/project/builder/payment-step.tsx` ✅
-- [x] `src/components/project/builder/people-step.tsx` ✅
-- [x] `src/components/project/builder/project-builder.tsx` ✅
-- [x] `src/components/project/builder/promotion-step.tsx` ✅
-- [x] `src/components/project/builder/rewards-step.tsx` ✅
-- [x] `src/components/project/builder/rewards-step/addons-tab.tsx` ✅
-- [x] `src/components/project/builder/rewards-step/constants.ts` ✅
-- [x] `src/components/project/builder/rewards-step/csv-import-screen.tsx` ✅
-- [x] `src/components/project/builder/rewards-step/import-addon-dialog.tsx` ✅
-- [x] `src/components/project/builder/rewards-step/import-reward-dialog.tsx` ✅
-- [x] `src/components/project/builder/rewards-step/index.tsx` ✅
-- [x] `src/components/project/builder/rewards-step/item-dialog.tsx` ✅
-- [x] `src/components/project/builder/rewards-step/items-tab.tsx` ✅
-- [x] `src/components/project/builder/rewards-step/reward-form.tsx` ✅
-- [x] `src/components/project/builder/rewards-step/tiers-tab.tsx` ✅
-- [x] `src/components/project/builder/story-step.tsx` ✅
-- [x] `src/components/promo-popup.tsx` ✅
-- [x] `src/components/providers/auth-provider.tsx` ✅
-- [x] `src/components/providers/theme-provider.tsx` ✅
-- [x] `src/components/site-header.tsx` ✅
-- [x] `src/components/theme-toggle.tsx` ✅
-- [x] `src/components/tracking-provider.tsx` ✅
-- [x] `src/components/ui/accordion.tsx` ✅
-- [x] `src/components/ui/alert-dialog.tsx` ✅
-- [x] `src/components/ui/alert.tsx` ✅
-- [x] `src/components/ui/avatar.tsx` ✅
-- [x] `src/components/ui/badge.tsx` ✅
-- [x] `src/components/ui/block-editor.tsx` ✅
-- [x] `src/components/ui/button.tsx` ✅
-- [x] `src/components/ui/calendar.tsx` ✅
-- [x] `src/components/ui/card.tsx` ✅
-- [x] `src/components/ui/checkbox.tsx` ✅
-- [x] `src/components/ui/collapsible.tsx` ✅
-- [x] `src/components/ui/confirm-dialog.tsx` ✅
-- [x] `src/components/ui/countdown-timer.tsx` ✅
-- [x] `src/components/ui/dialog.tsx` ✅
-- [x] `src/components/ui/drag-drop-image-cell.tsx` ✅
-- [x] `src/components/ui/dropdown-menu.tsx` ✅
-- [x] `src/components/ui/editable-input.tsx` ✅
-- [x] `src/components/ui/email-editor.tsx` ✅
-- [x] `src/components/ui/form.tsx` ✅
-- [x] `src/components/ui/image-upload.tsx` ✅
-- [x] `src/components/ui/input.tsx` ✅
-- [x] `src/components/ui/label.tsx` ✅
-- [x] `src/components/ui/location-autocomplete.tsx` ✅
-- [x] `src/components/ui/popover.tsx` ✅
-- [x] `src/components/ui/progress.tsx` ✅
-- [x] `src/components/ui/radio-group.tsx` ✅
-- [x] `src/components/ui/rich-text-editor.tsx` ✅
-- [x] `src/components/ui/screen-reader-announcer.tsx` ✅
-- [x] `src/components/ui/scroll-area.tsx` ✅
-- [x] `src/components/ui/secure-key-input.tsx` ✅
-- [x] `src/components/ui/select.tsx` ✅
-- [x] `src/components/ui/separator.tsx` ✅
-- [x] `src/components/ui/sheet.tsx` ✅
-- [x] `src/components/ui/skeleton.tsx` ✅
-- [x] `src/components/ui/slider.tsx` ✅
-- [x] `src/components/ui/sonner.tsx` ✅
-- [x] `src/components/ui/switch.tsx` ✅
-- [x] `src/components/ui/table.tsx` ✅
-- [x] `src/components/ui/tabs.tsx` ✅
-- [x] `src/components/ui/textarea.tsx` ✅
-- [x] `src/components/ui/tooltip.tsx` ✅
-- [x] `src/components/user-profile-dropdown.tsx` ✅
-- [x] `src/instrumentation.ts` ✅
-- [x] `src/lib/ai/anthropic.ts` ✅
-- [x] `src/lib/ai/automation.ts` 🔧
-- [x] `src/lib/ai/index.ts` ✅
-- [x] `src/lib/ai/marketing-services.ts` 🔧
-- [x] `src/lib/ai/settings-integration.ts` ✅
-- [x] `src/lib/ai/user-interests.ts` 🔧
-- [x] `src/lib/api-error.ts` ✅
-- [x] `src/lib/audit.ts` ✅
-- [x] `src/lib/auth-helpers.ts` ✅
-- [x] `src/lib/auth/actions.ts` 🔧 Fixed info disclosure: password reset "User not found" message now uses generic error
-- [x] `src/lib/auth/constants.ts` ✅
-- [x] `src/lib/auth/email-access.ts` ✅
-- [x] `src/lib/auth/index.ts` ✅
-- [x] `src/lib/auth/rate-limit.ts` ✅
-- [x] `src/lib/auth/recaptcha.ts` ✅
-- [x] `src/lib/auth/session.ts` 🔧 Fixed soft-deleted users remaining authenticated (added deletedAt:null filter + null user check)
-- [x] `src/lib/bot-blocker.ts` ✅
-- [x] `src/lib/circuit-breaker.ts` ✅
-- [x] `src/lib/consent.ts` ✅
-- [x] `src/lib/correlation.ts` ✅
-- [x] `src/lib/csrf.ts` ✅
-- [x] `src/lib/db/index.ts` ✅
-- [x] `src/lib/email.ts` ✅
-- [x] `src/lib/email/email-config.ts` ✅
-- [x] `src/lib/email/email-templates-auth.ts` ✅
-- [x] `src/lib/email/email-templates-misc.ts` ✅
-- [x] `src/lib/email/email-templates-pledge.ts` ✅
-- [x] `src/lib/email/email-templates-project.ts` ✅
-- [x] `src/lib/email/sendgrid-verify.ts` ✅
-- [x] `src/lib/encryption.ts` ✅
-- [x] `src/lib/error-tracker.ts` ✅
-- [x] `src/lib/feature-flags.ts` ✅
-- [x] `src/lib/fetch-utils.ts` ✅
-- [x] `src/lib/gdpr/execute-deletions.ts` ✅
-- [x] `src/lib/local-books-db.ts` ✅
-- [x] `src/lib/logger.ts` ✅
-- [x] `src/lib/metrics.ts` ✅
-- [x] `src/lib/notifications.ts` ✅
-- [x] `src/lib/notifications/core.ts` ✅
-- [x] `src/lib/notifications/email-templates.ts` ✅
-- [x] `src/lib/notifications/index.ts` ✅
-- [x] `src/lib/notifications/marketplace-notifications.ts` 🔧
-- [x] `src/lib/notifications/pledge-notifications.ts` ✅
-- [x] `src/lib/notifications/project-notifications.ts` 🔧 Fixed: add deletedAt:null to user queries in notifications
-- [x] `src/lib/notifications/social-notifications.ts` ✅
-- [x] `src/lib/notifications/types.ts` ✅
-- [x] `src/lib/oauth/config.ts` ✅
-- [x] `src/lib/payments/divinitycoin/cards.ts` ✅
-- [x] `src/lib/payments/divinitycoin/client.ts` ✅
-- [x] `src/lib/payments/divinitycoin/config.ts` ✅
-- [x] `src/lib/payments/divinitycoin/index.ts` ✅
-- [x] `src/lib/payments/divinitycoin/payments.ts` ✅
-- [x] `src/lib/payments/divinitycoin/types.ts` ✅
-- [x] `src/lib/payments/divinitycoin/webhooks.ts` ✅
-- [x] `src/lib/payments/paypal/capture-authorized.ts` ✅
-- [x] `src/lib/payments/paypal/checkout.ts` ✅
-- [x] `src/lib/payments/paypal/config.ts` ✅
-- [x] `src/lib/payments/paypal/index.ts` ✅
-- [x] `src/lib/payments/stripe/charges.ts` ✅
-- [x] `src/lib/payments/stripe/checkout.ts` ✅
-- [x] `src/lib/payments/stripe/config.ts` ✅
-- [x] `src/lib/payments/stripe/connect.ts` ✅
-- [x] `src/lib/payments/stripe/customers.ts` ✅
-- [x] `src/lib/payments/stripe/index.ts` ✅
-- [x] `src/lib/payments/stripe/intents.ts` ✅
-- [x] `src/lib/payments/stripe/rewards.ts` ✅
-- [x] `src/lib/payments/stripe/webhooks.ts` ✅
-- [x] `src/lib/payments/whop/checkout.ts` ✅
-- [x] `src/lib/payments/whop/config.ts` ✅
-- [x] `src/lib/payments/whop/index.ts` ✅
-- [x] `src/lib/pdf-cover-extractor.ts` ✅
-- [x] `src/lib/project-auth.ts` ✅
-- [x] `src/lib/project-permissions.ts` 🔧
-- [x] `src/lib/r2.ts` ✅
-- [x] `src/lib/rate-limiter.ts` ✅
-- [x] `src/lib/recommendations/engine.ts` ✅
-- [x] `src/lib/retailer-auth.ts` ✅
-- [x] `src/lib/seo-audit.ts` ✅
-- [x] `src/lib/seo-defaults.ts` ✅
-- [x] `src/lib/seo/indexing.ts` ✅
-- [x] `src/lib/shopify-push.ts` ✅
-- [x] `src/lib/shufti.ts` ✅
-- [x] `src/lib/stats.ts` ✅
-- [x] `src/lib/stats/actions.ts` ✅
-- [x] `src/lib/stats/index.ts` ✅
-- [x] `src/lib/stats/utils.ts` ✅
-- [x] `src/lib/stores/project-store.ts` ✅
-- [x] `src/lib/tracking.ts` ✅
-- [x] `src/lib/tracking/index.ts` ✅
-- [x] `src/lib/usePdfAsImages.ts` ✅
-- [x] `src/lib/utils.ts` ✅
-- [x] `src/lib/utils/api-params.ts` ✅
-- [x] `src/lib/utils/sanitize.ts` ✅
-- [x] `src/lib/vault.ts` ✅
-- [x] `src/middleware.ts` ✅
-- [x] `src/types/api.ts` ✅
-- [x] `src/types/index.ts` ✅
+- [ ] `src/__tests__/json-ld.test.tsx` ⬜
+- [ ] `src/__tests__/setup.ts` ⬜
+- [ ] `src/__tests__/utils.test.ts` ⬜
+- [ ] `src/app/(auth)/choose-role/page.tsx` ⬜
+- [ ] `src/app/(auth)/forgot-password/page.tsx` ⬜
+- [ ] `src/app/(auth)/layout.tsx` ⬜
+- [ ] `src/app/(auth)/login/loading.tsx` ⬜
+- [ ] `src/app/(auth)/login/page.tsx` ⬜
+- [ ] `src/app/(auth)/register/loading.tsx` ⬜
+- [ ] `src/app/(auth)/register/page.tsx` ⬜
+- [ ] `src/app/(auth)/reset-password/page.tsx` ⬜
+- [ ] `src/app/[vanityname]/[slug]/page.tsx` ⬜
+- [ ] `src/app/about-us/layout.tsx` ⬜
+- [ ] `src/app/about-us/page.tsx` ⬜
+- [ ] `src/app/access-denied/page.tsx` ⬜
+- [ ] `src/app/admin/ai-marketing/page.tsx` ⬜
+- [ ] `src/app/admin/ai/components/ResultsViewerDialog.tsx` ⬜
+- [ ] `src/app/admin/ai/components/StatusBadges.tsx` ⬜
+- [ ] `src/app/admin/ai/components/index.ts` ⬜
+- [ ] `src/app/admin/ai/page.tsx` ⬜
+- [ ] `src/app/admin/ai/types.ts` ⬜
+- [ ] `src/app/admin/analytics/page.tsx` ⬜
+- [ ] `src/app/admin/announcement-bar/page.tsx` ⬜
+- [ ] `src/app/admin/bug-reports/page.tsx` ⬜
+- [ ] `src/app/admin/changelog/page.tsx` ⬜
+- [ ] `src/app/admin/consent-banner/page.tsx` ⬜
+- [ ] `src/app/admin/cron/page.tsx` ⬜
+- [ ] `src/app/admin/divinitycoin-redemptions/page.tsx` ⬜
+- [ ] `src/app/admin/email-queue/page.tsx` ⬜
+- [ ] `src/app/admin/email/components/ComposeEmailDialog.tsx` ⬜
+- [ ] `src/app/admin/email/components/MailboxDialog.tsx` ⬜
+- [ ] `src/app/admin/email/components/index.ts` ⬜
+- [ ] `src/app/admin/email/components/types.ts` ⬜
+- [ ] `src/app/admin/email/page.tsx` ⬜
+- [ ] `src/app/admin/error-logs/page.tsx` ⬜
+- [ ] `src/app/admin/error.tsx` ⬜
+- [ ] `src/app/admin/hero-slider/page.tsx` ⬜
+- [ ] `src/app/admin/layout.tsx` ⬜
+- [ ] `src/app/admin/lcs-locator/page.tsx` ⬜
+- [ ] `src/app/admin/link-sanitizer/page.tsx` ⬜
+- [ ] `src/app/admin/loading.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/AddToCategoryDialog.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/AllBooksTab.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/BookDetailPanel.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/BookListItem.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/BookListPanel.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/CategoryBookItem.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/CategoryManagementTab.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/HistoryTab.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/PdfManagementTab.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/RejectDialog.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/StatsCards.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/StatusBadges.tsx` ⬜
+- [ ] `src/app/admin/marketplace/components/TransactionsTab.tsx` ⬜
+- [ ] `src/app/admin/marketplace/page.tsx` ⬜
+- [ ] `src/app/admin/marketplace/types.ts` ⬜
+- [ ] `src/app/admin/media/components/EditFileDialog.tsx` ⬜
+- [ ] `src/app/admin/media/components/MoveFilesDialog.tsx` ⬜
+- [ ] `src/app/admin/media/components/NewFolderDialog.tsx` ⬜
+- [ ] `src/app/admin/media/components/ScanImportDialog.tsx` ⬜
+- [ ] `src/app/admin/media/components/UploadDialog.tsx` ⬜
+- [ ] `src/app/admin/media/components/index.ts` ⬜
+- [ ] `src/app/admin/media/page.tsx` ⬜
+- [ ] `src/app/admin/media/types.ts` ⬜
+- [ ] `src/app/admin/moderation/page.tsx` ⬜
+- [ ] `src/app/admin/notifications/page.tsx` ⬜
+- [ ] `src/app/admin/page-builder/page.tsx` ⬜
+- [ ] `src/app/admin/page.tsx` ⬜
+- [ ] `src/app/admin/payouts/components/BankDetailsDialog.tsx` ⬜
+- [ ] `src/app/admin/payouts/components/CreateSettlementDialog.tsx` ⬜
+- [ ] `src/app/admin/payouts/components/CreatorBalancePayoutDialog.tsx` ⬜
+- [ ] `src/app/admin/payouts/components/CreatorBalancesTable.tsx` ⬜
+- [ ] `src/app/admin/payouts/components/PayoutStatsCards.tsx` ⬜
+- [ ] `src/app/admin/payouts/components/ProjectDetailDialog.tsx` ⬜
+- [ ] `src/app/admin/payouts/components/ProjectsTable.tsx` ⬜
+- [ ] `src/app/admin/payouts/components/SettlementBadge.tsx` ⬜
+- [ ] `src/app/admin/payouts/components/types.ts` ⬜
+- [ ] `src/app/admin/payouts/page.tsx` ⬜
+- [ ] `src/app/admin/prelaunch/page.tsx` ⬜
+- [ ] `src/app/admin/projects/components/active-project-panel.tsx` ⬜
+- [ ] `src/app/admin/projects/components/dialogs/adjust-end-date-dialog.tsx` ⬜
+- [ ] `src/app/admin/projects/components/dialogs/deactivate-dialog.tsx` ⬜
+- [ ] `src/app/admin/projects/components/dialogs/index.ts` ⬜
+- [ ] `src/app/admin/projects/components/dialogs/make-live-dialog.tsx` ⬜
+- [ ] `src/app/admin/projects/components/dialogs/reject-dialog.tsx` ⬜
+- [ ] `src/app/admin/projects/components/dialogs/review-dialog.tsx` ⬜
+- [ ] `src/app/admin/projects/components/dialogs/set-vanity-url-dialog.tsx` ⬜
+- [ ] `src/app/admin/projects/components/flagged-tab.tsx` ⬜
+- [ ] `src/app/admin/projects/components/index.ts` ⬜
+- [ ] `src/app/admin/projects/components/prelaunch-tab.tsx` ⬜
+- [ ] `src/app/admin/projects/components/project-detail-panel.tsx` ⬜
+- [ ] `src/app/admin/projects/components/project-list-item.tsx` ⬜
+- [ ] `src/app/admin/projects/components/projects-filter-bar.tsx` ⬜
+- [ ] `src/app/admin/projects/components/review-history-tab.tsx` ⬜
+- [ ] `src/app/admin/projects/components/review-stats-cards.tsx` ⬜
+- [ ] `src/app/admin/projects/components/types.ts` ⬜
+- [ ] `src/app/admin/projects/components/unsubmitted-tab.tsx` ⬜
+- [ ] `src/app/admin/projects/components/utils.tsx` ⬜
+- [ ] `src/app/admin/projects/page.tsx` ⬜
+- [ ] `src/app/admin/promo-popup/page.tsx` ⬜
+- [ ] `src/app/admin/reconcile/page.tsx` ⬜
+- [ ] `src/app/admin/retailers/components/ActionConfirmDialog.tsx` ⬜
+- [ ] `src/app/admin/retailers/components/RetailerDetailDialog.tsx` ⬜
+- [ ] `src/app/admin/retailers/components/StarRating.tsx` ⬜
+- [ ] `src/app/admin/retailers/components/StatusBadges.tsx` ⬜
+- [ ] `src/app/admin/retailers/components/SurveyDetailDialog.tsx` ⬜
+- [ ] `src/app/admin/retailers/components/index.ts` ⬜
+- [ ] `src/app/admin/retailers/page.tsx` ⬜
+- [ ] `src/app/admin/retailers/types.ts` ⬜
+- [ ] `src/app/admin/security/page.tsx` ⬜
+- [ ] `src/app/admin/seo/components/AiSuggestionsTab.tsx` ⬜
+- [ ] `src/app/admin/seo/components/CronTab.tsx` ⬜
+- [ ] `src/app/admin/seo/components/DashboardTab.tsx` ⬜
+- [ ] `src/app/admin/seo/components/KeywordsTab.tsx` ⬜
+- [ ] `src/app/admin/seo/components/MetaTagsTab.tsx` ⬜
+- [ ] `src/app/admin/seo/components/PageAuditTab.tsx` ⬜
+- [ ] `src/app/admin/seo/components/RedirectsTab.tsx` ⬜
+- [ ] `src/app/admin/seo/components/helpers.tsx` ⬜
+- [ ] `src/app/admin/seo/components/index.ts` ⬜
+- [ ] `src/app/admin/seo/components/types.ts` ⬜
+- [ ] `src/app/admin/seo/page.tsx` ⬜
+- [ ] `src/app/admin/settings/page.tsx` ⬜
+- [ ] `src/app/admin/themes/page.tsx` ⬜
+- [ ] `src/app/admin/transactions/components/BreakdownCards.tsx` ⬜
+- [ ] `src/app/admin/transactions/components/StatsCards.tsx` ⬜
+- [ ] `src/app/admin/transactions/components/StripeLookupDialog.tsx` ⬜
+- [ ] `src/app/admin/transactions/components/TransactionBadges.tsx` ⬜
+- [ ] `src/app/admin/transactions/components/TransactionDetailDialog.tsx` ⬜
+- [ ] `src/app/admin/transactions/components/TransactionFilters.tsx` ⬜
+- [ ] `src/app/admin/transactions/components/TransactionTable.tsx` ⬜
+- [ ] `src/app/admin/transactions/components/index.ts` ⬜
+- [ ] `src/app/admin/transactions/components/types.ts` ⬜
+- [ ] `src/app/admin/transactions/components/utils.ts` ⬜
+- [ ] `src/app/admin/transactions/page.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/add-user-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/approval-action-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/delete-user-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/edit-retailer-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/edit-user-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/email-preview-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/index.ts` ⬜
+- [ ] `src/app/admin/users/components/dialogs/password-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/retailer-details-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/role-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/send-email-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/dialogs/user-details-dialog.tsx` ⬜
+- [ ] `src/app/admin/users/components/index.ts` ⬜
+- [ ] `src/app/admin/users/components/retailer-stats-cards.tsx` ⬜
+- [ ] `src/app/admin/users/components/retailer-table.tsx` ⬜
+- [ ] `src/app/admin/users/components/types.ts` ⬜
+- [ ] `src/app/admin/users/components/user-filters.tsx` ⬜
+- [ ] `src/app/admin/users/components/user-stats-cards.tsx` ⬜
+- [ ] `src/app/admin/users/components/user-table.tsx` ⬜
+- [ ] `src/app/admin/users/components/utils.tsx` ⬜
+- [ ] `src/app/admin/users/hooks.ts` ⬜
+- [ ] `src/app/admin/users/hooks/dialogs.ts` ⬜
+- [ ] `src/app/admin/users/hooks/index.ts` ⬜
+- [ ] `src/app/admin/users/hooks/usePledgeActions.ts` ⬜
+- [ ] `src/app/admin/users/hooks/useRetailerActions.ts` ⬜
+- [ ] `src/app/admin/users/hooks/useUserData.ts` ⬜
+- [ ] `src/app/admin/users/page.tsx` ⬜
+- [ ] `src/app/api/admin/ai-marketing/auto-tag/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/behavior/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/campaigns/[type]/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/campaigns/fix-images/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/abort/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/duplicate/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/test/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/campaigns/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/run/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/segments/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/services/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/stats/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/subscribers/import/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/subscribers/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/subscribers/tags/route.ts` ⬜
+- [ ] `src/app/api/admin/ai-marketing/user-interests/route.ts` ⬜
+- [ ] `src/app/api/admin/analytics/route.ts` ⬜
+- [ ] `src/app/api/admin/announcement-bar/route.ts` ⬜
+- [ ] `src/app/api/admin/api-keys/route.ts` ⬜
+- [ ] `src/app/api/admin/backfill-backer-numbers/route.ts` ⬜
+- [ ] `src/app/api/admin/bank-accounts/[id]/route.ts` ⬜
+- [ ] `src/app/api/admin/build-backup/download/route.ts` ⬜
+- [ ] `src/app/api/admin/build-backup/route.ts` ⬜
+- [ ] `src/app/api/admin/changelog/extract/route.ts` ⬜
+- [ ] `src/app/api/admin/changelog/route.ts` ⬜
+- [ ] `src/app/api/admin/cleanup-duplicate-rewards/route.ts` ⬜ Fixed missing deletedAt:null in reward queries (cleanup tool operated on soft-deleted rewards)
+- [ ] `src/app/api/admin/cleanup-pledges/route.ts` ⬜ Fixed missing deletedAt:null in base pledge where clause (admin cleanup could see deleted pledges)
+- [ ] `src/app/api/admin/consent-banner/route.ts` ⬜
+- [ ] `src/app/api/admin/cron/route.ts` ⬜
+- [ ] `src/app/api/admin/dashboard/route.ts` ⬜
+- [ ] `src/app/api/admin/database/backup/download/route.ts` ⬜
+- [ ] `src/app/api/admin/database/backup/restore/route.ts` ⬜
+- [ ] `src/app/api/admin/database/backup/route.ts` ⬜
+- [ ] `src/app/api/admin/database/status/route.ts` ⬜ Fixed count queries missing deletedAt:null (inflated stats including soft-deleted records)
+- [ ] `src/app/api/admin/divinity-payouts/route.ts` ⬜ Fixed race condition in PATCH — now uses atomic updateMany with status guard
+- [ ] `src/app/api/admin/divinitycoin-redemptions/route.ts` ⬜
+- [ ] `src/app/api/admin/email-blocklist/[id]/route.ts` ⬜
+- [ ] `src/app/api/admin/email-blocklist/purge/route.ts` ⬜
+- [ ] `src/app/api/admin/email-blocklist/route.ts` ⬜
+- [ ] `src/app/api/admin/email-queue/route.ts` ⬜
+- [ ] `src/app/api/admin/email/route.ts` ⬜
+- [ ] `src/app/api/admin/emails/[emailId]/route.ts` ⬜
+- [ ] `src/app/api/admin/error-logs/[id]/route.ts` ⬜
+- [ ] `src/app/api/admin/error-logs/route.ts` ⬜
+- [ ] `src/app/api/admin/feature-flags/route.ts` ⬜
+- [ ] `src/app/api/admin/hero-slides/migrate/route.ts` ⬜
+- [ ] `src/app/api/admin/hero-slides/route.ts` ⬜
+- [ ] `src/app/api/admin/lcs-locator/cleanup-emails/route.ts` ⬜
+- [ ] `src/app/api/admin/lcs-locator/shops/route.ts` ⬜
+- [ ] `src/app/api/admin/link-sanitizer/route.ts` ⬜
+- [ ] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/attachments/[attachmentId]/route.ts` ⬜
+- [ ] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/route.ts` ⬜
+- [ ] `src/app/api/admin/mailboxes/[id]/emails/route.ts` ⬜
+- [ ] `src/app/api/admin/mailboxes/[id]/route.ts` ⬜
+- [ ] `src/app/api/admin/mailboxes/route.ts` ⬜
+- [ ] `src/app/api/admin/marketplace/books/[id]/feature/route.ts` ⬜
+- [ ] `src/app/api/admin/marketplace/books/[id]/review/route.ts` ⬜
+- [ ] `src/app/api/admin/marketplace/books/[id]/route.ts` ⬜
+- [ ] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts` ⬜
+- [ ] `src/app/api/admin/marketplace/books/reorder/route.ts` ⬜
+- [ ] `src/app/api/admin/marketplace/books/route.ts` ⬜
+- [ ] `src/app/api/admin/marketplace/history/route.ts` ⬜
+- [ ] `src/app/api/admin/marketplace/pdf-management/route.ts` ⬜
+- [ ] `src/app/api/admin/marketplace/transactions/route.ts` ⬜
+- [ ] `src/app/api/admin/media/route.ts` ⬜
+- [ ] `src/app/api/admin/media/scan/route.ts` ⬜
+- [ ] `src/app/api/admin/media/upload/route.ts` ⬜
+- [ ] `src/app/api/admin/notifications/route.ts` ⬜
+- [ ] `src/app/api/admin/pages/route.ts` ⬜
+- [ ] `src/app/api/admin/payouts/divinitycoin/route.ts` ⬜
+- [ ] `src/app/api/admin/payouts/paypal/route.ts` ⬜
+- [ ] `src/app/api/admin/payouts/route.ts` ⬜ Fixed race condition in PATCH — atomic updateMany with status guard
+- [ ] `src/app/api/admin/payouts/whop/route.ts` ⬜
+- [ ] `src/app/api/admin/pledges/[pledgeId]/route.ts` ⬜
+- [ ] `src/app/api/admin/pledges/cleanup/route.ts` ⬜
+- [ ] `src/app/api/admin/prelaunch/route.ts` ⬜
+- [ ] `src/app/api/admin/projects/[projectId]/adjust-end-date/route.ts` ⬜
+- [ ] `src/app/api/admin/projects/[projectId]/backfill-backer-numbers/route.ts` ⬜
+- [ ] `src/app/api/admin/projects/[projectId]/process-pledges/route.ts` ⬜
+- [ ] `src/app/api/admin/projects/history/route.ts` ⬜
+- [ ] `src/app/api/admin/projects/link-preview/route.ts` ⬜
+- [ ] `src/app/api/admin/projects/review/route.ts` ⬜
+- [ ] `src/app/api/admin/projects/status/route.ts` ⬜
+- [ ] `src/app/api/admin/promo-popup/route.ts` ⬜
+- [ ] `src/app/api/admin/recalculate-pledge-amounts/route.ts` ⬜
+- [ ] `src/app/api/admin/reconcile-pledges/route.ts` ⬜
+- [ ] `src/app/api/admin/reports/route.ts` ⬜
+- [ ] `src/app/api/admin/retailers/resend-approval/route.ts` ⬜
+- [ ] `src/app/api/admin/retailers/route.ts` ⬜
+- [ ] `src/app/api/admin/retailers/surveys/route.ts` ⬜
+- [ ] `src/app/api/admin/security/encrypt-secrets/route.ts` ⬜
+- [ ] `src/app/api/admin/security/stats/route.ts` ⬜
+- [ ] `src/app/api/admin/seo/audit/route.ts` ⬜
+- [ ] `src/app/api/admin/seo/cron/route.ts` ⬜
+- [ ] `src/app/api/admin/seo/fix-all/route.ts` ⬜
+- [ ] `src/app/api/admin/seo/keywords/route.ts` ⬜
+- [ ] `src/app/api/admin/seo/pages/route.ts` ⬜
+- [ ] `src/app/api/admin/seo/redirects/route.ts` ⬜
+- [ ] `src/app/api/admin/seo/route.ts` ⬜
+- [ ] `src/app/api/admin/settings/route.ts` ⬜
+- [ ] `src/app/api/admin/settings/test-r2/route.ts` ⬜
+- [ ] `src/app/api/admin/sidebar-stats/route.ts` ⬜
+- [ ] `src/app/api/admin/sync-all-project-stats/route.ts` ⬜
+- [ ] `src/app/api/admin/transactions/[id]/route.ts` ⬜
+- [ ] `src/app/api/admin/transactions/route.ts` ⬜ Fixed null crash on bankAccount.user in querySettlements (orphaned FK)
+- [ ] `src/app/api/admin/transactions/stripe-lookup/route.ts` ⬜
+- [ ] `src/app/api/admin/users/[userId]/emails/route.ts` ⬜
+- [ ] `src/app/api/admin/users/[userId]/pledges/route.ts` ⬜ Fixed missing deletedAt:null in user pledges query (showed soft-deleted pledges)
+- [ ] `src/app/api/admin/users/[userId]/vanity-url/route.ts` ⬜
+- [ ] `src/app/api/admin/users/merge-duplicates/route.ts` ⬜
+- [ ] `src/app/api/admin/users/route.ts` ⬜ Fixed UPDATE_ROLE missing CREATOR in valid roles list (admins could not set CREATOR role)
+- [ ] `src/app/api/admin/wallet/route.ts` ⬜
+- [ ] `src/app/api/ai/auto-tag/route.ts` ⬜
+- [ ] `src/app/api/ai/marketing-copy/route.ts` ⬜
+- [ ] `src/app/api/ai/moderate/route.ts` ⬜
+- [ ] `src/app/api/analytics/route.ts` ⬜
+- [ ] `src/app/api/announcement-bar/route.ts` ⬜
+- [ ] `src/app/api/auth/config/route.ts` ⬜
+- [ ] `src/app/api/auth/logout/route.ts` ⬜
+- [ ] `src/app/api/auth/recaptcha/route.ts` ⬜
+- [ ] `src/app/api/auth/session/route.ts` ⬜
+- [ ] `src/app/api/auth/social/[provider]/callback/route.ts` ⬜
+- [ ] `src/app/api/auth/social/[provider]/route.ts` ⬜
+- [ ] `src/app/api/auth/social/connections/route.ts` ⬜
+- [ ] `src/app/api/backer/addresses/[id]/route.ts` ⬜
+- [ ] `src/app/api/backer/addresses/route.ts` ⬜
+- [ ] `src/app/api/backer/analytics/export/route.ts` ⬜
+- [ ] `src/app/api/backer/analytics/route.ts` ⬜
+- [ ] `src/app/api/backer/collections/[id]/route.ts` ⬜
+- [ ] `src/app/api/backer/collections/route.ts` ⬜
+- [ ] `src/app/api/backer/dashboard/route.ts` ⬜
+- [ ] `src/app/api/backer/digital-files/extract-cover/route.ts` ⬜
+- [ ] `src/app/api/backer/digital-files/progress/route.ts` ⬜
+- [ ] `src/app/api/backer/digital-files/route.ts` ⬜
+- [ ] `src/app/api/backer/digital-files/stream/route.ts` ⬜
+- [ ] `src/app/api/backer/digital-library/route.ts` ⬜
+- [ ] `src/app/api/backer/following/route.ts` ⬜
+- [ ] `src/app/api/backer/marketplace-purchases/[id]/download/route.ts` ⬜ Removed debug log that leaked other users buyerId/status on unauthorized access attempts
+- [ ] `src/app/api/backer/notifications/preferences/route.ts` ⬜
+- [ ] `src/app/api/backer/surveys/route.ts` ⬜
+- [ ] `src/app/api/blocked/route.ts` ⬜
+- [ ] `src/app/api/bug-reports/route.ts` ⬜
+- [ ] `src/app/api/chat/admin/ban/route.ts` ⬜
+- [ ] `src/app/api/chat/admin/delete/route.ts` ⬜
+- [ ] `src/app/api/chat/messages/route.ts` ⬜
+- [ ] `src/app/api/chat/presence/route.ts` ⬜
+- [ ] `src/app/api/chat/stickers/route.ts` ⬜
+- [ ] `src/app/api/collaborations/[id]/route.ts` ⬜
+- [ ] `src/app/api/collaborations/route.ts` ⬜
+- [ ] `src/app/api/collaborator/[id]/respond/route.ts` ⬜
+- [ ] `src/app/api/collaborator/[id]/route.ts` ⬜
+- [ ] `src/app/api/consent-banner/route.ts` ⬜
+- [ ] `src/app/api/contact/route.ts` ⬜
+- [ ] `src/app/api/creator/account/avatar/route.ts` ⬜
+- [ ] `src/app/api/creator/account/password/route.ts` ⬜
+- [ ] `src/app/api/creator/account/preferences/route.ts` ⬜
+- [ ] `src/app/api/creator/account/profile/route.ts` ⬜
+- [ ] `src/app/api/creator/bank-account/route.ts` ⬜
+- [ ] `src/app/api/creator/dashboard/route.ts` ⬜
+- [ ] `src/app/api/creator/digital-files/route.ts` ⬜
+- [ ] `src/app/api/creator/email-marketing/campaigns/route.ts` ⬜
+- [ ] `src/app/api/creator/email-marketing/subscribers/[id]/route.ts` ⬜
+- [ ] `src/app/api/creator/email-marketing/subscribers/import/route.ts` ⬜
+- [ ] `src/app/api/creator/email-marketing/subscribers/route.ts` ⬜
+- [ ] `src/app/api/creator/email/campaign/route.ts` ⬜
+- [ ] `src/app/api/creator/email/compose/route.ts` ⬜
+- [ ] `src/app/api/creator/email/send-test/route.ts` ⬜
+- [ ] `src/app/api/creator/email/setup/route.ts` ⬜
+- [ ] `src/app/api/creator/email/threads/[threadId]/archive/route.ts` ⬜
+- [ ] `src/app/api/creator/email/threads/[threadId]/delete/route.ts` ⬜
+- [ ] `src/app/api/creator/email/threads/[threadId]/forward/route.ts` ⬜
+- [ ] `src/app/api/creator/email/threads/[threadId]/messages/route.ts` ⬜
+- [ ] `src/app/api/creator/email/threads/[threadId]/read/route.ts` ⬜
+- [ ] `src/app/api/creator/email/threads/[threadId]/reply/route.ts` ⬜
+- [ ] `src/app/api/creator/email/threads/[threadId]/star/route.ts` ⬜
+- [ ] `src/app/api/creator/email/threads/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/addons/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/address/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/backers/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/campaigns/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/digital/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/easypost/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/export/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/feedback/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/fulfillment/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/build-package-groups.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/compute-stats.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/format-digital-files.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/format-distribution-rules.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/format-email-campaigns.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/format-products.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/format-segments.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/format-timeline.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/index.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/post-campaign-sales.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/process-backers.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/helpers/workflow.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/integrations/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/modifiers/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/notes/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/orders/notify-balance/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/orders/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/products/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/segments/backers/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/segments/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/settings/image/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/settings/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/shipping-providers/credentials/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/shipping/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/shippo/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/shipstation/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/shopify/credentials/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/shopify/oauth/authorize/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/shopify/oauth/callback/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/shopify/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/shopify/sku-mapping/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/stamps/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/surveys/[pledgeId]/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/surveys/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/timeline/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/transactions/route.ts` ⬜
+- [ ] `src/app/api/creator/indiekit/updates/route.ts` ⬜
+- [ ] `src/app/api/creator/marketplace/books/[id]/route.ts` ⬜
+- [ ] `src/app/api/creator/marketplace/books/[id]/submit/route.ts` ⬜
+- [ ] `src/app/api/creator/marketplace/books/route.ts` ⬜
+- [ ] `src/app/api/creator/marketplace/company/route.ts` ⬜
+- [ ] `src/app/api/creator/marketplace/discount-codes/route.ts` ⬜
+- [ ] `src/app/api/creator/marketplace/files/route.ts` ⬜
+- [ ] `src/app/api/creator/marketplace/files/upload/route.ts` ⬜
+- [ ] `src/app/api/creator/marketplace/route.ts` ⬜
+- [ ] `src/app/api/creator/media/upload/route.ts` ⬜
+- [ ] `src/app/api/creator/paypal-bank-account/route.ts` ⬜
+- [ ] `src/app/api/creator/paypal/route.ts` ⬜
+- [ ] `src/app/api/creator/pledges/[pledgeId]/route.ts` ⬜
+- [ ] `src/app/api/creator/pledges/bulk-delete/route.ts` ⬜ Fixed missing deletedAt:null in pledge query
+- [ ] `src/app/api/creator/prelaunch-pages/route.ts` ⬜
+- [ ] `src/app/api/creator/projects-for-import/route.ts` ⬜
+- [ ] `src/app/api/creator/refund-requests/[requestId]/route.ts` ⬜
+- [ ] `src/app/api/creator/refund-requests/route.ts` ⬜
+- [ ] `src/app/api/creator/stripe/portal/route.ts` ⬜
+- [ ] `src/app/api/creator/whop-bank-account/route.ts` ⬜
+- [ ] `src/app/api/cron/ai-marketing/route.ts` ⬜ Added POST handler for consistency with other cron endpoints
+- [ ] `src/app/api/cron/cleanup-pledges/route.ts` ⬜
+- [ ] `src/app/api/cron/cleanup-projects/route.ts` ⬜
+- [ ] `src/app/api/cron/email-queue/route.ts` ⬜
+- [ ] `src/app/api/cron/email-retries/route.ts` ⬜
+- [ ] `src/app/api/cron/payment-retries/route.ts` ⬜
+- [ ] `src/app/api/cron/process-failed-campaigns/route.ts` ⬜
+- [ ] `src/app/api/cron/process-funded-campaigns/route.ts` ⬜
+- [ ] `src/app/api/cron/scheduled-campaigns/route.ts` ⬜ Added POST handler for consistency with other cron endpoints
+- [ ] `src/app/api/diagnostics/payment/route.ts` ⬜
+- [ ] `src/app/api/divinitycoin/config/route.ts` ⬜
+- [ ] `src/app/api/email/track/click/route.ts` ⬜
+- [ ] `src/app/api/email/track/open/route.ts` ⬜
+- [ ] `src/app/api/error-report/route.ts` ⬜
+- [ ] `src/app/api/health/route.ts` ⬜
+- [ ] `src/app/api/hero-slides/route.ts` ⬜
+- [ ] `src/app/api/home-stats/route.ts` ⬜
+- [ ] `src/app/api/internal/blocked-ips/route.ts` ⬜
+- [ ] `src/app/api/lcs-locator/import/route.ts` ⬜
+- [ ] `src/app/api/lcs-locator/route.ts` ⬜
+- [ ] `src/app/api/marketplace/books/[slug]/route.ts` ⬜
+- [ ] `src/app/api/marketplace/books/route.ts` ⬜
+- [ ] `src/app/api/marketplace/checkout/route.ts` ⬜
+- [ ] `src/app/api/marketplace/checkout/verify/route.ts` ⬜
+- [ ] `src/app/api/marketplace/companies/[slug]/route.ts` ⬜
+- [ ] `src/app/api/marketplace/companies/route.ts` ⬜
+- [ ] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts` ⬜
+- [ ] `src/app/api/marketplace/purchase/confirm/route.ts` ⬜
+- [ ] `src/app/api/marketplace/purchase/route.ts` ⬜
+- [ ] `src/app/api/marketplace/redeem-code/route.ts` ⬜
+- [ ] `src/app/api/marketplace/validate-code/route.ts` ⬜ Fixed missing deletedAt:null on book lookup (soft-deleted books could be used for code validation)
+- [ ] `src/app/api/messages/route.ts` ⬜
+- [ ] `src/app/api/messages/user-info/route.ts` ⬜
+- [ ] `src/app/api/metrics/route.ts` ⬜
+- [ ] `src/app/api/og/route.tsx` ⬜
+- [ ] `src/app/api/pay/balance/confirm/route.ts` ⬜
+- [ ] `src/app/api/pay/balance/route.ts` ⬜
+- [ ] `src/app/api/paypal/capture/[orderId]/route.ts` ⬜
+- [ ] `src/app/api/paypal/client-token/route.ts` ⬜
+- [ ] `src/app/api/paypal/config/route.ts` ⬜
+- [ ] `src/app/api/platform-stats/route.ts` ⬜
+- [ ] `src/app/api/pledges/[pledgeId]/add-items/route.ts` ⬜
+- [ ] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts` ⬜
+- [ ] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ⬜
+- [ ] `src/app/api/pledges/[pledgeId]/confirm/route.ts` ⬜
+- [ ] `src/app/api/pledges/[pledgeId]/route.ts` ⬜ Fixed race condition: second modification request now blocked while pendingModification awaits payment
+- [ ] `src/app/api/pledges/check/route.ts` ⬜
+- [ ] `src/app/api/pledges/route.ts` ⬜
+- [ ] `src/app/api/privacy/ccpa-opt-out/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/basics/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/chargeback-card/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/collaborators/me/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/collaborators/route.ts` ⬜ Fixed IDOR in DELETE: added projectId to where clause so project owners cannot delete collaborators from other projects
+- [ ] `src/app/api/projects/[id]/comments/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/contact-email/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/items/[itemId]/end/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/items/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/launch/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/members/import/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/members/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/payment/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/prelaunch/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/promotion/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/reviews/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/rewards/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/story/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/submit/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/survey/backer-questions/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/survey/item-questions/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/survey/lock/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/survey/responses/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/survey/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/survey/send/route.ts` ⬜
+- [ ] `src/app/api/projects/[id]/sync-stats/route.ts` ⬜
+- [ ] `src/app/api/projects/route.ts` ⬜
+- [ ] `src/app/api/projects/similar/route.ts` ⬜
+- [ ] `src/app/api/projects/slug/[slug]/check/route.ts` ⬜
+- [ ] `src/app/api/projects/slug/[slug]/route.ts` ⬜
+- [ ] `src/app/api/projects/slug/[slug]/stats/route.ts` ⬜
+- [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts` ⬜
+- [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts` ⬜
+- [ ] `src/app/api/promo-popup/route.ts` ⬜
+- [ ] `src/app/api/r2/serve/[...key]/route.ts` ⬜
+- [ ] `src/app/api/recommendations/route.ts` ⬜
+- [ ] `src/app/api/retailers/account/route.ts` ⬜
+- [ ] `src/app/api/retailers/apply/route.ts` ⬜
+- [ ] `src/app/api/retailers/forgot-password/route.ts` ⬜
+- [ ] `src/app/api/retailers/invoices/route.ts` ⬜
+- [ ] `src/app/api/retailers/login/route.ts` ⬜
+- [ ] `src/app/api/retailers/logout/route.ts` ⬜
+- [ ] `src/app/api/retailers/me/route.ts` ⬜
+- [ ] `src/app/api/retailers/orders/route.ts` ⬜
+- [ ] `src/app/api/retailers/projects/[id]/route.ts` ⬜
+- [ ] `src/app/api/retailers/projects/route.ts` ⬜
+- [ ] `src/app/api/retailers/reset-password/route.ts` ⬜
+- [ ] `src/app/api/retailers/session-auth/route.ts` ⬜
+- [ ] `src/app/api/rewards/[id]/copy-to-addon/route.ts` ⬜
+- [ ] `src/app/api/rewards/[id]/end/route.ts` ⬜
+- [ ] `src/app/api/rewards/[id]/shipping/route.ts` ⬜
+- [ ] `src/app/api/rewards/route.ts` ⬜
+- [ ] `src/app/api/stripe/config/route.ts` ⬜
+- [ ] `src/app/api/stripe/connect/refresh/route.ts` ⬜
+- [ ] `src/app/api/stripe/connect/reset/route.ts` ⬜
+- [ ] `src/app/api/stripe/connect/route.ts` ⬜
+- [ ] `src/app/api/stripe/connect/status/route.ts` ⬜
+- [ ] `src/app/api/surveys/[pledgeId]/respond/route.ts` ⬜ Fixed race condition on survey submit: atomic updateMany with isComplete:false guard prevents double-submission
+- [ ] `src/app/api/surveys/route.ts` ⬜
+- [ ] `src/app/api/track/route.ts` ⬜
+- [ ] `src/app/api/tracking/route.ts` ⬜
+- [ ] `src/app/api/unsubscribe/route.ts` ⬜
+- [ ] `src/app/api/updates/route.ts` ⬜
+- [ ] `src/app/api/upload/route.ts` ⬜
+- [ ] `src/app/api/uploads/[...path]/route.ts` ⬜
+- [ ] `src/app/api/user/activity/route.ts` ⬜
+- [ ] `src/app/api/user/data-deletion/route.ts` ⬜
+- [ ] `src/app/api/user/data-export/route.ts` ⬜
+- [ ] `src/app/api/user/following/route.ts` ⬜
+- [ ] `src/app/api/user/me/route.ts` ⬜
+- [ ] `src/app/api/user/notifications/route.ts` ⬜
+- [ ] `src/app/api/user/profile-dropdown/route.ts` ⬜
+- [ ] `src/app/api/user/profile/route.ts` ⬜
+- [ ] `src/app/api/user/public-profile/[username]/route.ts` ⬜
+- [ ] `src/app/api/user/settings/email/route.ts` ⬜
+- [ ] `src/app/api/user/settings/route.ts` ⬜
+- [ ] `src/app/api/user/vanity-url/route.ts` ⬜
+- [ ] `src/app/api/user/verify-email/route.ts` ⬜
+- [ ] `src/app/api/verify-id/callback/route.ts` ⬜
+- [ ] `src/app/api/verify-id/check/route.ts` ⬜
+- [ ] `src/app/api/verify-id/route.ts` ⬜
+- [ ] `src/app/api/webhooks/divinitycoin/route.ts` ⬜
+- [ ] `src/app/api/webhooks/email/events/route.ts` ⬜
+- [ ] `src/app/api/webhooks/email/inbound/route.ts` ⬜
+- [ ] `src/app/api/webhooks/paypal/route.ts` ⬜ Added processedWebhookEvent deduplication (PayPal retries could double-count backers/amounts)
+- [ ] `src/app/api/webhooks/stripe/connect/route.ts` ⬜
+- [ ] `src/app/api/webhooks/stripe/route.ts` ⬜
+- [ ] `src/app/api/webhooks/stripe_connect/route.ts` ⬜
+- [ ] `src/app/api/webhooks/whop/route.ts` ⬜
+- [ ] `src/app/api/whop/config/route.ts` ⬜
+- [ ] `src/app/api/whop/confirm/[pledgeId]/route.ts` ⬜
+- [ ] `src/app/backer-handbook/layout.tsx` ⬜
+- [ ] `src/app/backer-handbook/page.tsx` ⬜
+- [ ] `src/app/bug-report/layout.tsx` ⬜
+- [ ] `src/app/bug-report/page.tsx` ⬜
+- [ ] `src/app/cart/page.tsx` ⬜
+- [ ] `src/app/changelog/page.tsx` ⬜
+- [ ] `src/app/chat/page.tsx` ⬜
+- [ ] `src/app/collaborate/[id]/page.tsx` ⬜
+- [ ] `src/app/collaborate/layout.tsx` ⬜
+- [ ] `src/app/contact/layout.tsx` ⬜
+- [ ] `src/app/contact/page.tsx` ⬜
+- [ ] `src/app/creator-handbook/layout.tsx` ⬜
+- [ ] `src/app/creator-handbook/page.tsx` ⬜
+- [ ] `src/app/dashboard/activity/page.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/address-management-tab.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/animated-bar-chart.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/circular-progress.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/collections-tab.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/digital-downloads-tab.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/digital-library-sections/constants.ts` ⬜
+- [ ] `src/app/dashboard/backer/components/digital-library-sections/index.ts` ⬜
+- [ ] `src/app/dashboard/backer/components/digital-library-sections/library-card.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/digital-library-sections/library-toolbar.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/digital-library-sections/reader-view.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/digital-library-sections/types.ts` ⬜
+- [ ] `src/app/dashboard/backer/components/digital-library-tab.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/download-card.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/following-tab.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/fulfillment-pipeline.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/glowing-stat-card.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/index.ts` ⬜
+- [ ] `src/app/dashboard/backer/components/messages-tab.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/notification-preferences-tab.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/spending-analytics-tab.tsx` ⬜
+- [ ] `src/app/dashboard/backer/components/survey-hub-tab.tsx` ⬜
+- [ ] `src/app/dashboard/backer/page.tsx` ⬜
+- [ ] `src/app/dashboard/components/AnimatedBarChart.tsx` ⬜
+- [ ] `src/app/dashboard/components/BackersList.tsx` ⬜
+- [ ] `src/app/dashboard/components/CircularProgress.tsx` ⬜
+- [ ] `src/app/dashboard/components/CollaborationsTab.tsx` ⬜
+- [ ] `src/app/dashboard/components/EmailTab.tsx` ⬜
+- [ ] `src/app/dashboard/components/FundingChart.tsx` ⬜
+- [ ] `src/app/dashboard/components/GlowingStatCard.tsx` ⬜
+- [ ] `src/app/dashboard/components/IndieKitV2Tab.tsx` ⬜
+- [ ] `src/app/dashboard/components/MarketplaceTab.tsx` ⬜
+- [ ] `src/app/dashboard/components/PostUpdatesTab.tsx` ⬜
+- [ ] `src/app/dashboard/components/ProductionOrderView.tsx` ⬜
+- [ ] `src/app/dashboard/components/ProjectSelector.tsx` ⬜
+- [ ] `src/app/dashboard/components/QuickStats.tsx` ⬜
+- [ ] `src/app/dashboard/components/RecentBackersCard.tsx` ⬜
+- [ ] `src/app/dashboard/components/RewardStats.tsx` ⬜
+- [ ] `src/app/dashboard/components/SocialHubTab.tsx` ⬜
+- [ ] `src/app/dashboard/components/StatsCards.tsx` ⬜
+- [ ] `src/app/dashboard/components/StripeAccountAlert.tsx` ⬜
+- [ ] `src/app/dashboard/components/TrafficSources.tsx` ⬜
+- [ ] `src/app/dashboard/components/index.ts` ⬜
+- [ ] `src/app/dashboard/error.tsx` ⬜
+- [ ] `src/app/dashboard/following/page.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/layout/PhaseSelector.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/layout/WorkflowProgress.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/DashboardTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/DigitalDeliveryTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/EmailMarketingTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/FinalizeTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/PaymentsTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/PhysicalDeliveryTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/RefundRequestsTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/ReportsTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/SetupTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/components/tabs/SurveysTab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/constants.ts` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/page.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit-v2/types.ts` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/addon-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/address-validation-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/backer-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/balance-editor-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/confirm-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/distribution-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/edit-order-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/email-composer-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/email-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/export-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/import-addon-from-project-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/import-email-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/index.ts` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/notes-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/nps-feedback-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/packing-slip-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/refund-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/segment-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/tracking-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/dialogs/upload-dialog.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/account-settings-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/addons-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/backers-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/counts-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/digital-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/email-list-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/emails-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/export-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/inbox-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/index.ts` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/manage-survey-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/overview-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/packages-sections/index.ts` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/packages-sections/instructions-content.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/packages-sections/package-group-card.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/packages-sections/packages-dialogs.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/packages-sections/sku-mapping-content.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/packages-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/preorders-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/products-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/projects-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/segments-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/general-section.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/index.ts` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/integrations-section.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/notifications-section.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/payments-section.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/shipping-providers-section.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/shipping-section.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/shopify-credentials-section.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/survey-section.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-sections/team-section.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/settings-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/shipping-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/index.ts` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/modifier-combination-row.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/modifier-combinations-card.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/sku-input-field.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/sku-item-row.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/sku-mapping-sections/types.ts` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/sku-mapping-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/support-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/survey-builder-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/teaser-pages-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/timeline-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/transaction-history-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/tabs/updates-tab.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/ui/charts.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/ui/empty-states.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/ui/global-search.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/ui/help-tooltip.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/ui/index.ts` ⬜
+- [ ] `src/app/dashboard/indiekit/components/ui/keyboard-shortcuts.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/ui/skeleton.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/components/whats-next-banner.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/constants.ts` ⬜
+- [ ] `src/app/dashboard/indiekit/emails/[id]/edit/page.tsx` ⬜ Fixed XSS: sanitize email preview HTML
+- [ ] `src/app/dashboard/indiekit/page.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/shopify/app/page.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/shopify/install/page.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/survey/[pledgeId]/page.tsx` ⬜
+- [ ] `src/app/dashboard/indiekit/types.ts` ⬜
+- [ ] `src/app/dashboard/layout.tsx` ⬜
+- [ ] `src/app/dashboard/loading.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/components/FileUpload.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/components/PDFFilePicker.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/components/StatusBanner.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/components/StepBasicInfo.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/components/StepIndicator.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/components/StepMedia.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/components/StepPricing.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/components/StepReview.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/components/types.ts` ⬜
+- [ ] `src/app/dashboard/marketplace/books/[id]/edit/page.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/books/new/page.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/company/page.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/components/AnalyticsTab.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/components/BookCard.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/components/BooksGrid.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/components/CompanyProfileCard.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/components/PromoCodesTab.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/components/StatsCard.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/components/StatusBadge.tsx` ⬜
+- [ ] `src/app/dashboard/marketplace/components/types.ts` ⬜
+- [ ] `src/app/dashboard/marketplace/page.tsx` ⬜
+- [ ] `src/app/dashboard/messages/page.tsx` ⬜
+- [ ] `src/app/dashboard/notifications/page.tsx` ⬜
+- [ ] `src/app/dashboard/page.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/page.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/QuestionInput.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyAddonsStep.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyAddressStep.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyErrorState.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyHeader.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyIntroStep.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyItemsStep.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyLockedState.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyPaymentStep.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyQuestionsStep.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyReviewStep.tsx` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/types.ts` ⬜
+- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/page.tsx` ⬜
+- [ ] `src/app/dashboard/profile/page.tsx` ⬜
+- [ ] `src/app/dashboard/projects/[id]/survey/page.tsx` ⬜
+- [ ] `src/app/dashboard/projects/[id]/survey/responses/page.tsx` ⬜
+- [ ] `src/app/dashboard/projects/page.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/AccountCard.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/ConnectedServicesCard.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/EmailChangeDialog.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/LoadingState.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/PaypalCard.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/PrivacyCard.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/ProfileCard.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/SettingsHeader.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/SubscriptionsCard.tsx` ⬜
+- [ ] `src/app/dashboard/settings/components/types.ts` ⬜
+- [ ] `src/app/dashboard/settings/page.tsx` ⬜
+- [ ] `src/app/dashboard/social/page.tsx` ⬜
+- [ ] `src/app/dashboard/types.ts` ⬜
+- [ ] `src/app/dashboard/updates/page.tsx` ⬜
+- [ ] `src/app/discover/layout.tsx` ⬜
+- [ ] `src/app/discover/loading.tsx` ⬜
+- [ ] `src/app/discover/page.tsx` ⬜
+- [ ] `src/app/error.tsx` ⬜
+- [ ] `src/app/explore/page.tsx` ⬜
+- [ ] `src/app/faq/layout.tsx` ⬜
+- [ ] `src/app/faq/page.tsx` ⬜
+- [ ] `src/app/fees/calculations.ts` ⬜
+- [ ] `src/app/fees/data.ts` ⬜
+- [ ] `src/app/fees/layout.tsx` ⬜
+- [ ] `src/app/fees/page.tsx` ⬜
+- [ ] `src/app/fulfillment/page.tsx` ⬜
+- [ ] `src/app/global-error.tsx` ⬜
+- [ ] `src/app/help/page.tsx` ⬜
+- [ ] `src/app/help/whitelist/page.tsx` ⬜
+- [ ] `src/app/indiekit-handbook/layout.tsx` ⬜
+- [ ] `src/app/indiekit-handbook/page.tsx` ⬜
+- [ ] `src/app/layout.tsx` ⬜
+- [ ] `src/app/lcs-locator/layout.tsx` ⬜
+- [ ] `src/app/lcs-locator/page.tsx` ⬜
+- [ ] `src/app/marketplace-handbook/backers/page.tsx` ⬜
+- [ ] `src/app/marketplace-handbook/creators/page.tsx` ⬜
+- [ ] `src/app/marketplace-handbook/layout.tsx` ⬜
+- [ ] `src/app/marketplace/books/[slug]/layout.tsx` ⬜
+- [ ] `src/app/marketplace/books/[slug]/page.tsx` ⬜
+- [ ] `src/app/marketplace/books/featured/page.tsx` ⬜
+- [ ] `src/app/marketplace/books/layout.tsx` ⬜
+- [ ] `src/app/marketplace/books/page.tsx` ⬜
+- [ ] `src/app/marketplace/books/staff-picks/page.tsx` ⬜
+- [ ] `src/app/marketplace/checkout/success/page.tsx` ⬜
+- [ ] `src/app/marketplace/companies/[slug]/layout.tsx` ⬜
+- [ ] `src/app/marketplace/companies/[slug]/page.tsx` ⬜
+- [ ] `src/app/marketplace/components/MarketplacePayPalForm.tsx` ⬜
+- [ ] `src/app/marketplace/layout.tsx` ⬜
+- [ ] `src/app/marketplace/page.tsx` ⬜
+- [ ] `src/app/marketplace/physical-media/layout.tsx` ⬜
+- [ ] `src/app/marketplace/physical-media/page.tsx` ⬜
+- [ ] `src/app/not-found.tsx` ⬜
+- [ ] `src/app/page.tsx` ⬜
+- [ ] `src/app/pay/balance/[token]/page.tsx` ⬜
+- [ ] `src/app/privacy/layout.tsx` ⬜
+- [ ] `src/app/privacy/page.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/edit/page.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/layout.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/loading.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/page.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/AddonSelector.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/AddressWarning.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/Breadcrumb.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/DCPaymentWrapper.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/ErrorState.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/FAQSection.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/LoadingState.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/OrderSummary.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/PayPalPaymentForm.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/PaymentStep.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/RewardSelector.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/SuccessPage.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/constants.ts` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/hooks/usePledge.ts` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/page.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/types.ts` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/pledge/utils.ts` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/prelaunch/layout.tsx` ⬜
+- [ ] `src/app/projects/[vanityname]/[slug]/prelaunch/page.tsx` ⬜
+- [ ] `src/app/projects/new/page.tsx` ⬜
+- [ ] `src/app/projects/page.tsx` ⬜
+- [ ] `src/app/retailers/account/page.tsx` ⬜
+- [ ] `src/app/retailers/apply/page.tsx` ⬜
+- [ ] `src/app/retailers/dashboard/components/RetailerAccountTab.tsx` ⬜
+- [ ] `src/app/retailers/dashboard/components/RetailerInvoicesTab.tsx` ⬜
+- [ ] `src/app/retailers/dashboard/components/RetailerOrdersTab.tsx` ⬜
+- [ ] `src/app/retailers/dashboard/components/RetailerProjectsTab.tsx` ⬜
+- [ ] `src/app/retailers/dashboard/page.tsx` ⬜
+- [ ] `src/app/retailers/forgot-password/page.tsx` ⬜
+- [ ] `src/app/retailers/invoices/page.tsx` ⬜
+- [ ] `src/app/retailers/layout.tsx` ⬜
+- [ ] `src/app/retailers/login/page.tsx` ⬜
+- [ ] `src/app/retailers/orders/page.tsx` ⬜
+- [ ] `src/app/retailers/page.tsx` ⬜
+- [ ] `src/app/retailers/projects/[id]/page.tsx` ⬜
+- [ ] `src/app/retailers/projects/page.tsx` ⬜
+- [ ] `src/app/retailers/reset-password/page.tsx` ⬜
+- [ ] `src/app/robots.ts` ⬜
+- [ ] `src/app/settings/payment/page.tsx` ⬜
+- [ ] `src/app/settings/payment/stripe/complete/page.tsx` ⬜
+- [ ] `src/app/settings/payment/stripe/refresh/page.tsx` ⬜
+- [ ] `src/app/sitemap.ts` ⬜
+- [ ] `src/app/success-stories/page.tsx` ⬜
+- [ ] `src/app/survey/preview/page.tsx` ⬜
+- [ ] `src/app/term/page.tsx` ⬜
+- [ ] `src/app/terms/layout.tsx` ⬜
+- [ ] `src/app/terms/page.tsx` ⬜
+- [ ] `src/app/trust-safety/layout.tsx` ⬜
+- [ ] `src/app/trust-safety/page.tsx` ⬜
+- [ ] `src/app/u/[username]/layout.tsx` ⬜
+- [ ] `src/app/u/[username]/page.tsx` ⬜
+- [ ] `src/app/verification-complete/page.tsx` ⬜
+- [ ] `src/app/verify-email/page.tsx` ⬜
+- [ ] `src/app/what-is-divinitycoin/layout.tsx` ⬜
+- [ ] `src/app/what-is-divinitycoin/page.tsx` ⬜
+- [ ] `src/components/PdfPageFlipReader.tsx` ⬜
+- [ ] `src/components/PdfThumbnail.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/ai-settings-tab.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/auto-tagging-tab.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/behavior-analytics-tab.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/dialogs/campaign-dialog.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/dialogs/campaign-type-dialog.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/dialogs/csv-import-dialog.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/dialogs/index.ts` ⬜
+- [ ] `src/components/admin/ai-marketing/dialogs/results-viewer-dialog.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/dialogs/tag-review-dialog.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/email-campaigns-tab.tsx` ⬜ Fixed XSS: sanitize campaign HTML preview
+- [ ] `src/components/admin/ai-marketing/index.ts` ⬜
+- [ ] `src/components/admin/ai-marketing/overview-tab.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/subscriber-list-tab.tsx` ⬜
+- [ ] `src/components/admin/ai-marketing/tag-segments-tab.tsx` ⬜
+- [ ] `src/components/admin/settings/ai-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/analytics-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/api-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/communication-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/database-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/email-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/general-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/id-verification-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/index.ts` ⬜
+- [ ] `src/components/admin/settings/payment-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/security-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/social-settings.tsx` ⬜
+- [ ] `src/components/admin/settings/storage-settings.tsx` ⬜
+- [ ] `src/components/announcement-bar.tsx` ⬜
+- [ ] `src/components/auth/forgot-password-form.tsx` ⬜
+- [ ] `src/components/auth/login-form.tsx` ⬜
+- [ ] `src/components/auth/recaptcha.tsx` ⬜
+- [ ] `src/components/auth/register-form.tsx` ⬜
+- [ ] `src/components/auth/reset-password-form.tsx` ⬜
+- [ ] `src/components/back-to-top.tsx` ⬜
+- [ ] `src/components/chat/chat-room.tsx` ⬜
+- [ ] `src/components/consent-banner.tsx` ⬜
+- [ ] `src/components/email-verification-banner.tsx` ⬜
+- [ ] `src/components/error-reporter.tsx` ⬜
+- [ ] `src/components/footer.tsx` ⬜
+- [ ] `src/components/google-analytics.tsx` ⬜ Fixed: validate ga4Id format before script injection
+- [ ] `src/components/hero-slider.tsx` ⬜
+- [ ] `src/components/home-stats-poller.tsx` ⬜
+- [ ] `src/components/json-ld.tsx` ⬜ Fixed: escape </script> in JSON-LD output
+- [ ] `src/components/legal/ai-policy.tsx` ⬜
+- [ ] `src/components/legal/backer-agreement.tsx` ⬜
+- [ ] `src/components/legal/chargebacks-policy.tsx` ⬜
+- [ ] `src/components/legal/content-guidelines.tsx` ⬜
+- [ ] `src/components/legal/cookie-policy.tsx` ⬜
+- [ ] `src/components/legal/creator-agreement.tsx` ⬜
+- [ ] `src/components/legal/data-deletion-policy.tsx` ⬜
+- [ ] `src/components/legal/dmca-policy.tsx` ⬜
+- [ ] `src/components/legal/fraud-policy.tsx` ⬜
+- [ ] `src/components/legal/gdpr-ccpa-policy.tsx` ⬜
+- [ ] `src/components/legal/index.ts` ⬜
+- [ ] `src/components/legal/nsfw-policy.tsx` ⬜
+- [ ] `src/components/legal/pci-compliance.tsx` ⬜
+- [ ] `src/components/legal/privacy-policy.tsx` ⬜
+- [ ] `src/components/legal/refund-policy.tsx` ⬜
+- [ ] `src/components/legal/shipping-policy.tsx` ⬜
+- [ ] `src/components/legal/terms-of-service.tsx` ⬜
+- [ ] `src/components/marketplace/marketplace-payment-settings.tsx` ⬜
+- [ ] `src/components/messaging/messages-panel.tsx` ⬜
+- [ ] `src/components/mobile-profile-links.tsx` ⬜
+- [ ] `src/components/notifications/notifications-dropdown.tsx` ⬜
+- [ ] `src/components/payment-settings.tsx` ⬜
+- [ ] `src/components/project-details/index.ts` ⬜
+- [ ] `src/components/project-details/social-icons.tsx` ⬜
+- [ ] `src/components/project-details/tabs/campaign-tab.tsx` ⬜
+- [ ] `src/components/project-details/tabs/comments-tab.tsx` ⬜
+- [ ] `src/components/project-details/tabs/community-tab.tsx` ⬜
+- [ ] `src/components/project-details/tabs/creator-tab.tsx` ⬜
+- [ ] `src/components/project-details/tabs/faq-tab.tsx` ⬜
+- [ ] `src/components/project-details/tabs/index.ts` ⬜
+- [ ] `src/components/project-details/tabs/rewards-tab.tsx` ⬜
+- [ ] `src/components/project-details/tabs/updates-tab.tsx` ⬜
+- [ ] `src/components/project-details/types.ts` ⬜
+- [ ] `src/components/project-details/utils.ts` ⬜
+- [ ] `src/components/project/builder/basics-step.tsx` ⬜
+- [ ] `src/components/project/builder/new-project-wrapper.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/campaign-type-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/chargeback-card-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/contact-email-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/content-declaration-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/divinity-coin-bank-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/index.ts` ⬜
+- [ ] `src/components/project/builder/payment-sections/payment-processor-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/paypal-bank-payout-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/paypal-payout-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/project-type-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/retailer-access-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/stripe-connect-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-sections/types.ts` ⬜
+- [ ] `src/components/project/builder/payment-sections/whop-bank-payout-section.tsx` ⬜
+- [ ] `src/components/project/builder/payment-step.tsx` ⬜
+- [ ] `src/components/project/builder/people-step.tsx` ⬜
+- [ ] `src/components/project/builder/project-builder.tsx` ⬜
+- [ ] `src/components/project/builder/promotion-step.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step/addons-tab.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step/constants.ts` ⬜
+- [ ] `src/components/project/builder/rewards-step/csv-import-screen.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step/import-addon-dialog.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step/import-reward-dialog.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step/index.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step/item-dialog.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step/items-tab.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step/reward-form.tsx` ⬜
+- [ ] `src/components/project/builder/rewards-step/tiers-tab.tsx` ⬜
+- [ ] `src/components/project/builder/story-step.tsx` ⬜
+- [ ] `src/components/promo-popup.tsx` ⬜
+- [ ] `src/components/providers/auth-provider.tsx` ⬜
+- [ ] `src/components/providers/theme-provider.tsx` ⬜
+- [ ] `src/components/site-header.tsx` ⬜
+- [ ] `src/components/theme-toggle.tsx` ⬜
+- [ ] `src/components/tracking-provider.tsx` ⬜
+- [ ] `src/components/ui/accordion.tsx` ⬜
+- [ ] `src/components/ui/alert-dialog.tsx` ⬜
+- [ ] `src/components/ui/alert.tsx` ⬜
+- [ ] `src/components/ui/avatar.tsx` ⬜
+- [ ] `src/components/ui/badge.tsx` ⬜
+- [ ] `src/components/ui/block-editor.tsx` ⬜
+- [ ] `src/components/ui/button.tsx` ⬜
+- [ ] `src/components/ui/calendar.tsx` ⬜
+- [ ] `src/components/ui/card.tsx` ⬜
+- [ ] `src/components/ui/checkbox.tsx` ⬜
+- [ ] `src/components/ui/collapsible.tsx` ⬜
+- [ ] `src/components/ui/confirm-dialog.tsx` ⬜
+- [ ] `src/components/ui/countdown-timer.tsx` ⬜
+- [ ] `src/components/ui/dialog.tsx` ⬜
+- [ ] `src/components/ui/drag-drop-image-cell.tsx` ⬜
+- [ ] `src/components/ui/dropdown-menu.tsx` ⬜
+- [ ] `src/components/ui/editable-input.tsx` ⬜
+- [ ] `src/components/ui/email-editor.tsx` ⬜
+- [ ] `src/components/ui/form.tsx` ⬜
+- [ ] `src/components/ui/image-upload.tsx` ⬜
+- [ ] `src/components/ui/input.tsx` ⬜
+- [ ] `src/components/ui/label.tsx` ⬜
+- [ ] `src/components/ui/location-autocomplete.tsx` ⬜
+- [ ] `src/components/ui/popover.tsx` ⬜
+- [ ] `src/components/ui/progress.tsx` ⬜
+- [ ] `src/components/ui/radio-group.tsx` ⬜
+- [ ] `src/components/ui/rich-text-editor.tsx` ⬜
+- [ ] `src/components/ui/screen-reader-announcer.tsx` ⬜
+- [ ] `src/components/ui/scroll-area.tsx` ⬜
+- [ ] `src/components/ui/secure-key-input.tsx` ⬜
+- [ ] `src/components/ui/select.tsx` ⬜
+- [ ] `src/components/ui/separator.tsx` ⬜
+- [ ] `src/components/ui/sheet.tsx` ⬜
+- [ ] `src/components/ui/skeleton.tsx` ⬜
+- [ ] `src/components/ui/slider.tsx` ⬜
+- [ ] `src/components/ui/sonner.tsx` ⬜
+- [ ] `src/components/ui/switch.tsx` ⬜
+- [ ] `src/components/ui/table.tsx` ⬜
+- [ ] `src/components/ui/tabs.tsx` ⬜
+- [ ] `src/components/ui/textarea.tsx` ⬜
+- [ ] `src/components/ui/tooltip.tsx` ⬜
+- [ ] `src/components/user-profile-dropdown.tsx` ⬜
+- [ ] `src/instrumentation.ts` ⬜
+- [ ] `src/lib/ai/anthropic.ts` ⬜
+- [ ] `src/lib/ai/automation.ts` ⬜
+- [ ] `src/lib/ai/index.ts` ⬜
+- [ ] `src/lib/ai/marketing-services.ts` ⬜
+- [ ] `src/lib/ai/settings-integration.ts` ⬜
+- [ ] `src/lib/ai/user-interests.ts` ⬜
+- [ ] `src/lib/api-error.ts` ⬜
+- [ ] `src/lib/audit.ts` ⬜
+- [ ] `src/lib/auth-helpers.ts` ⬜
+- [ ] `src/lib/auth/actions.ts` ⬜ Fixed info disclosure: password reset "User not found" message now uses generic error
+- [ ] `src/lib/auth/constants.ts` ⬜
+- [ ] `src/lib/auth/email-access.ts` ⬜
+- [ ] `src/lib/auth/index.ts` ⬜
+- [ ] `src/lib/auth/rate-limit.ts` ⬜
+- [ ] `src/lib/auth/recaptcha.ts` ⬜
+- [ ] `src/lib/auth/session.ts` ⬜ Fixed soft-deleted users remaining authenticated (added deletedAt:null filter + null user check)
+- [ ] `src/lib/bot-blocker.ts` ⬜
+- [ ] `src/lib/circuit-breaker.ts` ⬜
+- [ ] `src/lib/consent.ts` ⬜
+- [ ] `src/lib/correlation.ts` ⬜
+- [ ] `src/lib/csrf.ts` ⬜
+- [ ] `src/lib/db/index.ts` ⬜
+- [ ] `src/lib/email.ts` ⬜
+- [ ] `src/lib/email/email-config.ts` ⬜
+- [ ] `src/lib/email/email-templates-auth.ts` ⬜
+- [ ] `src/lib/email/email-templates-misc.ts` ⬜
+- [ ] `src/lib/email/email-templates-pledge.ts` ⬜
+- [ ] `src/lib/email/email-templates-project.ts` ⬜
+- [ ] `src/lib/email/sendgrid-verify.ts` ⬜
+- [ ] `src/lib/encryption.ts` ⬜
+- [ ] `src/lib/error-tracker.ts` ⬜
+- [ ] `src/lib/feature-flags.ts` ⬜
+- [ ] `src/lib/fetch-utils.ts` ⬜
+- [ ] `src/lib/gdpr/execute-deletions.ts` ⬜
+- [ ] `src/lib/local-books-db.ts` ⬜
+- [ ] `src/lib/logger.ts` ⬜
+- [ ] `src/lib/metrics.ts` ⬜
+- [ ] `src/lib/notifications.ts` ⬜
+- [ ] `src/lib/notifications/core.ts` ⬜
+- [ ] `src/lib/notifications/email-templates.ts` ⬜
+- [ ] `src/lib/notifications/index.ts` ⬜
+- [ ] `src/lib/notifications/marketplace-notifications.ts` ⬜
+- [ ] `src/lib/notifications/pledge-notifications.ts` ⬜
+- [ ] `src/lib/notifications/project-notifications.ts` ⬜ Fixed: add deletedAt:null to user queries in notifications
+- [ ] `src/lib/notifications/social-notifications.ts` ⬜
+- [ ] `src/lib/notifications/types.ts` ⬜
+- [ ] `src/lib/oauth/config.ts` ⬜
+- [ ] `src/lib/payments/divinitycoin/cards.ts` ⬜
+- [ ] `src/lib/payments/divinitycoin/client.ts` ⬜
+- [ ] `src/lib/payments/divinitycoin/config.ts` ⬜
+- [ ] `src/lib/payments/divinitycoin/index.ts` ⬜
+- [ ] `src/lib/payments/divinitycoin/payments.ts` ⬜
+- [ ] `src/lib/payments/divinitycoin/types.ts` ⬜
+- [ ] `src/lib/payments/divinitycoin/webhooks.ts` ⬜
+- [ ] `src/lib/payments/paypal/capture-authorized.ts` ⬜
+- [ ] `src/lib/payments/paypal/checkout.ts` ⬜
+- [ ] `src/lib/payments/paypal/config.ts` ⬜
+- [ ] `src/lib/payments/paypal/index.ts` ⬜
+- [ ] `src/lib/payments/stripe/charges.ts` ⬜
+- [ ] `src/lib/payments/stripe/checkout.ts` ⬜
+- [ ] `src/lib/payments/stripe/config.ts` ⬜
+- [ ] `src/lib/payments/stripe/connect.ts` ⬜
+- [ ] `src/lib/payments/stripe/customers.ts` ⬜
+- [ ] `src/lib/payments/stripe/index.ts` ⬜
+- [ ] `src/lib/payments/stripe/intents.ts` ⬜
+- [ ] `src/lib/payments/stripe/rewards.ts` ⬜
+- [ ] `src/lib/payments/stripe/webhooks.ts` ⬜
+- [ ] `src/lib/payments/whop/checkout.ts` ⬜
+- [ ] `src/lib/payments/whop/config.ts` ⬜
+- [ ] `src/lib/payments/whop/index.ts` ⬜
+- [ ] `src/lib/pdf-cover-extractor.ts` ⬜
+- [ ] `src/lib/project-auth.ts` ⬜
+- [ ] `src/lib/project-permissions.ts` ⬜
+- [ ] `src/lib/r2.ts` ⬜
+- [ ] `src/lib/rate-limiter.ts` ⬜
+- [ ] `src/lib/recommendations/engine.ts` ⬜
+- [ ] `src/lib/retailer-auth.ts` ⬜
+- [ ] `src/lib/seo-audit.ts` ⬜
+- [ ] `src/lib/seo-defaults.ts` ⬜
+- [ ] `src/lib/seo/indexing.ts` ⬜
+- [ ] `src/lib/shopify-push.ts` ⬜
+- [ ] `src/lib/shufti.ts` ⬜
+- [ ] `src/lib/stats.ts` ⬜
+- [ ] `src/lib/stats/actions.ts` ⬜
+- [ ] `src/lib/stats/index.ts` ⬜
+- [ ] `src/lib/stats/utils.ts` ⬜
+- [ ] `src/lib/stores/project-store.ts` ⬜
+- [ ] `src/lib/tracking.ts` ⬜
+- [ ] `src/lib/tracking/index.ts` ⬜
+- [ ] `src/lib/usePdfAsImages.ts` ⬜
+- [ ] `src/lib/utils.ts` ⬜
+- [ ] `src/lib/utils/api-params.ts` ⬜
+- [ ] `src/lib/utils/sanitize.ts` ⬜
+- [ ] `src/lib/vault.ts` ⬜
+- [ ] `src/middleware.ts` ⬜
+- [ ] `src/types/api.ts` ⬜
+- [ ] `src/types/index.ts` ⬜
