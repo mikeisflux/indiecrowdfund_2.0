@@ -221,6 +221,9 @@ export async function PATCH(req: NextRequest) {
         if (data?.name !== undefined) updateData.name = data.name;
         if (data?.email !== undefined) {
           const newEmail = data.email.toLowerCase().trim();
+          if (!newEmail) {
+            return NextResponse.json({ error: "Email cannot be empty" }, { status: 400 });
+          }
           const oldEmail = user.email.toLowerCase();
 
           // Check if new email is already taken by another user (case-insensitive)
