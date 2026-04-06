@@ -79,8 +79,8 @@ export async function POST(request: Request) {
         // Get projects
         const projects = await db.project.findMany({
           where: projectIds?.length
-            ? { id: { in: projectIds } }
-            : { status: "ACTIVE" },
+            ? { id: { in: projectIds }, deletedAt: null }
+            : { status: "LIVE", deletedAt: null },
           take: 10,
           select: {
             id: true,
@@ -115,8 +115,8 @@ export async function POST(request: Request) {
 
         const projects = await db.project.findMany({
           where: projectIds?.length
-            ? { id: { in: projectIds } }
-            : { status: "ACTIVE" },
+            ? { id: { in: projectIds }, deletedAt: null }
+            : { status: "LIVE", deletedAt: null },
           take: 10,
           select: {
             id: true,

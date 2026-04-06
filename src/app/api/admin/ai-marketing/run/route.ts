@@ -259,6 +259,7 @@ export async function POST(request: Request) {
         // Get users with behavior data or pledges who need profiling
         const usersNeedingProfiles = await db.user.findMany({
           where: {
+            deletedAt: null,
             OR: [
               { behaviors: { some: {} } },
               { pledges: { some: { status: "COMPLETED" } } },

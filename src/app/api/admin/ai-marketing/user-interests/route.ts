@@ -260,6 +260,7 @@ export async function POST(request: Request) {
       // Get users with behavior data or pledges
       const usersWithActivity = await db.user.findMany({
         where: {
+          deletedAt: null,
           OR: [
             { behaviors: { some: {} } },
             { pledges: { some: { status: "COMPLETED" } } },
@@ -295,6 +296,7 @@ export async function POST(request: Request) {
         results,
         remainingUsers: await db.user.count({
           where: {
+            deletedAt: null,
             OR: [
               { behaviors: { some: {} } },
               { pledges: { some: { status: "COMPLETED" } } },
