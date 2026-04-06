@@ -8,21 +8,34 @@ import { z } from "zod";
 
 const createSurveySchema = z.object({
   projectId: z.string(),
-  title: z.string().optional(),
-  description: z.string().optional(),
+  title: z.string().max(500).optional(),
+  description: z.string().max(5000).optional(),
   questions: z.array(z.object({
-    id: z.string(),
+    id: z.string().max(100),
     type: z.enum(["text", "multiple_choice", "dropdown", "address"]),
-    question: z.string(),
+    question: z.string().max(500),
     required: z.boolean().default(false),
-    options: z.array(z.string()).optional(),
-  })),
+    options: z.array(z.string().max(200)).max(50).optional(),
+  })).max(100),
 });
 
 const submitResponseSchema = z.object({
   surveyId: z.string(),
   pledgeId: z.string(),
-  responses: z.record(z.string(), z.unknown()),
+  responses: z.record(z.string().max(100), z.union([
+    z.string().max(10000),
+    z.array(z.string().max(200)).max(50),
+    z.object({
+      name: z.string().max(100).optional(),
+      address1: z.string().max(200).optional(),
+      address2: z.string().max(200).optional(),
+      city: z.string().max(100).optional(),
+      state: z.string().max(100).optional(),
+      zip: z.string().max(20).optional(),
+      country: z.string().max(10).optional(),
+    }),
+    z.null(),
+  ])).refine(r => Object.keys(r).length <= 100, "Too many response fields"),
 });
 
 export async function POST(req: NextRequest) {
