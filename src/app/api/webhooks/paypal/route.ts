@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
           select: { addonId: true, quantity: true },
         });
         if (pledgeAddons.length > 0) {
-          const claimed = await claimAddonSlots(pledgeAddons.map(a => ({ id: a.addonId, quantity: a.quantity }))).catch(err => {
+          const claimed = await claimAddonSlots(pledgeAddons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity }))).catch(err => {
             paypalWebhookLogger.error({ err: String(err) }, "claimAddonSlots failed");
             return false;
           });

@@ -612,7 +612,7 @@ export async function handlePaymentSucceeded(
           select: { addonId: true, quantity: true },
         });
         if (pledgeAddons.length > 0) {
-          const claimed = await claimAddonSlots(pledgeAddons.map(a => ({ id: a.addonId, quantity: a.quantity })));
+          const claimed = await claimAddonSlots(pledgeAddons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity })));
           if (!claimed) {
             paymentsDivinitycoinLogger.warn(`[DivinityCoin] One or more addons sold out for pledge ${pledgeId}`);
           }

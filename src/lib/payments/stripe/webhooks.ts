@@ -147,7 +147,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         select: { addonId: true, quantity: true },
       });
       if (pledgeAddons.length > 0) {
-        const claimed = await claimAddonSlots(pledgeAddons.map(a => ({ id: a.addonId, quantity: a.quantity })));
+        const claimed = await claimAddonSlots(pledgeAddons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity })));
         if (!claimed) {
           webhookLogger.warn(`[Webhook] One or more addons sold out for pledge ${pledgeId}`);
         }
@@ -348,7 +348,7 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
       select: { addonId: true, quantity: true },
     });
     if (setupPledgeAddons.length > 0) {
-      const claimed = await claimAddonSlots(setupPledgeAddons.map(a => ({ id: a.addonId, quantity: a.quantity })));
+      const claimed = await claimAddonSlots(setupPledgeAddons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity })));
       if (!claimed) {
         webhookLogger.warn(`[SetupIntent] One or more addons sold out for pledge ${pledgeId}`);
       }

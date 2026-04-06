@@ -353,6 +353,20 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    // Restrict access to DRAFT/SUBMITTED projects — only creator, collaborator, or admin
+    if (project.status === "DRAFT" || project.status === "SUBMITTED") {
+      const session = await auth();
+      const userId = session?.user?.id;
+      const userRole = session?.user?.role;
+      const isCreatorOrAdmin =
+        userId === project.creatorId ||
+        userRole === "ADMIN" ||
+        userRole === "SUPER_ADMIN";
+      if (!isCreatorOrAdmin) {
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      }
+    }
+
     // Convert Decimal fields to numbers for JSON serialization
     const serializedProject = {
       ...project,
