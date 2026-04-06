@@ -352,6 +352,11 @@ export async function PATCH(
             });
           });
 
+          // Restore reward slot if pledge claimed one
+          if (pledge.reward?.id) {
+            await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
+          }
+
           return NextResponse.json({
             success: true,
             message: "DivinityCoin refund processed successfully",
@@ -432,6 +437,11 @@ export async function PATCH(
             });
           });
 
+          // Restore reward slot if pledge claimed one
+          if (pledge.reward?.id) {
+            await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
+          }
+
           return NextResponse.json({
             success: true,
             message: "PayPal refund processed successfully",
@@ -467,6 +477,11 @@ export async function PATCH(
           });
 
           adminPledgesLogger.info({ pledgeId, whopCheckoutId: pledge.whopCheckoutId }, "[Admin Whop Refund] Marked as refunded — process payment reversal in Whop dashboard");
+
+          // Restore reward slot if pledge claimed one
+          if (pledge.reward?.id) {
+            await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
+          }
 
           return NextResponse.json({
             success: true,
@@ -538,6 +553,11 @@ export async function PATCH(
         }),
       ]);
 
+      // Restore reward slot if pledge claimed one
+      if (pledge.reward?.id) {
+        await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
+      }
+
       return NextResponse.json({
         success: true,
         message: "Pledge refunded successfully",
@@ -580,6 +600,9 @@ export async function DELETE(
             currentAmount: true,
           },
         },
+        reward: {
+          select: { id: true },
+        },
       },
     });
 
@@ -620,8 +643,8 @@ export async function DELETE(
       );
     }
 
-    // Update project stats if pledge was active (PENDING or COMPLETED)
-    if (pledge.status === "PENDING" || pledge.status === "COMPLETED") {
+    // Update project stats only if they were previously counted (confirmationEmailSent = true)
+    if (pledge.confirmationEmailSent) {
       await db.project.update({
         where: { id: pledge.projectId },
         data: {
@@ -631,7 +654,12 @@ export async function DELETE(
       });
     }
 
-    // Delete the pledge
+    // Restore reward slot if pledge claimed one
+    if (pledge.reward?.id) {
+      await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
+    }
+
+    // Delete the pledge (PledgeAddon cascade-deletes automatically)
     await db.pledge.delete({
       where: { id: pledgeId },
     });

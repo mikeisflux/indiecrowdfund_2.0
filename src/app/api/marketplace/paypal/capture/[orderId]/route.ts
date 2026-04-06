@@ -8,7 +8,6 @@ const captureLogger = logger.child({ module: "marketplace-paypal-capture" });
 
 export const dynamic = "force-dynamic";
 
-const PLATFORM_FEE_PERCENT = 3;
 const PAYPAL_FEE_RATE = 0.0349;   // 3.49%
 const PAYPAL_FEE_FIXED = 0.49;    // $0.49 per transaction
 
@@ -97,7 +96,9 @@ export async function POST(
     // Atomically mark purchase as completed
     const grossAmount = Number(purchase.amount);
     const paypalFee = Math.round((grossAmount * PAYPAL_FEE_RATE + PAYPAL_FEE_FIXED) * 100) / 100;
-    const platformFee = Math.round(grossAmount * (PLATFORM_FEE_PERCENT / 100) * 100) / 100;
+    const mpPaypalPlatformSettings = await db.platformSettings.findUnique({ where: { id: "default" }, select: { platformFee: true } });
+    const mpPaypalFeeRate = mpPaypalPlatformSettings?.platformFee ? Number(mpPaypalPlatformSettings.platformFee) / 100 : 0.03;
+    const platformFee = Math.round(grossAmount * mpPaypalFeeRate * 100) / 100;
     const netAmount = Math.round((grossAmount - paypalFee - platformFee) * 100) / 100;
 
     const updated = await db.marketplacePurchase.updateMany({

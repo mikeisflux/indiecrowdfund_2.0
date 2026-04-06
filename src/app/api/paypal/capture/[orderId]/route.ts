@@ -113,14 +113,21 @@ export async function POST(
 
       paypalCaptureLogger.info({ pledgeId: pledge.id, orderId, authorizationId }, "PayPal order authorized (deferred capture)");
 
-      // Store authorization ID — pledge stays PENDING until goal is reached
-      await db.pledge.update({
-        where: { id: pledge.id },
+      // Atomically claim the right to update stats using confirmationEmailSent flag.
+      // This prevents double-counting if the endpoint is retried concurrently.
+      const authClaimResult = await db.pledge.updateMany({
+        where: { id: pledge.id, confirmationEmailSent: false },
         data: {
           paypalAuthorizationId: authorizationId,
-          confirmationEmailSent: true, // Prevents double-processing
+          confirmationEmailSent: true,
         },
       });
+
+      if (authClaimResult.count === 0) {
+        // Already processed by a concurrent request
+        paypalCaptureLogger.info({ pledgeId: pledge.id, orderId }, "PayPal authorization already processed (confirmationEmailSent already true)");
+        return NextResponse.json({ success: true, message: "Authorization already processed" });
+      }
 
       // Update project stats now (same as Stripe SetupIntent flow)
       const updatedProject = await db.project.update({

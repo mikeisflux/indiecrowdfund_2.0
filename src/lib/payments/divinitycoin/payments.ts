@@ -825,7 +825,7 @@ export async function handleRefundCompleted(
   try {
     const pledge = await db.pledge.findUnique({
       where: { id: pledgeId },
-      select: { id: true, status: true, userId: true, projectId: true, amount: true },
+      select: { id: true, status: true, userId: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
     });
 
     if (!pledge) {
@@ -864,8 +864,8 @@ export async function handleRefundCompleted(
         },
       });
 
-      // Only decrement project stats if pledge was COMPLETED
-      if (pledge.status === "COMPLETED") {
+      // Only decrement project stats if stats were previously counted
+      if (pledge.confirmationEmailSent) {
         await tx.project.update({
           where: { id: pledge.projectId },
           data: {
@@ -875,6 +875,11 @@ export async function handleRefundCompleted(
         });
       }
     });
+
+    // Restore reward slot outside transaction (raw SQL not supported in array transactions)
+    if (pledge.rewardId) {
+      await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
+    }
 
     paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} marked as REFUNDED via webhook`);
     return { success: true, message: "Refund recorded" };
