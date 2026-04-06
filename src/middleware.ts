@@ -42,6 +42,49 @@ const shopifyIframeRoutes = [
   "/api/creator/indiekit/shopify/install",
 ];
 
+// ============ Google Crawler Allowlist ============
+// Google's crawlers (Googlebot, AdsBot, GTM detection, Search Console, etc.)
+// must never be blocked — they affect SEO and tag verification.
+// IP ranges sourced from https://developers.google.com/search/apis/ipranges/googlebot.json
+// User-agent check is a fast pre-filter; IP ranges are the authoritative check.
+
+const GOOGLE_CRAWLER_UA_PATTERNS = [
+  "googlebot",
+  "adsbot-google",
+  "mediapartners-google",
+  "google-inspectiontool",
+  "googleother",
+  "apis-google",
+  "google-site-verification",
+  "google-structured-data-testing-tool",
+  "google page speed",
+];
+
+// Representative Google IP prefixes (covers Googlebot + AdsBot + infrastructure)
+// Full list: https://www.gstatic.com/ipranges/goog.json
+const GOOGLE_IP_PREFIXES = [
+  "66.249.", // Googlebot
+  "64.233.", // Google
+  "72.14.",  // Google
+  "74.125.", // Google
+  "142.250.", // Google
+  "172.253.", // Google
+  "209.85.",  // Google
+  "216.58.",  // Google
+  "216.239.", // Google
+  "34.64.",   // Google Cloud
+  "34.80.",   // Google Cloud
+  "35.187.",  // Google Cloud
+  "35.190.",  // Google Cloud
+];
+
+function isGoogleCrawler(ip: string, userAgent: string): boolean {
+  const ua = userAgent.toLowerCase();
+  if (GOOGLE_CRAWLER_UA_PATTERNS.some((p) => ua.includes(p))) return true;
+  if (GOOGLE_IP_PREFIXES.some((prefix) => ip.startsWith(prefix))) return true;
+  return false;
+}
+
 // ============ Bot Detection & IP Blocking ============
 // In-memory cache with database persistence via internal API
 // Survives PM2 restarts by loading from database on startup
@@ -366,6 +409,11 @@ export async function middleware(req: NextRequest) {
     url.searchParams.set("reason", reason);
     url.searchParams.set("status", String(status));
     return NextResponse.rewrite(url);
+  }
+
+  // Google crawlers (Googlebot, AdsBot, GTM detection, Search Console) bypass all bot protection
+  if (isGoogleCrawler(clientIP, userAgent)) {
+    return NextResponse.next();
   }
 
   // Check if IP is blocked (fast in-memory check)
