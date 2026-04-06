@@ -138,9 +138,9 @@ const updateProjectSchema = z.object({
   location: z.string().max(200).optional().nullable(),
   imageUrl: z.string().max(2048).optional().nullable(),
   videoUrl: z.string().max(2048).optional().nullable(),
-  goalAmount: z.number().optional(),
+  goalAmount: z.number().positive().optional(),
   durationType: z.enum(["FIXED_DAYS", "END_DATE"]).optional(),
-  durationDays: z.number().optional().nullable(),
+  durationDays: z.number().min(1).max(60).optional().nullable(),
   endDate: z.string().optional().nullable(),
   launchDate: z.string().optional().nullable(),
 

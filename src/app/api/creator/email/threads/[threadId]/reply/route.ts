@@ -125,6 +125,11 @@ export async function POST(
       orderBy: { createdAt: "desc" },
     });
 
+    // For non-project threads, require a prior message to exist (prevents cold-messaging)
+    if (!hasProject && !originalMessage) {
+      return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+    }
+
     const subject = originalMessage?.subject
       ? `Re: ${originalMessage.subject}`
       : project

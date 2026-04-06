@@ -20,9 +20,9 @@ const basicsSchema = z.object({
   location: z.string().optional().nullable(),
   imageUrl: z.string().optional().nullable(),
   videoUrl: z.string().optional().nullable(),
-  goalAmount: z.number().optional(),
+  goalAmount: z.number().positive().optional(),
   durationType: z.enum(["FIXED_DAYS", "END_DATE"]).optional(),
-  durationDays: z.number().optional().nullable(),
+  durationDays: z.number().min(1).max(60).optional().nullable(),
   endDate: z.string().optional().nullable(),
   launchDate: z.string().optional().nullable(),
 });

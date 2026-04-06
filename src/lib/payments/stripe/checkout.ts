@@ -350,6 +350,7 @@ export async function createStripePayment({
   const amountInCents = Math.round(amount * 100);
   const platformFee = Math.round(amount * platformFeeRate * 100);
 
+  try {
   if (isCampaignFunded) {
     // Campaign already funded - charge immediately
     const paymentIntent = await stripeClient.paymentIntents.create({
@@ -409,5 +410,13 @@ export async function createStripePayment({
       pledgeId: pledge.id,
       chargedImmediately: false,
     };
+  }
+  } catch (stripeError) {
+    // Clean up the created pledge so it doesn't accumulate as an orphaned PENDING record
+    await db.pledge.update({
+      where: { id: pledge.id },
+      data: { status: "CANCELLED", lastFailureReason: "Stripe intent creation failed" },
+    }).catch(() => {/* best-effort cleanup */});
+    throw stripeError;
   }
 }
