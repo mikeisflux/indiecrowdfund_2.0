@@ -167,7 +167,7 @@ export async function POST(request: Request) {
 
     // Verify the project exists
     const project = await db.project.findFirst({
-      where: { id: projectId, deletedAt: null , deletedAt: null },
+      where: { id: projectId, deletedAt: null },
       select: { id: true, title: true, prelaunchActive: true, status: true },
     });
 

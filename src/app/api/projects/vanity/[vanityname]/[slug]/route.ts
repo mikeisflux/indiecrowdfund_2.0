@@ -36,6 +36,7 @@ export async function GET(
       where: {
         slug: slug,
         creatorId: creator.id,
+        deletedAt: null,
       },
       include: {
         creator: {
