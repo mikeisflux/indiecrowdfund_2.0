@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     creatorMarketplaceFilesUploadLogger.error({ err: String(error) }, "[Marketplace Upload] Error:");
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Upload failed" },
+      { error: "Upload failed" },
       { status: 500 }
     );
   }
