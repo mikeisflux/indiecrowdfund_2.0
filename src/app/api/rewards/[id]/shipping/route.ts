@@ -8,7 +8,7 @@ import { auth } from "@/lib/auth";
 
 const updateShippingSchema = z.object({
   shippingType: z.enum(["NO_SHIPPING", "WORLDWIDE", "SELECTED_COUNTRIES"]),
-  shippingCost: z.record(z.string(), z.number()).default({}),
+  shippingCost: z.record(z.string(), z.number().min(0)).default({}),
   shippingCountries: z.array(z.string()).default([]),
 });
 
