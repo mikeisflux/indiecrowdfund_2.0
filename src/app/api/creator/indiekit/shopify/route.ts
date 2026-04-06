@@ -5,6 +5,7 @@ const creatorIndiekitShopifyLogger = logger.child({ module: "creator-indiekit-sh
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import { encryptCredential, decryptCredential } from "@/lib/encryption";
 
 export const dynamic = "force-dynamic";
 
@@ -267,7 +268,7 @@ export async function POST(req: NextRequest) {
             status: "CONNECTED",
             credentials: {
               shopDomain: cleanDomain,
-              accessToken,
+              accessToken: encryptCredential(accessToken),
               shopName: shopResponse.shop.name,
               shopEmail: shopResponse.shop.email,
             },
@@ -276,7 +277,7 @@ export async function POST(req: NextRequest) {
             status: "CONNECTED",
             credentials: {
               shopDomain: cleanDomain,
-              accessToken,
+              accessToken: encryptCredential(accessToken),
               shopName: shopResponse.shop.name,
               shopEmail: shopResponse.shop.email,
             },
@@ -354,10 +355,13 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const credentials = integration.credentials as {
+      const rawCreds = integration.credentials as {
         shopDomain: string;
         accessToken: string;
       };
+      let decryptedAccessToken: string;
+      try { decryptedAccessToken = decryptCredential(rawCreds.accessToken); } catch { decryptedAccessToken = rawCreds.accessToken; }
+      const credentials = { shopDomain: rawCreds.shopDomain, accessToken: decryptedAccessToken };
 
       // Get SKU mappings for this project
       const skuMappings = await db.shopifySkuMapping.findMany({
@@ -720,10 +724,13 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const credentials = integration.credentials as {
+      const rawCreds2 = integration.credentials as {
         shopDomain: string;
         accessToken: string;
       };
+      let decryptedAccessToken2: string;
+      try { decryptedAccessToken2 = decryptCredential(rawCreds2.accessToken); } catch { decryptedAccessToken2 = rawCreds2.accessToken; }
+      const credentials = { shopDomain: rawCreds2.shopDomain, accessToken: decryptedAccessToken2 };
 
       // Get all pushed orders
       const trackedOrders = await db.shopifyFulfillmentOrder.findMany({
