@@ -89,6 +89,7 @@ export default function PayoutsPage() {
       setWhopStats(data.stats || whopStats);
     } catch (error) {
       console.error("Error fetching Whop payouts:", error);
+      toast.error("Failed to load Whop payouts");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, searchQuery]);
