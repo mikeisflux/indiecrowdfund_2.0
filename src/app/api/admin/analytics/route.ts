@@ -390,7 +390,8 @@ export async function GET(req: NextRequest) {
       };
 
       fundingProgress.forEach(p => {
-        const progress = (Number(p.currentAmount) / Number(p.goalAmount)) * 100;
+        const goalAmount = Number(p.goalAmount);
+        const progress = goalAmount > 0 ? (Number(p.currentAmount) / goalAmount) * 100 : 0;
         if (progress >= 100) fundingDistribution["100%+"]++;
         else if (progress >= 75) fundingDistribution["75-100%"]++;
         else if (progress >= 50) fundingDistribution["50-75%"]++;

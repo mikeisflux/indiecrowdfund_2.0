@@ -67,9 +67,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if email is already taken by another user
-    const existingUser = await db.user.findUnique({
-      where: { email: newEmail.toLowerCase() },
+    // Check if email is already taken by another user (case-insensitive)
+    const existingUser = await db.user.findFirst({
+      where: {
+        email: { equals: newEmail, mode: "insensitive" },
+        id: { not: session.user.id },
+        deletedAt: null,
+      },
     });
 
     if (existingUser) {
