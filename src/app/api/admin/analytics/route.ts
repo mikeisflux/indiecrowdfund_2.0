@@ -405,7 +405,7 @@ export async function GET(req: NextRequest) {
             status: p.status,
             count: p._count
           })),
-          recent: recentProjects,
+          recent: recentProjects.map(p => ({ ...p, goalAmount: Number(p.goalAmount), currentAmount: Number(p.currentAmount) })),
           fundingDistribution
         }
       });

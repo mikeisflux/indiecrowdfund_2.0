@@ -289,7 +289,7 @@ export function PaymentStep() {
   //   checkStripeStatus();
   // }, []);
 
-  const goalAmount = basics.goalAmount || 10000;
+  const goalAmount = Number(basics.goalAmount) || 10000;
   const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
 
   // If adult/risky content is selected, Stripe is NOT allowed (PayPal/DivinityCoin/Whop are all fine)

@@ -402,8 +402,8 @@ export default function ManagePledgePage() {
     );
   }
 
-  const fundingPercent = pledge.project.goalAmount > 0
-    ? (pledge.project.currentAmount / pledge.project.goalAmount) * 100
+  const fundingPercent = Number(pledge.project.goalAmount) > 0
+    ? (Number(pledge.project.currentAmount) / Number(pledge.project.goalAmount)) * 100
     : 0;
   const isPending = pledge.status === "PENDING";
   const isCompleted = pledge.status === "COMPLETED";
