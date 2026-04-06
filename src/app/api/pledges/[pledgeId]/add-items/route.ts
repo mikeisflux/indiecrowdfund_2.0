@@ -209,10 +209,16 @@ export async function POST(
       return sum + (Number(addon.amount) * qty);
     }, 0);
 
-    // Allow some tolerance for shipping costs
+    // Amount must cover addon total; cap excess at $500 to allow for shipping without unbounded overcharge
     if (amount < calculatedAmount) {
       return NextResponse.json(
         { error: "Amount is less than addon total" },
+        { status: 400 }
+      );
+    }
+    if (amount > calculatedAmount + 500) {
+      return NextResponse.json(
+        { error: "Amount exceeds addon total by more than the allowed shipping allowance" },
         { status: 400 }
       );
     }

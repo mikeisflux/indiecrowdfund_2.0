@@ -533,9 +533,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { projectId, amount, adminNotes } = body;
 
-    if (!amount) {
+    if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
       return NextResponse.json(
-        { error: "Amount is required" },
+        { error: "Amount must be a positive number" },
         { status: 400 }
       );
     }
