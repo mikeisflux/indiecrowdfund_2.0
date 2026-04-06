@@ -155,11 +155,12 @@ export async function POST(
 
         await db.emailLog.create({
           data: {
-            type: "pledge_confirmation",
-            recipient: pledge.user.email,
+            type: "PLEDGE_CONFIRMATION",
+            recipientEmail: pledge.user.email,
             subject: `Your pledge to "${pledge.project.title}" is confirmed!`,
-            status: "sent",
             userId: pledge.userId,
+            projectId: pledge.project.id,
+            pledgeId: pledge.id,
           },
         });
       }

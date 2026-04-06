@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
               },
               line_items: lineItems,
               placed_at: pledge.createdAt.toISOString(),
-              total_price: String(pledge.amount / 100),
+              total_price: String(Number(pledge.amount) / 100),
               currency: "USD",
               notes: `IndieKit pledge from ${project.title}`,
             };

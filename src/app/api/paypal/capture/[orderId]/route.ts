@@ -263,7 +263,7 @@ export async function POST(
         pledge.projectId,
         pledge.project.creatorId,
         pledge.user.name || "A backer",
-        pledge.amount
+        Number(pledge.amount)
       );
     } catch (err) {
       paypalCaptureLogger.error({ err: String(err) }, "Failed to notify creator");
