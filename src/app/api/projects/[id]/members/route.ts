@@ -223,11 +223,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Project not found or you don't have access" }, { status: 404 });
     }
 
-    // Delete all members for this creator
+    // Delete all members sourced from this specific project
     if (deleteAll) {
       const result = await db.emailListSubscriber.deleteMany({
         where: {
           creatorId: session.user.id,
+          sourceProjectId: projectId,
         },
       });
 

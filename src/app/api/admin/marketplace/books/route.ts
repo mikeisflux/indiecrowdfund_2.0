@@ -91,7 +91,7 @@ export async function GET() {
       price: Number(book.price),
       currency: book.currency,
       paymentProcessor: book.paymentProcessor,
-      isNsfw: book.isNsfw,
+      hasAdultContent: book.hasAdultContent,
       status: book.status,
       isFeatured: book.isFeatured,
       isStaffPick: book.isStaffPick,

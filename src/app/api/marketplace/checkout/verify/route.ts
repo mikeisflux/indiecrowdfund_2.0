@@ -73,39 +73,41 @@ export async function GET(request: Request) {
       );
     }
 
-    // Complete the purchase atomically in a transaction
-    await prisma.$transaction(async (tx) => {
-      // Update purchase status
-      await tx.marketplacePurchase.update({
-        where: { id: purchase.id },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
-          deliveredAt: new Date(),
-          stripePaymentIntentId: typeof checkoutSession.payment_intent === "string"
-            ? checkoutSession.payment_intent
-            : checkoutSession.payment_intent?.id,
-        },
-      });
+    // Complete the purchase atomically in a transaction, guarded against double-processing
+    const updated = await prisma.marketplacePurchase.updateMany({
+      where: { id: purchase.id, status: "PENDING" },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        deliveredAt: new Date(),
+        stripePaymentIntentId: typeof checkoutSession.payment_intent === "string"
+          ? checkoutSession.payment_intent
+          : checkoutSession.payment_intent?.id,
+      },
+    });
 
-      // Update book purchase count
-      await tx.marketplaceBook.update({
-        where: { id: purchase.bookId },
-        data: {
-          purchaseCount: { increment: 1 },
-        },
-      });
-
-      // Update company total sales if applicable
-      if (purchase.book.companyId) {
-        await tx.companyProfile.update({
-          where: { id: purchase.book.companyId },
+    // Only increment counts if we actually flipped the status (prevents double-counting)
+    if (updated.count > 0) {
+      await prisma.$transaction(async (tx) => {
+        // Update book purchase count
+        await tx.marketplaceBook.update({
+          where: { id: purchase.bookId },
           data: {
-            totalSales: { increment: 1 },
+            purchaseCount: { increment: 1 },
           },
         });
-      }
-    });
+
+        // Update company total sales if applicable
+        if (purchase.book.companyId) {
+          await tx.companyProfile.update({
+            where: { id: purchase.book.companyId },
+            data: {
+              totalSales: { increment: 1 },
+            },
+          });
+        }
+      });
+    }
 
     // Send notifications (don't await to avoid blocking the response)
     notifyMarketplacePurchase(purchase.id, "STRIPE").catch((err) =>

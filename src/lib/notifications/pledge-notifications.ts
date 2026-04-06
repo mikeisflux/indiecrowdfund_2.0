@@ -358,6 +358,7 @@ export async function processUnsentConfirmationEmails() {
       status: "COMPLETED",
       confirmationEmailSent: false,
       updatedAt: { gte: oneDayAgo },
+      deletedAt: null,
     },
     include: {
       project: {
@@ -393,6 +394,7 @@ export async function processUnsentConfirmationEmails() {
       stripePaymentMethodId: { not: null },
       confirmationEmailSent: false,
       updatedAt: { gte: oneDayAgo },
+      deletedAt: null,
     },
     include: {
       project: {

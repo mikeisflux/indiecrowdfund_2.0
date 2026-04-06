@@ -480,6 +480,7 @@ export async function processPaymentRetries() {
       retryCount: { gt: 0, lte: MAX_RETRY_ATTEMPTS },
       nextRetryAt: { lte: now },
       stripePaymentMethodId: { not: null },
+      deletedAt: null,
     },
     take: 100,
   });

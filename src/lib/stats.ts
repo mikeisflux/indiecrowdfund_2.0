@@ -298,7 +298,7 @@ export async function getPlatformTotals(): Promise<PlatformTotals> {
     db.pledge.groupBy({ by: ["userId"], where: completedFilter }),
     db.pledge.count({ where: completedFilter }),
     db.project.groupBy({ by: ["creatorId"], where: { status: { not: "DRAFT" }, deletedAt: null } }),
-    db.user.count(),
+    db.user.count({ where: { deletedAt: null } }),
     db.project.groupBy({
       by: ["category"],
       _count: { id: true },

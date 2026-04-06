@@ -206,7 +206,7 @@ export async function GET(req: NextRequest) {
 
     // Also get stats on all PENDING pledges
     const allPendingCount = await db.pledge.count({
-      where: { status: "PENDING" },
+      where: { status: "PENDING", deletedAt: null },
     });
 
     const staleCount = stalePledges.length;
