@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  let event: { event_type: string; resource: Record<string, unknown> };
+  let event: { id?: string; event_type: string; resource: Record<string, unknown> };
   try {
     event = JSON.parse(rawBody);
   } catch {
@@ -75,6 +75,27 @@ export async function POST(req: NextRequest) {
   }
 
   paypalWebhookLogger.info({ eventType: event.event_type }, "PayPal webhook received");
+
+  // Deduplicate using event ID (same pattern as Stripe webhook handler)
+  const eventId = event.id
+    ? `paypal_${event.id}`
+    : `paypal_${req.headers.get("paypal-transmission-id") || Date.now()}`;
+
+  const existingEvent = await db.processedWebhookEvent.findUnique({
+    where: { eventId },
+  });
+  if (existingEvent) {
+    paypalWebhookLogger.info({ eventId }, "Duplicate PayPal event ignored");
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+  try {
+    await db.processedWebhookEvent.create({
+      data: { eventId, eventType: event.event_type, source: "paypal" },
+    });
+  } catch {
+    paypalWebhookLogger.info({ eventId }, "PayPal event already being processed");
+    return NextResponse.json({ received: true, duplicate: true });
+  }
 
   try {
     switch (event.event_type) {
