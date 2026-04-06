@@ -103,10 +103,18 @@ export async function POST(req: NextRequest) {
       });
 
       if (survey) {
-        await db.survey.update({
-          where: { id: survey.id },
-          data: body.surveySettings || {},
-        });
+        const allowedSurveyFields = ["status", "collectAddresses", "addressesLocked", "introTitle", "introMessage"];
+        const safeData = Object.fromEntries(
+          Object.entries((body.surveySettings as Record<string, unknown>) || {}).filter(([key]) =>
+            allowedSurveyFields.includes(key)
+          )
+        );
+        if (Object.keys(safeData).length > 0) {
+          await db.survey.update({
+            where: { id: survey.id },
+            data: safeData,
+          });
+        }
       }
 
       return NextResponse.json({ success: true });
