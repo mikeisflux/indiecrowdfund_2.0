@@ -165,8 +165,19 @@ export default async function RootLayout({
         ga4Id = platformSettings.googleAnalyticsId;
       }
     }
+
+    // Env var fallbacks (take effect even if DB row is missing or flags are off)
+    if (!gtmId && process.env.NEXT_PUBLIC_GTM_ID) {
+      gtmId = process.env.NEXT_PUBLIC_GTM_ID;
+    }
+    if (!ga4Id && !gtmId && process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
+      ga4Id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+    }
   } catch (error) {
     console.error("Layout data fetch error:", error);
+    // Still try env var fallbacks if DB fetch failed entirely
+    if (process.env.NEXT_PUBLIC_GTM_ID) gtmId = process.env.NEXT_PUBLIC_GTM_ID;
+    else if (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) ga4Id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   }
 
   return (
