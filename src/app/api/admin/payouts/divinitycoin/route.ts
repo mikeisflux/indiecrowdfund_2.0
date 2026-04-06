@@ -600,8 +600,13 @@ export async function POST(request: NextRequest) {
       }),
     ]);
     const grossAmount = Number(totalRaised._sum.amount || 0);
-    const partnerFee = Math.round(grossAmount * 0.03 * 100) / 100;
-    const platformFee = Math.round(grossAmount * 0.03 * 100) / 100;
+    const payoutPlatformSettings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { platformFee: true },
+    });
+    const payoutPlatformFeeRate = payoutPlatformSettings?.platformFee ? Number(payoutPlatformSettings.platformFee) / 100 : 0.03;
+    const partnerFee = Math.round(grossAmount * 0.03 * 100) / 100; // DC partner fee is fixed at 3%
+    const platformFee = Math.round(grossAmount * payoutPlatformFeeRate * 100) / 100;
 
     // Create the DivinityCoin settlement record as COMPLETED
     const settlement = await db.divinityCoinSettlement.create({

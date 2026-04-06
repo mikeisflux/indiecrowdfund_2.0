@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const rewardsEndLogger = logger.child({ module: "rewards-end" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { canUserEditProject } from "@/lib/project-auth";
 
 // POST - End a reward (marks it as ended so no new backers can select it)
 export async function POST(
@@ -23,7 +24,7 @@ export async function POST(
     const reward = await db.reward.findUnique({
       where: { id: rewardId },
       include: {
-        project: { select: { creatorId: true, status: true } },
+        project: { select: { id: true, creatorId: true, status: true } },
         _count: { select: { pledges: true } },
       },
     });
@@ -32,7 +33,8 @@ export async function POST(
       return NextResponse.json({ error: "Reward not found" }, { status: 404 });
     }
 
-    if (reward.project.creatorId !== session.user.id) {
+    const canEdit = await canUserEditProject(reward.project.id, session.user.id, reward.project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
