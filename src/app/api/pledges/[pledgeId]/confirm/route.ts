@@ -12,6 +12,7 @@ import {
 } from "@/lib/notifications";
 import { processPendingPledgesForProject, getStripeInstance, claimRewardSlot, assignBackerNumber } from "@/lib/payments/stripe";
 import { captureAuthorizedPaypalPledgesAsync } from "@/lib/payments/paypal/capture-authorized";
+import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal/config";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm
@@ -114,9 +115,30 @@ export async function POST(
         paymentVerified = true;
         pledgesConfirmLogger.info(`[Confirm] PayPal pledge already completed for ${pledgeId}`);
       } else if (pledge.paypalOrderId) {
-        // Order created but capture might be in-flight
-        paymentVerified = true;
-        pledgesConfirmLogger.info(`[Confirm] PayPal order ID present for pledge ${pledgeId}, assuming capture in-flight`);
+        // Order exists but not yet COMPLETED — verify with PayPal before trusting
+        try {
+          const paypalConfig = await getPayPalConfig();
+          const paypalAccessToken = await getPayPalAccessToken();
+          const paypalOrderRes = await fetch(`${paypalConfig.baseUrl}/v2/checkout/orders/${pledge.paypalOrderId}`, {
+            headers: { Authorization: `Bearer ${paypalAccessToken}` },
+          });
+          if (paypalOrderRes.ok) {
+            const paypalOrderData = await paypalOrderRes.json();
+            if (paypalOrderData.status === "COMPLETED" || paypalOrderData.status === "APPROVED") {
+              paymentVerified = true;
+              pledgesConfirmLogger.info(`[Confirm] PayPal order ${pledge.paypalOrderId} verified as ${paypalOrderData.status} for pledge ${pledgeId}`);
+            } else {
+              pledgesConfirmLogger.warn(`[Confirm] PayPal order ${pledge.paypalOrderId} is in status '${paypalOrderData.status}' — not verified`);
+              return NextResponse.json({ success: false, error: "PayPal payment not completed. Please try again." }, { status: 400 });
+            }
+          } else {
+            pledgesConfirmLogger.warn(`[Confirm] Could not fetch PayPal order ${pledge.paypalOrderId} — status ${paypalOrderRes.status}`);
+            return NextResponse.json({ success: false, error: "Could not verify PayPal payment. Please try again." }, { status: 400 });
+          }
+        } catch (paypalErr) {
+          pledgesConfirmLogger.error({ err: String(paypalErr) }, `[Confirm] Failed to verify PayPal order for pledge ${pledgeId}:`);
+          return NextResponse.json({ success: false, error: "Could not verify PayPal payment. Please try again." }, { status: 500 });
+        }
       } else {
         return NextResponse.json({
           success: false,
