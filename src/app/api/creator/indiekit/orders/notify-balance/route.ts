@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
         deletedAt: null,
         projectId,
         status: "COMPLETED",
-        deletedAt: null,
       },
       include: {
         user: { select: { email: true, name: true } },

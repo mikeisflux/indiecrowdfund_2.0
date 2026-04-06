@@ -112,7 +112,6 @@ export async function POST(request: NextRequest) {
             id: projectId,
             deletedAt: null,
             creatorId: session.user.id,
-            deletedAt: null,
           },
           select: { id: true, title: true, backerCount: true },
         })
@@ -121,7 +120,6 @@ export async function POST(request: NextRequest) {
             creatorId: session.user.id,
             deletedAt: null,
             status: { in: ["LIVE", "FUNDED", "SUBMITTED"] },
-            deletedAt: null,
           },
           orderBy: { createdAt: "desc" },
           select: { id: true, title: true, backerCount: true },

@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
         userId: session.user.id,
         deletedAt: null,
         status: { in: ["PENDING", "COMPLETED"] },
-        deletedAt: null,
         ...(projectId ? { projectId } : {}),
       },
       include: {

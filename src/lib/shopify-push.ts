@@ -270,7 +270,7 @@ export async function pushOrdersToShopify(
     projectId: string;
     status: string;
     id?: { in: string[] };
-    fulfillmentStatus?: { not: string };
+    fulfillmentStatus?: { not: string } | { notIn: string[] };
   } = {
     projectId,
     status: "COMPLETED",

@@ -78,7 +78,6 @@ export async function POST(request: NextRequest) {
         id: projectId,
         deletedAt: null,
         creatorId: session.user.id,
-        deletedAt: null,
         OR: [
           { status: "LIVE" },
           { prelaunchActive: true },

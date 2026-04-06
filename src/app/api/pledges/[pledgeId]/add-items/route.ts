@@ -97,7 +97,6 @@ export async function POST(
         id: pledgeId,
         deletedAt: null,
         userId: session.user.id,
-        deletedAt: null,
       },
       include: {
         project: {
