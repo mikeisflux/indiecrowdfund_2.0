@@ -5,6 +5,7 @@ const surveysLogger = logger.child({ module: "surveys" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { canUserEditProject } from "@/lib/project-auth";
 
 const createSurveySchema = z.object({
   projectId: z.string(),
@@ -96,9 +97,9 @@ export async function POST(req: NextRequest) {
       // Survey creation
       const data = createSurveySchema.parse(body);
 
-      // Verify project ownership
+      // Verify project ownership or collaborator edit access
       const project = await db.project.findFirst({
-        where: { id: data.projectId , deletedAt: null },
+        where: { id: data.projectId, deletedAt: null },
         select: { creatorId: true, status: true },
       });
 
@@ -106,7 +107,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
       }
 
-      if (project.creatorId !== session.user.id) {
+      const canEdit = await canUserEditProject(data.projectId, session.user.id, project.creatorId);
+      if (!canEdit) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
@@ -153,13 +155,18 @@ export async function GET(req: NextRequest) {
     const pledgeId = searchParams.get("pledgeId");
 
     if (projectId) {
-      // Get survey for project (creator view)
+      // Get survey for project (creator/collaborator view)
       const project = await db.project.findFirst({
-        where: { id: projectId , deletedAt: null },
+        where: { id: projectId, deletedAt: null },
         select: { creatorId: true },
       });
 
-      if (project?.creatorId !== session.user.id) {
+      if (!project) {
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      }
+
+      const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+      if (!canEdit) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 

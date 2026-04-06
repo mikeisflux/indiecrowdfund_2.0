@@ -5,6 +5,8 @@ const updatesLogger = logger.child({ module: "updates" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { canUserEditProject } from "@/lib/project-auth";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 
 const createUpdateSchema = z.object({
   projectId: z.string(),
@@ -24,7 +26,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createUpdateSchema.parse(body);
 
-    // Verify project ownership
+    // Verify project ownership or collaborator edit access
     const project = await db.project.findFirst({
       where: { id: data.projectId, deletedAt: null },
       select: { creatorId: true },
@@ -34,7 +36,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    if (project.creatorId !== session.user.id) {
+    const canEdit = await canUserEditProject(data.projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
       data: {
         projectId: data.projectId,
         title: data.title,
-        content: data.content,
+        content: sanitizeHtml(data.content),
         visibility: data.visibility,
         status: data.publish ? "PUBLISHED" : "DRAFT",
         publishedAt: data.publish ? new Date() : null,

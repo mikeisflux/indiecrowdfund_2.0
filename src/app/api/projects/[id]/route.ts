@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { sendCollaboratorInviteEmail, sendProjectSubmittedEmail } from "@/lib/email";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 
 // Helper function to check if a user has had a successful (funded + fulfilled) campaign
 async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
@@ -477,8 +478,8 @@ export async function PATCH(
     // For draft/submitted/approved projects, allow all edits
     if (isLaunched) {
       // Story fields only for launched campaigns
-      if (projectData.description !== undefined) updateData.description = projectData.description;
-      if (projectData.risks !== undefined) updateData.risks = projectData.risks;
+      if (projectData.description !== undefined) updateData.description = sanitizeHtml(projectData.description);
+      if (projectData.risks !== undefined) updateData.risks = sanitizeHtml(projectData.risks);
       if (projectData.usesAI !== undefined) updateData.usesAI = projectData.usesAI;
       if (projectData.faqs !== undefined) updateData.faqs = projectData.faqs;
     } else {
@@ -519,8 +520,8 @@ export async function PATCH(
       if (projectData.launchDate !== undefined) updateData.launchDate = projectData.launchDate ? new Date(projectData.launchDate) : null;
 
       // Story fields
-      if (projectData.description !== undefined) updateData.description = projectData.description;
-      if (projectData.risks !== undefined) updateData.risks = projectData.risks;
+      if (projectData.description !== undefined) updateData.description = sanitizeHtml(projectData.description);
+      if (projectData.risks !== undefined) updateData.risks = sanitizeHtml(projectData.risks);
       if (projectData.usesAI !== undefined) updateData.usesAI = projectData.usesAI;
       if (projectData.faqs !== undefined) updateData.faqs = projectData.faqs;
 

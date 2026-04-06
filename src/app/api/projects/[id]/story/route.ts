@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { checkProjectEditPermission } from "@/lib/project-permissions";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +49,8 @@ export async function POST(
 
     const updateData: Record<string, unknown> = {};
 
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.risks !== undefined) updateData.risks = data.risks;
+    if (data.description !== undefined) updateData.description = sanitizeHtml(data.description);
+    if (data.risks !== undefined) updateData.risks = sanitizeHtml(data.risks);
     if (data.usesAI !== undefined) updateData.usesAI = data.usesAI;
     if (data.faqs !== undefined) updateData.faqs = data.faqs;
 
