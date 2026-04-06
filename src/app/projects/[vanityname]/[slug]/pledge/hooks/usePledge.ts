@@ -206,14 +206,14 @@ export function usePledge() {
   }, [project]);
 
   // Calculate totals
-  const rewardAmount = pledgeWithoutReward ? customPledgeAmount : (selectedReward?.amount || 0);
+  const rewardAmount = pledgeWithoutReward ? customPledgeAmount : (Number(selectedReward?.amount) || 0);
   const rewardShipping = selectedReward
     ? getShippingCost(selectedReward.shippingCost, selectedReward.shippingType, shippingCountry)
     : 0;
 
   const addonsTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
     const addon = addons.find((a) => a.id === id);
-    return sum + (addon?.amount || 0) * qty;
+    return sum + (Number(addon?.amount) || 0) * qty;
   }, 0);
 
   const addonsShipping = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {

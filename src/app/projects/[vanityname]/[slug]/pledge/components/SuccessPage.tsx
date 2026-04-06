@@ -176,7 +176,7 @@ export function SuccessPage({
                 ) : selectedReward && (
                   <div className="flex justify-between text-sm">
                     <span>{selectedReward.title}</span>
-                    <span className="font-medium">${selectedReward.amount.toFixed(2)}</span>
+                    <span className="font-medium">${Number(selectedReward.amount).toFixed(2)}</span>
                   </div>
                 )}
 
@@ -191,7 +191,7 @@ export function SuccessPage({
                         return (
                           <div key={id} className="flex justify-between text-sm py-0.5">
                             <span>{addon.title} × {qty}</span>
-                            <span className="font-medium">${(addon.amount * qty).toFixed(2)}</span>
+                            <span className="font-medium">${(Number(addon.amount) * qty).toFixed(2)}</span>
                           </div>
                         );
                       })}
