@@ -68,7 +68,7 @@ async function getSuccessfulProjects() {
         creator: project.creator.name || "Creator",
         category: project.category,
         raised: liveStats.currentAmount,
-        goal: project.goalAmount,
+        goal: Number(project.goalAmount),
         backers: liveStats.backerCount,
         image: project.imageUrl || "",
         highlight: `${Number(project.goalAmount) > 0 ? Math.round((liveStats.currentAmount / Number(project.goalAmount)) * 100) : 0}% funded`,
@@ -87,6 +87,7 @@ async function getCategoryStats() {
       by: ["category"],
       where: {
         status: { in: ["LIVE", "FUNDED"] },
+        deletedAt: null,
       },
       _sum: {
         currentAmount: true,

@@ -115,6 +115,7 @@ export async function GET() {
       // Stripe uses auto Connect payouts so only DC and PayPal projects need manual payouts
       db.project.count({
         where: {
+          deletedAt: null,
           paymentProcessor: { in: ["DIVINITYCOIN", "PAYPAL"] },
           OR: [
             { status: "FUNDED" },

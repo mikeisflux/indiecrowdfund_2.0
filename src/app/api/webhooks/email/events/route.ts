@@ -324,19 +324,20 @@ export async function POST(request: NextRequest) {
 
       // Check if it's a SendGrid webhook (array of events)
       if (Array.isArray(payload)) {
-        // Verify SendGrid webhook signature if verification key is configured
+        // Verify SendGrid webhook signature — require signature when a verification key is configured
         const sgSignature = request.headers.get("x-twilio-email-event-webhook-signature");
         const sgTimestamp = request.headers.get("x-twilio-email-event-webhook-timestamp");
 
-        if (sgSignature && sgTimestamp) {
-          const settings = await db.platformSettings.findUnique({
-            where: { id: "default" },
-            select: { sendgridWebhookVerificationKey: true },
-          });
+        const settings = await db.platformSettings.findUnique({
+          where: { id: "default" },
+          select: { sendgridWebhookVerificationKey: true },
+        });
 
-          if (!settings?.sendgridWebhookVerificationKey) {
-            webhooksEmailEventsLogger.error("[Webhook] No sendgridWebhookVerificationKey configured — rejecting webhook");
-            return NextResponse.json({ error: "SendGrid verification key not configured" }, { status: 500 });
+        if (settings?.sendgridWebhookVerificationKey) {
+          // Verification key is configured — signature headers are required
+          if (!sgSignature || !sgTimestamp) {
+            webhooksEmailEventsLogger.error("[Webhook] SendGrid webhook missing signature headers — rejecting");
+            return NextResponse.json({ error: "Missing signature headers" }, { status: 401 });
           }
 
           const key = settings.sendgridWebhookVerificationKey;
@@ -352,11 +353,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
           }
           webhooksEmailEventsLogger.info("[Webhook] SendGrid signature verification passed!");
+        } else {
+          webhooksEmailEventsLogger.warn("[Webhook] SendGrid verification key not configured — accepting without signature verification");
         }
 
         sendGridEvents = payload as SendGridEventData[];
       } else {
-        // Mailgun JSON format - verify signature if present
+        // Mailgun JSON format - verify signature
         const mailgunPayload = payload as MailgunWebhookPayload;
 
         if (mailgunPayload.signature) {
@@ -367,7 +370,23 @@ export async function POST(request: NextRequest) {
               webhooksEmailEventsLogger.error("[Webhook] Mailgun signature verification failed");
               return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
             }
+          } else {
+            // Signature block present but fields missing — reject
+            webhooksEmailEventsLogger.error("[Webhook] Mailgun signature block incomplete — rejecting");
+            return NextResponse.json({ error: "Incomplete signature" }, { status: 401 });
           }
+        } else {
+          // No signature block — verify via signing key if configured
+          const mgSettings = await db.platformSettings.findUnique({
+            where: { id: "default" },
+            select: { mailgunWebhookSigningKey: true },
+          });
+          if (mgSettings?.mailgunWebhookSigningKey) {
+            // Signing key configured but no signature in payload — reject
+            webhooksEmailEventsLogger.error("[Webhook] Mailgun JSON webhook missing signature — rejecting");
+            return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+          }
+          webhooksEmailEventsLogger.warn("[Webhook] Mailgun signing key not configured — accepting without signature verification");
         }
 
         if (mailgunPayload["event-data"]) {

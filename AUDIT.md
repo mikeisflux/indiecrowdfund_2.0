@@ -6,9 +6,9 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 
 ---
 
-- [ ] `src/__tests__/json-ld.test.tsx` ⬜
-- [ ] `src/__tests__/setup.ts` ⬜
-- [ ] `src/__tests__/utils.test.ts` ⬜
+- [x] `src/__tests__/json-ld.test.tsx` ✅
+- [x] `src/__tests__/setup.ts` ✅
+- [x] `src/__tests__/utils.test.ts` ✅
 - [x] `src/app/(auth)/choose-role/page.tsx` ✅
 - [x] `src/app/(auth)/forgot-password/page.tsx` ✅
 - [x] `src/app/(auth)/layout.tsx` ✅
@@ -18,18 +18,18 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/(auth)/register/page.tsx` ✅
 - [x] `src/app/(auth)/reset-password/page.tsx` ✅
 - [ ] `src/app/[vanityname]/[slug]/page.tsx` ⬜
-- [ ] `src/app/about-us/layout.tsx` ⬜
-- [ ] `src/app/about-us/page.tsx` ⬜
-- [ ] `src/app/access-denied/page.tsx` ⬜
+- [x] `src/app/about-us/layout.tsx` ✅
+- [x] `src/app/about-us/page.tsx` ✅
+- [x] `src/app/access-denied/page.tsx` ✅
 - [ ] `src/app/admin/ai-marketing/page.tsx` ⬜
-- [ ] `src/app/admin/ai/components/ResultsViewerDialog.tsx` ⬜
-- [ ] `src/app/admin/ai/components/StatusBadges.tsx` ⬜
+- [x] `src/app/admin/ai/components/ResultsViewerDialog.tsx` ✅
+- [x] `src/app/admin/ai/components/StatusBadges.tsx` ✅
 - [ ] `src/app/admin/ai/components/index.ts` ⬜
 - [ ] `src/app/admin/ai/page.tsx` ⬜
 - [ ] `src/app/admin/ai/types.ts` ⬜
 - [ ] `src/app/admin/analytics/page.tsx` ⬜
-- [ ] `src/app/admin/announcement-bar/page.tsx` ⬜
-- [ ] `src/app/admin/bug-reports/page.tsx` ⬜
+- [x] `src/app/admin/announcement-bar/page.tsx` ✅
+- [x] `src/app/admin/bug-reports/page.tsx` ✅
 - [ ] `src/app/admin/changelog/page.tsx` ⬜
 - [ ] `src/app/admin/consent-banner/page.tsx` ⬜
 - [ ] `src/app/admin/cron/page.tsx` ⬜
@@ -293,22 +293,22 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/auth/social/[provider]/callback/route.ts` ⬜
 - [ ] `src/app/api/auth/social/[provider]/route.ts` ⬜
 - [ ] `src/app/api/auth/social/connections/route.ts` ⬜
-- [ ] `src/app/api/backer/addresses/[id]/route.ts` ⬜
-- [ ] `src/app/api/backer/addresses/route.ts` ⬜
-- [ ] `src/app/api/backer/analytics/export/route.ts` ⬜
-- [ ] `src/app/api/backer/analytics/route.ts` ⬜
-- [ ] `src/app/api/backer/collections/[id]/route.ts` ⬜
-- [ ] `src/app/api/backer/collections/route.ts` ⬜
-- [ ] `src/app/api/backer/dashboard/route.ts` ⬜
-- [ ] `src/app/api/backer/digital-files/extract-cover/route.ts` ⬜
-- [ ] `src/app/api/backer/digital-files/progress/route.ts` ⬜
-- [ ] `src/app/api/backer/digital-files/route.ts` ⬜
-- [ ] `src/app/api/backer/digital-files/stream/route.ts` ⬜
-- [ ] `src/app/api/backer/digital-library/route.ts` ⬜
-- [ ] `src/app/api/backer/following/route.ts` ⬜
-- [ ] `src/app/api/backer/marketplace-purchases/[id]/download/route.ts` ⬜ Removed debug log that leaked other users buyerId/status on unauthorized access attempts
-- [ ] `src/app/api/backer/notifications/preferences/route.ts` ⬜
-- [ ] `src/app/api/backer/surveys/route.ts` ⬜
+- [x] `src/app/api/backer/addresses/[id]/route.ts` ✅
+- [x] `src/app/api/backer/addresses/route.ts` ✅
+- [x] `src/app/api/backer/analytics/export/route.ts` ✅
+- [x] `src/app/api/backer/analytics/route.ts` ✅
+- [x] `src/app/api/backer/collections/[id]/route.ts` ✅
+- [x] `src/app/api/backer/collections/route.ts` ✅
+- [x] `src/app/api/backer/dashboard/route.ts` ✅
+- [x] `src/app/api/backer/digital-files/extract-cover/route.ts` ✅
+- [x] `src/app/api/backer/digital-files/progress/route.ts` ✅
+- [x] `src/app/api/backer/digital-files/route.ts` ✅
+- [x] `src/app/api/backer/digital-files/stream/route.ts` ✅
+- [x] `src/app/api/backer/digital-library/route.ts` ✅
+- [x] `src/app/api/backer/following/route.ts` ✅
+- [x] `src/app/api/backer/marketplace-purchases/[id]/download/route.ts` ✅
+- [x] `src/app/api/backer/notifications/preferences/route.ts` ✅
+- [x] `src/app/api/backer/surveys/route.ts` ✅
 - [ ] `src/app/api/blocked/route.ts` ⬜
 - [ ] `src/app/api/bug-reports/route.ts` ⬜
 - [ ] `src/app/api/chat/admin/ban/route.ts` ⬜
@@ -321,86 +321,87 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/collaborator/[id]/respond/route.ts` ⬜
 - [ ] `src/app/api/collaborator/[id]/route.ts` ⬜
 - [ ] `src/app/api/consent-banner/route.ts` ⬜
-- [ ] `src/app/api/contact/route.ts` ⬜
-- [ ] `src/app/api/creator/account/avatar/route.ts` ⬜
-- [ ] `src/app/api/creator/account/password/route.ts` ⬜
-- [ ] `src/app/api/creator/account/preferences/route.ts` ⬜
-- [ ] `src/app/api/creator/account/profile/route.ts` ⬜
-- [ ] `src/app/api/creator/bank-account/route.ts` ⬜
-- [ ] `src/app/api/creator/dashboard/route.ts` ⬜
-- [ ] `src/app/api/creator/digital-files/route.ts` ⬜
-- [ ] `src/app/api/creator/email-marketing/campaigns/route.ts` ⬜
-- [ ] `src/app/api/creator/email-marketing/subscribers/[id]/route.ts` ⬜
-- [ ] `src/app/api/creator/email-marketing/subscribers/import/route.ts` ⬜
-- [ ] `src/app/api/creator/email-marketing/subscribers/route.ts` ⬜
-- [ ] `src/app/api/creator/email/campaign/route.ts` ⬜
-- [ ] `src/app/api/creator/email/compose/route.ts` ⬜
-- [ ] `src/app/api/creator/email/send-test/route.ts` ⬜
-- [ ] `src/app/api/creator/email/setup/route.ts` ⬜
-- [ ] `src/app/api/creator/email/threads/[threadId]/archive/route.ts` ⬜
-- [ ] `src/app/api/creator/email/threads/[threadId]/delete/route.ts` ⬜
-- [ ] `src/app/api/creator/email/threads/[threadId]/forward/route.ts` ⬜
-- [ ] `src/app/api/creator/email/threads/[threadId]/messages/route.ts` ⬜
-- [ ] `src/app/api/creator/email/threads/[threadId]/read/route.ts` ⬜
-- [ ] `src/app/api/creator/email/threads/[threadId]/reply/route.ts` ⬜
-- [ ] `src/app/api/creator/email/threads/[threadId]/star/route.ts` ⬜
-- [ ] `src/app/api/creator/email/threads/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/addons/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/address/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/backers/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/campaigns/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/digital/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/easypost/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/export/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/feedback/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/fulfillment/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/build-package-groups.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/compute-stats.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-digital-files.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-distribution-rules.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-email-campaigns.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-products.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-segments.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-timeline.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/index.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/post-campaign-sales.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/process-backers.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/workflow.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/integrations/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/modifiers/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/notes/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/orders/notify-balance/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/orders/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/products/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/segments/backers/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/segments/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/settings/image/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/settings/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shipping-providers/credentials/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shipping/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shippo/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shipstation/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/credentials/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/oauth/authorize/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/oauth/callback/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/sku-mapping/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/stamps/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/surveys/[pledgeId]/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/surveys/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/timeline/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/transactions/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/updates/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/books/[id]/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/books/[id]/submit/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/books/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/company/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/discount-codes/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/files/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/files/upload/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/route.ts` ⬜
-- [ ] `src/app/api/creator/media/upload/route.ts` ⬜
+- [x] `src/app/api/contact/route.ts` ⚠️
+  - Issue: No rate limiting on contact form — attacker can flood support email and drain email service credits. Zod validation and HTML escaping are correct.
+- [x] `src/app/api/creator/account/avatar/route.ts` ✅
+- [x] `src/app/api/creator/account/password/route.ts` ✅
+- [x] `src/app/api/creator/account/preferences/route.ts` ✅
+- [x] `src/app/api/creator/account/profile/route.ts` ✅
+- [x] `src/app/api/creator/bank-account/route.ts` ✅
+- [x] `src/app/api/creator/dashboard/route.ts` ✅
+- [x] `src/app/api/creator/digital-files/route.ts` ✅
+- [x] `src/app/api/creator/email-marketing/campaigns/route.ts` ✅
+- [x] `src/app/api/creator/email-marketing/subscribers/[id]/route.ts` ✅
+- [x] `src/app/api/creator/email-marketing/subscribers/import/route.ts` ✅
+- [x] `src/app/api/creator/email-marketing/subscribers/route.ts` ✅
+- [x] `src/app/api/creator/email/campaign/route.ts` ✅
+- [x] `src/app/api/creator/email/compose/route.ts` ✅
+- [x] `src/app/api/creator/email/send-test/route.ts` ✅
+- [x] `src/app/api/creator/email/setup/route.ts` ✅
+- [x] `src/app/api/creator/email/threads/[threadId]/archive/route.ts` ✅
+- [x] `src/app/api/creator/email/threads/[threadId]/delete/route.ts` ✅
+- [x] `src/app/api/creator/email/threads/[threadId]/forward/route.ts` ✅
+- [x] `src/app/api/creator/email/threads/[threadId]/messages/route.ts` ✅
+- [x] `src/app/api/creator/email/threads/[threadId]/read/route.ts` ✅
+- [x] `src/app/api/creator/email/threads/[threadId]/reply/route.ts` ✅
+- [x] `src/app/api/creator/email/threads/[threadId]/star/route.ts` ✅
+- [x] `src/app/api/creator/email/threads/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/addons/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/address/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/backers/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/campaigns/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/digital/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/easypost/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/export/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/feedback/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/fulfillment/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/build-package-groups.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/compute-stats.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-digital-files.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-distribution-rules.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-email-campaigns.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-products.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-segments.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-timeline.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/index.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/post-campaign-sales.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/process-backers.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/workflow.ts` ✅
+- [x] `src/app/api/creator/indiekit/integrations/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/modifiers/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/notes/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/orders/notify-balance/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/orders/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/products/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/segments/backers/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/segments/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/settings/image/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/settings/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shipping-providers/credentials/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shipping/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shippo/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shipstation/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/credentials/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/oauth/authorize/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/oauth/callback/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/sku-mapping/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/stamps/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/surveys/[pledgeId]/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/surveys/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/timeline/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/transactions/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/updates/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/books/[id]/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/books/[id]/submit/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/books/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/company/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/discount-codes/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/files/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/files/upload/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/route.ts` ✅
+- [x] `src/app/api/creator/media/upload/route.ts` ✅
 - [ ] `src/app/api/creator/paypal-bank-account/route.ts` ⬜
 - [ ] `src/app/api/creator/paypal/route.ts` ⬜
 - [ ] `src/app/api/creator/pledges/[pledgeId]/route.ts` ⬜

@@ -133,6 +133,15 @@ export async function PATCH(
       );
     }
 
+    // Atomic guard — claim the request BEFORE calling any payment API to prevent double-refunds
+    const claimResult = await db.refundRequest.updateMany({
+      where: { id: requestId, status: "PENDING" },
+      data: { status: "APPROVED", creatorNote: creatorNote || null, processedAt: new Date() },
+    });
+    if (claimResult.count === 0) {
+      return NextResponse.json({ success: true, message: "Refund request was already processed." });
+    }
+
     // Process the refund per processor
     try {
       if (processor === "STRIPE") {
@@ -224,18 +233,12 @@ export async function PATCH(
       }
     } catch (refundError) {
       refundRequestLogger.error({ err: String(refundError), pledgeId: pledge.id }, "Refund processing error");
+      // Revert the claim so the creator can retry
+      await db.refundRequest.update({
+        where: { id: requestId },
+        data: { status: "PENDING", processedAt: null },
+      });
       return NextResponse.json({ error: "Failed to process refund. Please try again." }, { status: 500 });
-    }
-
-    // Atomic DB update — guard against double-processing from concurrent requests
-    const approveResult = await db.refundRequest.updateMany({
-      where: { id: requestId, status: "PENDING" },
-      data: { status: "APPROVED", creatorNote: creatorNote || null, processedAt: new Date() },
-    });
-    if (approveResult.count === 0) {
-      // Another concurrent request already processed this refund
-      refundRequestLogger.warn({ requestId, pledgeId: pledge.id }, "Concurrent approve detected — refund may have been processed twice");
-      return NextResponse.json({ success: true, message: "Refund approved and processed successfully." });
     }
 
     // Update pledge and project stats in a transaction

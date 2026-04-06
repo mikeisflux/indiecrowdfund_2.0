@@ -41,8 +41,9 @@ export function MarketplacePayPalForm({
 
     const existingScript = document.getElementById("paypal-sdk");
     if (existingScript) {
-      existingScript.addEventListener("load", () => setSdkReady(true));
-      return;
+      const handleLoad = () => setSdkReady(true);
+      existingScript.addEventListener("load", handleLoad);
+      return () => existingScript.removeEventListener("load", handleLoad);
     }
 
     const script = document.createElement("script");
