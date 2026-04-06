@@ -29,7 +29,7 @@ export async function GET(
 
     // Get user's pledges with project and reward info
     const pledges = await db.pledge.findMany({
-      where: { userId },
+      where: { userId, deletedAt: null },
       include: {
         project: {
           select: {

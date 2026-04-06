@@ -209,7 +209,7 @@ export async function PATCH(req: NextRequest) {
             { status: 403 }
           );
         }
-        if (!data?.role || !["USER", "COOL_KIDS", "ADMIN", "SUPER_ADMIN"].includes(data.role)) {
+        if (!data?.role || !["USER", "COOL_KIDS", "CREATOR", "ADMIN", "SUPER_ADMIN"].includes(data.role)) {
           return NextResponse.json(
             { error: "Invalid role" },
             { status: 400 }

@@ -242,16 +242,16 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/payouts/paypal/route.ts` ✅
 - [x] `src/app/api/admin/payouts/route.ts` 🔧 Fixed race condition in PATCH — atomic updateMany with status guard
 - [x] `src/app/api/admin/payouts/whop/route.ts` ✅
-- [ ] `src/app/api/admin/pledges/[pledgeId]/route.ts`
-- [ ] `src/app/api/admin/pledges/cleanup/route.ts`
+- [x] `src/app/api/admin/pledges/[pledgeId]/route.ts` ✅
+- [x] `src/app/api/admin/pledges/cleanup/route.ts` ✅
 - [ ] `src/app/api/admin/prelaunch/route.ts`
-- [ ] `src/app/api/admin/projects/[projectId]/adjust-end-date/route.ts`
-- [ ] `src/app/api/admin/projects/[projectId]/backfill-backer-numbers/route.ts`
-- [ ] `src/app/api/admin/projects/[projectId]/process-pledges/route.ts`
-- [ ] `src/app/api/admin/projects/history/route.ts`
+- [x] `src/app/api/admin/projects/[projectId]/adjust-end-date/route.ts` ✅
+- [x] `src/app/api/admin/projects/[projectId]/backfill-backer-numbers/route.ts` ✅
+- [x] `src/app/api/admin/projects/[projectId]/process-pledges/route.ts` ✅
+- [x] `src/app/api/admin/projects/history/route.ts` ✅
 - [ ] `src/app/api/admin/projects/link-preview/route.ts`
-- [ ] `src/app/api/admin/projects/review/route.ts`
-- [ ] `src/app/api/admin/projects/status/route.ts`
+- [x] `src/app/api/admin/projects/review/route.ts` ✅
+- [x] `src/app/api/admin/projects/status/route.ts` ✅
 - [ ] `src/app/api/admin/promo-popup/route.ts`
 - [ ] `src/app/api/admin/recalculate-pledge-amounts/route.ts`
 - [ ] `src/app/api/admin/reconcile-pledges/route.ts`
@@ -272,14 +272,14 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/settings/test-r2/route.ts`
 - [ ] `src/app/api/admin/sidebar-stats/route.ts`
 - [ ] `src/app/api/admin/sync-all-project-stats/route.ts`
-- [ ] `src/app/api/admin/transactions/[id]/route.ts`
+- [x] `src/app/api/admin/transactions/[id]/route.ts` ✅
 - [x] `src/app/api/admin/transactions/route.ts` 🔧 Fixed null crash on bankAccount.user in querySettlements (orphaned FK)
 - [ ] `src/app/api/admin/transactions/stripe-lookup/route.ts`
-- [ ] `src/app/api/admin/users/[userId]/emails/route.ts`
-- [ ] `src/app/api/admin/users/[userId]/pledges/route.ts`
+- [x] `src/app/api/admin/users/[userId]/emails/route.ts` ✅
+- [x] `src/app/api/admin/users/[userId]/pledges/route.ts` 🔧 Fixed missing deletedAt:null in user pledges query (showed soft-deleted pledges)
 - [ ] `src/app/api/admin/users/[userId]/vanity-url/route.ts`
-- [ ] `src/app/api/admin/users/merge-duplicates/route.ts`
-- [ ] `src/app/api/admin/users/route.ts`
+- [x] `src/app/api/admin/users/merge-duplicates/route.ts` ✅
+- [x] `src/app/api/admin/users/route.ts` 🔧 Fixed UPDATE_ROLE missing CREATOR in valid roles list (admins could not set CREATOR role)
 - [ ] `src/app/api/admin/wallet/route.ts`
 - [ ] `src/app/api/ai/auto-tag/route.ts`
 - [ ] `src/app/api/ai/marketing-copy/route.ts`
