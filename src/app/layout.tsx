@@ -184,12 +184,12 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <GoogleAnalytics ga4Id={ga4Id} gtmId={gtmId} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        {/* GTM noscript fallback — must be immediately after <body> per GTM spec */}
+        {/* GTM scripts — beforeInteractive renders in SSR HTML; noscript fallback per GTM spec */}
+        <GoogleAnalytics ga4Id={ga4Id} gtmId={gtmId} />
         {gtmId && (
           <noscript>
             <iframe

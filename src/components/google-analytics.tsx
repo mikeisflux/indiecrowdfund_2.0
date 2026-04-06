@@ -1,7 +1,4 @@
 /* eslint-disable @next/next/next-script-for-ga */
-// The GTM snippet must use a native <script> tag (not next/script) so it appears in the
-// server-rendered HTML. Google's tag verification tools do a static crawl and won't detect
-// scripts that are injected client-side via next/script strategy="afterInteractive".
 import Script from "next/script";
 
 interface GoogleAnalyticsProps {
@@ -11,16 +8,22 @@ interface GoogleAnalyticsProps {
 
 /**
  * Injects GA4 and/or GTM scripts into the page.
- * GTM uses a native <script> tag so it appears in the SSR HTML (required for detection).
- * GA4 uses Next.js Script strategy="afterInteractive" (fine for tracking without SSR requirement).
- * Rendered server-side from layout.tsx using settings fetched from the DB.
+ *
+ * GTM uses strategy="beforeInteractive" — this is the ONLY next/script
+ * strategy that is injected into the server-rendered HTML (inside <head>),
+ * making it detectable by Google's tag verification crawlers.
+ *
+ * GA4 uses strategy="afterInteractive" — fine for tracking since it
+ * doesn't need to be in the initial HTML crawl.
  */
 export function GoogleAnalytics({ ga4Id, gtmId }: GoogleAnalyticsProps) {
   return (
     <>
-      {/* Google Tag Manager — native script tag so it appears in initial SSR HTML */}
+      {/* Google Tag Manager — beforeInteractive so it's in the SSR HTML */}
       {gtmId && (
-        <script
+        <Script
+          id="gtm-script"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`,
           }}
