@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     // Get reward IDs that are used as pledge-level tiers (main reward on pledges)
     // These should NOT appear in the add-ons checklist even if typed as ADDON
     const pledgeTierIds = await db.pledge.findMany({
-      where: { projectId, rewardId: { not: null } },
+      where: { projectId, rewardId: { not: null }, deletedAt: null },
       select: { rewardId: true },
       distinct: ["rewardId"],
     });

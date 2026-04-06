@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
       const data = submitResponseSchema.parse(body);
 
       // Verify pledge belongs to user
-      const pledge = await db.pledge.findUnique({
-        where: { id: data.pledgeId },
+      const pledge = await db.pledge.findFirst({
+        where: { id: data.pledgeId, deletedAt: null },
         select: { userId: true, surveyCompleted: true },
       });
 
@@ -177,8 +177,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ survey });
     } else if (pledgeId) {
       // Get survey for a specific pledge (backer view)
-      const pledge = await db.pledge.findUnique({
-        where: { id: pledgeId },
+      const pledge = await db.pledge.findFirst({
+        where: { id: pledgeId, deletedAt: null },
         select: { userId: true, projectId: true, surveyCompleted: true },
       });
 

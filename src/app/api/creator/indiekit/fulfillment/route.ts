@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
         where: {
           id: { in: backerIds },
           projectId,
+          deletedAt: null,
         },
         data: {
           fulfillmentStatus: effectiveStatus,
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
         where: {
           id: { in: backerIds },
           projectId,
+          deletedAt: null,
         },
         data: {
           fulfillmentStatus: "SHIPPED",

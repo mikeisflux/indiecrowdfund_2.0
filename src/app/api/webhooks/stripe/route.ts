@@ -69,7 +69,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true, duplicate: true });
       }
 
-      await handleStripeWebhook(event);
+      try {
+        await handleStripeWebhook(event);
+      } catch (handlerError) {
+        // Return 200 even on handler errors — the dedup record is already written,
+        // so retrying would just be deduped and silently dropped. Log for alerting.
+        const durationSec = (Date.now() - startTime) / 1000;
+        metrics.httpRequestsTotal.inc({ method: "POST", path: "/api/webhooks/stripe", status: "500" });
+        metrics.httpRequestDuration.observe({ method: "POST", path: "/api/webhooks/stripe" }, durationSec);
+        webhookLogger.error({ correlationId, eventType: event.type, err: handlerError instanceof Error ? handlerError.message : String(handlerError) }, "Stripe webhook handler error (event already deduped)");
+        return NextResponse.json({ received: true, error: "Handler failed" });
+      }
 
       const durationSec = (Date.now() - startTime) / 1000;
       metrics.httpRequestsTotal.inc({ method: "POST", path: "/api/webhooks/stripe", status: "200" });

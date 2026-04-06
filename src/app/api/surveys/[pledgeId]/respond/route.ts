@@ -62,8 +62,8 @@ export async function GET(
     const { pledgeId } = await params;
 
     // Get pledge and verify ownership
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
       include: {
         project: {
           select: { id: true, title: true, imageUrl: true, paymentProcessor: true, slug: true },
@@ -278,8 +278,8 @@ export async function POST(
     const { pledgeId } = await params;
 
     // Get pledge and verify ownership
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
       include: {
         addons: true,
       },

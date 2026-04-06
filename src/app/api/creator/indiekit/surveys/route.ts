@@ -258,6 +258,7 @@ export async function PATCH(req: NextRequest) {
         const backers = await db.pledge.findMany({
           where: {
             projectId,
+            deletedAt: null,
             OR: [
               { status: "COMPLETED" },
               {
@@ -369,6 +370,7 @@ export async function PATCH(req: NextRequest) {
         const newBackers = await db.pledge.findMany({
           where: {
             projectId,
+            deletedAt: null,
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
@@ -442,6 +444,7 @@ export async function PATCH(req: NextRequest) {
         const updateBackers = await db.pledge.findMany({
           where: {
             projectId,
+            deletedAt: null,
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
