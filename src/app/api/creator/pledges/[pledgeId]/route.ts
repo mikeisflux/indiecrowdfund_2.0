@@ -308,7 +308,7 @@ export async function PATCH(
                 where: { id: typedPledge.projectId },
                 data: {
                   backerCount: { decrement: 1 },
-                  currentAmount: { decrement: typedPledge.amount },
+                  currentAmount: { decrement: Number(typedPledge.amount) },
                 },
               });
 
