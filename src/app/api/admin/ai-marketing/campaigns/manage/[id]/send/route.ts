@@ -218,7 +218,7 @@ export async function POST(
           // Only include verified users if no specific segments are selected
           selectedSegmentIds.length === 0
             ? db.user.findMany({
-                where: { emailVerified: { not: null } },
+                where: { emailVerified: { not: null }, deletedAt: null },
                 select: { email: true, name: true },
               })
             : Promise.resolve([]),
@@ -245,7 +245,7 @@ export async function POST(
           distinct: ["userId"],
         });
         const backerUsers = await db.user.findMany({
-          where: { id: { in: backerPledges.map(p => p.userId) } },
+          where: { id: { in: backerPledges.map(p => p.userId) }, deletedAt: null },
           select: { email: true, name: true },
         });
         backerUsers.forEach(u => {
@@ -255,7 +255,7 @@ export async function POST(
 
       case "creator":
         const creators = await db.user.findMany({
-          where: { createdProjects: { some: {} } },
+          where: { createdProjects: { some: {} }, deletedAt: null },
           select: { email: true, name: true },
         });
         creators.forEach(c => {

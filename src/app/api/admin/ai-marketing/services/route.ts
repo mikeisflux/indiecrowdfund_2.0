@@ -184,6 +184,7 @@ export async function POST(request: Request) {
         // Get users with recent activity
         const activeUsers = await db.user.findMany({
           where: {
+            deletedAt: null,
             behaviors: {
               some: {
                 timestamp: {
@@ -213,6 +214,7 @@ export async function POST(request: Request) {
         // Get users who have backed before but haven't been active
         const users = await db.user.findMany({
           where: {
+            deletedAt: null,
             pledges: { some: {} },
           },
           take: 200,
@@ -253,6 +255,7 @@ export async function POST(request: Request) {
           case "high-value-backers":
             users = await db.user.findMany({
               where: {
+                deletedAt: null,
                 pledges: { some: {} },
               },
               include: {
@@ -272,6 +275,7 @@ export async function POST(request: Request) {
           case "at-risk-churners":
             users = await db.user.findMany({
               where: {
+                deletedAt: null,
                 pledges: { some: {} },
                 behaviors: {
                   none: {
@@ -288,6 +292,7 @@ export async function POST(request: Request) {
           case "new-users":
             users = await db.user.findMany({
               where: {
+                deletedAt: null,
                 createdAt: {
                   gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
                 },

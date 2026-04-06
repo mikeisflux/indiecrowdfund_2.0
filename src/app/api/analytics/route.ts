@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
         where: {
           projectId,
           status: "COMPLETED",
+          deletedAt: null,
           createdAt: { gte: startDate },
         },
         _sum: { amount: true },
@@ -66,6 +67,7 @@ export async function GET(req: NextRequest) {
         where: {
           projectId,
           status: "COMPLETED",
+          deletedAt: null,
         },
         _sum: { amount: true },
         _count: true,

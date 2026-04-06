@@ -248,7 +248,8 @@ export async function POST(request: Request) {
       case "creators":
         recipientCount = await db.user.count({
           where: {
-            createdProjects: { some: {} }
+            createdProjects: { some: {} },
+            deletedAt: null,
           }
         });
         break;

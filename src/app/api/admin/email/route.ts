@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
       });
     } else if (targetAudience === "creators") {
       recipientCount = await db.user.count({
-        where: { createdProjects: { some: {} } }
+        where: { createdProjects: { some: {} }, deletedAt: null }
       });
     }
 

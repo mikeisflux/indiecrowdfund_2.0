@@ -68,6 +68,7 @@ export async function GET(request: Request) {
       db.project.findMany({
         where: {
           createdAt: { gte: oneWeekAgo },
+          deletedAt: null,
         },
         orderBy: { createdAt: "desc" },
         take: 20,
@@ -85,6 +86,7 @@ export async function GET(request: Request) {
       db.user.findMany({
         where: {
           createdAt: { gte: oneWeekAgo },
+          deletedAt: null,
         },
         orderBy: { createdAt: "desc" },
         take: 20,

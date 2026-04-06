@@ -134,6 +134,7 @@ async function findMismatchedPledges(
     where: {
       status: "COMPLETED",
       rewardId: { not: null },
+      deletedAt: null,
       ...(projectId ? { projectId } : {}),
     },
     include: {
