@@ -269,7 +269,7 @@ export default function CreatorDashboard() {
 
   const project = data.selectedProject;
   const stats = data.stats;
-  const fundingPercent = project
+  const fundingPercent = project && Number(project.goalAmount) > 0
     ? (Number(project.currentAmount) / Number(project.goalAmount)) * 100
     : 0;
 

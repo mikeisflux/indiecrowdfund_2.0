@@ -10,7 +10,9 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ project, stats }: StatsCardsProps) {
-  const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
+  const fundingPercent = Number(project.goalAmount) > 0
+    ? (Number(project.currentAmount) / Number(project.goalAmount)) * 100
+    : 0;
 
   return (
     <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">

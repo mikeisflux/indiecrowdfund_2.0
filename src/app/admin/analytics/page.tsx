@@ -522,7 +522,7 @@ export default function AnalyticsPage() {
                               </div>
                               <div className="w-24">
                                 <Progress
-                                  value={Math.min((Number(project.currentAmount) / Number(project.goalAmount)) * 100, 100)}
+                                  value={Number(project.goalAmount) > 0 ? Math.min((Number(project.currentAmount) / Number(project.goalAmount)) * 100, 100) : 0}
                                   className="h-2"
                                 />
                               </div>

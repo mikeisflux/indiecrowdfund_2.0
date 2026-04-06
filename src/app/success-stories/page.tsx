@@ -70,7 +70,7 @@ async function getSuccessfulProjects() {
         goal: project.goalAmount,
         backers: liveStats.backerCount,
         image: project.imageUrl || "",
-        highlight: `${Math.round((liveStats.currentAmount / Number(project.goalAmount)) * 100)}% funded`,
+        highlight: `${Number(project.goalAmount) > 0 ? Math.round((liveStats.currentAmount / Number(project.goalAmount)) * 100) : 0}% funded`,
       };
     });
   } catch (error) {

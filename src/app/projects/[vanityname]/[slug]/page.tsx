@@ -91,7 +91,9 @@ export default function ProjectPage() {
   const [isCollaborator, setIsCollaborator] = useState(false);
 
   const tiers = rewards.filter((r) => r.type === "TIER");
-  const fundingPercentage = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
+  const fundingPercentage = Number(project.goalAmount) > 0
+    ? (Number(project.currentAmount) / Number(project.goalAmount)) * 100
+    : 0;
   const hasEnded = project.endDate ? new Date(project.endDate) < new Date() : false;
 
   // Scroll to top on mount (ensures page starts at top when navigating from homepage)
