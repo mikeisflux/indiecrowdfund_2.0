@@ -184,12 +184,36 @@ export async function POST(req: NextRequest) {
         const customId = resource.custom_id as string | undefined;
         if (!customId) break;
 
-        await db.pledge.updateMany({
-          where: { id: customId, status: "COMPLETED" },
+        const refundedPledge = await db.pledge.findFirst({
+          where: { id: customId, status: "COMPLETED", deletedAt: null },
+          select: { id: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
+        });
+
+        if (!refundedPledge) {
+          paypalWebhookLogger.info({ pledgeId: customId }, "PayPal refund: pledge not found or not COMPLETED, skipping");
+          break;
+        }
+
+        await db.pledge.update({
+          where: { id: refundedPledge.id },
           data: { status: "REFUNDED" },
         });
 
-        paypalWebhookLogger.info({ pledgeId: customId }, "PayPal payment refunded");
+        if (refundedPledge.confirmationEmailSent) {
+          await db.project.update({
+            where: { id: refundedPledge.projectId },
+            data: {
+              backerCount: { decrement: 1 },
+              currentAmount: { decrement: Number(refundedPledge.amount) },
+            },
+          });
+        }
+
+        if (refundedPledge.rewardId) {
+          await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${refundedPledge.rewardId}`;
+        }
+
+        paypalWebhookLogger.info({ pledgeId: customId }, "PayPal payment refunded — stats and reward slot updated");
         break;
       }
 

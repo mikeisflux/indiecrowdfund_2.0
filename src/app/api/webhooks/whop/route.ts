@@ -189,11 +189,33 @@ export async function POST(req: NextRequest) {
         if (!pledgeId) break;
 
         if (eventType === "refund_created") {
-          await db.pledge.updateMany({
-            where: { id: pledgeId, status: "COMPLETED" },
-            data: { status: "REFUNDED" },
+          const refundedPledge = await db.pledge.findFirst({
+            where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
+            select: { id: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
           });
-          whopWebhookLogger.info({ pledgeId }, "Whop refund created — pledge marked refunded");
+
+          if (refundedPledge) {
+            await db.pledge.update({
+              where: { id: refundedPledge.id },
+              data: { status: "REFUNDED" },
+            });
+
+            if (refundedPledge.confirmationEmailSent) {
+              await db.project.update({
+                where: { id: refundedPledge.projectId },
+                data: {
+                  backerCount: { decrement: 1 },
+                  currentAmount: { decrement: Number(refundedPledge.amount) },
+                },
+              });
+            }
+
+            if (refundedPledge.rewardId) {
+              await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${refundedPledge.rewardId}`;
+            }
+          }
+
+          whopWebhookLogger.info({ pledgeId }, "Whop refund created — pledge marked refunded, stats updated");
         } else {
           whopWebhookLogger.info({ pledgeId, eventType }, "Whop refund updated");
         }

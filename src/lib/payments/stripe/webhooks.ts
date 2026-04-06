@@ -454,6 +454,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       status: true,
       amount: true,
       projectId: true,
+      rewardId: true,
       confirmationEmailSent: true,
     },
   });
@@ -495,6 +496,10 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
         ]
       : []),
   ]);
+
+  if (pledge.rewardId) {
+    await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
+  }
 
   webhookLogger.info(`[ChargeRefunded] Pledge ${pledge.id} marked REFUNDED via webhook safety net`);
 }
