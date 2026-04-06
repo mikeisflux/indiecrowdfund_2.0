@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
           where: {
             projectId,
             status: { in: ["COMPLETED", "PENDING"] },
+            deletedAt: null,
           },
           take: 50000,
           include: {

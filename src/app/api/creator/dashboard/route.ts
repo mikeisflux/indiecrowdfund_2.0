@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     const ownProjects = await db.project.findMany({
       where: {
         creatorId: session.user.id,
+        deletedAt: null,
       },
       orderBy: [
         { status: "asc" }, // LIVE projects first
@@ -226,6 +227,7 @@ export async function GET(req: NextRequest) {
         where: {
           projectId: selectedProjectId,
           status: { in: ["COMPLETED", "CANCELLED", "REFUNDED"] },
+          deletedAt: null,
         },
         orderBy: { createdAt: "desc" },
         take: 500, // Increased limit for CSV export

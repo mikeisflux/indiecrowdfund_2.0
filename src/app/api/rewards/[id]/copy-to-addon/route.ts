@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const rewardsCopyToAddonLogger = logger.child({ module: "rewards-copy-to-addon" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { canUserEditProject } from "@/lib/project-auth";
 
 export async function POST(
   req: NextRequest,
@@ -22,7 +23,7 @@ export async function POST(
       include: {
         items: true,
         project: {
-          select: { creatorId: true, status: true },
+          select: { id: true, creatorId: true, status: true },
         },
       },
     });
@@ -31,7 +32,8 @@ export async function POST(
       return NextResponse.json({ error: "Reward not found" }, { status: 404 });
     }
 
-    if (reward.project.creatorId !== session.user.id) {
+    const canEdit = await canUserEditProject(reward.project.id, session.user.id, reward.project.creatorId);
+    if (!canEdit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

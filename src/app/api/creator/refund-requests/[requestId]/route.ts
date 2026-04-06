@@ -53,6 +53,7 @@ export async function PATCH(
             id: true,
             amount: true,
             status: true,
+            rewardId: true,
             paymentProcessor: true,
             stripePaymentIntentId: true,
             divinityCoinPaymentId: true,
@@ -236,6 +237,11 @@ export async function PATCH(
         data: { status: "APPROVED", creatorNote: creatorNote || null, processedAt: new Date() },
       }),
     ]);
+
+    // Restore reward slot if pledge claimed one
+    if (pledge.rewardId) {
+      await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
+    }
 
     // Fire-and-forget notification to backer
     notifyRefundRequestDecision(pledge.id, "approved", creatorNote || null).catch(() => {});

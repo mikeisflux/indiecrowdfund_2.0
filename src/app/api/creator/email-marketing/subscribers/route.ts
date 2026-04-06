@@ -34,7 +34,7 @@ export async function GET() {
 
     // Also get backers from creator's projects (paying customers)
     const creatorProjects = await db.project.findMany({
-      where: { creatorId: session.user.id },
+      where: { creatorId: session.user.id, deletedAt: null },
       select: { id: true, title: true },
     });
 
@@ -44,6 +44,7 @@ export async function GET() {
       where: {
         projectId: { in: projectIds },
         status: "COMPLETED",
+        deletedAt: null,
       },
       include: {
         user: {

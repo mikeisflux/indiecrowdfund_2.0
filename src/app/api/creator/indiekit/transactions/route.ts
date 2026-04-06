@@ -28,11 +28,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "projectId is required" }, { status: 400 });
     }
 
-    // Verify the user owns this project
+    // Verify the user owns or collaborates on this project
     const project = await db.project.findFirst({
       where: {
         id: projectId,
-        creatorId: session.user.id,
+        OR: [
+          { creatorId: session.user.id },
+          { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+        ],
       },
       select: { id: true, title: true },
     });

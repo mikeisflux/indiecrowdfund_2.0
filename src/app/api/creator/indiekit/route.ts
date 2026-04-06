@@ -77,6 +77,7 @@ export async function GET(req: NextRequest) {
     const ownProjects = await db.project.findMany({
       where: {
         creatorId: session.user.id,
+        deletedAt: null,
         OR: [
           { status: { in: ["FUNDED", "LIVE", "APPROVED"] } },
           { status: "DRAFT", prelaunchActive: true },

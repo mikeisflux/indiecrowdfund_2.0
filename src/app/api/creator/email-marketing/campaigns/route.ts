@@ -20,7 +20,7 @@ export async function GET() {
 
     // Get campaigns from project updates marked as email campaigns
     const creatorProjects = await db.project.findMany({
-      where: { creatorId: session.user.id },
+      where: { creatorId: session.user.id, deletedAt: null },
       select: { id: true },
     });
 
@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
           where: {
             id: projectId,
             creatorId: session.user.id,
+            deletedAt: null,
           },
           select: { id: true, title: true, backerCount: true },
         })
@@ -118,6 +119,7 @@ export async function POST(request: NextRequest) {
           where: {
             creatorId: session.user.id,
             status: { in: ["LIVE", "FUNDED", "SUBMITTED"] },
+            deletedAt: null,
           },
           orderBy: { createdAt: "desc" },
           select: { id: true, title: true, backerCount: true },
