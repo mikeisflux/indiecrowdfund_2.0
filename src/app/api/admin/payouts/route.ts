@@ -215,7 +215,8 @@ export async function POST(request: NextRequest) {
     // Calculate amounts
     const grossAmount = project.pledges.reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
     const pledgeCount = project.pledges.length;
-    const platformFeeRate = 0.03; // 3% platform fee
+    const payoutPlatformSettings = await db.platformSettings.findUnique({ where: { id: "default" }, select: { platformFee: true } });
+    const platformFeeRate = payoutPlatformSettings?.platformFee ? Number(payoutPlatformSettings.platformFee) / 100 : 0.03;
 
     // Use processor-specific rates
     // PayPal Advanced Checkout: 3.49% + $0.49/tx

@@ -153,6 +153,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const whopPayoutPlatformSettings = await db.platformSettings.findUnique({ where: { id: "default" }, select: { platformFee: true } });
+    const whopPlatformFeeRate = whopPayoutPlatformSettings?.platformFee ? Number(whopPayoutPlatformSettings.platformFee) / 100 : 0.03;
+
     const formattedProjects = projects.map((project) => {
       const totalRaised = project.pledges.reduce((sum: number, pledge: { id: string; amount: unknown }) => sum + Number(pledge.amount), 0);
       const projectRefunds = refundsByProject.get(project.id) || {
@@ -161,9 +164,9 @@ export async function GET(request: NextRequest) {
 
       const effectiveRevenue = Math.round((totalRaised - projectRefunds.partialRefundTotal) * 100) / 100;
 
-      // Whop: 3% fee + Platform: 3%
-      const platformFeeRate = 0.03;
-      const whopFeeRate = 0.03;
+      // Whop: 3% fee + Platform: configured rate
+      const platformFeeRate = whopPlatformFeeRate;
+      const whopFeeRate = 0.03; // Whop's own processor fee is fixed at 3%
       const backerCount = project.pledges.length;
       const processorFee = Math.round(effectiveRevenue * whopFeeRate * 100) / 100;
       const perTransactionFee = 0; // Whop doesn't charge per-transaction

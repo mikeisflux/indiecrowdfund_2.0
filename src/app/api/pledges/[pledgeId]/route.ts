@@ -674,7 +674,9 @@ export async function PATCH(
         }
 
         const amountInCents = Math.round(amountDiff * 100);
-        const platformFee = Math.round(amountDiff * 0.03 * 100); // 3% platform fee (matches charges.ts)
+        const pledgeModPlatformSettings = await db.platformSettings.findUnique({ where: { id: "default" }, select: { platformFee: true } });
+        const pledgeModFeeRate = pledgeModPlatformSettings?.platformFee ? Number(pledgeModPlatformSettings.platformFee) / 100 : 0.03;
+        const platformFee = Math.round(amountDiff * pledgeModFeeRate * 100);
 
         const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
           amount: amountInCents,
@@ -860,7 +862,9 @@ export async function PATCH(
         const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
         if (stripeAccountId) {
           const amountInCents = Math.round(additionalAmount * 100);
-          const platformFee = Math.round(additionalAmount * 0.03 * 100);
+          const platformSettings = await db.platformSettings.findUnique({ where: { id: "default" }, select: { platformFee: true } });
+          const platformFeeRate = platformSettings?.platformFee ? Number(platformSettings.platformFee) / 100 : 0.03;
+          const platformFee = Math.round(additionalAmount * platformFeeRate * 100);
 
           try {
             const stripeClient = await getStripeInstance();
