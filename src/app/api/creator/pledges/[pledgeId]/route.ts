@@ -23,8 +23,8 @@ function escapeHtml(str: string): string {
 
 // Helper to check if user owns the project that the pledge belongs to
 async function isProjectOwnerOrCollaborator(userId: string, pledgeId: string): Promise<{ allowed: boolean; pledge: unknown }> {
-  const pledge = await db.pledge.findUnique({
-    where: { id: pledgeId },
+  const pledge = await db.pledge.findFirst({
+    where: { id: pledgeId , deletedAt: null },
     include: {
       project: {
         include: {

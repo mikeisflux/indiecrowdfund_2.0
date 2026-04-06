@@ -22,8 +22,8 @@ export async function GET(
 
     const { id: projectId } = await params;
 
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: {
         id: true,
         title: true,

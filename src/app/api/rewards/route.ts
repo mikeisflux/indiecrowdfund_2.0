@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
     const data = createRewardSchema.parse(body);
 
     // Verify project ownership or collaborator with edit permission
-    const project = await db.project.findUnique({
-      where: { id: data.projectId },
+    const project = await db.project.findFirst({
+      where: { id: data.projectId , deletedAt: null },
       select: { creatorId: true, status: true },
     });
 
@@ -283,8 +283,8 @@ export async function GET(req: NextRequest) {
     });
 
     // Also get project status to determine if campaign is live
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: { status: true },
     });
 

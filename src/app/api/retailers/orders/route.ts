@@ -175,8 +175,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Get the project
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       include: {
         rewards: true,
       },

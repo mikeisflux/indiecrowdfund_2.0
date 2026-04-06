@@ -60,8 +60,8 @@ export async function POST(req: NextRequest) {
 
     // If projectId is provided, verify the user is the project owner (not just a collaborator)
     if (projectId) {
-      const project = await db.project.findUnique({
-        where: { id: projectId },
+      const project = await db.project.findFirst({
+        where: { id: projectId , deletedAt: null },
         select: { creatorId: true },
       });
 

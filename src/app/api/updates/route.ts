@@ -81,8 +81,8 @@ export async function GET(req: NextRequest) {
     if (includesDrafts) {
       const session = await auth();
       if (session?.user?.id) {
-        const project = await db.project.findUnique({
-          where: { id: projectId },
+        const project = await db.project.findFirst({
+          where: { id: projectId, deletedAt: null },
           select: { creatorId: true },
         });
         canSeeDrafts = project?.creatorId === session.user.id;
