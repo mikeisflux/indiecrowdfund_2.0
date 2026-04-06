@@ -22,17 +22,17 @@ export const stripeFeeBreakdown = [
 export const divinityCoinFeeBreakdown = [
   {
     title: "DivinityCoin Partner Fee",
-    rate: "3%",
-    description: "Total fee deducted at settlement",
+    rate: "3% + $0.30",
+    description: "Per-transaction fee charged by DivinityCoin",
     details:
-      "Includes all payment processing fees handled by DivinityCoin. This covers secure card processing and compliance infrastructure.",
+      "3% of total pledges plus $0.30 per individual transaction. Covers secure card processing and compliance infrastructure handled by DivinityCoin.",
   },
   {
     title: "IndieCrowdfund Platform Fee",
     rate: "3%",
     description: "Deducted from creator payouts",
     details:
-      "Applied when we pay out your earnings from DivinityCoin settlements. Creators receive ~94.09% of backer contributions.",
+      "Applied on the remainder after DivinityCoin partner fees are deducted. Covers hosting, tools, and customer support.",
   },
 ];
 
@@ -81,8 +81,8 @@ export const comparisonData = [
   {
     platform: "IndieCrowdfund (DivinityCoin)",
     platformFee: "3%",
-    paymentFee: "3% partner",
-    total: "~5.91%",
+    paymentFee: "3% + $0.30/txn",
+    total: "~6.5%",
     highlight: false,
   },
   {
@@ -92,13 +92,14 @@ export const comparisonData = [
     total: "~6%",
     highlight: false,
   },
-  {
-    platform: "IndieCrowdfund (Stripe – Legacy)",
-    platformFee: "3%",
-    paymentFee: "2.9% + $0.30",
-    total: "~6%",
-    highlight: false,
-  },
+  // Stripe (Legacy) - hidden for now
+  // {
+  //   platform: "IndieCrowdfund (Stripe – Legacy)",
+  //   platformFee: "3%",
+  //   paymentFee: "2.9% + $0.30",
+  //   total: "~6%",
+  //   highlight: false,
+  // },
   {
     platform: "Kickstarter",
     platformFee: "5%",

@@ -82,6 +82,7 @@ const platformFeatures = [
         description:
           "AI analyzes your project type and costs to recommend optimal funding goals and pricing strategies.",
         icon: Target,
+        comingSoon: true,
       },
       {
         title: "Pre-Launch Pages",
@@ -94,6 +95,7 @@ const platformFeatures = [
         description:
           "Start faster with category-specific templates for comics, games, art books, and other creative projects.",
         icon: FileText,
+        comingSoon: true,
       },
     ],
   },
@@ -168,6 +170,7 @@ const platformFeatures = [
         description:
           "Create and manage stretch goals with visual progress indicators. Automatically unlock rewards when goals are reached.",
         icon: Target,
+        comingSoon: true,
       },
       {
         title: "Collaborator System",
@@ -797,8 +800,13 @@ export default function AboutUsPage() {
                           <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center flex-shrink-0 shadow-md`}>
                             <feature.icon className="h-5 w-5 text-white" />
                           </div>
-                          <div>
-                            <h4 className="font-semibold mb-1">{feature.title}</h4>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold">{feature.title}</h4>
+                              {feature.comingSoon && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">Coming Soon</Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground">{feature.description}</p>
                           </div>
                         </div>

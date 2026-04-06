@@ -155,7 +155,7 @@ export function ProjectDetailDialog({
                     </>
                   )}
                   <div className="flex justify-between text-zinc-500">
-                    <span>DivinityCoin Partner Fee (6%)</span>
+                    <span>DivinityCoin Partner Fee (3% + $0.30/txn)</span>
                     <span className="text-red-500">-{formatCurrency(selectedProject.processorFee)}</span>
                   </div>
                   <div className="flex justify-between text-zinc-500">

@@ -16,6 +16,7 @@ export interface PayPalFeeResult extends FeeResult {
 
 export interface DivinityCoinFeeResult extends FeeResult {
   divinityPartnerFee: number;
+  perTransactionFee: number;
   platformFee: number;
 }
 
@@ -50,14 +51,19 @@ export function calculatePayPalFees(
   return { platformFee, processingFee, totalFees, youReceive, feePercentage: (totalFees / amount) * 100 };
 }
 
-// 3% DivinityCoin partner fee, then 3% platform fee on the remainder
-export function calculateDivinityCoinFees(amount: number): DivinityCoinFeeResult {
+// 3% DivinityCoin partner fee + $0.30 per transaction, then 3% platform fee on the remainder
+export function calculateDivinityCoinFees(
+  amount: number,
+  averagePledge = 50
+): DivinityCoinFeeResult {
   const divinityPartnerFee = amount * 0.03;
-  const afterPartner = amount - divinityPartnerFee;
+  const numTransactions = Math.ceil(amount / averagePledge);
+  const perTransactionFee = numTransactions * 0.3;
+  const afterPartner = amount - divinityPartnerFee - perTransactionFee;
   const platformFee = afterPartner * 0.03;
-  const totalFees = divinityPartnerFee + platformFee;
+  const totalFees = divinityPartnerFee + perTransactionFee + platformFee;
   const youReceive = amount - totalFees;
-  return { divinityPartnerFee, platformFee, totalFees, youReceive, feePercentage: (totalFees / amount) * 100 };
+  return { divinityPartnerFee, perTransactionFee, platformFee, totalFees, youReceive, feePercentage: (totalFees / amount) * 100 };
 }
 
 // 3% Whop fee, then 3% platform fee on the remainder

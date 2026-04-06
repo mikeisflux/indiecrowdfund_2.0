@@ -49,7 +49,7 @@ const faqs: FAQ[] = [
   },
   {
     question: 'Are the fees different with DivinityCoin?',
-    answer: 'As a backer, you pay the same price regardless of which payment processor the creator uses. Fees (~6% across all processors) are handled on the creator side and do not affect what you pay.',
+    answer: 'As a backer, you pay the same price regardless of which payment processor the creator uses. Fees (typically ~6–6.5% depending on the processor) are handled on the creator side and do not affect what you pay.',
   },
   {
     question: 'Can I use DivinityCoin in the digital marketplace too?',
@@ -285,7 +285,7 @@ export default function WhatIsDivinityCoinPage() {
                 <li>• Enter your card at checkout</li>
                 <li>• Payment processed directly</li>
                 <li>• Supports credit, debit, Apple Pay, Google Pay</li>
-                <li>• ~6% total fees (paid by creator)</li>
+                <li>• ~6.5% total fees (paid by creator)</li>
                 <li>• Standard content types only</li>
                 <li>• Most projects use this</li>
               </ul>
@@ -299,7 +299,7 @@ export default function WhatIsDivinityCoinPage() {
                 <li>• Enter your card at checkout</li>
                 <li>• Payment processed through DivinityCoin</li>
                 <li>• Supports Visa, Mastercard, Amex, Discover</li>
-                <li>• ~6% total fees (paid by creator)</li>
+                <li>• ~6.5% total fees (paid by creator)</li>
                 <li>• Supports ALL content types including NSFW</li>
                 <li>• Used by creators who need broader content support</li>
               </ul>
@@ -424,7 +424,7 @@ export default function WhatIsDivinityCoinPage() {
           </div>
           <div className="mt-4 rounded-lg bg-purple-100 dark:bg-purple-900/30 p-3">
             <p className="text-sm text-purple-800 dark:text-purple-200">
-              <strong>Fees:</strong> 3% IndieCrowdfund platform fee + 3% DivinityCoin partner fee = ~6% total.
+              <strong>Fees:</strong> 3% DivinityCoin partner fee + $0.30/txn + 3% IndieCrowdfund platform fee = ~6.5% total.
               Settlement to your bank account within 14 business days.
             </p>
           </div>

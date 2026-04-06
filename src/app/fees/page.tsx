@@ -8,16 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DollarSign, Percent, CheckCircle, ArrowRight, HelpCircle, Calculator,
+  DollarSign, CheckCircle, ArrowRight, HelpCircle, Calculator,
   Gift, CreditCard, Coins, ExternalLink, ArrowLeft, ShoppingBag,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 import {
-  stripeFeeBreakdown, divinityCoinFeeBreakdown, paypalFeeBreakdown,
+  divinityCoinFeeBreakdown, paypalFeeBreakdown,
   whopFeeBreakdown, comparisonData, features, type PaymentMethod,
 } from "./data";
 import {
-  calculateStripeFees, calculatePayPalFees, calculateDivinityCoinFees, calculateWhopFees,
+  calculatePayPalFees, calculateDivinityCoinFees, calculateWhopFees,
 } from "./calculations";
 
 // ─── Sub-components ────────────────────────────────────────────────────────
@@ -83,20 +83,17 @@ export default function FeesPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("whop");
   const amount = sliderValue[0];
 
-  const stripeFees = calculateStripeFees(amount);
   const divinityFees = calculateDivinityCoinFees(amount);
   const paypalFees = calculatePayPalFees(amount);
   const whopFees = calculateWhopFees(amount);
 
   const fees =
-    paymentMethod === "stripe" ? stripeFees
-    : paymentMethod === "paypal" ? paypalFees
+    paymentMethod === "paypal" ? paypalFees
     : paymentMethod === "whop" ? whopFees
     : divinityFees;
 
   const methodLabel =
     paymentMethod === "paypal" ? "PayPal"
-    : paymentMethod === "stripe" ? "Stripe (Legacy)"
     : paymentMethod === "whop" ? "Whop"
     : "DivinityCoin";
 
@@ -175,9 +172,11 @@ export default function FeesPage() {
               <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" /> DivinityCoin
               </TabsTrigger>
+              {/* Stripe (Legacy) - hidden for now
               <TabsTrigger value="stripe" className="flex items-center gap-2 opacity-50">
                 <CreditCard className="h-4 w-4" /> Stripe (Legacy)
               </TabsTrigger>
+              */}
             </TabsList>
 
             {/* Whop */}
@@ -262,8 +261,9 @@ export default function FeesPage() {
                         <li>DivinityCoin securely processes the $100 payment</li>
                         <li>When your project funds, payment is captured</li>
                         <li>DivinityCoin partner fee (3% = $3.00) deducted at settlement</li>
-                        <li>Platform fee (3% of $97 = $2.91) deducted at settlement</li>
-                        <li>You receive <strong>$94.09</strong> deposited to your account</li>
+                        <li>Per-transaction fee ($0.30 × 1 txn = $0.30) deducted at settlement</li>
+                        <li>Platform fee (3% of $96.70 = $2.90) deducted at settlement</li>
+                        <li>You receive <strong>$93.80</strong> deposited to your account</li>
                       </ol>
                       <a
                         href="https://divinitycoin.com/"
@@ -278,14 +278,15 @@ export default function FeesPage() {
                   </div>
                 </CardContent>
               </Card>
-              <TotalBadge color="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400" text="Total fees with DivinityCoin: approximately 5.91% of funds raised" />
+              <TotalBadge color="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400" text="Total fees with DivinityCoin: approximately 6.5% of funds raised (varies with avg. pledge size)" />
             </TabsContent>
 
-            {/* Stripe (Legacy) */}
+            {/* Stripe (Legacy) - hidden for now
             <TabsContent value="stripe">
               <FeeBreakdownCards fees={stripeFeeBreakdown} iconBg="bg-gradient-to-br from-emerald-500 to-teal-500" rateClass="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent" Icon={Percent} />
               <TotalBadge color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400" text="Total fees with Stripe: approximately 6% of funds raised" />
             </TabsContent>
+            */}
           </Tabs>
         </div>
       </section>
@@ -306,7 +307,7 @@ export default function FeesPage() {
               {/* Payment method toggle */}
               <div className="flex justify-center mb-6">
                 <div className="inline-flex rounded-lg border p-1 bg-white dark:bg-zinc-800 flex-wrap gap-1">
-                  {(["whop", "paypal", "divinitycoin", "stripe"] as PaymentMethod[]).map((m) => (
+                  {(["whop", "paypal", "divinitycoin"] as PaymentMethod[]).map((m) => (
                     <button
                       key={m}
                       onClick={() => setPaymentMethod(m)}
@@ -314,9 +315,9 @@ export default function FeesPage() {
                         paymentMethod === m
                           ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"
                           : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400"
-                      } ${m === "stripe" ? "opacity-60" : ""}`}
+                      }`}
                     >
-                      {m === "divinitycoin" ? "DivinityCoin" : m === "stripe" ? "Stripe" : m.charAt(0).toUpperCase() + m.slice(1)}
+                      {m === "divinitycoin" ? "DivinityCoin" : m.charAt(0).toUpperCase() + m.slice(1)}
                     </button>
                   ))}
                 </div>
@@ -360,17 +361,6 @@ export default function FeesPage() {
                         <span className="text-red-500">-${paypalFees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </>
-                  ) : paymentMethod === "stripe" ? (
-                    <>
-                      <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-zinc-400">Platform fee (3%)</span>
-                        <span className="text-red-500">-${stripeFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-zinc-400">Stripe processing (2.9% + $0.30/txn)</span>
-                        <span className="text-red-500">-${stripeFees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    </>
                   ) : paymentMethod === "whop" ? (
                     <>
                       <div className="flex justify-between py-2 border-b">
@@ -387,6 +377,10 @@ export default function FeesPage() {
                       <div className="flex justify-between py-2 border-b">
                         <span className="text-zinc-600 dark:text-zinc-400">DivinityCoin partner fee (3%)</span>
                         <span className="text-red-500">-${divinityFees.divinityPartnerFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-zinc-600 dark:text-zinc-400">Per-transaction fee ($0.30/txn)</span>
+                        <span className="text-red-500">-${divinityFees.perTransactionFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
                         <span className="text-zinc-600 dark:text-zinc-400">Platform fee (3% of net)</span>
@@ -530,7 +524,7 @@ export default function FeesPage() {
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold">What&apos;s the difference between Stripe and DivinityCoin?</h3>
               <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-                Stripe is our legacy payment processor (~6% total). DivinityCoin is an alternative payment sub-processor (~5.91% total: 3% partner + 3% platform on remainder) that supports all content types including NSFW/adult projects. Both accept credit and debit cards at checkout.
+                Stripe is our legacy payment processor (~6% total). DivinityCoin is an alternative payment sub-processor (~6.5% total: 3% partner + $0.30/txn + 3% platform) that supports all content types including NSFW/adult projects. Both accept credit and debit cards at checkout.
               </p>
             </div>
             <div className="rounded-lg border p-6">
