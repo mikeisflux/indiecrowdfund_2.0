@@ -40,9 +40,12 @@ export async function GET(request: NextRequest) {
     const category = url.searchParams.get("category");
     const published = url.searchParams.get("published");
 
+    const search = url.searchParams.get("search");
+
     const where: {
       category?: string;
       isPublished?: boolean;
+      OR?: Array<{ title?: { contains: string; mode: "insensitive" }; description?: { contains: string; mode: "insensitive" } }>;
     } = {};
 
     if (category) {
@@ -53,6 +56,13 @@ export async function GET(request: NextRequest) {
       where.isPublished = true;
     } else if (published === "false") {
       where.isPublished = false;
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
     }
 
     const [entries, total, publishedCount, draftCount, bugfixCount] = await Promise.all([

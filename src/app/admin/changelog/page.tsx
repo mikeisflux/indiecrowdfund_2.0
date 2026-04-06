@@ -51,6 +51,8 @@ import {
   Package,
   ExternalLink,
   GitBranch,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface ChangelogEntry {
@@ -89,6 +91,8 @@ interface ChangelogStats {
   bugfixes: number;
 }
 
+const PAGE_SIZE = 50;
+
 export default function AdminChangelogPage() {
   const [entries, setEntries] = useState<ChangelogEntry[]>([]);
   const [stats, setStats] = useState<ChangelogStats>({ total: 0, published: 0, drafts: 0, bugfixes: 0 });
@@ -98,6 +102,12 @@ export default function AdminChangelogPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [extracting, setExtracting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [suggestions, setSuggestions] = useState<ChangelogEntry[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -108,12 +118,19 @@ export default function AdminChangelogPage() {
   const [branch, setBranch] = useState("");
   const [isPublished, setIsPublished] = useState(false);
 
-  const fetchEntries = useCallback(async () => {
+  const fetchEntries = useCallback(async (page = currentPage, searchQuery = search) => {
+    setLoading(true);
     try {
-      const response = await fetch("/api/admin/changelog?limit=100");
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        page: String(page),
+      });
+      if (searchQuery) params.set("search", searchQuery);
+      const response = await fetch(`/api/admin/changelog?${params}`);
       if (response.ok) {
         const data = await response.json();
         setEntries(data.entries || []);
+        setTotalPages(data.pagination?.totalPages || 1);
         if (data.stats) {
           setStats(data.stats);
         }
@@ -124,11 +141,51 @@ export default function AdminChangelogPage() {
     } finally {
       setLoading(false);
     }
+  }, [currentPage, search]);
+
+  // Fetch autocomplete suggestions (top 5 matches by title)
+  const fetchSuggestions = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const response = await fetch(
+        `/api/admin/changelog?limit=5&search=${encodeURIComponent(query)}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSuggestions(data.entries || []);
+      }
+    } catch {
+      setSuggestions([]);
+    }
   }, []);
 
   useEffect(() => {
     fetchEntries();
   }, [fetchEntries]);
+
+  // Debounce autocomplete suggestions
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchSuggestions(searchInput);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchInput, fetchSuggestions]);
+
+  const handleSearchSubmit = (query: string) => {
+    setSearch(query);
+    setSearchInput(query);
+    setCurrentPage(1);
+    setShowSuggestions(false);
+    fetchEntries(1, query);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchEntries(page, search);
+  };
 
   const resetForm = () => {
     setTitle("");
@@ -349,10 +406,70 @@ export default function AdminChangelogPage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Input
+          placeholder="Search changelog by title or description..."
+          value={searchInput}
+          onChange={(e) => {
+            setSearchInput(e.target.value);
+            setShowSuggestions(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSearchSubmit(searchInput);
+            if (e.key === "Escape") setShowSuggestions(false);
+          }}
+          onFocus={() => searchInput && setShowSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+          className="pr-20"
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+          {searchInput && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => handleSearchSubmit("")}
+            >
+              Clear
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="h-7 px-3 text-xs"
+            onClick={() => handleSearchSubmit(searchInput)}
+          >
+            Search
+          </Button>
+        </div>
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-64 overflow-y-auto">
+            {suggestions.map((s) => {
+              const Icon = getCategoryIcon(s.category);
+              return (
+                <button
+                  key={s.id}
+                  className="w-full flex items-start gap-3 px-3 py-2 hover:bg-accent text-left"
+                  onMouseDown={() => handleSearchSubmit(s.title)}
+                >
+                  <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${getCategoryColor(s.category)}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{s.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{s.description}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Entries</CardTitle>
+          <CardTitle>
+            {search ? `Results for "${search}"` : "All Entries"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -464,6 +581,59 @@ export default function AdminChangelogPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage <= 1 || loading}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            {/* Page number buttons — show up to 7 around current page */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+              .reduce<(number | "…")[]>((acc, p, i, arr) => {
+                if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push("…");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === "…" ? (
+                  <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground">…</span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={p === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(p as number)}
+                    disabled={loading}
+                    className="w-9"
+                  >
+                    {p}
+                  </Button>
+                )
+              )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages || loading}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
