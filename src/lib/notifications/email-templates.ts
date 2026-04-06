@@ -1,6 +1,15 @@
 import { sendEmail } from "@/lib/email";
 import { APP_NAME, APP_URL } from "./types";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 /**
  * Send project funded email
  */
@@ -166,14 +175,14 @@ export async function sendProjectUpdateEmail(
         </div>
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-          <h2 style="margin-top: 0; color: #333;">New Update from ${creatorName}</h2>
+          <h2 style="margin-top: 0; color: #333;">New Update from ${escapeHtml(creatorName)}</h2>
 
           <div style="background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 20px; margin: 20px 0;">
-            <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">${projectTitle}</p>
-            <h3 style="margin: 0 0 15px 0; color: #333;">${updateTitle}</h3>
+            <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">${escapeHtml(projectTitle)}</p>
+            <h3 style="margin: 0 0 15px 0; color: #333;">${escapeHtml(updateTitle)}</h3>
             ${contentPreview ? `
             <div style="border-top: 1px solid #e5e5e5; padding-top: 15px; margin-top: 10px;">
-              <p style="margin: 0; color: #444; font-size: 14px; white-space: pre-wrap;">${contentPreview}</p>
+              <p style="margin: 0; color: #444; font-size: 14px; white-space: pre-wrap;">${escapeHtml(contentPreview)}</p>
             </div>
             ` : ""}
           </div>
@@ -227,12 +236,12 @@ export async function sendCommentReplyEmail(
         </div>
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-          <h2 style="margin-top: 0; color: #333;">Hi ${userName},</h2>
+          <h2 style="margin-top: 0; color: #333;">Hi ${escapeHtml(userName)},</h2>
 
-          <p><strong>${replierName}</strong> replied to your comment on <strong>"${projectTitle}"</strong>:</p>
+          <p><strong>${escapeHtml(replierName)}</strong> replied to your comment on <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong>:</p>
 
           <div style="background: #fff; border-left: 4px solid #05ce78; padding: 15px 20px; margin: 20px 0; border-radius: 0 6px 6px 0;">
-            <p style="margin: 0; color: #333; white-space: pre-wrap;">${replyContent}</p>
+            <p style="margin: 0; color: #333; white-space: pre-wrap;">${escapeHtml(replyContent)}</p>
           </div>
 
           <div style="text-align: center; margin: 30px 0;">

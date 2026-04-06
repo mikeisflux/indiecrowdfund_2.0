@@ -583,7 +583,9 @@ export async function PATCH(
 
       // Calculate price difference
       const oldAmount = Number(pledge.amount);
-      const amountDiff = newAmount - oldAmount;
+      // Default to current amount if client didn't send newAmount (no price change intended)
+      const effectiveNewAmount: number = (newAmount !== undefined && newAmount !== null) ? newAmount : oldAmount;
+      const amountDiff = effectiveNewAmount - oldAmount;
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
       const isAlreadyCharged = pledge.status === "COMPLETED";
 
@@ -659,7 +661,7 @@ export async function PATCH(
               clientSecret: dcResult.clientSecret,
               publishableKey: dcResult.publishableKey,
               message: `Additional $${amountDiff.toFixed(2)} payment required`,
-              newAmount,
+              newAmount: effectiveNewAmount,
             });
           } catch (dcError) {
             pledgesLogger.error({ err: String(dcError) }, "[DivinityCoin Modify] API error:");
@@ -729,7 +731,7 @@ export async function PATCH(
           requiresPayment: true,
           clientSecret: paymentIntent.client_secret,
           message: `Additional $${amountDiff.toFixed(2)} payment required`,
-          newAmount,
+          newAmount: effectiveNewAmount,
         });
       }
 
@@ -796,10 +798,10 @@ export async function PATCH(
         }
 
         // Apply the modification changes (addons, rewards, amounts)
-        await applyModificationChanges(pledgeId, pledge, rewardId, addonsWithQuantity, addonIdList, newAmount, amountDiff);
+        await applyModificationChanges(pledgeId, pledge, rewardId, addonsWithQuantity, addonIdList, effectiveNewAmount, amountDiff);
 
         // Send refund notification
-        notifyPledgeModified(pledgeId, oldAmount, newAmount, "refund").catch(err =>
+        notifyPledgeModified(pledgeId, oldAmount, effectiveNewAmount, "refund").catch(err =>
           pledgesLogger.error({ err: String(err) }, "[Modify] Failed to send refund notification:")
         );
 
@@ -808,15 +810,15 @@ export async function PATCH(
           requiresPayment: false,
           refundAmount,
           message: `Pledge updated. $${refundAmount.toFixed(2)} has been refunded.`,
-          newAmount,
+          newAmount: effectiveNewAmount,
         });
       }
 
       // No price change, or PENDING pledge (not yet charged) - just update directly
-      await applyModificationChanges(pledgeId, pledge, rewardId, addonsWithQuantity, addonIdList, newAmount, amountDiff);
+      await applyModificationChanges(pledgeId, pledge, rewardId, addonsWithQuantity, addonIdList, effectiveNewAmount, amountDiff);
 
       // Send modification notification
-      notifyPledgeModified(pledgeId, oldAmount, newAmount, "no_change").catch(err =>
+      notifyPledgeModified(pledgeId, oldAmount, effectiveNewAmount, "no_change").catch(err =>
         pledgesLogger.error({ err: String(err) }, "[Modify] Failed to send modification notification:")
       );
 

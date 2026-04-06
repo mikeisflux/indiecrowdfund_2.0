@@ -3,6 +3,15 @@ import { sendEmail } from "./email-config";
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 // Project Review Email Functions
 export async function sendProjectSubmittedEmail(
   email: string,
@@ -96,13 +105,13 @@ export async function sendProjectApprovedEmail(
             </div>
           </div>
 
-          <h2 style="margin-top: 0; color: #15803d; text-align: center;">Congratulations, ${creatorName || "Creator"}!</h2>
-          <p style="text-align: center;">Your project <strong>"${projectTitle}"</strong> has been approved and is ready to launch!</p>
+          <h2 style="margin-top: 0; color: #15803d; text-align: center;">Congratulations, ${escapeHtml(creatorName || "Creator")}!</h2>
+          <p style="text-align: center;">Your project <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong> has been approved and is ready to launch!</p>
 
           ${notes ? `
           <div style="background: white; border-radius: 6px; padding: 15px; margin: 20px 0; border-left: 4px solid #22c55e;">
             <p style="margin: 0; color: #666; font-size: 14px;"><strong>Notes from reviewer:</strong></p>
-            <p style="margin: 10px 0 0 0;">${notes}</p>
+            <p style="margin: 10px 0 0 0;">${escapeHtml(notes)}</p>
           </div>
           ` : ""}
 
@@ -167,18 +176,18 @@ export async function sendProjectRejectedEmail(
 
         <div style="background: #fef2f2; border-radius: 8px; padding: 30px; margin-bottom: 20px; border: 1px solid #fecaca;">
           <h2 style="margin-top: 0; color: #dc2626;">Project Not Approved</h2>
-          <p>Hi ${creatorName || "Creator"},</p>
-          <p>Unfortunately, your project <strong>"${projectTitle}"</strong> was not approved at this time.</p>
+          <p>Hi ${escapeHtml(creatorName || "Creator")},</p>
+          <p>Unfortunately, your project <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong> was not approved at this time.</p>
 
           <div style="background: white; border-radius: 6px; padding: 15px; margin: 20px 0; border-left: 4px solid #dc2626;">
             <p style="margin: 0; color: #666; font-size: 14px;"><strong>Reason:</strong></p>
-            <p style="margin: 10px 0 0 0; font-weight: 500;">${reasonLabels[rejectionReason] || rejectionReason}</p>
+            <p style="margin: 10px 0 0 0; font-weight: 500;">${escapeHtml(reasonLabels[rejectionReason] || rejectionReason)}</p>
           </div>
 
           ${notes ? `
           <div style="background: white; border-radius: 6px; padding: 15px; margin: 20px 0;">
             <p style="margin: 0; color: #666; font-size: 14px;"><strong>Reviewer feedback:</strong></p>
-            <p style="margin: 10px 0 0 0;">${notes}</p>
+            <p style="margin: 10px 0 0 0;">${escapeHtml(notes)}</p>
           </div>
           ` : ""}
 
@@ -238,12 +247,12 @@ export async function sendProjectChangesRequestedEmail(
           </div>
 
           <h2 style="margin-top: 0; color: #d97706; text-align: center;">Almost There!</h2>
-          <p>Hi ${creatorName || "Creator"},</p>
-          <p>Your project <strong>"${projectTitle}"</strong> is close to being approved, but we need a few changes first.</p>
+          <p>Hi ${escapeHtml(creatorName || "Creator")},</p>
+          <p>Your project <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong> is close to being approved, but we need a few changes first.</p>
 
           <div style="background: white; border-radius: 6px; padding: 15px; margin: 20px 0; border-left: 4px solid #f59e0b;">
             <p style="margin: 0; color: #666; font-size: 14px;"><strong>Requested changes:</strong></p>
-            <p style="margin: 10px 0 0 0;">${notes}</p>
+            <p style="margin: 10px 0 0 0;">${escapeHtml(notes)}</p>
           </div>
 
           <p>Please make these changes and resubmit your project for review.</p>
