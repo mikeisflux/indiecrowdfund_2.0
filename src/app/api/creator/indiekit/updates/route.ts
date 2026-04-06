@@ -128,13 +128,19 @@ export async function POST(req: NextRequest) {
 
     // Handle publish/unpublish actions
     if (action === "publish" && updateId) {
-      const update = await db.update.update({
-        where: { id: updateId },
+      const publishResult = await db.update.updateMany({
+        where: { id: updateId, projectId },
         data: {
           status: "PUBLISHED",
           publishedAt: new Date(),
         },
       });
+
+      if (publishResult.count === 0) {
+        return NextResponse.json({ error: "Update not found or access denied" }, { status: 403 });
+      }
+
+      const update = await db.update.findFirst({ where: { id: updateId } });
 
       // Send notifications to all backers and followers
       try {
@@ -148,13 +154,19 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "unpublish" && updateId) {
-      const update = await db.update.update({
-        where: { id: updateId },
+      const unpublishResult = await db.update.updateMany({
+        where: { id: updateId, projectId },
         data: {
           status: "DRAFT",
           publishedAt: null,
         },
       });
+
+      if (unpublishResult.count === 0) {
+        return NextResponse.json({ error: "Update not found or access denied" }, { status: 403 });
+      }
+
+      const update = await db.update.findFirst({ where: { id: updateId } });
       return NextResponse.json({ update });
     }
 
@@ -319,9 +331,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
     }
 
-    await db.update.delete({
-      where: { id: updateId },
+    const deleteResult = await db.update.deleteMany({
+      where: { id: updateId, projectId },
     });
+
+    if (deleteResult.count === 0) {
+      return NextResponse.json({ error: "Update not found or access denied" }, { status: 403 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

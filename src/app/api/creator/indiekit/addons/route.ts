@@ -43,7 +43,7 @@ async function verifyProjectAccess(projectId: string, userId: string) {
       id: projectId,
       OR: [
         { creatorId: userId },
-        { collaborators: { some: { userId } } },
+        { collaborators: { some: { userId, status: "ACCEPTED" } } },
       ],
     },
   });

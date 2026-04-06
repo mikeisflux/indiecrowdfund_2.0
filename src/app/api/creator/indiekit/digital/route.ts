@@ -596,7 +596,7 @@ export async function POST(req: NextRequest) {
       await db.digitalFile.update({
         where: { id: file.id },
         data: {
-          distributedCount: createdCount,
+          distributedCount: { increment: createdCount },
           totalEligible: eligiblePledges.length,
         },
       });

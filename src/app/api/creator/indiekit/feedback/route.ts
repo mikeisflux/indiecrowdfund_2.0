@@ -25,21 +25,24 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { score, feedback, projectId } = feedbackSchema.parse(body);
 
-    // Store as a fulfillment activity for now; could be its own model later
-    await db.fulfillmentActivity.create({
-      data: {
-        projectId: projectId || "global",
-        type: "NPS_FEEDBACK",
-        title: `NPS feedback: ${score}/10`,
-        metadata: {
-          score,
-          feedback: feedback || "",
-          userId: session.user.id,
-          userEmail: session.user.email,
-          submittedAt: new Date().toISOString(),
+    // Store as a fulfillment activity only when a valid projectId is available
+    // (FulfillmentActivity.projectId is a non-nullable FK — "global" is not valid)
+    if (projectId) {
+      await db.fulfillmentActivity.create({
+        data: {
+          projectId,
+          type: "NOTE_ADDED",
+          title: `NPS feedback: ${score}/10`,
+          metadata: {
+            score,
+            feedback: feedback || "",
+            userId: session.user.id,
+            userEmail: session.user.email,
+            submittedAt: new Date().toISOString(),
+          },
         },
-      },
-    });
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

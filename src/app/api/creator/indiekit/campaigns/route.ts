@@ -106,8 +106,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "update" && campaignId) {
-      const campaign = await db.emailCampaign.update({
-        where: { id: campaignId },
+      const updated = await db.emailCampaign.updateMany({
+        where: { id: campaignId, createdBy: session.user.id },
         data: {
           name: name || title,
           subject,
@@ -115,19 +115,24 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      if (updated.count === 0) {
+        return NextResponse.json({ error: "Campaign not found or access denied" }, { status: 403 });
+      }
+
+      const campaign = await db.emailCampaign.findFirst({ where: { id: campaignId } });
       return NextResponse.json({ campaign });
     }
 
     if (action === "send" && campaignId) {
       // Email access already validated at top of handler
 
-      // Get campaign
-      const campaign = await db.emailCampaign.findUnique({
-        where: { id: campaignId },
+      // Get campaign — scope to owner
+      const campaign = await db.emailCampaign.findFirst({
+        where: { id: campaignId, createdBy: session.user.id },
       });
 
       if (!campaign) {
-        return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+        return NextResponse.json({ error: "Campaign not found or access denied" }, { status: 403 });
       }
 
       // Validate email template before sending
@@ -157,9 +162,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete" && campaignId) {
-      await db.emailCampaign.delete({
-        where: { id: campaignId },
+      const deleted = await db.emailCampaign.deleteMany({
+        where: { id: campaignId, createdBy: session.user.id },
       });
+
+      if (deleted.count === 0) {
+        return NextResponse.json({ error: "Campaign not found or access denied" }, { status: 403 });
+      }
 
       return NextResponse.json({ success: true });
     }

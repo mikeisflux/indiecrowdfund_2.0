@@ -33,6 +33,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    const validRejectionReasons = [
+      "INCOMPLETE_INFORMATION", "POLICY_VIOLATION", "PROHIBITED_CONTENT",
+      "INTELLECTUAL_PROPERTY", "FRAUD_SUSPECTED", "UNREALISTIC_GOALS",
+      "MISSING_REWARDS", "IDENTITY_VERIFICATION", "OTHER",
+    ];
+
     const {
       projectId,
       action, // "APPROVED" | "REJECTED" | "REQUESTED_CHANGES"
@@ -42,6 +48,11 @@ export async function POST(req: NextRequest) {
       sendEmail = true,
       isPrelaunch = false, // Whether this is a prelaunch review
     } = body;
+
+    // Validate rejectionReason is a valid enum value when provided
+    if (rejectionReason && !validRejectionReasons.includes(rejectionReason)) {
+      return NextResponse.json({ error: "Invalid rejection reason" }, { status: 400 });
+    }
 
     if (!projectId || !action) {
       return NextResponse.json(

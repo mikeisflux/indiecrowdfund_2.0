@@ -172,20 +172,31 @@ export async function POST(request: Request) {
       data: updateData,
     });
 
+    // Map admin actions to valid ReviewAction enum values (MAKE_LIVE is not in the enum)
+    const actionToReviewAction: Record<string, "DEACTIVATE" | "REACTIVATE" | "SEND_TO_REVIEW"> = {
+      DEACTIVATE: "DEACTIVATE",
+      REACTIVATE: "REACTIVATE",
+      MAKE_LIVE: "REACTIVATE",
+      SEND_TO_REVIEW: "SEND_TO_REVIEW",
+    };
+    const reviewAction = actionToReviewAction[action];
+
     // Create a review history entry
-    await db.projectReview.create({
-      data: {
-        projectId: projectId,
-        reviewerId: session.user.id,
-        reviewerEmail: session.user.email || "admin@indiecrowdfund.com",
-        action: action,
-        previousStatus: project.status,
-        newStatus: newStatus,
-        notes: reason || notes || actionDescription,
-        internalNotes: `Admin action: ${action}`,
-        flagsRaised: [],
-      },
-    });
+    if (reviewAction) {
+      await db.projectReview.create({
+        data: {
+          projectId: projectId,
+          reviewerId: session.user.id,
+          reviewerEmail: session.user.email || "admin@indiecrowdfund.com",
+          action: reviewAction,
+          previousStatus: project.status,
+          newStatus: newStatus,
+          notes: reason || notes || actionDescription,
+          internalNotes: `Admin action: ${action}`,
+          flagsRaised: [],
+        },
+      });
+    }
 
     // Notify search engines when a project goes live (fire-and-forget)
     if (newStatus === "LIVE") {
