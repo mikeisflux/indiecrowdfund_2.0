@@ -124,24 +124,34 @@ export async function POST(request: NextRequest) {
     let projectName = "";
     let projectUrl = "";
     if (projectId) {
-      const project = await db.project.findUnique({
-        where: { id: projectId },
+      const project = await db.project.findFirst({
+        where: {
+          id: projectId,
+          OR: [
+            { creatorId: session.user.id },
+            { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+          ],
+        },
         select: { title: true, slug: true, creator: { select: { vanityUrl: true } } },
       });
-      if (project) {
-        projectName = project.title;
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        projectUrl = `${appUrl}/projects/${project.creator?.vanityUrl || "creator"}/${project.slug}`;
+      if (!project) {
+        return NextResponse.json(
+          { error: "Project not found or access denied" },
+          { status: 403 }
+        );
       }
+      projectName = project.title;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      projectUrl = `${appUrl}/projects/${project.creator?.vanityUrl || "creator"}/${project.slug}`;
     }
 
     const resolveVars = (text: string) =>
-      text
+      escapeHtml(text)
         .replace(/\{\{PROJECT_NAME\}\}/g, escapeHtml(projectName))
         .replace(/\{\{CREATOR_NAME\}\}/g, escapeHtml(fromName))
-        .replace(/\{\{PROJECT_URL\}\}/g, projectUrl);
+        .replace(/\{\{PROJECT_URL\}\}/g, escapeHtml(projectUrl));
 
-    const resolvedSubject = subject.trim().replace(/\{\{PROJECT_NAME\}\}/g, projectName).replace(/\{\{CREATOR_NAME\}\}/g, fromName);
+    const resolvedSubject = subject.trim().replace(/[\r\n]/g, "").replace(/\{\{PROJECT_NAME\}\}/g, projectName.replace(/[\r\n]/g, "")).replace(/\{\{CREATOR_NAME\}\}/g, fromName.replace(/[\r\n]/g, ""));
     const resolvedContent = resolveVars(content.trim());
 
     // Build email HTML
@@ -165,7 +175,7 @@ export async function POST(request: NextRequest) {
 
           <h2 style="color: #333; margin-bottom: 20px;">${escapeHtml(resolvedSubject)}</h2>
 
-          <div style="padding: 20px 0;">
+          <div style="padding: 20px 0; white-space: pre-wrap;">
             ${resolvedContent}
           </div>
 
