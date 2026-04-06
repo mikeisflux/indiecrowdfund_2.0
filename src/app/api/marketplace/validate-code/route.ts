@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the book to verify it belongs to the code creator
-    const book = await db.marketplaceBook.findUnique({
-      where: { id: bookId },
+    const book = await db.marketplaceBook.findFirst({
+      where: { id: bookId, deletedAt: null },
       select: {
         id: true,
         title: true,

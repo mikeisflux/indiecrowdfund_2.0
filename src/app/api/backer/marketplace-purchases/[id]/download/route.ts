@@ -50,27 +50,6 @@ export async function GET(
       },
     });
 
-    backerMarketplacePurchasesDownloadLogger.info({ data: purchase ? "yes" : "no" }, "[Marketplace Download] Purchase found:");
-    if (purchase) {
-      backerMarketplacePurchasesDownloadLogger.info({ data: {
-        purchaseId: purchase.id,
-        bookId: purchase.book.id,
-        bookTitle: purchase.book.title,
-        hasPdfUrl: !!purchase.book.pdfFileUrl,
-      } }, "[Marketplace Download] Purchase details:");
-    } else {
-      // Try to find the purchase without the buyerId filter to debug
-      const anyPurchase = await prisma.marketplacePurchase.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          buyerId: true,
-          status: true,
-        },
-      });
-      backerMarketplacePurchasesDownloadLogger.info({ data: anyPurchase }, "[Marketplace Download] Debug - purchase exists but not matching:");
-    }
-
     if (!purchase) {
       return NextResponse.json(
         { error: "Purchase not found" },

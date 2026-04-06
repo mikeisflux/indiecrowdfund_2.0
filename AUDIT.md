@@ -302,11 +302,11 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/backer/dashboard/route.ts`
 - [ ] `src/app/api/backer/digital-files/extract-cover/route.ts`
 - [ ] `src/app/api/backer/digital-files/progress/route.ts`
-- [ ] `src/app/api/backer/digital-files/route.ts`
-- [ ] `src/app/api/backer/digital-files/stream/route.ts`
+- [x] `src/app/api/backer/digital-files/route.ts` ✅
+- [x] `src/app/api/backer/digital-files/stream/route.ts` ✅
 - [ ] `src/app/api/backer/digital-library/route.ts`
 - [ ] `src/app/api/backer/following/route.ts`
-- [ ] `src/app/api/backer/marketplace-purchases/[id]/download/route.ts`
+- [x] `src/app/api/backer/marketplace-purchases/[id]/download/route.ts` 🔧 Removed debug log that leaked other users buyerId/status on unauthorized access attempts
 - [ ] `src/app/api/backer/notifications/preferences/route.ts`
 - [ ] `src/app/api/backer/surveys/route.ts`
 - [ ] `src/app/api/blocked/route.ts`
@@ -431,17 +431,17 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/internal/blocked-ips/route.ts`
 - [ ] `src/app/api/lcs-locator/import/route.ts`
 - [ ] `src/app/api/lcs-locator/route.ts`
-- [ ] `src/app/api/marketplace/books/[slug]/route.ts`
-- [ ] `src/app/api/marketplace/books/route.ts`
-- [ ] `src/app/api/marketplace/checkout/route.ts`
-- [ ] `src/app/api/marketplace/checkout/verify/route.ts`
-- [ ] `src/app/api/marketplace/companies/[slug]/route.ts`
-- [ ] `src/app/api/marketplace/companies/route.ts`
-- [ ] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts`
-- [ ] `src/app/api/marketplace/purchase/confirm/route.ts`
-- [ ] `src/app/api/marketplace/purchase/route.ts`
-- [ ] `src/app/api/marketplace/redeem-code/route.ts`
-- [ ] `src/app/api/marketplace/validate-code/route.ts`
+- [x] `src/app/api/marketplace/books/[slug]/route.ts` ✅
+- [x] `src/app/api/marketplace/books/route.ts` ✅
+- [x] `src/app/api/marketplace/checkout/route.ts` ✅
+- [x] `src/app/api/marketplace/checkout/verify/route.ts` ✅
+- [x] `src/app/api/marketplace/companies/[slug]/route.ts` ✅
+- [x] `src/app/api/marketplace/companies/route.ts` ✅
+- [x] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts` ✅
+- [x] `src/app/api/marketplace/purchase/confirm/route.ts` ✅
+- [x] `src/app/api/marketplace/purchase/route.ts` ✅
+- [x] `src/app/api/marketplace/redeem-code/route.ts` ✅
+- [x] `src/app/api/marketplace/validate-code/route.ts` 🔧 Fixed missing deletedAt:null on book lookup (soft-deleted books could be used for code validation)
 - [ ] `src/app/api/messages/route.ts`
 - [ ] `src/app/api/messages/user-info/route.ts`
 - [ ] `src/app/api/metrics/route.ts`
@@ -494,7 +494,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts`
 - [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts`
 - [ ] `src/app/api/promo-popup/route.ts`
-- [ ] `src/app/api/r2/serve/[...key]/route.ts`
+- [x] `src/app/api/r2/serve/[...key]/route.ts` ✅
 - [ ] `src/app/api/recommendations/route.ts`
 - [ ] `src/app/api/retailers/account/route.ts`
 - [ ] `src/app/api/retailers/apply/route.ts`
