@@ -431,7 +431,7 @@ export async function PATCH(
           where: { id: pledge.projectId },
           data: {
             backerCount: { decrement: 1 },
-            currentAmount: { decrement: pledge.amount },
+            currentAmount: { decrement: Number(pledge.amount) },
           },
         });
 
@@ -826,7 +826,7 @@ export async function PATCH(
         success: true,
         requiresPayment: false,
         message: "Pledge modified successfully",
-        newAmount,
+        newAmount: effectiveNewAmount,
       });
     }
 
@@ -1040,7 +1040,7 @@ export async function DELETE(
         where: { id: pledge.projectId },
         data: {
           backerCount: { decrement: 1 },
-          currentAmount: { decrement: pledge.amount },
+          currentAmount: { decrement: Number(pledge.amount) },
         },
       });
     }
