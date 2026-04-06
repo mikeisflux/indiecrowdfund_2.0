@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const cronProcessFailedCampaignsLogger = logger.child({ module: "cron-process-failed-campaigns" });
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 
 /**
  * Cron job endpoint for processing ended campaigns
@@ -122,6 +123,8 @@ export async function GET(req: NextRequest) {
           divinityCoinRefunds: 0,
           divinityCoinAmount: 0,
           stripePledgesCancelled: 0,
+          paypalAuthsCancelled: 0,
+          whopPledgesCancelled: 0,
         };
 
         // Process DivinityCoin refunds
@@ -134,6 +137,14 @@ export async function GET(req: NextRequest) {
         // Cancel Stripe pledges (they weren't charged since campaign wasn't funded)
         const stripeCancelResult = await cancelStripePledges(project.id);
         projectResult.stripePledgesCancelled = stripeCancelResult.count;
+
+        // Void PayPal authorized pledges (authorization holds must be explicitly released)
+        const paypalCancelResult = await cancelPaypalAuthorizedPledges(project.id);
+        projectResult.paypalAuthsCancelled = paypalCancelResult.count;
+
+        // Cancel Whop pending pledges
+        const whopCancelResult = await cancelWhopPledges(project.id);
+        projectResult.whopPledgesCancelled = whopCancelResult.count;
 
         // Update project status to FAILED
         await db.project.update({
@@ -312,6 +323,120 @@ async function cancelStripePledges(projectId: string) {
   return {
     count: pledgesToCancel.length,
   };
+}
+
+async function cancelPaypalAuthorizedPledges(projectId: string) {
+  // Find PayPal pledges with an authorization hold (backer authorized, campaign didn't fund)
+  const pledges = await db.pledge.findMany({
+    where: {
+      projectId,
+      paymentProcessor: "PAYPAL",
+      status: "PENDING",
+      paypalAuthorizationId: { not: null },
+      deletedAt: null,
+    },
+    select: { id: true, rewardId: true, confirmationEmailSent: true, amount: true, paypalAuthorizationId: true },
+  });
+
+  let count = 0;
+  try {
+    const paypalConfig = await getPayPalConfig();
+    const accessToken = await getPayPalAccessToken();
+
+    for (const pledge of pledges) {
+      try {
+        // Void the PayPal authorization to release the hold on the backer's card
+        const voidRes = await fetch(
+          `${paypalConfig.baseUrl}/v2/payments/authorizations/${pledge.paypalAuthorizationId}/void`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (!voidRes.ok && voidRes.status !== 422) {
+          // 422 means already voided/captured — treat as success
+          cronProcessFailedCampaignsLogger.error(
+            { pledgeId: pledge.id, status: voidRes.status },
+            "[Cron Failed] Failed to void PayPal authorization"
+          );
+        }
+      } catch (voidErr) {
+        cronProcessFailedCampaignsLogger.error({ err: String(voidErr), pledgeId: pledge.id }, "[Cron Failed] Error voiding PayPal auth");
+      }
+
+      // Mark pledge cancelled and reverse stats if they were counted
+      await db.$transaction(async (tx) => {
+        await tx.pledge.update({
+          where: { id: pledge.id },
+          data: { status: "CANCELLED", lastFailureReason: "Campaign did not reach funding goal" },
+        });
+
+        if (pledge.confirmationEmailSent) {
+          await tx.project.update({
+            where: { id: projectId },
+            data: {
+              backerCount: { decrement: 1 },
+              currentAmount: { decrement: Number(pledge.amount) },
+            },
+          });
+        }
+
+        if (pledge.rewardId) {
+          await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
+        }
+      });
+
+      count++;
+    }
+  } catch (err) {
+    cronProcessFailedCampaignsLogger.error({ err: String(err) }, "[Cron Failed] Error in cancelPaypalAuthorizedPledges");
+  }
+
+  return { count };
+}
+
+async function cancelWhopPledges(projectId: string) {
+  const pledges = await db.pledge.findMany({
+    where: {
+      projectId,
+      paymentProcessor: "WHOP",
+      status: "PENDING",
+      deletedAt: null,
+    },
+    select: { id: true, rewardId: true, confirmationEmailSent: true, amount: true },
+  });
+
+  for (const pledge of pledges) {
+    try {
+      await db.$transaction(async (tx) => {
+        await tx.pledge.update({
+          where: { id: pledge.id },
+          data: { status: "CANCELLED", lastFailureReason: "Campaign did not reach funding goal" },
+        });
+
+        if (pledge.confirmationEmailSent) {
+          await tx.project.update({
+            where: { id: projectId },
+            data: {
+              backerCount: { decrement: 1 },
+              currentAmount: { decrement: Number(pledge.amount) },
+            },
+          });
+        }
+
+        if (pledge.rewardId) {
+          await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
+        }
+      });
+    } catch (err) {
+      cronProcessFailedCampaignsLogger.error({ err: String(err), pledgeId: pledge.id }, "[Cron Failed] Error cancelling Whop pledge");
+    }
+  }
+
+  return { count: pledges.length };
 }
 
 // Also support POST for flexibility

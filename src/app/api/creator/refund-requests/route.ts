@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({
-      refundRequests: refundRequests.map(rr => ({
+      refundRequests: refundRequests.map((rr: typeof refundRequests[number]) => ({
         ...rr,
         pledge: rr.pledge ? { ...rr.pledge, amount: Number(rr.pledge.amount) } : null,
       })),
