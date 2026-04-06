@@ -46,12 +46,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired payment link" }, { status: 404 });
     }
 
+    if (pledges.length > 1) {
+      payBalanceLogger.error({ pledgeCount: pledges.length }, "Duplicate balance payment tokens found");
+      return NextResponse.json({ error: "Invalid payment link" }, { status: 400 });
+    }
+
     const pledge = pledges[0];
     const meta = (pledge.metadata as Record<string, unknown>) || {};
 
-    // Check token expiry
+    // Check token expiry — reject tokens without an expiry (should always be set)
     const expiryStr = meta.balancePaymentTokenExpiry as string | undefined;
-    if (expiryStr && new Date(expiryStr) < new Date()) {
+    if (!expiryStr || new Date(expiryStr) < new Date()) {
       return NextResponse.json({ error: "This payment link has expired" }, { status: 410 });
     }
 
@@ -130,12 +135,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired payment link" }, { status: 404 });
     }
 
+    if (pledges.length > 1) {
+      payBalanceLogger.error({ pledgeCount: pledges.length }, "Duplicate balance payment tokens found");
+      return NextResponse.json({ error: "Invalid payment link" }, { status: 400 });
+    }
+
     const pledge = pledges[0];
     const meta = (pledge.metadata as Record<string, unknown>) || {};
 
-    // Check token expiry
+    // Check token expiry — reject tokens without an expiry (should always be set)
     const expiryStr = meta.balancePaymentTokenExpiry as string | undefined;
-    if (expiryStr && new Date(expiryStr) < new Date()) {
+    if (!expiryStr || new Date(expiryStr) < new Date()) {
       return NextResponse.json({ error: "Payment link expired" }, { status: 410 });
     }
 
