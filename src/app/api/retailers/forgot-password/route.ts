@@ -10,6 +10,15 @@ import { verifyRecaptcha } from "@/lib/auth/recaptcha";
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 /**
  * Get client IP from request headers
  */
@@ -91,7 +100,7 @@ export async function POST(req: NextRequest) {
 
             <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
               <h2 style="margin-top: 0; color: #333;">Reset Your Retailer Password</h2>
-              <p>Hi ${retailer.contactName || retailer.businessName},</p>
+              <p>Hi ${escapeHtml(retailer.contactName || retailer.businessName)},</p>
               <p>We received a request to reset your retailer portal password. Click the button below to create a new password:</p>
 
               <div style="text-align: center; margin: 30px 0;">
