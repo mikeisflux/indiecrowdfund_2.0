@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     // Find duplicate addons grouped by title + amount
     const allAddons = await db.reward.findMany({
-      where: { projectId, type: "ADDON" },
+      where: { projectId, type: "ADDON", deletedAt: null },
       include: {
         _count: { select: { pledges: true } },
       },
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     // Find duplicate addons grouped by title + amount
     const allAddons = await db.reward.findMany({
-      where: { projectId, type: "ADDON" },
+      where: { projectId, type: "ADDON", deletedAt: null },
       include: {
         _count: { select: { pledges: true } },
         pledges: { select: { id: true } },

@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     const showAll = searchParams.get("showAll") === "true";
 
     // Build where clause
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { deletedAt: null };
 
     if (userId) {
       where.userId = userId;

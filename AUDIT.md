@@ -185,20 +185,20 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/ai-marketing/subscribers/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/subscribers/tags/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/user-interests/route.ts`
-- [ ] `src/app/api/admin/analytics/route.ts`
-- [ ] `src/app/api/admin/announcement-bar/route.ts`
-- [ ] `src/app/api/admin/api-keys/route.ts`
-- [ ] `src/app/api/admin/backfill-backer-numbers/route.ts`
-- [ ] `src/app/api/admin/bank-accounts/[id]/route.ts`
+- [x] `src/app/api/admin/analytics/route.ts` ✅
+- [x] `src/app/api/admin/announcement-bar/route.ts` ✅
+- [x] `src/app/api/admin/api-keys/route.ts` ✅
+- [x] `src/app/api/admin/backfill-backer-numbers/route.ts` ✅
+- [x] `src/app/api/admin/bank-accounts/[id]/route.ts` ✅
 - [ ] `src/app/api/admin/build-backup/download/route.ts`
 - [ ] `src/app/api/admin/build-backup/route.ts`
 - [ ] `src/app/api/admin/changelog/extract/route.ts`
 - [ ] `src/app/api/admin/changelog/route.ts`
-- [ ] `src/app/api/admin/cleanup-duplicate-rewards/route.ts`
-- [ ] `src/app/api/admin/cleanup-pledges/route.ts`
-- [ ] `src/app/api/admin/consent-banner/route.ts`
+- [x] `src/app/api/admin/cleanup-duplicate-rewards/route.ts` 🔧 Fixed missing deletedAt:null in reward queries (cleanup tool operated on soft-deleted rewards)
+- [x] `src/app/api/admin/cleanup-pledges/route.ts` 🔧 Fixed missing deletedAt:null in base pledge where clause (admin cleanup could see deleted pledges)
+- [x] `src/app/api/admin/consent-banner/route.ts` ✅
 - [ ] `src/app/api/admin/cron/route.ts`
-- [ ] `src/app/api/admin/dashboard/route.ts`
+- [x] `src/app/api/admin/dashboard/route.ts` ✅
 - [ ] `src/app/api/admin/database/backup/download/route.ts`
 - [ ] `src/app/api/admin/database/backup/restore/route.ts`
 - [ ] `src/app/api/admin/database/backup/route.ts`
