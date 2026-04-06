@@ -57,6 +57,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No backers selected" }, { status: 400 });
     }
 
+    // Verify user has access to this project FIRST (before idempotency check to prevent info leakage)
+    const project = await db.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { creatorId: session.user.id },
+          {
+            collaborators: {
+              some: {
+                userId: session.user.id,
+                status: "ACCEPTED",
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+    }
+
     // Idempotency check for charge_cards to prevent duplicate charges
     if (action === "charge_cards") {
       const key = idempotencyKey || crypto.randomUUID();
@@ -77,28 +99,6 @@ export async function POST(req: NextRequest) {
           idempotencyKey: key,
         });
       }
-    }
-
-    // Verify user has access to this project
-    const project = await db.project.findFirst({
-      where: {
-        id: projectId,
-        OR: [
-          { creatorId: session.user.id },
-          {
-            collaborators: {
-              some: {
-                userId: session.user.id,
-                status: "ACCEPTED",
-              },
-            },
-          },
-        ],
-      },
-    });
-
-    if (!project) {
-      return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
     }
 
     // Get pledges

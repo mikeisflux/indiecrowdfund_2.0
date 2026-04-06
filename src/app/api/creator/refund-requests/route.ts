@@ -50,7 +50,12 @@ export async function GET(req: NextRequest) {
     };
 
     if (status && status !== "all") {
-      where.status = status.toUpperCase();
+      const validStatuses = ["PENDING", "APPROVED", "DENIED"];
+      const normalizedStatus = status.toUpperCase();
+      if (!validStatuses.includes(normalizedStatus)) {
+        return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
+      }
+      where.status = normalizedStatus;
     }
 
     const refundRequests = await db.refundRequest.findMany({
@@ -70,7 +75,12 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ refundRequests });
+    return NextResponse.json({
+      refundRequests: refundRequests.map(rr => ({
+        ...rr,
+        pledge: rr.pledge ? { ...rr.pledge, amount: Number(rr.pledge.amount) } : null,
+      })),
+    });
   } catch (error) {
     refundRequestsLogger.error({ err: String(error) }, "Error fetching refund requests");
     return NextResponse.json({ error: "Failed to fetch refund requests" }, { status: 500 });
