@@ -46,27 +46,38 @@ export async function POST(req: NextRequest) {
       ? Math.max(0, Math.round(storedBalanceDue * 100) / 100)
       : Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
 
-    // Update the pledge: add balance to pledge amount and mark as paid
-    await db.pledge.update({
-      where: { id: pledge.id },
-      data: {
-        amount: { increment: balanceDue },
-        metadata: {
-          ...meta,
-          balancePaymentCompletedAt: new Date().toISOString(),
-          balancePaymentIntentId: paymentIntentId || meta.balancePaymentIntentId,
-          balanceAmountPaid: balanceDue,
+    // Use a transaction to atomically mark as confirmed and prevent double-processing
+    const confirmed = await db.$transaction(async (tx) => {
+      // Re-fetch the pledge with a lock to guard against concurrent requests
+      const current = await tx.pledge.findUnique({ where: { id: pledge.id } });
+      if (!current) return false;
+      const currentMeta = (current.metadata as Record<string, unknown>) || {};
+      if (currentMeta.balancePaymentCompletedAt) return false; // Already done
+
+      await tx.pledge.update({
+        where: { id: pledge.id },
+        data: {
+          amount: { increment: balanceDue },
+          metadata: {
+            ...currentMeta,
+            balancePaymentCompletedAt: new Date().toISOString(),
+            balancePaymentIntentId: paymentIntentId || currentMeta.balancePaymentIntentId,
+            balanceAmountPaid: balanceDue,
+          },
         },
-      },
+      });
+
+      await tx.project.update({
+        where: { id: pledge.projectId },
+        data: { currentAmount: { increment: balanceDue } },
+      });
+
+      return true;
     });
 
-    // Update project current amount
-    await db.project.update({
-      where: { id: pledge.projectId },
-      data: {
-        currentAmount: { increment: balanceDue },
-      },
-    });
+    if (!confirmed) {
+      return NextResponse.json({ success: true, message: "Already confirmed" });
+    }
 
     return NextResponse.json({
       success: true,

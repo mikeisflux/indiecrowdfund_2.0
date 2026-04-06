@@ -12,7 +12,7 @@ const contactSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email("Invalid email address"),
   category: z.enum(["general", "support", "billing", "project", "report"]),
-  subject: z.string().min(1, "Subject is required").max(200),
+  subject: z.string().min(1, "Subject is required").max(200).refine(s => !/[\r\n]/.test(s), "Subject cannot contain line breaks"),
   message: z.string().min(10, "Message must be at least 10 characters").max(5000),
 });
 

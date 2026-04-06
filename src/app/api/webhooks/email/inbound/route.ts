@@ -1,10 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getR2Storage, generateEmailAttachmentKey } from "@/lib/r2";
+import crypto from "crypto";
 
 import { logger } from "@/lib/logger";
 
 const webhooksEmailInboundLogger = logger.child({ module: "webhooks-email-inbound" });
+
+// Verify Mailgun inbound webhook signature (same HMAC-SHA256 scheme as event webhooks)
+async function verifyMailgunInboundSignature(
+  timestamp: string,
+  token: string,
+  signature: string
+): Promise<boolean> {
+  try {
+    const settings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { mailgunWebhookSigningKey: true },
+    });
+
+    const signingKey = settings?.mailgunWebhookSigningKey;
+    if (!signingKey) {
+      webhooksEmailInboundLogger.warn("[Inbound Email] Mailgun webhook signing key not configured - skipping verification");
+      return true;
+    }
+
+    const encodedToken = crypto
+      .createHmac("sha256", signingKey)
+      .update(timestamp.concat(token))
+      .digest("hex");
+
+    return encodedToken === signature;
+  } catch (error) {
+    webhooksEmailInboundLogger.error({ err: error }, "[Inbound Email] Error verifying Mailgun signature:");
+    return false;
+  }
+}
 
 
 export const dynamic = "force-dynamic";
@@ -143,6 +174,18 @@ export async function POST(request: NextRequest) {
         }
       });
       webhooksEmailInboundLogger.info({ data: Object.keys(formFields).join(", ") }, "[Inbound Email] Received form fields:");
+
+      // Verify Mailgun inbound signature if present
+      const mgTimestamp = formData.get("timestamp") as string;
+      const mgToken = formData.get("token") as string;
+      const mgSignature = formData.get("signature") as string;
+      if (mgTimestamp && mgToken && mgSignature) {
+        const isValid = await verifyMailgunInboundSignature(mgTimestamp, mgToken, mgSignature);
+        if (!isValid) {
+          webhooksEmailInboundLogger.error("[Inbound Email] Mailgun signature verification failed");
+          return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+        }
+      }
 
       // Mailgun uses "recipient" and "sender", SendGrid uses "to" and "from"
       const toRaw = (formData.get("recipient") as string) || (formData.get("to") as string) || "";
