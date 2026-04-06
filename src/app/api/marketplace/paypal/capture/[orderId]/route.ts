@@ -107,7 +107,7 @@ export async function POST(
         completedAt: new Date(),
         deliveredAt: new Date(),
         transactionId,
-        platformFee: paypalFee + platformFee, // PayPal processing fee + platform fee
+        platformFee: platformFee, // Platform fee only (PayPal processing fee is separate cost)
         creatorPayout: netAmount,
       },
     });

@@ -16,9 +16,12 @@ async function verifyPayPalWebhook(
   try {
     const config = await getPayPalConfig();
     if (!config.webhookId) {
-      // If no webhook ID configured, skip verification in dev mode
-      paypalWebhookLogger.warn("PayPal webhook ID not configured, skipping verification");
-      return true;
+      if (process.env.NODE_ENV === "development") {
+        paypalWebhookLogger.warn("PayPal webhook ID not configured, skipping verification (development only)");
+        return true;
+      }
+      paypalWebhookLogger.error("PayPal webhook ID not configured — rejecting webhook in production");
+      return false;
     }
 
     const transmissionId = req.headers.get("paypal-transmission-id") || "";
