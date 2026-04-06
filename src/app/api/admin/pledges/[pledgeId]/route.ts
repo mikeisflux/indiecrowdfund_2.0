@@ -169,6 +169,7 @@ export async function PATCH(
       },
     });
 
+
     if (!pledge) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
@@ -268,14 +269,16 @@ export async function PATCH(
         },
       });
 
-      // Update project backer count and amount
-      await db.project.update({
-        where: { id: pledge.projectId },
-        data: {
-          backerCount: { decrement: 1 },
-          currentAmount: { decrement: Number(pledge.amount) },
-        },
-      });
+      // Only decrement project stats if pledge was counted (confirmationEmailSent is the atomic flag)
+      if (pledge.confirmationEmailSent) {
+        await db.project.update({
+          where: { id: pledge.projectId },
+          data: {
+            backerCount: { decrement: 1 },
+            currentAmount: { decrement: Number(pledge.amount) },
+          },
+        });
+      }
 
       return NextResponse.json({
         success: true,
