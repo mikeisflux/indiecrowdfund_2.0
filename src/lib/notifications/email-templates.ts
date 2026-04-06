@@ -37,10 +37,10 @@ export async function sendProjectFundedEmail(
         <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
           <h2 style="margin-top: 0; color: white; text-align: center;">Project Funded!</h2>
 
-          ${imageUrl ? `<img src="${imageUrl}" alt="${projectTitle}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
+          ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(projectTitle)}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
 
           <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
-            <h3 style="margin: 0 0 10px 0; color: white;">${projectTitle}</h3>
+            <h3 style="margin: 0 0 10px 0; color: white;">${escapeHtml(projectTitle)}</h3>
             <p style="margin: 0; color: rgba(255,255,255,0.9);">has reached its funding goal!</p>
           </div>
 
@@ -101,11 +101,11 @@ export async function sendProjectLaunchEmail(
         <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
           <h2 style="margin-top: 0; color: #333;">A Project You Follow Is Now Live!</h2>
 
-          ${imageUrl ? `<img src="${imageUrl}" alt="${projectTitle}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin-bottom: 20px;">` : ""}
+          ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(projectTitle)}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin-bottom: 20px;">` : ""}
 
           <div style="background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 20px; margin: 20px 0;">
-            <h3 style="margin: 0 0 10px 0; color: #333;">${projectTitle}</h3>
-            <p style="margin: 0; color: #666;">by ${creatorName}</p>
+            <h3 style="margin: 0 0 10px 0; color: #333;">${escapeHtml(projectTitle)}</h3>
+            <p style="margin: 0; color: #666;">by ${escapeHtml(creatorName)}</p>
           </div>
 
           <p>The project you signed up to be notified about has just launched! Be one of the first backers and help bring this project to life.</p>
@@ -302,10 +302,10 @@ export async function sendMarketplacePurchaseEmail(
         <div style="background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
           <h2 style="margin-top: 0; color: white; text-align: center;">Purchase Confirmed!</h2>
 
-          ${coverImageUrl ? `<img src="${coverImageUrl}" alt="${bookTitle}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin: 20px auto; display: block; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">` : ""}
+          ${coverImageUrl ? `<img src="${coverImageUrl}" alt="${escapeHtml(bookTitle)}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin: 20px auto; display: block; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">` : ""}
 
           <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
-            <h3 style="margin: 0 0 10px 0; color: white;">${bookTitle}</h3>
+            <h3 style="margin: 0 0 10px 0; color: white;">${escapeHtml(bookTitle)}</h3>
             <p style="margin: 0; color: rgba(255,255,255,0.9);">has been added to your Digital Library!</p>
           </div>
 
@@ -388,8 +388,8 @@ export async function sendMarketplaceSaleEmail(
           <h2 style="margin-top: 0; color: white; text-align: center;">You made a sale!</h2>
 
           <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
-            <h3 style="margin: 0 0 10px 0; color: white;">${bookTitle}</h3>
-            <p style="margin: 0; color: rgba(255,255,255,0.9);">purchased by ${buyerName}</p>
+            <h3 style="margin: 0 0 10px 0; color: white;">${escapeHtml(bookTitle)}</h3>
+            <p style="margin: 0; color: rgba(255,255,255,0.9);">purchased by ${escapeHtml(buyerName)}</p>
           </div>
 
           <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 15px; margin-top: 20px;">
@@ -478,7 +478,7 @@ export async function sendPayoutCreatedEmail(
           <h2 style="margin-top: 0; color: white; text-align: center;">Payout Initiated!</h2>
 
           <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
-            <h3 style="margin: 0 0 10px 0; color: white;">${projectTitle}</h3>
+            <h3 style="margin: 0 0 10px 0; color: white;">${escapeHtml(projectTitle)}</h3>
             <p style="margin: 0; color: rgba(255,255,255,0.9);">A payout has been initiated for your campaign</p>
           </div>
 
