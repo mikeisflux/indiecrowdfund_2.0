@@ -20,8 +20,8 @@ export async function GET(
     const projectId = id;
 
     // Verify project ownership or collaborator access
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       include: {
         collaborators: {
           where: {
@@ -88,8 +88,8 @@ export async function GET(
     // Get pledge and user info for each response
     const responsesWithDetails = await Promise.all(
       responses.map(async (response) => {
-        const pledge = await db.pledge.findUnique({
-          where: { id: response.pledgeId },
+        const pledge = await db.pledge.findFirst({
+          where: { id: response.pledgeId, deletedAt: null },
           include: {
             user: {
               select: { id: true, name: true, email: true },
@@ -172,8 +172,8 @@ export async function POST(
     const { format = "json" } = body;
 
     // Verify project ownership or collaborator access
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       include: {
         collaborators: {
           where: {

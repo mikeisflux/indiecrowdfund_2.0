@@ -65,8 +65,8 @@ export async function POST(
     }
 
     // Get current project to check content flags
-    const currentProject = await db.project.findUnique({
-      where: { id: projectId },
+    const currentProject = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { paymentProcessor: true, hasAdultContent: true, hasRiskyContent: true },
     });
 
@@ -175,8 +175,8 @@ export async function GET(
       );
     }
 
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: {
         id: true,
         contactEmail: true,

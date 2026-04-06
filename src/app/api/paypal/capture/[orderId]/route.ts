@@ -29,8 +29,8 @@ export async function POST(
     }
 
     // Find the pledge for this PayPal order
-    const pledge = await db.pledge.findUnique({
-      where: { paypalOrderId: orderId },
+    const pledge = await db.pledge.findFirst({
+      where: { paypalOrderId: orderId, deletedAt: null },
       include: {
         project: {
           select: {

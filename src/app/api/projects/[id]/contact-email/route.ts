@@ -27,8 +27,8 @@ export async function POST(
     const projectId = id;
 
     // Get the project and verify ownership or collaborator access
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { creatorId: true, title: true },
     });
 
@@ -105,8 +105,8 @@ export async function GET(
 
     const projectId = id;
 
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { creatorId: true, contactEmail: true },
     });
 

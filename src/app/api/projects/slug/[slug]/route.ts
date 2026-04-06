@@ -22,8 +22,8 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const secretToken = searchParams.get("secret");
 
-    const project = await db.project.findUnique({
-      where: { slug },
+    const project = await db.project.findFirst({
+      where: { slug, deletedAt: null },
       include: {
         creator: {
           select: {

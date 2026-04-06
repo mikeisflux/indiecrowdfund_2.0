@@ -21,8 +21,8 @@ export async function GET(
     const projectId = id;
 
     // Get the project to verify ownership
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: { id: true, creatorId: true, status: true },
     });
 

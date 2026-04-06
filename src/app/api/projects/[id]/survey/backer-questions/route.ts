@@ -19,8 +19,8 @@ const backerQuestionSchema = z.object({
 });
 
 async function verifyProjectAccess(projectId: string, userId: string) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
+  const project = await db.project.findFirst({
+    where: { id: projectId, deletedAt: null },
     include: {
       collaborators: {
         where: {

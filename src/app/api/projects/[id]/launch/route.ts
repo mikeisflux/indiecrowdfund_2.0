@@ -55,8 +55,8 @@ export async function POST(
     }
 
     // Get the project with creator info for URL construction
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       include: {
         rewards: true,
         creator: {

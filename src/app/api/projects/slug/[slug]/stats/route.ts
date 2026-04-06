@@ -12,8 +12,8 @@ export async function GET(
   try {
     const { slug } = await params;
 
-    const project = await db.project.findUnique({
-      where: { slug },
+    const project = await db.project.findFirst({
+      where: { slug, deletedAt: null },
       select: { id: true, goalAmount: true, status: true },
     });
 

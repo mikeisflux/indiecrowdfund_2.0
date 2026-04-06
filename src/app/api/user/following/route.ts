@@ -166,8 +166,8 @@ export async function POST(request: Request) {
     }
 
     // Verify the project exists
-    const project = await db.project.findUnique({
-      where: { id: projectId, deletedAt: null },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null , deletedAt: null },
       select: { id: true, title: true, prelaunchActive: true, status: true },
     });
 
@@ -224,8 +224,8 @@ export async function POST(request: Request) {
     });
 
     // Get project creator ID to add follower to their email list
-    const projectDetails = await db.project.findUnique({
-      where: { id: projectId },
+    const projectDetails = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: { creatorId: true },
     });
 

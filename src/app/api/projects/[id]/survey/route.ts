@@ -21,8 +21,8 @@ export async function GET(
     const projectId = id;
 
     // Verify project ownership or collaborator access
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       include: {
         collaborators: {
           where: { userId: session.user.id, status: "ACCEPTED" },
@@ -127,8 +127,8 @@ export async function POST(
     const body = await req.json();
 
     // Verify project ownership
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       include: {
         collaborators: {
           where: {
@@ -204,8 +204,8 @@ export async function PUT(
     const body = await req.json();
 
     // Verify project ownership
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       include: {
         collaborators: {
           where: {

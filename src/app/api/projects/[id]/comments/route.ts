@@ -117,8 +117,8 @@ export async function GET(
     const skip = (page - 1) * limit;
 
     // Verify project exists before fetching comments
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: { creatorId: true },
     });
 
@@ -241,8 +241,8 @@ export async function POST(
     }
 
     // Check if project exists
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
       select: { id: true, creatorId: true },
     });
 
@@ -396,8 +396,8 @@ export async function POST(
     // Send notification to the original commenter if this is a reply
     if (parentComment && parentComment.userId !== session.user.id) {
       // Get project details for the notification
-      const projectDetails = await db.project.findUnique({
-        where: { id: projectId },
+      const projectDetails = await db.project.findFirst({
+        where: { id: projectId , deletedAt: null },
         select: {
           title: true,
           slug: true,

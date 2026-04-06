@@ -49,8 +49,8 @@ export async function GET(
     const { id: projectId } = await params;
 
     // Check user is creator or admin
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { creatorId: true },
     });
 
@@ -116,8 +116,8 @@ export async function POST(
     const { id: projectId } = await params;
 
     // Verify the user is the project creator
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { creatorId: true },
     });
 

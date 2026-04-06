@@ -52,8 +52,8 @@ export async function POST(
     const data = prelaunchSchema.parse(body);
 
     // Get current project state
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: {
         prelaunchStatus: true,
         status: true,
@@ -206,8 +206,8 @@ export async function GET(
       );
     }
 
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: {
         id: true,
         prelaunchActive: true,
