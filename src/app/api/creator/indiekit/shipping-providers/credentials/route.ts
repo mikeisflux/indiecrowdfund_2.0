@@ -5,6 +5,12 @@ import { auth } from "@/lib/auth";
 
 const creatorIndiekitShippingProvidersCredentialsLogger = logger.child({ module: "creator-indiekit-shipping-providers-credentials" });
 import { db } from "@/lib/db";
+import { encryptCredential, decryptCredential } from "@/lib/encryption";
+
+/** Decrypt a stored credential, falling back to plaintext for legacy values */
+function safeDecrypt(value: string): string {
+  try { return decryptCredential(value); } catch { return value; }
+}
 
 /**
  * GET /api/creator/indiekit/shipping-providers/credentials
@@ -38,34 +44,31 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Decrypt for preview display
+    const ssKey = user.shipstationApiKey ? safeDecrypt(user.shipstationApiKey) : null;
+    const shippoToken = user.shippoApiToken ? safeDecrypt(user.shippoApiToken) : null;
+    const epKey = user.easypostApiKey ? safeDecrypt(user.easypostApiKey) : null;
+    const stIntId = user.stampsIntegrationId ? safeDecrypt(user.stampsIntegrationId) : null;
+    const stUser = user.stampsUsername ? safeDecrypt(user.stampsUsername) : null;
+
     // Return credential status (with masked previews for saved credentials)
     return NextResponse.json({
       shipstation: {
         hasCredentials: !!(user.shipstationApiKey && user.shipstationApiSecret),
-        apiKeyPreview: user.shipstationApiKey
-          ? `${user.shipstationApiKey.substring(0, 8)}••••••••`
-          : null,
+        apiKeyPreview: ssKey ? `${ssKey.substring(0, 8)}••••••••` : null,
       },
       shippo: {
         hasCredentials: !!user.shippoApiToken,
-        apiTokenPreview: user.shippoApiToken
-          ? `${user.shippoApiToken.substring(0, 12)}••••••••`
-          : null,
+        apiTokenPreview: shippoToken ? `${shippoToken.substring(0, 12)}••••••••` : null,
       },
       easypost: {
         hasCredentials: !!user.easypostApiKey,
-        apiKeyPreview: user.easypostApiKey
-          ? `${user.easypostApiKey.substring(0, 8)}••••••••`
-          : null,
+        apiKeyPreview: epKey ? `${epKey.substring(0, 8)}••••••••` : null,
       },
       stamps: {
         hasCredentials: !!(user.stampsIntegrationId && user.stampsUsername && user.stampsPassword),
-        integrationIdPreview: user.stampsIntegrationId
-          ? `${user.stampsIntegrationId.substring(0, 4)}••••••••`
-          : null,
-        usernamePreview: user.stampsUsername
-          ? `${user.stampsUsername.substring(0, 4)}••••`
-          : null,
+        integrationIdPreview: stIntId ? `${stIntId.substring(0, 4)}••••••••` : null,
+        usernamePreview: stUser ? `${stUser.substring(0, 4)}••••` : null,
       },
     });
   } catch (error) {
@@ -110,8 +113,8 @@ export async function POST(req: NextRequest) {
             { status: 400 }
           );
         }
-        updateData.shipstationApiKey = credentials.apiKey;
-        updateData.shipstationApiSecret = credentials.apiSecret;
+        updateData.shipstationApiKey = encryptCredential(credentials.apiKey);
+        updateData.shipstationApiSecret = encryptCredential(credentials.apiSecret);
         break;
 
       case "shippo":
@@ -121,7 +124,7 @@ export async function POST(req: NextRequest) {
             { status: 400 }
           );
         }
-        updateData.shippoApiToken = credentials.apiToken;
+        updateData.shippoApiToken = encryptCredential(credentials.apiToken);
         break;
 
       case "easypost":
@@ -131,7 +134,7 @@ export async function POST(req: NextRequest) {
             { status: 400 }
           );
         }
-        updateData.easypostApiKey = credentials.apiKey;
+        updateData.easypostApiKey = encryptCredential(credentials.apiKey);
         break;
 
       case "stamps":
@@ -141,9 +144,9 @@ export async function POST(req: NextRequest) {
             { status: 400 }
           );
         }
-        updateData.stampsIntegrationId = credentials.integrationId;
-        updateData.stampsUsername = credentials.username;
-        updateData.stampsPassword = credentials.password;
+        updateData.stampsIntegrationId = encryptCredential(credentials.integrationId);
+        updateData.stampsUsername = encryptCredential(credentials.username);
+        updateData.stampsPassword = encryptCredential(credentials.password);
         break;
 
       default:

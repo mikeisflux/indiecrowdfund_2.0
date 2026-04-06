@@ -7,6 +7,8 @@ const creatorIndiekitEasypostLogger = logger.child({ module: "creator-indiekit-e
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import { decryptCredential } from "@/lib/encryption";
+function safeDecrypt(v: string): string { try { return decryptCredential(v); } catch { return v; } }
 
 const actionSchema = z.object({
   projectId: z.string(),
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const easypostAuth = Buffer.from(`${creator.easypostApiKey}:`).toString("base64");
+    const easypostAuth = Buffer.from(`${safeDecrypt(creator.easypostApiKey)}:`).toString("base64");
     const easypostHeaders = {
       "Authorization": `Basic ${easypostAuth}`,
       "Content-Type": "application/json",

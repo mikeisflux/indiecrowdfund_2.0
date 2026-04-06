@@ -7,6 +7,8 @@ const creatorIndiekitShippoLogger = logger.child({ module: "creator-indiekit-shi
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import { decryptCredential } from "@/lib/encryption";
+function safeDecrypt(v: string): string { try { return decryptCredential(v); } catch { return v; } }
 
 const actionSchema = z.object({
   projectId: z.string(),
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
     }
 
     const shippoHeaders = {
-      "Authorization": `ShippoToken ${creator.shippoApiToken}`,
+      "Authorization": `ShippoToken ${safeDecrypt(creator.shippoApiToken)}`,
       "Content-Type": "application/json",
     };
 

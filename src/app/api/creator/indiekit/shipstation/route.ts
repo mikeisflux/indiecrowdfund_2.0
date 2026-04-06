@@ -8,6 +8,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import { decryptCredential } from "@/lib/encryption";
+function safeDecrypt(v: string): string { try { return decryptCredential(v); } catch { return v; } }
 
 const actionSchema = z.object({
   projectId: z.string(),
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const authHeader = getShipStationAuthHeader(creator.shipstationApiKey, creator.shipstationApiSecret);
+    const authHeader = getShipStationAuthHeader(safeDecrypt(creator.shipstationApiKey), safeDecrypt(creator.shipstationApiSecret));
 
     switch (action) {
       case "push_orders": {
