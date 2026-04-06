@@ -199,8 +199,8 @@ export async function POST(
     const { id: projectId } = await params;
 
     // Verify project ownership or collaborator with edit permission
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { creatorId: true, status: true },
     });
 
@@ -310,8 +310,8 @@ export async function PATCH(
     const { id: projectId } = await params;
 
     // Verify project ownership or collaborator with edit permission
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { creatorId: true },
     });
 
@@ -470,8 +470,8 @@ export async function DELETE(
     }
 
     // Verify project ownership or collaborator with edit permission
-    const project = await db.project.findUnique({
-      where: { id: projectId },
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
       select: { creatorId: true, status: true },
     });
 

@@ -33,7 +33,7 @@ export async function POST(
       },
     });
 
-    if (!project) {
+    if (!project || project.deletedAt) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
@@ -84,7 +84,7 @@ export async function POST(
 
     // Check rewards have required fields (title and price required, description optional)
     const invalidRewards = project.rewards.filter(
-      (r: { title: string | null; description: string | null; amount: number }) => !r.title || r.amount <= 0
+      (r: { title: string | null; description: string | null; amount: unknown }) => !r.title || Number(r.amount) <= 0
     );
     if (invalidRewards.length > 0) {
       validationErrors.push("All reward tiers must have a title and price");

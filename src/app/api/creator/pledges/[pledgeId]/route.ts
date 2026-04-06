@@ -306,13 +306,15 @@ export async function PATCH(
                 },
               });
 
-              await tx.project.update({
-                where: { id: typedPledge.projectId },
-                data: {
-                  backerCount: { decrement: 1 },
-                  currentAmount: { decrement: Number(typedPledge.amount) },
-                },
-              });
+              if (typedPledge.confirmationEmailSent) {
+                await tx.project.update({
+                  where: { id: typedPledge.projectId },
+                  data: {
+                    backerCount: { decrement: 1 },
+                    currentAmount: { decrement: Number(typedPledge.amount) },
+                  },
+                });
+              }
 
               await tx.fulfillmentActivity.create({
                 data: {
@@ -455,13 +457,15 @@ export async function PATCH(
               },
             });
 
-            await tx.project.update({
-              where: { id: typedPledge.projectId },
-              data: {
-                backerCount: { decrement: 1 },
-                currentAmount: { decrement: Number(typedPledge.amount) },
-              },
-            });
+            if (typedPledge.confirmationEmailSent) {
+              await tx.project.update({
+                where: { id: typedPledge.projectId },
+                data: {
+                  backerCount: { decrement: 1 },
+                  currentAmount: { decrement: Number(typedPledge.amount) },
+                },
+              });
+            }
 
             await tx.fulfillmentActivity.create({
               data: {

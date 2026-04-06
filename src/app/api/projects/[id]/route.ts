@@ -175,8 +175,8 @@ const updateProjectSchema = z.object({
   // Collaborators
   collaborators: z.array(collaboratorSchema).optional(),
 
-  // Status
-  status: z.enum(["DRAFT", "SUBMITTED"]).optional(),
+  // Status - only DRAFT revert is supported via PATCH (submit uses /submit endpoint)
+  status: z.literal("DRAFT").optional(),
 });
 
 // Helper function to handle collaborators and create notifications
@@ -747,7 +747,7 @@ export async function PATCH(
               estimatedDelivery: reward.estimatedDelivery ? new Date(reward.estimatedDelivery) : null,
               shippingType: reward.shippingType,
               shippingCountries: reward.shippingCountries || [],
-              shippingCost: reward.shippingCost || 0,
+              shippingCost: reward.shippingCost || {},
               quantityAvailable: reward.quantityAvailable ?? null,
               isEnded: reward.isEnded || false,
             };
@@ -847,6 +847,7 @@ export async function DELETE(
       select: {
         creatorId: true,
         status: true,
+        deletedAt: true,
         title: true,
         _count: {
           select: { pledges: true },
@@ -854,7 +855,7 @@ export async function DELETE(
       },
     });
 
-    if (!project) {
+    if (!project || project.deletedAt) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 

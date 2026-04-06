@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
     const whereClause: any = {
       projectId,
       status: "COMPLETED",
+      deletedAt: null,
     };
 
     if (!segment.isDynamic && segment.staticBackerIds.length > 0) {

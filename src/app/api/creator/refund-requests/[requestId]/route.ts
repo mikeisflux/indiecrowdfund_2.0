@@ -61,6 +61,7 @@ export async function PATCH(
             paypalAuthorizationId: true,
             chargedImmediately: true,
             whopPaymentId: true,
+            confirmationEmailSent: true,
           },
         },
         user: { select: { id: true, name: true, email: true } },
@@ -225,21 +226,24 @@ export async function PATCH(
         where: { id: pledge.id },
         data: { status: "REFUNDED", lastFailureReason: `Refund approved by creator: ${refundRequest.reason}` },
       }),
-      db.project.update({
-        where: { id: refundRequest.projectId },
-        data: {
-          backerCount: { decrement: 1 },
-          currentAmount: { decrement: Number(pledge.amount) },
-        },
-      }),
+      // Only decrement stats if they were previously incremented (confirmationEmailSent flag)
+      ...(pledge.confirmationEmailSent ? [
+        db.project.update({
+          where: { id: refundRequest.projectId },
+          data: {
+            backerCount: { decrement: 1 },
+            currentAmount: { decrement: Number(pledge.amount) },
+          },
+        }),
+      ] : []),
       db.refundRequest.update({
         where: { id: requestId },
         data: { status: "APPROVED", creatorNote: creatorNote || null, processedAt: new Date() },
       }),
     ]);
 
-    // Restore reward slot if pledge claimed one
-    if (pledge.rewardId) {
+    // Restore reward slot if pledge claimed one (only if stats were incremented)
+    if (pledge.confirmationEmailSent && pledge.rewardId) {
       await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
     }
 

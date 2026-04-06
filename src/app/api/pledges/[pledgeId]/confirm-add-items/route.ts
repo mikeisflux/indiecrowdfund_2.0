@@ -31,8 +31,8 @@ export async function POST(
     const { pledgeId } = await params;
 
     // Get the pledge with metadata
-    const pledge = await db.pledge.findUnique({
-      where: { id: pledgeId },
+    const pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
       include: {
         project: {
           select: {
@@ -136,11 +136,12 @@ export async function POST(
       }
     }
 
-    // Get the addons
+    // Get the addons, scoped to the pledge's project for defense in depth
     const addons = await db.reward.findMany({
       where: {
         id: { in: addonIds },
         type: "ADDON",
+        projectId: pledge.projectId,
       },
     });
 

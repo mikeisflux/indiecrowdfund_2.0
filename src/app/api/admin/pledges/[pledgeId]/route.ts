@@ -525,7 +525,14 @@ export async function PATCH(
             },
           });
         } else {
-          adminPledgesLogger.info(`[Admin Refund] Pledge ${pledge.id} already has existing refund(s) in Stripe`);
+          const existingRefund = existingRefunds.data[0];
+          if (existingRefund.status !== "succeeded") {
+            return NextResponse.json(
+              { error: `Existing Stripe refund is in status '${existingRefund.status}', not succeeded. Please check the Stripe dashboard.` },
+              { status: 400 }
+            );
+          }
+          adminPledgesLogger.info(`[Admin Refund] Pledge ${pledge.id} already has existing succeeded refund(s) in Stripe`);
         }
       } catch (stripeError) {
         adminPledgesLogger.error({ err: String(stripeError) }, "Stripe refund error:");
@@ -635,8 +642,8 @@ export async function DELETE(
       }
     }
 
-    // For COMPLETED pledges, we should refund first - warn admin
-    if (pledge.status === "COMPLETED" && pledge.stripePaymentIntentId) {
+    // For COMPLETED pledges, we should refund first - warn admin (applies to all payment processors)
+    if (pledge.status === "COMPLETED") {
       return NextResponse.json(
         { error: "Cannot delete completed pledge. Please refund first using PATCH with action='refund'" },
         { status: 400 }

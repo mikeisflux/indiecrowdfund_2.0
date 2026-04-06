@@ -73,6 +73,19 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
           where: { id: pledge.id },
           data: { status: "FAILED", lastFailureReason: `PayPal capture failed: ${errBody.slice(0, 200)}` },
         });
+        // Stats were incremented when authorization was confirmed — reverse them on capture failure
+        if (pledge.confirmationEmailSent) {
+          await db.project.update({
+            where: { id: pledge.projectId },
+            data: {
+              currentAmount: { decrement: Number(pledge.amount) },
+              backerCount: { decrement: 1 },
+            },
+          });
+          if (pledge.reward?.id) {
+            await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
+          }
+        }
         failed++;
         continue;
       }
@@ -84,6 +97,19 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
           where: { id: pledge.id },
           data: { status: "FAILED", lastFailureReason: `PayPal capture returned status: ${captureData.status}` },
         });
+        // Stats were incremented when authorization was confirmed — reverse them on capture failure
+        if (pledge.confirmationEmailSent) {
+          await db.project.update({
+            where: { id: pledge.projectId },
+            data: {
+              currentAmount: { decrement: Number(pledge.amount) },
+              backerCount: { decrement: 1 },
+            },
+          });
+          if (pledge.reward?.id) {
+            await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
+          }
+        }
         failed++;
         continue;
       }

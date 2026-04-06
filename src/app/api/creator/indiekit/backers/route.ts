@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     let pledgeIds: string[] = rawPledgeIds || [];
     if (action === "send_survey_reminder" && sendToAll) {
       const allPledges = await db.pledge.findMany({
-        where: { projectId, status: "COMPLETED" },
+        where: { projectId, status: "COMPLETED", deletedAt: null },
         select: { id: true },
       });
       pledgeIds = allPledges.map(p => p.id);
@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
       where: {
         id: { in: pledgeIds },
         projectId,
+        deletedAt: null,
       },
       include: {
         user: { select: { email: true, name: true } },

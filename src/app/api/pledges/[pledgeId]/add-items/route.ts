@@ -96,6 +96,7 @@ export async function POST(
       where: {
         id: pledgeId,
         userId: session.user.id,
+        deletedAt: null,
       },
       include: {
         project: {
@@ -176,6 +177,7 @@ export async function POST(
         id: { in: addonIdList },
         projectId: pledge.projectId,
         type: "ADDON",
+        isEnded: false,
       },
     });
 

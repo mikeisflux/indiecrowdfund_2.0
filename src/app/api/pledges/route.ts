@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       let reward = null;
       if (data.rewardId && data.rewardId !== "no-reward") {
         reward = await db.reward.findUnique({
-          where: { id: data.rewardId },
+          where: { id: data.rewardId, isEnded: false },
         });
 
         if (!reward || reward.projectId !== data.projectId) {
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       if (addonsWithQuantity.length > 0) {
         const addonIdList = addonsWithQuantity.map((a: { id: string }) => a.id);
         const validAddonCount = await db.reward.count({
-          where: { id: { in: addonIdList }, projectId: data.projectId, type: "ADDON" },
+          where: { id: { in: addonIdList }, projectId: data.projectId, type: "ADDON", isEnded: false },
         });
         if (validAddonCount !== addonIdList.length) {
           return NextResponse.json({ error: "One or more invalid addons" }, { status: 400 });
@@ -552,6 +552,8 @@ async function cleanupAbandonedCarts(projectId: string, olderThan: Date) {
       confirmationEmailSent: false,
       // Exclude PayPal pledges that have been approved but not yet captured
       paypalOrderId: null,
+      // Exclude DivinityCoin pledges that have a payment ID (payment was initiated, webhook may be in flight)
+      divinityCoinPaymentId: null,
     },
     select: { id: true },
   });

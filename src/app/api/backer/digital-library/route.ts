@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       const userPledges = await prisma.pledge.findMany({
         where: {
           userId: session.user.id,
-          status: { in: ["PENDING", "COMPLETED"] },
+          status: "COMPLETED",
           deletedAt: null,
         },
         select: {
