@@ -279,8 +279,8 @@ export async function pushOrdersToShopify(
   if (backerIds && Array.isArray(backerIds) && backerIds.length > 0) {
     whereClause.id = { in: backerIds };
   } else {
-    // Only get pledges not already pushed
-    whereClause.fulfillmentStatus = { not: "SHIPPED" };
+    // Only get pledges not already pushed or shipped
+    whereClause.fulfillmentStatus = { notIn: ["IN_PROGRESS", "SHIPPED"] };
   }
 
   const pledges = await db.pledge.findMany({
