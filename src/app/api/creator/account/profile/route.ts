@@ -13,31 +13,17 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email: rawEmail } = body;
+    const { name } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
-    const email = rawEmail?.toLowerCase().trim();
-
-    // Check if email is being changed and if it's already taken
-    if (email && email !== session.user.email?.toLowerCase()) {
-      const existingUser = await db.user.findFirst({
-        where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
-      });
-
-      if (existingUser && existingUser.id !== session.user.id) {
-        return NextResponse.json({ error: "Email already in use" }, { status: 400 });
-      }
-    }
-
-    // Update user profile
+    // Note: email changes must go through /api/user/settings/email which requires password verification
     await db.user.update({
       where: { id: session.user.id },
       data: {
         name: name.trim(),
-        ...(email && { email }),
       },
     });
 

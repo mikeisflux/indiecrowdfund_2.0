@@ -435,18 +435,19 @@ export async function resetPassword(formData: FormData, token: string) {
       return { error: { _form: ["User not found. Please request a new reset link."] } };
     }
 
-    await db.user.update({
-      where: { id: targetUser.id },
-      data: {
-        password: hashedPassword,
-        email: targetUser.email.toLowerCase(), // Normalize email to lowercase
-      },
-    });
-
-    // Delete the used token
-    await db.passwordResetToken.delete({
-      where: { token },
-    });
+    // Update password, normalize email, delete used token, and invalidate all sessions
+    // Session invalidation ensures a compromised account can't be retained after password reset
+    await db.$transaction([
+      db.user.update({
+        where: { id: targetUser.id },
+        data: {
+          password: hashedPassword,
+          email: targetUser.email.toLowerCase(),
+        },
+      }),
+      db.passwordResetToken.delete({ where: { token } }),
+      db.session.deleteMany({ where: { userId: targetUser.id } }),
+    ]);
 
     return { success: true };
   } catch (error) {

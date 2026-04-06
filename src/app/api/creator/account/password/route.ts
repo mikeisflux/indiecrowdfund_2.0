@@ -47,11 +47,14 @@ export async function POST(req: NextRequest) {
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_COST);
 
-    // Update password
-    await db.user.update({
-      where: { id: session.user.id },
-      data: { password: hashedPassword },
-    });
+    // Update password and invalidate all sessions — forces re-login so compromised sessions can't persist
+    await db.$transaction([
+      db.user.update({
+        where: { id: session.user.id },
+        data: { password: hashedPassword },
+      }),
+      db.session.deleteMany({ where: { userId: session.user.id } }),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {
