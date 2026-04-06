@@ -272,10 +272,16 @@ export async function POST(req: NextRequest) {
 
     // 4. Update or delete the pledge
     if (action === "delete") {
-      // Only delete if not completed (to preserve records)
+      // Only delete if not completed or processing (to preserve records and avoid orphaning in-flight payments)
       if (pledge.status === "COMPLETED") {
         return NextResponse.json(
           { error: "Cannot delete COMPLETED pledge - use refund instead" },
+          { status: 400 }
+        );
+      }
+      if (pledge.status === "PROCESSING") {
+        return NextResponse.json(
+          { error: "Cannot delete PROCESSING pledge - payment may be in-flight. Wait for webhook processing." },
           { status: 400 }
         );
       }

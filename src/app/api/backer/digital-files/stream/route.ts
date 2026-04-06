@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
         deletedAt: null,
         projectId: file.projectId,
         status: { in: ["PENDING", "COMPLETED"] },
-        deletedAt: null,
       },
       include: {
         addons: { select: { addonId: true } },

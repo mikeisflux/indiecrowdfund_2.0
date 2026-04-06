@@ -71,8 +71,9 @@ export async function claimRewardSlot(rewardId: string, quantity: number = 1): P
       id: string;
       quantityAvailable: number | null;
       quantityClaimed: number;
+      isEnded: boolean;
     }>>`
-      SELECT id, "quantityAvailable", "quantityClaimed"
+      SELECT id, "quantityAvailable", "quantityClaimed", "isEnded"
       FROM "Reward"
       WHERE id = ${rewardId}
       FOR UPDATE
@@ -81,6 +82,12 @@ export async function claimRewardSlot(rewardId: string, quantity: number = 1): P
     const reward = rewards[0];
     if (!reward) {
       paymentsStripeRewardsLogger.warn(`[claimRewardSlot] Reward ${rewardId} not found`);
+      return false;
+    }
+
+    // Reject if reward was ended between initial check and slot claim
+    if (reward.isEnded) {
+      paymentsStripeRewardsLogger.warn(`[claimRewardSlot] Reward ${rewardId} has been ended`);
       return false;
     }
 
