@@ -432,7 +432,7 @@ export async function resetPassword(formData: FormData, token: string) {
     });
 
     if (!targetUser) {
-      return { error: { _form: ["User not found. Please request a new reset link."] } };
+      return { error: { _form: ["Invalid or expired reset link. Please request a new one."] } };
     }
 
     // Update password, normalize email, delete used token, and invalidate all sessions

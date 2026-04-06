@@ -74,6 +74,7 @@ export const validateSession = cache(async (): Promise<Session | null> => {
       where: { sessionToken: token },
       include: {
         user: {
+          where: { deletedAt: null },
           select: {
             id: true,
             email: true,
@@ -85,7 +86,9 @@ export const validateSession = cache(async (): Promise<Session | null> => {
       },
     });
 
-    if (!session) {
+    if (!session || !session.user) {
+      // Session not found or user was soft-deleted
+      await db.session.delete({ where: { sessionToken: token } }).catch(() => {});
       return null;
     }
 
