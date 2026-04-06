@@ -225,10 +225,11 @@ export async function POST(
     }
 
     // Update project to LIVE status and clear prelaunch data
+    // Atomic guard: only update if still APPROVED (prevents race condition / double-launch)
     let updatedProject;
     try {
-      updatedProject = await db.project.update({
-        where: { id: projectId },
+      const launchResult = await db.project.updateMany({
+        where: { id: projectId, status: "APPROVED" },
         data: {
           status: "LIVE",
           launchDate: now,
@@ -240,6 +241,13 @@ export async function POST(
           prelaunchStatus: "DRAFT", // Reset to draft for any future use
         },
       });
+      if (launchResult.count === 0) {
+        return NextResponse.json(
+          { error: "Project could not be launched. It may have already been launched or its status changed." },
+          { status: 409 }
+        );
+      }
+      updatedProject = await db.project.findUnique({ where: { id: projectId } });
     } catch (dbError) {
       projectsLaunchLogger.error({ err: String(dbError) }, "Failed to update project status:");
       throw new Error(`Failed to update project: ${dbError instanceof Error ? dbError.message : "Unknown DB error"}`);

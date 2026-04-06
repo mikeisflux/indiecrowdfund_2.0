@@ -73,7 +73,9 @@ export async function GET(request: NextRequest) {
       const pledgeAddonIds = pledge.addons.map((a: { addonId: string }) => a.addonId);
 
       if (fileRewardIds.length === 0 && fileAddonIds.length === 0) {
-        hasAccess = true;
+        // No reward/addon restrictions configured — only grant access if file is ALL_BACKERS
+        // (ALL_BACKERS is already handled above; reaching here means accessType is SPECIFIC_REWARDS/ADDONS)
+        hasAccess = false;
       } else {
         const rewardMatch = fileRewardIds.length > 0 && pledge.rewardId !== null && fileRewardIds.includes(pledge.rewardId);
         const addonMatch = fileAddonIds.length > 0 && fileAddonIds.some((id: string) => pledgeAddonIds.includes(id));

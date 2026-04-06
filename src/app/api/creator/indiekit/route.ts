@@ -37,8 +37,8 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
-    const backersPage = parseInt(searchParams.get("backersPage") || "1", 10);
-    const backersLimit = Math.min(parseInt(searchParams.get("backersLimit") || "50", 10), 200);
+    const backersPage = Math.max(1, parseInt(searchParams.get("backersPage") || "1", 10) || 1);
+    const backersLimit = Math.min(Math.max(1, parseInt(searchParams.get("backersLimit") || "50", 10) || 50), 200);
     const backersOffset = (backersPage - 1) * backersLimit;
     // Field selection: comma-separated list of sections to include
     // e.g. ?fields=backers,stats,emails — if omitted, all sections are returned

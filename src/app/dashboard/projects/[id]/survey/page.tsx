@@ -169,9 +169,12 @@ export default function SurveyBuilderPage() {
           setItemQuestions(data.survey.itemQuestions || []);
           setBackerQuestions(data.survey.backerQuestions || []);
         }
+      } else {
+        toast.error("Failed to load survey data");
       }
     } catch (error) {
       console.error("Error fetching survey:", error);
+      toast.error("Failed to load survey data");
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { toast } from "sonner";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -306,9 +307,13 @@ export default function BackerSurveyPage() {
       if (!response.ok) {
         const err = await response.json();
         console.error("Failed to confirm add-items:", err);
+        toast.error(err.error || "Payment recorded but confirmation failed. Please contact support.");
+        return;
       }
     } catch (err) {
       console.error("Error confirming add-items:", err);
+      toast.error("Payment recorded but confirmation failed. Please contact support.");
+      return;
     }
 
     // Redirect to dashboard
