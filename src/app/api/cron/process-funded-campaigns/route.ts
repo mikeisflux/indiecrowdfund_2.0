@@ -166,10 +166,18 @@ export async function GET(req: NextRequest) {
       (project) => Number(project.currentAmount) >= Number(project.goalAmount)
     );
 
+    // Check if Stripe is enabled before attempting any Stripe operations
+    const stripeSettings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { stripeEnabled: true },
+    });
+    const stripeEnabled = stripeSettings?.stripeEnabled ?? false;
+
     let totalSynced = 0;
 
     // First pass: sync payment methods from Stripe for all funded projects
     for (const project of projectsNeedingSync) {
+      if (!stripeEnabled) break;
       const synced = await syncPaymentMethodsFromStripe(project.id);
       totalSynced += synced;
       if (synced > 0) {
@@ -204,8 +212,12 @@ export async function GET(req: NextRequest) {
     // Process pending pledges for each funded project
     for (const project of projectsReadyToCharge) {
       try {
-        const pledgeResults = await processPendingPledgesForProject(project.id);
-        // Also capture any authorized (deferred) PayPal pledges
+        // Only charge via Stripe if Stripe is enabled
+        const pledgeResults = stripeEnabled
+          ? await processPendingPledgesForProject(project.id)
+          : { total: 0, successful: 0, failed: 0 };
+
+        // Always capture authorized PayPal pledges (independent of Stripe)
         await captureAuthorizedPaypalPledges(project.id).catch(err =>
           cronProcessFundedCampaignsLogger.error({ err: String(err) }, `[Cron] PayPal capture error for project ${project.id}`)
         );
