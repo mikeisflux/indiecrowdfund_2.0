@@ -28,6 +28,7 @@ export async function GET() {
       where: {
         userId: session.user.id,
         status: { in: ["COMPLETED", "REFUNDED"] },
+        deletedAt: null,
       },
       include: {
         project: {
