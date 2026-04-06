@@ -8,36 +8,43 @@ import { z } from "zod";
 
 // Lenient address schema for progress saves (allows empty strings)
 const addressSchemaPartial = z.object({
-  name: z.string(),
-  line1: z.string(),
-  line2: z.string().optional().nullable(),
-  city: z.string(),
-  state: z.string(),
-  postalCode: z.string(),
-  country: z.string(),
-  phone: z.string().optional().nullable(),
+  name: z.string().max(100),
+  line1: z.string().max(200),
+  line2: z.string().max(200).optional().nullable(),
+  city: z.string().max(100),
+  state: z.string().max(100),
+  postalCode: z.string().max(20),
+  country: z.string().max(10),
+  phone: z.string().max(30).optional().nullable(),
 });
 
 // Strict address schema for final submission
 const addressSchemaStrict = z.object({
-  name: z.string().min(1, "Name is required"),
-  line1: z.string().min(1, "Address is required"),
-  line2: z.string().optional().nullable(),
-  city: z.string().min(1, "City is required"),
-  state: z.string().min(1, "State is required"),
-  postalCode: z.string().min(1, "Postal code is required"),
-  country: z.string().min(1, "Country is required"),
-  phone: z.string().optional().nullable(),
+  name: z.string().min(1, "Name is required").max(100),
+  line1: z.string().min(1, "Address is required").max(200),
+  line2: z.string().max(200).optional().nullable(),
+  city: z.string().min(1, "City is required").max(100),
+  state: z.string().min(1, "State is required").max(100),
+  postalCode: z.string().min(1, "Postal code is required").max(20),
+  country: z.string().min(1, "Country is required").max(10),
+  phone: z.string().max(30).optional().nullable(),
 });
 
+const responseValueSchema = z.union([z.string().max(10000), z.array(z.string().max(500)).max(50)]);
+
 const responseSchema = z.object({
-  itemResponses: z.record(z.string(), z.object({
-    variants: z.record(z.string(), z.string()).optional(),
-    customAnswers: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
-  })).optional(),
-  backerResponses: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
+  itemResponses: z.record(
+    z.string().max(100),
+    z.object({
+      variants: z.record(z.string().max(100), z.string().max(500)).optional(),
+      customAnswers: z.record(z.string().max(100), responseValueSchema).optional(),
+    })
+  ).refine(r => Object.keys(r).length <= 200, "Too many item responses").optional(),
+  backerResponses: z.record(z.string().max(100), responseValueSchema)
+    .refine(r => Object.keys(r).length <= 100, "Too many backer responses").optional(),
   shippingAddress: addressSchemaPartial.optional().nullable(),
-  selectedAddons: z.record(z.string(), z.number().int().min(0)).optional(), // { addonId: quantity }
+  selectedAddons: z.record(z.string().max(100), z.number().int().min(0))
+    .refine(r => Object.keys(r).length <= 50, "Too many addons").optional(),
   submit: z.boolean().default(false), // If true, mark as complete
 });
 

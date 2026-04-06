@@ -27,8 +27,8 @@ const createPledgeSchema = z.object({
   projectId: z.string(),
   rewardId: z.string().nullable().optional(), // Optional for "pledge without reward"
   // Support both array of IDs (legacy) and array of objects with quantities
-  addonIds: z.array(z.string()).default([]),
-  addons: z.array(addonWithQuantitySchema).optional(), // New format with quantities
+  addonIds: z.array(z.string()).max(50).default([]),
+  addons: z.array(addonWithQuantitySchema).max(50).optional(), // New format with quantities
   amount: z.number().positive(),
   shippingAmount: z.number().min(0).optional(), // Shipping cost
   shippingCountry: z.string().optional(), // Country code for shipping
