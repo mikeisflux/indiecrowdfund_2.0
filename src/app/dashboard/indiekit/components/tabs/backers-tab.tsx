@@ -150,10 +150,12 @@ export function BackersTab({
 
       setIsLoadingSkuMappings(true);
       try {
-        const response = await fetch(`/api/creator/indiekit/shopify/sku-mapping?projectId=${projectId}`);
+        const response = await apiFetch(`/api/creator/indiekit/shopify/sku-mapping?projectId=${projectId}`);
         if (response.ok) {
           const data = await response.json();
           setSkuMappings(data.mappings || []);
+        } else {
+          console.error("Failed to fetch SKU mappings:", response.status);
         }
       } catch (error) {
         console.error("Failed to fetch SKU mappings:", error);

@@ -1180,9 +1180,7 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         onOpenChange={setShowNotes}
         backerId={backer.id}
         backerName={backer.name}
-        onSave={(note) => {
-          console.log("Note added:", note);
-        }}
+        onSave={() => { /* notes-dialog handles persistence internally */ }}
       />
 
       <EmailComposerDialog
@@ -1190,8 +1188,25 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
         onOpenChange={setShowEmailComposer}
         recipientEmail={backer.email}
         recipientName={backer.name}
-        onSend={(email) => {
-          console.log("Email sent:", email);
+        onSend={async (email) => {
+          try {
+            const res = await apiFetch("/api/creator/email/compose", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                to: email.to,
+                subject: email.subject,
+                content: email.body,
+                projectId: backer.projectId,
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              toast.error(err.error || "Failed to send email");
+            }
+          } catch {
+            toast.error("Failed to send email");
+          }
         }}
       />
 

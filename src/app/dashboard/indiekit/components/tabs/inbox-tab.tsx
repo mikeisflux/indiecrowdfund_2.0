@@ -999,7 +999,16 @@ export function InboxTab({ projectId }: InboxTabProps) {
       </div>
 
       {/* Compose Email Dialog */}
-      <Dialog open={showComposeDialog} onOpenChange={setShowComposeDialog}>
+      <Dialog open={showComposeDialog} onOpenChange={(open) => {
+        if (!open) {
+          setComposeTo("");
+          setComposeSubject("");
+          setComposeContent("");
+          setComposeAttachments([]);
+          setComposeMode("new");
+        }
+        setShowComposeDialog(open);
+      }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
