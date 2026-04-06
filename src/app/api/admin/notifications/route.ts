@@ -103,6 +103,7 @@ export async function GET(request: Request) {
           createdAt: { gte: oneWeekAgo },
           amount: { gte: 10000 }, // 100 dollars in cents
           status: "COMPLETED",
+          deletedAt: null,
         },
         orderBy: { createdAt: "desc" },
         take: 20,

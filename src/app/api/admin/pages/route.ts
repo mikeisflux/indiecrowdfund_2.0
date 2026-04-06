@@ -211,6 +211,25 @@ export async function PATCH(req: NextRequest) {
 
     // Check if new slug already exists (if slug is being changed)
     if (slug && slug !== existingPage.slug) {
+      // Prevent slugs that conflict with reserved application routes
+      const RESERVED_SLUGS = [
+        "admin", "api", "auth", "profile", "dashboard", "projects",
+        "backer", "creator", "marketplace", "settings", "search",
+        "login", "signup", "register", "logout", "explore", "discover",
+      ];
+      const normalizedSlug = slug.toLowerCase();
+      if (
+        RESERVED_SLUGS.includes(normalizedSlug) ||
+        normalizedSlug.startsWith("api/") ||
+        normalizedSlug.startsWith("admin/") ||
+        normalizedSlug.startsWith("auth/")
+      ) {
+        return NextResponse.json(
+          { error: "This slug is reserved and cannot be used for custom pages" },
+          { status: 400 }
+        );
+      }
+
       const slugExists = await db.customPage.findUnique({
         where: { slug }
       });

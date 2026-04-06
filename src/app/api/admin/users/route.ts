@@ -311,6 +311,13 @@ export async function PATCH(req: NextRequest) {
         break;
 
       case "SEND_RESET_EMAIL":
+        // Prevent non-SUPER_ADMINs from sending reset emails to SUPER_ADMIN accounts
+        if (user.role === "SUPER_ADMIN" && authResult.role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { error: "Only super admins can send reset emails to super admin accounts" },
+            { status: 403 }
+          );
+        }
         // Send a password reset email to the user
         try {
           const resetEmail = user.email.toLowerCase();
