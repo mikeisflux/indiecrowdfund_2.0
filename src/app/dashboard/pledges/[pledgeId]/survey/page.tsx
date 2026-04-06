@@ -267,6 +267,9 @@ export default function BackerSurveyPage() {
       } else if (!stripePromise) {
         // Stripe: load platform Stripe key
         const configRes = await fetch("/api/stripe/config");
+        if (!configRes.ok) {
+          throw new Error("Failed to load payment configuration. Please contact support.");
+        }
         const configData = await configRes.json();
         if (configData.publishableKey) {
           setStripePromise(loadStripe(configData.publishableKey));

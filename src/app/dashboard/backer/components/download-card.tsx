@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,7 @@ export function DownloadCard({
       setTimeout(() => setIsDownloaded(false), 3000);
     } catch (error) {
       console.error("Download failed:", error);
+      toast.error("Download failed. Please try again.");
     } finally {
       setIsDownloading(false);
     }

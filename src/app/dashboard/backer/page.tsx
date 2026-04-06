@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -193,9 +194,12 @@ export default function BackerDashboard() {
             savedProjects: prev.savedProjects.filter((p) => p.id !== projectId),
           };
         });
+      } else {
+        toast.error("Failed to unsave project. Please try again.");
       }
     } catch (err) {
       console.error("Failed to unsave project:", err);
+      toast.error("Failed to unsave project. Please try again.");
     } finally {
       setUnsavingProjectId(null);
     }
