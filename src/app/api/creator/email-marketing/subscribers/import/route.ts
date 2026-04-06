@@ -80,6 +80,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Enforce file size limit (5 MB) to prevent DoS via large uploads
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "File size must be 5 MB or less" }, { status: 400 });
+    }
+
     const content = await file.text();
     const rows = parseCSV(content);
 
