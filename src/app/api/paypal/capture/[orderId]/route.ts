@@ -143,7 +143,7 @@ export async function POST(
         paypalCaptureLogger.error({ err: String(err) }, "Failed to assign backer number");
       }
 
-      await notifyPledgeReceived(pledge.projectId, pledge.project.creatorId, pledge.user.name || "A backer", pledge.amount).catch(
+      await notifyPledgeReceived(pledge.projectId, pledge.project.creatorId, pledge.user.name || "A backer", Number(pledge.amount)).catch(
         err => paypalCaptureLogger.error({ err: String(err) }, "notifyPledgeReceived failed")
       );
 

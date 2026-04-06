@@ -101,7 +101,7 @@ export async function POST(
       whopConfirmLogger.error({ err: String(err) }, "assignBackerNumber failed")
     );
 
-    await notifyPledgeReceived(pledge.projectId, pledge.project.creatorId, pledge.user.name || "A backer", pledge.amount).catch(
+    await notifyPledgeReceived(pledge.projectId, pledge.project.creatorId, pledge.user.name || "A backer", Number(pledge.amount)).catch(
       err => whopConfirmLogger.error({ err: String(err) }, "notifyPledgeReceived failed")
     );
 
