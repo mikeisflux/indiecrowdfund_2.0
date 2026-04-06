@@ -120,6 +120,7 @@ export default async function RootLayout({
   let announcements: { id: string; text: string; linkUrl: string | null; linkText: string | null; backgroundColor: string; textColor: string; dismissible: boolean }[] = [];
   let ga4Id: string | null = null;
   let gtmId: string | null = null;
+  const validGtmId = (id: string) => /^GTM-[A-Z0-9]+$/i.test(id);
 
   try {
     const now = new Date();
@@ -157,7 +158,7 @@ export default async function RootLayout({
     ]);
 
     if (platformSettings) {
-      if (platformSettings.gtmEnabled && platformSettings.googleTagManagerId) {
+      if (platformSettings.gtmEnabled && platformSettings.googleTagManagerId && validGtmId(platformSettings.googleTagManagerId)) {
         gtmId = platformSettings.googleTagManagerId;
       }
       // Only inject GA4 directly if GTM is not active (avoid double-tracking)
@@ -167,7 +168,7 @@ export default async function RootLayout({
     }
 
     // Env var fallbacks (take effect even if DB row is missing or flags are off)
-    if (!gtmId && process.env.NEXT_PUBLIC_GTM_ID) {
+    if (!gtmId && process.env.NEXT_PUBLIC_GTM_ID && validGtmId(process.env.NEXT_PUBLIC_GTM_ID)) {
       gtmId = process.env.NEXT_PUBLIC_GTM_ID;
     }
     if (!ga4Id && !gtmId && process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
@@ -176,7 +177,7 @@ export default async function RootLayout({
   } catch (error) {
     console.error("Layout data fetch error:", error);
     // Still try env var fallbacks if DB fetch failed entirely
-    if (process.env.NEXT_PUBLIC_GTM_ID) gtmId = process.env.NEXT_PUBLIC_GTM_ID;
+    if (process.env.NEXT_PUBLIC_GTM_ID && validGtmId(process.env.NEXT_PUBLIC_GTM_ID)) gtmId = process.env.NEXT_PUBLIC_GTM_ID;
     else if (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) ga4Id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   }
 

@@ -46,10 +46,9 @@ export function LocationAutocomplete({
       // Check if script already exists
       const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
       if (existingScript) {
-        existingScript.addEventListener("load", () => {
-          setIsGoogleLoaded(true);
-        });
-        return;
+        const handleLoad = () => setIsGoogleLoaded(true);
+        existingScript.addEventListener("load", handleLoad);
+        return () => existingScript.removeEventListener("load", handleLoad);
       }
 
       // Get API key from environment or window config
