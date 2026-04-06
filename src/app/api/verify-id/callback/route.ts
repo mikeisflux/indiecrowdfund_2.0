@@ -7,14 +7,22 @@ import { db } from "@/lib/db";
 import crypto from "crypto";
 
 /**
- * Verify Shufti webhook signature
+ * Verify Shufti webhook signature using constant-time comparison (prevents timing attacks)
  */
 function verifySignature(payload: string, signature: string, secretKey: string): boolean {
-  const expectedSignature = crypto
-    .createHmac("sha256", secretKey)
-    .update(payload)
-    .digest("hex");
-  return signature === expectedSignature;
+  try {
+    const expectedSignature = crypto
+      .createHmac("sha256", secretKey)
+      .update(payload)
+      .digest("hex");
+    // Use timingSafeEqual to prevent timing-based side-channel attacks
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -28,11 +36,23 @@ export async function POST(req: NextRequest) {
     // Get settings to verify signature
     const settings = await db.platformSettings.findUnique({
       where: { id: "default" },
-      select: { shuftiSecretKey: true },
+      select: { shuftiSecretKey: true, idVerificationEnabled: true },
     });
 
-    // Verify signature if secret key is configured
-    if (settings?.shuftiSecretKey && signature) {
+    // Enforce signature verification when ID verification is enabled.
+    // If secret key is not configured but verification is enabled, reject the request
+    // to prevent accepting forged verification callbacks.
+    if (settings?.idVerificationEnabled) {
+      if (!settings.shuftiSecretKey) {
+        verifyIdCallbackLogger.error("ID verification enabled but Shufti secret key not configured");
+        return NextResponse.json({ error: "Service misconfigured" }, { status: 503 });
+      }
+      if (!signature || !verifySignature(rawBody, signature, settings.shuftiSecretKey)) {
+        verifyIdCallbackLogger.error("Invalid or missing Shufti webhook signature");
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } else if (settings?.shuftiSecretKey && signature) {
+      // Verify if we have a key, even if verification isn't explicitly enabled
       if (!verifySignature(rawBody, signature, settings.shuftiSecretKey)) {
         verifyIdCallbackLogger.error("Invalid Shufti webhook signature");
         return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
