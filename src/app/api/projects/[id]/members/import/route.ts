@@ -295,12 +295,27 @@ export async function POST(
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Enforce file size limit (5 MB) to prevent DoS via enormous CSV uploads
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "File size must be 5 MB or less" }, { status: 400 });
+    }
+
     const content = await file.text();
     const rows = parseCSV(content, columnMapping);
 
     if (rows.length === 0) {
       return NextResponse.json(
         { error: "No valid email addresses found in CSV" },
+        { status: 400 }
+      );
+    }
+
+    // Cap imports at 10,000 rows per request to prevent request timeouts
+    const MAX_ROWS = 10000;
+    if (rows.length > MAX_ROWS) {
+      return NextResponse.json(
+        { error: `CSV contains too many rows. Maximum is ${MAX_ROWS} per import.` },
         { status: 400 }
       );
     }

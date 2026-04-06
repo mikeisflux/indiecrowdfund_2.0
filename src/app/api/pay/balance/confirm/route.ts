@@ -39,7 +39,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Calculate balance due — prefer the stored value (set by order edits or balance adjustments)
-    const storedBalanceDue = meta.balanceDue != null ? Number(meta.balanceDue) : null;
+    // Use balanceDueAmount (set by creator/order-edit) or balanceDue (legacy key) as the stored override
+    const storedBalanceDue = meta.balanceDueAmount != null ? Number(meta.balanceDueAmount) : (meta.balanceDue != null ? Number(meta.balanceDue) : null);
     const pledgeTotal = Number(pledge.amount);
     const expectedTotal = Number(pledge.rewardAmount) + Number(pledge.addonsAmount) + Number(pledge.shippingAmount);
     const balanceDue = storedBalanceDue !== null
