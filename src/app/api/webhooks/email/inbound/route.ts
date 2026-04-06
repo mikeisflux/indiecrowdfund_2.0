@@ -21,8 +21,8 @@ async function verifyMailgunInboundSignature(
 
     const signingKey = settings?.mailgunWebhookSigningKey;
     if (!signingKey) {
-      webhooksEmailInboundLogger.warn("[Inbound Email] Mailgun webhook signing key not configured - skipping verification");
-      return true;
+      webhooksEmailInboundLogger.error("[Inbound Email] Mailgun webhook signing key not configured - rejecting request");
+      return false;
     }
 
     const encodedToken = crypto
