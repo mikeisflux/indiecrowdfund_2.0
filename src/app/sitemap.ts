@@ -213,6 +213,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const books = await db.marketplaceBook.findMany({
       where: {
         status: "APPROVED",
+        deletedAt: null,
       },
       select: {
         slug: true,
@@ -237,6 +238,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       where: {
         vanityUrl: { not: null },
         role: { in: ["CREATOR", "ADMIN", "SUPER_ADMIN"] },
+        deletedAt: null,
       },
       select: {
         vanityUrl: true,

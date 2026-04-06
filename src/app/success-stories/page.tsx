@@ -41,6 +41,7 @@ async function getSuccessfulProjects() {
     const projects = await db.project.findMany({
       where: {
         status: "FUNDED",
+        deletedAt: null,
       },
       include: {
         creator: {
