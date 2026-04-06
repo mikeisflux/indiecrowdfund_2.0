@@ -108,6 +108,7 @@ export async function GET(req: NextRequest) {
       Promise.all([
         db.user.count({ where: { deletedAt: null, role: "USER" } }),
         db.user.count({ where: { deletedAt: null, role: "COOL_KIDS" } }),
+        db.user.count({ where: { deletedAt: null, role: "CREATOR" } }),
         db.user.count({ where: { deletedAt: null, role: "ADMIN" } }),
         db.user.count({ where: { deletedAt: null, role: "SUPER_ADMIN" } })
       ])
@@ -130,8 +131,8 @@ export async function GET(req: NextRequest) {
       divinityCoinBalance: Number(user.divinityCoinBalance),
     }));
 
-    // roleCounts: [USER, COOL_KIDS, ADMIN, SUPER_ADMIN]
-    const totalUsers = roleCounts[0] + roleCounts[1] + roleCounts[2] + roleCounts[3];
+    // roleCounts: [USER, COOL_KIDS, CREATOR, ADMIN, SUPER_ADMIN]
+    const totalUsers = roleCounts[0] + roleCounts[1] + roleCounts[2] + roleCounts[3] + roleCounts[4];
 
     return NextResponse.json({
       users: usersWithStats,
@@ -143,9 +144,9 @@ export async function GET(req: NextRequest) {
       },
       stats: {
         total: totalUsers,
-        users: roleCounts[0] + roleCounts[1], // Regular users + Cool Kids
-        admins: roleCounts[2],
-        superAdmins: roleCounts[3]
+        users: roleCounts[0] + roleCounts[1] + roleCounts[2], // Regular users + Cool Kids + Creators
+        admins: roleCounts[3],
+        superAdmins: roleCounts[4]
       }
     }, {
       headers: { [CORRELATION_HEADER]: correlationId },

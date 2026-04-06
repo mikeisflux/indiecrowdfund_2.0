@@ -343,17 +343,19 @@ export async function PATCH(
               },
             });
 
-            await tx.project.update({
-              where: { id: pledge.projectId },
-              data: {
-                backerCount: { decrement: 1 },
-                currentAmount: { decrement: Number(pledge.amount) },
-              },
-            });
+            if (pledge.confirmationEmailSent) {
+              await tx.project.update({
+                where: { id: pledge.projectId },
+                data: {
+                  backerCount: { decrement: 1 },
+                  currentAmount: { decrement: Number(pledge.amount) },
+                },
+              });
+            }
           });
 
           // Restore reward slot if pledge claimed one
-          if (pledge.reward?.id) {
+          if (pledge.confirmationEmailSent && pledge.reward?.id) {
             await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
           }
 
@@ -428,17 +430,19 @@ export async function PATCH(
               },
             });
 
-            await tx.project.update({
-              where: { id: pledge.projectId },
-              data: {
-                backerCount: { decrement: 1 },
-                currentAmount: { decrement: Number(pledge.amount) },
-              },
-            });
+            if (pledge.confirmationEmailSent) {
+              await tx.project.update({
+                where: { id: pledge.projectId },
+                data: {
+                  backerCount: { decrement: 1 },
+                  currentAmount: { decrement: Number(pledge.amount) },
+                },
+              });
+            }
           });
 
           // Restore reward slot if pledge claimed one
-          if (pledge.reward?.id) {
+          if (pledge.confirmationEmailSent && pledge.reward?.id) {
             await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
           }
 
@@ -467,19 +471,21 @@ export async function PATCH(
               },
             });
 
-            await tx.project.update({
-              where: { id: pledge.projectId },
-              data: {
-                backerCount: { decrement: 1 },
-                currentAmount: { decrement: Number(pledge.amount) },
-              },
-            });
+            if (pledge.confirmationEmailSent) {
+              await tx.project.update({
+                where: { id: pledge.projectId },
+                data: {
+                  backerCount: { decrement: 1 },
+                  currentAmount: { decrement: Number(pledge.amount) },
+                },
+              });
+            }
           });
 
           adminPledgesLogger.info({ pledgeId, whopCheckoutId: pledge.whopCheckoutId }, "[Admin Whop Refund] Marked as refunded — process payment reversal in Whop dashboard");
 
           // Restore reward slot if pledge claimed one
-          if (pledge.reward?.id) {
+          if (pledge.confirmationEmailSent && pledge.reward?.id) {
             await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
           }
 
@@ -551,17 +557,20 @@ export async function PATCH(
             lastFailureReason: reason || "Refunded by admin",
           },
         }),
-        db.project.update({
-          where: { id: pledge.projectId },
-          data: {
-            backerCount: { decrement: 1 },
-            currentAmount: { decrement: Number(pledge.amount) },
-          },
-        }),
+        // Only decrement stats if they were previously incremented
+        ...(pledge.confirmationEmailSent ? [
+          db.project.update({
+            where: { id: pledge.projectId },
+            data: {
+              backerCount: { decrement: 1 },
+              currentAmount: { decrement: Number(pledge.amount) },
+            },
+          }),
+        ] : []),
       ]);
 
       // Restore reward slot if pledge claimed one
-      if (pledge.reward?.id) {
+      if (pledge.confirmationEmailSent && pledge.reward?.id) {
         await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
       }
 
