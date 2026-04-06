@@ -237,6 +237,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Fetch platform fee from settings (not hardcoded)
+    const platformSettings = await db.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { platformFee: true },
+    });
+    const configuredPlatformFeeRate = platformSettings?.platformFee ? Number(platformSettings.platformFee) / 100 : 0.03;
+
     // Calculate stats and format the response
     const formattedProjects = projects.map((project) => {
       // Calculate total raised from completed pledges
@@ -260,10 +267,10 @@ export async function GET(request: NextRequest) {
       // (Full refunds are already excluded since pledge status is REFUNDED)
       const effectiveRevenue = Math.round((totalRaised - projectRefunds.partialRefundTotal) * 100) / 100;
 
-      // DivinityCoin Partner Fee: 3%
-      // IndieCrowdfund Platform Fee: 3%
+      // DivinityCoin Partner Fee: 3% (fixed by DC agreement)
+      // IndieCrowdfund Platform Fee: from platformSettings
       const partnerFeeRate = 0.03;
-      const platformFeeRate = 0.03;
+      const platformFeeRate = configuredPlatformFeeRate;
       const perTransactionRate = 0.30;
       const backerCount = project.pledges.length;
       const processorFee = Math.round(effectiveRevenue * partnerFeeRate * 100) / 100;

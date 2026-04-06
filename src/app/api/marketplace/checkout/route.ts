@@ -95,9 +95,14 @@ export async function POST(request: Request) {
       },
     });
 
-    // Calculate platform fee (3%) and creator payout (97%)
+    // Calculate platform fee and creator payout
     const bookPrice = Number(book.price);
-    const platformFeeAmount = Math.round(bookPrice * 0.03 * 100) / 100;
+    const platformSettings = await prisma.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { platformFee: true },
+    });
+    const platformFeeRate = platformSettings?.platformFee ? Number(platformSettings.platformFee) / 100 : 0.03;
+    const platformFeeAmount = Math.round(bookPrice * platformFeeRate * 100) / 100;
     // Derive payout as exact remainder so fee + payout always equals price
     const creatorPayoutAmount = Math.round((bookPrice - platformFeeAmount) * 100) / 100;
 
