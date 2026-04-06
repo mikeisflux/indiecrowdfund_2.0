@@ -279,6 +279,7 @@ async function cancelStripePledges(projectId: string) {
       paymentProcessor: "STRIPE",
       status: "PENDING",
       chargedImmediately: false, // Pledges that weren't charged yet
+      deletedAt: null,
     },
     select: {
       id: true,

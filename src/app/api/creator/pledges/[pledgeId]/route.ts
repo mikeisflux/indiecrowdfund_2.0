@@ -153,6 +153,8 @@ export async function PATCH(
       amount: number;
       status: string;
       projectId: string;
+      rewardId: string | null;
+      confirmationEmailSent: boolean;
       paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
       stripePaymentIntentId: string | null;
       stripeSetupIntentId: string | null;
@@ -325,6 +327,11 @@ export async function PATCH(
             }
           });
 
+          // Restore reward slot if full refund and pledge claimed one
+          if (!isPartialRefund && typedPledge.rewardId) {
+            await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${typedPledge.rewardId}`;
+          }
+
           creatorPledgesLogger.info(`[DivinityCoin Refund] Processed ${isPartialRefund ? "partial" : "full"} refund ($${refundAmount.toFixed(2)}) for pledge ${pledgeId} via DC API`);
 
           // Send refund notification email to backer
@@ -468,6 +475,11 @@ export async function PATCH(
             });
           }
         });
+
+        // Restore reward slot if full refund and pledge claimed one
+        if (!isPartialRefund && typedPledge.rewardId) {
+          await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${typedPledge.rewardId}`;
+        }
 
         // Send refund notification email to backer
         if (typedPledge.user.email) {
