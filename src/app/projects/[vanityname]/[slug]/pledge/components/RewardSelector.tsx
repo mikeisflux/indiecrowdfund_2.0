@@ -69,7 +69,7 @@ export function RewardSelector({
                   type="number"
                   min={1}
                   value={customPledgeAmount}
-                  onChange={(e) => setCustomPledgeAmount(Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={(e) => setCustomPledgeAmount(Math.max(1, parseFloat(e.target.value) || 1))}
                   className="w-20 border-0 focus-visible:ring-0 bg-transparent"
                 />
               </div>

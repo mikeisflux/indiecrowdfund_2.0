@@ -369,7 +369,7 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
         existingPledge.projectId,
         existingPledge.project.creatorId,
         existingPledge.user?.name || "A backer",
-        existingPledge.amount
+        Number(existingPledge.amount)
       );
     } catch (notifyError) {
       webhookLogger.error({ err: notifyError }, `[SetupIntent] Failed to notify creator for pledge ${pledgeId}:`);
@@ -378,8 +378,8 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
     webhookLogger.info(`[SetupIntent] Updated project stats: +$${existingPledge.amount}`);
 
     // Notify that project was funded (if this pledge pushed it over)
-    const justReachedGoal = currentProjectAmount >= existingPledge.project.goalAmount &&
-      currentProjectAmount - existingPledge.amount < existingPledge.project.goalAmount;
+    const justReachedGoal = Number(currentProjectAmount) >= Number(existingPledge.project.goalAmount) &&
+      Number(currentProjectAmount) - Number(existingPledge.amount) < Number(existingPledge.project.goalAmount);
     if (justReachedGoal) {
       try {
         await notifyProjectFunded(existingPledge.projectId);
@@ -409,7 +409,7 @@ async function handleSetupIntentSuccess(setupIntent: Stripe.SetupIntent) {
   // ALWAYS check if project is funded and process pending pledges
   // This acts as a failsafe - every new backer on a funded project triggers processing
   // The duplicate charge prevention (idempotency keys, PaymentIntent checks) prevents double-charging
-  const projectIsFunded = currentProjectAmount >= existingPledge.project.goalAmount;
+  const projectIsFunded = Number(currentProjectAmount) >= Number(existingPledge.project.goalAmount);
 
   if (projectIsFunded) {
     webhookLogger.info(`[SetupIntent] Project ${existingPledge.projectId} is funded (${currentProjectAmount}/${existingPledge.project.goalAmount}). Processing pending pledges...`);
