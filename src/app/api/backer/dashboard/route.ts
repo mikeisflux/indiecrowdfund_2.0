@@ -159,9 +159,9 @@ export async function GET() {
       (p) => !p.surveyCompleted && projectsWithSurveys.has(p.projectId)
     ).length;
 
-    // Count rewards by fulfillment status
-    const rewardsDelivered = pledges.filter((p) => p.fulfillmentStatus === "DELIVERED").length;
-    const rewardsPending = pledges.filter((p) => p.fulfillmentStatus !== "DELIVERED").length;
+    // Count rewards by fulfillment status (only for pledges that actually have a reward tier)
+    const rewardsDelivered = pledges.filter((p) => p.reward && p.fulfillmentStatus === "DELIVERED").length;
+    const rewardsPending = pledges.filter((p) => p.reward && p.fulfillmentStatus !== "DELIVERED").length;
 
     // Process monthly spending
     const monthlySpendingMap = new Map<string, number>();
