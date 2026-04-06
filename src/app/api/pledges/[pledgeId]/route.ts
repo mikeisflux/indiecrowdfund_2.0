@@ -426,14 +426,16 @@ export async function PATCH(
           },
         });
 
-        // Decrement project stats
-        await db.project.update({
-          where: { id: pledge.projectId },
-          data: {
-            backerCount: { decrement: 1 },
-            currentAmount: { decrement: Number(pledge.amount) },
-          },
-        });
+        // Decrement project stats (only if pledge was counted)
+        if (pledge.confirmationEmailSent) {
+          await db.project.update({
+            where: { id: pledge.projectId },
+            data: {
+              backerCount: { decrement: 1 },
+              currentAmount: { decrement: Number(pledge.amount) },
+            },
+          });
+        }
 
         // Release reward slot so it can be claimed by another backer
         if (pledge.rewardId) {

@@ -301,9 +301,14 @@ export async function PATCH(req: NextRequest) {
           );
         }
         if (notes) {
-          const parsed = JSON.parse(notes);
+          let parsed;
+          try {
+            parsed = JSON.parse(notes);
+          } catch {
+            return NextResponse.json({ error: "Invalid JSON in notes" }, { status: 400 });
+          }
           updateData = {
-            amount: parsed.amount || settlement.amount,
+            amount: parsed.amount ? parseFloat(parsed.amount) : Number(settlement.amount),
             adminNotes: parsed.adminNotes ?? settlement.adminNotes,
           };
         }

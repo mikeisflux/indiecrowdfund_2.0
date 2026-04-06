@@ -310,10 +310,7 @@ export async function checkLoginRateLimit(
 
   return {
     allowed: true,
-    remainingAttempts: Math.min(
-      ip && settings.globalRateLimitEnabled ? redisAccountResult.remaining : loginConfig.maxAttempts,
-      redisAccountResult.remaining
-    ),
+    remainingAttempts: redisAccountResult.remaining,
   };
 }
 

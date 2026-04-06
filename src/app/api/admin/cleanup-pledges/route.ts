@@ -280,40 +280,42 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Update project stats if pledge was PENDING
-      if (pledge.status === "PENDING") {
-        await db.project.update({
-          where: { id: pledge.projectId },
-          data: {
-            backerCount: { decrement: 1 },
-            currentAmount: { decrement: Number(pledge.amount) },
-          },
-        });
-        actions.push("Decremented project stats");
-      }
-
-      await db.pledge.delete({ where: { id: pledgeId } });
+      // Update project stats only if pledge was counted (confirmationEmailSent)
+      await db.$transaction(async (tx) => {
+        if (pledge.confirmationEmailSent) {
+          await tx.project.update({
+            where: { id: pledge.projectId },
+            data: {
+              backerCount: { decrement: 1 },
+              currentAmount: { decrement: Number(pledge.amount) },
+            },
+          });
+          actions.push("Decremented project stats");
+        }
+        await tx.pledge.delete({ where: { id: pledgeId } });
+      });
       actions.push("Deleted pledge from database");
     } else {
       // Cancel action - update status
-      if (pledge.status === "PENDING") {
-        await db.project.update({
-          where: { id: pledge.projectId },
+      await db.$transaction(async (tx) => {
+        if (pledge.confirmationEmailSent) {
+          await tx.project.update({
+            where: { id: pledge.projectId },
+            data: {
+              backerCount: { decrement: 1 },
+              currentAmount: { decrement: Number(pledge.amount) },
+            },
+          });
+          actions.push("Decremented project stats");
+        }
+        await tx.pledge.update({
+          where: { id: pledgeId },
           data: {
-            backerCount: { decrement: 1 },
-            currentAmount: { decrement: Number(pledge.amount) },
+            status: "CANCELLED",
+            stripePaymentMethodId: null,
+            lastFailureReason: "Cancelled via admin cleanup",
           },
         });
-        actions.push("Decremented project stats");
-      }
-
-      await db.pledge.update({
-        where: { id: pledgeId },
-        data: {
-          status: "CANCELLED",
-          stripePaymentMethodId: null,
-          lastFailureReason: "Cancelled via admin cleanup",
-        },
       });
       actions.push("Updated pledge status to CANCELLED");
     }

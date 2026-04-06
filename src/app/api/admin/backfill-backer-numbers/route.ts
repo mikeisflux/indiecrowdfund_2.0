@@ -59,8 +59,12 @@ export async function POST() {
         select: { id: true, backerNumber: true },
       });
 
-      // Assign backer numbers in order
-      let backerNum = 1;
+      // Start from 1 above the highest existing backer number to avoid collisions
+      const maxExisting = pledges.reduce(
+        (max, p) => (p.backerNumber !== null ? Math.max(max, p.backerNumber) : max),
+        0
+      );
+      let backerNum = maxExisting + 1;
       let updated = 0;
 
       for (const pledge of pledges) {
@@ -69,9 +73,9 @@ export async function POST() {
             where: { id: pledge.id },
             data: { backerNumber: backerNum },
           });
+          backerNum++;
           updated++;
         }
-        backerNum++;
       }
 
       if (updated > 0) {
