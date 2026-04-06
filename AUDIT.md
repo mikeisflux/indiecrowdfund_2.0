@@ -411,24 +411,24 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/creator/refund-requests/route.ts`
 - [ ] `src/app/api/creator/stripe/portal/route.ts`
 - [ ] `src/app/api/creator/whop-bank-account/route.ts`
-- [ ] `src/app/api/cron/ai-marketing/route.ts`
-- [ ] `src/app/api/cron/cleanup-pledges/route.ts`
-- [ ] `src/app/api/cron/cleanup-projects/route.ts`
-- [ ] `src/app/api/cron/email-queue/route.ts`
-- [ ] `src/app/api/cron/email-retries/route.ts`
-- [ ] `src/app/api/cron/payment-retries/route.ts`
-- [ ] `src/app/api/cron/process-failed-campaigns/route.ts`
-- [ ] `src/app/api/cron/process-funded-campaigns/route.ts`
-- [ ] `src/app/api/cron/scheduled-campaigns/route.ts`
-- [ ] `src/app/api/diagnostics/payment/route.ts`
+- [x] `src/app/api/cron/ai-marketing/route.ts` 🔧 Added POST handler for consistency with other cron endpoints
+- [x] `src/app/api/cron/cleanup-pledges/route.ts` ✅
+- [x] `src/app/api/cron/cleanup-projects/route.ts` ✅
+- [x] `src/app/api/cron/email-queue/route.ts` ✅
+- [x] `src/app/api/cron/email-retries/route.ts` ✅
+- [x] `src/app/api/cron/payment-retries/route.ts` ✅
+- [x] `src/app/api/cron/process-failed-campaigns/route.ts` ✅
+- [x] `src/app/api/cron/process-funded-campaigns/route.ts` ✅
+- [x] `src/app/api/cron/scheduled-campaigns/route.ts` 🔧 Added POST handler for consistency with other cron endpoints
+- [x] `src/app/api/diagnostics/payment/route.ts` ✅
 - [ ] `src/app/api/divinitycoin/config/route.ts`
 - [ ] `src/app/api/email/track/click/route.ts`
 - [ ] `src/app/api/email/track/open/route.ts`
 - [ ] `src/app/api/error-report/route.ts`
-- [ ] `src/app/api/health/route.ts`
+- [x] `src/app/api/health/route.ts` ✅
 - [ ] `src/app/api/hero-slides/route.ts`
-- [ ] `src/app/api/home-stats/route.ts`
-- [ ] `src/app/api/internal/blocked-ips/route.ts`
+- [x] `src/app/api/home-stats/route.ts` ✅
+- [x] `src/app/api/internal/blocked-ips/route.ts` ✅
 - [ ] `src/app/api/lcs-locator/import/route.ts`
 - [ ] `src/app/api/lcs-locator/route.ts`
 - [x] `src/app/api/marketplace/books/[slug]/route.ts` ✅
@@ -444,14 +444,14 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/marketplace/validate-code/route.ts` 🔧 Fixed missing deletedAt:null on book lookup (soft-deleted books could be used for code validation)
 - [ ] `src/app/api/messages/route.ts`
 - [ ] `src/app/api/messages/user-info/route.ts`
-- [ ] `src/app/api/metrics/route.ts`
+- [x] `src/app/api/metrics/route.ts` ✅
 - [ ] `src/app/api/og/route.tsx`
 - [x] `src/app/api/pay/balance/confirm/route.ts` ✅
 - [x] `src/app/api/pay/balance/route.ts` ✅
 - [x] `src/app/api/paypal/capture/[orderId]/route.ts` ✅
 - [x] `src/app/api/paypal/client-token/route.ts` ✅
 - [x] `src/app/api/paypal/config/route.ts` ✅
-- [ ] `src/app/api/platform-stats/route.ts`
+- [x] `src/app/api/platform-stats/route.ts` ✅
 - [x] `src/app/api/pledges/[pledgeId]/add-items/route.ts` ✅
 - [x] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts` ✅
 - [x] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ✅
