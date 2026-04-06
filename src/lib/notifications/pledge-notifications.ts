@@ -577,7 +577,7 @@ export async function notifyPledgeModified(
 
     await createNotification({
       userId: pledge.user.id,
-      type: "PLEDGE_RECEIVED" as NotificationType, // Reuse existing type
+      type: "PLEDGE_MODIFIED",
       title: "Pledge Updated",
       message: notifMessage,
       actionUrl: `/dashboard/pledges/${pledgeId}`,
@@ -650,7 +650,7 @@ export async function notifyPledgeCancelled(
     // In-app notification for backer
     await createNotification({
       userId: pledge.user.id,
-      type: "PLEDGE_RECEIVED" as NotificationType,
+      type: "PLEDGE_CANCELLED",
       title: wasRefunded ? "Pledge Cancelled & Refunded" : "Pledge Cancelled",
       message: wasRefunded
         ? `Your $${Number(pledge.amount).toFixed(2)} pledge for "${pledge.project.title}" has been cancelled and refunded.`
@@ -662,7 +662,7 @@ export async function notifyPledgeCancelled(
     // In-app notification for creator
     await createNotification({
       userId: pledge.project.creator.id,
-      type: "PLEDGE_RECEIVED" as NotificationType,
+      type: "PLEDGE_CANCELLED",
       title: "Pledge Cancelled",
       message: `${pledge.user.name || "A backer"} cancelled their $${Number(pledge.amount).toFixed(2)} pledge for "${pledge.project.title}".`,
       actionUrl: projectUrlPath,
@@ -730,7 +730,7 @@ export async function notifyRefundRequestDecision(
     // In-app notification
     await createNotification({
       userId: pledge.user.id,
-      type: "PLEDGE_RECEIVED" as NotificationType,
+      type: "PLEDGE_REFUND_DECISION",
       title: isApproved ? "Refund Request Approved" : "Refund Request Denied",
       message: isApproved
         ? `Your refund request for "${pledge.project.title}" was approved. $${Number(pledge.amount).toFixed(2)} will be returned to your payment method.`
@@ -756,7 +756,7 @@ export async function notifyRefundRequestDecision(
           userId: pledge.user.id,
           projectId: pledge.project.id,
           pledgeId: pledge.id,
-          type: "PLEDGE_CANCELLATION",
+          type: "PLEDGE_REFUND",
           subject: emailResult.subject,
           recipientEmail: pledge.user.email,
           htmlContent: emailResult.html,

@@ -56,7 +56,12 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     select: { status: true, projectId: true, backerNumber: true, sourceCampaignId: true },
   });
 
-  if (existingPledge?.status === "COMPLETED") {
+  if (!existingPledge) {
+    webhookLogger.warn(`[Webhook] Pledge ${pledgeId} not found in database, skipping`);
+    return;
+  }
+
+  if (existingPledge.status === "COMPLETED") {
     webhookLogger.info(`[Webhook] Pledge ${pledgeId} already COMPLETED, skipping`);
     return;
   }
@@ -67,7 +72,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     : paymentIntent.payment_method?.id;
 
   // Assign backer number atomically if not already assigned
-  if (!existingPledge?.backerNumber && existingPledge?.projectId) {
+  if (!existingPledge.backerNumber && existingPledge.projectId) {
     await assignBackerNumber(existingPledge.projectId, pledgeId);
   }
 
