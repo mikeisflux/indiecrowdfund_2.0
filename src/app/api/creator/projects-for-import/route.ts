@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
     // Find projects where user is creator OR an accepted collaborator
     const projects = await db.project.findMany({
       where: {
+        deletedAt: null,
         OR: [
           // Projects user created
           { creatorId: session.user.id },

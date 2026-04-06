@@ -91,14 +91,21 @@ export async function PATCH(
     }
 
     if (action === "deny") {
-      await db.refundRequest.update({
-        where: { id: requestId },
+      // Atomic update — only succeeds if still PENDING, prevents double-processing
+      const denyResult = await db.refundRequest.updateMany({
+        where: { id: requestId, status: "PENDING" },
         data: {
           status: "DENIED",
           creatorNote: creatorNote || null,
           processedAt: new Date(),
         },
       });
+      if (denyResult.count === 0) {
+        return NextResponse.json(
+          { error: "This request has already been processed. Please refresh and try again." },
+          { status: 409 }
+        );
+      }
 
       // Fire-and-forget notification to backer
       notifyRefundRequestDecision(refundRequest.pledge.id, "denied", creatorNote || null).catch(() => {});
@@ -220,7 +227,18 @@ export async function PATCH(
       return NextResponse.json({ error: "Failed to process refund. Please try again." }, { status: 500 });
     }
 
-    // Update DB atomically
+    // Atomic DB update — guard against double-processing from concurrent requests
+    const approveResult = await db.refundRequest.updateMany({
+      where: { id: requestId, status: "PENDING" },
+      data: { status: "APPROVED", creatorNote: creatorNote || null, processedAt: new Date() },
+    });
+    if (approveResult.count === 0) {
+      // Another concurrent request already processed this refund
+      refundRequestLogger.warn({ requestId, pledgeId: pledge.id }, "Concurrent approve detected — refund may have been processed twice");
+      return NextResponse.json({ success: true, message: "Refund approved and processed successfully." });
+    }
+
+    // Update pledge and project stats in a transaction
     await db.$transaction([
       db.pledge.update({
         where: { id: pledge.id },
@@ -236,10 +254,6 @@ export async function PATCH(
           },
         }),
       ] : []),
-      db.refundRequest.update({
-        where: { id: requestId },
-        data: { status: "APPROVED", creatorNote: creatorNote || null, processedAt: new Date() },
-      }),
     ]);
 
     // Restore reward slot if pledge claimed one (only if stats were incremented)

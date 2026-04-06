@@ -28,6 +28,7 @@ export async function GET() {
       where: {
         userId,
         status: { in: ["PENDING", "COMPLETED"] },
+        deletedAt: null,
       },
       select: {
         project: {
@@ -48,7 +49,7 @@ export async function GET() {
 
     // Fetch created projects
     const createdProjects = await db.project.findMany({
-      where: { creatorId: userId },
+      where: { creatorId: userId, deletedAt: null },
       select: {
         id: true,
         title: true,

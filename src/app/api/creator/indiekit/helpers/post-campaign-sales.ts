@@ -18,6 +18,7 @@ export async function computePostCampaignSales(projects: ProjectRef[]) {
     where: {
       projectId: { in: endedProjectIds },
       status: "COMPLETED",
+      deletedAt: null,
       metadata: {
         path: ["completedAdditionalItems"],
         not: { equals: null },

@@ -51,7 +51,6 @@ export async function POST(
     const item = await db.projectItem.findFirst({
       where: {
         id: itemId,
-        deletedAt: null,
         projectId,
       },
     });
