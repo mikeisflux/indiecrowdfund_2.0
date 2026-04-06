@@ -167,120 +167,120 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/admin/users/hooks/useRetailerActions.ts` ⬜
 - [ ] `src/app/admin/users/hooks/useUserData.ts` ⬜
 - [x] `src/app/admin/users/page.tsx` ✅
-- [ ] `src/app/api/admin/ai-marketing/auto-tag/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/behavior/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/[type]/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/fix-images/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/abort/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/duplicate/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/test/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/run/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/segments/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/services/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/stats/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/subscribers/import/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/subscribers/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/subscribers/tags/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/user-interests/route.ts` ⬜
-- [ ] `src/app/api/admin/analytics/route.ts` ⬜
-- [ ] `src/app/api/admin/announcement-bar/route.ts` ⬜
-- [ ] `src/app/api/admin/api-keys/route.ts` ⬜
-- [ ] `src/app/api/admin/backfill-backer-numbers/route.ts` ⬜
-- [ ] `src/app/api/admin/bank-accounts/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/build-backup/download/route.ts` ⬜
-- [ ] `src/app/api/admin/build-backup/route.ts` ⬜
-- [ ] `src/app/api/admin/changelog/extract/route.ts` ⬜
-- [ ] `src/app/api/admin/changelog/route.ts` ⬜
-- [ ] `src/app/api/admin/cleanup-duplicate-rewards/route.ts` ⬜ Fixed missing deletedAt:null in reward queries (cleanup tool operated on soft-deleted rewards)
-- [ ] `src/app/api/admin/cleanup-pledges/route.ts` ⬜ Fixed missing deletedAt:null in base pledge where clause (admin cleanup could see deleted pledges)
-- [ ] `src/app/api/admin/consent-banner/route.ts` ⬜
-- [ ] `src/app/api/admin/cron/route.ts` ⬜
-- [ ] `src/app/api/admin/dashboard/route.ts` ⬜
-- [ ] `src/app/api/admin/database/backup/download/route.ts` ⬜
-- [ ] `src/app/api/admin/database/backup/restore/route.ts` ⬜
-- [ ] `src/app/api/admin/database/backup/route.ts` ⬜
-- [ ] `src/app/api/admin/database/status/route.ts` ⬜ Fixed count queries missing deletedAt:null (inflated stats including soft-deleted records)
-- [ ] `src/app/api/admin/divinity-payouts/route.ts` ⬜ Fixed race condition in PATCH — now uses atomic updateMany with status guard
-- [ ] `src/app/api/admin/divinitycoin-redemptions/route.ts` ⬜
-- [ ] `src/app/api/admin/email-blocklist/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/email-blocklist/purge/route.ts` ⬜
-- [ ] `src/app/api/admin/email-blocklist/route.ts` ⬜
-- [ ] `src/app/api/admin/email-queue/route.ts` ⬜
-- [ ] `src/app/api/admin/email/route.ts` ⬜
-- [ ] `src/app/api/admin/emails/[emailId]/route.ts` ⬜
-- [ ] `src/app/api/admin/error-logs/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/error-logs/route.ts` ⬜
-- [ ] `src/app/api/admin/feature-flags/route.ts` ⬜
-- [ ] `src/app/api/admin/hero-slides/migrate/route.ts` ⬜
-- [ ] `src/app/api/admin/hero-slides/route.ts` ⬜
-- [ ] `src/app/api/admin/lcs-locator/cleanup-emails/route.ts` ⬜
-- [ ] `src/app/api/admin/lcs-locator/shops/route.ts` ⬜
-- [ ] `src/app/api/admin/link-sanitizer/route.ts` ⬜
-- [ ] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/attachments/[attachmentId]/route.ts` ⬜
-- [ ] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/route.ts` ⬜
-- [ ] `src/app/api/admin/mailboxes/[id]/emails/route.ts` ⬜
-- [ ] `src/app/api/admin/mailboxes/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/mailboxes/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/[id]/feature/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/[id]/review/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/reorder/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/history/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/pdf-management/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/transactions/route.ts` ⬜
-- [ ] `src/app/api/admin/media/route.ts` ⬜
-- [ ] `src/app/api/admin/media/scan/route.ts` ⬜
-- [ ] `src/app/api/admin/media/upload/route.ts` ⬜
-- [ ] `src/app/api/admin/notifications/route.ts` ⬜
-- [ ] `src/app/api/admin/pages/route.ts` ⬜
-- [ ] `src/app/api/admin/payouts/divinitycoin/route.ts` ⬜
-- [ ] `src/app/api/admin/payouts/paypal/route.ts` ⬜
-- [ ] `src/app/api/admin/payouts/route.ts` ⬜ Fixed race condition in PATCH — atomic updateMany with status guard
-- [ ] `src/app/api/admin/payouts/whop/route.ts` ⬜
-- [ ] `src/app/api/admin/pledges/[pledgeId]/route.ts` ⬜
-- [ ] `src/app/api/admin/pledges/cleanup/route.ts` ⬜
-- [ ] `src/app/api/admin/prelaunch/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/[projectId]/adjust-end-date/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/[projectId]/backfill-backer-numbers/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/[projectId]/process-pledges/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/history/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/link-preview/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/review/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/status/route.ts` ⬜
-- [ ] `src/app/api/admin/promo-popup/route.ts` ⬜
-- [ ] `src/app/api/admin/recalculate-pledge-amounts/route.ts` ⬜
-- [ ] `src/app/api/admin/reconcile-pledges/route.ts` ⬜
-- [ ] `src/app/api/admin/reports/route.ts` ⬜
-- [ ] `src/app/api/admin/retailers/resend-approval/route.ts` ⬜
-- [ ] `src/app/api/admin/retailers/route.ts` ⬜
-- [ ] `src/app/api/admin/retailers/surveys/route.ts` ⬜
-- [ ] `src/app/api/admin/security/encrypt-secrets/route.ts` ⬜
-- [ ] `src/app/api/admin/security/stats/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/audit/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/cron/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/fix-all/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/keywords/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/pages/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/redirects/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/route.ts` ⬜
-- [ ] `src/app/api/admin/settings/route.ts` ⬜
-- [ ] `src/app/api/admin/settings/test-r2/route.ts` ⬜
-- [ ] `src/app/api/admin/sidebar-stats/route.ts` ⬜
-- [ ] `src/app/api/admin/sync-all-project-stats/route.ts` ⬜
-- [ ] `src/app/api/admin/transactions/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/transactions/route.ts` ⬜ Fixed null crash on bankAccount.user in querySettlements (orphaned FK)
-- [ ] `src/app/api/admin/transactions/stripe-lookup/route.ts` ⬜
-- [ ] `src/app/api/admin/users/[userId]/emails/route.ts` ⬜
-- [ ] `src/app/api/admin/users/[userId]/pledges/route.ts` ⬜ Fixed missing deletedAt:null in user pledges query (showed soft-deleted pledges)
-- [ ] `src/app/api/admin/users/[userId]/vanity-url/route.ts` ⬜
-- [ ] `src/app/api/admin/users/merge-duplicates/route.ts` ⬜
-- [ ] `src/app/api/admin/users/route.ts` ⬜ Fixed UPDATE_ROLE missing CREATOR in valid roles list (admins could not set CREATOR role)
-- [ ] `src/app/api/admin/wallet/route.ts` ⬜
+- [x] `src/app/api/admin/ai-marketing/auto-tag/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/behavior/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/[type]/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/fix-images/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/abort/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/duplicate/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/test/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/run/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/segments/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/services/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/stats/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/subscribers/import/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/subscribers/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/subscribers/tags/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/user-interests/route.ts` ✅
+- [x] `src/app/api/admin/analytics/route.ts` ✅
+- [x] `src/app/api/admin/announcement-bar/route.ts` ✅
+- [x] `src/app/api/admin/api-keys/route.ts` ✅
+- [x] `src/app/api/admin/backfill-backer-numbers/route.ts` ✅
+- [x] `src/app/api/admin/bank-accounts/[id]/route.ts` ✅
+- [x] `src/app/api/admin/build-backup/download/route.ts` ✅
+- [x] `src/app/api/admin/build-backup/route.ts` ✅
+- [x] `src/app/api/admin/changelog/extract/route.ts` ✅
+- [x] `src/app/api/admin/changelog/route.ts` ✅
+- [x] `src/app/api/admin/cleanup-duplicate-rewards/route.ts` 🔧 Fixed missing `deletedAt: null` in reward queries (cleanup tool operated on soft-deleted rewards)
+- [x] `src/app/api/admin/cleanup-pledges/route.ts` 🔧 Fixed missing `deletedAt: null` in base pledge where clause (admin cleanup could see deleted pledges)
+- [x] `src/app/api/admin/consent-banner/route.ts` ✅
+- [x] `src/app/api/admin/cron/route.ts` ✅
+- [x] `src/app/api/admin/dashboard/route.ts` ✅
+- [x] `src/app/api/admin/database/backup/download/route.ts` ✅
+- [x] `src/app/api/admin/database/backup/restore/route.ts` ✅
+- [x] `src/app/api/admin/database/backup/route.ts` ✅
+- [x] `src/app/api/admin/database/status/route.ts` 🔧 Fixed count queries missing `deletedAt: null` (inflated stats including soft-deleted records)
+- [x] `src/app/api/admin/divinity-payouts/route.ts` 🔧 Fixed race condition in PATCH — now uses atomic `updateMany` with status guard
+- [x] `src/app/api/admin/divinitycoin-redemptions/route.ts` ✅
+- [x] `src/app/api/admin/email-blocklist/[id]/route.ts` ✅
+- [x] `src/app/api/admin/email-blocklist/purge/route.ts` ✅
+- [x] `src/app/api/admin/email-blocklist/route.ts` ✅
+- [x] `src/app/api/admin/email-queue/route.ts` ✅
+- [x] `src/app/api/admin/email/route.ts` ✅
+- [x] `src/app/api/admin/emails/[emailId]/route.ts` ✅
+- [x] `src/app/api/admin/error-logs/[id]/route.ts` ✅
+- [x] `src/app/api/admin/error-logs/route.ts` ✅
+- [x] `src/app/api/admin/feature-flags/route.ts` ✅
+- [x] `src/app/api/admin/hero-slides/migrate/route.ts` ✅
+- [x] `src/app/api/admin/hero-slides/route.ts` ✅
+- [x] `src/app/api/admin/lcs-locator/cleanup-emails/route.ts` ✅
+- [x] `src/app/api/admin/lcs-locator/shops/route.ts` ✅
+- [x] `src/app/api/admin/link-sanitizer/route.ts` ✅
+- [x] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/attachments/[attachmentId]/route.ts` ✅
+- [x] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/route.ts` ✅
+- [x] `src/app/api/admin/mailboxes/[id]/emails/route.ts` ✅
+- [x] `src/app/api/admin/mailboxes/[id]/route.ts` ✅
+- [x] `src/app/api/admin/mailboxes/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/[id]/feature/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/[id]/review/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/[id]/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/reorder/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/route.ts` 🔧 Fixed wrong field name `isNsfw` → `hasAdultContent` (schema field is `hasAdultContent Boolean`)
+- [x] `src/app/api/admin/marketplace/history/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/pdf-management/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/transactions/route.ts` ✅
+- [x] `src/app/api/admin/media/route.ts` ✅
+- [x] `src/app/api/admin/media/scan/route.ts` ✅
+- [x] `src/app/api/admin/media/upload/route.ts` ✅
+- [x] `src/app/api/admin/notifications/route.ts` ✅
+- [x] `src/app/api/admin/pages/route.ts` ✅
+- [x] `src/app/api/admin/payouts/divinitycoin/route.ts` ✅
+- [x] `src/app/api/admin/payouts/paypal/route.ts` ✅
+- [x] `src/app/api/admin/payouts/route.ts` 🔧 Fixed race condition in PATCH — atomic `updateMany` with status guard
+- [x] `src/app/api/admin/payouts/whop/route.ts` ✅
+- [x] `src/app/api/admin/pledges/[pledgeId]/route.ts` ✅
+- [x] `src/app/api/admin/pledges/cleanup/route.ts` 🔧 Fixed missing `deletedAt: null` in `allPendingCount` query (inflated count included soft-deleted pledges)
+- [x] `src/app/api/admin/prelaunch/route.ts` ✅
+- [x] `src/app/api/admin/projects/[projectId]/adjust-end-date/route.ts` ✅
+- [x] `src/app/api/admin/projects/[projectId]/backfill-backer-numbers/route.ts` ✅
+- [x] `src/app/api/admin/projects/[projectId]/process-pledges/route.ts` ✅
+- [x] `src/app/api/admin/projects/history/route.ts` ✅
+- [x] `src/app/api/admin/projects/link-preview/route.ts` ✅
+- [x] `src/app/api/admin/projects/review/route.ts` ✅
+- [x] `src/app/api/admin/projects/status/route.ts` ✅
+- [x] `src/app/api/admin/promo-popup/route.ts` ✅
+- [x] `src/app/api/admin/recalculate-pledge-amounts/route.ts` ✅
+- [x] `src/app/api/admin/reconcile-pledges/route.ts` 🔧 Fixed missing `deletedAt: null` in project `findMany` (could reconcile soft-deleted projects)
+- [x] `src/app/api/admin/reports/route.ts` ✅
+- [x] `src/app/api/admin/retailers/resend-approval/route.ts` ✅
+- [x] `src/app/api/admin/retailers/route.ts` ✅
+- [x] `src/app/api/admin/retailers/surveys/route.ts` ✅
+- [x] `src/app/api/admin/security/encrypt-secrets/route.ts` ✅
+- [x] `src/app/api/admin/security/stats/route.ts` ✅
+- [x] `src/app/api/admin/seo/audit/route.ts` ✅
+- [x] `src/app/api/admin/seo/cron/route.ts` ✅
+- [x] `src/app/api/admin/seo/fix-all/route.ts` ✅
+- [x] `src/app/api/admin/seo/keywords/route.ts` ✅
+- [x] `src/app/api/admin/seo/pages/route.ts` ✅
+- [x] `src/app/api/admin/seo/redirects/route.ts` ✅
+- [x] `src/app/api/admin/seo/route.ts` ✅
+- [x] `src/app/api/admin/settings/route.ts` ✅
+- [x] `src/app/api/admin/settings/test-r2/route.ts` ✅
+- [x] `src/app/api/admin/sidebar-stats/route.ts` 🔧 Fixed missing `deletedAt: null` in `pendingPayouts` project count query
+- [x] `src/app/api/admin/sync-all-project-stats/route.ts` ✅
+- [x] `src/app/api/admin/transactions/[id]/route.ts` ✅
+- [x] `src/app/api/admin/transactions/route.ts` 🔧 Fixed null crash on `bankAccount.user` in `querySettlements` (orphaned FK)
+- [x] `src/app/api/admin/transactions/stripe-lookup/route.ts` ✅
+- [x] `src/app/api/admin/users/[userId]/emails/route.ts` ✅
+- [x] `src/app/api/admin/users/[userId]/pledges/route.ts` 🔧 Fixed missing `deletedAt: null` in user pledges query (showed soft-deleted pledges)
+- [x] `src/app/api/admin/users/[userId]/vanity-url/route.ts` ✅
+- [x] `src/app/api/admin/users/merge-duplicates/route.ts` ✅
+- [x] `src/app/api/admin/users/route.ts` 🔧 Fixed `UPDATE_ROLE` missing `CREATOR` in valid roles list (admins could not set CREATOR role)
+- [x] `src/app/api/admin/wallet/route.ts` ✅
 - [ ] `src/app/api/ai/auto-tag/route.ts` ⬜
 - [ ] `src/app/api/ai/marketing-copy/route.ts` ⬜
 - [ ] `src/app/api/ai/moderate/route.ts` ⬜
