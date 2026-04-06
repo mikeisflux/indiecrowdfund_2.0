@@ -361,11 +361,20 @@ export async function GET(
       const session = await auth();
       const userId = session?.user?.id;
       const userRole = session?.user?.role;
-      const isCreatorOrAdmin =
+      let hasAccess =
         userId === project.creatorId ||
         userRole === "ADMIN" ||
         userRole === "SUPER_ADMIN";
-      if (!isCreatorOrAdmin) {
+
+      if (!hasAccess && userId) {
+        const collaborator = await db.projectCollaborator.findFirst({
+          where: { projectId: id, userId, status: "ACCEPTED" },
+          select: { id: true },
+        });
+        hasAccess = !!collaborator;
+      }
+
+      if (!hasAccess) {
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
       }
     }
