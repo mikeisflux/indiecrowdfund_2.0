@@ -463,7 +463,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
     }
   };
 
-  const handleStartDraft = (stageId: string, stageTitle: string, template?: EmailTemplate) => {
+  const handleStartDraft = (template?: EmailTemplate) => {
     // Open the email dialog with the template pre-filled
     if (template) {
       onOpenEmailDialog({
@@ -727,7 +727,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
                               <Button
                                 size="sm"
                                 className="shrink-0 bg-teal-600 hover:bg-teal-700"
-                                onClick={() => handleStartDraft(stage.id, stage.title, template)}
+                                onClick={() => handleStartDraft(template)}
                               >
                                 <PenLine className="h-4 w-4 mr-2" />
                                 Use Template
@@ -752,7 +752,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
                               variant="outline"
                               size="sm"
                               className="shrink-0"
-                              onClick={() => handleStartDraft(stage.id, stage.title)}
+                              onClick={() => handleStartDraft()}
                             >
                               Blank Draft
                             </Button>
