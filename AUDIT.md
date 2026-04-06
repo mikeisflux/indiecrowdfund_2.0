@@ -4,28 +4,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 
 **Legend:** ✅ Audited & Clean | 🔧 Audited & Fixed | ⚠️ Needs Attention | ⬜ Not Yet Audited
 
-## Previously Fixed Issues (This Session)
-
-| File | Issue | Status |
-|------|-------|--------|
-| `src/lib/auth/session.ts` | Session halfLife was `SESSION_MAX_AGE * 500` (41yr) instead of `* 1000 / 2` | ✅ Fixed |
-| `src/app/api/marketplace/redeem-code/route.ts` | Race condition allowed over-redemption of promo codes | ✅ Fixed |
-| `src/app/api/marketplace/validate-code/route.ts` | No rate limiting — code enumeration brute-force possible | ✅ Fixed |
-| `src/app/api/admin/users/route.ts` | Admins could modify/spam SUPER_ADMIN accounts | ✅ Fixed |
-| `src/app/api/admin/ai-marketing/subscribers/route.ts` | Missing `deletedAt:null` inflated backer segment counts | ✅ Fixed |
-| `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` | N+1 email log inserts + missing `deletedAt:null` | ✅ Fixed |
-| `src/app/api/admin/pages/route.ts` | Custom pages could shadow reserved routes like `/admin` | ✅ Fixed |
-| `src/app/api/admin/email/route.ts` | Backer count included deleted/incomplete pledges | ✅ Fixed |
-| `src/app/api/admin/notifications/route.ts` | Soft-deleted pledges triggered false high-value alerts | ✅ Fixed |
-| `src/app/admin/changelog/page.tsx` | No pagination or search on changelog | ✅ Fixed |
-| `src/app/api/admin/changelog/route.ts` | No search support in changelog API | ✅ Fixed |
-| `src/app/layout.tsx` | Font preload warnings + GTM not injecting in `<head>` | ✅ Fixed |
-| `src/components/google-analytics.tsx` | Cleaned up — GTM now handled in layout.tsx directly | ✅ Fixed |
-| `src/middleware.ts` | Google crawlers blocked by bot-blocker (GTM verification failing) | ✅ Fixed |
-
 ---
-
-## Full File Audit Checklist
 
 - [ ] `src/__tests__/json-ld.test.tsx`
 - [ ] `src/__tests__/setup.ts`
@@ -51,7 +30,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/admin/analytics/page.tsx`
 - [ ] `src/app/admin/announcement-bar/page.tsx`
 - [ ] `src/app/admin/bug-reports/page.tsx`
-- [x] `src/app/admin/changelog/page.tsx` — 🔧 Added pagination (50/page) + debounced search
+- [ ] `src/app/admin/changelog/page.tsx`
 - [ ] `src/app/admin/consent-banner/page.tsx`
 - [ ] `src/app/admin/cron/page.tsx`
 - [ ] `src/app/admin/divinitycoin-redemptions/page.tsx`
@@ -195,7 +174,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/abort/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/duplicate/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/route.ts`
-- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` — 🔧 Fixed N+1 emailLog.create (batch createMany) + missing deletedAt
+- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/test/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/campaigns/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/run/route.ts`
@@ -203,7 +182,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/ai-marketing/services/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/stats/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/subscribers/import/route.ts`
-- [x] `src/app/api/admin/ai-marketing/subscribers/route.ts` — 🔧 Fixed missing deletedAt:null on pledge queries (inflated counts)
+- [ ] `src/app/api/admin/ai-marketing/subscribers/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/subscribers/tags/route.ts`
 - [ ] `src/app/api/admin/ai-marketing/user-interests/route.ts`
 - [ ] `src/app/api/admin/analytics/route.ts`
@@ -214,7 +193,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/build-backup/download/route.ts`
 - [ ] `src/app/api/admin/build-backup/route.ts`
 - [ ] `src/app/api/admin/changelog/extract/route.ts`
-- [x] `src/app/api/admin/changelog/route.ts` — 🔧 Added search query param filtering
+- [ ] `src/app/api/admin/changelog/route.ts`
 - [ ] `src/app/api/admin/cleanup-duplicate-rewards/route.ts`
 - [ ] `src/app/api/admin/cleanup-pledges/route.ts`
 - [ ] `src/app/api/admin/consent-banner/route.ts`
@@ -230,7 +209,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/email-blocklist/purge/route.ts`
 - [ ] `src/app/api/admin/email-blocklist/route.ts`
 - [ ] `src/app/api/admin/email-queue/route.ts`
-- [x] `src/app/api/admin/email/route.ts` — 🔧 Fixed backer count including deleted/incomplete pledges
+- [ ] `src/app/api/admin/email/route.ts`
 - [ ] `src/app/api/admin/emails/[emailId]/route.ts`
 - [ ] `src/app/api/admin/error-logs/[id]/route.ts`
 - [ ] `src/app/api/admin/error-logs/route.ts`
@@ -257,8 +236,8 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/media/route.ts`
 - [ ] `src/app/api/admin/media/scan/route.ts`
 - [ ] `src/app/api/admin/media/upload/route.ts`
-- [x] `src/app/api/admin/notifications/route.ts` — 🔧 Fixed soft-deleted pledges triggering false high-value alerts
-- [x] `src/app/api/admin/pages/route.ts` — 🔧 Added reserved slug validation (prevents shadowing /admin, /api, etc.)
+- [ ] `src/app/api/admin/notifications/route.ts`
+- [ ] `src/app/api/admin/pages/route.ts`
 - [ ] `src/app/api/admin/payouts/divinitycoin/route.ts`
 - [ ] `src/app/api/admin/payouts/paypal/route.ts`
 - [ ] `src/app/api/admin/payouts/route.ts`
@@ -300,7 +279,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/users/[userId]/pledges/route.ts`
 - [ ] `src/app/api/admin/users/[userId]/vanity-url/route.ts`
 - [ ] `src/app/api/admin/users/merge-duplicates/route.ts`
-- [x] `src/app/api/admin/users/route.ts` — 🔧 Fixed privilege escalation: admins could modify SUPER_ADMIN accounts
+- [ ] `src/app/api/admin/users/route.ts`
 - [ ] `src/app/api/admin/wallet/route.ts`
 - [ ] `src/app/api/ai/auto-tag/route.ts`
 - [ ] `src/app/api/ai/marketing-copy/route.ts`
@@ -461,8 +440,8 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts`
 - [ ] `src/app/api/marketplace/purchase/confirm/route.ts`
 - [ ] `src/app/api/marketplace/purchase/route.ts`
-- [x] `src/app/api/marketplace/redeem-code/route.ts` — 🔧 Fixed race condition in maxRedemptions check (updateMany atomic)
-- [x] `src/app/api/marketplace/validate-code/route.ts` — 🔧 Added rate limiting to prevent code enumeration brute-force
+- [ ] `src/app/api/marketplace/redeem-code/route.ts`
+- [ ] `src/app/api/marketplace/validate-code/route.ts`
 - [ ] `src/app/api/messages/route.ts`
 - [ ] `src/app/api/messages/user-info/route.ts`
 - [ ] `src/app/api/metrics/route.ts`
@@ -802,7 +781,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/help/whitelist/page.tsx`
 - [ ] `src/app/indiekit-handbook/layout.tsx`
 - [ ] `src/app/indiekit-handbook/page.tsx`
-- [x] `src/app/layout.tsx` — 🔧 Fixed font preload warnings + GTM injection in <head> + env var fallback
+- [ ] `src/app/layout.tsx`
 - [ ] `src/app/lcs-locator/layout.tsx`
 - [ ] `src/app/lcs-locator/page.tsx`
 - [ ] `src/app/marketplace-handbook/backers/page.tsx`
@@ -929,7 +908,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/components/email-verification-banner.tsx`
 - [ ] `src/components/error-reporter.tsx`
 - [ ] `src/components/footer.tsx`
-- [x] `src/components/google-analytics.tsx` — 🔧 Simplified to GA4-only (GTM moved to layout.tsx)
+- [ ] `src/components/google-analytics.tsx`
 - [ ] `src/components/hero-slider.tsx`
 - [ ] `src/components/home-stats-poller.tsx`
 - [ ] `src/components/json-ld.tsx`
@@ -1063,7 +1042,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/lib/auth/index.ts`
 - [ ] `src/lib/auth/rate-limit.ts`
 - [ ] `src/lib/auth/recaptcha.ts`
-- [x] `src/lib/auth/session.ts` — 🔧 Fixed session halfLife bug (41yr TTL → 15 days)
+- [ ] `src/lib/auth/session.ts`
 - [ ] `src/lib/bot-blocker.ts`
 - [ ] `src/lib/circuit-breaker.ts`
 - [ ] `src/lib/consent.ts`
@@ -1142,6 +1121,6 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/lib/utils/api-params.ts`
 - [ ] `src/lib/utils/sanitize.ts`
 - [ ] `src/lib/vault.ts`
-- [x] `src/middleware.ts` — 🔧 Added Google crawler IP/UA allowlist to bypass bot blocker
+- [ ] `src/middleware.ts`
 - [ ] `src/types/api.ts`
 - [ ] `src/types/index.ts`
