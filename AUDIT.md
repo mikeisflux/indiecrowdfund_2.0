@@ -632,7 +632,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/dashboard/indiekit/components/dialogs/distribution-dialog.tsx`
 - [ ] `src/app/dashboard/indiekit/components/dialogs/edit-order-dialog.tsx`
 - [ ] `src/app/dashboard/indiekit/components/dialogs/email-composer-dialog.tsx`
-- [ ] `src/app/dashboard/indiekit/components/dialogs/email-dialog.tsx`
+- [x] `src/app/dashboard/indiekit/components/dialogs/email-dialog.tsx` 🔧
 - [ ] `src/app/dashboard/indiekit/components/dialogs/export-dialog.tsx`
 - [ ] `src/app/dashboard/indiekit/components/dialogs/import-addon-from-project-dialog.tsx`
 - [ ] `src/app/dashboard/indiekit/components/dialogs/import-email-dialog.tsx`
@@ -1028,11 +1028,11 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/components/user-profile-dropdown.tsx`
 - [ ] `src/instrumentation.ts`
 - [ ] `src/lib/ai/anthropic.ts`
-- [ ] `src/lib/ai/automation.ts`
+- [x] `src/lib/ai/automation.ts` 🔧
 - [ ] `src/lib/ai/index.ts`
-- [ ] `src/lib/ai/marketing-services.ts`
+- [x] `src/lib/ai/marketing-services.ts` 🔧
 - [ ] `src/lib/ai/settings-integration.ts`
-- [ ] `src/lib/ai/user-interests.ts`
+- [x] `src/lib/ai/user-interests.ts` 🔧
 - [ ] `src/lib/api-error.ts`
 - [ ] `src/lib/audit.ts`
 - [ ] `src/lib/auth-helpers.ts`
@@ -1068,7 +1068,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/lib/notifications/core.ts`
 - [ ] `src/lib/notifications/email-templates.ts`
 - [ ] `src/lib/notifications/index.ts`
-- [ ] `src/lib/notifications/marketplace-notifications.ts`
+- [x] `src/lib/notifications/marketplace-notifications.ts` 🔧
 - [ ] `src/lib/notifications/pledge-notifications.ts`
 - [ ] `src/lib/notifications/project-notifications.ts`
 - [ ] `src/lib/notifications/social-notifications.ts`
@@ -1099,7 +1099,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/lib/payments/whop/index.ts`
 - [ ] `src/lib/pdf-cover-extractor.ts`
 - [ ] `src/lib/project-auth.ts`
-- [ ] `src/lib/project-permissions.ts`
+- [x] `src/lib/project-permissions.ts` 🔧
 - [ ] `src/lib/r2.ts`
 - [ ] `src/lib/rate-limiter.ts`
 - [ ] `src/lib/recommendations/engine.ts`

@@ -42,7 +42,7 @@ interface UserInterestData {
 export async function calculateUserInterests(userId: string): Promise<UserInterestData> {
   // Get user's pledges with project data
   const pledges = await db.pledge.findMany({
-    where: { userId, status: "COMPLETED" },
+    where: { userId, status: "COMPLETED", deletedAt: null },
     include: {
       project: {
         select: {

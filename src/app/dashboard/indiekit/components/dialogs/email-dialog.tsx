@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -359,7 +360,7 @@ export function EmailDialog({
                       <hr />
                       <div
                         className="text-sm text-muted-foreground prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: emailBody }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(emailBody) }}
                       />
                     </div>
                   </div>

@@ -145,8 +145,8 @@ export async function notifyMarketplaceBookReview(
   action: "APPROVED" | "REJECTED",
   rejectionReason?: string
 ) {
-  const book = await db.marketplaceBook.findUnique({
-    where: { id: bookId },
+  const book = await db.marketplaceBook.findFirst({
+    where: { id: bookId, deletedAt: null },
     include: {
       creator: {
         select: { id: true, email: true, name: true },

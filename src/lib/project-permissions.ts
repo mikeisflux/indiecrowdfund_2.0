@@ -66,6 +66,7 @@ export async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
   const fundedProjects = await db.project.findMany({
     where: {
       creatorId: userId,
+      deletedAt: null,
       OR: [
         { status: "FUNDED" },
         {
@@ -93,6 +94,7 @@ export async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
       where: {
         projectId: project.id,
         status: "COMPLETED",
+        deletedAt: null,
       },
       select: {
         fulfillmentStatus: true,

@@ -179,6 +179,7 @@ async function refreshUserProfiles(): Promise<AutomationStepResult> {
   // Find users needing profile updates (no profile or stale > 7 days)
   const usersNeedingProfiles = await db.user.findMany({
     where: {
+      deletedAt: null,
       OR: [
         { behaviors: { some: {} } },
         { pledges: { some: { status: "COMPLETED" } } },

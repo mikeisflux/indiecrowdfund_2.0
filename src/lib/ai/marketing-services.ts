@@ -373,6 +373,7 @@ export interface UserSegment {
 export async function generateSmartSegments(): Promise<UserSegment[]> {
   // Get aggregate user data
   const users = await db.user.findMany({
+    where: { deletedAt: null },
     include: {
       pledges: true,
       behaviors: {
