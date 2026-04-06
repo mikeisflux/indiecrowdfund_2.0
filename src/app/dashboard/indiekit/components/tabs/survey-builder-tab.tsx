@@ -936,6 +936,53 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
                 />
               </div>
 
+              {["multiple_choice", "checkboxes", "dropdown"].includes(editingQuestion.type) && (
+                <div className="space-y-2">
+                  <Label>Options</Label>
+                  <div className="space-y-2">
+                    {(editingQuestion.options || []).map((option, i) => (
+                      <div key={i} className="flex gap-2">
+                        <Input
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...(editingQuestion.options || [])];
+                            newOptions[i] = e.target.value;
+                            setEditingQuestion({ ...editingQuestion, options: newOptions });
+                          }}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          placeholder={`Option ${i + 1}`}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 text-red-600 shrink-0"
+                          onClick={() => {
+                            const newOptions = (editingQuestion.options || []).filter((_, idx) => idx !== i);
+                            setEditingQuestion({ ...editingQuestion, options: newOptions });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() =>
+                        setEditingQuestion({
+                          ...editingQuestion,
+                          options: [...(editingQuestion.options || []), ""],
+                        })
+                      }
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Option
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <Label>Required</Label>
                 <Switch
