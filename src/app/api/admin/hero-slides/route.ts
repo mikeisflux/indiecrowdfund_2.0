@@ -271,6 +271,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Slide ID is required" }, { status: 400, headers: corsHeaders });
     }
 
+    const existing = await db.heroSlide.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Slide not found" }, { status: 404, headers: corsHeaders });
+    }
+
     await db.heroSlide.delete({
       where: { id },
     });

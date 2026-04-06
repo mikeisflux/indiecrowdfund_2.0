@@ -158,8 +158,9 @@ export async function PATCH(req: NextRequest) {
     }
 
     // If fromPath is being changed, check for duplicates
-    if (fromPath && fromPath !== existing.fromPath) {
-      const normalizedFrom = fromPath.startsWith("/") ? fromPath : `/${fromPath}`;
+    // Normalize before comparing so "/path" and "path" are treated as identical
+    const normalizedFrom = fromPath ? (fromPath.startsWith("/") ? fromPath : `/${fromPath}`) : null;
+    if (normalizedFrom && normalizedFrom !== existing.fromPath) {
       const duplicate = await db.seoRedirect.findFirst({
         where: {
           fromPath: normalizedFrom,
