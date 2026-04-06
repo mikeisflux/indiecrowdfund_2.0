@@ -241,7 +241,7 @@ export async function GET(request: Request) {
           read: readNotifications.has(notifId),
           createdAt: pledge.createdAt,
           actionUrl: pledge.project ? `/admin/projects/${pledge.project.id}` : undefined,
-          metadata: { pledgeId: pledge.id, amount: pledge.amount },
+          metadata: { pledgeId: pledge.id, amount: Number(pledge.amount) },
         });
       }
     }
