@@ -122,8 +122,8 @@ export async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
  * Check if user can activate prelaunch without approval
  */
 export async function canActivatePrelaunchImmediately(userId: string): Promise<boolean> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
+  const user = await db.user.findFirst({
+    where: { id: userId, deletedAt: null },
     select: { role: true },
   });
 

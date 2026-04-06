@@ -156,8 +156,8 @@ Respond in JSON:
  * Get user profile for personalization
  */
 async function getUserProfile(userId: string): Promise<UserProfile> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
+  const user = await db.user.findFirst({
+    where: { id: userId, deletedAt: null },
     include: {
       pledges: {
         include: {

@@ -58,7 +58,7 @@ export async function notifyProjectFunded(projectId: string) {
   const backerIds = project.pledges.map((p: { userId: string }) => p.userId);
   if (backerIds.length > 0) {
     const backers = await db.user.findMany({
-      where: { id: { in: backerIds } },
+      where: { id: { in: backerIds }, deletedAt: null },
       select: { email: true },
     });
 
