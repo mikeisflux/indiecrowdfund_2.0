@@ -515,6 +515,17 @@ export async function PATCH(
     }
 
     if (action === "modify") {
+      // Prevent overwriting a pending modification awaiting payment
+      const existingMeta = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+        ? pledge.metadata as Record<string, unknown>
+        : {};
+      if (existingMeta.pendingModification) {
+        return NextResponse.json(
+          { error: "This pledge already has a pending modification awaiting payment. Please complete or cancel it first." },
+          { status: 409 }
+        );
+      }
+
       // Can only modify while project is live and campaign hasn't ended
       if (pledge.project.status !== "LIVE" || campaignEnded) {
         return NextResponse.json(
