@@ -33,9 +33,10 @@ export async function GET(
     const { username } = await params;
     await auth(); // Check auth status for isFollowing feature (used later)
 
-    // Find user by vanityUrl or id
+    // Find user by vanityUrl or id (exclude soft-deleted users)
     const user = await db.user.findFirst({
       where: {
+        deletedAt: null,
         OR: [
           { vanityUrl: username },
           { id: username },
@@ -44,7 +45,6 @@ export async function GET(
       select: {
         id: true,
         name: true,
-        email: true,
         image: true,
         heroImage: true,
         bio: true,

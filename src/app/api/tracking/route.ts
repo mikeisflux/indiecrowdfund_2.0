@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const trackingLogger = logger.child({ module: "tracking" });
 import { trackEvent, trackProjectView, trackReferrer } from "@/lib/tracking/index";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import { auth } from "@/lib/auth";
 
 // Simple in-memory cache to avoid hitting IP-API rate limits (45 req/min)
 const geoCache = new Map<string, { country: string; timestamp: number }>();
@@ -83,7 +84,6 @@ export async function POST(req: NextRequest) {
 
     const {
       eventType,
-      userId,
       sessionId,
       projectId,
       rewardId,
@@ -98,6 +98,16 @@ export async function POST(req: NextRequest) {
         { error: "Missing required fields" },
         { status: 400 }
       );
+    }
+
+    // Resolve userId from the authenticated session, not the request body,
+    // to prevent clients from spoofing another user's analytics identity.
+    let userId: string | null = null;
+    try {
+      const session = await auth();
+      userId = session?.user?.id ?? null;
+    } catch {
+      // Not authenticated — anonymous tracking is fine
     }
 
     // Get geolocation data from request
