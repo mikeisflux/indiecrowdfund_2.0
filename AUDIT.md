@@ -269,25 +269,25 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/projects/review/route.ts` 🔧
   - Fixed: findUnique → findFirst with deletedAt: null for admin role check
 - [x] `src/app/api/admin/projects/status/route.ts` ✅
-- [ ] `src/app/api/admin/promo-popup/route.ts` ⬜
-- [ ] `src/app/api/admin/recalculate-pledge-amounts/route.ts` ⬜
-- [ ] `src/app/api/admin/reconcile-pledges/route.ts` ⬜
-- [ ] `src/app/api/admin/reports/route.ts` ⬜
+- [x] `src/app/api/admin/promo-popup/route.ts` ✅
+- [x] `src/app/api/admin/recalculate-pledge-amounts/route.ts` ✅
+- [x] `src/app/api/admin/reconcile-pledges/route.ts` ✅
+- [x] `src/app/api/admin/reports/route.ts` ✅
 - [x] `src/app/api/admin/retailers/resend-approval/route.ts` 🔧
   - Fixed: findUnique → findFirst with deletedAt: null for admin role check
 - [x] `src/app/api/admin/retailers/route.ts` 🔧
   - Fixed: findUnique → findFirst with deletedAt: null (3 handlers)
 - [x] `src/app/api/admin/retailers/surveys/route.ts` 🔧
   - Fixed: findUnique → findFirst with deletedAt: null for admin role check
-- [ ] `src/app/api/admin/security/encrypt-secrets/route.ts` ⬜
-- [ ] `src/app/api/admin/security/stats/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/audit/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/cron/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/fix-all/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/keywords/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/pages/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/redirects/route.ts` ⬜
-- [ ] `src/app/api/admin/seo/route.ts` ⬜
+- [x] `src/app/api/admin/security/encrypt-secrets/route.ts` ✅
+- [x] `src/app/api/admin/security/stats/route.ts` ✅
+- [x] `src/app/api/admin/seo/audit/route.ts` ✅
+- [x] `src/app/api/admin/seo/cron/route.ts` ✅
+- [x] `src/app/api/admin/seo/fix-all/route.ts` ✅
+- [x] `src/app/api/admin/seo/keywords/route.ts` ✅
+- [x] `src/app/api/admin/seo/pages/route.ts` ✅
+- [x] `src/app/api/admin/seo/redirects/route.ts` ✅
+- [x] `src/app/api/admin/seo/route.ts` ✅
 - [ ] `src/app/api/admin/settings/route.ts` ⬜
 - [ ] `src/app/api/admin/settings/test-r2/route.ts` ⬜
 - [ ] `src/app/api/admin/sidebar-stats/route.ts` ⬜
