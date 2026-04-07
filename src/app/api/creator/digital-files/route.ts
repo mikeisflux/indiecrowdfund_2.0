@@ -356,10 +356,11 @@ export async function PATCH(request: NextRequest) {
         const safeFileName = file.name.replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
         const downloadsUrl = `${APP_URL}/dashboard/backer?tab=digital-downloads`;
 
+        type DistributionWithUser = (typeof distributions)[number];
         const emailResults = await Promise.allSettled(
           distributions
-            .filter(dist => dist.pledge.user && !dist.pledge.user.deletedAt && dist.pledge.user.email)
-            .map(dist => {
+            .filter((dist: DistributionWithUser) => dist.pledge.user && !dist.pledge.user.deletedAt && dist.pledge.user.email)
+            .map((dist: DistributionWithUser) => {
               const user = dist.pledge.user!;
               const safeName = (user.name || "Backer").replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
               return sendEmail({
