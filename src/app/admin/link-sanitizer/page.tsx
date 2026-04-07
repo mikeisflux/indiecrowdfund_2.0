@@ -228,14 +228,14 @@ export default function LinkSanitizerPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Link Sanitizer</h1>
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight">Link Sanitizer</h1>
           <p className="text-muted-foreground">
             Manage project URLs and clean up unused projects
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={runCleanup}
             variant="default"

@@ -857,19 +857,19 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Settings</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Settings</h1>
           <p className="text-muted-foreground">Configure platform settings and integrations</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           {saveMessage && (
             <span className="text-sm text-emerald-600">{saveMessage}</span>
           )}
           {error && (
             <span className="text-sm text-red-600">{error}</span>
           )}
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
             {isSaving ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />

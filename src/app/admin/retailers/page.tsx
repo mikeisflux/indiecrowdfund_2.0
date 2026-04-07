@@ -249,21 +249,21 @@ export default function RetailersPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Retailer Management</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Retailer Management</h1>
           <p className="text-muted-foreground">
             Review and manage retailer applications
           </p>
         </div>
-        <Button onClick={fetchRetailers} variant="outline" size="sm">
+        <Button onClick={fetchRetailers} variant="outline" size="sm" className="w-full sm:w-auto">
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl font-bold">{totalRetailers}</p>
@@ -324,7 +324,7 @@ export default function RetailersPage() {
       )}
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -335,7 +335,7 @@ export default function RetailersPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>

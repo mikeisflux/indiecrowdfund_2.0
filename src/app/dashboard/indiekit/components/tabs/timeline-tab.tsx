@@ -135,9 +135,9 @@ export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Select value={activityFilter} onValueChange={setActivityFilter}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Filter activity" />
           </SelectTrigger>
           <SelectContent>
@@ -151,7 +151,7 @@ export function TimelineTab({ entries = [], projectId }: TimelineTabProps) {
           </SelectContent>
         </Select>
         <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Date range" />
           </SelectTrigger>
           <SelectContent>

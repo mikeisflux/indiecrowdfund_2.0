@@ -9,40 +9,40 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
 
 - [ ] **src/**
   - [ ] **__tests__/**
-    - [ ] json-ld.test.tsx
-    - [ ] setup.ts
-    - [ ] utils.test.ts
+    - [x] json-ld.test.tsx
+    - [x] setup.ts
+    - [x] utils.test.ts
   - [ ] **app/**
     - [ ] **(auth)/**
-      - [ ] **choose-role/**
-        - [ ] choose-role-client.tsx
-        - [ ] page.tsx
+      - [x] **choose-role/**
+        - [x] choose-role-client.tsx
+        - [x] page.tsx
       - [ ] **forgot-password/**
-        - [ ] page.tsx
+        - [x] page.tsx
       - [ ] **login/**
-        - [ ] loading.tsx
-        - [ ] page.tsx
+        - [x] loading.tsx
+        - [x] page.tsx
       - [ ] **register/**
-        - [ ] loading.tsx
-        - [ ] page.tsx
+        - [x] loading.tsx
+        - [x] page.tsx
       - [ ] **reset-password/**
-        - [ ] page.tsx
-      - [ ] layout.tsx
+        - [x] page.tsx
+      - [x] layout.tsx
     - [ ] **[vanityname]/**
       - [ ] **[slug]/**
-        - [ ] page.tsx
+        - [x] page.tsx
     - [ ] **about-us/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
+      - [x] layout.tsx
+      - [x] page.tsx
     - [ ] **access-denied/**
-      - [ ] page.tsx
+      - [x] page.tsx
     - [ ] **admin/**
       - [ ] **ai/**
         - [ ] **components/**
           - [ ] ResultsViewerDialog.tsx
           - [ ] StatusBadges.tsx
           - [ ] index.ts
-        - [ ] page.tsx
+        - [x] page.tsx
         - [ ] types.ts
       - [ ] **ai-marketing/**
         - [ ] page.tsx
@@ -55,7 +55,7 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
           - [ ] TrafficTab.tsx
         - [ ] page.tsx
       - [ ] **announcement-bar/**
-        - [ ] page.tsx
+        - [x] page.tsx
       - [ ] **bug-reports/**
         - [ ] page.tsx
       - [ ] **changelog/**
@@ -1338,10 +1338,10 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
       - [ ] loading.tsx
       - [ ] page.tsx
       - [ ] types.ts
-    - [ ] **discover/**
-      - [ ] layout.tsx
-      - [ ] loading.tsx
-      - [ ] page.tsx
+    - [x] **discover/**
+      - [x] layout.tsx
+      - [x] loading.tsx
+      - [x] page.tsx
     - [ ] **explore/**
       - [ ] page.tsx
     - [ ] **faq/**
@@ -1607,13 +1607,13 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
         - [ ] story-step.tsx
     - [ ] **project-details/**
       - [ ] **tabs/**
-        - [ ] campaign-tab.tsx
-        - [ ] comments-tab.tsx
+        - [x] campaign-tab.tsx
+        - [x] comments-tab.tsx
         - [ ] community-tab.tsx
         - [ ] creator-tab.tsx
-        - [ ] faq-tab.tsx
+        - [x] faq-tab.tsx
         - [ ] index.ts
-        - [ ] rewards-tab.tsx
+        - [x] rewards-tab.tsx
         - [ ] updates-tab.tsx
       - [ ] index.ts
       - [ ] social-icons.tsx
@@ -1672,15 +1672,15 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
     - [ ] consent-banner.tsx
     - [ ] email-verification-banner.tsx
     - [ ] error-reporter.tsx
-    - [ ] footer.tsx
+    - [x] footer.tsx
     - [ ] google-analytics.tsx
     - [ ] hero-slider.tsx
-    - [ ] home-stats-poller.tsx
+    - [x] home-stats-poller.tsx
     - [ ] json-ld.tsx
     - [ ] mobile-profile-links.tsx
     - [ ] payment-settings.tsx
     - [ ] promo-popup.tsx
-    - [ ] site-header.tsx
+    - [x] site-header.tsx
     - [ ] theme-toggle.tsx
     - [ ] tracking-provider.tsx
     - [ ] user-profile-dropdown.tsx

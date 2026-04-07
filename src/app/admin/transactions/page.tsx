@@ -161,7 +161,7 @@ export default function TransactionsPage() {
             Comprehensive diagnostic view of all transactions across the platform
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"

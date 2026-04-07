@@ -339,14 +339,14 @@ export default function AdminChangelogPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Changelog Management</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Changelog Management</h1>
           <p className="text-muted-foreground">
             Document updates, fixes, and improvements
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <a href="/changelog" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4 mr-2" />

@@ -479,7 +479,7 @@ export default function IndieKitV2Page() {
               setSelectedProjectId(value);
               localStorage.setItem(SELECTED_PROJECT_KEY, value);
             }}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[140px] sm:w-[180px]">
                 <SelectValue placeholder="Select project" />
               </SelectTrigger>
               <SelectContent>

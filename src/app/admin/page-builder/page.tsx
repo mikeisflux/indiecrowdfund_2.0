@@ -421,8 +421,8 @@ export default function PageBuilderPage() {
       {/* Main Content - Canvas */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <div className="flex items-center justify-between rounded-lg border bg-white p-3 mb-4 dark:bg-zinc-900">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-white p-3 mb-4 dark:bg-zinc-900">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <Select value={selectedPageId || ""} onValueChange={handlePageChange}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Select a page" />
