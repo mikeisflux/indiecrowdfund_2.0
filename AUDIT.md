@@ -503,19 +503,20 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts` ✅
 - [x] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts` ✅
 - [x] `src/app/api/promo-popup/route.ts` ✅
-- [ ] `src/app/api/r2/serve/[...key]/route.ts` ⬜
-- [ ] `src/app/api/recommendations/route.ts` ⬜
-- [ ] `src/app/api/retailers/account/route.ts` ⬜
-- [ ] `src/app/api/retailers/apply/route.ts` ⬜
-- [ ] `src/app/api/retailers/forgot-password/route.ts` ⬜
-- [ ] `src/app/api/retailers/invoices/route.ts` ⬜
-- [ ] `src/app/api/retailers/login/route.ts` ⬜
-- [ ] `src/app/api/retailers/logout/route.ts` ⬜
-- [ ] `src/app/api/retailers/me/route.ts` ⬜
-- [ ] `src/app/api/retailers/orders/route.ts` ⬜
-- [ ] `src/app/api/retailers/projects/[id]/route.ts` ⬜
-- [ ] `src/app/api/retailers/projects/route.ts` ⬜
-- [ ] `src/app/api/retailers/reset-password/route.ts` ⬜
+- [x] `src/app/api/r2/serve/[...key]/route.ts` 🔧
+  - Fixed: admin role check used `findUnique` without `deletedAt: null` — a soft-deleted user with a live session and retained ADMIN/SUPER_ADMIN role could still access all R2 files
+- [x] `src/app/api/recommendations/route.ts` ✅
+- [x] `src/app/api/retailers/account/route.ts` ✅
+- [x] `src/app/api/retailers/apply/route.ts` ✅
+- [x] `src/app/api/retailers/forgot-password/route.ts` ✅
+- [x] `src/app/api/retailers/invoices/route.ts` ✅
+- [x] `src/app/api/retailers/login/route.ts` ✅
+- [x] `src/app/api/retailers/logout/route.ts` ✅
+- [x] `src/app/api/retailers/me/route.ts` ✅
+- [x] `src/app/api/retailers/orders/route.ts` ✅
+- [x] `src/app/api/retailers/projects/[id]/route.ts` ✅
+- [x] `src/app/api/retailers/projects/route.ts` ✅
+- [x] `src/app/api/retailers/reset-password/route.ts` ✅
 - [x] `src/app/api/retailers/session-auth/route.ts` ✅
 - [x] `src/app/api/rewards/[id]/copy-to-addon/route.ts` ✅
 - [x] `src/app/api/rewards/[id]/end/route.ts` ✅
