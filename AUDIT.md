@@ -281,11 +281,11 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/users/merge-duplicates/route.ts` ⬜
 - [ ] `src/app/api/admin/users/route.ts` ⬜
 - [ ] `src/app/api/admin/wallet/route.ts` ⬜
-- [ ] `src/app/api/ai/auto-tag/route.ts` ⬜
-- [ ] `src/app/api/ai/marketing-copy/route.ts` ⬜
-- [ ] `src/app/api/ai/moderate/route.ts` ⬜
-- [ ] `src/app/api/analytics/route.ts` ⬜
-- [ ] `src/app/api/announcement-bar/route.ts` ⬜
+- [x] `src/app/api/ai/auto-tag/route.ts` ✅
+- [x] `src/app/api/ai/marketing-copy/route.ts` ✅
+- [x] `src/app/api/ai/moderate/route.ts` ✅
+- [x] `src/app/api/analytics/route.ts` ✅
+- [x] `src/app/api/announcement-bar/route.ts` ✅
 - [x] `src/app/api/auth/config/route.ts` ✅
 - [ ] `src/app/api/auth/logout/route.ts` ⬜
 - [x] `src/app/api/auth/recaptcha/route.ts` ✅
@@ -309,21 +309,22 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/backer/marketplace-purchases/[id]/download/route.ts` ⬜
 - [ ] `src/app/api/backer/notifications/preferences/route.ts` ⬜
 - [ ] `src/app/api/backer/surveys/route.ts` ⬜
-- [ ] `src/app/api/blocked/route.ts` ⬜
+- [x] `src/app/api/blocked/route.ts` ✅
   - Fixed: `status` query param accepted any integer — attacker could force arbitrary HTTP status codes (e.g. 500, 200). Now whitelisted to `{400, 401, 403, 404, 429}`.
-- [ ] `src/app/api/bug-reports/route.ts` ⬜
-- [ ] `src/app/api/chat/admin/ban/route.ts` ⬜
-- [ ] `src/app/api/chat/admin/delete/route.ts` ⬜
-- [ ] `src/app/api/chat/messages/route.ts` ⬜
-- [ ] `src/app/api/chat/presence/route.ts` ⬜
-- [ ] `src/app/api/chat/stickers/route.ts` ⬜
+- [x] `src/app/api/bug-reports/route.ts` ✅
+  - ⚠️ No rate limiting on public POST — attacker can flood support inbox. Low priority since it requires valid email.
+- [x] `src/app/api/chat/admin/ban/route.ts` ✅
+- [x] `src/app/api/chat/admin/delete/route.ts` ✅
+- [x] `src/app/api/chat/messages/route.ts` ✅
+- [x] `src/app/api/chat/presence/route.ts` ✅
+- [x] `src/app/api/chat/stickers/route.ts` ✅
 - [ ] `src/app/api/collaborations/[id]/route.ts` ⬜
 - [ ] `src/app/api/collaborations/route.ts` ⬜
 - [ ] `src/app/api/collaborator/[id]/respond/route.ts` ⬜
 - [ ] `src/app/api/collaborator/[id]/route.ts` ⬜
-- [ ] `src/app/api/consent-banner/route.ts` ⬜
-- [ ] `src/app/api/contact/route.ts` ⬜
-  - Issue: No rate limiting on contact form — attacker can flood support email and drain email service credits. Zod validation and HTML escaping are correct.
+- [x] `src/app/api/consent-banner/route.ts` ✅
+- [x] `src/app/api/contact/route.ts` ✅
+  - ⚠️ No rate limiting on contact form — attacker can flood support email and drain email service credits. Zod validation and HTML escaping are correct.
 - [ ] `src/app/api/creator/account/avatar/route.ts` ⬜
 - [ ] `src/app/api/creator/account/password/route.ts` ⬜
 - [ ] `src/app/api/creator/account/preferences/route.ts` ⬜
@@ -423,19 +424,20 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/cron/process-failed-campaigns/route.ts` ⬜
 - [ ] `src/app/api/cron/process-funded-campaigns/route.ts` ⬜
 - [ ] `src/app/api/cron/scheduled-campaigns/route.ts` ⬜
-- [ ] `src/app/api/diagnostics/payment/route.ts` ⬜
-- [ ] `src/app/api/divinitycoin/config/route.ts` ⬜
-- [ ] `src/app/api/email/track/click/route.ts` ⬜
+- [x] `src/app/api/diagnostics/payment/route.ts` ✅
+  - No auth by design — logs only, no sensitive data returned.
+- [x] `src/app/api/divinitycoin/config/route.ts` ✅
+- [x] `src/app/api/email/track/click/route.ts` ✅
   - Fixed: Open redirect — when `campaignId` was absent, `decodedUrl` (from base64 query param) was redirected to without calling `isAllowedRedirectUrl`, allowing attacker to craft links that redirect to arbitrary external URLs. Now validates URL in both code paths.
-- [ ] `src/app/api/email/track/open/route.ts` ⬜
-- [ ] `src/app/api/error-report/route.ts` ⬜
-- [ ] `src/app/api/health/route.ts` ⬜
+- [x] `src/app/api/email/track/open/route.ts` ✅
+- [x] `src/app/api/error-report/route.ts` ✅
+- [x] `src/app/api/health/route.ts` ✅
   - Fixed: `db.user.count()`, `db.project.count()`, `db.pledge.count()` did not filter `deletedAt: null` — metrics inflated by soft-deleted records.
-- [ ] `src/app/api/hero-slides/route.ts` ⬜
-- [ ] `src/app/api/home-stats/route.ts` ⬜
-- [ ] `src/app/api/internal/blocked-ips/route.ts` ⬜
-- [ ] `src/app/api/lcs-locator/import/route.ts` ⬜
-- [ ] `src/app/api/lcs-locator/route.ts` ⬜
+- [x] `src/app/api/hero-slides/route.ts` ✅
+- [x] `src/app/api/home-stats/route.ts` ✅
+- [x] `src/app/api/internal/blocked-ips/route.ts` ✅
+- [x] `src/app/api/lcs-locator/import/route.ts` ✅
+- [x] `src/app/api/lcs-locator/route.ts` ✅
 - [ ] `src/app/api/marketplace/books/[slug]/route.ts` ⬜
 - [ ] `src/app/api/marketplace/books/route.ts` ⬜
 - [ ] `src/app/api/marketplace/checkout/route.ts` ⬜
@@ -450,15 +452,15 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/messages/route.ts` ⬜
   - Fixed: recipient and sender lookups used `findUnique` without `deletedAt: null` — soft-deleted users could receive and send messages
 - [ ] `src/app/api/messages/user-info/route.ts` ⬜
-- [ ] `src/app/api/metrics/route.ts` ⬜
-- [ ] `src/app/api/og/route.tsx` ⬜
+- [x] `src/app/api/metrics/route.ts` ✅
+- [x] `src/app/api/og/route.tsx` ✅
 - [ ] `src/app/api/pay/balance/confirm/route.ts` ⬜
   - Fixed: balance was credited without verifying actual payment success with Stripe/DC APIs — a valid token alone was enough to increment pledge.amount and project.currentAmount; now cross-checks PaymentIntent status before applying the credit
 - [ ] `src/app/api/pay/balance/route.ts` ⬜
 - [ ] `src/app/api/paypal/capture/[orderId]/route.ts` ⬜
 - [ ] `src/app/api/paypal/client-token/route.ts` ⬜
 - [ ] `src/app/api/paypal/config/route.ts` ⬜
-- [ ] `src/app/api/platform-stats/route.ts` ⬜
+- [x] `src/app/api/platform-stats/route.ts` ✅
 - [ ] `src/app/api/pledges/[pledgeId]/add-items/route.ts` ⬜
 - [ ] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts` ⬜
 - [ ] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ⬜
@@ -468,7 +470,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
   - Fixed: addon validation in "modify" action did not filter by `isEnded: false`, allowing ended addons to be assigned to a pledge modification
 - [ ] `src/app/api/pledges/check/route.ts` ⬜
 - [ ] `src/app/api/pledges/route.ts` ⬜
-- [ ] `src/app/api/privacy/ccpa-opt-out/route.ts` ⬜
+- [x] `src/app/api/privacy/ccpa-opt-out/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/basics/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/chargeback-card/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/collaborators/me/route.ts` ⬜
@@ -502,10 +504,10 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/projects/slug/[slug]/stats/route.ts` ⬜
 - [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts` ⬜
 - [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts` ⬜
-- [ ] `src/app/api/promo-popup/route.ts` ⬜
+- [x] `src/app/api/promo-popup/route.ts` ✅
 - [ ] `src/app/api/r2/serve/[...key]/route.ts` ⬜
   - Fixed: admin role check used `findUnique` without `deletedAt: null` — a soft-deleted user with a live session and retained ADMIN/SUPER_ADMIN role could still access all R2 files
-- [ ] `src/app/api/recommendations/route.ts` ⬜
+- [x] `src/app/api/recommendations/route.ts` ✅
 - [ ] `src/app/api/retailers/account/route.ts` ⬜
 - [ ] `src/app/api/retailers/apply/route.ts` ⬜
 - [ ] `src/app/api/retailers/forgot-password/route.ts` ⬜
@@ -534,13 +536,14 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
   - Fixed race condition on survey submit: atomic updateMany with isComplete:false guard prevents double-submission
 - [ ] `src/app/api/surveys/route.ts` ⬜
   - Issue: Legacy POST handler references non-existent schema fields (`Survey.title`, `Survey.description`, `Survey.questions`, `Survey.isActive`, `SurveyResponse.responses`). This code path is dead (real survey logic lives in `/api/creator/indiekit/surveys` and `/api/surveys/[pledgeId]/respond`). Not removed to avoid breaking any callers, but the `upsert` and `create` calls will fail at runtime if invoked.
-- [ ] `src/app/api/track/route.ts` ⬜
-- [ ] `src/app/api/tracking/route.ts` ⬜
+- [x] `src/app/api/track/route.ts` ✅
+- [x] `src/app/api/tracking/route.ts` ✅
   - Fixed: Client-supplied `userId` in request body was passed directly to analytics functions, allowing any caller to spoof another user's identity in tracking data. Now resolves userId exclusively from the authenticated session.
-- [ ] `src/app/api/unsubscribe/route.ts` ⬜
+- [x] `src/app/api/unsubscribe/route.ts` ✅
+  - Fixed: `APP_URL` env var was interpolated directly into `href` attribute without HTML escaping; now uses `safeAppUrl = escapeHtml(APP_URL)` to prevent XSS if the env var is tampered.
 - [ ] `src/app/api/updates/route.ts` ⬜
-- [ ] `src/app/api/upload/route.ts` ⬜
-- [ ] `src/app/api/uploads/[...path]/route.ts` ⬜
+- [x] `src/app/api/upload/route.ts` ✅
+- [x] `src/app/api/uploads/[...path]/route.ts` ✅
 - [ ] `src/app/api/user/activity/route.ts` ⬜
 - [ ] `src/app/api/user/data-deletion/route.ts` ⬜
 - [ ] `src/app/api/user/data-export/route.ts` ⬜

@@ -244,6 +244,7 @@ function renderUnsubscribePage(success: boolean, message: string): string {
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const safeMessage = escapeHtml(message);
   const safeAppName = escapeHtml(APP_NAME);
+  const safeAppUrl = escapeHtml(APP_URL);
 
   return `
     <!DOCTYPE html>
@@ -301,7 +302,7 @@ function renderUnsubscribePage(success: boolean, message: string): string {
           <div class="icon">${success ? "✓" : "✕"}</div>
           <h1>${success ? "Unsubscribed" : "Error"}</h1>
           <p class="message">${safeMessage}</p>
-          <a href="${APP_URL}" class="link">Return to ${safeAppName}</a>
+          <a href="${safeAppUrl}" class="link">Return to ${safeAppName}</a>
         </div>
       </body>
     </html>
