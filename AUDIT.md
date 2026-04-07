@@ -466,9 +466,9 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/pledges/[pledgeId]/route.ts` 🔧
   - Fixed: race condition — second modification request now blocked while pendingModification awaits payment (pendingModification guard in metadata)
   - Fixed: addon validation in "modify" action did not filter by `isEnded: false`, allowing ended addons to be assigned to a pledge modification
-- [ ] `src/app/api/pledges/check/route.ts` ⬜
-- [ ] `src/app/api/pledges/route.ts` ⬜
-- [ ] `src/app/api/privacy/ccpa-opt-out/route.ts` ⬜
+- [x] `src/app/api/pledges/check/route.ts` ✅
+- [x] `src/app/api/pledges/route.ts` ✅
+- [x] `src/app/api/privacy/ccpa-opt-out/route.ts` ✅
 - [x] `src/app/api/projects/[id]/basics/route.ts` ✅
 - [x] `src/app/api/projects/[id]/chargeback-card/route.ts` ✅
 - [x] `src/app/api/projects/[id]/collaborators/me/route.ts` ✅
@@ -502,7 +502,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/projects/slug/[slug]/stats/route.ts` ✅
 - [x] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts` ✅
 - [x] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts` ✅
-- [ ] `src/app/api/promo-popup/route.ts` ⬜
+- [x] `src/app/api/promo-popup/route.ts` ✅
 - [ ] `src/app/api/r2/serve/[...key]/route.ts` ⬜
 - [ ] `src/app/api/recommendations/route.ts` ⬜
 - [ ] `src/app/api/retailers/account/route.ts` ⬜
