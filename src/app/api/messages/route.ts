@@ -46,9 +46,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Verify recipient exists and get their details
-    const recipient = await db.user.findUnique({
-      where: { id: data.recipientId },
+    // Verify recipient exists and is not deleted
+    const recipient = await db.user.findFirst({
+      where: { id: data.recipientId, deletedAt: null },
       select: { id: true, email: true, name: true },
     });
 
@@ -56,9 +56,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Recipient not found" }, { status: 404 });
     }
 
-    // Get sender's name for the notification
-    const sender = await db.user.findUnique({
-      where: { id: session.user.id },
+    // Get sender's name for the notification (also guard deletedAt)
+    const sender = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { name: true },
     });
 

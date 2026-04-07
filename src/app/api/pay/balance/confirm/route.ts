@@ -3,6 +3,8 @@ import { logger } from "@/lib/logger";
 
 const payBalanceConfirmLogger = logger.child({ module: "pay-balance-confirm" });
 import { db } from "@/lib/db";
+import { getStripeInstance } from "@/lib/payments/stripe/config";
+import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 
 // POST - Confirm balance payment was successful
 export async function POST(req: NextRequest) {
@@ -14,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 });
     }
 
-    // Find pledge with this payment token
+    // Find pledge with this payment token (include project for payment processor)
     const pledges = await db.pledge.findMany({
       where: {
         status: "COMPLETED",
@@ -22,6 +24,11 @@ export async function POST(req: NextRequest) {
         metadata: {
           path: ["balancePaymentToken"],
           equals: token,
+        },
+      },
+      include: {
+        project: {
+          select: { paymentProcessor: true },
         },
       },
     });
@@ -36,6 +43,59 @@ export async function POST(req: NextRequest) {
     // Check if already confirmed
     if (meta.balancePaymentCompletedAt) {
       return NextResponse.json({ success: true, message: "Already confirmed" });
+    }
+
+    // Verify the payment actually succeeded before crediting the balance.
+    // The caller supplies a paymentIntentId; we cross-check it against the stored
+    // ID in metadata and then confirm success with the payment processor.
+    const storedIntentId = meta.balancePaymentIntentId as string | undefined;
+    const storedDcPaymentId = meta.balanceDivinityCoinPaymentId as string | undefined;
+    const paymentProcessor = (pledge as { project?: { paymentProcessor?: string } }).project?.paymentProcessor;
+
+    // Determine which payment ID to verify
+    const effectiveIntentId = paymentIntentId || storedIntentId;
+
+    if (storedDcPaymentId || paymentProcessor === "DIVINITYCOIN") {
+      // DivinityCoin: verify via API
+      const dcIntentId = effectiveIntentId || storedDcPaymentId;
+      if (!dcIntentId) {
+        payBalanceConfirmLogger.warn({ pledgeId: pledge.id }, "[Balance Confirm] No DC payment ID to verify");
+        return NextResponse.json({ error: "Payment not verified — missing payment reference" }, { status: 400 });
+      }
+      try {
+        const verifyResult = await callDivinityCoinAPI("verify-payment", { paymentIntentId: dcIntentId });
+        if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
+          payBalanceConfirmLogger.warn({ pledgeId: pledge.id, dcIntentId }, "[Balance Confirm] DC payment not succeeded");
+          return NextResponse.json({ error: "Payment not completed. Please try again." }, { status: 400 });
+        }
+      } catch (dcErr) {
+        payBalanceConfirmLogger.error({ err: String(dcErr) }, "[Balance Confirm] DC verify error:");
+        return NextResponse.json({ error: "Could not verify payment. Please try again." }, { status: 500 });
+      }
+    } else {
+      // Stripe: verify the PaymentIntent status
+      if (!effectiveIntentId) {
+        payBalanceConfirmLogger.warn({ pledgeId: pledge.id }, "[Balance Confirm] No Stripe payment intent ID to verify");
+        return NextResponse.json({ error: "Payment not verified — missing payment reference" }, { status: 400 });
+      }
+      // Reject if caller-supplied ID doesn't match the stored ID (tampering guard)
+      if (storedIntentId && paymentIntentId && paymentIntentId !== storedIntentId) {
+        payBalanceConfirmLogger.warn({ pledgeId: pledge.id, paymentIntentId, storedIntentId }, "[Balance Confirm] PaymentIntent ID mismatch");
+        return NextResponse.json({ error: "Invalid payment reference" }, { status: 400 });
+      }
+      try {
+        const stripe = await getStripeInstance();
+        if (stripe) {
+          const pi = await stripe.paymentIntents.retrieve(effectiveIntentId);
+          if (pi.status !== "succeeded") {
+            payBalanceConfirmLogger.warn({ pledgeId: pledge.id, piStatus: pi.status }, "[Balance Confirm] Stripe PI not succeeded");
+            return NextResponse.json({ error: "Payment not completed. Please try again." }, { status: 400 });
+          }
+        }
+      } catch (stripeErr) {
+        payBalanceConfirmLogger.error({ err: String(stripeErr) }, "[Balance Confirm] Stripe verify error:");
+        return NextResponse.json({ error: "Could not verify payment. Please try again." }, { status: 500 });
+      }
     }
 
     // Calculate balance due — prefer the stored value (set by order edits or balance adjustments)

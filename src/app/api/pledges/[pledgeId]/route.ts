@@ -575,13 +575,14 @@ export async function PATCH(
         }
       }
 
-      // Validate addons if provided
+      // Validate addons if provided (only active, non-ended addons)
       if (addonIdList.length > 0) {
         const validAddons = await db.reward.findMany({
           where: {
             id: { in: addonIdList },
             projectId: pledge.projectId,
             type: "ADDON",
+            isEnded: false,
           },
         });
 

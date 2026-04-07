@@ -449,16 +449,17 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/marketplace/validate-code/route.ts` ✅
 - [x] `src/app/api/messages/route.ts` 🔧
   - Fixed: recipient and sender lookups used `findUnique` without `deletedAt: null` — soft-deleted users could receive and send messages
-- [ ] `src/app/api/messages/user-info/route.ts` ⬜
-- [ ] `src/app/api/metrics/route.ts` ⬜
-- [ ] `src/app/api/og/route.tsx` ⬜
-- [ ] `src/app/api/pay/balance/confirm/route.ts` ⬜
-- [ ] `src/app/api/pay/balance/route.ts` ⬜
+- [x] `src/app/api/messages/user-info/route.ts` ✅
+- [x] `src/app/api/metrics/route.ts` ✅
+- [x] `src/app/api/og/route.tsx` ✅
+- [x] `src/app/api/pay/balance/confirm/route.ts` 🔧
+  - Fixed: balance was credited without verifying actual payment success with Stripe/DC APIs — a valid token alone was enough to increment pledge.amount and project.currentAmount; now cross-checks PaymentIntent status before applying the credit
+- [x] `src/app/api/pay/balance/route.ts` ✅
 - [x] `src/app/api/paypal/capture/[orderId]/route.ts` ✅
 - [x] `src/app/api/paypal/client-token/route.ts` ✅
 - [x] `src/app/api/paypal/config/route.ts` ✅
-- [ ] `src/app/api/platform-stats/route.ts` ⬜
-- [ ] `src/app/api/pledges/[pledgeId]/add-items/route.ts` ⬜
+- [x] `src/app/api/platform-stats/route.ts` ✅
+- [x] `src/app/api/pledges/[pledgeId]/add-items/route.ts` ✅
 - [ ] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts` ⬜
 - [ ] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ⬜
 - [ ] `src/app/api/pledges/[pledgeId]/confirm/route.ts` ⬜

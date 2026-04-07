@@ -38,8 +38,8 @@ export async function GET(
 
     // Check if user is admin (for approval workflow)
     const { db } = await import("@/lib/db");
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
     const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
