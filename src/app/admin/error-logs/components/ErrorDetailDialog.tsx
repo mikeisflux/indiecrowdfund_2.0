@@ -149,7 +149,7 @@ export function ErrorDetailDialog({
         </div>
 
         {/* Additional metadata */}
-        {group.latestMetadata && (
+        {group.latestMetadata != null && (
           <div className="space-y-1">
             <h3 className="text-sm font-medium text-muted-foreground">
               Additional Data

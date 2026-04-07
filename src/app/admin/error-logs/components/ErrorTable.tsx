@@ -8,7 +8,8 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
-  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Clock,
   EyeOff,
   AlertCircle,
@@ -57,6 +58,16 @@ export function ErrorTable({
 }: ErrorTableProps) {
   const allSelected = groups.length > 0 && selectedIds.size === groups.length;
 
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortBy !== field)
+      return <ArrowDown className="h-3 w-3 opacity-30" />;
+    return sortOrder === "asc" ? (
+      <ArrowUp className="h-3 w-3 text-foreground" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-foreground" />
+    );
+  };
+
   return (
     <Card>
       {/* ── Desktop table (md+) ── */}
@@ -75,18 +86,14 @@ export function ErrorTable({
             className="w-20 text-right flex items-center justify-end gap-1 hover:text-foreground transition-colors"
           >
             Events
-            <ArrowUpDown
-              className={`h-3 w-3 ${sortBy === "eventCount" ? "text-foreground" : ""}`}
-            />
+            <SortIcon field="eventCount" />
           </button>
           <button
             onClick={() => onSort("lastSeen")}
             className="w-24 text-right flex items-center justify-end gap-1 hover:text-foreground transition-colors"
           >
             Last Seen
-            <ArrowUpDown
-              className={`h-3 w-3 ${sortBy === "lastSeen" ? "text-foreground" : ""}`}
-            />
+            <SortIcon field="lastSeen" />
           </button>
           <div className="w-24 text-right">First Seen</div>
           <div className="w-24 text-right">Status</div>
