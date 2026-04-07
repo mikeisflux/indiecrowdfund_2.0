@@ -331,7 +331,8 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/backer/surveys/route.ts` ✅
 - [x] `src/app/api/blocked/route.ts` ✅
   - Fixed: `status` query param accepted any integer — attacker could force arbitrary HTTP status codes (e.g. 500, 200). Now whitelisted to `{400, 401, 403, 404, 429}`.
-- [x] `src/app/api/bug-reports/route.ts` ✅
+- [x] `src/app/api/bug-reports/route.ts` 🔧
+  - Fixed: No rate limiting on public POST — added 10 requests/hour per IP
   - ⚠️ No rate limiting on public POST — attacker can flood support inbox. Low priority since it requires valid email.
 - [x] `src/app/api/chat/admin/ban/route.ts` ✅
 - [x] `src/app/api/chat/admin/delete/route.ts` ✅
@@ -343,7 +344,8 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/collaborator/[id]/respond/route.ts` ✅
 - [x] `src/app/api/collaborator/[id]/route.ts` ✅
 - [x] `src/app/api/consent-banner/route.ts` ✅
-- [x] `src/app/api/contact/route.ts` ✅
+- [x] `src/app/api/contact/route.ts` 🔧
+  - Fixed: No rate limiting on public POST — added 5 requests/10min per IP
   - ⚠️ No rate limiting on contact form — attacker can flood support email and drain email service credits. Zod validation and HTML escaping are correct.
 - [x] `src/app/api/creator/account/avatar/route.ts` ✅
 - [x] `src/app/api/creator/account/password/route.ts` ✅

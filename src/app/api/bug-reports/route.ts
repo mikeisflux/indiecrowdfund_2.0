@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { sendBugReportResolutionEmail } from "@/lib/email/email-templates-misc";
+import { rateLimiter } from "@/lib/rate-limiter";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -38,6 +39,16 @@ const bugReportSchema = z.object({
 // POST - Submit a new bug report
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 10 reports per IP per hour
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rl = await rateLimiter.check("bug-reports", ip, { limit: 10, windowSec: 3600 });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait before submitting again." },
+        { status: 429, headers: { "Retry-After": String(rl.resetAt - Math.floor(Date.now() / 1000)) } }
+      );
+    }
+
     const session = await auth();
     const body = await req.json();
 

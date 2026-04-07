@@ -6,6 +6,7 @@ import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { db } from "@/lib/db";
 import { escapeHtml, escapeHtmlForEmail } from "@/lib/utils/api-params";
+import { rateLimiter } from "@/lib/rate-limiter";
 
 // Schema for contact form validation
 const contactSchema = z.object({
@@ -26,6 +27,16 @@ const categoryLabels: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 5 submissions per IP per 10 minutes
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rl = await rateLimiter.check("contact", ip, { limit: 5, windowSec: 600 });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait before submitting again." },
+        { status: 429, headers: { "Retry-After": String(rl.resetAt - Math.floor(Date.now() / 1000)) } }
+      );
+    }
+
     const body = await req.json();
 
     // Validate input
