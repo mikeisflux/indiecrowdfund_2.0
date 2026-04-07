@@ -44,37 +44,37 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
           - [ ] index.ts
         - [x] page.tsx
         - [ ] types.ts
-      - [ ] **ai-marketing/**
-        - [ ] page.tsx
-      - [ ] **analytics/**
-        - [ ] **components/**
-          - [ ] GeographyTab.tsx
-          - [ ] OverviewTab.tsx
-          - [ ] ProjectsAnalyticsTab.tsx
-          - [ ] RevenueTab.tsx
-          - [ ] TrafficTab.tsx
-        - [ ] page.tsx
+      - [x] **ai-marketing/**
+        - [x] page.tsx
+      - [x] **analytics/**
+        - [x] **components/**
+          - [x] GeographyTab.tsx
+          - [x] OverviewTab.tsx
+          - [x] ProjectsAnalyticsTab.tsx
+          - [x] RevenueTab.tsx
+          - [x] TrafficTab.tsx
+        - [x] page.tsx
       - [ ] **announcement-bar/**
         - [x] page.tsx
-      - [ ] **bug-reports/**
-        - [ ] page.tsx
-      - [ ] **changelog/**
-        - [ ] page.tsx
-      - [ ] **consent-banner/**
-        - [ ] page.tsx
-      - [ ] **cron/**
-        - [ ] page.tsx
-      - [ ] **divinitycoin-redemptions/**
-        - [ ] page.tsx
-      - [ ] **email/**
-        - [ ] **components/**
+      - [x] **bug-reports/**
+        - [x] page.tsx
+      - [x] **changelog/**
+        - [x] page.tsx
+      - [x] **consent-banner/**
+        - [x] page.tsx
+      - [x] **cron/**
+        - [x] page.tsx
+      - [x] **divinitycoin-redemptions/**
+        - [x] page.tsx
+      - [x] **email/**
+        - [x] **components/**
           - [ ] ComposeEmailDialog.tsx
           - [ ] MailboxDialog.tsx
           - [ ] index.ts
           - [ ] types.ts
         - [ ] page.tsx
-      - [ ] **email-queue/**
-        - [ ] page.tsx
+      - [x] **email-queue/**
+        - [x] page.tsx
       - [ ] **error-logs/**
         - [ ] **components/**
           - [ ] ErrorDetailDialog.tsx
@@ -83,12 +83,12 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
           - [ ] helpers.tsx
           - [ ] types.ts
         - [ ] page.tsx
-      - [ ] **hero-slider/**
-        - [ ] page.tsx
-      - [ ] **lcs-locator/**
-        - [ ] page.tsx
-      - [ ] **link-sanitizer/**
-        - [ ] page.tsx
+      - [x] **hero-slider/**
+        - [x] page.tsx
+      - [x] **lcs-locator/**
+        - [x] page.tsx
+      - [x] **link-sanitizer/**
+        - [x] page.tsx
       - [ ] **marketplace/**
         - [ ] **components/**
           - [ ] AddToCategoryDialog.tsx
@@ -116,13 +116,13 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
           - [ ] index.ts
         - [ ] page.tsx
         - [ ] types.ts
-      - [ ] **moderation/**
-        - [ ] page.tsx
-      - [ ] **notifications/**
-        - [ ] page.tsx
-      - [ ] **page-builder/**
-        - [ ] page.tsx
-      - [ ] **payouts/**
+      - [x] **moderation/**
+        - [x] page.tsx
+      - [x] **notifications/**
+        - [x] page.tsx
+      - [x] **page-builder/**
+        - [x] page.tsx
+      - [x] **payouts/**
         - [ ] **components/**
           - [ ] BankDetailsDialog.tsx
           - [ ] CreateSettlementDialog.tsx
@@ -136,7 +136,7 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
         - [ ] page.tsx
       - [ ] **prelaunch/**
         - [ ] page.tsx
-      - [ ] **projects/**
+      - [x] **projects/**
         - [ ] **components/**
           - [ ] **dialogs/**
             - [ ] adjust-end-date-dialog.tsx
@@ -207,7 +207,7 @@ This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. E
           - [ ] types.ts
           - [ ] utils.ts
         - [ ] page.tsx
-      - [ ] **users/**
+      - [x] **users/**
         - [ ] **components/**
           - [ ] **dialogs/**
             - [ ] add-user-dialog.tsx
