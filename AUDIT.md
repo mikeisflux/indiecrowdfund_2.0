@@ -232,16 +232,16 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/marketplace/books/[id]/review/route.ts` ✅
 - [x] `src/app/api/admin/marketplace/books/[id]/route.ts` 🔧
   - Fixed: findUnique → findFirst with deletedAt: null
-- [ ] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/reorder/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/history/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/pdf-management/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/transactions/route.ts` ⬜
-- [ ] `src/app/api/admin/media/route.ts` ⬜
-- [ ] `src/app/api/admin/media/scan/route.ts` ⬜
-- [ ] `src/app/api/admin/media/upload/route.ts` ⬜
-- [ ] `src/app/api/admin/notifications/route.ts` ⬜
+- [x] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/reorder/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/history/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/pdf-management/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/transactions/route.ts` ✅
+- [x] `src/app/api/admin/media/route.ts` ✅
+- [x] `src/app/api/admin/media/scan/route.ts` ✅
+- [x] `src/app/api/admin/media/upload/route.ts` ✅
+- [x] `src/app/api/admin/notifications/route.ts` ✅
 - [ ] `src/app/api/admin/pages/route.ts` ⬜
 - [ ] `src/app/api/admin/payouts/divinitycoin/route.ts` ⬜
 - [ ] `src/app/api/admin/payouts/paypal/route.ts` ⬜
@@ -508,8 +508,10 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/projects/slug/[slug]/check/route.ts` ⬜
 - [ ] `src/app/api/projects/slug/[slug]/route.ts` ⬜
 - [ ] `src/app/api/projects/slug/[slug]/stats/route.ts` ⬜
-- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts` ✅
-- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts` ✅
+- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts` 🔧
+  - Fixed: Creator lookup by `vanityUrl` used `findUnique` without `deletedAt: null`.
+- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts` 🔧
+  - Fixed: Creator lookup used `findUnique` without `deletedAt: null`.
 - [x] `src/app/api/promo-popup/route.ts` ✅
 - [x] `src/app/api/r2/serve/[...key]/route.ts` ✅
   - Fixed: admin role check used `findUnique` without `deletedAt: null` — a soft-deleted user with a live session and retained ADMIN/SUPER_ADMIN role could still access all R2 files
@@ -540,8 +542,8 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/stripe/connect/status/route.ts` ⬜
 - [ ] `src/app/api/surveys/[pledgeId]/respond/route.ts` ⬜
   - Fixed race condition on survey submit: atomic updateMany with isComplete:false guard prevents double-submission
-- [x] `src/app/api/surveys/route.ts` ✅
-  - Issue: Legacy POST handler references non-existent schema fields (`Survey.title`, `Survey.description`, `Survey.questions`, `Survey.isActive`, `SurveyResponse.responses`). This code path is dead (real survey logic lives in `/api/creator/indiekit/surveys` and `/api/surveys/[pledgeId]/respond`). Not removed to avoid breaking any callers, but the `upsert` and `create` calls will fail at runtime if invoked.
+- [x] `src/app/api/surveys/route.ts` 🔧
+  - Fixed: Legacy POST handler used non-existent Survey schema fields (`title`, `description`, `questions`); upsert now maps to correct fields (`introTitle`, `introMessage`). Fixed GET handler `select: { isActive: true }` → `select: { status: true }`.
 - [x] `src/app/api/track/route.ts` ✅
 - [x] `src/app/api/tracking/route.ts` ✅
   - Fixed: Client-supplied `userId` in request body was passed directly to analytics functions, allowing any caller to spoof another user's identity in tracking data. Now resolves userId exclusively from the authenticated session.
@@ -554,16 +556,22 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/user/data-deletion/route.ts` ✅
 - [ ] `src/app/api/user/data-export/route.ts` ⬜
 - [x] `src/app/api/user/following/route.ts` ✅
-- [x] `src/app/api/user/me/route.ts` ✅
+- [x] `src/app/api/user/me/route.ts` 🔧
+  - Fixed: `findUnique` without `deletedAt: null` allowed soft-deleted users to retrieve their own data.
 - [x] `src/app/api/user/notifications/route.ts` ✅
-- [x] `src/app/api/user/profile-dropdown/route.ts` ✅
-- [x] `src/app/api/user/profile/route.ts` ✅
+- [x] `src/app/api/user/profile-dropdown/route.ts` 🔧
+  - Fixed: `findUnique` without `deletedAt: null` for current user lookup.
+- [x] `src/app/api/user/profile/route.ts` 🔧
+  - Fixed: `findUnique` without `deletedAt: null` in GET handler.
 - [x] `src/app/api/user/public-profile/[username]/route.ts` ✅
   - Fixed: `email` field was included in the `select` of a public endpoint, leaking private user data. Also missing `deletedAt: null` filter allowed returning soft-deleted user profiles.
 - [ ] `src/app/api/user/settings/email/route.ts` ⬜
-- [x] `src/app/api/user/settings/route.ts` ✅
-- [x] `src/app/api/user/vanity-url/route.ts` ✅
-- [x] `src/app/api/user/verify-email/route.ts` ✅
+- [x] `src/app/api/user/settings/route.ts` 🔧
+  - Fixed: `findUnique` without `deletedAt: null` in GET handler; soft-deleted users could still fetch settings.
+- [x] `src/app/api/user/vanity-url/route.ts` 🔧
+  - Fixed: Two `findUnique` calls without `deletedAt: null`.
+- [x] `src/app/api/user/verify-email/route.ts` 🔧
+  - Fixed: `findUnique` without `deletedAt: null`; soft-deleted users could trigger verification emails.
 - [ ] `src/app/api/verify-id/callback/route.ts` ⬜
 - [ ] `src/app/api/verify-id/check/route.ts` ⬜
 - [ ] `src/app/api/verify-id/route.ts` ⬜
