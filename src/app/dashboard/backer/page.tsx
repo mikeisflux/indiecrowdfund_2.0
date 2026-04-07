@@ -708,9 +708,9 @@ export default function BackerDashboard() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           {/* Main Content */}
-          <div className="lg:col-span-2" ref={tabsRef}>
+          <div className="md:col-span-2" ref={tabsRef}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <div className="overflow-x-auto pb-1">
               <TabsList className="bg-card/50 backdrop-blur border border-border/50 p-1 inline-flex w-max h-auto gap-1">
