@@ -36,8 +36,8 @@ export async function GET(
 
     const { id } = await params;
 
-    const book = await prisma.marketplaceBook.findUnique({
-      where: { id },
+    const book = await prisma.marketplaceBook.findFirst({
+      where: { id, deletedAt: null },
       include: {
         creator: {
           select: {
@@ -91,8 +91,8 @@ export async function PATCH(
 
     const { id } = await params;
 
-    const book = await prisma.marketplaceBook.findUnique({
-      where: { id },
+    const book = await prisma.marketplaceBook.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!book) {

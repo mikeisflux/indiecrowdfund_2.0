@@ -13,8 +13,8 @@ export async function GET() {
       return NextResponse.json({ user: null });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: {
         id: true,
         name: true,

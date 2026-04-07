@@ -17,8 +17,8 @@ export async function GET() {
     const userId = session.user.id;
 
     // Get user's vanity URL for created projects
-    const currentUser = await db.user.findUnique({
-      where: { id: userId },
+    const currentUser = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: { vanityUrl: true },
     });
     const userVanityUrl = currentUser?.vanityUrl;

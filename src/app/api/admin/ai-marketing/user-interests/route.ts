@@ -169,7 +169,7 @@ export async function GET(request: Request) {
       // Get user details
       const userIds = matches.map((m) => m.userId);
       const users = await db.user.findMany({
-        where: { id: { in: userIds } },
+        where: { id: { in: userIds }, deletedAt: null },
         select: {
           id: true,
           name: true,

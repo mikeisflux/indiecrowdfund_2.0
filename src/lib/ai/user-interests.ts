@@ -418,7 +418,7 @@ export async function findMatchingProjectsForUser(
   }
 
   // Get candidate projects
-  const whereClause: { status?: string; id?: { notIn: string[] } } = {};
+  const whereClause: { status?: string; id?: { notIn: string[] }; deletedAt: null } = { deletedAt: null };
   if (status !== "ALL") {
     whereClause.status = status;
   }

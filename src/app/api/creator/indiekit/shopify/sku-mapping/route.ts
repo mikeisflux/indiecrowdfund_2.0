@@ -400,6 +400,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Mapping ID required" }, { status: 400 });
       }
 
+      // Verify the mapping belongs to this project before deleting
+      const existingForDelete = await db.shopifySkuMapping.findFirst({
+        where: { id: mappingId, projectId },
+      });
+
+      if (!existingForDelete) {
+        return NextResponse.json({ error: "Mapping not found" }, { status: 404 });
+      }
+
       await db.shopifySkuMapping.delete({
         where: { id: mappingId },
       });

@@ -90,6 +90,7 @@ export async function POST(request: Request) {
         // Get active users
         const users = await db.user.findMany({
           where: {
+            deletedAt: null,
             behaviors: {
               some: {
                 timestamp: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) },
@@ -139,6 +140,7 @@ export async function POST(request: Request) {
         // Get users with behavior data
         const users = await db.user.findMany({
           where: {
+            deletedAt: null,
             behaviors: { some: {} },
           },
           take: limit,
@@ -186,6 +188,7 @@ export async function POST(request: Request) {
         // Get projects without tags
         const projects = await db.project.findMany({
           where: {
+            deletedAt: null,
             OR: [{ tags: { isEmpty: true } }, { tags: { equals: [] } }],
           },
           take: limit,

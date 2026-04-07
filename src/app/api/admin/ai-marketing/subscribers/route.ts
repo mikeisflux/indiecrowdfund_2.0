@@ -158,6 +158,7 @@ export async function GET(req: NextRequest) {
     if (category === "all" || category === "verified") {
       const verifiedUsers = await db.user.findMany({
         where: {
+          deletedAt: null,
           emailVerified: { not: null },
           ...(search ? {
             OR: [
@@ -192,6 +193,7 @@ export async function GET(req: NextRequest) {
       if (category === "verified") {
         total = await db.user.count({
           where: {
+            deletedAt: null,
             emailVerified: { not: null },
             ...(search ? {
               OR: [
@@ -213,6 +215,7 @@ export async function GET(req: NextRequest) {
 
       const backerUsers = await db.user.findMany({
         where: {
+          deletedAt: null,
           id: { in: backerUserIds.map(b => b.userId) },
           ...(search ? {
             OR: [
@@ -252,6 +255,7 @@ export async function GET(req: NextRequest) {
     if (category === "all" || category === "creators") {
       const creatorUsers = await db.user.findMany({
         where: {
+          deletedAt: null,
           createdProjects: { some: {} },
           ...(search ? {
             OR: [
@@ -286,6 +290,7 @@ export async function GET(req: NextRequest) {
       if (category === "creators") {
         total = await db.user.count({
           where: {
+            deletedAt: null,
             createdProjects: { some: {} },
             ...(search ? {
               OR: [

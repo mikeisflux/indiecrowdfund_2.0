@@ -387,6 +387,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "assignmentId required" }, { status: 400 });
       }
 
+      // Verify the assignment belongs to a pledge in this project before deleting
+      const assignment = await db.pledgeModifierAssignment.findFirst({
+        where: {
+          id: assignmentId,
+          pledge: { projectId },
+        },
+      });
+
+      if (!assignment) {
+        return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
+      }
+
       await db.pledgeModifierAssignment.delete({
         where: { id: assignmentId },
       });
@@ -487,6 +499,15 @@ export async function POST(req: NextRequest) {
 
       if (!mappingId) {
         return NextResponse.json({ error: "mappingId required" }, { status: 400 });
+      }
+
+      // Verify the mapping belongs to this project before deleting
+      const existingMapping = await db.modifierSkuMapping.findFirst({
+        where: { id: mappingId, projectId },
+      });
+
+      if (!existingMapping) {
+        return NextResponse.json({ error: "Modifier SKU mapping not found" }, { status: 404 });
       }
 
       await db.modifierSkuMapping.delete({
