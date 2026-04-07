@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
     // Calculate recipient count based on target audience
     let recipientCount = 0;
     if (targetAudience === "all") {
-      recipientCount = await db.user.count();
+      recipientCount = await db.user.count({ where: { deletedAt: null } });
     } else if (targetAudience === "backers") {
       recipientCount = await db.user.count({
         where: { pledges: { some: { deletedAt: null, status: "COMPLETED" } } }

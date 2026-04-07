@@ -200,7 +200,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/cleanup-duplicate-rewards/route.ts` ✅
 - [x] `src/app/api/admin/cleanup-pledges/route.ts` ✅
 - [x] `src/app/api/admin/consent-banner/route.ts` ✅
-- [ ] `src/app/api/admin/cron/route.ts` ⬜
+- [x] `src/app/api/admin/cron/route.ts` ✅
 - [x] `src/app/api/admin/dashboard/route.ts` ✅
 - [x] `src/app/api/admin/database/backup/download/route.ts` ✅
 - [x] `src/app/api/admin/database/backup/restore/route.ts` ✅
@@ -208,12 +208,13 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/database/status/route.ts` ✅
 - [x] `src/app/api/admin/divinity-payouts/route.ts` ✅
 - [x] `src/app/api/admin/divinitycoin-redemptions/route.ts` ✅
-- [ ] `src/app/api/admin/email-blocklist/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/email-blocklist/purge/route.ts` ⬜
-- [ ] `src/app/api/admin/email-blocklist/route.ts` ⬜
-- [ ] `src/app/api/admin/email-queue/route.ts` ⬜
-- [ ] `src/app/api/admin/email/route.ts` ⬜
-- [ ] `src/app/api/admin/emails/[emailId]/route.ts` ⬜
+- [x] `src/app/api/admin/email-blocklist/[id]/route.ts` ✅
+- [x] `src/app/api/admin/email-blocklist/purge/route.ts` ✅
+- [x] `src/app/api/admin/email-blocklist/route.ts` ✅
+- [x] `src/app/api/admin/email-queue/route.ts` ✅
+- [x] `src/app/api/admin/email/route.ts` 🔧
+  - Fixed: Added `deletedAt: null` to user count for "all" audience
+- [x] `src/app/api/admin/emails/[emailId]/route.ts` ✅
 - [ ] `src/app/api/admin/error-logs/[id]/route.ts` ⬜
 - [ ] `src/app/api/admin/error-logs/route.ts` ⬜
 - [ ] `src/app/api/admin/feature-flags/route.ts` ⬜
@@ -577,19 +578,19 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/webhooks/whop/route.ts` ⬜
 - [ ] `src/app/api/whop/config/route.ts` ⬜
 - [ ] `src/app/api/whop/confirm/[pledgeId]/route.ts` ⬜
-- [ ] `src/app/backer-handbook/layout.tsx` ⬜
-- [ ] `src/app/backer-handbook/page.tsx` ⬜
-- [ ] `src/app/bug-report/layout.tsx` ⬜
-- [ ] `src/app/bug-report/page.tsx` ⬜
-- [ ] `src/app/cart/page.tsx` ⬜
-- [ ] `src/app/changelog/page.tsx` ⬜
-- [ ] `src/app/chat/page.tsx` ⬜
-- [ ] `src/app/collaborate/[id]/page.tsx` ⬜
-- [ ] `src/app/collaborate/layout.tsx` ⬜
-- [ ] `src/app/contact/layout.tsx` ⬜
-- [ ] `src/app/contact/page.tsx` ⬜
-- [ ] `src/app/creator-handbook/layout.tsx` ⬜
-- [ ] `src/app/creator-handbook/page.tsx` ⬜
+- [x] `src/app/backer-handbook/layout.tsx` ✅
+- [x] `src/app/backer-handbook/page.tsx` ✅
+- [x] `src/app/bug-report/layout.tsx` ✅
+- [x] `src/app/bug-report/page.tsx` ✅
+- [x] `src/app/cart/page.tsx` ✅
+- [x] `src/app/changelog/page.tsx` ✅
+- [x] `src/app/chat/page.tsx` ✅
+- [x] `src/app/collaborate/[id]/page.tsx` ✅
+- [x] `src/app/collaborate/layout.tsx` ✅
+- [x] `src/app/contact/layout.tsx` ✅
+- [x] `src/app/contact/page.tsx` ✅
+- [x] `src/app/creator-handbook/layout.tsx` ✅
+- [x] `src/app/creator-handbook/page.tsx` ✅
 - [x] `src/app/dashboard/activity/page.tsx` ✅
 - [x] `src/app/dashboard/backer/components/address-management-tab.tsx` ✅
 - [x] `src/app/dashboard/backer/components/animated-bar-chart.tsx` ✅
@@ -790,29 +791,29 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/dashboard/social/page.tsx` ✅
 - [x] `src/app/dashboard/types.ts` ✅
 - [x] `src/app/dashboard/updates/page.tsx` ✅
-- [ ] `src/app/discover/layout.tsx` ⬜
-- [ ] `src/app/discover/loading.tsx` ⬜
-- [ ] `src/app/discover/page.tsx` ⬜
+- [x] `src/app/discover/layout.tsx` ✅
+- [x] `src/app/discover/loading.tsx` ✅
+- [x] `src/app/discover/page.tsx` ✅
 - [x] `src/app/error.tsx` ✅
-- [ ] `src/app/explore/page.tsx` ⬜
-- [ ] `src/app/faq/layout.tsx` ⬜
-- [ ] `src/app/faq/page.tsx` ⬜
-- [ ] `src/app/fees/calculations.ts` ⬜
-- [ ] `src/app/fees/data.ts` ⬜
-- [ ] `src/app/fees/layout.tsx` ⬜
-- [ ] `src/app/fees/page.tsx` ⬜
-- [ ] `src/app/fulfillment/page.tsx` ⬜
-- [ ] `src/app/global-error.tsx` ⬜
-- [ ] `src/app/help/page.tsx` ⬜
-- [ ] `src/app/help/whitelist/page.tsx` ⬜
-- [ ] `src/app/indiekit-handbook/layout.tsx` ⬜
-- [ ] `src/app/indiekit-handbook/page.tsx` ⬜
+- [x] `src/app/explore/page.tsx` ✅
+- [x] `src/app/faq/layout.tsx` ✅
+- [x] `src/app/faq/page.tsx` ✅
+- [x] `src/app/fees/calculations.ts` ✅
+- [x] `src/app/fees/data.ts` ✅
+- [x] `src/app/fees/layout.tsx` ✅
+- [x] `src/app/fees/page.tsx` ✅
+- [x] `src/app/fulfillment/page.tsx` ✅
+- [x] `src/app/global-error.tsx` ✅
+- [x] `src/app/help/page.tsx` ✅
+- [x] `src/app/help/whitelist/page.tsx` ✅
+- [x] `src/app/indiekit-handbook/layout.tsx` ✅
+- [x] `src/app/indiekit-handbook/page.tsx` ✅
 - [x] `src/app/layout.tsx` ✅
-- [ ] `src/app/lcs-locator/layout.tsx` ⬜
-- [ ] `src/app/lcs-locator/page.tsx` ⬜
-- [ ] `src/app/marketplace-handbook/backers/page.tsx` ⬜
-- [ ] `src/app/marketplace-handbook/creators/page.tsx` ⬜
-- [ ] `src/app/marketplace-handbook/layout.tsx` ⬜
+- [x] `src/app/lcs-locator/layout.tsx` ✅
+- [x] `src/app/lcs-locator/page.tsx` ✅
+- [x] `src/app/marketplace-handbook/backers/page.tsx` ✅
+- [x] `src/app/marketplace-handbook/creators/page.tsx` ✅
+- [x] `src/app/marketplace-handbook/layout.tsx` ✅
 - [x] `src/app/marketplace/books/[slug]/layout.tsx` ✅
 - [x] `src/app/marketplace/books/[slug]/page.tsx` ✅
 - [x] `src/app/marketplace/books/featured/page.tsx` ✅
@@ -830,9 +831,9 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/marketplace/physical-media/page.tsx` ✅
 - [x] `src/app/not-found.tsx` ✅
 - [x] `src/app/page.tsx` ✅
-- [ ] `src/app/pay/balance/[token]/page.tsx` ⬜
-- [ ] `src/app/privacy/layout.tsx` ⬜
-- [ ] `src/app/privacy/page.tsx` ⬜
+- [x] `src/app/pay/balance/[token]/page.tsx` ✅
+- [x] `src/app/privacy/layout.tsx` ✅
+- [x] `src/app/privacy/page.tsx` ✅
 - [x] `src/app/projects/[vanityname]/[slug]/edit/page.tsx` ✅
 - [x] `src/app/projects/[vanityname]/[slug]/layout.tsx` ✅
 - [x] `src/app/projects/[vanityname]/[slug]/loading.tsx` ✅
@@ -860,42 +861,42 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/projects/[vanityname]/[slug]/prelaunch/page.tsx` ✅
 - [x] `src/app/projects/new/page.tsx` ✅
 - [x] `src/app/projects/page.tsx` ✅
-- [ ] `src/app/retailers/account/page.tsx` ⬜
-- [ ] `src/app/retailers/apply/page.tsx` ⬜
-- [ ] `src/app/retailers/dashboard/components/RetailerAccountTab.tsx` ⬜
-- [ ] `src/app/retailers/dashboard/components/RetailerInvoicesTab.tsx` ⬜
-- [ ] `src/app/retailers/dashboard/components/RetailerOrdersTab.tsx` ⬜
-- [ ] `src/app/retailers/dashboard/components/RetailerProjectsTab.tsx` ⬜
-- [ ] `src/app/retailers/dashboard/page.tsx` ⬜
-- [ ] `src/app/retailers/forgot-password/page.tsx` ⬜
-- [ ] `src/app/retailers/invoices/page.tsx` ⬜
-- [ ] `src/app/retailers/layout.tsx` ⬜
-- [ ] `src/app/retailers/login/page.tsx` ⬜
-- [ ] `src/app/retailers/orders/page.tsx` ⬜
-- [ ] `src/app/retailers/page.tsx` ⬜
-- [ ] `src/app/retailers/projects/[id]/page.tsx` ⬜
-- [ ] `src/app/retailers/projects/page.tsx` ⬜
-- [ ] `src/app/retailers/reset-password/page.tsx` ⬜
+- [x] `src/app/retailers/account/page.tsx` ✅
+- [x] `src/app/retailers/apply/page.tsx` ✅
+- [x] `src/app/retailers/dashboard/components/RetailerAccountTab.tsx` ✅
+- [x] `src/app/retailers/dashboard/components/RetailerInvoicesTab.tsx` ✅
+- [x] `src/app/retailers/dashboard/components/RetailerOrdersTab.tsx` 🔧
+- [x] `src/app/retailers/dashboard/components/RetailerProjectsTab.tsx` 🔧
+- [x] `src/app/retailers/dashboard/page.tsx` 🔧
+- [x] `src/app/retailers/forgot-password/page.tsx` ✅
+- [x] `src/app/retailers/invoices/page.tsx` ✅
+- [x] `src/app/retailers/layout.tsx` ✅
+- [x] `src/app/retailers/login/page.tsx` ✅
+- [x] `src/app/retailers/orders/page.tsx` ✅
+- [x] `src/app/retailers/page.tsx` ✅
+- [x] `src/app/retailers/projects/[id]/page.tsx` 🔧
+- [x] `src/app/retailers/projects/page.tsx` ✅
+- [x] `src/app/retailers/reset-password/page.tsx` ✅
 - [x] `src/app/robots.ts` ✅
-- [ ] `src/app/settings/payment/page.tsx` ⬜
-- [ ] `src/app/settings/payment/stripe/complete/page.tsx` ⬜
-- [ ] `src/app/settings/payment/stripe/refresh/page.tsx` ⬜
+- [x] `src/app/settings/payment/page.tsx` ✅
+- [x] `src/app/settings/payment/stripe/complete/page.tsx` ✅
+- [x] `src/app/settings/payment/stripe/refresh/page.tsx` ✅
 - [x] `src/app/sitemap.ts` ✅
 - [x] `src/app/success-stories/page.tsx` ✅
   - Fixed: getCategoryStats() missing `deletedAt: null` — soft-deleted projects included in category stats
   - Fixed: story.goal passed as Prisma Decimal to JSX arithmetic — caused NaN in funding percentage display; now converted to Number()
-- [ ] `src/app/survey/preview/page.tsx` ⬜
-- [ ] `src/app/term/page.tsx` ⬜
-- [ ] `src/app/terms/layout.tsx` ⬜
-- [ ] `src/app/terms/page.tsx` ⬜
-- [ ] `src/app/trust-safety/layout.tsx` ⬜
-- [ ] `src/app/trust-safety/page.tsx` ⬜
-- [ ] `src/app/u/[username]/layout.tsx` ⬜
-- [ ] `src/app/u/[username]/page.tsx` ⬜
-- [ ] `src/app/verification-complete/page.tsx` ⬜
-- [ ] `src/app/verify-email/page.tsx` ⬜
-- [ ] `src/app/what-is-divinitycoin/layout.tsx` ⬜
-- [ ] `src/app/what-is-divinitycoin/page.tsx` ⬜
+- [x] `src/app/survey/preview/page.tsx` ✅
+- [x] `src/app/term/page.tsx` ✅
+- [x] `src/app/terms/layout.tsx` ✅
+- [x] `src/app/terms/page.tsx` ✅
+- [x] `src/app/trust-safety/layout.tsx` ✅
+- [x] `src/app/trust-safety/page.tsx` ✅
+- [x] `src/app/u/[username]/layout.tsx` ✅
+- [x] `src/app/u/[username]/page.tsx` ✅
+- [x] `src/app/verification-complete/page.tsx` ✅
+- [x] `src/app/verify-email/page.tsx` ✅
+- [x] `src/app/what-is-divinitycoin/layout.tsx` ✅
+- [x] `src/app/what-is-divinitycoin/page.tsx` ✅
 - [x] `src/components/PdfPageFlipReader.tsx` ✅
 - [x] `src/components/PdfThumbnail.tsx` ✅
 - [x] `src/components/admin/ai-marketing/ai-settings-tab.tsx` ✅
