@@ -207,7 +207,7 @@ export function SkuMappingContent({ projectId, fulfillmentMethod }: SkuMappingCo
                         <AlertCircle className="h-4 w-4 text-amber-500" />
                         Items Needing SKU Mapping ({unmappedItems.length})
                       </h4>
-                      <div className="rounded-lg border overflow-hidden">
+                      <div className="rounded-lg border overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-amber-50">
@@ -264,7 +264,7 @@ export function SkuMappingContent({ projectId, fulfillmentMethod }: SkuMappingCo
                         <p className="text-muted-foreground">No SKU mappings yet. Map your rewards and add-ons above.</p>
                       </div>
                     ) : (
-                      <div className="rounded-lg border overflow-hidden">
+                      <div className="rounded-lg border overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>

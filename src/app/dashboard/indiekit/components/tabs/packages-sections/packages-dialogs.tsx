@@ -386,6 +386,7 @@ export function ViewGroupDialog({
                 <p className="text-xl font-bold">{group.statusCounts.shipped}</p>
               </div>
             </div>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -406,6 +407,7 @@ export function ViewGroupDialog({
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         )}
         <DialogFooter>

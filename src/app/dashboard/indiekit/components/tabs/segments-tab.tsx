@@ -585,7 +585,7 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
               {viewingSegment?.backerCount} backers in this segment
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 overflow-x-auto">
             {isLoadingBackers ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
