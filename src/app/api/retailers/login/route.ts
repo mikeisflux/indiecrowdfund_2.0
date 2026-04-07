@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       }
 
       retailer = await db.retailer.findUnique({
-        where: { email },
+        where: { email: email.toLowerCase().trim() },
       });
 
       if (!retailer) {

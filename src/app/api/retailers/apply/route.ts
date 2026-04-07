@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       annualRevenue,
       websiteUrl,
       contactName,
-      email,
+      email: rawEmail,
       phone,
       preferredContact,
       address,
@@ -54,6 +54,9 @@ export async function POST(req: NextRequest) {
       resaleCertificate,
       password,
     } = body;
+
+    // Normalize email to lowercase to ensure consistent lookup across login/forgot-password
+    const email = typeof rawEmail === "string" ? rawEmail.toLowerCase().trim() : rawEmail;
 
     // Validate required fields
     const requiredFields = [

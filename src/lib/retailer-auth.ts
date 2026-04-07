@@ -29,7 +29,7 @@ interface RetailerAuthResult {
 /**
  * Authenticate a request for retailer API access.
  * Checks for:
- * 1. Valid retailer JWT token in cookies
+ * 1. Valid retailer JWT token in cookies (also re-validates retailer status in DB)
  * 2. NextAuth session with SUPER_ADMIN role
  * 3. NextAuth session with retailerAccess enabled and linked retailer
  */
@@ -37,6 +37,21 @@ export async function authenticateRetailerRequest(): Promise<RetailerAuthResult>
   // First, try to get retailer from JWT token
   const tokenData = await getRetailerFromToken();
   if (tokenData) {
+    // Re-check retailer status in DB so that suspensions/rejections take effect
+    // immediately without waiting for the 7-day JWT to expire.
+    const retailer = await db.retailer.findUnique({
+      where: { id: tokenData.retailerId },
+      select: { id: true, status: true },
+    });
+
+    if (!retailer) {
+      return { authorized: false, error: "Retailer account not found" };
+    }
+
+    if (retailer.status !== "APPROVED") {
+      return { authorized: false, error: "Retailer account is not active" };
+    }
+
     return {
       authorized: true,
       retailerId: tokenData.retailerId,
