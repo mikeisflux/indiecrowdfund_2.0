@@ -460,10 +460,12 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/paypal/config/route.ts` ✅
 - [x] `src/app/api/platform-stats/route.ts` ✅
 - [x] `src/app/api/pledges/[pledgeId]/add-items/route.ts` ✅
-- [ ] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts` ⬜
-- [ ] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ⬜
-- [ ] `src/app/api/pledges/[pledgeId]/confirm/route.ts` ⬜
-- [ ] `src/app/api/pledges/[pledgeId]/route.ts` ⬜ Fixed race condition: second modification request now blocked while pendingModification awaits payment
+- [x] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts` ✅
+- [x] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ✅
+- [x] `src/app/api/pledges/[pledgeId]/confirm/route.ts` ✅
+- [x] `src/app/api/pledges/[pledgeId]/route.ts` 🔧
+  - Fixed: race condition — second modification request now blocked while pendingModification awaits payment (pendingModification guard in metadata)
+  - Fixed: addon validation in "modify" action did not filter by `isEnded: false`, allowing ended addons to be assigned to a pledge modification
 - [ ] `src/app/api/pledges/check/route.ts` ⬜
 - [ ] `src/app/api/pledges/route.ts` ⬜
 - [ ] `src/app/api/privacy/ccpa-opt-out/route.ts` ⬜
