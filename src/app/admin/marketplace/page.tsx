@@ -606,9 +606,9 @@ export default function AdminMarketplacePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Marketplace Management</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Marketplace Management</h1>
           <p className="text-muted-foreground">
             Review submissions and manage homepage categories
           </p>
@@ -617,6 +617,7 @@ export default function AdminMarketplacePage() {
           onClick={fetchBooks}
           variant="outline"
           size="sm"
+          className="w-full sm:w-auto"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh

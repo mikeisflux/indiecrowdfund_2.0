@@ -111,9 +111,9 @@ export default function PledgePage() {
       </header>
 
       <div className="container py-8">
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-3">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="md:col-span-2 space-y-6">
             <AddressWarning hasSavedAddress={pledge.hasSavedAddress} allRewards={pledge.allRewards} />
 
             {pledge.step === "rewards" && (
@@ -171,7 +171,7 @@ export default function PledgePage() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="md:col-span-1">
             <div className="sticky top-6 space-y-6">
               <OrderSummary
                 step={pledge.step}
