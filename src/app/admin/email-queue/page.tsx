@@ -213,16 +213,14 @@ export default function EmailQueuePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Email Queue</h1>
-          <p className="text-muted-foreground">
-            Monitor and manage the email sending queue in real time
-          </p>
+          <p className="text-muted-foreground text-sm">Monitor and manage the email sending queue in real time</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {lastUpdated && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground hidden sm:inline">
               Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
             </span>
           )}
@@ -233,11 +231,11 @@ export default function EmailQueuePage() {
             className={autoRefresh ? "border-green-500 text-green-600" : ""}
           >
             <RefreshCw className={`h-4 w-4 mr-1 ${autoRefresh ? "animate-spin" : ""}`} />
-            {autoRefresh ? "Live (3s)" : "Paused"}
+            <span className="hidden xs:inline">{autoRefresh ? "Live (3s)" : "Paused"}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={fetchQueue}>
             <RefreshCw className="h-4 w-4 mr-1" />
-            Refresh
+            <span className="hidden xs:inline">Refresh</span>
           </Button>
         </div>
       </div>
@@ -513,105 +511,116 @@ export default function EmailQueuePage() {
       {/* Email List */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-3 font-medium">Status</th>
-                  <th className="text-left p-3 font-medium">Priority</th>
-                  <th className="text-left p-3 font-medium">Recipient</th>
-                  <th className="text-left p-3 font-medium">Subject</th>
-                  <th className="text-left p-3 font-medium">Attempts</th>
-                  <th className="text-left p-3 font-medium">Error</th>
-                  <th className="text-left p-3 font-medium">Created</th>
-                  <th className="text-left p-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {emails.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No emails found
-                    </td>
-                  </tr>
-                ) : (
-                  emails.map((email) => (
-                    <tr key={email.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="p-3">
-                        <div className="flex items-center gap-1.5">
-                          {getStatusIcon(email.status)}
-                          <Badge variant={getStatusBadgeVariant(email.status)} className="text-xs">
-                            {email.status}
-                          </Badge>
-                        </div>
-                      </td>
-                      <td className="p-3">
+          {emails.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No emails found</div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-3 font-medium">Status</th>
+                      <th className="text-left p-3 font-medium">Priority</th>
+                      <th className="text-left p-3 font-medium">Recipient</th>
+                      <th className="text-left p-3 font-medium">Subject</th>
+                      <th className="text-left p-3 font-medium">Attempts</th>
+                      <th className="text-left p-3 font-medium">Error</th>
+                      <th className="text-left p-3 font-medium">Created</th>
+                      <th className="text-left p-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {emails.map((email) => (
+                      <tr key={email.id} className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="p-3">
+                          <div className="flex items-center gap-1.5">
+                            {getStatusIcon(email.status)}
+                            <Badge variant={getStatusBadgeVariant(email.status)} className="text-xs">{email.status}</Badge>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${getPriorityColor(email.priority)}`}>
+                            {getPriorityLabel(email.priority)}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <div className="max-w-[200px] truncate" title={email.toEmail}>{email.toEmail}</div>
+                          {email.isCreatorEmail && <span className="text-xs text-muted-foreground">Creator email</span>}
+                        </td>
+                        <td className="p-3">
+                          <div className="max-w-[250px] truncate" title={email.subject}>{email.subject}</div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className={email.attempts >= email.maxAttempts ? "text-red-600 font-medium" : ""}>
+                            {email.attempts}/{email.maxAttempts}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          {email.error ? (
+                            <div className="max-w-[200px] truncate text-red-600 text-xs" title={email.error}>{email.error}</div>
+                          ) : <span className="text-muted-foreground">-</span>}
+                        </td>
+                        <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDistanceToNow(new Date(email.createdAt), { addSuffix: true })}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1">
+                            {(email.status === "FAILED" || email.status === "PENDING" || email.status === "PROCESSING") && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" title="Retry" onClick={() => doAction("retry-one", email.id)} disabled={isActioning}>
+                                <RotateCcw className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700" title="Delete" onClick={() => doAction("delete-one", email.id)} disabled={isActioning}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y">
+                {emails.map((email) => (
+                  <div key={email.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {getStatusIcon(email.status)}
+                        <Badge variant={getStatusBadgeVariant(email.status)} className="text-xs">{email.status}</Badge>
                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${getPriorityColor(email.priority)}`}>
                           {getPriorityLabel(email.priority)}
                         </span>
-                      </td>
-                      <td className="p-3">
-                        <div className="max-w-[200px] truncate" title={email.toEmail}>
-                          {email.toEmail}
-                        </div>
-                        {email.isCreatorEmail && (
-                          <span className="text-xs text-muted-foreground">Creator email</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <div className="max-w-[250px] truncate" title={email.subject}>
-                          {email.subject}
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">
-                        <span className={email.attempts >= email.maxAttempts ? "text-red-600 font-medium" : ""}>
-                          {email.attempts}/{email.maxAttempts}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        {email.error ? (
-                          <div className="max-w-[200px] truncate text-red-600 text-xs" title={email.error}>
-                            {email.error}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDistanceToNow(new Date(email.createdAt), { addSuffix: true })}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          {(email.status === "FAILED" || email.status === "PENDING" || email.status === "PROCESSING") && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              title="Retry this email"
-                              onClick={() => doAction("retry-one", email.id)}
-                              disabled={isActioning}
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-red-500 hover:text-red-700"
-                            title="Delete this email"
-                            onClick={() => doAction("delete-one", email.id)}
-                            disabled={isActioning}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {(email.status === "FAILED" || email.status === "PENDING" || email.status === "PROCESSING") && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => doAction("retry-one", email.id)} disabled={isActioning}>
+                            <RotateCcw className="h-3.5 w-3.5" />
                           </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => doAction("delete-one", email.id)} disabled={isActioning}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-sm font-medium truncate">{email.toEmail}</p>
+                    <p className="text-xs text-muted-foreground truncate">{email.subject}</p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{email.attempts}/{email.maxAttempts} attempts</span>
+                      <span>·</span>
+                      <span>{formatDistanceToNow(new Date(email.createdAt), { addSuffix: true })}</span>
+                    </div>
+                    {email.error && (
+                      <p className="text-xs text-red-600 truncate">{email.error}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
 
           {/* Pagination */}
           {pagination && pagination.totalPages > 1 && (

@@ -628,8 +628,9 @@ export default function AdminMarketplacePage() {
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex items-center justify-between mb-6">
-          <TabsList className="bg-muted/50 border border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <div className="overflow-x-auto pb-1">
+          <TabsList className="inline-flex w-max bg-muted/50 border border-border">
             <TabsTrigger value="pending" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
               <Clock className="w-4 h-4 mr-2" />
               Pending
@@ -671,8 +672,9 @@ export default function AdminMarketplacePage() {
               )}
             </TabsTrigger>
           </TabsList>
+          </div>
 
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
             <Input
               placeholder="Search books..."

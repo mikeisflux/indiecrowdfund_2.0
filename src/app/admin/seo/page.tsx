@@ -722,36 +722,38 @@ export default function SeoManagementPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 h-auto">
-          <TabsTrigger value="dashboard" className="text-xs sm:text-sm">
+        <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max min-w-full h-auto">
+          <TabsTrigger value="dashboard" className="text-xs sm:text-sm shrink-0">
             <BarChart3 className="h-3 w-3 mr-1 hidden sm:inline" />
             Dashboard
           </TabsTrigger>
-          <TabsTrigger value="audit" className="text-xs sm:text-sm">
+          <TabsTrigger value="audit" className="text-xs sm:text-sm shrink-0">
             <Search className="h-3 w-3 mr-1 hidden sm:inline" />
             Page Audit
           </TabsTrigger>
-          <TabsTrigger value="meta" className="text-xs sm:text-sm">
+          <TabsTrigger value="meta" className="text-xs sm:text-sm shrink-0">
             <FileText className="h-3 w-3 mr-1 hidden sm:inline" />
             Meta Tags
           </TabsTrigger>
-          <TabsTrigger value="keywords" className="text-xs sm:text-sm">
+          <TabsTrigger value="keywords" className="text-xs sm:text-sm shrink-0">
             <Tag className="h-3 w-3 mr-1 hidden sm:inline" />
             Keywords
           </TabsTrigger>
-          <TabsTrigger value="redirects" className="text-xs sm:text-sm">
+          <TabsTrigger value="redirects" className="text-xs sm:text-sm shrink-0">
             <Link2 className="h-3 w-3 mr-1 hidden sm:inline" />
             Redirects
           </TabsTrigger>
-          <TabsTrigger value="cron" className="text-xs sm:text-sm">
+          <TabsTrigger value="cron" className="text-xs sm:text-sm shrink-0">
             <Clock className="h-3 w-3 mr-1 hidden sm:inline" />
             Cron
           </TabsTrigger>
-          <TabsTrigger value="ai" className="text-xs sm:text-sm">
+          <TabsTrigger value="ai" className="text-xs sm:text-sm shrink-0">
             <Sparkles className="h-3 w-3 mr-1 hidden sm:inline" />
             AI Suggestions
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="dashboard" className="space-y-6">
           <DashboardTab

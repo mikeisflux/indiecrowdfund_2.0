@@ -53,38 +53,41 @@ export function TransactionTable({
 }: TransactionTableProps) {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
-      <TabsList>
-        <TabsTrigger value="all" className="gap-1">
-          All
-          {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.totalTransactions}</Badge>}
-        </TabsTrigger>
-        <TabsTrigger value="pledge" className="gap-1">
-          Pledges
-          {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.PLEDGE}</Badge>}
-        </TabsTrigger>
-        <TabsTrigger value="marketplace" className="gap-1">
-          Marketplace
-          {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.MARKETPLACE}</Badge>}
-        </TabsTrigger>
-        <TabsTrigger value="dc_transaction" className="gap-1">
-          DC Txns
-          {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.DC_TRANSACTION}</Badge>}
-        </TabsTrigger>
-        <TabsTrigger value="payout" className="gap-1">
-          Payouts
-          {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.PAYOUT}</Badge>}
-        </TabsTrigger>
-        <TabsTrigger value="settlement" className="gap-1">
-          Settlements
-          {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.SETTLEMENT}</Badge>}
-        </TabsTrigger>
-        <TabsTrigger value="indiekit_aftersale" className="gap-1">
-          IndieKit
-          {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.INDIEKIT_AFTERSALE}</Badge>}
-        </TabsTrigger>
-      </TabsList>
+      {/* Scrollable tab bar — prevents overflow on mobile */}
+      <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max min-w-full">
+          <TabsTrigger value="all" className="gap-1">
+            All
+            {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.totalTransactions}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="pledge" className="gap-1">
+            Pledges
+            {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.PLEDGE}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="marketplace" className="gap-1">
+            Marketplace
+            {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.MARKETPLACE}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="dc_transaction" className="gap-1">
+            DC Txns
+            {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.DC_TRANSACTION}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="payout" className="gap-1">
+            Payouts
+            {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.PAYOUT}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="settlement" className="gap-1">
+            Settlements
+            {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.SETTLEMENT}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="indiekit_aftersale" className="gap-1">
+            IndieKit
+            {stats && <Badge variant="secondary" className="ml-1 text-xs h-5">{stats.byType.INDIEKIT_AFTERSALE}</Badge>}
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
-      {/* All tabs share the same table content */}
+      {/* All tabs share the same table/card content */}
       {["all", "pledge", "marketplace", "dc_transaction", "dc_redemption", "payout", "settlement", "indiekit_aftersale"].map((tab) => (
         <TabsContent key={tab} value={tab} className="mt-4">
           {isLoading ? (
@@ -104,7 +107,8 @@ export function TransactionTable({
           ) : (
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                {/* ── Desktop table (md and up) ── */}
+                <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -205,11 +209,76 @@ export function TransactionTable({
                   </Table>
                 </div>
 
-                {/* Pagination */}
+                {/* ── Mobile card list (below md) ── */}
+                <div className="md:hidden divide-y">
+                  {transactions.map((txn) => (
+                    <div
+                      key={`mobile-${txn.type}-${txn.id}`}
+                      className={`px-4 py-3 ${
+                        txn.status === "FAILED" ? "bg-red-50/50 dark:bg-red-950/10" :
+                        txn.status === "CHARGEBACK" ? "bg-purple-50/50 dark:bg-purple-950/10" :
+                        ""
+                      }`}
+                    >
+                      {/* Row 1: date + type badge + Eye button */}
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(txn.createdAt), "MMM d, yyyy")} &middot; {format(new Date(txn.createdAt), "h:mm a")}
+                          </span>
+                          {getTypeBadge(txn.type)}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 flex-shrink-0"
+                          onClick={() => fetchDetail(txn)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Row 2: user */}
+                      <div className="mb-1">
+                        <p className="text-sm font-medium truncate">{txn.userName || "N/A"}</p>
+                        <p className="text-xs text-muted-foreground truncate">{txn.userEmail}</p>
+                      </div>
+
+                      {/* Row 3: project / item */}
+                      <div className="mb-2">
+                        <p className="text-sm truncate">{txn.projectName || txn.itemDescription}</p>
+                        {txn.projectName && txn.itemDescription !== txn.projectName && (
+                          <p className="text-xs text-muted-foreground truncate">{txn.itemDescription}</p>
+                        )}
+                      </div>
+
+                      {/* Row 4: amount + status + processor */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold">{formatCurrency(txn.amount)}</span>
+                        {getStatusBadge(txn.status)}
+                        {txn.retryCount > 0 && (
+                          <span className="text-xs text-yellow-600">{txn.retryCount} retries</span>
+                        )}
+                        {getProcessorBadge(txn.paymentProcessor)}
+                        {txn.externalTransactionId && (
+                          <button
+                            className="flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground max-w-[140px]"
+                            onClick={() => copyToClipboard(txn.externalTransactionId!)}
+                          >
+                            <span className="truncate">{txn.externalTransactionId}</span>
+                            <Copy className="h-3 w-3 flex-shrink-0" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination — stacks on mobile */}
                 {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between border-t px-4 py-3">
-                    <p className="text-sm text-muted-foreground">
-                      Showing {(pagination.page - 1) * pagination.limit + 1} - {Math.min(pagination.page * pagination.limit, pagination.totalCount)} of {pagination.totalCount}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t px-4 py-3">
+                    <p className="text-sm text-muted-foreground text-center sm:text-left">
+                      Showing {(pagination.page - 1) * pagination.limit + 1}&ndash;{Math.min(pagination.page * pagination.limit, pagination.totalCount)} of {pagination.totalCount}
                     </p>
                     <div className="flex items-center gap-2">
                       <Button
@@ -221,7 +290,7 @@ export function TransactionTable({
                         <ChevronLeft className="h-4 w-4" />
                         Previous
                       </Button>
-                      <span className="text-sm">
+                      <span className="text-sm whitespace-nowrap">
                         Page {pagination.page} of {pagination.totalPages}
                       </span>
                       <Button

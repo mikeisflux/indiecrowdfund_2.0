@@ -99,8 +99,8 @@ export function TransactionsTab({
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
           <Input
             placeholder="Search transactions..."
@@ -112,7 +112,7 @@ export function TransactionsTab({
         <select
           value={statusFilter}
           onChange={(e) => onStatusFilterChange(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-muted/50 border border-border text-foreground"
+          className="w-full sm:w-auto px-3 py-2 rounded-lg bg-muted/50 border border-border text-foreground"
         >
           <option value="all">All Status</option>
           <option value="COMPLETED">Completed</option>

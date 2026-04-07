@@ -886,7 +886,8 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6 lg:grid-cols-12 lg:w-auto lg:inline-grid">
+        <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max min-w-full h-auto p-1">
           <TabsTrigger value="general">
             <Settings className="mr-2 h-4 w-4" />
             General
@@ -936,9 +937,9 @@ export default function SettingsPage() {
             Database
           </TabsTrigger>
         </TabsList>
+        </div>
 
-
-        <GeneralSettings 
+        <GeneralSettings
           settings={generalSettings}
           onSettingsChange={setGeneralSettings}
           onSave={handleSave}
