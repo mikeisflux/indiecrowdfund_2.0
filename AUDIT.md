@@ -6,6 +6,16 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 
 ---
 
+
+## Systemic Fixes Applied in This Session
+
+- **Admin role-check `findUnique` → `findFirst` + `deletedAt: null`**: 85 admin API route files used `db.user.findUnique({ where: { id: session.user.id } })` for role verification without `deletedAt: null`. A soft-deleted admin with a live session could bypass role checks. Bulk-fixed with Python script.
+- **Non-admin route `findUnique` → `findFirst` + `deletedAt: null`**: 47 non-admin API routes had the same pattern. Bulk-fixed.
+- **Email recipient lookups**: `creator/email/compose` and `creator/email/threads/[threadId]/forward` used `findUnique` by email without `deletedAt: null` — soft-deleted users could receive internal message records. Fixed to `findFirst` + `deletedAt: null`.
+- **Collaborator lookup**: `projects/[id]/collaborators` used `findUnique` by email without `deletedAt: null` for inviting collaborators. Fixed.
+- **Surveys schema mismatch**: `surveys/route.ts` upserted to non-existent `Survey.title/description/questions` fields and selected non-existent `isActive`. Fixed to use real schema fields.
+
+---
 - [x] `src/__tests__/json-ld.test.tsx` ✅
 - [x] `src/__tests__/setup.ts` ✅
 - [x] `src/__tests__/utils.test.ts` ✅
