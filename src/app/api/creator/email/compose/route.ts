@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get sender info including their creator email handle
-    const sender = await db.user.findUnique({
-      where: { id: session.user.id },
+    const sender = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { id: true, name: true, email: true, creatorEmailHandle: true },
     });
 

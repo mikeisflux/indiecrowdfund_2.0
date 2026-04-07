@@ -45,8 +45,8 @@ export async function POST(
     const projectId = id;
 
     // Get user with role
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { id: true, role: true },
     });
 

@@ -177,8 +177,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get creator's name for code prefix
-    const creator = await db.user.findUnique({
-      where: { id: userId },
+    const creator = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: { name: true, vanityUrl: true },
     });
 

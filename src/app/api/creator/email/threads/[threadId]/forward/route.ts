@@ -45,8 +45,8 @@ export async function POST(
     }
 
     // Get creator with email handle
-    const creator = await db.user.findUnique({
-      where: { id: session.user.id },
+    const creator = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { id: true, name: true, email: true, creatorEmailHandle: true },
     });
 

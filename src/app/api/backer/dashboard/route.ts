@@ -17,8 +17,8 @@ export async function GET() {
     const userId = session.user.id;
 
     // Fetch user info
-    const user = await db.user.findUnique({
-      where: { id: userId },
+    const user = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: { name: true },
     });
 

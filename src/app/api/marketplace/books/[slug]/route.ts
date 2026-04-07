@@ -155,8 +155,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     // Check ownership
     if (book.creatorId !== session.user.id) {
       // Check if admin
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
+      const user = await prisma.user.findFirst({
+        where: { id: session.user.id, deletedAt: null },
         select: { role: true },
       });
       if (!user || !["SUPER_ADMIN", "ADMIN"].includes(user.role)) {
@@ -261,8 +261,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     // Check ownership
     if (book.creatorId !== session.user.id) {
       // Check if admin
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
+      const user = await prisma.user.findFirst({
+        where: { id: session.user.id, deletedAt: null },
         select: { role: true },
       });
       if (!user || !["SUPER_ADMIN", "ADMIN"].includes(user.role)) {

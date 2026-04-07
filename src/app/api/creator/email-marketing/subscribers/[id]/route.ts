@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 
 // Helper to get creator tag
 async function getCreatorTag(userId: string) {
-  const creator = await db.user.findUnique({
-    where: { id: userId },
+  const creator = await db.user.findFirst({
+    where: { id: userId, deletedAt: null },
     select: { name: true, vanityUrl: true },
   });
   return creator?.vanityUrl || creator?.name || userId;

@@ -75,8 +75,8 @@ export async function GET(req: NextRequest) {
         });
 
         // Get creator info
-        const creator = await db.user.findUnique({
-          where: { id: campaign.createdBy },
+        const creator = await db.user.findFirst({
+          where: { id: campaign.createdBy, deletedAt: null },
           select: { id: true, name: true, email: true, creatorEmailHandle: true },
         });
 

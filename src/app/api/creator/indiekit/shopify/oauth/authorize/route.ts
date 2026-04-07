@@ -45,8 +45,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Get Shopify API credentials from user's account
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: {
         shopifyApiKey: true,
         shopifyApiSecret: true,

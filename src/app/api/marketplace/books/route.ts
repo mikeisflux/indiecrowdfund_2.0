@@ -168,8 +168,8 @@ export async function POST(request: Request) {
     }
 
     // Fetch current user role
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const user = await prisma.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
 

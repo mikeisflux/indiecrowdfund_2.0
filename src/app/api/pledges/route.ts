@@ -56,8 +56,8 @@ export async function POST(req: NextRequest) {
       // Check if email verification is required before pledging
       const verificationRequired = await isEmailVerificationRequired();
       if (verificationRequired) {
-        const user = await db.user.findUnique({
-          where: { id: session.user.id },
+        const user = await db.user.findFirst({
+          where: { id: session.user.id, deletedAt: null },
           select: { emailVerified: true },
         });
 
@@ -287,8 +287,8 @@ export async function POST(req: NextRequest) {
 
         try {
           const dcConfig = await getDivinityCoinConfig();
-          const userRecord = await db.user.findUnique({
-            where: { id: session.user.id },
+          const userRecord = await db.user.findFirst({
+            where: { id: session.user.id, deletedAt: null },
             select: { email: true, name: true },
           });
 

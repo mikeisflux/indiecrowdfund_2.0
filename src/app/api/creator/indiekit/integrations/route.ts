@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
     const projectId = searchParams.get("projectId");
 
     // Get user's integration settings
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: {
         stripeAccountId: true,
         stripeAccountStatus: true,

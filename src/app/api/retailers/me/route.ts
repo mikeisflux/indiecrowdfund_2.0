@@ -39,8 +39,8 @@ async function checkUserAccess() {
   const session = await auth();
   if (!session?.user?.id) return { hasAccess: false };
 
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
+  const user = await db.user.findFirst({
+    where: { id: session.user.id, deletedAt: null },
     select: {
       id: true,
       email: true,

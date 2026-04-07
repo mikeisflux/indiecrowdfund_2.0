@@ -608,8 +608,8 @@ export async function PATCH(
           // Call DC's create-payment-intent for the upcharge amount
           try {
             const dcConfig = await getDivinityCoinConfig();
-            const userRecord = await db.user.findUnique({
-              where: { id: session.user.id },
+            const userRecord = await db.user.findFirst({
+              where: { id: session.user.id, deletedAt: null },
               select: { email: true, name: true },
             });
 

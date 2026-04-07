@@ -220,12 +220,13 @@ export async function isEmailBlocked(email: string): Promise<{ blocked: boolean;
 // Add whitelist banner to the top of HTML email
 function addWhitelistBanner(html: string, fromEmail: string): string {
   const whitelistGuideUrl = `${APP_URL}/help/whitelist`;
+  const safeFromEmail = escapeHtmlForEmail(fromEmail);
   const banner = `
     <div style="background: linear-gradient(90deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #166534;">
       <table cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
           <td style="vertical-align: middle;">
-            <strong style="color: #15803d;">Ensure delivery:</strong> Add <span style="font-family: monospace; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${fromEmail}</span> to your contacts or safe sender list.
+            <strong style="color: #15803d;">Ensure delivery:</strong> Add <span style="font-family: monospace; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${safeFromEmail}</span> to your contacts or safe sender list.
             <a href="${whitelistGuideUrl}" style="color: #16a34a; text-decoration: underline; margin-left: 8px;" clicktracking="off">How to whitelist</a>
           </td>
         </tr>

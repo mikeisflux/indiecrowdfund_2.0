@@ -207,8 +207,8 @@ export async function POST(
     }
 
     // Get user info for tagging in admin newsletter
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { name: true, email: true },
     });
     const uploaderTag = user?.name || user?.email || session.user.id;

@@ -71,8 +71,8 @@ export async function POST(
     const creatorName = session.user.name || project.creator.name || "Project Creator";
 
     // Get creator's email handle for reply-to address
-    const creator = await db.user.findUnique({
-      where: { id: session.user.id },
+    const creator = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { creatorEmailHandle: true },
     });
     const creatorEmailHandle = creator?.creatorEmailHandle;

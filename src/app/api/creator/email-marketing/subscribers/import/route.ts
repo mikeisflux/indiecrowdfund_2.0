@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get creator's name for tagging
-    const creator = await db.user.findUnique({
-      where: { id: session.user.id },
+    const creator = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { name: true, vanityUrl: true },
     });
 

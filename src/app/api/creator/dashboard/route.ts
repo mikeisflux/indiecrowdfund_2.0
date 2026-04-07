@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
     const days = Math.min(365, Math.max(1, parseInt(searchParams.get("days") || "30") || 30));
 
     // Get user role for conditional UI (e.g. hiding IndieKit 1.0 for non-super-admins)
-    const currentUser = await db.user.findUnique({
-      where: { id: session.user.id },
+    const currentUser = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
     const userRole = currentUser?.role || "USER";

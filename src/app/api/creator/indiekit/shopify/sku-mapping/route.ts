@@ -290,8 +290,8 @@ export async function POST(req: NextRequest) {
 
     // Get PROJECT CREATOR's Shopify credentials for validation
     // Collaborators use the creator's connection, not their own
-    const creatorRaw = await db.user.findUnique({
-      where: { id: project.creatorId },
+    const creatorRaw = await db.user.findFirst({
+      where: { id: project.creatorId, deletedAt: null },
       select: {
         shopifyAccessToken: true,
         shopifyShopDomain: true,

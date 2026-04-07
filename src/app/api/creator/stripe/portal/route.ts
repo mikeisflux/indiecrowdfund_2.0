@@ -16,8 +16,8 @@ export async function POST() {
     }
 
     // Get user's Stripe customer ID
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { stripeCustomerId: true },
     });
 

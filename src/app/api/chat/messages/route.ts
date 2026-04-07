@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
 
     // Get current user info including role and ban status
-    const currentUser = await db.user.findUnique({
-      where: { id: session.user.id },
+    const currentUser = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: {
         role: true,
         chatBannedAt: true,
@@ -127,8 +127,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is banned from chat
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { chatBannedAt: true, chatBanReason: true },
     });
 

@@ -19,8 +19,8 @@ export async function POST(
     const { id: projectId } = await params;
 
     // Verify user is the project creator, a collaborator, or an admin
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
     const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";

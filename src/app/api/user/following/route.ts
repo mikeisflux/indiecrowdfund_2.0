@@ -208,8 +208,8 @@ export async function POST(request: Request) {
     }
 
     // Get user's email for notifications
-    const user = await db.user.findUnique({
-      where: { id: userId },
+    const user = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: { email: true },
     });
 
@@ -232,8 +232,8 @@ export async function POST(request: Request) {
     // Auto-add follower to creator's email list (non-blocking)
     if (user?.email && projectDetails?.creatorId) {
       try {
-        const userDetails = await db.user.findUnique({
-          where: { id: userId },
+        const userDetails = await db.user.findFirst({
+          where: { id: userId, deletedAt: null },
           select: { name: true },
         });
         await addToCreatorEmailList({

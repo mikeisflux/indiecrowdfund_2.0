@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
 
     // Get PROJECT CREATOR's Stamps.com credentials
     // Collaborators use the creator's connection, not their own
-    const creator = await db.user.findUnique({
-      where: { id: project.creatorId },
+    const creator = await db.user.findFirst({
+      where: { id: project.creatorId, deletedAt: null },
       select: {
         stampsIntegrationId: true,
         stampsUsername: true,

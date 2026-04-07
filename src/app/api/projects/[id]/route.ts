@@ -64,8 +64,8 @@ async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
 
 // Helper function to check if user can activate prelaunch without approval
 async function canActivatePrelaunchImmediately(userId: string): Promise<boolean> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
+  const user = await db.user.findFirst({
+    where: { id: userId, deletedAt: null },
     select: { role: true },
   });
 
@@ -199,8 +199,8 @@ async function handleCollaborators(
   }
 
   // Get creator's email handle for sending from their address
-  const creator = await db.user.findUnique({
-    where: { id: creatorId },
+  const creator = await db.user.findFirst({
+    where: { id: creatorId, deletedAt: null },
     select: { creatorEmailHandle: true },
   });
   const creatorEmailHandle = creator?.creatorEmailHandle;
@@ -861,8 +861,8 @@ export async function DELETE(
     }
 
     // Check permission - creator or super admin
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
 

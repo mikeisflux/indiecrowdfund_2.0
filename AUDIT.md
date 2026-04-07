@@ -1100,55 +1100,56 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/lib/notifications/social-notifications.ts` ⬜
 - [ ] `src/lib/notifications/types.ts` ⬜
 - [ ] `src/lib/oauth/config.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/cards.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/client.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/config.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/index.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/payments.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/types.ts` ⬜
-- [ ] `src/lib/payments/divinitycoin/webhooks.ts` ⬜
-- [ ] `src/lib/payments/paypal/capture-authorized.ts` ⬜
-- [ ] `src/lib/payments/paypal/checkout.ts` ⬜
-- [ ] `src/lib/payments/paypal/config.ts` ⬜
-- [ ] `src/lib/payments/paypal/index.ts` ⬜
-- [ ] `src/lib/payments/stripe/charges.ts` ⬜
+- [x] `src/lib/payments/divinitycoin/cards.ts` ✅
+- [x] `src/lib/payments/divinitycoin/client.ts` ✅
+- [x] `src/lib/payments/divinitycoin/config.ts` ✅
+- [x] `src/lib/payments/divinitycoin/index.ts` ✅
+- [x] `src/lib/payments/divinitycoin/payments.ts` ✅
+- [x] `src/lib/payments/divinitycoin/types.ts` ✅
+- [x] `src/lib/payments/divinitycoin/webhooks.ts` ✅
+- [x] `src/lib/payments/paypal/capture-authorized.ts` ✅
+- [x] `src/lib/payments/paypal/checkout.ts` ✅
+- [x] `src/lib/payments/paypal/config.ts` ✅
+- [x] `src/lib/payments/paypal/index.ts` ✅
+- [x] `src/lib/payments/stripe/charges.ts` 🔧
   - Fixed: processPaymentRetries() Pledge query missing `deletedAt: null` — soft-deleted pledges would be incorrectly included in retry processing and potentially re-charged
-- [ ] `src/lib/payments/stripe/checkout.ts` ⬜
-- [ ] `src/lib/payments/stripe/config.ts` ⬜
-- [ ] `src/lib/payments/stripe/connect.ts` ⬜
-- [ ] `src/lib/payments/stripe/customers.ts` ⬜
-- [ ] `src/lib/payments/stripe/index.ts` ⬜
-- [ ] `src/lib/payments/stripe/intents.ts` ⬜
-- [ ] `src/lib/payments/stripe/rewards.ts` ⬜
-- [ ] `src/lib/payments/stripe/webhooks.ts` ⬜
-- [ ] `src/lib/payments/whop/checkout.ts` ⬜
-- [ ] `src/lib/payments/whop/config.ts` ⬜
-- [ ] `src/lib/payments/whop/index.ts` ⬜
-- [ ] `src/lib/pdf-cover-extractor.ts` ⬜
-- [ ] `src/lib/project-auth.ts` ⬜
-- [ ] `src/lib/project-permissions.ts` ⬜
-- [ ] `src/lib/r2.ts` ⬜
-- [ ] `src/lib/rate-limiter.ts` ⬜
-- [ ] `src/lib/recommendations/engine.ts` ⬜
-- [ ] `src/lib/retailer-auth.ts` ⬜
-- [ ] `src/lib/seo-audit.ts` ⬜
-- [ ] `src/lib/seo-defaults.ts` ⬜
-- [ ] `src/lib/seo/indexing.ts` ⬜
-- [ ] `src/lib/shopify-push.ts` ⬜
-- [ ] `src/lib/shufti.ts` ⬜
-- [ ] `src/lib/stats.ts` ⬜
+  - Fixed: processPendingPledgesForProject() Pledge query missing `deletedAt: null` — soft-deleted pledges would be charged when campaign reaches its funding goal
+- [x] `src/lib/payments/stripe/checkout.ts` ✅
+- [x] `src/lib/payments/stripe/config.ts` ✅
+- [x] `src/lib/payments/stripe/connect.ts` ✅
+- [x] `src/lib/payments/stripe/customers.ts` ✅
+- [x] `src/lib/payments/stripe/index.ts` ✅
+- [x] `src/lib/payments/stripe/intents.ts` ✅
+- [x] `src/lib/payments/stripe/rewards.ts` ✅
+- [x] `src/lib/payments/stripe/webhooks.ts` ✅
+- [x] `src/lib/payments/whop/checkout.ts` ✅
+- [x] `src/lib/payments/whop/config.ts` ✅
+- [x] `src/lib/payments/whop/index.ts` ✅
+- [x] `src/lib/pdf-cover-extractor.ts` ✅
+- [x] `src/lib/project-auth.ts` ✅
+- [x] `src/lib/project-permissions.ts` ✅
+- [x] `src/lib/r2.ts` ✅
+- [x] `src/lib/rate-limiter.ts` ✅
+- [x] `src/lib/recommendations/engine.ts` ✅
+- [x] `src/lib/retailer-auth.ts` ✅
+- [x] `src/lib/seo-audit.ts` ✅
+- [x] `src/lib/seo-defaults.ts` ✅
+- [x] `src/lib/seo/indexing.ts` ✅
+- [x] `src/lib/shopify-push.ts` ✅
+- [x] `src/lib/shufti.ts` ✅
+- [x] `src/lib/stats.ts` 🔧
   - Fixed: getPlatformTotals() called `db.user.count()` without `deletedAt: null`, causing soft-deleted users to inflate the totalUsers platform stat
-- [ ] `src/lib/stats/actions.ts` ⬜
-- [ ] `src/lib/stats/index.ts` ⬜
-- [ ] `src/lib/stats/utils.ts` ⬜
-- [ ] `src/lib/stores/project-store.ts` ⬜
-- [ ] `src/lib/tracking.ts` ⬜
-- [ ] `src/lib/tracking/index.ts` ⬜
-- [ ] `src/lib/usePdfAsImages.ts` ⬜
-- [ ] `src/lib/utils.ts` ⬜
-- [ ] `src/lib/utils/api-params.ts` ⬜
-- [ ] `src/lib/utils/sanitize.ts` ⬜
-- [ ] `src/lib/vault.ts` ⬜
+- [x] `src/lib/stats/actions.ts` ✅
+- [x] `src/lib/stats/index.ts` ✅
+- [x] `src/lib/stats/utils.ts` ✅
+- [x] `src/lib/stores/project-store.ts` ✅
+- [x] `src/lib/tracking.ts` ✅
+- [x] `src/lib/tracking/index.ts` ✅
+- [x] `src/lib/usePdfAsImages.ts` ✅
+- [x] `src/lib/utils.ts` ✅
+- [x] `src/lib/utils/api-params.ts` ✅
+- [x] `src/lib/utils/sanitize.ts` ✅
+- [x] `src/lib/vault.ts` ✅
 - [x] `src/middleware.ts` ✅
 - [ ] `src/types/api.ts` ⬜
 - [ ] `src/types/index.ts` ⬜

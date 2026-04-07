@@ -18,8 +18,8 @@ export async function GET() {
     }
 
     // Get user verification status
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: {
         idVerified: true,
         idVerifiedAt: true,
@@ -98,8 +98,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is already verified
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: {
         idVerified: true,
         email: true,

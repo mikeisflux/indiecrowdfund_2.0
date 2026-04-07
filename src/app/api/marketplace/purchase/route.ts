@@ -169,8 +169,8 @@ export async function POST(request: Request) {
     if (book.paymentProcessor === "DIVINITYCOIN" && paymentMethod === "divinitycoin") {
       try {
         const dcConfig = await getDivinityCoinConfig();
-        const userRecord = await prisma.user.findUnique({
-          where: { id: session.user.id },
+        const userRecord = await prisma.user.findFirst({
+          where: { id: session.user.id, deletedAt: null },
           select: { email: true, name: true },
         });
 

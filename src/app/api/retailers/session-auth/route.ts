@@ -31,8 +31,8 @@ export async function POST() {
     }
 
     // Check if user has retailerAccess enabled
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -207,8 +207,8 @@ export async function GET() {
       });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: {
         retailerAccess: true,
         role: true

@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Check that target user exists
-    const targetUser = await db.user.findUnique({
-      where: { id: userId },
+    const targetUser = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: { id: true, name: true, role: true },
     });
 

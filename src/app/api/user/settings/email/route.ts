@@ -41,8 +41,8 @@ export async function POST(request: Request) {
     }
 
     // Get the current user
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: {
         id: true,
         email: true,

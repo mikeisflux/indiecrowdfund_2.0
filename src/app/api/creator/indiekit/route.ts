@@ -49,8 +49,8 @@ export async function GET(req: NextRequest) {
     const shouldInclude = (field: string) => !requestedFields || requestedFields.has(field);
 
     // Get user role and check if they have at least one approved prelaunch page or campaign
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
     const userRole = user?.role || "USER";
