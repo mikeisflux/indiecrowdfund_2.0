@@ -82,7 +82,7 @@ export function AggregateRating({
   count: number;
   size?: "sm" | "md" | "lg";
 }) {
-  if (!value || count === 0) return null;
+  if (!value) return null;
 
   return (
     <div className="flex items-center gap-1.5">

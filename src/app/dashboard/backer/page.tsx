@@ -148,6 +148,17 @@ interface DashboardData {
   analytics: DashboardAnalytics;
 }
 
+interface ReviewData {
+  id?: string;
+  markedReceived: boolean;
+  overallRating: number | null;
+  deliveryRating: number | null;
+  qualityRating: number | null;
+  communicationRating: number | null;
+  reviewTitle: string | null;
+  reviewBody: string | null;
+}
+
 export default function BackerDashboard() {
   const searchParams = useSearchParams();
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -195,16 +206,6 @@ export default function BackerDashboard() {
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   // Review state
-  interface ReviewData {
-    id?: string;
-    markedReceived: boolean;
-    overallRating: number | null;
-    deliveryRating: number | null;
-    qualityRating: number | null;
-    communicationRating: number | null;
-    reviewTitle: string | null;
-    reviewBody: string | null;
-  }
   const [reviews, setReviews] = useState<Record<string, ReviewData>>({});
   const [reviewDialogPledgeId, setReviewDialogPledgeId] = useState<string | null>(null);
   const [reviewDialogProject, setReviewDialogProject] = useState<{ title: string } | null>(null);
@@ -932,7 +933,7 @@ export default function BackerDashboard() {
                             </div>
 
                             {/* Mark as Received + Review Row */}
-                            {project.pledge.status === "COMPLETED" || project.status === "FUNDED" || project.status === "COMPLETED" ? (
+                            {project.pledge.status === "COMPLETED" ? (
                               <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between gap-3 flex-wrap">
                                 <button
                                   onClick={() => quickMarkReceived(project.pledge.id)}

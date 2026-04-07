@@ -339,16 +339,20 @@ export async function PATCH(request: NextRequest) {
       // Find all backers who received this file and send notification emails
       let notifiedCount = 0;
       if (notifyBackers) {
+        // DigitalDistribution has no pledge relation — only pledgeId field.
+        // Fetch distributions to get pledgeIds, then look up users via Pledge.
         const distributions = await db.digitalDistribution.findMany({
           where: { digitalFileId: fileId, distributedAt: { not: null } },
-          include: {
-            pledge: {
-              include: {
-                user: { select: { email: true, name: true, deletedAt: true } },
-              },
-            },
-          },
+          select: { pledgeId: true },
         });
+
+        const pledgeIds = distributions.map((d) => d.pledgeId);
+        const pledges = pledgeIds.length > 0
+          ? await db.pledge.findMany({
+              where: { id: { in: pledgeIds } },
+              select: { user: { select: { email: true, name: true, deletedAt: true } } },
+            })
+          : [];
 
         const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "";
         const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
@@ -356,12 +360,11 @@ export async function PATCH(request: NextRequest) {
         const safeFileName = file.name.replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
         const downloadsUrl = `${APP_URL}/dashboard/backer?tab=digital-downloads`;
 
-        type DistributionWithUser = (typeof distributions)[number];
         const emailResults = await Promise.allSettled(
-          distributions
-            .filter((dist: DistributionWithUser) => dist.pledge.user && !dist.pledge.user.deletedAt && dist.pledge.user.email)
-            .map((dist: DistributionWithUser) => {
-              const user = dist.pledge.user!;
+          pledges
+            .filter((p) => p.user && !p.user.deletedAt && p.user.email)
+            .map((p) => {
+              const user = p.user!;
               const safeName = (user.name || "Backer").replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
               return sendEmail({
                 to: user.email!,

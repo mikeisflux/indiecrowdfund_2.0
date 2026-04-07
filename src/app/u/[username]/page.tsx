@@ -95,7 +95,7 @@ interface PublicProfile {
   };
   createdProjects: ProjectSummary[];
   backedProjects: ProjectSummary[];
-  ratings: {
+  ratings?: {
     avg: {
       overall: number | null;
       delivery: number | null;
