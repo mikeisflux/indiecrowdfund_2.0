@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     switch (eventType) {
       case "PROJECT_VIEW":
         if (projectId) {
-          await trackProjectView(projectId, userId, sessionId, referrer, geo.country, geo.ip);
+          await trackProjectView(projectId, userId ?? undefined, sessionId, referrer, geo.country, geo.ip);
           if (referrer) {
             await trackReferrer(projectId, referrer);
           }
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       default:
         await trackEvent({
           eventType,
-          userId,
+          userId: userId ?? undefined,
           sessionId,
           projectId,
           rewardId,
