@@ -743,12 +743,7 @@ export function DigitalTab({
                   {replaceProgress < 30 ? "Preparing upload…" : replaceProgress < 75 ? "Uploading file…" : "Finalising…"}
                 </span>
               </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-teal-600 transition-all duration-300"
-                  style={{ width: `${replaceProgress}%` }}
-                />
-              </div>
+              <Progress value={replaceProgress} className="h-2" />
             </div>
           )}
 

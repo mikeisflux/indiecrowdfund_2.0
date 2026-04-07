@@ -5,6 +5,7 @@ const creatorDigitalFilesLogger = logger.child({ module: "creator-digital-files"
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getR2Storage, generateFileKey } from "@/lib/r2";
+import { sendEmail } from "@/lib/email";
 
 // CORS headers for API responses
 const corsHeaders = {
@@ -302,6 +303,13 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: "newStorageKey required" }, { status: 400, headers: corsHeaders });
       }
 
+      // Security: verify the key was generated for this project (prevents a creator from
+      // pointing this DigitalFile at another project's R2 object by passing an arbitrary key)
+      const expectedPrefix = `digital-rewards/${file.project.id}/`;
+      if (!newStorageKey.startsWith(expectedPrefix)) {
+        return NextResponse.json({ error: "Invalid storage key" }, { status: 400, headers: corsHeaders });
+      }
+
       const r2 = await getR2Storage();
 
       // Swap the storage key and reset cover (new file may have different pages)
@@ -344,42 +352,43 @@ export async function PATCH(request: NextRequest) {
 
         const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "";
         const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
+        const escapeMap: Record<string, string> = { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" };
+        const safeFileName = file.name.replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
+        const downloadsUrl = `${APP_URL}/dashboard/backer?tab=digital-downloads`;
 
-        for (const dist of distributions) {
-          const user = dist.pledge.user;
-          if (!user || user.deletedAt || !user.email) continue;
-
-          const escapeMap: Record<string, string> = { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" };
-          const safeName = (user.name || "Backer").replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
-          const safeFileName = file.name.replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
-          const downloadsUrl = `${APP_URL}/dashboard/backer?tab=digital-downloads`;
-
-          try {
-            const { sendEmail } = await import("@/lib/email");
-            await sendEmail({
-              to: user.email,
-              subject: `Updated file available: ${file.name}`,
-              html: `
-                <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-                  <h2 style="color:#333;">Updated File Available</h2>
-                  <p>Hi ${safeName},</p>
-                  <p>The creator has uploaded a corrected version of <strong>${safeFileName}</strong>.</p>
-                  <p>The updated file is now available in your digital downloads. Your reading progress has been preserved.</p>
-                  <p style="margin:24px 0;">
-                    <a href="${downloadsUrl}" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">
-                      View Downloads
-                    </a>
-                  </p>
-                  <p style="color:#666;font-size:12px;">— The ${APP_NAME} Team</p>
-                </div>
-              `,
-              text: `Hi ${user.name || "Backer"},\n\nThe creator has uploaded a corrected version of "${file.name}".\n\nThe updated file is now available in your digital downloads at: ${downloadsUrl}\n\n— The ${APP_NAME} Team`,
-            });
-            notifiedCount++;
-          } catch (emailErr) {
-            creatorDigitalFilesLogger.warn({ err: String(emailErr), pledgeId: dist.pledgeId }, "Failed to send replacement notification email");
+        const emailResults = await Promise.allSettled(
+          distributions
+            .filter(dist => dist.pledge.user && !dist.pledge.user.deletedAt && dist.pledge.user.email)
+            .map(dist => {
+              const user = dist.pledge.user!;
+              const safeName = (user.name || "Backer").replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
+              return sendEmail({
+                to: user.email!,
+                subject: `Updated file available: ${file.name}`,
+                html: `
+                  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+                    <h2 style="color:#333;">Updated File Available</h2>
+                    <p>Hi ${safeName},</p>
+                    <p>The creator has uploaded a corrected version of <strong>${safeFileName}</strong>.</p>
+                    <p>The updated file is now available in your digital downloads. Your reading progress has been preserved.</p>
+                    <p style="margin:24px 0;">
+                      <a href="${downloadsUrl}" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">
+                        View Downloads
+                      </a>
+                    </p>
+                    <p style="color:#666;font-size:12px;">— The ${APP_NAME} Team</p>
+                  </div>
+                `,
+                text: `Hi ${user.name || "Backer"},\n\nThe creator has uploaded a corrected version of "${file.name}".\n\nThe updated file is now available in your digital downloads at: ${downloadsUrl}\n\n— The ${APP_NAME} Team`,
+              });
+            })
+        );
+        notifiedCount = emailResults.filter(r => r.status === "fulfilled").length;
+        emailResults.forEach((r, i) => {
+          if (r.status === "rejected") {
+            creatorDigitalFilesLogger.warn({ err: String(r.reason), index: i }, "Failed to send replacement notification email");
           }
-        }
+        });
       }
 
       const affectedCount = await db.digitalDistribution.count({
