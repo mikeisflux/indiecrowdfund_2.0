@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await db.user.findUnique({ where: { id: session.user.id } });
+    const user = await db.user.findFirst({ where: { id: session.user.id, deletedAt: null } });
     if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

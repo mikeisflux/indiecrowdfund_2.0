@@ -9,15 +9,17 @@ import { canUserEditProject } from "@/lib/project-auth";
 
 const createSurveySchema = z.object({
   projectId: z.string(),
+  // Legacy fields — mapped to current schema equivalents (introTitle/introMessage)
   title: z.string().max(500).optional(),
   description: z.string().max(5000).optional(),
+  // questions field is accepted for backward compat but ignored (stored as SurveyItemQuestion/SurveyBackerQuestion)
   questions: z.array(z.object({
     id: z.string().max(100),
     type: z.enum(["text", "multiple_choice", "dropdown", "address"]),
     question: z.string().max(500),
     required: z.boolean().default(false),
     options: z.array(z.string().max(200)).max(50).optional(),
-  })).max(100),
+  })).max(100).optional(),
 });
 
 const submitResponseSchema = z.object({
@@ -112,19 +114,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
-      // Create or update survey
+      // Create or update survey — use actual schema fields (introTitle/introMessage)
       const survey = await db.survey.upsert({
         where: { projectId: data.projectId },
         create: {
           projectId: data.projectId,
-          title: data.title,
-          description: data.description,
-          questions: data.questions as object[],
+          introTitle: data.title || null,
+          introMessage: data.description || null,
         },
         update: {
-          title: data.title,
-          description: data.description,
-          questions: data.questions as object[],
+          introTitle: data.title || null,
+          introMessage: data.description || null,
         },
       });
 
@@ -201,10 +201,9 @@ export async function GET(req: NextRequest) {
         where: { projectId: pledge.projectId },
         select: {
           id: true,
-          title: true,
-          description: true,
-          questions: true,
-          isActive: true,
+          introTitle: true,
+          introMessage: true,
+          status: true,
         },
       });
 

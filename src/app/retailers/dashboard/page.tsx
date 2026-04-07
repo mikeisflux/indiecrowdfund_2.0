@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -337,7 +337,7 @@ export default function RetailerDashboardPage() {
                       {recentOrders.map((order) => (
                         <div key={order.id} className="flex items-center gap-4 p-4 rounded-lg border border-zinc-100 hover:border-zinc-200 hover:bg-zinc-50 transition-colors">
                           <div className="h-16 w-16 rounded-lg bg-zinc-100 overflow-hidden flex-shrink-0">
-                            <img src={order.projectImage} alt={order.projectTitle} className="h-full w-full object-cover" />
+                            <Image src={order.projectImage} alt={order.projectTitle} width={64} height={64} className="h-full w-full object-cover" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium truncate">{order.projectTitle}</h4>
@@ -411,7 +411,7 @@ export default function RetailerDashboardPage() {
                   <Link key={project.id} href={`/retailers/projects/${project.id}`}>
                     <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                       <div className="aspect-video bg-zinc-100 relative">
-                        <img src={project.imageUrl} alt={project.title} className="h-full w-full object-cover" />
+                        <Image src={project.imageUrl} alt={project.title} fill className="object-cover" />
                         <Badge className="absolute top-3 right-3 bg-emerald-600">{project.retailerDiscount}% OFF</Badge>
                       </div>
                       <CardContent className="p-4">
