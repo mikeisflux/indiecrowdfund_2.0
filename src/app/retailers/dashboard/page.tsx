@@ -108,7 +108,7 @@ export default function RetailerDashboardPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "bg-zinc-100 text-zinc-700";
+        return "bg-muted text-zinc-700";
       case "INVOICED":
         return "bg-amber-100 text-amber-700";
       case "PAID":
@@ -120,7 +120,7 @@ export default function RetailerDashboardPage() {
       case "DELIVERED":
         return "bg-green-100 text-green-700";
       default:
-        return "bg-zinc-100 text-zinc-700";
+        return "bg-muted text-zinc-700";
     }
   };
 
@@ -139,7 +139,7 @@ export default function RetailerDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted/50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     );
@@ -167,8 +167,8 @@ export default function RetailerDashboardPage() {
 
             <div className="hidden md:flex flex-1 max-w-md mx-8">
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                <Input placeholder="Search projects..." className="pl-10 bg-zinc-50 border-zinc-200" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search projects..." className="pl-10 bg-muted/50 border-zinc-200" />
               </div>
             </div>
 
@@ -184,7 +184,7 @@ export default function RetailerDashboardPage() {
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-medium">{retailerData?.businessName}</p>
-                  <p className="text-xs text-zinc-500">Certified Retailer</p>
+                  <p className="text-xs text-muted-foreground">Certified Retailer</p>
                 </div>
                 <Button variant="ghost" size="icon" onClick={handleLogout}>
                   <LogOut className="h-5 w-5" />
@@ -202,35 +202,35 @@ export default function RetailerDashboardPage() {
             <TabsList className="h-auto p-0 bg-transparent rounded-none gap-4 sm:gap-8 min-w-max">
               <TabsTrigger
                 value="dashboard"
-                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-zinc-500 hover:text-zinc-700"
+                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-muted-foreground hover:text-zinc-700"
               >
                 <LayoutDashboard className="h-4 w-4 mr-2 hidden sm:inline-block" />
                 Dashboard
               </TabsTrigger>
               <TabsTrigger
                 value="projects"
-                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-zinc-500 hover:text-zinc-700"
+                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-muted-foreground hover:text-zinc-700"
               >
                 <Package className="h-4 w-4 mr-2 hidden sm:inline-block" />
                 Browse Projects
               </TabsTrigger>
               <TabsTrigger
                 value="orders"
-                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-zinc-500 hover:text-zinc-700"
+                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-muted-foreground hover:text-zinc-700"
               >
                 <ShoppingCart className="h-4 w-4 mr-2 hidden sm:inline-block" />
                 My Orders
               </TabsTrigger>
               <TabsTrigger
                 value="invoices"
-                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-zinc-500 hover:text-zinc-700"
+                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-muted-foreground hover:text-zinc-700"
               >
                 <FileText className="h-4 w-4 mr-2 hidden sm:inline-block" />
                 Invoices
               </TabsTrigger>
               <TabsTrigger
                 value="account"
-                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-zinc-500 hover:text-zinc-700"
+                className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-muted-foreground hover:text-zinc-700"
               >
                 <UserCircle className="h-4 w-4 mr-2 hidden sm:inline-block" />
                 Account
@@ -266,7 +266,7 @@ export default function RetailerDashboardPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-zinc-500">Total Orders</p>
+                      <p className="text-sm text-muted-foreground">Total Orders</p>
                       <p className="text-3xl font-bold">{retailerData?.totalOrders}</p>
                       <p className="text-xs text-emerald-600 mt-1">+12% from last month</p>
                     </div>
@@ -280,7 +280,7 @@ export default function RetailerDashboardPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-zinc-500">Total Savings</p>
+                      <p className="text-sm text-muted-foreground">Total Savings</p>
                       <p className="text-3xl font-bold">${Number(retailerData?.totalSavings || 0).toLocaleString()}</p>
                       <p className="text-xs text-emerald-600 mt-1">50% wholesale discount</p>
                     </div>
@@ -294,9 +294,9 @@ export default function RetailerDashboardPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-zinc-500">Pending Orders</p>
+                      <p className="text-sm text-muted-foreground">Pending Orders</p>
                       <p className="text-3xl font-bold">{retailerData?.pendingOrders}</p>
-                      <p className="text-xs text-zinc-500 mt-1">Awaiting fulfillment</p>
+                      <p className="text-xs text-muted-foreground mt-1">Awaiting fulfillment</p>
                     </div>
                     <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
                       <Clock className="h-6 w-6 text-yellow-600" />
@@ -308,7 +308,7 @@ export default function RetailerDashboardPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-zinc-500">Available Projects</p>
+                      <p className="text-sm text-muted-foreground">Available Projects</p>
                       <p className="text-3xl font-bold">{retailerData?.activeProjects}</p>
                       <p className="text-xs text-blue-600 mt-1">New this week</p>
                     </div>
@@ -335,13 +335,13 @@ export default function RetailerDashboardPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {recentOrders.map((order) => (
-                        <div key={order.id} className="flex items-center gap-4 p-4 rounded-lg border border-zinc-100 hover:border-zinc-200 hover:bg-zinc-50 transition-colors">
-                          <div className="h-16 w-16 rounded-lg bg-zinc-100 overflow-hidden flex-shrink-0">
+                        <div key={order.id} className="flex items-center gap-4 p-4 rounded-lg border border-zinc-100 hover:border-zinc-200 hover:bg-muted/50 transition-colors">
+                          <div className="h-16 w-16 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                             <Image src={order.projectImage} alt={order.projectTitle} width={64} height={64} className="h-full w-full object-cover" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium truncate">{order.projectTitle}</h4>
-                            <p className="text-sm text-zinc-500">Qty: {order.quantity} • {new Date(order.createdAt).toLocaleDateString()}</p>
+                            <p className="text-sm text-muted-foreground">Qty: {order.quantity} • {new Date(order.createdAt).toLocaleDateString()}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge className={getStatusColor(order.fulfillmentStatus)}>
                                 {getFulfillmentIcon(order.fulfillmentStatus)}
@@ -351,7 +351,7 @@ export default function RetailerDashboardPage() {
                           </div>
                           <div className="text-right">
                             <p className="font-bold text-emerald-600">${Number(order.totalAmount).toFixed(2)}</p>
-                            <p className="text-sm text-zinc-400 line-through">${Number(order.originalAmount).toFixed(2)}</p>
+                            <p className="text-sm text-muted-foreground line-through">${Number(order.originalAmount).toFixed(2)}</p>
                             <p className="text-xs text-emerald-600">50% off</p>
                           </div>
                         </div>
@@ -380,7 +380,7 @@ export default function RetailerDashboardPage() {
                       </div>
                       <div>
                         <h4 className="font-semibold">Your Benefits</h4>
-                        <p className="text-sm text-zinc-500">As a certified retailer</p>
+                        <p className="text-sm text-muted-foreground">As a certified retailer</p>
                       </div>
                     </div>
                     <ul className="space-y-2 text-sm">
@@ -399,7 +399,7 @@ export default function RetailerDashboardPage() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-bold">Featured Projects</h2>
-                  <p className="text-zinc-500">Trending campaigns with retailer access</p>
+                  <p className="text-muted-foreground">Trending campaigns with retailer access</p>
                 </div>
                 <Button variant="outline" onClick={() => setActiveTab("projects")}>
                   View All Projects<ChevronRight className="ml-1 h-4 w-4" />
@@ -410,7 +410,7 @@ export default function RetailerDashboardPage() {
                 {featuredProjects.map((project) => (
                   <Link key={project.id} href={`/retailers/projects/${project.id}`}>
                     <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-                      <div className="aspect-video bg-zinc-100 relative">
+                      <div className="aspect-video bg-muted relative">
                         <Image src={project.imageUrl} alt={project.title} fill className="object-cover" />
                         <Badge className="absolute top-3 right-3 bg-emerald-600">{project.retailerDiscount}% OFF</Badge>
                       </div>
@@ -419,12 +419,12 @@ export default function RetailerDashboardPage() {
                         <h3 className="font-semibold mb-2 line-clamp-1">{project.title}</h3>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-emerald-600 font-medium">{project.fundingPercent}% funded</span>
-                          <span className="text-zinc-500 flex items-center gap-1">
+                          <span className="text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}
                           </span>
                         </div>
-                        <div className="mt-3 h-2 bg-zinc-100 rounded-full overflow-hidden">
+                        <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
                           <div className="h-full bg-emerald-600 rounded-full" style={{ width: `${Math.min(project.fundingPercent, 100)}%` }} />
                         </div>
                       </CardContent>

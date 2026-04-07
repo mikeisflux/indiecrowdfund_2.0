@@ -5,7 +5,7 @@ export function DataDeletionPolicyContent() {
     <div className="prose prose-zinc dark:prose-invert max-w-none">
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">IndieCrowdfund — Data Deletion Policy</h2>
-        <p className="text-sm text-zinc-500 mb-8">
+        <p className="text-sm text-muted-foreground mb-8">
           <strong>Last Updated:</strong> November 28, 2025
         </p>
 
@@ -188,7 +188,7 @@ export function DataDeletionPolicyContent() {
               privacy@indiecrowdfund.com
             </a>
           </p>
-          <p className="text-sm text-zinc-500">Subject Line: Data Deletion Request</p>
+          <p className="text-sm text-muted-foreground">Subject Line: Data Deletion Request</p>
         </div>
 
         <h4 className="text-lg font-semibold mt-6 mb-3">B. Account Settings</h4>

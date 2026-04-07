@@ -366,7 +366,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
             <p
               className={cn(
                 "mt-6 mb-4 text-lg md:text-xl max-w-2xl animate-fade-in-up",
-                currentSlide.textColor === "dark" ? "text-zinc-600" : "text-muted-foreground",
+                currentSlide.textColor === "dark" ? "text-muted-foreground" : "text-muted-foreground",
                 currentSlide.textAlignment === "center" && "mx-auto",
                 currentSlide.textAlignment === "right" && "ml-auto",
                 isTransitioning && "opacity-0"

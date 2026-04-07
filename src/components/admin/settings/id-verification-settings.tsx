@@ -184,7 +184,7 @@ export function IdVerificationSettings({ settings, onSettingsChange, onSave }: I
 
           <div className="rounded-lg border p-4 bg-muted/50 dark:bg-zinc-800/50">
             <h4 className="font-medium mb-2">How ID Verification Works</h4>
-            <ul className="text-sm text-zinc-600 dark:text-muted-foreground space-y-2">
+            <ul className="text-sm text-muted-foreground dark:text-muted-foreground space-y-2">
               <li className="flex items-start gap-2">
                 <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                 <span>Users attempting to view restricted projects are prompted to verify their identity</span>

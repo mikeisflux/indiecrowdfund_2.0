@@ -75,7 +75,7 @@ export function NPSFeedbackDialog({
                     "hover:border-teal-500 hover:bg-teal-50",
                     selectedScore === score
                       ? "border-teal-600 bg-teal-600 text-white"
-                      : "border-gray-200 bg-white"
+                      : "border-border bg-card"
                   )}
                 >
                   {score}

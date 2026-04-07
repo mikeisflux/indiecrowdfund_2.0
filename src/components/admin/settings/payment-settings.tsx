@@ -258,7 +258,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
 
           <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">DivinityCoin Fee Structure:</p>
-            <ul className="list-disc list-inside text-zinc-600 dark:text-muted-foreground space-y-1">
+            <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
               <li>3% partner fee (DivinityCoin processing)</li>
               <li>Platform fee to creator: 3% (configurable) = ~6% total</li>
               <li>Settlements processed via wire transfer to your bank</li>
@@ -351,7 +351,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
 
           <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">PayPal Setup:</p>
-            <ul className="list-disc list-inside text-zinc-600 dark:text-muted-foreground space-y-1">
+            <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
               <li>Advanced Checkout: inline card fields + PayPal wallet button on pledge page</li>
               <li>Payouts API: creators add their PayPal email, platform pays out on campaign end</li>
               <li>Enable &quot;Payouts&quot; in your PayPal app permissions (Apps &amp; Credentials)</li>
@@ -452,7 +452,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
 
           <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">Whop Setup:</p>
-            <ul className="list-disc list-inside text-zinc-600 dark:text-muted-foreground space-y-1">
+            <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
               <li>Embedded in-page checkout — no redirect, no popup</li>
               <li>Card payments settle to USDC automatically</li>
               <li>Create a Plan in Checkout links (base template — price is overridden per pledge)</li>
@@ -567,7 +567,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
 
           <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">How to get reCAPTCHA keys:</p>
-            <ol className="list-decimal list-inside text-zinc-600 dark:text-muted-foreground space-y-1">
+            <ol className="list-decimal list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
               <li>Go to the Google reCAPTCHA Admin Console</li>
               <li>Register a new site with reCAPTCHA v2 &quot;I&apos;m not a robot&quot;</li>
               <li>Add your domain(s) to the allowed list</li>

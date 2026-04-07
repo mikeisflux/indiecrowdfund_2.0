@@ -66,7 +66,7 @@ export function SurveyAddressStep({
                 <button
                   key={addr.id}
                   onClick={() => onApplySavedAddress(addr)}
-                  className="w-full text-left p-3 rounded-lg border bg-white hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                  className="w-full text-left p-3 rounded-lg border bg-card hover:border-blue-400 hover:bg-blue-50 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">

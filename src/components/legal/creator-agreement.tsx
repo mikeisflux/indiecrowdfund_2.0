@@ -5,7 +5,7 @@ export function CreatorAgreementContent() {
     <div className="prose prose-zinc dark:prose-invert max-w-none">
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">Creator Responsibility Agreement</h2>
-        <p className="text-sm text-zinc-500 mb-8">
+        <p className="text-sm text-muted-foreground mb-8">
           <strong>Last Updated:</strong> March 13, 2026
         </p>
 

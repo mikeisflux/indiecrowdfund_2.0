@@ -341,13 +341,13 @@ export function ApiSettings() {
                       </code>
                       <button
                         onClick={() => setShowApiKey(showApiKey === key.id ? null : key.id)}
-                        className="text-muted-foreground hover:text-zinc-600"
+                        className="text-muted-foreground hover:text-muted-foreground"
                       >
                         {showApiKey === key.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                       <button
                         onClick={() => copyToClipboard(key.key, key.id)}
-                        className="text-muted-foreground hover:text-zinc-600"
+                        className="text-muted-foreground hover:text-muted-foreground"
                       >
                         {copiedKey === key.id ? (
                           <CheckCircle className="h-4 w-4 text-green-500" />

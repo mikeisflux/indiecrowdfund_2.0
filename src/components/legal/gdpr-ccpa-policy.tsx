@@ -5,7 +5,7 @@ export function GdprCcpaPolicyContent() {
     <div className="prose prose-zinc dark:prose-invert max-w-none">
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">GDPR + CCPA Addendum</h2>
-        <p className="text-sm text-zinc-500 mb-8">
+        <p className="text-sm text-muted-foreground mb-8">
           <strong>Last Updated:</strong> November 28, 2025
         </p>
 
@@ -77,7 +77,7 @@ export function GdprCcpaPolicyContent() {
               privacy@indiecrowdfund.com
             </a>
           </p>
-          <p className="text-sm text-zinc-500 mt-2">
+          <p className="text-sm text-muted-foreground mt-2">
             Please include "GDPR Request" or "CCPA Request" in your subject line for faster processing.
           </p>
         </div>

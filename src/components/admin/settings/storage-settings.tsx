@@ -276,7 +276,7 @@ export function StorageSettings({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <HardDrive className="h-5 w-5 text-zinc-600 dark:text-muted-foreground" />
+            <HardDrive className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
             Storage Limits & Security
           </CardTitle>
           <CardDescription>Configure file size limits and allowed types</CardDescription>

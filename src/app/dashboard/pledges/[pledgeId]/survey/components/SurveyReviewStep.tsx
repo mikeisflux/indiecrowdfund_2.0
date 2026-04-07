@@ -57,7 +57,7 @@ export function SurveyReviewStep({
                 {response.variants && Object.entries(response.variants).map(([variantId, value]) => {
                   const variant = item.variants.find((v) => v.id === variantId);
                   return (
-                    <p key={variantId} className="text-sm text-zinc-600">
+                    <p key={variantId} className="text-sm text-muted-foreground">
                       {variant?.variantType}: {value}
                     </p>
                   );
@@ -73,7 +73,7 @@ export function SurveyReviewStep({
             return (
               <div key={q.id} className="border-b pb-4">
                 <h4 className="font-medium">{q.question}</h4>
-                <p className="text-sm text-zinc-600">
+                <p className="text-sm text-muted-foreground">
                   {Array.isArray(response) ? response.join(", ") : response}
                 </p>
               </div>
@@ -95,7 +95,7 @@ export function SurveyReviewStep({
                     if (!addon) return null;
                     return (
                       <div key={id} className="flex items-center justify-between text-sm">
-                        <span className="text-zinc-600">
+                        <span className="text-muted-foreground">
                           {addon.title} x{qty}
                         </span>
                         <div className="flex items-center gap-2">
@@ -132,7 +132,7 @@ export function SurveyReviewStep({
           {showAddressStep && shippingAddress.name && (
             <div>
               <h4 className="font-medium">Shipping Address</h4>
-              <p className="text-sm text-zinc-600">
+              <p className="text-sm text-muted-foreground">
                 {shippingAddress.name}<br />
                 {shippingAddress.line1}<br />
                 {shippingAddress.line2 && <>{shippingAddress.line2}<br /></>}

@@ -455,7 +455,7 @@ export default function SurveyBuilderPage() {
                     {survey.status === "SENT" && "Survey sent to backers"}
                     {survey.status === "LOCKED" && "Addresses locked"}
                   </p>
-                  <p className="text-sm text-zinc-600">
+                  <p className="text-sm text-muted-foreground">
                     {survey.status === "SENT" && `${stats.completedResponses} of ${stats.totalBackers} responses (${stats.responseRate}%)`}
                     {survey.status === "LOCKED" && "No more address changes allowed"}
                   </p>
