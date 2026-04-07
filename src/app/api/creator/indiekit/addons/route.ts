@@ -19,6 +19,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
     }
 
+    // Verify user has access to this project before returning addons
+    const project = await verifyProjectAccess(projectId, session.user.id);
+    if (!project) {
+      return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
+    }
+
     // Get addons linked to the survey (showInSurvey = true)
     const addons = await db.reward.findMany({
       where: {

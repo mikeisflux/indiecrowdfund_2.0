@@ -243,7 +243,6 @@ export async function DELETE(
     const member = await db.emailListSubscriber.findFirst({
       where: {
         id: memberId,
-        deletedAt: null,
         creatorId: session.user.id,
       },
     });
