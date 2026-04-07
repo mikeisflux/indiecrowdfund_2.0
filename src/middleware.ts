@@ -63,12 +63,21 @@ const GOOGLE_CRAWLER_UA_PATTERNS = [
   "google favicon",
   "googleweblight",
   "google-read-aloud",
+  "google-pagerenderer",
+  "google-tagassistant",
+  "google-searchconsole",
+  "pagespeed",
+  "lighthouse",
+  "chrome-lighthouse",
 ];
 
-// Representative Google IP prefixes (covers Googlebot + AdsBot + infrastructure)
-// Full list: https://www.gstatic.com/ipranges/goog.json
+// Google IP prefixes — covers Googlebot, AdsBot, GTM/GA tag verification, and Google Cloud.
+// Tag verification (GA4 setup assistant, GTM install checker) runs from Google Cloud infra
+// using standard browser UAs, so IP-range matching is the only reliable bypass mechanism.
+// Ranges sourced from https://www.gstatic.com/ipranges/goog.json (updated 2025-04)
 const GOOGLE_IP_PREFIXES = [
-  "66.249.", // Googlebot
+  // Core Google serving infrastructure
+  "66.249.", // Googlebot crawlers
   "64.233.", // Google
   "72.14.",  // Google
   "74.125.", // Google
@@ -77,10 +86,20 @@ const GOOGLE_IP_PREFIXES = [
   "209.85.",  // Google
   "216.58.",  // Google
   "216.239.", // Google
-  "34.64.",   // Google Cloud
-  "34.80.",   // Google Cloud
-  "35.187.",  // Google Cloud
-  "35.190.",  // Google Cloud
+  // Google Cloud (used by tag verification, PageSpeed, Search Console, etc.)
+  "34.",     // All 34.x.x.x — Google Cloud is heavily allocated here
+  "35.",     // All 35.x.x.x — Google Cloud asia/europe/us regions
+  "104.196.", // Google Cloud us-east1
+  "104.197.", // Google Cloud us-central1
+  "104.198.", // Google Cloud us-east1
+  "104.199.", // Google Cloud us-west1
+  "104.154.", // Google Cloud us-central1
+  "104.155.", // Google Cloud us-east1
+  "104.196.", // Google Cloud
+  "107.178.", // Google Cloud
+  "130.211.", // Google Cloud global LB
+  "146.148.", // Google Cloud
+  "173.255.", // Google
 ];
 
 function isGoogleCrawler(ip: string, userAgent: string): boolean {
@@ -373,7 +392,7 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https: http:",
-    "connect-src 'self' blob: https://api.stripe.com https://*.paypal.com https://www.google-analytics.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com https://unpkg.com wss: https://api.whop.com https://*.whop.com",
+    "connect-src 'self' blob: https://api.stripe.com https://*.paypal.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com https://unpkg.com wss: https://api.whop.com https://*.whop.com",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://www.youtube.com https://youtube.com https://player.vimeo.com https://www.google.com https://recaptcha.google.com https://whop.com https://*.whop.com",
     // Worker sources - allow blob URLs for pdf.js web worker
     "worker-src 'self' blob:",
