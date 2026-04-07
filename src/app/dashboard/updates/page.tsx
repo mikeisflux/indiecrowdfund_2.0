@@ -343,7 +343,7 @@ export default function UpdatesPage() {
           </Link>
           <div className="flex-1" />
           <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-            <SelectTrigger className="w-[280px] bg-card/50 backdrop-blur border-border/50">
+            <SelectTrigger className="w-[200px] sm:w-[280px] bg-card/50 backdrop-blur border-border/50">
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
