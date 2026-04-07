@@ -85,8 +85,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { vanityUrl: true },
     });
 
@@ -111,8 +111,8 @@ export async function POST(request: Request) {
     }
 
     // Check if user already has a vanity URL (cannot change once set)
-    const existingUser = await db.user.findUnique({
-      where: { id: session.user.id },
+    const existingUser = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { vanityUrl: true },
     });
 

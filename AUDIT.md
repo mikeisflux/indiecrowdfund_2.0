@@ -129,54 +129,54 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/admin/seo/page.tsx` ✅
 - [x] `src/app/admin/settings/page.tsx` ✅
 - [x] `src/app/admin/themes/page.tsx` ✅
-- [ ] `src/app/admin/transactions/components/BreakdownCards.tsx` ⬜
-- [ ] `src/app/admin/transactions/components/StatsCards.tsx` ⬜
-- [ ] `src/app/admin/transactions/components/StripeLookupDialog.tsx` ⬜
-- [ ] `src/app/admin/transactions/components/TransactionBadges.tsx` ⬜
-- [ ] `src/app/admin/transactions/components/TransactionDetailDialog.tsx` ⬜
-- [ ] `src/app/admin/transactions/components/TransactionFilters.tsx` ⬜
-- [ ] `src/app/admin/transactions/components/TransactionTable.tsx` ⬜
-- [ ] `src/app/admin/transactions/components/index.ts` ⬜
-- [ ] `src/app/admin/transactions/components/types.ts` ⬜
-- [ ] `src/app/admin/transactions/components/utils.ts` ⬜
-- [ ] `src/app/admin/transactions/page.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/add-user-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/approval-action-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/delete-user-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/edit-retailer-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/edit-user-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/email-preview-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/index.ts` ⬜
-- [ ] `src/app/admin/users/components/dialogs/password-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/retailer-details-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/role-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/send-email-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/dialogs/user-details-dialog.tsx` ⬜
-- [ ] `src/app/admin/users/components/index.ts` ⬜
-- [ ] `src/app/admin/users/components/retailer-stats-cards.tsx` ⬜
-- [ ] `src/app/admin/users/components/retailer-table.tsx` ⬜
-- [ ] `src/app/admin/users/components/types.ts` ⬜
-- [ ] `src/app/admin/users/components/user-filters.tsx` ⬜
-- [ ] `src/app/admin/users/components/user-stats-cards.tsx` ⬜
-- [ ] `src/app/admin/users/components/user-table.tsx` ⬜
-- [ ] `src/app/admin/users/components/utils.tsx` ⬜
-- [ ] `src/app/admin/users/hooks.ts` ⬜
-- [ ] `src/app/admin/users/hooks/dialogs.ts` ⬜
-- [ ] `src/app/admin/users/hooks/index.ts` ⬜
-- [ ] `src/app/admin/users/hooks/usePledgeActions.ts` ⬜
-- [ ] `src/app/admin/users/hooks/useRetailerActions.ts` ⬜
-- [ ] `src/app/admin/users/hooks/useUserData.ts` ⬜
-- [ ] `src/app/admin/users/page.tsx` ⬜
-- [ ] `src/app/api/admin/ai-marketing/auto-tag/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/behavior/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/[type]/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/fix-images/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/abort/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/duplicate/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/test/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/campaigns/route.ts` ⬜
+- [x] `src/app/admin/transactions/components/BreakdownCards.tsx` ✅
+- [x] `src/app/admin/transactions/components/StatsCards.tsx` ✅
+- [x] `src/app/admin/transactions/components/StripeLookupDialog.tsx` ✅
+- [x] `src/app/admin/transactions/components/TransactionBadges.tsx` ✅
+- [x] `src/app/admin/transactions/components/TransactionDetailDialog.tsx` ✅
+- [x] `src/app/admin/transactions/components/TransactionFilters.tsx` ✅
+- [x] `src/app/admin/transactions/components/TransactionTable.tsx` ✅
+- [x] `src/app/admin/transactions/components/index.ts` ✅
+- [x] `src/app/admin/transactions/components/types.ts` ✅
+- [x] `src/app/admin/transactions/components/utils.ts` ✅
+- [x] `src/app/admin/transactions/page.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/add-user-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/approval-action-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/delete-user-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/edit-retailer-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/edit-user-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/email-preview-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/index.ts` ✅
+- [x] `src/app/admin/users/components/dialogs/password-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/retailer-details-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/role-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/send-email-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/dialogs/user-details-dialog.tsx` ✅
+- [x] `src/app/admin/users/components/index.ts` ✅
+- [x] `src/app/admin/users/components/retailer-stats-cards.tsx` ✅
+- [x] `src/app/admin/users/components/retailer-table.tsx` ✅
+- [x] `src/app/admin/users/components/types.ts` ✅
+- [x] `src/app/admin/users/components/user-filters.tsx` ✅
+- [x] `src/app/admin/users/components/user-stats-cards.tsx` ✅
+- [x] `src/app/admin/users/components/user-table.tsx` ✅
+- [x] `src/app/admin/users/components/utils.tsx` ✅
+- [x] `src/app/admin/users/hooks.ts` ✅
+- [x] `src/app/admin/users/hooks/dialogs.ts` ✅
+- [x] `src/app/admin/users/hooks/index.ts` ✅
+- [x] `src/app/admin/users/hooks/usePledgeActions.ts` ✅
+- [x] `src/app/admin/users/hooks/useRetailerActions.ts` ✅
+- [x] `src/app/admin/users/hooks/useUserData.ts` ✅
+- [x] `src/app/admin/users/page.tsx` ✅
+- [x] `src/app/api/admin/ai-marketing/auto-tag/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/behavior/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/[type]/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/fix-images/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/abort/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/duplicate/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/test/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/campaigns/route.ts` ✅
 - [ ] `src/app/api/admin/ai-marketing/run/route.ts` ⬜
 - [ ] `src/app/api/admin/ai-marketing/segments/route.ts` ⬜
 - [ ] `src/app/api/admin/ai-marketing/services/route.ts` ⬜
@@ -749,7 +749,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/dashboard/marketplace/components/PromoCodesTab.tsx` ✅
 - [x] `src/app/dashboard/marketplace/components/StatsCard.tsx` ✅
 - [x] `src/app/dashboard/marketplace/components/StatusBadge.tsx` ✅
-- [ ] `src/app/dashboard/marketplace/components/types.ts` ⬜
+- [x] `src/app/dashboard/marketplace/components/types.ts` ✅
 - [x] `src/app/dashboard/marketplace/page.tsx` ✅
 - [x] `src/app/dashboard/messages/page.tsx` ✅
 - [x] `src/app/dashboard/notifications/page.tsx` ✅
@@ -766,7 +766,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyPaymentStep.tsx` ✅
 - [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyQuestionsStep.tsx` ✅
 - [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/SurveyReviewStep.tsx` ✅
-- [ ] `src/app/dashboard/pledges/[pledgeId]/survey/components/types.ts` ⬜
+- [x] `src/app/dashboard/pledges/[pledgeId]/survey/components/types.ts` ✅
 - [x] `src/app/dashboard/pledges/[pledgeId]/survey/page.tsx` ✅
 - [x] `src/app/dashboard/profile/page.tsx` ✅
 - [x] `src/app/dashboard/projects/[id]/survey/page.tsx` ✅
@@ -847,11 +847,11 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm.tsx` ✅
 - [x] `src/app/projects/[vanityname]/[slug]/pledge/components/SuccessPage.tsx` ✅
 - [x] `src/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm.tsx` ✅
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/constants.ts` ⬜
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/hooks/usePledge.ts` ⬜
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/constants.ts` ✅
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/hooks/usePledge.ts` ✅
 - [x] `src/app/projects/[vanityname]/[slug]/pledge/page.tsx` ✅
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/types.ts` ⬜
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/utils.ts` ⬜
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/types.ts` ✅
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/utils.ts` ✅
 - [x] `src/app/projects/[vanityname]/[slug]/prelaunch/layout.tsx` ✅
 - [x] `src/app/projects/[vanityname]/[slug]/prelaunch/page.tsx` ✅
 - [x] `src/app/projects/new/page.tsx` ✅
