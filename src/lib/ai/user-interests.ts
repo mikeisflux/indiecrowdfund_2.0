@@ -391,20 +391,20 @@ export async function findMatchingProjectsForUser(
   } = options;
 
   // Get user's interest profile
-  const profile = await db.userInterestProfile.findUnique({
+  let profile = await db.userInterestProfile.findUnique({
     where: { userId },
   });
 
   if (!profile) {
     // Calculate profile if not exists
     await updateUserInterestProfile(userId);
-    const newProfile = await db.userInterestProfile.findUnique({
+    profile = await db.userInterestProfile.findUnique({
       where: { userId },
     });
-    if (!newProfile) return [];
+    if (!profile) return [];
   }
 
-  const userProfile = profile ?? await db.userInterestProfile.findUnique({ where: { userId } });
+  const userProfile = profile;
   if (!userProfile) return [];
 
   // Get user's backed project IDs if excluding
