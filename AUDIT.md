@@ -215,14 +215,14 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/email/route.ts` 🔧
   - Fixed: Added `deletedAt: null` to user count for "all" audience
 - [x] `src/app/api/admin/emails/[emailId]/route.ts` ✅
-- [ ] `src/app/api/admin/error-logs/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/error-logs/route.ts` ⬜
-- [ ] `src/app/api/admin/feature-flags/route.ts` ⬜
-- [ ] `src/app/api/admin/hero-slides/migrate/route.ts` ⬜
-- [ ] `src/app/api/admin/hero-slides/route.ts` ⬜
-- [ ] `src/app/api/admin/lcs-locator/cleanup-emails/route.ts` ⬜
-- [ ] `src/app/api/admin/lcs-locator/shops/route.ts` ⬜
-- [ ] `src/app/api/admin/link-sanitizer/route.ts` ⬜
+- [x] `src/app/api/admin/error-logs/[id]/route.ts` ✅
+- [x] `src/app/api/admin/error-logs/route.ts` ✅
+- [x] `src/app/api/admin/feature-flags/route.ts` ✅
+- [x] `src/app/api/admin/hero-slides/migrate/route.ts` ✅
+- [x] `src/app/api/admin/hero-slides/route.ts` ✅
+- [x] `src/app/api/admin/lcs-locator/cleanup-emails/route.ts` ✅
+- [x] `src/app/api/admin/lcs-locator/shops/route.ts` ✅
+- [x] `src/app/api/admin/link-sanitizer/route.ts` ✅
 - [ ] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/attachments/[attachmentId]/route.ts` ⬜
 - [ ] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/route.ts` ⬜
 - [ ] `src/app/api/admin/mailboxes/[id]/emails/route.ts` ⬜
