@@ -223,13 +223,13 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/lcs-locator/cleanup-emails/route.ts` ✅
 - [x] `src/app/api/admin/lcs-locator/shops/route.ts` ✅
 - [x] `src/app/api/admin/link-sanitizer/route.ts` ✅
-- [ ] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/attachments/[attachmentId]/route.ts` ⬜
-- [ ] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/route.ts` ⬜
-- [ ] `src/app/api/admin/mailboxes/[id]/emails/route.ts` ⬜
-- [ ] `src/app/api/admin/mailboxes/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/mailboxes/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/[id]/feature/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/[id]/review/route.ts` ⬜
+- [x] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/attachments/[attachmentId]/route.ts` ✅
+- [x] `src/app/api/admin/mailboxes/[id]/emails/[emailId]/route.ts` ✅
+- [x] `src/app/api/admin/mailboxes/[id]/emails/route.ts` ✅
+- [x] `src/app/api/admin/mailboxes/[id]/route.ts` ✅
+- [x] `src/app/api/admin/mailboxes/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/[id]/feature/route.ts` ✅
+- [x] `src/app/api/admin/marketplace/books/[id]/review/route.ts` ✅
 - [x] `src/app/api/admin/marketplace/books/[id]/route.ts` 🔧
   - Fixed: findUnique → findFirst with deletedAt: null
 - [ ] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts` ⬜
@@ -292,9 +292,9 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/analytics/route.ts` ✅
 - [x] `src/app/api/announcement-bar/route.ts` ✅
 - [x] `src/app/api/auth/config/route.ts` ✅
-- [ ] `src/app/api/auth/logout/route.ts` ⬜
+- [x] `src/app/api/auth/logout/route.ts` ✅
 - [x] `src/app/api/auth/recaptcha/route.ts` ✅
-- [ ] `src/app/api/auth/session/route.ts` ⬜
+- [x] `src/app/api/auth/session/route.ts` ✅
 - [x] `src/app/api/auth/social/[provider]/callback/route.ts` ✅
 - [x] `src/app/api/auth/social/[provider]/route.ts` ✅
 - [x] `src/app/api/auth/social/connections/route.ts` ✅
@@ -323,10 +323,10 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/chat/messages/route.ts` ✅
 - [x] `src/app/api/chat/presence/route.ts` ✅
 - [x] `src/app/api/chat/stickers/route.ts` ✅
-- [ ] `src/app/api/collaborations/[id]/route.ts` ⬜
-- [ ] `src/app/api/collaborations/route.ts` ⬜
+- [x] `src/app/api/collaborations/[id]/route.ts` ✅
+- [x] `src/app/api/collaborations/route.ts` ✅
 - [ ] `src/app/api/collaborator/[id]/respond/route.ts` ⬜
-- [ ] `src/app/api/collaborator/[id]/route.ts` ⬜
+- [x] `src/app/api/collaborator/[id]/route.ts` ✅
 - [x] `src/app/api/consent-banner/route.ts` ✅
 - [x] `src/app/api/contact/route.ts` ✅
   - ⚠️ No rate limiting on contact form — attacker can flood support email and drain email service credits. Zod validation and HTML escaping are correct.
@@ -444,58 +444,58 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/internal/blocked-ips/route.ts` ✅
 - [x] `src/app/api/lcs-locator/import/route.ts` ✅
 - [x] `src/app/api/lcs-locator/route.ts` ✅
-- [ ] `src/app/api/marketplace/books/[slug]/route.ts` ⬜
-- [ ] `src/app/api/marketplace/books/route.ts` ⬜
-- [ ] `src/app/api/marketplace/checkout/route.ts` ⬜
-- [ ] `src/app/api/marketplace/checkout/verify/route.ts` ⬜
+- [x] `src/app/api/marketplace/books/[slug]/route.ts` ✅
+- [x] `src/app/api/marketplace/books/route.ts` ✅
+- [x] `src/app/api/marketplace/checkout/route.ts` ✅
+- [x] `src/app/api/marketplace/checkout/verify/route.ts` ✅
 - [ ] `src/app/api/marketplace/companies/[slug]/route.ts` ⬜
 - [ ] `src/app/api/marketplace/companies/route.ts` ⬜
 - [ ] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts` ⬜
 - [ ] `src/app/api/marketplace/purchase/confirm/route.ts` ⬜
-- [ ] `src/app/api/marketplace/purchase/route.ts` ⬜
+- [x] `src/app/api/marketplace/purchase/route.ts` ✅
 - [ ] `src/app/api/marketplace/redeem-code/route.ts` ⬜
 - [ ] `src/app/api/marketplace/validate-code/route.ts` ⬜
-- [ ] `src/app/api/messages/route.ts` ⬜
+- [x] `src/app/api/messages/route.ts` ✅
   - Fixed: recipient and sender lookups used `findUnique` without `deletedAt: null` — soft-deleted users could receive and send messages
 - [ ] `src/app/api/messages/user-info/route.ts` ⬜
 - [x] `src/app/api/metrics/route.ts` ✅
 - [x] `src/app/api/og/route.tsx` ✅
-- [ ] `src/app/api/pay/balance/confirm/route.ts` ⬜
+- [x] `src/app/api/pay/balance/confirm/route.ts` ✅
   - Fixed: balance was credited without verifying actual payment success with Stripe/DC APIs — a valid token alone was enough to increment pledge.amount and project.currentAmount; now cross-checks PaymentIntent status before applying the credit
-- [ ] `src/app/api/pay/balance/route.ts` ⬜
-- [ ] `src/app/api/paypal/capture/[orderId]/route.ts` ⬜
+- [x] `src/app/api/pay/balance/route.ts` ✅
+- [x] `src/app/api/paypal/capture/[orderId]/route.ts` ✅
 - [ ] `src/app/api/paypal/client-token/route.ts` ⬜
 - [ ] `src/app/api/paypal/config/route.ts` ⬜
 - [x] `src/app/api/platform-stats/route.ts` ✅
 - [ ] `src/app/api/pledges/[pledgeId]/add-items/route.ts` ⬜
 - [ ] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts` ⬜
 - [ ] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ⬜
-- [ ] `src/app/api/pledges/[pledgeId]/confirm/route.ts` ⬜
-- [ ] `src/app/api/pledges/[pledgeId]/route.ts` ⬜
+- [x] `src/app/api/pledges/[pledgeId]/confirm/route.ts` ✅
+- [x] `src/app/api/pledges/[pledgeId]/route.ts` ✅
   - Fixed: race condition — second modification request now blocked while pendingModification awaits payment (pendingModification guard in metadata)
   - Fixed: addon validation in "modify" action did not filter by `isEnded: false`, allowing ended addons to be assigned to a pledge modification
 - [ ] `src/app/api/pledges/check/route.ts` ⬜
-- [ ] `src/app/api/pledges/route.ts` ⬜
+- [x] `src/app/api/pledges/route.ts` ✅
 - [x] `src/app/api/privacy/ccpa-opt-out/route.ts` ✅
-- [ ] `src/app/api/projects/[id]/basics/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/basics/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/chargeback-card/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/collaborators/me/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/collaborators/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/comments/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/collaborators/route.ts` ✅
+- [x] `src/app/api/projects/[id]/comments/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/contact-email/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/items/[itemId]/end/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/items/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/items/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/launch/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/members/import/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/members/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/payment/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/payment/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/prelaunch/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/promotion/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/reviews/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/rewards/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/rewards/route.ts` ✅
+- [x] `src/app/api/projects/[id]/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/story/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/submit/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/submit/route.ts` ✅
 - [ ] `src/app/api/projects/[id]/survey/backer-questions/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/survey/item-questions/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/survey/lock/route.ts` ⬜
@@ -503,30 +503,30 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/projects/[id]/survey/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/survey/send/route.ts` ⬜
 - [ ] `src/app/api/projects/[id]/sync-stats/route.ts` ⬜
-- [ ] `src/app/api/projects/route.ts` ⬜
+- [x] `src/app/api/projects/route.ts` ✅
 - [ ] `src/app/api/projects/similar/route.ts` ⬜
 - [ ] `src/app/api/projects/slug/[slug]/check/route.ts` ⬜
 - [ ] `src/app/api/projects/slug/[slug]/route.ts` ⬜
 - [ ] `src/app/api/projects/slug/[slug]/stats/route.ts` ⬜
-- [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts` ⬜
-- [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts` ⬜
+- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts` ✅
+- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts` ✅
 - [x] `src/app/api/promo-popup/route.ts` ✅
-- [ ] `src/app/api/r2/serve/[...key]/route.ts` ⬜
+- [x] `src/app/api/r2/serve/[...key]/route.ts` ✅
   - Fixed: admin role check used `findUnique` without `deletedAt: null` — a soft-deleted user with a live session and retained ADMIN/SUPER_ADMIN role could still access all R2 files
 - [x] `src/app/api/recommendations/route.ts` ✅
 - [ ] `src/app/api/retailers/account/route.ts` ⬜
 - [ ] `src/app/api/retailers/apply/route.ts` ⬜
-- [ ] `src/app/api/retailers/forgot-password/route.ts` ⬜
+- [x] `src/app/api/retailers/forgot-password/route.ts` ✅
   - Fixed: Reset tokens shared the same `PasswordResetToken` table as main-user reset tokens with no namespace separator — a token issued to a user email could be accepted by the retailer reset-password endpoint and vice versa; retailer tokens are now prefixed with `rtl_`
 - [ ] `src/app/api/retailers/invoices/route.ts` ⬜
-- [ ] `src/app/api/retailers/login/route.ts` ⬜
+- [x] `src/app/api/retailers/login/route.ts` ✅
   - Fixed: `recordRetailerLoginAttempt(success=true)` was called before the retailer status check — a PENDING/SUSPENDED retailer who knew their correct password could clear the rate-limit counter on every attempt; the success record is now recorded only after status is confirmed APPROVED
 - [ ] `src/app/api/retailers/logout/route.ts` ⬜
 - [ ] `src/app/api/retailers/me/route.ts` ⬜
 - [ ] `src/app/api/retailers/orders/route.ts` ⬜
 - [ ] `src/app/api/retailers/projects/[id]/route.ts` ⬜
 - [ ] `src/app/api/retailers/projects/route.ts` ⬜
-- [ ] `src/app/api/retailers/reset-password/route.ts` ⬜
+- [x] `src/app/api/retailers/reset-password/route.ts` ✅
   - Fixed: No prefix check on incoming token allowed user-issued reset tokens to be accepted by the retailer endpoint (cross-system token acceptance); both POST and GET handlers now reject any token that does not start with `rtl_`
 - [ ] `src/app/api/retailers/session-auth/route.ts` ⬜
 - [ ] `src/app/api/rewards/[id]/copy-to-addon/route.ts` ⬜
@@ -540,40 +540,40 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/stripe/connect/status/route.ts` ⬜
 - [ ] `src/app/api/surveys/[pledgeId]/respond/route.ts` ⬜
   - Fixed race condition on survey submit: atomic updateMany with isComplete:false guard prevents double-submission
-- [ ] `src/app/api/surveys/route.ts` ⬜
+- [x] `src/app/api/surveys/route.ts` ✅
   - Issue: Legacy POST handler references non-existent schema fields (`Survey.title`, `Survey.description`, `Survey.questions`, `Survey.isActive`, `SurveyResponse.responses`). This code path is dead (real survey logic lives in `/api/creator/indiekit/surveys` and `/api/surveys/[pledgeId]/respond`). Not removed to avoid breaking any callers, but the `upsert` and `create` calls will fail at runtime if invoked.
 - [x] `src/app/api/track/route.ts` ✅
 - [x] `src/app/api/tracking/route.ts` ✅
   - Fixed: Client-supplied `userId` in request body was passed directly to analytics functions, allowing any caller to spoof another user's identity in tracking data. Now resolves userId exclusively from the authenticated session.
 - [x] `src/app/api/unsubscribe/route.ts` ✅
   - Fixed: `APP_URL` env var was interpolated directly into `href` attribute without HTML escaping; now uses `safeAppUrl = escapeHtml(APP_URL)` to prevent XSS if the env var is tampered.
-- [ ] `src/app/api/updates/route.ts` ⬜
+- [x] `src/app/api/updates/route.ts` ✅
 - [x] `src/app/api/upload/route.ts` ✅
 - [x] `src/app/api/uploads/[...path]/route.ts` ✅
-- [ ] `src/app/api/user/activity/route.ts` ⬜
-- [ ] `src/app/api/user/data-deletion/route.ts` ⬜
+- [x] `src/app/api/user/activity/route.ts` ✅
+- [x] `src/app/api/user/data-deletion/route.ts` ✅
 - [ ] `src/app/api/user/data-export/route.ts` ⬜
-- [ ] `src/app/api/user/following/route.ts` ⬜
-- [ ] `src/app/api/user/me/route.ts` ⬜
-- [ ] `src/app/api/user/notifications/route.ts` ⬜
-- [ ] `src/app/api/user/profile-dropdown/route.ts` ⬜
-- [ ] `src/app/api/user/profile/route.ts` ⬜
-- [ ] `src/app/api/user/public-profile/[username]/route.ts` ⬜
+- [x] `src/app/api/user/following/route.ts` ✅
+- [x] `src/app/api/user/me/route.ts` ✅
+- [x] `src/app/api/user/notifications/route.ts` ✅
+- [x] `src/app/api/user/profile-dropdown/route.ts` ✅
+- [x] `src/app/api/user/profile/route.ts` ✅
+- [x] `src/app/api/user/public-profile/[username]/route.ts` ✅
   - Fixed: `email` field was included in the `select` of a public endpoint, leaking private user data. Also missing `deletedAt: null` filter allowed returning soft-deleted user profiles.
 - [ ] `src/app/api/user/settings/email/route.ts` ⬜
-- [ ] `src/app/api/user/settings/route.ts` ⬜
-- [ ] `src/app/api/user/vanity-url/route.ts` ⬜
-- [ ] `src/app/api/user/verify-email/route.ts` ⬜
+- [x] `src/app/api/user/settings/route.ts` ✅
+- [x] `src/app/api/user/vanity-url/route.ts` ✅
+- [x] `src/app/api/user/verify-email/route.ts` ✅
 - [ ] `src/app/api/verify-id/callback/route.ts` ⬜
 - [ ] `src/app/api/verify-id/check/route.ts` ⬜
 - [ ] `src/app/api/verify-id/route.ts` ⬜
-- [ ] `src/app/api/webhooks/divinitycoin/route.ts` ⬜
-- [ ] `src/app/api/webhooks/email/events/route.ts` ⬜
+- [x] `src/app/api/webhooks/divinitycoin/route.ts` ✅
+- [x] `src/app/api/webhooks/email/events/route.ts` ✅
   - Fixed: SendGrid webhook accepted JSON array payloads without signature when headers were absent — now enforces signature when verification key is configured. Mailgun JSON webhook also enforces signing key when configured.
-- [ ] `src/app/api/webhooks/email/inbound/route.ts` ⬜
-- [ ] `src/app/api/webhooks/paypal/route.ts` ⬜
+- [x] `src/app/api/webhooks/email/inbound/route.ts` ✅
+- [x] `src/app/api/webhooks/paypal/route.ts` ✅
 - [ ] `src/app/api/webhooks/stripe/connect/route.ts` ⬜
-- [ ] `src/app/api/webhooks/stripe/route.ts` ⬜
+- [x] `src/app/api/webhooks/stripe/route.ts` ✅
 - [ ] `src/app/api/webhooks/stripe_connect/route.ts` ⬜
 - [ ] `src/app/api/webhooks/whop/route.ts` ⬜
 - [ ] `src/app/api/whop/config/route.ts` ⬜
