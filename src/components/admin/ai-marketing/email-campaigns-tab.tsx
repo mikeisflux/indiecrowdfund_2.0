@@ -916,22 +916,22 @@ export function EmailCampaignsTab({
                   </div>
 
                   {/* Stats Grid */}
-                  <div className="grid grid-cols-4 gap-4 p-4 bg-zinc-50 rounded-lg">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
                     <div className="text-center">
                       <p className="text-2xl font-bold">{selectedCampaign.sentCount.toLocaleString()}</p>
-                      <p className="text-sm text-zinc-500">Sent</p>
+                      <p className="text-sm text-muted-foreground">Sent</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-blue-600">{selectedCampaign.openCount.toLocaleString()}</p>
-                      <p className="text-sm text-zinc-500">Opens</p>
+                      <p className="text-sm text-muted-foreground">Opens</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-emerald-600">{selectedCampaign.clickCount.toLocaleString()}</p>
-                      <p className="text-sm text-zinc-500">Clicks</p>
+                      <p className="text-sm text-muted-foreground">Clicks</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-red-600">{selectedCampaign.bounceCount.toLocaleString()}</p>
-                      <p className="text-sm text-zinc-500">Bounces</p>
+                      <p className="text-sm text-muted-foreground">Bounces</p>
                     </div>
                   </div>
 

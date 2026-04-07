@@ -166,7 +166,7 @@ function PredictiveAnalyticsContent({ data, sortConfig, onSort }: { data: any; s
 
   return (
     <div className="space-y-4 h-full">
-      <div className="grid gap-3 grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
         <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
           <p className="text-xs text-zinc-500">Total Analyzed</p>
           <p className="text-xl font-bold">{summary.totalAnalyzed || 0}</p>
