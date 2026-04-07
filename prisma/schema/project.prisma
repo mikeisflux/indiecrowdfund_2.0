@@ -76,6 +76,7 @@ model Project {
   projectItems          ProjectItem[]
   rewards               Reward[]
   pledges               Pledge[]
+  backerReviews         BackerReview[]
   updates               Update[]
   collaborators         ProjectCollaborator[]
   messages              Message[]

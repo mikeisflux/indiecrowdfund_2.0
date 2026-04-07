@@ -106,6 +106,10 @@ model User {
   // Creator email list (per-user subscriber list)
   emailListSubscribers EmailListSubscriber[] @relation("CreatorEmailList")
 
+  // Backer reviews
+  backerReviews       BackerReview[] @relation("ReviewAuthor")
+  receivedReviews     BackerReview[] @relation("CreatorReviews")
+
   // Marketplace relations
   marketplaceBooks     MarketplaceBook[]     @relation("MarketplaceCreator")
   marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")

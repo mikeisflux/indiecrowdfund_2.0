@@ -42,7 +42,23 @@ import {
   Users,
   Library,
   Shield,
+  Star,
+  PackageCheck,
+  Pencil,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { StarRating } from "@/components/ui/star-rating";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { formatTimeRemaining } from "@/lib/utils";
 import {
@@ -178,6 +194,31 @@ export default function BackerDashboard() {
   const [unsavingProjectId, setUnsavingProjectId] = useState<string | null>(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
+  // Review state
+  interface ReviewData {
+    id?: string;
+    markedReceived: boolean;
+    overallRating: number | null;
+    deliveryRating: number | null;
+    qualityRating: number | null;
+    communicationRating: number | null;
+    reviewTitle: string | null;
+    reviewBody: string | null;
+  }
+  const [reviews, setReviews] = useState<Record<string, ReviewData>>({});
+  const [reviewDialogPledgeId, setReviewDialogPledgeId] = useState<string | null>(null);
+  const [reviewDialogProject, setReviewDialogProject] = useState<{ title: string } | null>(null);
+  const [reviewDraft, setReviewDraft] = useState<ReviewData>({
+    markedReceived: false,
+    overallRating: null,
+    deliveryRating: null,
+    qualityRating: null,
+    communicationRating: null,
+    reviewTitle: null,
+    reviewBody: null,
+  });
+  const [savingReview, setSavingReview] = useState(false);
+
   const handleUnsaveProject = async (projectId: string) => {
     setUnsavingProjectId(projectId);
     try {
@@ -273,6 +314,22 @@ export default function BackerDashboard() {
     fetchUnreadMessages();
   }, []);
 
+  // Fetch backer reviews (mark-as-received + ratings)
+  useEffect(() => {
+    async function fetchReviews() {
+      try {
+        const res = await fetch("/api/backer/reviews");
+        if (res.ok) {
+          const { reviews: reviewMap } = await res.json();
+          setReviews(reviewMap || {});
+        }
+      } catch {
+        // Non-blocking
+      }
+    }
+    fetchReviews();
+  }, []);
+
   // Check if user has a saved shipping address
   useEffect(() => {
     async function checkAddress() {
@@ -288,6 +345,72 @@ export default function BackerDashboard() {
     }
     checkAddress();
   }, []);
+
+  const openReviewDialog = (pledgeId: string, projectTitle: string) => {
+    const existing = reviews[pledgeId];
+    setReviewDraft({
+      markedReceived: existing?.markedReceived ?? false,
+      overallRating: existing?.overallRating ?? null,
+      deliveryRating: existing?.deliveryRating ?? null,
+      qualityRating: existing?.qualityRating ?? null,
+      communicationRating: existing?.communicationRating ?? null,
+      reviewTitle: existing?.reviewTitle ?? null,
+      reviewBody: existing?.reviewBody ?? null,
+    });
+    setReviewDialogPledgeId(pledgeId);
+    setReviewDialogProject({ title: projectTitle });
+  };
+
+  const saveReview = async () => {
+    if (!reviewDialogPledgeId) return;
+    setSavingReview(true);
+    try {
+      const res = await apiFetch("/api/backer/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pledgeId: reviewDialogPledgeId, ...reviewDraft }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to save");
+      }
+      const { review } = await res.json();
+      setReviews((prev) => ({ ...prev, [reviewDialogPledgeId]: review }));
+      toast.success("Review saved!");
+      setReviewDialogPledgeId(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save review");
+    } finally {
+      setSavingReview(false);
+    }
+  };
+
+  const quickMarkReceived = async (pledgeId: string) => {
+    const already = reviews[pledgeId]?.markedReceived;
+    // Optimistic update
+    setReviews((prev) => ({
+      ...prev,
+      [pledgeId]: { ...(prev[pledgeId] || { overallRating: null, deliveryRating: null, qualityRating: null, communicationRating: null, reviewTitle: null, reviewBody: null }), markedReceived: !already },
+    }));
+    try {
+      const res = await apiFetch("/api/backer/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pledgeId, markedReceived: !already }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const { review } = await res.json();
+      setReviews((prev) => ({ ...prev, [pledgeId]: review }));
+      if (!already) toast.success("Marked as received!");
+    } catch {
+      // Revert optimistic update
+      setReviews((prev) => ({
+        ...prev,
+        [pledgeId]: { ...(prev[pledgeId] || { overallRating: null, deliveryRating: null, qualityRating: null, communicationRating: null, reviewTitle: null, reviewBody: null }), markedReceived: !!already },
+      }));
+      toast.error("Failed to update");
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -807,6 +930,45 @@ export default function BackerDashboard() {
                                 </Link>
                               )}
                             </div>
+
+                            {/* Mark as Received + Review Row */}
+                            {project.pledge.status === "COMPLETED" || project.status === "FUNDED" || project.status === "COMPLETED" ? (
+                              <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between gap-3 flex-wrap">
+                                <button
+                                  onClick={() => quickMarkReceived(project.pledge.id)}
+                                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+                                >
+                                  <div className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${reviews[project.pledge.id]?.markedReceived ? "bg-green-500 border-green-500" : "border-muted-foreground/40 group-hover:border-green-500"}`}>
+                                    {reviews[project.pledge.id]?.markedReceived && (
+                                      <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <PackageCheck className="h-4 w-4" />
+                                  <span>{reviews[project.pledge.id]?.markedReceived ? "Received" : "Mark as Received"}</span>
+                                </button>
+
+                                <div className="flex items-center gap-2">
+                                  {reviews[project.pledge.id]?.overallRating && (
+                                    <div className="flex items-center gap-1">
+                                      {[1,2,3,4,5].map((s) => (
+                                        <Star key={s} className={`h-3.5 w-3.5 ${s <= (reviews[project.pledge.id]?.overallRating ?? 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30"}`} />
+                                      ))}
+                                    </div>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs border-primary/30 text-primary hover:bg-primary/5"
+                                    onClick={() => openReviewDialog(project.pledge.id, project.title)}
+                                  >
+                                    <Pencil className="h-3 w-3 mr-1" />
+                                    {reviews[project.pledge.id]?.overallRating ? "Edit Review" : "Rate & Review"}
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       </Card>
@@ -1069,6 +1231,98 @@ export default function BackerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Review Dialog */}
+      <Dialog open={!!reviewDialogPledgeId} onOpenChange={(open) => { if (!open) setReviewDialogPledgeId(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+              Rate Your Experience
+            </DialogTitle>
+            <DialogDescription>
+              {reviewDialogProject?.title} — share your honest feedback with the community.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            {/* Mark as Received */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border/50">
+              <Checkbox
+                id="review-received"
+                checked={reviewDraft.markedReceived}
+                onCheckedChange={(v) => setReviewDraft((d) => ({ ...d, markedReceived: !!v }))}
+              />
+              <Label htmlFor="review-received" className="flex items-center gap-2 cursor-pointer font-medium">
+                <PackageCheck className="h-4 w-4 text-green-500" />
+                I received my order
+              </Label>
+            </div>
+
+            {/* Star ratings */}
+            <div className="space-y-3">
+              {([
+                { key: "overallRating", label: "Overall Experience" },
+                { key: "qualityRating", label: "Product Quality" },
+                { key: "deliveryRating", label: "Delivery Speed" },
+                { key: "communicationRating", label: "Creator Communication" },
+              ] as const).map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{label}</span>
+                  <StarRating
+                    value={reviewDraft[key]}
+                    onChange={(v) => setReviewDraft((d) => ({ ...d, [key]: v }))}
+                    size="md"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Written review (only shown when overall rating given) */}
+            {reviewDraft.overallRating && (
+              <div className="space-y-3 pt-1 border-t border-border/50">
+                <div className="space-y-1">
+                  <Label htmlFor="review-title">Review Title <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input
+                    id="review-title"
+                    placeholder="Summarise your experience..."
+                    maxLength={200}
+                    value={reviewDraft.reviewTitle ?? ""}
+                    onChange={(e) => setReviewDraft((d) => ({ ...d, reviewTitle: e.target.value || null }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="review-body">Your Review <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Textarea
+                    id="review-body"
+                    placeholder="Tell backers about your experience with this creator and project..."
+                    className="min-h-[100px] resize-none"
+                    maxLength={5000}
+                    value={reviewDraft.reviewBody ?? ""}
+                    onChange={(e) => setReviewDraft((d) => ({ ...d, reviewBody: e.target.value || null }))}
+                  />
+                  <p className="text-xs text-muted-foreground text-right">{(reviewDraft.reviewBody ?? "").length}/5000</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setReviewDialogPledgeId(null)}>Cancel</Button>
+            <Button
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
+              onClick={saveReview}
+              disabled={savingReview}
+            >
+              {savingReview ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+              ) : (
+                <><Star className="h-4 w-4 mr-2 fill-white" />Save Review</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

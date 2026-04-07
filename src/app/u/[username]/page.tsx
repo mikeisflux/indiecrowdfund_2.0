@@ -26,7 +26,10 @@ import {
   Heart,
   Users,
   FolderOpen,
+  Star,
+  Quote,
 } from "lucide-react";
+import { AggregateRating } from "@/components/ui/star-rating";
 import { useSession } from "@/components/providers/auth-provider";
 
 // TikTok icon component
@@ -60,6 +63,20 @@ interface ProjectSummary {
   projectUrl: string;
 }
 
+interface ReviewSummary {
+  id: string;
+  overallRating: number | null;
+  deliveryRating: number | null;
+  qualityRating: number | null;
+  communicationRating: number | null;
+  reviewTitle: string | null;
+  reviewBody: string | null;
+  markedReceived: boolean;
+  createdAt: string;
+  reviewer: { name: string | null; image: string | null };
+  project: { title: string; slug: string };
+}
+
 interface PublicProfile {
   id: string;
   name: string | null;
@@ -78,6 +95,17 @@ interface PublicProfile {
   };
   createdProjects: ProjectSummary[];
   backedProjects: ProjectSummary[];
+  ratings: {
+    avg: {
+      overall: number | null;
+      delivery: number | null;
+      quality: number | null;
+      communication: number | null;
+    };
+    count: number;
+    distribution: Record<number, number>;
+    recentReviews: ReviewSummary[];
+  };
 }
 
 export default function PublicProfilePage() {
@@ -219,6 +247,13 @@ export default function PublicProfilePage() {
                 <p className="text-muted-foreground">@{profile.vanityUrl}</p>
               )}
 
+              {/* Creator rating badge */}
+              {profile.ratings?.avg?.overall && profile.ratings.count > 0 && (
+                <div className="mt-2">
+                  <AggregateRating value={profile.ratings.avg.overall} count={profile.ratings.count} size="sm" />
+                </div>
+              )}
+
               {/* Location */}
               {profile.location && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
@@ -354,13 +389,19 @@ export default function PublicProfilePage() {
           {/* Projects */}
           <div className="lg:col-span-2">
             <Tabs defaultValue="created" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className={`grid w-full ${profile.ratings?.count > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
                 <TabsTrigger value="created">
                   Created ({profile.createdProjects?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="backed">
                   Backed ({profile.backedProjects?.length || 0})
                 </TabsTrigger>
+                {profile.ratings?.count > 0 && (
+                  <TabsTrigger value="reviews" className="flex items-center gap-1">
+                    <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+                    Reviews ({profile.ratings.count})
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="created" className="mt-6">
@@ -401,6 +442,72 @@ export default function PublicProfilePage() {
                     }
                   />
                 )}
+              </TabsContent>
+
+              <TabsContent value="reviews" className="mt-6 space-y-6">
+                {/* Rating breakdown */}
+                {profile.ratings?.avg?.overall && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex flex-col sm:flex-row gap-6">
+                        {/* Big score */}
+                        <div className="flex flex-col items-center justify-center min-w-[120px] py-4 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20">
+                          <span className="text-5xl font-bold text-amber-500">{profile.ratings.avg.overall}</span>
+                          <div className="mt-2">
+                            <AggregateRating value={profile.ratings.avg.overall} count={0} size="sm" />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{profile.ratings.count} reviews</p>
+                        </div>
+
+                        {/* Category breakdown */}
+                        <div className="flex-1 space-y-2">
+                          {[
+                            { label: "Overall", value: profile.ratings.avg.overall },
+                            { label: "Product Quality", value: profile.ratings.avg.quality },
+                            { label: "Delivery Speed", value: profile.ratings.avg.delivery },
+                            { label: "Communication", value: profile.ratings.avg.communication },
+                          ].filter(c => c.value).map(({ label, value }) => (
+                            <div key={label} className="flex items-center gap-3">
+                              <span className="text-sm text-muted-foreground w-36 shrink-0">{label}</span>
+                              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full transition-all"
+                                  style={{ width: `${((value ?? 0) / 5) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-semibold text-amber-500 w-6 text-right">{value}</span>
+                            </div>
+                          ))}
+
+                          {/* Star distribution */}
+                          <div className="pt-2 space-y-1">
+                            {[5, 4, 3, 2, 1].map((star) => {
+                              const count = profile.ratings.distribution[star] || 0;
+                              const pct = profile.ratings.count > 0 ? (count / profile.ratings.count) * 100 : 0;
+                              return (
+                                <div key={star} className="flex items-center gap-2 text-xs">
+                                  <span className="w-3 text-right text-muted-foreground">{star}</span>
+                                  <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="w-4 text-right text-muted-foreground">{count}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Individual reviews */}
+                <div className="space-y-4">
+                  {profile.ratings?.recentReviews?.map((review) => (
+                    <ReviewCard key={review.id} review={review} />
+                  ))}
+                </div>
               </TabsContent>
             </Tabs>
           </div>
@@ -458,6 +565,83 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
         </div>
       </Card>
     </Link>
+  );
+}
+
+function ReviewCard({ review }: { review: ReviewSummary }) {
+  const initials = (review.reviewer.name || "A").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  const timeAgo = (() => {
+    const diff = Date.now() - new Date(review.createdAt).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 30) return `${days} days ago`;
+    if (days < 365) return `${Math.floor(days / 30)} months ago`;
+    return `${Math.floor(days / 365)} years ago`;
+  })();
+
+  return (
+    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+      <CardContent className="pt-5 pb-5">
+        <div className="flex items-start gap-3">
+          {/* Avatar */}
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-purple-500/30 flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
+            {review.reviewer.image ? (
+              <Image src={review.reviewer.image} alt={review.reviewer.name || ""} width={40} height={40} className="object-cover" />
+            ) : initials}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <span className="font-medium text-sm">{review.reviewer.name || "Anonymous Backer"}</span>
+                <span className="text-muted-foreground text-xs ml-2">· {timeAgo}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {[1,2,3,4,5].map((s) => (
+                  <Star key={s} className={`h-3.5 w-3.5 ${s <= (review.overallRating ?? 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20 fill-muted-foreground/20"}`} />
+                ))}
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Backed: <span className="text-foreground">{review.project.title}</span>
+              {review.markedReceived && <span className="ml-2 text-green-500">· Received ✓</span>}
+            </p>
+
+            {review.reviewTitle && (
+              <p className="font-semibold text-sm mt-2">{review.reviewTitle}</p>
+            )}
+            {review.reviewBody && (
+              <div className="mt-1 relative">
+                <Quote className="h-3 w-3 text-muted-foreground/40 absolute -top-1 -left-0.5" />
+                <p className="text-sm text-muted-foreground pl-4 line-clamp-4">{review.reviewBody}</p>
+              </div>
+            )}
+
+            {/* Sub-ratings */}
+            {(review.deliveryRating || review.qualityRating || review.communicationRating) && (
+              <div className="mt-3 flex flex-wrap gap-3">
+                {[
+                  { label: "Quality", value: review.qualityRating },
+                  { label: "Delivery", value: review.deliveryRating },
+                  { label: "Comms", value: review.communicationRating },
+                ].filter(r => r.value).map(({ label, value }) => (
+                  <div key={label} className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>{label}:</span>
+                    <div className="flex items-center gap-0.5">
+                      {[1,2,3,4,5].map((s) => (
+                        <Star key={s} className={`h-2.5 w-2.5 ${s <= (value ?? 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20 fill-muted-foreground/20"}`} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

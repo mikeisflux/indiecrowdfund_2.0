@@ -131,6 +131,64 @@ export async function GET(
     // Note: Follow functionality will be added in a future update
     const isFollowing = false;
 
+    // Fetch creator rating data in parallel with project stats
+    const ratingAgg = await db.backerReview.aggregate({
+      where: {
+        creatorId: user.id,
+        isPublished: true,
+        isHidden: false,
+        overallRating: { not: null },
+      },
+      _avg: {
+        overallRating: true,
+        deliveryRating: true,
+        qualityRating: true,
+        communicationRating: true,
+      },
+      _count: { overallRating: true },
+    });
+
+    const recentReviews = await db.backerReview.findMany({
+      where: {
+        creatorId: user.id,
+        isPublished: true,
+        isHidden: false,
+        overallRating: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        overallRating: true,
+        deliveryRating: true,
+        qualityRating: true,
+        communicationRating: true,
+        reviewTitle: true,
+        reviewBody: true,
+        markedReceived: true,
+        createdAt: true,
+        user: { select: { name: true, image: true } },
+        project: { select: { title: true, slug: true } },
+      },
+    });
+
+    // Rating distribution (how many 1★, 2★, etc.)
+    const ratingDistribution = await db.backerReview.groupBy({
+      by: ["overallRating"],
+      where: {
+        creatorId: user.id,
+        isPublished: true,
+        isHidden: false,
+        overallRating: { not: null },
+      },
+      _count: { overallRating: true },
+    });
+
+    const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const row of ratingDistribution) {
+      if (row.overallRating) distribution[row.overallRating] = row._count.overallRating;
+    }
+
     // Collect all unique projects for batch stats lookup
     const backedProjectsRaw = new Map<string, ProjectData>();
     user.pledges.forEach((pledge: PledgeData) => {
@@ -203,6 +261,29 @@ export async function GET(
       createdProjects,
       backedProjects: Array.from(backedProjectsMap.values()),
       isFollowing,
+      ratings: {
+        avg: {
+          overall: ratingAgg._avg.overallRating ? Number(ratingAgg._avg.overallRating.toFixed(1)) : null,
+          delivery: ratingAgg._avg.deliveryRating ? Number(ratingAgg._avg.deliveryRating.toFixed(1)) : null,
+          quality: ratingAgg._avg.qualityRating ? Number(ratingAgg._avg.qualityRating.toFixed(1)) : null,
+          communication: ratingAgg._avg.communicationRating ? Number(ratingAgg._avg.communicationRating.toFixed(1)) : null,
+        },
+        count: ratingAgg._count.overallRating,
+        distribution,
+        recentReviews: recentReviews.map((r: typeof recentReviews[number]) => ({
+          id: r.id,
+          overallRating: r.overallRating,
+          deliveryRating: r.deliveryRating,
+          qualityRating: r.qualityRating,
+          communicationRating: r.communicationRating,
+          reviewTitle: r.reviewTitle,
+          reviewBody: r.reviewBody,
+          markedReceived: r.markedReceived,
+          createdAt: r.createdAt.toISOString(),
+          reviewer: { name: r.user.name, image: r.user.image },
+          project: r.project,
+        })),
+      },
     };
 
     return NextResponse.json(response);
