@@ -288,19 +288,19 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/seo/pages/route.ts` ✅
 - [x] `src/app/api/admin/seo/redirects/route.ts` ✅
 - [x] `src/app/api/admin/seo/route.ts` ✅
-- [ ] `src/app/api/admin/settings/route.ts` ⬜
-- [ ] `src/app/api/admin/settings/test-r2/route.ts` ⬜
-- [ ] `src/app/api/admin/sidebar-stats/route.ts` ⬜
-- [ ] `src/app/api/admin/sync-all-project-stats/route.ts` ⬜
-- [ ] `src/app/api/admin/transactions/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/transactions/route.ts` ⬜
-- [ ] `src/app/api/admin/transactions/stripe-lookup/route.ts` ⬜
-- [ ] `src/app/api/admin/users/[userId]/emails/route.ts` ⬜
-- [ ] `src/app/api/admin/users/[userId]/pledges/route.ts` ⬜
-- [ ] `src/app/api/admin/users/[userId]/vanity-url/route.ts` ⬜
-- [ ] `src/app/api/admin/users/merge-duplicates/route.ts` ⬜
-- [ ] `src/app/api/admin/users/route.ts` ⬜
-- [ ] `src/app/api/admin/wallet/route.ts` ⬜
+- [x] `src/app/api/admin/settings/route.ts` ✅
+- [x] `src/app/api/admin/settings/test-r2/route.ts` ✅
+- [x] `src/app/api/admin/sidebar-stats/route.ts` ✅
+- [x] `src/app/api/admin/sync-all-project-stats/route.ts` ✅
+- [x] `src/app/api/admin/transactions/[id]/route.ts` ✅
+- [x] `src/app/api/admin/transactions/route.ts` ✅
+- [x] `src/app/api/admin/transactions/stripe-lookup/route.ts` ✅
+- [x] `src/app/api/admin/users/[userId]/emails/route.ts` ✅
+- [x] `src/app/api/admin/users/[userId]/pledges/route.ts` ✅
+- [x] `src/app/api/admin/users/[userId]/vanity-url/route.ts` ✅
+- [x] `src/app/api/admin/users/merge-duplicates/route.ts` ✅
+- [x] `src/app/api/admin/users/route.ts` ✅
+- [x] `src/app/api/admin/wallet/route.ts` ✅
 - [x] `src/app/api/ai/auto-tag/route.ts` ✅
 - [x] `src/app/api/ai/marketing-copy/route.ts` ✅
 - [x] `src/app/api/ai/moderate/route.ts` ✅
@@ -340,7 +340,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/chat/stickers/route.ts` ✅
 - [x] `src/app/api/collaborations/[id]/route.ts` ✅
 - [x] `src/app/api/collaborations/route.ts` ✅
-- [ ] `src/app/api/collaborator/[id]/respond/route.ts` ⬜
+- [x] `src/app/api/collaborator/[id]/respond/route.ts` ✅
 - [x] `src/app/api/collaborator/[id]/route.ts` ✅
 - [x] `src/app/api/consent-banner/route.ts` ✅
 - [x] `src/app/api/contact/route.ts` ✅
@@ -463,10 +463,10 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/marketplace/books/route.ts` ✅
 - [x] `src/app/api/marketplace/checkout/route.ts` ✅
 - [x] `src/app/api/marketplace/checkout/verify/route.ts` ✅
-- [ ] `src/app/api/marketplace/companies/[slug]/route.ts` ⬜
-- [ ] `src/app/api/marketplace/companies/route.ts` ⬜
-- [ ] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts` ⬜
-- [ ] `src/app/api/marketplace/purchase/confirm/route.ts` ⬜
+- [x] `src/app/api/marketplace/companies/[slug]/route.ts` ✅
+- [x] `src/app/api/marketplace/companies/route.ts` ✅
+- [x] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts` ✅
+- [x] `src/app/api/marketplace/purchase/confirm/route.ts` ✅
 - [x] `src/app/api/marketplace/purchase/route.ts` ✅
 - [x] `src/app/api/marketplace/redeem-code/route.ts` ✅
 - [x] `src/app/api/marketplace/validate-code/route.ts` ✅
@@ -484,7 +484,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/platform-stats/route.ts` ✅
 - [x] `src/app/api/pledges/[pledgeId]/add-items/route.ts` ✅
 - [x] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts` ✅
-- [ ] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ⬜
+- [x] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts` ✅
 - [x] `src/app/api/pledges/[pledgeId]/confirm/route.ts` ✅
 - [x] `src/app/api/pledges/[pledgeId]/route.ts` ✅
   - Fixed: race condition — second modification request now blocked while pendingModification awaits payment (pendingModification guard in metadata)
@@ -498,11 +498,11 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/projects/[id]/collaborators/route.ts` ✅
 - [x] `src/app/api/projects/[id]/comments/route.ts` ✅
 - [x] `src/app/api/projects/[id]/contact-email/route.ts` ✅
-- [ ] `src/app/api/projects/[id]/items/[itemId]/end/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/items/[itemId]/end/route.ts` ✅
 - [x] `src/app/api/projects/[id]/items/route.ts` ✅
-- [ ] `src/app/api/projects/[id]/launch/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/members/import/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/members/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/launch/route.ts` ✅
+- [x] `src/app/api/projects/[id]/members/import/route.ts` ✅
+- [x] `src/app/api/projects/[id]/members/route.ts` ✅
 - [x] `src/app/api/projects/[id]/payment/route.ts` ✅
 - [x] `src/app/api/projects/[id]/prelaunch/route.ts` ✅
 - [x] `src/app/api/projects/[id]/promotion/route.ts` ✅
@@ -511,15 +511,15 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/projects/[id]/route.ts` ✅
 - [x] `src/app/api/projects/[id]/story/route.ts` ✅
 - [x] `src/app/api/projects/[id]/submit/route.ts` ✅
-- [ ] `src/app/api/projects/[id]/survey/backer-questions/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/survey/item-questions/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/survey/lock/route.ts` ⬜
-- [ ] `src/app/api/projects/[id]/survey/responses/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/survey/backer-questions/route.ts` ✅
+- [x] `src/app/api/projects/[id]/survey/item-questions/route.ts` ✅
+- [x] `src/app/api/projects/[id]/survey/lock/route.ts` ✅
+- [x] `src/app/api/projects/[id]/survey/responses/route.ts` ✅
 - [x] `src/app/api/projects/[id]/survey/route.ts` ✅
-- [ ] `src/app/api/projects/[id]/survey/send/route.ts` ⬜
+- [x] `src/app/api/projects/[id]/survey/send/route.ts` ✅
 - [x] `src/app/api/projects/[id]/sync-stats/route.ts` ✅
 - [x] `src/app/api/projects/route.ts` ✅
-- [ ] `src/app/api/projects/similar/route.ts` ⬜
+- [x] `src/app/api/projects/similar/route.ts` ✅
 - [x] `src/app/api/projects/slug/[slug]/check/route.ts` ✅
 - [x] `src/app/api/projects/slug/[slug]/route.ts` ✅
 - [x] `src/app/api/projects/slug/[slug]/stats/route.ts` ✅
@@ -531,30 +531,30 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/r2/serve/[...key]/route.ts` ✅
   - Fixed: admin role check used `findUnique` without `deletedAt: null` — a soft-deleted user with a live session and retained ADMIN/SUPER_ADMIN role could still access all R2 files
 - [x] `src/app/api/recommendations/route.ts` ✅
-- [ ] `src/app/api/retailers/account/route.ts` ⬜
-- [ ] `src/app/api/retailers/apply/route.ts` ⬜
+- [x] `src/app/api/retailers/account/route.ts` ✅
+- [x] `src/app/api/retailers/apply/route.ts` ✅
 - [x] `src/app/api/retailers/forgot-password/route.ts` ✅
   - Fixed: Reset tokens shared the same `PasswordResetToken` table as main-user reset tokens with no namespace separator — a token issued to a user email could be accepted by the retailer reset-password endpoint and vice versa; retailer tokens are now prefixed with `rtl_`
-- [ ] `src/app/api/retailers/invoices/route.ts` ⬜
+- [x] `src/app/api/retailers/invoices/route.ts` ✅
 - [x] `src/app/api/retailers/login/route.ts` ✅
   - Fixed: `recordRetailerLoginAttempt(success=true)` was called before the retailer status check — a PENDING/SUSPENDED retailer who knew their correct password could clear the rate-limit counter on every attempt; the success record is now recorded only after status is confirmed APPROVED
-- [ ] `src/app/api/retailers/logout/route.ts` ⬜
-- [ ] `src/app/api/retailers/me/route.ts` ⬜
-- [ ] `src/app/api/retailers/orders/route.ts` ⬜
-- [ ] `src/app/api/retailers/projects/[id]/route.ts` ⬜
-- [ ] `src/app/api/retailers/projects/route.ts` ⬜
+- [x] `src/app/api/retailers/logout/route.ts` ✅
+- [x] `src/app/api/retailers/me/route.ts` ✅
+- [x] `src/app/api/retailers/orders/route.ts` ✅
+- [x] `src/app/api/retailers/projects/[id]/route.ts` ✅
+- [x] `src/app/api/retailers/projects/route.ts` ✅
 - [x] `src/app/api/retailers/reset-password/route.ts` ✅
   - Fixed: No prefix check on incoming token allowed user-issued reset tokens to be accepted by the retailer endpoint (cross-system token acceptance); both POST and GET handlers now reject any token that does not start with `rtl_`
-- [ ] `src/app/api/retailers/session-auth/route.ts` ⬜
-- [ ] `src/app/api/rewards/[id]/copy-to-addon/route.ts` ⬜
-- [ ] `src/app/api/rewards/[id]/end/route.ts` ⬜
-- [ ] `src/app/api/rewards/[id]/shipping/route.ts` ⬜
-- [ ] `src/app/api/rewards/route.ts` ⬜
-- [ ] `src/app/api/stripe/config/route.ts` ⬜
-- [ ] `src/app/api/stripe/connect/refresh/route.ts` ⬜
-- [ ] `src/app/api/stripe/connect/reset/route.ts` ⬜
-- [ ] `src/app/api/stripe/connect/route.ts` ⬜
-- [ ] `src/app/api/stripe/connect/status/route.ts` ⬜
+- [x] `src/app/api/retailers/session-auth/route.ts` ✅
+- [x] `src/app/api/rewards/[id]/copy-to-addon/route.ts` ✅
+- [x] `src/app/api/rewards/[id]/end/route.ts` ✅
+- [x] `src/app/api/rewards/[id]/shipping/route.ts` ✅
+- [x] `src/app/api/rewards/route.ts` ✅
+- [x] `src/app/api/stripe/config/route.ts` ✅
+- [x] `src/app/api/stripe/connect/refresh/route.ts` ✅
+- [x] `src/app/api/stripe/connect/reset/route.ts` ✅
+- [x] `src/app/api/stripe/connect/route.ts` ✅
+- [x] `src/app/api/stripe/connect/status/route.ts` ✅
 - [x] `src/app/api/surveys/[pledgeId]/respond/route.ts` ✅
   - Fixed race condition on survey submit: atomic updateMany with isComplete:false guard prevents double-submission
 - [x] `src/app/api/surveys/route.ts` 🔧
@@ -1079,7 +1079,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/components/ui/textarea.tsx` ✅
 - [x] `src/components/ui/tooltip.tsx` ✅
 - [x] `src/components/user-profile-dropdown.tsx` ✅
-- [ ] `src/instrumentation.ts` ⬜
+- [x] `src/instrumentation.ts` ✅
 - [x] `src/lib/ai/anthropic.ts` ✅
 - [x] `src/lib/ai/automation.ts` 🔧
   - Fixed: `generateAutomatedEmailHtml()` interpolated all AI-generated content (subject, preheader, personalizedIntro, footer, project.title, recommendationReason, callToAction) directly into HTML without escaping — XSS via AI output. Fixed by importing `escapeHtmlForEmail` from `@/lib/email` and wrapping every interpolated value.
