@@ -188,20 +188,20 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/ai-marketing/subscribers/tags/route.ts` ✅
 - [x] `src/app/api/admin/ai-marketing/user-interests/route.ts` 🔧
   - Fixed: Added `deletedAt: null` to matchUsers user query
-- [ ] `src/app/api/admin/analytics/route.ts` ⬜
-- [ ] `src/app/api/admin/announcement-bar/route.ts` ⬜
-- [ ] `src/app/api/admin/api-keys/route.ts` ⬜
-- [ ] `src/app/api/admin/backfill-backer-numbers/route.ts` ⬜
-- [ ] `src/app/api/admin/bank-accounts/[id]/route.ts` ⬜
-- [ ] `src/app/api/admin/build-backup/download/route.ts` ⬜
-- [ ] `src/app/api/admin/build-backup/route.ts` ⬜
+- [x] `src/app/api/admin/analytics/route.ts` ✅
+- [x] `src/app/api/admin/announcement-bar/route.ts` ✅
+- [x] `src/app/api/admin/api-keys/route.ts` ✅
+- [x] `src/app/api/admin/backfill-backer-numbers/route.ts` ✅
+- [x] `src/app/api/admin/bank-accounts/[id]/route.ts` ✅
+- [x] `src/app/api/admin/build-backup/download/route.ts` ✅
+- [x] `src/app/api/admin/build-backup/route.ts` ✅
 - [x] `src/app/api/admin/changelog/extract/route.ts` ✅
 - [x] `src/app/api/admin/changelog/route.ts` ✅
-- [ ] `src/app/api/admin/cleanup-duplicate-rewards/route.ts` ⬜
-- [ ] `src/app/api/admin/cleanup-pledges/route.ts` ⬜
-- [ ] `src/app/api/admin/consent-banner/route.ts` ⬜
+- [x] `src/app/api/admin/cleanup-duplicate-rewards/route.ts` ✅
+- [x] `src/app/api/admin/cleanup-pledges/route.ts` ✅
+- [x] `src/app/api/admin/consent-banner/route.ts` ✅
 - [ ] `src/app/api/admin/cron/route.ts` ⬜
-- [ ] `src/app/api/admin/dashboard/route.ts` ⬜
+- [x] `src/app/api/admin/dashboard/route.ts` ✅
 - [x] `src/app/api/admin/database/backup/download/route.ts` ✅
 - [x] `src/app/api/admin/database/backup/restore/route.ts` ✅
 - [x] `src/app/api/admin/database/backup/route.ts` ✅
@@ -229,7 +229,8 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [ ] `src/app/api/admin/mailboxes/route.ts` ⬜
 - [ ] `src/app/api/admin/marketplace/books/[id]/feature/route.ts` ⬜
 - [ ] `src/app/api/admin/marketplace/books/[id]/review/route.ts` ⬜
-- [ ] `src/app/api/admin/marketplace/books/[id]/route.ts` ⬜
+- [x] `src/app/api/admin/marketplace/books/[id]/route.ts` 🔧
+  - Fixed: findUnique → findFirst with deletedAt: null
 - [ ] `src/app/api/admin/marketplace/books/[id]/staff-pick/route.ts` ⬜
 - [ ] `src/app/api/admin/marketplace/books/reorder/route.ts` ⬜
 - [ ] `src/app/api/admin/marketplace/books/route.ts` ⬜

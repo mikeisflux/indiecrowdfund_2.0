@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -158,7 +158,7 @@ export function RetailerOrdersTab({ onNavigateToProjects }: RetailerOrdersTabPro
                   <div className="flex items-center gap-4">
                     {order.projectImage && (
                       <div className="h-16 w-16 rounded-lg bg-zinc-100 overflow-hidden flex-shrink-0">
-                        <img src={order.projectImage} alt={order.projectTitle} className="h-full w-full object-cover" />
+                        <Image src={order.projectImage} alt={order.projectTitle} width={64} height={64} className="h-full w-full object-cover" />
                       </div>
                     )}
                     <div>

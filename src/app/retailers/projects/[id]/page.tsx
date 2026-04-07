@@ -1,10 +1,10 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -235,10 +235,11 @@ export default function RetailerProjectDetailPage() {
             {/* Project Header */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="aspect-video bg-zinc-100 relative">
-                <img
+                <Image
                   src={project.imageUrl}
                   alt={project.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                 />
                 <Badge className="absolute top-4 left-4 bg-emerald-600 text-white text-lg px-4 py-2">
                   <Percent className="h-5 w-5 mr-2" />

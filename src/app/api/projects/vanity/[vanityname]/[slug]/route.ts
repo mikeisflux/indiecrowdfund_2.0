@@ -22,9 +22,9 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const secretToken = searchParams.get("secret");
 
-    // First, find the creator by vanity URL
-    const creator = await db.user.findUnique({
-      where: { vanityUrl: vanityname },
+    // First, find the creator by vanity URL (exclude soft-deleted users)
+    const creator = await db.user.findFirst({
+      where: { vanityUrl: vanityname, deletedAt: null },
       select: { id: true },
     });
 

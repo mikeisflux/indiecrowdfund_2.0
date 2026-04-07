@@ -78,9 +78,9 @@ export async function POST(
     const creatorEmailHandle = creator?.creatorEmailHandle;
     const creatorEmail = creatorEmailHandle ? `${creatorEmailHandle}@indiecrowdfund.com` : undefined;
 
-    // Find user by email
-    const user = await db.user.findUnique({
-      where: { email: emailLower },
+    // Find active user by email (exclude soft-deleted users)
+    const user = await db.user.findFirst({
+      where: { email: emailLower, deletedAt: null },
       select: { id: true },
     });
 

@@ -174,9 +174,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Also create an internal message record if recipient has an account
-    const recipient = await db.user.findUnique({
-      where: { email: to.trim().toLowerCase() },
+    // Also create an internal message record if recipient has an active account
+    const recipient = await db.user.findFirst({
+      where: { email: to.trim().toLowerCase(), deletedAt: null },
       select: { id: true, name: true, email: true },
     });
 

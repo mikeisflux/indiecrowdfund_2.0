@@ -12,8 +12,8 @@ export async function GET(
   try {
     const { vanityname, slug } = await params;
 
-    const creator = await db.user.findUnique({
-      where: { vanityUrl: vanityname },
+    const creator = await db.user.findFirst({
+      where: { vanityUrl: vanityname, deletedAt: null },
       select: { id: true },
     });
 

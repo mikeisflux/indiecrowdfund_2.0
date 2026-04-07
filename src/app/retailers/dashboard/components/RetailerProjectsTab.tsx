@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -204,7 +204,7 @@ export function RetailerProjectsTab() {
             <Link key={project.id} href={`/retailers/projects/${project.id}`}>
               <Card className="overflow-hidden hover:shadow-lg transition-all cursor-pointer group">
                 <div className="aspect-[4/3] bg-zinc-100 relative overflow-hidden">
-                  <img src={project.imageUrl} alt={project.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <Image src={project.imageUrl} alt={project.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
                   <Badge className="absolute top-3 left-3 bg-emerald-600 text-white">{project.retailerDiscount}% OFF</Badge>
                   {project.daysLeft <= 7 && (
                     <Badge className="absolute top-3 right-3 bg-red-500 text-white">
@@ -250,7 +250,7 @@ export function RetailerProjectsTab() {
               <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                 <div className="flex flex-col sm:flex-row">
                   <div className="w-full sm:w-64 h-48 bg-zinc-100 relative flex-shrink-0">
-                    <img src={project.imageUrl} alt={project.title} className="h-full w-full object-cover" />
+                    <Image src={project.imageUrl} alt={project.title} fill className="object-cover" />
                     <Badge className="absolute top-3 left-3 bg-emerald-600 text-white">{project.retailerDiscount}% OFF</Badge>
                   </div>
                   <CardContent className="flex-1 p-5">
