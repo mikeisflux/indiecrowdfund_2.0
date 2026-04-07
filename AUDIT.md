@@ -177,11 +177,12 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` ✅
 - [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/test/route.ts` ✅
 - [x] `src/app/api/admin/ai-marketing/campaigns/route.ts` ✅
-- [ ] `src/app/api/admin/ai-marketing/run/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/segments/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/services/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/stats/route.ts` ⬜
-- [ ] `src/app/api/admin/ai-marketing/subscribers/import/route.ts` ⬜
+- [x] `src/app/api/admin/ai-marketing/run/route.ts` 🔧
+  - Fixed: Added `deletedAt: null` to user/project queries (predictive analytics, send time optimization, auto-tagging)
+- [x] `src/app/api/admin/ai-marketing/segments/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/services/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/stats/route.ts` ✅
+- [x] `src/app/api/admin/ai-marketing/subscribers/import/route.ts` ✅
 - [ ] `src/app/api/admin/ai-marketing/subscribers/route.ts` ⬜
 - [ ] `src/app/api/admin/ai-marketing/subscribers/tags/route.ts` ⬜
 - [ ] `src/app/api/admin/ai-marketing/user-interests/route.ts` ⬜
