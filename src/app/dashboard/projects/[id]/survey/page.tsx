@@ -488,24 +488,29 @@ export default function SurveyBuilderPage() {
       {/* Survey Builder */}
       {survey && (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
-            <TabsTrigger value="intro" className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" />
-              Survey Intro
-            </TabsTrigger>
-            <TabsTrigger value="items" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Item Questions
-            </TabsTrigger>
-            <TabsTrigger value="backer" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Backer Questions
-            </TabsTrigger>
-            <TabsTrigger value="addresses" className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Addresses
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="inline-flex w-max min-w-full max-w-2xl">
+              <TabsTrigger value="intro" className="flex items-center gap-2 flex-1">
+                <ClipboardList className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Survey Intro</span>
+                <span className="sm:hidden">Intro</span>
+              </TabsTrigger>
+              <TabsTrigger value="items" className="flex items-center gap-2 flex-1">
+                <Package className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Item Questions</span>
+                <span className="sm:hidden">Items</span>
+              </TabsTrigger>
+              <TabsTrigger value="backer" className="flex items-center gap-2 flex-1">
+                <Users className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Backer Questions</span>
+                <span className="sm:hidden">Backers</span>
+              </TabsTrigger>
+              <TabsTrigger value="addresses" className="flex items-center gap-2 flex-1">
+                <MapPin className="h-4 w-4 shrink-0" />
+                Addresses
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Survey Intro Tab */}
           <TabsContent value="intro" className="mt-6">

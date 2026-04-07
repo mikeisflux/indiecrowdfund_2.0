@@ -417,12 +417,14 @@ export default function ProfilePage() {
         )}
 
         <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger value="links">Links & Social</TabsTrigger>
-            <TabsTrigger value="addresses">Addresses</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="inline-flex w-max min-w-full">
+              <TabsTrigger value="basic" className="flex-1">Basic Info</TabsTrigger>
+              <TabsTrigger value="links" className="flex-1">Links & Social</TabsTrigger>
+              <TabsTrigger value="addresses" className="flex-1">Addresses</TabsTrigger>
+              <TabsTrigger value="settings" className="flex-1">Settings</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Basic Info Tab */}
           <TabsContent value="basic" className="space-y-6">

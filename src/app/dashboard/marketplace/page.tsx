@@ -343,8 +343,8 @@ export default function CreatorMarketplaceDashboard() {
 
         {/* Books Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex items-center justify-between overflow-x-auto">
-            <TabsList className="bg-muted/50 backdrop-blur-sm border border-border rounded-xl p-1 flex-wrap md:flex-nowrap">
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="bg-muted/50 backdrop-blur-sm border border-border rounded-xl p-1 inline-flex w-max">
               <TabsTrigger
                 value="books"
                 className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-muted-foreground"

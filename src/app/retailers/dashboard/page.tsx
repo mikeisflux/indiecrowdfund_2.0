@@ -198,8 +198,8 @@ export default function RetailerDashboardPage() {
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <nav className="bg-background/60 backdrop-blur border-b border-border">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <TabsList className="h-auto p-0 bg-transparent rounded-none gap-4 sm:gap-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-auto">
+            <TabsList className="h-auto p-0 bg-transparent rounded-none gap-4 sm:gap-8 min-w-max">
               <TabsTrigger
                 value="dashboard"
                 className="py-4 px-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600 data-[state=active]:shadow-none bg-transparent font-medium text-sm whitespace-nowrap text-zinc-500 hover:text-zinc-700"

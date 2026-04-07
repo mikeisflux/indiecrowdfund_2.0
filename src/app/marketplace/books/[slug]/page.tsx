@@ -515,7 +515,7 @@ export default function BookDetailPage() {
 
             {/* Gallery */}
             {book.galleryImages && book.galleryImages.length > 0 && (
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {(book.galleryImages as string[]).slice(0, 4).map((img, i) => (
                   <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-border">
                     <Image src={img} alt={`Gallery ${i + 1}`} fill className="object-cover" />

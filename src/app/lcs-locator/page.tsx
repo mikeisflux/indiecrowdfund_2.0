@@ -171,14 +171,14 @@ export default function LCSLocatorPage() {
       {/* Filters */}
       <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <Store className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Filter by:</span>
             </div>
 
             <Select value={selectedRegion} onValueChange={(v) => { setSelectedRegion(v === "all" ? "" : v); setPage(1); }}>
-              <SelectTrigger className="w-40 bg-card border-border text-foreground">
+              <SelectTrigger className="w-full sm:w-40 bg-card border-border text-foreground">
                 <SelectValue placeholder="Region" />
               </SelectTrigger>
               <SelectContent>
@@ -190,7 +190,7 @@ export default function LCSLocatorPage() {
             </Select>
 
             <Select value={selectedState} onValueChange={(v) => { setSelectedState(v === "all" ? "" : v); setPage(1); }}>
-              <SelectTrigger className="w-32 bg-card border-border text-foreground">
+              <SelectTrigger className="w-full sm:w-32 bg-card border-border text-foreground">
                 <SelectValue placeholder="State" />
               </SelectTrigger>
               <SelectContent className="max-h-60">

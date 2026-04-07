@@ -712,7 +712,8 @@ export default function BackerDashboard() {
           {/* Main Content */}
           <div className="lg:col-span-2" ref={tabsRef}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="bg-card/50 backdrop-blur border border-border/50 p-1 flex-wrap h-auto gap-1">
+              <div className="overflow-x-auto pb-1">
+              <TabsList className="bg-card/50 backdrop-blur border border-border/50 p-1 inline-flex w-max h-auto gap-1">
                 <TabsTrigger value="backed" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
                   <Package className="mr-2 h-4 w-4" />
                   Backed ({backedProjects.length})
@@ -768,6 +769,7 @@ export default function BackerDashboard() {
                   Digital Library
                 </TabsTrigger>
               </TabsList>
+              </div>
 
               <TabsContent value="backed" className="space-y-4">
                 {backedProjects.length === 0 ? (

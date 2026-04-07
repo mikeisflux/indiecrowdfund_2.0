@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
@@ -9,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import Image from "next/image";
 import { Package, Search, Filter, Download, Eye, Store, Bell, Settings, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
@@ -112,7 +112,7 @@ export default function RetailerOrdersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50">
+      <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Skeleton className="h-10 w-48 mb-8" />
           <div className="space-y-4">
@@ -162,18 +162,18 @@ export default function RetailerOrdersPage() {
       </header>
 
       {/* Navigation Tabs */}
-      <nav className="bg-white border-b border-zinc-200">
+      <nav className="bg-background/60 backdrop-blur border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-4 sm:gap-8 overflow-x-auto">
             <Link
               href="/retailers/dashboard"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
+              className="py-4 px-1 border-b-2 border-transparent text-muted-foreground hover:text-foreground font-medium text-sm whitespace-nowrap"
             >
               Dashboard
             </Link>
             <Link
               href="/retailers/projects"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
+              className="py-4 px-1 border-b-2 border-transparent text-muted-foreground hover:text-foreground font-medium text-sm whitespace-nowrap"
             >
               Browse Projects
             </Link>
@@ -185,13 +185,13 @@ export default function RetailerOrdersPage() {
             </Link>
             <Link
               href="/retailers/invoices"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
+              className="py-4 px-1 border-b-2 border-transparent text-muted-foreground hover:text-foreground font-medium text-sm whitespace-nowrap"
             >
               Invoices
             </Link>
             <Link
               href="/retailers/account"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
+              className="py-4 px-1 border-b-2 border-transparent text-muted-foreground hover:text-foreground font-medium text-sm whitespace-nowrap"
             >
               Account
             </Link>
@@ -245,14 +245,15 @@ export default function RetailerOrdersPage() {
             {filteredOrders.map((order) => (
               <Card key={order.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-center gap-4">
                       {order.projectImage && (
-                        <div className="h-16 w-16 rounded-lg bg-zinc-100 overflow-hidden flex-shrink-0">
-                          <img
+                        <div className="h-16 w-16 rounded-lg bg-zinc-100 overflow-hidden flex-shrink-0 relative">
+                          <Image
                             src={order.projectImage}
                             alt={order.projectTitle}
-                            className="h-full w-full object-cover"
+                            fill
+                            className="object-cover"
                           />
                         </div>
                       )}
@@ -268,7 +269,7 @@ export default function RetailerOrdersPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {getStatusBadge(order.status)}
                       {getFulfillmentBadge(order.fulfillmentStatus)}
                     </div>
