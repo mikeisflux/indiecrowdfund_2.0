@@ -306,7 +306,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
             <Card
               key={key}
               className={`cursor-pointer transition-all ${
-                isSelected ? "ring-2 ring-emerald-500" : "hover:border-zinc-400"
+                isSelected ? "ring-2 ring-emerald-500" : "hover:border-border/80"
               }`}
               onClick={() => {
                 setSelectedCategory(key);
@@ -328,7 +328,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
           );
         })}
         {/* Backer Pool Card */}
-        <Card className="hover:border-zinc-400 transition-all">
+        <Card className="hover:border-border/80 transition-all">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="rounded-full p-2 bg-emerald-100 text-emerald-700">
@@ -342,7 +342,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
           </CardContent>
         </Card>
         {/* Pool Hit Rate Card */}
-        <Card className="hover:border-zinc-400 transition-all">
+        <Card className="hover:border-border/80 transition-all">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="rounded-full p-2 bg-teal-100 text-teal-700">
@@ -360,7 +360,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
       {/* All Subscribers Card */}
       <Card
         className={`cursor-pointer transition-all ${
-          selectedCategory === "all" ? "ring-2 ring-emerald-500" : "hover:border-zinc-400"
+          selectedCategory === "all" ? "ring-2 ring-emerald-500" : "hover:border-border/80"
         }`}
         onClick={() => {
           setSelectedCategory("all");
@@ -370,12 +370,12 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-zinc-100 p-2">
-                <Users className="h-5 w-5 text-zinc-600" />
+              <div className="rounded-full bg-muted p-2">
+                <Users className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
                 <p className="font-medium">All Subscribers</p>
-                <p className="text-sm text-zinc-500">Combined view of all lists</p>
+                <p className="text-sm text-muted-foreground">Combined view of all lists</p>
               </div>
             </div>
             <p className="text-2xl font-bold">{counts?.total.toLocaleString() || 0}</p>
@@ -436,7 +436,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
           {/* Search */}
           <div className="mb-4 flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by email or name..."
                 className="pl-10"
@@ -467,12 +467,12 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
-                      <RefreshCw className="h-6 w-6 animate-spin mx-auto text-zinc-400" />
+                      <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : subscribers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No subscribers found
                     </TableCell>
                   </TableRow>
@@ -488,7 +488,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
                         <Badge
                           className={
                             categoryInfo[subscriber.category as keyof typeof categoryInfo]?.color ||
-                            "bg-zinc-100 text-zinc-700"
+                            "bg-muted text-foreground"
                           }
                         >
                           {categoryInfo[subscriber.category as keyof typeof categoryInfo]?.label ||
@@ -510,10 +510,10 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
                             )}
                           </div>
                         ) : (
-                          <span className="text-zinc-400">—</span>
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-zinc-500">
+                      <TableCell className="text-muted-foreground">
                         {formatDate(subscriber.subscribedAt)}
                       </TableCell>
                       <TableCell>
@@ -550,7 +550,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 Page {page} of {totalPages}
               </p>
               <div className="flex gap-2">

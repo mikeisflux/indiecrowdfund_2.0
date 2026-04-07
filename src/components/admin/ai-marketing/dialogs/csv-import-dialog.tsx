@@ -265,7 +265,7 @@ export function CSVImportDialog({
           <div className="py-8 text-center">
             <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
             <h3 className="font-semibold text-lg text-emerald-700">Import Complete!</h3>
-            <p className="text-sm text-zinc-500 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               {result.imported} subscribers imported successfully
               {result.skipped > 0 && `, ${result.skipped} skipped (duplicates)`}
             </p>
@@ -299,7 +299,7 @@ export function CSVImportDialog({
                   className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                     isDragging
                       ? "border-emerald-500 bg-emerald-50"
-                      : "border-zinc-300 hover:border-zinc-400"
+                      : "border-border hover:border-border/80"
                   }`}
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -318,11 +318,11 @@ export function CSVImportDialog({
                       if (selectedFile) handleFileSelect(selectedFile);
                     }}
                   />
-                  <Upload className="h-10 w-10 text-zinc-400 mx-auto mb-4" />
-                  <p className="font-medium text-zinc-700">
+                  <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                  <p className="font-medium text-foreground">
                     Drag and drop your CSV file here
                   </p>
-                  <p className="text-sm text-zinc-500 mt-1">or</p>
+                  <p className="text-sm text-muted-foreground mt-1">or</p>
                   <Button
                     variant="outline"
                     className="mt-4"
@@ -333,7 +333,7 @@ export function CSVImportDialog({
                 </div>
 
                 {/* Download Template */}
-                <div className="flex items-center justify-center gap-2 text-sm text-zinc-500">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <span>Need a template?</span>
                   <Button variant="link" size="sm" className="h-auto p-0" onClick={downloadTemplate}>
                     <Download className="h-3 w-3 mr-1" />
@@ -349,7 +349,7 @@ export function CSVImportDialog({
                     <FileSpreadsheet className="h-8 w-8 text-emerald-600" />
                     <div>
                       <p className="font-medium">{file.name}</p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         {parsedData.length} rows found
                       </p>
                     </div>
@@ -417,7 +417,7 @@ export function CSVImportDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     Categorize these subscribers by type for filtering and targeting.
                   </p>
                 </div>
@@ -430,7 +430,7 @@ export function CSVImportDialog({
                     value={listTag}
                     onChange={(e) => setListTag(e.target.value)}
                   />
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     Tag these subscribers for segmentation. Use creator names, list sources, or campaign names.
                   </p>
                 </div>
@@ -461,7 +461,7 @@ export function CSVImportDialog({
                         >
                           <span className="truncate flex-1">{subscriber.email}</span>
                           {subscriber.name && (
-                            <span className="text-xs text-zinc-500 ml-2">{subscriber.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{subscriber.name}</span>
                           )}
                           {!subscriber.isValid && (
                             <span className="text-xs ml-2">{subscriber.error}</span>
@@ -469,7 +469,7 @@ export function CSVImportDialog({
                         </div>
                       ))}
                       {parsedData.length > 50 && (
-                        <p className="text-center text-xs text-zinc-500 py-2">
+                        <p className="text-center text-xs text-muted-foreground py-2">
                           And {parsedData.length - 50} more...
                         </p>
                       )}

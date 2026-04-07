@@ -150,7 +150,7 @@ export function ResultsViewerDialog({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function EmptyState({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle: string }) {
   return (
-    <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
       <Icon className="h-12 w-12 mb-4 text-zinc-300" />
       <p className="font-medium">{title}</p>
       <p className="text-sm">{subtitle}</p>
@@ -167,20 +167,20 @@ function PredictiveAnalyticsContent({ data, sortConfig, onSort }: { data: any; s
   return (
     <div className="space-y-4 h-full">
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-        <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
-          <p className="text-xs text-zinc-500">Total Analyzed</p>
+        <div className="rounded-lg border bg-muted/50 p-3 dark:bg-card">
+          <p className="text-xs text-muted-foreground">Total Analyzed</p>
           <p className="text-xl font-bold">{summary.totalAnalyzed || 0}</p>
         </div>
         <div className="rounded-lg border bg-emerald-50 p-3 dark:bg-emerald-900/30">
-          <p className="text-xs text-zinc-500">High Value Prospects</p>
+          <p className="text-xs text-muted-foreground">High Value Prospects</p>
           <p className="text-xl font-bold text-emerald-600">{summary.highValueProspects || 0}</p>
         </div>
         <div className="rounded-lg border bg-amber-50 p-3 dark:bg-amber-900/30">
-          <p className="text-xs text-zinc-500">At Risk Users</p>
+          <p className="text-xs text-muted-foreground">At Risk Users</p>
           <p className="text-xl font-bold text-amber-600">{summary.atRiskUsers || 0}</p>
         </div>
         <div className="rounded-lg border bg-blue-50 p-3 dark:bg-blue-900/30">
-          <p className="text-xs text-zinc-500">Predicted Revenue</p>
+          <p className="text-xs text-muted-foreground">Predicted Revenue</p>
           <p className="text-xl font-bold text-blue-600">${Number(summary.predictedRevenue || 0).toFixed(2)}</p>
         </div>
       </div>
@@ -205,7 +205,7 @@ function PredictiveAnalyticsContent({ data, sortConfig, onSort }: { data: any; s
               <TableHeader>
                 <TableRow className="text-xs">
                   <TableHead className="h-8">User ID</TableHead>
-                  <TableHead className="h-8 text-right cursor-pointer hover:bg-zinc-100" onClick={() => onSort("conversionProbability")}>
+                  <TableHead className="h-8 text-right cursor-pointer hover:bg-muted" onClick={() => onSort("conversionProbability")}>
                     Conversion %
                     {sortConfig.key === "conversionProbability" && (sortConfig.direction === "desc" ? <ChevronDown className="h-3 w-3 inline ml-1" /> : <ChevronUp className="h-3 w-3 inline ml-1" />)}
                   </TableHead>
@@ -252,7 +252,7 @@ function PredictiveAnalyticsContent({ data, sortConfig, onSort }: { data: any; s
               <TableHeader>
                 <TableRow className="text-xs">
                   <TableHead className="h-8">User ID</TableHead>
-                  <TableHead className="h-8 text-right cursor-pointer hover:bg-zinc-100" onClick={() => onSort("churnRisk")}>
+                  <TableHead className="h-8 text-right cursor-pointer hover:bg-muted" onClick={() => onSort("churnRisk")}>
                     Churn Risk
                     {sortConfig.key === "churnRisk" && (sortConfig.direction === "desc" ? <ChevronDown className="h-3 w-3 inline ml-1" /> : <ChevronUp className="h-3 w-3 inline ml-1" />)}
                   </TableHead>
@@ -294,7 +294,7 @@ function SegmentationContent({ data }: { data: any }) {
       <div className="flex items-center justify-between">
         <div>
           <p className="font-medium">{segments.length} Segments Generated</p>
-          <p className="text-sm text-zinc-500">{totalUsers} total users segmented</p>
+          <p className="text-sm text-muted-foreground">{totalUsers} total users segmented</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => {
           const jsonData = JSON.stringify(segments, null, 2);
@@ -316,13 +316,13 @@ function SegmentationContent({ data }: { data: any }) {
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h4 className="font-semibold text-sm">{segment.name}</h4>
-                  <p className="text-xs text-zinc-500">{segment.description}</p>
+                  <p className="text-xs text-muted-foreground">{segment.description}</p>
                 </div>
                 <Badge variant="secondary">{segment.userCount} users</Badge>
               </div>
               <div className="flex items-center gap-4 mb-2">
                 <div className="text-xs">
-                  <span className="text-zinc-500">Engagement:</span>
+                  <span className="text-muted-foreground">Engagement:</span>
                   <span className="ml-1 font-medium">{(segment.avgEngagement * 100).toFixed(0)}%</span>
                 </div>
               </div>
@@ -362,18 +362,18 @@ function SendTimeContent({ data, timestamp }: { data: any; timestamp: string }) 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 grid-cols-3">
-        <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
-          <p className="text-xs text-zinc-500">Users Analyzed</p>
+        <div className="rounded-lg border bg-muted/50 p-3 dark:bg-card">
+          <p className="text-xs text-muted-foreground">Users Analyzed</p>
           <p className="text-xl font-bold">{summary.totalAnalyzed || 0}</p>
         </div>
         <div className="rounded-lg border bg-amber-50 p-3 dark:bg-amber-900/30">
-          <p className="text-xs text-zinc-500">Peak Hour</p>
+          <p className="text-xs text-muted-foreground">Peak Hour</p>
           <p className="text-xl font-bold text-amber-600">
             {summary.peakHour !== undefined ? `${summary.peakHour}:00` : "N/A"}
           </p>
         </div>
         <div className="rounded-lg border bg-blue-50 p-3 dark:bg-blue-900/30">
-          <p className="text-xs text-zinc-500">Timestamp</p>
+          <p className="text-xs text-muted-foreground">Timestamp</p>
           <p className="text-sm font-medium text-blue-600">{timestamp}</p>
         </div>
       </div>
@@ -392,17 +392,17 @@ function SendTimeContent({ data, timestamp }: { data: any; timestamp: string }) 
                   style={{ height: `${heightPercent}%`, minHeight: slot.count > 0 ? "4px" : "0" }}
                   title={`${slot.hour}:00 - ${slot.count} users`}
                 />
-                <span className="text-[10px] text-zinc-500">{slot.hour}</span>
+                <span className="text-[10px] text-muted-foreground">{slot.hour}</span>
               </div>
             );
           })}
         </div>
-        <p className="text-xs text-zinc-500 mt-2 text-center">Hour of day (0-23)</p>
+        <p className="text-xs text-muted-foreground mt-2 text-center">Hour of day (0-23)</p>
       </div>
 
       {/* Distribution Table */}
       <div className="rounded-lg border overflow-hidden">
-        <div className="px-4 py-2 bg-zinc-50 border-b dark:bg-zinc-800">
+        <div className="px-4 py-2 bg-muted/50 border-b dark:bg-muted">
           <span className="font-medium text-sm">Detailed Distribution</span>
         </div>
         <ScrollArea className="h-32">
@@ -426,7 +426,7 @@ function SendTimeContent({ data, timestamp }: { data: any; timestamp: string }) 
                       <TableCell className="py-2">
                         <div className="flex items-center gap-2">
                           <Progress value={percent} className="flex-1 h-1.5" />
-                          <span className="w-10 text-right text-zinc-500">{percent.toFixed(1)}%</span>
+                          <span className="w-10 text-right text-muted-foreground">{percent.toFixed(1)}%</span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -449,16 +449,16 @@ function TaggingContent({ data }: { data: any }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 grid-cols-3">
-        <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
-          <p className="text-xs text-zinc-500">Projects Processed</p>
+        <div className="rounded-lg border bg-muted/50 p-3 dark:bg-card">
+          <p className="text-xs text-muted-foreground">Projects Processed</p>
           <p className="text-xl font-bold">{results.length}</p>
         </div>
         <div className="rounded-lg border bg-emerald-50 p-3 dark:bg-emerald-900/30">
-          <p className="text-xs text-zinc-500">Successfully Tagged</p>
+          <p className="text-xs text-muted-foreground">Successfully Tagged</p>
           <p className="text-xl font-bold text-emerald-600">{successCount}</p>
         </div>
         <div className="rounded-lg border bg-red-50 p-3 dark:bg-red-900/30">
-          <p className="text-xs text-zinc-500">Failed / Skipped</p>
+          <p className="text-xs text-muted-foreground">Failed / Skipped</p>
           <p className="text-xl font-bold text-red-600">{failedCount}</p>
         </div>
       </div>
@@ -494,7 +494,7 @@ function TaggingContent({ data }: { data: any }) {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="py-2 text-xs text-zinc-500 max-w-xs truncate">
+                <TableCell className="py-2 text-xs text-muted-foreground max-w-xs truncate">
                   {result.reason || "-"}
                 </TableCell>
               </TableRow>

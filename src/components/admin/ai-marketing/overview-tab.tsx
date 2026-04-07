@@ -139,17 +139,17 @@ export function OverviewTab({
               {userSegments.map((segment) => (
                 <div key={segment.name} className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100">
-                      <Users className="h-5 w-5 text-zinc-600" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                      <Users className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="font-medium">{segment.name}</p>
-                      <p className="text-xs text-zinc-500">{segment.criteria}</p>
+                      <p className="text-xs text-muted-foreground">{segment.criteria}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">{segment.count.toLocaleString()}</p>
-                    <p className="text-xs text-zinc-500">Avg ${segment.avgSpend}</p>
+                    <p className="text-xs text-muted-foreground">Avg ${segment.avgSpend}</p>
                   </div>
                 </div>
               ))}
@@ -212,7 +212,7 @@ export function OverviewTab({
                       {campaign.status}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-sm text-zinc-500">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {campaign.recipients.toLocaleString()} recipients
                     {campaign.sentAt && ` • Sent ${campaign.sentAt}`}
                     {campaign.scheduledFor && ` • Scheduled for ${campaign.scheduledFor}`}
@@ -222,15 +222,15 @@ export function OverviewTab({
                   <div className="flex gap-6 text-center">
                     <div>
                       <p className="text-lg font-semibold">{((campaign.opens / campaign.recipients) * 100).toFixed(1)}%</p>
-                      <p className="text-xs text-zinc-500">Opens</p>
+                      <p className="text-xs text-muted-foreground">Opens</p>
                     </div>
                     <div>
                       <p className="text-lg font-semibold">{((campaign.clicks / campaign.recipients) * 100).toFixed(1)}%</p>
-                      <p className="text-xs text-zinc-500">Clicks</p>
+                      <p className="text-xs text-muted-foreground">Clicks</p>
                     </div>
                     <div>
                       <p className="text-lg font-semibold text-emerald-600">{campaign.conversions}</p>
-                      <p className="text-xs text-zinc-500">Conversions</p>
+                      <p className="text-xs text-muted-foreground">Conversions</p>
                     </div>
                   </div>
                 )}

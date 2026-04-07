@@ -381,30 +381,30 @@ export function EmailCampaignsTab({
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm text-zinc-500">Total Sent</p>
+            <p className="text-sm text-muted-foreground">Total Sent</p>
             <p className="mt-1 text-2xl font-bold">{(emailStats?.totalSent || 0).toLocaleString()}</p>
-            <p className="text-xs text-zinc-500">All campaigns</p>
+            <p className="text-xs text-muted-foreground">All campaigns</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm text-zinc-500">Avg Open Rate</p>
+            <p className="text-sm text-muted-foreground">Avg Open Rate</p>
             <p className="mt-1 text-2xl font-bold">{emailStats?.avgOpenRate || "0"}%</p>
-            <p className="text-xs text-zinc-500">{(emailStats?.totalOpens || 0).toLocaleString()} total opens</p>
+            <p className="text-xs text-muted-foreground">{(emailStats?.totalOpens || 0).toLocaleString()} total opens</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm text-zinc-500">Avg Click Rate</p>
+            <p className="text-sm text-muted-foreground">Avg Click Rate</p>
             <p className="mt-1 text-2xl font-bold">{emailStats?.avgClickRate || "0"}%</p>
-            <p className="text-xs text-zinc-500">{(emailStats?.totalClicks || 0).toLocaleString()} total clicks</p>
+            <p className="text-xs text-muted-foreground">{(emailStats?.totalClicks || 0).toLocaleString()} total clicks</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm text-zinc-500">Active Campaigns</p>
+            <p className="text-sm text-muted-foreground">Active Campaigns</p>
             <p className="mt-1 text-2xl font-bold">{emailCampaigns.length}</p>
-            <p className="text-xs text-zinc-500">Total campaigns</p>
+            <p className="text-xs text-muted-foreground">Total campaigns</p>
           </CardContent>
         </Card>
       </div>
@@ -434,7 +434,7 @@ export function EmailCampaignsTab({
                 </div>
                 <div>
                   <p className="font-medium">Subscriber Campaigns</p>
-                  <p className="text-sm text-zinc-500">Target newsletter subscribers</p>
+                  <p className="text-sm text-muted-foreground">Target newsletter subscribers</p>
                 </div>
               </div>
               <div className="mt-4 flex gap-2">
@@ -464,7 +464,7 @@ export function EmailCampaignsTab({
                 </div>
                 <div>
                   <p className="font-medium">Backer Campaigns</p>
-                  <p className="text-sm text-zinc-500">Engage previous backers</p>
+                  <p className="text-sm text-muted-foreground">Engage previous backers</p>
                 </div>
               </div>
               <Button
@@ -484,7 +484,7 @@ export function EmailCampaignsTab({
                 </div>
                 <div>
                   <p className="font-medium">Creator Campaigns</p>
-                  <p className="text-sm text-zinc-500">Notify project creators</p>
+                  <p className="text-sm text-muted-foreground">Notify project creators</p>
                 </div>
               </div>
               <Button
@@ -504,7 +504,7 @@ export function EmailCampaignsTab({
                 </div>
                 <div>
                   <p className="font-medium">Retailer Campaigns</p>
-                  <p className="text-sm text-zinc-500">Reach retail partners</p>
+                  <p className="text-sm text-muted-foreground">Reach retail partners</p>
                 </div>
               </div>
               <Button
@@ -543,11 +543,11 @@ export function EmailCampaignsTab({
         <CardContent>
           {emailCampaigns.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="rounded-full bg-zinc-100 p-4 mb-4">
-                <Send className="h-8 w-8 text-zinc-400" />
+              <div className="rounded-full bg-muted p-4 mb-4">
+                <Send className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="text-lg font-medium text-zinc-600">No campaigns yet</p>
-              <p className="text-sm text-zinc-500 mt-1 max-w-md">
+              <p className="text-lg font-medium text-muted-foreground">No campaigns yet</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-md">
                 Create your first campaign using the campaign type cards above.
                 The AI will help you target the right audience with personalized content.
               </p>
@@ -581,7 +581,7 @@ export function EmailCampaignsTab({
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <Users className="h-3.5 w-3.5 text-zinc-400" />
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
                           {campaign.recipients.toLocaleString()}
                         </div>
                       </TableCell>
@@ -590,7 +590,7 @@ export function EmailCampaignsTab({
                           <Eye className="h-3.5 w-3.5 text-blue-500" />
                           {campaign.opens.toLocaleString()}
                           {campaign.recipients > 0 && (
-                            <span className="text-xs text-zinc-400">
+                            <span className="text-xs text-muted-foreground">
                               ({Math.round((campaign.opens / campaign.recipients) * 100)}%)
                             </span>
                           )}
@@ -603,7 +603,7 @@ export function EmailCampaignsTab({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-zinc-500">
+                        <div className="text-sm text-muted-foreground">
                           {campaign.sentAt
                             ? new Date(campaign.sentAt).toLocaleDateString()
                             : campaign.scheduledFor
@@ -716,7 +716,7 @@ export function EmailCampaignsTab({
                 <Tag className="h-8 w-8 text-violet-600" />
               </div>
               <p className="text-center font-medium">Auto-Tag Projects</p>
-              <p className="text-center text-sm text-zinc-500">AI analyzes content and generates tags</p>
+              <p className="text-center text-sm text-muted-foreground">AI analyzes content and generates tags</p>
             </div>
             <ArrowRight className="h-6 w-6 text-zinc-300" />
             <div className="flex flex-1 flex-col items-center gap-2 p-4">
@@ -724,7 +724,7 @@ export function EmailCampaignsTab({
                 <Users className="h-8 w-8 text-blue-600" />
               </div>
               <p className="text-center font-medium">Match User Interests</p>
-              <p className="text-center text-sm text-zinc-500">Compare tags to user behavior</p>
+              <p className="text-center text-sm text-muted-foreground">Compare tags to user behavior</p>
             </div>
             <ArrowRight className="h-6 w-6 text-zinc-300" />
             <div className="flex flex-1 flex-col items-center gap-2 p-4">
@@ -732,7 +732,7 @@ export function EmailCampaignsTab({
                 <Send className="h-8 w-8 text-emerald-600" />
               </div>
               <p className="text-center font-medium">Send Personalized Email</p>
-              <p className="text-center text-sm text-zinc-500">Deliver relevant projects</p>
+              <p className="text-center text-sm text-muted-foreground">Deliver relevant projects</p>
             </div>
             <ArrowRight className="h-6 w-6 text-zinc-300" />
             <div className="flex flex-1 flex-col items-center gap-2 p-4">
@@ -740,7 +740,7 @@ export function EmailCampaignsTab({
                 <ShoppingCart className="h-8 w-8 text-amber-600" />
               </div>
               <p className="text-center font-medium">Track Conversions</p>
-              <p className="text-center text-sm text-zinc-500">Measure and optimize</p>
+              <p className="text-center text-sm text-muted-foreground">Measure and optimize</p>
             </div>
           </div>
         </CardContent>
@@ -774,11 +774,11 @@ export function EmailCampaignsTab({
               {selectedCampaign && (
                 <span className="flex items-center gap-2">
                   <CampaignStatusBadge status={selectedCampaign.status} />
-                  <span className="text-zinc-400">|</span>
+                  <span className="text-muted-foreground">|</span>
                   <span>
                     {getFilteredRecipientCount().toLocaleString()} recipients
                     {selectedSegments.length > 0 && (
-                      <span className="text-xs text-zinc-400 ml-1">
+                      <span className="text-xs text-muted-foreground ml-1">
                         (filtered from {selectedCampaign.recipientCount.toLocaleString()})
                       </span>
                     )}
@@ -810,7 +810,7 @@ export function EmailCampaignsTab({
                   </div>
                   <div className="space-y-2">
                     <Label>Email Body Content</Label>
-                    <p className="text-xs text-zinc-500 mb-2">
+                    <p className="text-xs text-muted-foreground mb-2">
                       Edit your email content with rich formatting. Drag & drop or paste images directly.
                     </p>
                     <EmailEditor
@@ -824,14 +824,14 @@ export function EmailCampaignsTab({
                   {/* Subscriber Segment Selection */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4 text-zinc-500" />
+                      <Filter className="h-4 w-4 text-muted-foreground" />
                       <Label>Target Subscriber Segments</Label>
                     </div>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                       Select which subscriber lists/segments should receive this campaign. If none selected, all newsletter subscribers will be targeted.
                     </p>
                     {segmentsLoading ? (
-                      <div className="flex items-center gap-2 text-sm text-zinc-500">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading segments...
                       </div>
@@ -841,7 +841,7 @@ export function EmailCampaignsTab({
                           {availableSegments.map((segment) => (
                             <div
                               key={segment.id}
-                              className="flex items-center justify-between rounded-lg border p-2 hover:bg-zinc-50"
+                              className="flex items-center justify-between rounded-lg border p-2 hover:bg-muted/50"
                             >
                               <div className="flex items-center gap-3">
                                 <Checkbox
@@ -862,7 +862,7 @@ export function EmailCampaignsTab({
                                   >
                                     {segment.name}
                                   </label>
-                                  <p className="text-xs text-zinc-500">{segment.description}</p>
+                                  <p className="text-xs text-muted-foreground">{segment.description}</p>
                                 </div>
                               </div>
                               <Badge variant="secondary" className="text-xs">
@@ -873,13 +873,13 @@ export function EmailCampaignsTab({
                         </div>
                       </ScrollArea>
                     ) : (
-                      <div className="rounded-lg border border-dashed p-4 text-center text-sm text-zinc-500">
+                      <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                         No subscriber segments found. Import subscribers with tags to create segments.
                       </div>
                     )}
                     {selectedSegments.length > 0 && (
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-zinc-500">Selected:</span>
+                        <span className="text-muted-foreground">Selected:</span>
                         <div className="flex flex-wrap gap-1">
                           {selectedSegments.map(id => {
                             const segment = availableSegments.find(s => s.id === id);
@@ -898,19 +898,19 @@ export function EmailCampaignsTab({
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-zinc-500">Name</p>
+                      <p className="text-sm font-medium text-muted-foreground">Name</p>
                       <p className="font-medium">{selectedCampaign.name}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-zinc-500">Subject</p>
+                      <p className="text-sm font-medium text-muted-foreground">Subject</p>
                       <p>{selectedCampaign.subject}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-zinc-500">Audience</p>
+                      <p className="text-sm font-medium text-muted-foreground">Audience</p>
                       <p className="capitalize">{selectedCampaign.targetAudience || "All"}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-zinc-500">Created</p>
+                      <p className="text-sm font-medium text-muted-foreground">Created</p>
                       <p>{new Date(selectedCampaign.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
@@ -937,8 +937,8 @@ export function EmailCampaignsTab({
 
                   {/* Email Preview */}
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-zinc-500">Email Preview</p>
-                    <div className="border rounded-lg p-4 bg-white max-h-[300px] overflow-y-auto">
+                    <p className="text-sm font-medium text-muted-foreground">Email Preview</p>
+                    <div className="border rounded-lg p-4 bg-card max-h-[300px] overflow-y-auto">
                       <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedCampaign.htmlContent) }} />
                     </div>
                   </div>
@@ -1051,7 +1051,7 @@ export function EmailCampaignsTab({
                 value={testName}
                 onChange={(e) => setTestName(e.target.value)}
               />
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 Leave blank to test fallback text (e.g., &quot;Hi there&quot;)
               </p>
             </div>

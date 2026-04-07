@@ -132,7 +132,7 @@ export function CampaignDialog({
           <div className="py-8 text-center">
             <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
             <h3 className="font-semibold text-lg text-emerald-700">{success}</h3>
-            <p className="text-sm text-zinc-500 mt-2">Your campaign is being prepared with AI-generated content.</p>
+            <p className="text-sm text-muted-foreground mt-2">Your campaign is being prepared with AI-generated content.</p>
           </div>
         ) : (
           <>
@@ -161,7 +161,7 @@ export function CampaignDialog({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-zinc-500">Select a template to auto-fill campaign settings</p>
+                <p className="text-xs text-muted-foreground">Select a template to auto-fill campaign settings</p>
               </div>
 
               {/* AI Auto-Generate Toggle */}
@@ -255,14 +255,14 @@ export function CampaignDialog({
               {(form.targetAudience === "all" || form.targetAudience === "subscriber") && (
                 <div className="space-y-3 rounded-lg border p-4">
                   <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-zinc-500" />
+                    <Filter className="h-4 w-4 text-muted-foreground" />
                     <Label>Target Specific Subscriber Segments</Label>
                   </div>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     Select which subscriber lists should receive this campaign. If none selected, all subscribers in the target audience will be included.
                   </p>
                   {segmentsLoading ? (
-                    <div className="flex items-center gap-2 text-sm text-zinc-500">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Loading segments...
                     </div>
@@ -272,7 +272,7 @@ export function CampaignDialog({
                         {availableSegments.map((segment) => (
                           <div
                             key={segment.id}
-                            className="flex items-center justify-between rounded-lg border p-2 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                            className="flex items-center justify-between rounded-lg border p-2 hover:bg-muted/50 dark:hover:bg-muted"
                           >
                             <div className="flex items-center gap-3">
                               <Checkbox
@@ -294,7 +294,7 @@ export function CampaignDialog({
                                 >
                                   {segment.name}
                                 </label>
-                                <p className="text-xs text-zinc-500">{segment.description}</p>
+                                <p className="text-xs text-muted-foreground">{segment.description}</p>
                               </div>
                             </div>
                             <Badge variant="secondary" className="text-xs">
@@ -305,7 +305,7 @@ export function CampaignDialog({
                       </div>
                     </ScrollArea>
                   ) : (
-                    <div className="rounded-lg border border-dashed p-4 text-center text-sm text-zinc-500">
+                    <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                       No subscriber segments found. Import subscribers with tags to create segments.
                     </div>
                   )}
@@ -323,7 +323,7 @@ export function CampaignDialog({
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-zinc-500">Selected segments:</span>
+                        <span className="text-muted-foreground">Selected segments:</span>
                         <div className="flex flex-wrap gap-1">
                           {form.selectedSegments.map(id => {
                             const segment = availableSegments.find(s => s.id === id);
@@ -353,7 +353,7 @@ export function CampaignDialog({
 
                   <div className="space-y-2">
                     <Label>Email Body Content</Label>
-                    <p className="text-xs text-zinc-500 mb-2">
+                    <p className="text-xs text-muted-foreground mb-2">
                       Design your email with rich formatting. Drag & drop or paste images directly.
                     </p>
                     <EmailEditor

@@ -100,7 +100,7 @@ export function BehaviorAnalyticsTab({
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <Eye className="h-4 w-4 text-zinc-500" />
+                    <Eye className="h-4 w-4 text-muted-foreground" />
                     <Label>Page Views</Label>
                   </div>
                   <Switch
@@ -110,7 +110,7 @@ export function BehaviorAnalyticsTab({
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <Activity className="h-4 w-4 text-zinc-500" />
+                    <Activity className="h-4 w-4 text-muted-foreground" />
                     <Label>Scroll Depth</Label>
                   </div>
                   <Switch
@@ -120,7 +120,7 @@ export function BehaviorAnalyticsTab({
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <Timer className="h-4 w-4 text-zinc-500" />
+                    <Timer className="h-4 w-4 text-muted-foreground" />
                     <Label>Time on Page</Label>
                   </div>
                   <Switch
@@ -130,7 +130,7 @@ export function BehaviorAnalyticsTab({
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <MousePointer className="h-4 w-4 text-zinc-500" />
+                    <MousePointer className="h-4 w-4 text-muted-foreground" />
                     <Label>Click Tracking</Label>
                   </div>
                   <Switch
@@ -146,7 +146,7 @@ export function BehaviorAnalyticsTab({
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <ShoppingCart className="h-4 w-4 text-zinc-500" />
+                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                     <Label>Abandoned Carts</Label>
                   </div>
                   <Switch
@@ -156,7 +156,7 @@ export function BehaviorAnalyticsTab({
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <Layers className="h-4 w-4 text-zinc-500" />
+                    <Layers className="h-4 w-4 text-muted-foreground" />
                     <Label>Reward Comparisons</Label>
                   </div>
                   <Switch
@@ -166,7 +166,7 @@ export function BehaviorAnalyticsTab({
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <Play className="h-4 w-4 text-zinc-500" />
+                    <Play className="h-4 w-4 text-muted-foreground" />
                     <Label>Video Engagement</Label>
                   </div>
                   <Switch
@@ -176,7 +176,7 @@ export function BehaviorAnalyticsTab({
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <BarChart3 className="h-4 w-4 text-zinc-500" />
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
                     <Label>Funnel Analysis</Label>
                   </div>
                   <Switch
@@ -194,7 +194,7 @@ export function BehaviorAnalyticsTab({
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <Label>Session Recording</Label>
-                  <p className="text-xs text-zinc-500">Record user sessions for replay</p>
+                  <p className="text-xs text-muted-foreground">Record user sessions for replay</p>
                 </div>
                 <Switch
                   checked={trackingSettings.sessionRecording}
@@ -204,7 +204,7 @@ export function BehaviorAnalyticsTab({
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <Label>Heatmaps</Label>
-                  <p className="text-xs text-zinc-500">Generate click heatmaps</p>
+                  <p className="text-xs text-muted-foreground">Generate click heatmaps</p>
                 </div>
                 <Switch
                   checked={trackingSettings.heatmaps}
@@ -238,30 +238,30 @@ export function BehaviorAnalyticsTab({
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm text-zinc-500">Today&apos;s Events</p>
+            <p className="text-sm text-muted-foreground">Today&apos;s Events</p>
             <p className="text-2xl font-bold">{behaviorStats?.todayCount?.toLocaleString() || 0}</p>
             <p className="text-xs text-emerald-600">{behaviorStats?.trend || "+0%"} vs yesterday</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm text-zinc-500">This Week</p>
+            <p className="text-sm text-muted-foreground">This Week</p>
             <p className="text-2xl font-bold">{behaviorStats?.weekCount?.toLocaleString() || 0}</p>
-            <p className="text-xs text-zinc-500">Total events</p>
+            <p className="text-xs text-muted-foreground">Total events</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm text-zinc-500">Top Searches</p>
+            <p className="text-sm text-muted-foreground">Top Searches</p>
             <p className="text-2xl font-bold">{topSearches.length}</p>
-            <p className="text-xs text-zinc-500">Unique queries</p>
+            <p className="text-xs text-muted-foreground">Unique queries</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm text-zinc-500">Top Projects</p>
+            <p className="text-sm text-muted-foreground">Top Projects</p>
             <p className="text-2xl font-bold">{topProjects.length}</p>
-            <p className="text-xs text-zinc-500">By engagement</p>
+            <p className="text-xs text-muted-foreground">By engagement</p>
           </CardContent>
         </Card>
       </div>
@@ -274,12 +274,12 @@ export function BehaviorAnalyticsTab({
           </CardHeader>
           <CardContent>
             {topProjects.length === 0 ? (
-              <p className="text-sm text-zinc-500 text-center py-4">No project data yet</p>
+              <p className="text-sm text-muted-foreground text-center py-4">No project data yet</p>
             ) : (
               <div className="space-y-3">
                 {topProjects.slice(0, 5).map((project, i) => (
                   <div key={project.projectId} className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-zinc-400 w-6">{i + 1}.</span>
+                    <span className="text-sm font-medium text-muted-foreground w-6">{i + 1}.</span>
                     <div className="flex-1">
                       <p className="font-medium text-sm">{project.projectTitle}</p>
                     </div>
@@ -298,12 +298,12 @@ export function BehaviorAnalyticsTab({
           </CardHeader>
           <CardContent>
             {topSearches.length === 0 ? (
-              <p className="text-sm text-zinc-500 text-center py-4">No search data yet</p>
+              <p className="text-sm text-muted-foreground text-center py-4">No search data yet</p>
             ) : (
               <div className="space-y-3">
                 {topSearches.slice(0, 5).map((search, i) => (
                   <div key={search.query} className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-zinc-400 w-6">{i + 1}.</span>
+                    <span className="text-sm font-medium text-muted-foreground w-6">{i + 1}.</span>
                     <div className="flex-1">
                       <p className="font-medium text-sm">&quot;{search.query}&quot;</p>
                     </div>
@@ -329,7 +329,7 @@ export function BehaviorAnalyticsTab({
         <CardContent>
           <div className="space-y-2">
             {liveEvents.length === 0 ? (
-              <div className="text-center py-8 text-zinc-500">
+              <div className="text-center py-8 text-muted-foreground">
                 <Activity className="h-12 w-12 mx-auto mb-3 text-zinc-300" />
                 <p className="font-medium">No events recorded yet</p>
                 <p className="text-sm">User behavior will appear here in real-time as visitors interact with your site.</p>
@@ -352,12 +352,12 @@ export function BehaviorAnalyticsTab({
 
                 return (
                   <div key={event.id} className="flex items-center gap-4 rounded-lg border p-3 text-sm">
-                    <span className="w-16 text-zinc-500">{timeAgo}</span>
+                    <span className="w-16 text-muted-foreground">{timeAgo}</span>
                     <Badge variant="outline" className="w-28 justify-center text-xs">
                       {event.eventType.toLowerCase().replace(/_/g, " ")}
                     </Badge>
-                    <code className="text-xs text-zinc-500">{event.userName || event.sessionId}</code>
-                    <span className="flex-1 text-zinc-600 truncate">{details}</span>
+                    <code className="text-xs text-muted-foreground">{event.userName || event.sessionId}</code>
+                    <span className="flex-1 text-muted-foreground truncate">{details}</span>
                   </div>
                 );
               })

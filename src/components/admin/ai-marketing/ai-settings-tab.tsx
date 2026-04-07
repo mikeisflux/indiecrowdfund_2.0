@@ -263,7 +263,7 @@ export function AISettingsTab({
                       ) : (
                         <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
                       )}
-                      <span className="text-zinc-600 dark:text-zinc-400">
+                      <span className="text-muted-foreground dark:text-muted-foreground">
                         <span className="font-medium">{step.step}:</span> {step.message}
                       </span>
                     </div>
@@ -275,8 +275,8 @@ export function AISettingsTab({
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Last Run */}
-            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
-              <p className="text-xs text-zinc-500 mb-1">Last Run</p>
+            <div className="rounded-lg border bg-card p-4 dark:bg-card">
+              <p className="text-xs text-muted-foreground mb-1">Last Run</p>
               <p className="font-semibold text-sm">
                 {automationStatus?.lastRun
                   ? new Date(automationStatus.lastRun).toLocaleDateString("en-US", {
@@ -287,24 +287,24 @@ export function AISettingsTab({
             </div>
 
             {/* Campaigns Sent (30d) */}
-            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
-              <p className="text-xs text-zinc-500 mb-1">Auto Campaigns (30d)</p>
+            <div className="rounded-lg border bg-card p-4 dark:bg-card">
+              <p className="text-xs text-muted-foreground mb-1">Auto Campaigns (30d)</p>
               <p className="font-semibold text-sm">
                 {automationStatus?.performance?.campaignsSent ?? 0}
               </p>
             </div>
 
             {/* Open Rate */}
-            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
-              <p className="text-xs text-zinc-500 mb-1">Avg Open Rate</p>
+            <div className="rounded-lg border bg-card p-4 dark:bg-card">
+              <p className="text-xs text-muted-foreground mb-1">Avg Open Rate</p>
               <p className="font-semibold text-sm">
                 {automationStatus?.performance?.avgOpenRate ?? "N/A"}
               </p>
             </div>
 
             {/* Click Rate */}
-            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
-              <p className="text-xs text-zinc-500 mb-1">Avg Click Rate</p>
+            <div className="rounded-lg border bg-card p-4 dark:bg-card">
+              <p className="text-xs text-muted-foreground mb-1">Avg Click Rate</p>
               <p className="font-semibold text-sm">
                 {automationStatus?.performance?.avgClickRate ?? "N/A"}
               </p>
@@ -313,8 +313,8 @@ export function AISettingsTab({
 
           {/* Recent automated campaigns */}
           {automationStatus?.recentCampaigns && automationStatus.recentCampaigns.length > 0 && (
-            <div className="mt-4 rounded-lg border bg-white dark:bg-zinc-900 overflow-hidden">
-              <div className="px-4 py-2 border-b bg-zinc-50 dark:bg-zinc-800">
+            <div className="mt-4 rounded-lg border bg-card dark:bg-card overflow-hidden">
+              <div className="px-4 py-2 border-b bg-muted/50 dark:bg-muted">
                 <span className="text-sm font-medium">Recent Automated Campaigns</span>
               </div>
               <div className="p-2">
@@ -339,7 +339,7 @@ export function AISettingsTab({
                         <TableCell className="py-2 text-right">{c.sent}</TableCell>
                         <TableCell className="py-2 text-right">{c.opens}</TableCell>
                         <TableCell className="py-2 text-right">{c.clicks}</TableCell>
-                        <TableCell className="py-2 text-right text-zinc-500">
+                        <TableCell className="py-2 text-right text-muted-foreground">
                           {c.sentAt ? new Date(c.sentAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
                         </TableCell>
                       </TableRow>
@@ -351,12 +351,12 @@ export function AISettingsTab({
           )}
 
           {/* Cron setup instructions */}
-          <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:bg-zinc-800 dark:border-zinc-700">
-            <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">Cron Setup</p>
-            <code className="text-xs text-zinc-500 break-all">
+          <div className="mt-4 rounded-lg border border-border bg-muted/50 p-3 dark:bg-muted dark:border-border">
+            <p className="text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-1">Cron Setup</p>
+            <code className="text-xs text-muted-foreground break-all">
               0 10 * * * curl -s -H &quot;Authorization: Bearer $CRON_SECRET&quot; http://localhost:3000/api/cron/ai-marketing
             </code>
-            <p className="text-xs text-zinc-400 mt-1">Add this to your crontab to run daily at 10 AM. The AI decides what to send based on platform activity.</p>
+            <p className="text-xs text-muted-foreground mt-1">Add this to your crontab to run daily at 10 AM. The AI decides what to send based on platform activity.</p>
           </div>
         </CardContent>
       </Card>
@@ -395,14 +395,14 @@ export function AISettingsTab({
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Auto-Tagging */}
-            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+            <div className="rounded-lg border bg-card p-4 dark:bg-card">
               <div className="flex items-center gap-3 mb-3">
                 <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-900/30">
                   <Tag className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Auto-Tagging</p>
-                  <p className="text-xs text-zinc-500">Tag projects with AI</p>
+                  <p className="text-xs text-muted-foreground">Tag projects with AI</p>
                 </div>
               </div>
               <Button
@@ -423,14 +423,14 @@ export function AISettingsTab({
             </div>
 
             {/* Predictive Analytics */}
-            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+            <div className="rounded-lg border bg-card p-4 dark:bg-card">
               <div className="flex items-center gap-3 mb-3">
                 <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
                   <TrendingUp className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Predictive Analytics</p>
-                  <p className="text-xs text-zinc-500">Score users</p>
+                  <p className="text-xs text-muted-foreground">Score users</p>
                 </div>
               </div>
               <Button
@@ -451,14 +451,14 @@ export function AISettingsTab({
             </div>
 
             {/* Smart Segmentation */}
-            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+            <div className="rounded-lg border bg-card p-4 dark:bg-card">
               <div className="flex items-center gap-3 mb-3">
                 <div className="rounded-full bg-violet-100 p-2 dark:bg-violet-900/30">
                   <Users className="h-4 w-4 text-violet-600" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Smart Segmentation</p>
-                  <p className="text-xs text-zinc-500">Create segments</p>
+                  <p className="text-xs text-muted-foreground">Create segments</p>
                 </div>
               </div>
               <Button
@@ -479,14 +479,14 @@ export function AISettingsTab({
             </div>
 
             {/* Send Time Optimization */}
-            <div className="rounded-lg border bg-white p-4 dark:bg-zinc-900">
+            <div className="rounded-lg border bg-card p-4 dark:bg-card">
               <div className="flex items-center gap-3 mb-3">
                 <div className="rounded-full bg-amber-100 p-2 dark:bg-amber-900/30">
                   <Timer className="h-4 w-4 text-amber-600" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Send Time Optimization</p>
-                  <p className="text-xs text-zinc-500">Optimal times</p>
+                  <p className="text-xs text-muted-foreground">Optimal times</p>
                 </div>
               </div>
               <Button
@@ -533,19 +533,19 @@ export function AISettingsTab({
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <p className="text-zinc-500 text-xs">Analyzed</p>
+                        <p className="text-muted-foreground text-xs">Analyzed</p>
                         <p className="font-semibold">{(aiRunResults.runPredictiveAnalytics.data as { summary?: { totalAnalyzed?: number } }).summary?.totalAnalyzed || 0}</p>
                       </div>
                       <div>
-                        <p className="text-zinc-500 text-xs">High Value</p>
+                        <p className="text-muted-foreground text-xs">High Value</p>
                         <p className="font-semibold text-emerald-600">{(aiRunResults.runPredictiveAnalytics.data as { summary?: { highValueProspects?: number } }).summary?.highValueProspects || 0}</p>
                       </div>
                       <div>
-                        <p className="text-zinc-500 text-xs">At Risk</p>
+                        <p className="text-muted-foreground text-xs">At Risk</p>
                         <p className="font-semibold text-amber-600">{(aiRunResults.runPredictiveAnalytics.data as { summary?: { atRiskUsers?: number } }).summary?.atRiskUsers || 0}</p>
                       </div>
                       <div>
-                        <p className="text-zinc-500 text-xs">Predicted LTV</p>
+                        <p className="text-muted-foreground text-xs">Predicted LTV</p>
                         <p className="font-semibold">${((aiRunResults.runPredictiveAnalytics.data as { summary?: { predictedRevenue?: number } }).summary?.predictedRevenue || 0).toLocaleString()}</p>
                       </div>
                     </div>
@@ -561,11 +561,11 @@ export function AISettingsTab({
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-zinc-500">Segments Created</span>
+                        <span className="text-muted-foreground">Segments Created</span>
                         <span className="font-semibold">{((aiRunResults.runSegmentation.data as { segments?: unknown[] }).segments || []).length}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-zinc-500">Total Users</span>
+                        <span className="text-muted-foreground">Total Users</span>
                         <span className="font-semibold">{(aiRunResults.runSegmentation.data as { totalUsers?: number }).totalUsers || 0}</span>
                       </div>
                     </div>
@@ -581,11 +581,11 @@ export function AISettingsTab({
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-zinc-500">Users Analyzed</span>
+                        <span className="text-muted-foreground">Users Analyzed</span>
                         <span className="font-semibold">{(aiRunResults.runSendTimeOptimization.data as { summary?: { totalAnalyzed?: number } }).summary?.totalAnalyzed || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-zinc-500">Peak Hour</span>
+                        <span className="text-muted-foreground">Peak Hour</span>
                         <span className="font-semibold">{(aiRunResults.runSendTimeOptimization.data as { summary?: { peakHour?: number } }).summary?.peakHour !== undefined ? `${(aiRunResults.runSendTimeOptimization.data as { summary: { peakHour: number } }).summary.peakHour}:00` : "N/A"}</span>
                       </div>
                     </div>
@@ -601,13 +601,13 @@ export function AISettingsTab({
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-zinc-500">Projects Tagged</span>
+                        <span className="text-muted-foreground">Projects Tagged</span>
                         <span className="font-semibold">
                           {((aiRunResults.runAutoTagging.data as { results?: { success: boolean }[] }).results || []).filter(r => r.success).length}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-zinc-500">Status</span>
+                        <span className="text-muted-foreground">Status</span>
                         <Badge variant="outline" className="text-xs">
                           {aiRunResults.runAutoTagging.success ? "Complete" : "Failed"}
                         </Badge>
@@ -619,8 +619,8 @@ export function AISettingsTab({
 
               {/* Inline Quick Data Preview */}
               {aiRunResults.runPredictiveAnalytics?.data && (
-                <div className="rounded-lg border bg-white dark:bg-zinc-900 overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-2 border-b bg-zinc-50 dark:bg-zinc-800">
+                <div className="rounded-lg border bg-card dark:bg-card overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50 dark:bg-muted">
                     <span className="text-sm font-medium">Top High-Value Prospects</span>
                     <Button
                       variant="ghost"
@@ -686,7 +686,7 @@ export function AISettingsTab({
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <Label>Email Personalization</Label>
-                    <p className="text-xs text-zinc-500">Personalize email content per user</p>
+                    <p className="text-xs text-muted-foreground">Personalize email content per user</p>
                   </div>
                   <Switch
                     checked={aiSettings.emailPersonalization}
@@ -696,7 +696,7 @@ export function AISettingsTab({
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <Label>Predictive Analytics</Label>
-                    <p className="text-xs text-zinc-500">Predict user behavior and conversion</p>
+                    <p className="text-xs text-muted-foreground">Predict user behavior and conversion</p>
                   </div>
                   <Switch
                     checked={aiSettings.predictiveAnalytics}
@@ -706,7 +706,7 @@ export function AISettingsTab({
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <Label>Smart Segmentation</Label>
-                    <p className="text-xs text-zinc-500">Auto-create user segments</p>
+                    <p className="text-xs text-muted-foreground">Auto-create user segments</p>
                   </div>
                   <Switch
                     checked={aiSettings.smartSegmentation}
@@ -722,7 +722,7 @@ export function AISettingsTab({
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <Label>Send Time Optimization</Label>
-                    <p className="text-xs text-zinc-500">AI picks optimal send time</p>
+                    <p className="text-xs text-muted-foreground">AI picks optimal send time</p>
                   </div>
                   <Switch
                     checked={aiSettings.sendTimeOptimization}
@@ -732,7 +732,7 @@ export function AISettingsTab({
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <Label>Content Optimization</Label>
-                    <p className="text-xs text-zinc-500">A/B test subject lines and content</p>
+                    <p className="text-xs text-muted-foreground">A/B test subject lines and content</p>
                   </div>
                   <Switch
                     checked={aiSettings.contentOptimization}
@@ -742,7 +742,7 @@ export function AISettingsTab({
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <Label>Automatic A/B Testing</Label>
-                    <p className="text-xs text-zinc-500">Auto-run A/B tests on campaigns</p>
+                    <p className="text-xs text-muted-foreground">Auto-run A/B tests on campaigns</p>
                   </div>
                   <Switch
                     checked={aiSettings.abTesting}
@@ -771,7 +771,7 @@ export function AISettingsTab({
                 max={7}
                 step={1}
               />
-              <p className="text-sm text-zinc-500">{aiSettings.emailFrequencyCap} emails per week</p>
+              <p className="text-sm text-muted-foreground">{aiSettings.emailFrequencyCap} emails per week</p>
             </div>
 
             <div className="space-y-2">
@@ -781,7 +781,7 @@ export function AISettingsTab({
                 value={aiSettings.dailyEmailLimit}
                 onChange={(e) => setAiSettings({ ...aiSettings, dailyEmailLimit: parseInt(e.target.value) })}
               />
-              <p className="text-xs text-zinc-500">Maximum emails to send per day across all campaigns</p>
+              <p className="text-xs text-muted-foreground">Maximum emails to send per day across all campaigns</p>
             </div>
           </div>
 
@@ -803,7 +803,7 @@ export function AISettingsTab({
               />
             </div>
           </div>
-          <p className="text-sm text-zinc-500">No emails will be sent during quiet hours (in user&apos;s local timezone)</p>
+          <p className="text-sm text-muted-foreground">No emails will be sent during quiet hours (in user&apos;s local timezone)</p>
         </CardContent>
       </Card>
     </div>

@@ -72,12 +72,12 @@ export function AutoTaggingTab({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border bg-zinc-50 p-4 dark:bg-zinc-900">
+          <div className="rounded-lg border bg-muted/50 p-4 dark:bg-card">
             <div className="flex items-center gap-3">
               <Brain className="h-5 w-5 text-violet-600" />
               <div className="flex-1">
                 <p className="text-sm font-medium">AI analyzes project titles, descriptions, stories, and images</p>
-                <p className="text-xs text-zinc-500">Uses NLP and image recognition to extract meaningful tags</p>
+                <p className="text-xs text-muted-foreground">Uses NLP and image recognition to extract meaningful tags</p>
               </div>
             </div>
           </div>
@@ -100,7 +100,7 @@ export function AutoTaggingTab({
                   max={100}
                   step={5}
                 />
-                <p className="text-xs text-zinc-500">Only apply tags with confidence above this threshold</p>
+                <p className="text-xs text-muted-foreground">Only apply tags with confidence above this threshold</p>
               </div>
 
               <div className="space-y-2">
@@ -119,7 +119,7 @@ export function AutoTaggingTab({
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <Label>Auto-Tag New Projects</Label>
-                  <p className="text-sm text-zinc-500">Automatically tag projects on creation</p>
+                  <p className="text-sm text-muted-foreground">Automatically tag projects on creation</p>
                 </div>
                 <Switch
                   checked={aiSettings.autoTagging}
@@ -130,7 +130,7 @@ export function AutoTaggingTab({
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <Label>Require Review</Label>
-                  <p className="text-sm text-zinc-500">Require admin approval for auto-generated tags</p>
+                  <p className="text-sm text-muted-foreground">Require admin approval for auto-generated tags</p>
                 </div>
                 <Switch checked={false} />
               </div>

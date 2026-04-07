@@ -73,11 +73,11 @@ export function TagReviewDialog({
         </DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
           {pendingTagUpdates.length === 0 ? (
-            <p className="text-center text-zinc-500 py-8">No tags to review</p>
+            <p className="text-center text-muted-foreground py-8">No tags to review</p>
           ) : (
             <>
               {/* Summary stats */}
-              <div className="flex items-center justify-between rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
+              <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3 dark:bg-card">
                 <div className="text-sm">
                   <span className="font-medium">{pendingTagUpdates.length}</span> projects analyzed
                   {" • "}
@@ -121,7 +121,7 @@ export function TagReviewDialog({
                         )}
                       </div>
                       {project.primaryCategory && (
-                        <p className="text-sm text-zinc-500 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           Suggested category: <span className="font-medium">{project.primaryCategory}</span>
                         </p>
                       )}
@@ -157,10 +157,10 @@ export function TagReviewDialog({
                   {/* Current tags */}
                   {project.currentTags.length > 0 && (
                     <div className="mb-3">
-                      <p className="text-xs text-zinc-500 mb-1">Current tags:</p>
+                      <p className="text-xs text-muted-foreground mb-1">Current tags:</p>
                       <div className="flex flex-wrap gap-1">
                         {project.currentTags.map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs text-zinc-500">
+                          <Badge key={tag} variant="outline" className="text-xs text-muted-foreground">
                             {tag}
                           </Badge>
                         ))}
@@ -171,7 +171,7 @@ export function TagReviewDialog({
                   {/* Suggested tags (toggleable) */}
                   {project.suggestedTags.length > 0 && (
                     <div>
-                      <p className="text-xs text-zinc-500 mb-1">AI-suggested tags (click to toggle):</p>
+                      <p className="text-xs text-muted-foreground mb-1">AI-suggested tags (click to toggle):</p>
                       <div className="flex flex-wrap gap-2">
                         {project.suggestedTags.map((tag) => (
                           <Badge
@@ -180,7 +180,7 @@ export function TagReviewDialog({
                             className={`cursor-pointer transition-colors ${
                               project.selectedTags.includes(tag)
                                 ? "bg-violet-600 hover:bg-violet-700"
-                                : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                : "hover:bg-muted dark:hover:bg-muted"
                             }`}
                             onClick={() => onToggleTagSelection(project.projectId, tag)}
                           >
@@ -188,14 +188,14 @@ export function TagReviewDialog({
                           </Badge>
                         ))}
                       </div>
-                      <p className="text-xs text-zinc-400 mt-2">
+                      <p className="text-xs text-muted-foreground mt-2">
                         {project.selectedTags.length} tags selected
                       </p>
                     </div>
                   )}
 
                   {project.suggestedTags.length === 0 && !project.error && (
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       No tags met the confidence threshold
                     </p>
                   )}

@@ -395,7 +395,7 @@ export function CampaignTypeDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="rounded-full bg-zinc-100 p-2">{getTypeIcon()}</div>
+            <div className="rounded-full bg-muted p-2">{getTypeIcon()}</div>
             <div>
               <DialogTitle>{getTypeTitle()}</DialogTitle>
               <DialogDescription>
@@ -407,7 +407,7 @@ export function CampaignTypeDialog({
 
         {loading && (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         )}
 
@@ -428,14 +428,14 @@ export function CampaignTypeDialog({
         {config && !loading && !success && (
           <div className="space-y-6">
             {/* Recipient Count */}
-            <div className="rounded-lg bg-zinc-50 p-4">
+            <div className="rounded-lg bg-muted/50 p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-500">Potential Recipients</span>
+                <span className="text-sm text-muted-foreground">Potential Recipients</span>
                 <span className="text-2xl font-bold">{config.recipientCount.toLocaleString()}</span>
               </div>
               {config.sampleRecipients.length > 0 && (
                 <div className="mt-2">
-                  <p className="text-xs text-zinc-400">Sample: {config.sampleRecipients.slice(0, 3).map(r => r.email).join(", ")}</p>
+                  <p className="text-xs text-muted-foreground">Sample: {config.sampleRecipients.slice(0, 3).map(r => r.email).join(", ")}</p>
                 </div>
               )}
             </div>
@@ -511,7 +511,7 @@ export function CampaignTypeDialog({
                   </Button>
                 </div>
               </div>
-              <p className="text-xs text-zinc-500 mb-2">
+              <p className="text-xs text-muted-foreground mb-2">
                 Design your email content below. Drag & drop or paste images directly. AI will add personalized project recommendations after your content.
               </p>
               {canvaFileName && (
@@ -528,7 +528,7 @@ export function CampaignTypeDialog({
                       setCanvaFileName(null);
                       setIntro("");
                     }}
-                    className="text-xs text-zinc-500"
+                    className="text-xs text-muted-foreground"
                   >
                     Clear import
                   </Button>
@@ -542,7 +542,7 @@ export function CampaignTypeDialog({
                   </div>
                   <iframe
                     srcDoc={intro}
-                    className="w-full bg-white"
+                    className="w-full bg-card"
                     style={{ minHeight: "300px", border: "none" }}
                     title="Email Preview"
                     sandbox="allow-same-origin"
@@ -571,12 +571,12 @@ export function CampaignTypeDialog({
                       className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
                         selectedProjects.includes(project.id)
                           ? "border-emerald-500 bg-emerald-50"
-                          : "border-zinc-200 hover:bg-zinc-50"
+                          : "border-border hover:bg-muted/50"
                       }`}
                     >
                       <div className="flex-1">
                         <p className="font-medium">{project.title}</p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted-foreground">
                           {project.category} • ${Number(project.currentAmount).toLocaleString()} raised
                         </p>
                       </div>
@@ -586,7 +586,7 @@ export function CampaignTypeDialog({
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {selectedProjects.length === 0
                     ? "All live projects will be included"
                     : `${selectedProjects.length} project(s) selected`}
