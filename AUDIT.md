@@ -434,8 +434,8 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/hero-slides/route.ts` ✅
 - [x] `src/app/api/home-stats/route.ts` ✅
 - [x] `src/app/api/internal/blocked-ips/route.ts` ✅
-- [ ] `src/app/api/lcs-locator/import/route.ts` ⬜
-- [ ] `src/app/api/lcs-locator/route.ts` ⬜
+- [x] `src/app/api/lcs-locator/import/route.ts` ✅
+- [x] `src/app/api/lcs-locator/route.ts` ✅
 - [x] `src/app/api/marketplace/books/[slug]/route.ts` ✅
 - [x] `src/app/api/marketplace/books/route.ts` ✅
 - [x] `src/app/api/marketplace/checkout/route.ts` ✅
@@ -446,8 +446,9 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/marketplace/purchase/confirm/route.ts` ✅
 - [x] `src/app/api/marketplace/purchase/route.ts` ✅
 - [x] `src/app/api/marketplace/redeem-code/route.ts` ✅
-- [ ] `src/app/api/marketplace/validate-code/route.ts` ⬜ Fixed missing deletedAt:null on book lookup (soft-deleted books could be used for code validation)
-- [ ] `src/app/api/messages/route.ts` ⬜
+- [x] `src/app/api/marketplace/validate-code/route.ts` ✅
+- [x] `src/app/api/messages/route.ts` 🔧
+  - Fixed: recipient and sender lookups used `findUnique` without `deletedAt: null` — soft-deleted users could receive and send messages
 - [ ] `src/app/api/messages/user-info/route.ts` ⬜
 - [ ] `src/app/api/metrics/route.ts` ⬜
 - [ ] `src/app/api/og/route.tsx` ⬜

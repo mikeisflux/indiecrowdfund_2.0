@@ -64,9 +64,9 @@ export async function GET() {
   if (dbCheck.status !== "unhealthy") {
     try {
       const [userCount, projectCount, pledgeCount, settings] = await Promise.all([
-        db.user.count(),
-        db.project.count(),
-        db.pledge.count(),
+        db.user.count({ where: { deletedAt: null } }),
+        db.project.count({ where: { deletedAt: null } }),
+        db.pledge.count({ where: { deletedAt: null } }),
         db.platformSettings.findUnique({
           where: { id: "default" },
           select: {

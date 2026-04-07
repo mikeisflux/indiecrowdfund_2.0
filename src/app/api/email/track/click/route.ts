@@ -120,7 +120,11 @@ export async function GET(request: Request) {
       return response;
     }
 
-    // No campaign tracking, just redirect
+    // No campaign tracking — still validate URL to prevent open redirect
+    if (!isAllowedRedirectUrl(decodedUrl)) {
+      emailTrackClickLogger.warn(`[Click Track] Blocked unsafe redirect URL (no campaign): ${decodedUrl}`);
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     return NextResponse.redirect(decodedUrl);
   } catch (error) {
     emailTrackClickLogger.error({ err: String(error) }, "Error tracking email click:");
