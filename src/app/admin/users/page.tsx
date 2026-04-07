@@ -533,7 +533,7 @@ export default function UsersPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">User Management</h1>
-          <p className="text-zinc-500">Manage platform users and retailer applications</p>
+          <p className="text-muted-foreground">Manage platform users and retailer applications</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {duplicateCount !== null && duplicateCount > 0 && (

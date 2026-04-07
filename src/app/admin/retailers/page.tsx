@@ -252,7 +252,7 @@ export default function RetailersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Retailer Management</h1>
-          <p className="text-zinc-500">
+          <p className="text-muted-foreground">
             Review and manage retailer applications
           </p>
         </div>
@@ -267,37 +267,37 @@ export default function RetailersPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl font-bold">{totalRetailers}</p>
-            <p className="text-xs text-zinc-500">Total Applications</p>
+            <p className="text-xs text-muted-foreground">Total Applications</p>
           </CardContent>
         </Card>
         <Card className={stats.pending > 0 ? "border-amber-200 bg-amber-50" : ""}>
           <CardContent className="p-4">
             <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-            <p className="text-xs text-zinc-500">Pending Review</p>
+            <p className="text-xs text-muted-foreground">Pending Review</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl font-bold text-blue-600">{stats.underReview}</p>
-            <p className="text-xs text-zinc-500">Under Review</p>
+            <p className="text-xs text-muted-foreground">Under Review</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl font-bold text-emerald-600">{stats.approved}</p>
-            <p className="text-xs text-zinc-500">Approved</p>
+            <p className="text-xs text-muted-foreground">Approved</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
-            <p className="text-xs text-zinc-500">Rejected</p>
+            <p className="text-xs text-muted-foreground">Rejected</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-bold text-zinc-600">{stats.suspended}</p>
-            <p className="text-xs text-zinc-500">Suspended</p>
+            <p className="text-2xl font-bold text-muted-foreground">{stats.suspended}</p>
+            <p className="text-xs text-muted-foreground">Suspended</p>
           </CardContent>
         </Card>
       </div>
@@ -326,7 +326,7 @@ export default function RetailersPage() {
       {/* Filters */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by business name, contact, or email..."
             className="pl-9"
@@ -355,7 +355,7 @@ export default function RetailersPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b bg-zinc-50 dark:bg-zinc-800">
+                <tr className="border-b bg-muted/50 dark:bg-zinc-800">
                   <th className="p-4 text-left text-sm font-medium">Business</th>
                   <th className="p-4 text-left text-sm font-medium">Type</th>
                   <th className="p-4 text-left text-sm font-medium">Contact</th>
@@ -368,21 +368,21 @@ export default function RetailersPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-zinc-500">
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
                       <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
                       Loading retailers...
                     </td>
                   </tr>
                 ) : filteredRetailers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-zinc-500">
-                      <Store className="h-8 w-8 mx-auto mb-2 text-zinc-300" />
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                      <Store className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                       No retailer applications found
                     </td>
                   </tr>
                 ) : (
                   filteredRetailers.map((retailer) => (
-                    <tr key={retailer.id} className="border-b hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                    <tr key={retailer.id} className="border-b hover:bg-muted/50 dark:hover:bg-zinc-800">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
@@ -390,7 +390,7 @@ export default function RetailersPage() {
                           </div>
                           <div>
                             <p className="font-medium">{retailer.businessName}</p>
-                            <p className="text-sm text-zinc-500">
+                            <p className="text-sm text-muted-foreground">
                               {retailer.yearsInBusiness
                                 ? `${retailer.yearsInBusiness} year${retailer.yearsInBusiness !== 1 ? "s" : ""} in business`
                                 : "New business"}
@@ -402,7 +402,7 @@ export default function RetailersPage() {
                       <td className="p-4">
                         <div>
                           <p className="font-medium">{retailer.contactName}</p>
-                          <p className="text-sm text-zinc-500">{retailer.email}</p>
+                          <p className="text-sm text-muted-foreground">{retailer.email}</p>
                         </div>
                       </td>
                       <td className="p-4">
@@ -413,7 +413,7 @@ export default function RetailersPage() {
                         </p>
                       </td>
                       <td className="p-4">{getRetailerStatusBadge(retailer.status)}</td>
-                      <td className="p-4 text-sm text-zinc-500">
+                      <td className="p-4 text-sm text-muted-foreground">
                         {new Date(retailer.createdAt).toLocaleDateString()}
                       </td>
                       <td className="p-4">
@@ -462,7 +462,7 @@ export default function RetailersPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-zinc-600 hover:text-zinc-700"
+                                className="text-muted-foreground hover:text-foreground"
                                 onClick={() => handleActionClick(retailer, "SUSPEND")}
                                 title="Suspend"
                               >
@@ -495,7 +495,7 @@ export default function RetailersPage() {
       {/* Pagination */}
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
             {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
             {pagination.total} applications
@@ -532,7 +532,7 @@ export default function RetailersPage() {
               <MessageSquare className="h-5 w-5" />
               Satisfaction Surveys
             </h2>
-            <p className="text-zinc-500 text-sm">
+            <p className="text-muted-foreground text-sm">
               Feedback from retailers after receiving their orders
             </p>
           </div>
@@ -547,19 +547,19 @@ export default function RetailersPage() {
           <Card>
             <CardContent className="p-4">
               <p className="text-2xl font-bold">{surveyStats.total}</p>
-              <p className="text-xs text-zinc-500">Total Surveys</p>
+              <p className="text-xs text-muted-foreground">Total Surveys</p>
             </CardContent>
           </Card>
           <Card className="border-emerald-200 bg-emerald-50">
             <CardContent className="p-4">
               <p className="text-2xl font-bold text-emerald-600">{surveyStats.completed}</p>
-              <p className="text-xs text-zinc-500">Completed</p>
+              <p className="text-xs text-muted-foreground">Completed</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <p className="text-2xl font-bold text-amber-600">{surveyStats.pending}</p>
-              <p className="text-xs text-zinc-500">Awaiting Response</p>
+              <p className="text-xs text-muted-foreground">Awaiting Response</p>
             </CardContent>
           </Card>
           <Card>
@@ -568,7 +568,7 @@ export default function RetailersPage() {
                 <p className="text-2xl font-bold">{Number(surveyStats.avgRating).toFixed(1)}</p>
                 <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
               </div>
-              <p className="text-xs text-zinc-500">Average Rating</p>
+              <p className="text-xs text-muted-foreground">Average Rating</p>
             </CardContent>
           </Card>
         </div>
@@ -596,7 +596,7 @@ export default function RetailersPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b bg-zinc-50 dark:bg-zinc-800">
+                  <tr className="border-b bg-muted/50 dark:bg-zinc-800">
                     <th className="p-4 text-left text-sm font-medium">Retailer</th>
                     <th className="p-4 text-left text-sm font-medium">Campaign</th>
                     <th className="p-4 text-left text-sm font-medium">Order</th>
@@ -610,25 +610,25 @@ export default function RetailersPage() {
                 <tbody>
                   {isSurveysLoading ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-zinc-500">
+                      <td colSpan={8} className="p-8 text-center text-muted-foreground">
                         <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
                         Loading surveys...
                       </td>
                     </tr>
                   ) : surveys.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-zinc-500">
-                        <MessageSquare className="h-8 w-8 mx-auto mb-2 text-zinc-300" />
+                      <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                        <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                         No satisfaction surveys found
                       </td>
                     </tr>
                   ) : (
                     surveys.map((survey) => (
-                      <tr key={survey.id} className="border-b hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                      <tr key={survey.id} className="border-b hover:bg-muted/50 dark:hover:bg-zinc-800">
                         <td className="p-4">
                           <div>
                             <p className="font-medium">{survey.retailer.businessName}</p>
-                            <p className="text-sm text-zinc-500">{survey.retailer.contactName}</p>
+                            <p className="text-sm text-muted-foreground">{survey.retailer.contactName}</p>
                           </div>
                         </td>
                         <td className="p-4">
@@ -648,7 +648,7 @@ export default function RetailersPage() {
                               </span>
                             </div>
                           ) : (
-                            <span className="text-zinc-400">-</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="p-4">
@@ -657,12 +657,12 @@ export default function RetailersPage() {
                               <p className="text-sm font-medium">
                                 {survey.order.quantity}x {survey.order.reward?.title || "Item"}
                               </p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-muted-foreground">
                                 ${Number(survey.order.totalAmount).toFixed(2)}
                               </p>
                             </div>
                           ) : (
-                            <span className="text-zinc-400">-</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="p-4">
@@ -670,7 +670,7 @@ export default function RetailersPage() {
                         </td>
                         <td className="p-4">
                           {survey.wouldRecommend === null ? (
-                            <span className="text-zinc-400">-</span>
+                            <span className="text-muted-foreground">-</span>
                           ) : survey.wouldRecommend ? (
                             <Badge className="bg-emerald-100 text-emerald-700">
                               <ThumbsUp className="h-3 w-3 mr-1" /> Yes
@@ -694,7 +694,7 @@ export default function RetailersPage() {
                             <Badge variant="outline">Not Sent</Badge>
                           )}
                         </td>
-                        <td className="p-4 text-sm text-zinc-500">
+                        <td className="p-4 text-sm text-muted-foreground">
                           {survey.completedAt
                             ? new Date(survey.completedAt).toLocaleDateString()
                             : survey.sentAt
@@ -726,7 +726,7 @@ export default function RetailersPage() {
         {/* Survey Pagination */}
         {surveyPagination.totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted-foreground">
               Showing {(surveyPagination.page - 1) * surveyPagination.limit + 1} to{" "}
               {Math.min(surveyPagination.page * surveyPagination.limit, surveyPagination.total)} of{" "}
               {surveyPagination.total} surveys

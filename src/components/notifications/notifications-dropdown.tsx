@@ -112,7 +112,7 @@ export function NotificationsDropdown() {
       case "COMMENT_REPLY":
         return <MessageSquare className="h-4 w-4 text-purple-500" />;
       default:
-        return <Bell className="h-4 w-4 text-zinc-500" />;
+        return <Bell className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -153,8 +153,8 @@ export function NotificationsDropdown() {
         <DropdownMenuSeparator />
         {notifications.length === 0 ? (
           <div className="py-8 text-center">
-            <Bell className="h-8 w-8 mx-auto text-zinc-300 mb-2" />
-            <p className="text-sm text-zinc-500">No notifications yet</p>
+            <Bell className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">No notifications yet</p>
           </div>
         ) : (
           <>
@@ -179,15 +179,15 @@ export function NotificationsDropdown() {
                 <div className="flex-1 min-w-0">
                   <p
                     className={`text-sm font-medium truncate ${
-                      !notification.read ? "text-zinc-900 dark:text-white" : ""
+                      !notification.read ? "text-foreground" : ""
                     }`}
                   >
                     {notification.title}
                   </p>
-                  <p className="text-xs text-zinc-500 line-clamp-2">
+                  <p className="text-xs text-muted-foreground line-clamp-2">
                     {notification.message}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {formatDistanceToNow(new Date(notification.createdAt), {
                       addSuffix: true,
                     })}

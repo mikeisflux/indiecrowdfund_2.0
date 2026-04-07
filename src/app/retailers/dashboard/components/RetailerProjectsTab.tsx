@@ -124,7 +124,7 @@ export function RetailerProjectsTab() {
       {/* Page Header */}
       <div className="mb-8">
         <h2 className="text-2xl sm:text-3xl font-bold mb-2">Browse Projects</h2>
-        <p className="text-zinc-500">
+        <p className="text-muted-foreground">
           Discover campaigns with retailer access and get 50% wholesale discount on all orders.
         </p>
       </div>
@@ -147,7 +147,7 @@ export function RetailerProjectsTab() {
       {/* Filters & Search */}
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search projects by name, creator, or category..."
             className="pl-10"
@@ -192,7 +192,7 @@ export function RetailerProjectsTab() {
         </div>
       </div>
 
-      <p className="text-sm text-zinc-500 mb-6">Showing {projects.length} retailer-eligible projects</p>
+      <p className="text-sm text-muted-foreground mb-6">Showing {projects.length} retailer-eligible projects</p>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
@@ -203,7 +203,7 @@ export function RetailerProjectsTab() {
           {projects.map((project) => (
             <Link key={project.id} href={`/retailers/projects/${project.id}`}>
               <Card className="overflow-hidden hover:shadow-lg transition-all cursor-pointer group">
-                <div className="aspect-[4/3] bg-zinc-100 relative overflow-hidden">
+                <div className="aspect-[4/3] bg-muted relative overflow-hidden">
                   <Image src={project.imageUrl} alt={project.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
                   <Badge className="absolute top-3 left-3 bg-emerald-600 text-white">{project.retailerDiscount}% OFF</Badge>
                   {project.daysLeft <= 7 && (
@@ -216,25 +216,25 @@ export function RetailerProjectsTab() {
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="outline" className="text-xs">{project.category}</Badge>
-                    <span className="text-xs text-zinc-400">by {project.creator.name}</span>
+                    <span className="text-xs text-muted-foreground">by {project.creator.name}</span>
                   </div>
                   <h3 className="font-semibold text-lg mb-2 line-clamp-1 group-hover:text-emerald-600 transition-colors">{project.title}</h3>
-                  <p className="text-sm text-zinc-500 mb-4 line-clamp-2">{project.subtitle}</p>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{project.subtitle}</p>
                   <div className="bg-emerald-50 rounded-lg p-3 mb-4">
-                    <p className="text-xs text-zinc-500 mb-1">Wholesale pricing from</p>
+                    <p className="text-xs text-muted-foreground mb-1">Wholesale pricing from</p>
                     <div className="flex items-baseline gap-2">
                       <span className="text-xl font-bold text-emerald-600">${Number(project.rewards[0]?.retailerPrice).toFixed(2)}</span>
-                      <span className="text-sm text-zinc-400 line-through">${Number(project.rewards[0]?.amount).toFixed(2)}</span>
+                      <span className="text-sm text-muted-foreground line-through">${Number(project.rewards[0]?.amount).toFixed(2)}</span>
                     </div>
-                    <p className="text-xs text-zinc-500 mt-1">Min order: {project.retailerMinQuantity} units</p>
+                    <p className="text-xs text-muted-foreground mt-1">Min order: {project.retailerMinQuantity} units</p>
                   </div>
                   <div className="space-y-2">
-                    <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-600 rounded-full transition-all" style={{ width: `${Math.min(getFundingPercent(project.currentAmount, project.goalAmount), 100)}%` }} />
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-emerald-600">{getFundingPercent(project.currentAmount, project.goalAmount)}% funded</span>
-                      <span className="text-zinc-500 flex items-center gap-1"><Users className="h-3 w-3" />{project.backerCount} backers</span>
+                      <span className="text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3" />{project.backerCount} backers</span>
                     </div>
                   </div>
                   <Button className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700"><ShoppingCart className="h-4 w-4 mr-2" />Place Wholesale Order</Button>
@@ -249,7 +249,7 @@ export function RetailerProjectsTab() {
             <Link key={project.id} href={`/retailers/projects/${project.id}`}>
               <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                 <div className="flex flex-col sm:flex-row">
-                  <div className="w-full sm:w-64 h-48 bg-zinc-100 relative flex-shrink-0">
+                  <div className="w-full sm:w-64 h-48 bg-muted relative flex-shrink-0">
                     <Image src={project.imageUrl} alt={project.title} fill className="object-cover" />
                     <Badge className="absolute top-3 left-3 bg-emerald-600 text-white">{project.retailerDiscount}% OFF</Badge>
                   </div>
@@ -258,7 +258,7 @@ export function RetailerProjectsTab() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <Badge variant="outline">{project.category}</Badge>
-                          <span className="text-sm text-zinc-400">by {project.creator.name}</span>
+                          <span className="text-sm text-muted-foreground">by {project.creator.name}</span>
                           {project.daysLeft <= 7 && (
                             <Badge className="bg-red-100 text-red-700">
                               <Clock className="h-3 w-3 mr-1" />
@@ -267,21 +267,21 @@ export function RetailerProjectsTab() {
                           )}
                         </div>
                         <h3 className="font-semibold text-xl mb-2 hover:text-emerald-600 transition-colors">{project.title}</h3>
-                        <p className="text-zinc-500 mb-4 line-clamp-2">{project.subtitle}</p>
+                        <p className="text-muted-foreground mb-4 line-clamp-2">{project.subtitle}</p>
                         <div className="flex items-center gap-6 text-sm">
                           <div className="flex items-center gap-1"><TrendingUp className="h-4 w-4 text-emerald-600" /><span className="font-medium">{getFundingPercent(project.currentAmount, project.goalAmount)}% funded</span></div>
-                          <div className="flex items-center gap-1 text-zinc-500"><Users className="h-4 w-4" /><span>{project.backerCount} backers</span></div>
-                          <div className="flex items-center gap-1 text-zinc-500"><Calendar className="h-4 w-4" /><span>{project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}</span></div>
+                          <div className="flex items-center gap-1 text-muted-foreground"><Users className="h-4 w-4" /><span>{project.backerCount} backers</span></div>
+                          <div className="flex items-center gap-1 text-muted-foreground"><Calendar className="h-4 w-4" /><span>{project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}</span></div>
                         </div>
                       </div>
                       <div className="ml-6 text-right">
                         <div className="bg-emerald-50 rounded-lg p-4 min-w-[180px]">
-                          <p className="text-xs text-zinc-500 mb-1">Wholesale price from</p>
+                          <p className="text-xs text-muted-foreground mb-1">Wholesale price from</p>
                           <div className="flex items-baseline justify-end gap-2">
                             <span className="text-2xl font-bold text-emerald-600">${Number(project.rewards[0]?.retailerPrice).toFixed(2)}</span>
-                            <span className="text-sm text-zinc-400 line-through">${Number(project.rewards[0]?.amount).toFixed(2)}</span>
+                            <span className="text-sm text-muted-foreground line-through">${Number(project.rewards[0]?.amount).toFixed(2)}</span>
                           </div>
-                          <p className="text-xs text-zinc-500 mt-1">Min: {project.retailerMinQuantity} units</p>
+                          <p className="text-xs text-muted-foreground mt-1">Min: {project.retailerMinQuantity} units</p>
                         </div>
                         <Button className="mt-3 bg-emerald-600 hover:bg-emerald-700"><ShoppingCart className="h-4 w-4 mr-2" />Order</Button>
                       </div>

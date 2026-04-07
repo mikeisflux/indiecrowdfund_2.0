@@ -316,7 +316,7 @@ export default function HeroSliderPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -326,7 +326,7 @@ export default function HeroSliderPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Hero Slider</h1>
-          <p className="text-zinc-500">Manage the hero section slides on the home page</p>
+          <p className="text-muted-foreground">Manage the hero section slides on the home page</p>
         </div>
         <Card className="max-w-lg">
           <CardHeader>
@@ -361,7 +361,7 @@ export default function HeroSliderPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Hero Slider</h1>
-          <p className="text-zinc-500">Manage the hero section slides on the home page</p>
+          <p className="text-muted-foreground">Manage the hero section slides on the home page</p>
         </div>
         <Button onClick={openCreateDialog} className="gap-2">
           <Plus className="h-4 w-4" />
@@ -374,19 +374,19 @@ export default function HeroSliderPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-sm text-zinc-500">Total Slides</p>
+            <p className="text-sm text-muted-foreground">Total Slides</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-emerald-600">{stats.active}</div>
-            <p className="text-sm text-zinc-500">Active Slides</p>
+            <p className="text-sm text-muted-foreground">Active Slides</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-zinc-400">{stats.inactive}</div>
-            <p className="text-sm text-zinc-500">Hidden Slides</p>
+            <div className="text-2xl font-bold text-muted-foreground">{stats.inactive}</div>
+            <p className="text-sm text-muted-foreground">Hidden Slides</p>
           </CardContent>
         </Card>
       </div>
@@ -401,7 +401,7 @@ export default function HeroSliderPage() {
             </CardHeader>
             <CardContent>
               {slides.length === 0 ? (
-                <div className="text-center py-12 text-zinc-500">
+                <div className="text-center py-12 text-muted-foreground">
                   <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No slides yet. Create your first slide!</p>
                 </div>
@@ -411,30 +411,30 @@ export default function HeroSliderPage() {
                     <div
                       key={slide.id}
                       className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${
-                        slide.isActive ? "bg-background" : "bg-zinc-50 dark:bg-zinc-900 opacity-60"
+                        slide.isActive ? "bg-background" : "bg-muted/50 dark:bg-zinc-900 opacity-60"
                       }`}
                     >
                       <div className="flex flex-col gap-1">
                         <button
                           onClick={() => moveSlide(index, "up")}
                           disabled={index === 0}
-                          className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded disabled:opacity-30"
+                          className="p-1 hover:bg-muted dark:hover:bg-zinc-800 rounded disabled:opacity-30"
                         >
                           <ArrowUp className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => moveSlide(index, "down")}
                           disabled={index === slides.length - 1}
-                          className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded disabled:opacity-30"
+                          className="p-1 hover:bg-muted dark:hover:bg-zinc-800 rounded disabled:opacity-30"
                         >
                           <ArrowDown className="h-4 w-4" />
                         </button>
                       </div>
 
-                      <GripVertical className="h-5 w-5 text-zinc-400 cursor-grab" />
+                      <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
 
                       {/* Thumbnail */}
-                      <div className="relative w-24 h-16 rounded overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
+                      <div className="relative w-24 h-16 rounded overflow-hidden bg-muted dark:bg-zinc-800 flex-shrink-0">
                         {slide.imageUrl || slide.videoThumbnail ? (
                           <Image
                             src={slide.imageUrl || slide.videoThumbnail || ""}
@@ -445,8 +445,8 @@ export default function HeroSliderPage() {
                         ) : (
                           <div className="flex items-center justify-center h-full">
                             {slide.mediaType === "YOUTUBE" && <Youtube className="h-6 w-6 text-red-500" />}
-                            {slide.mediaType === "VIDEO" && <Video className="h-6 w-6 text-zinc-400" />}
-                            {slide.mediaType === "IMAGE" && <ImageIcon className="h-6 w-6 text-zinc-400" />}
+                            {slide.mediaType === "VIDEO" && <Video className="h-6 w-6 text-muted-foreground" />}
+                            {slide.mediaType === "IMAGE" && <ImageIcon className="h-6 w-6 text-muted-foreground" />}
                           </div>
                         )}
                         {(slide.mediaType === "YOUTUBE" || slide.mediaType === "VIDEO") && (
@@ -468,7 +468,7 @@ export default function HeroSliderPage() {
                           </Badge>
                         </div>
                         {slide.subtitle && (
-                          <p className="text-sm text-zinc-500 truncate">{slide.subtitle}</p>
+                          <p className="text-sm text-muted-foreground truncate">{slide.subtitle}</p>
                         )}
                       </div>
 
@@ -528,7 +528,7 @@ export default function HeroSliderPage() {
             </CardHeader>
             <CardContent>
               {activeSlides.length === 0 ? (
-                <div className="aspect-video bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-500">
+                <div className="aspect-video bg-muted dark:bg-zinc-800 rounded-lg flex items-center justify-center text-muted-foreground">
                   No active slides
                 </div>
               ) : (
@@ -683,7 +683,7 @@ export default function HeroSliderPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-base">Primary Button</Label>
-                    <p className="text-sm text-zinc-500">Show/hide the primary call-to-action button</p>
+                    <p className="text-sm text-muted-foreground">Show/hide the primary call-to-action button</p>
                   </div>
                   <Switch
                     checked={editingSlide?.showPrimaryButton ?? true}
@@ -719,7 +719,7 @@ export default function HeroSliderPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-base">Secondary Button</Label>
-                    <p className="text-sm text-zinc-500">Show/hide the secondary call-to-action button</p>
+                    <p className="text-sm text-muted-foreground">Show/hide the secondary call-to-action button</p>
                   </div>
                   <Switch
                     checked={editingSlide?.showSecondaryButton ?? true}
@@ -796,7 +796,7 @@ export default function HeroSliderPage() {
                     onChange={(e) => setEditingSlide({ ...editingSlide, imageUrl: e.target.value })}
                     placeholder="https://example.com/image.jpg"
                   />
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     Recommended size: 1920x800px. Upload images via Media Library.
                   </p>
                 </div>
@@ -813,7 +813,7 @@ export default function HeroSliderPage() {
                       placeholder="https://www.youtube.com/watch?v=..."
                     />
                     {editingSlide?.videoUrl && getYouTubeVideoId(editingSlide.videoUrl) && (
-                      <div className="mt-2 aspect-video bg-zinc-100 rounded overflow-hidden">
+                      <div className="mt-2 aspect-video bg-muted rounded overflow-hidden">
                         <iframe
                           src={`https://www.youtube.com/embed/${getYouTubeVideoId(editingSlide.videoUrl)}`}
                           className="w-full h-full"
@@ -831,7 +831,7 @@ export default function HeroSliderPage() {
                       onChange={(e) => setEditingSlide({ ...editingSlide, videoThumbnail: e.target.value })}
                       placeholder="https://example.com/thumbnail.jpg"
                     />
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                       Shown while video is loading or paused
                     </p>
                   </div>
@@ -848,7 +848,7 @@ export default function HeroSliderPage() {
                       onChange={(e) => setEditingSlide({ ...editingSlide, videoUrl: e.target.value })}
                       placeholder="https://example.com/video.mp4"
                     />
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                       Upload videos via Media Library. MP4 format recommended.
                     </p>
                   </div>
@@ -869,30 +869,30 @@ export default function HeroSliderPage() {
                 <div className="rounded-lg border p-4 space-y-4">
                   <h5 className="font-medium text-sm">Video Playback Settings</h5>
                   <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                    <div className="flex items-center justify-between rounded-lg bg-muted/50 dark:bg-zinc-900 p-3">
                       <div>
                         <Label className="text-sm">Autoplay</Label>
-                        <p className="text-xs text-zinc-500">Start automatically</p>
+                        <p className="text-xs text-muted-foreground">Start automatically</p>
                       </div>
                       <Switch
                         checked={editingSlide?.videoAutoplay ?? true}
                         onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, videoAutoplay: checked })}
                       />
                     </div>
-                    <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                    <div className="flex items-center justify-between rounded-lg bg-muted/50 dark:bg-zinc-900 p-3">
                       <div>
                         <Label className="text-sm">Muted</Label>
-                        <p className="text-xs text-zinc-500">Play without sound</p>
+                        <p className="text-xs text-muted-foreground">Play without sound</p>
                       </div>
                       <Switch
                         checked={editingSlide?.videoMuted ?? true}
                         onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, videoMuted: checked })}
                       />
                     </div>
-                    <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                    <div className="flex items-center justify-between rounded-lg bg-muted/50 dark:bg-zinc-900 p-3">
                       <div>
                         <Label className="text-sm">Loop</Label>
-                        <p className="text-xs text-zinc-500">Repeat video</p>
+                        <p className="text-xs text-muted-foreground">Repeat video</p>
                       </div>
                       <Switch
                         checked={editingSlide?.videoLoop ?? true}
@@ -956,7 +956,7 @@ export default function HeroSliderPage() {
                   max={80}
                   step={5}
                 />
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   Dark overlay to improve text readability over bright images/videos
                 </p>
               </div>
@@ -965,7 +965,7 @@ export default function HeroSliderPage() {
               <div className="rounded-lg border p-4 space-y-3">
                 <h5 className="font-medium text-sm">Content Visibility</h5>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                  <div className="flex items-center justify-between rounded-lg bg-muted/50 dark:bg-zinc-900 p-3">
                     <div>
                       <Label className="text-sm">Show Subtitle</Label>
                     </div>
@@ -974,7 +974,7 @@ export default function HeroSliderPage() {
                       onCheckedChange={(checked) => setEditingSlide({ ...editingSlide, showSubtitle: checked })}
                     />
                   </div>
-                  <div className="flex items-center justify-between rounded-lg bg-zinc-50 dark:bg-zinc-900 p-3">
+                  <div className="flex items-center justify-between rounded-lg bg-muted/50 dark:bg-zinc-900 p-3">
                     <div>
                       <Label className="text-sm">Show Description</Label>
                     </div>
@@ -989,7 +989,7 @@ export default function HeroSliderPage() {
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <Label>Active</Label>
-                  <p className="text-sm text-zinc-500">Show this slide on the home page</p>
+                  <p className="text-sm text-muted-foreground">Show this slide on the home page</p>
                 </div>
                 <Switch
                   checked={editingSlide?.isActive ?? true}
@@ -1080,7 +1080,7 @@ export default function HeroSliderPage() {
                   {previewSlide.title}
                 </h2>
                 {previewSlide.description && previewSlide.showDescription !== false && (
-                  <p className={`text-lg opacity-90 max-w-2xl mb-6 drop-shadow ${previewSlide.textColor === "dark" ? "text-zinc-600" : ""}`}>
+                  <p className={`text-lg opacity-90 max-w-2xl mb-6 drop-shadow ${previewSlide.textColor === "dark" ? "text-muted-foreground" : ""}`}>
                     {previewSlide.description}
                   </p>
                 )}
@@ -1091,7 +1091,7 @@ export default function HeroSliderPage() {
                     </Button>
                   )}
                   {previewSlide.showSecondaryButton !== false && previewSlide.secondaryButtonText && (
-                    <Button size="lg" variant="outline" className={previewSlide.textColor === "dark" ? "border-zinc-300" : "border-white text-white hover:bg-white/10"}>
+                    <Button size="lg" variant="outline" className={previewSlide.textColor === "dark" ? "border-border" : "border-white text-white hover:bg-white/10"}>
                       {previewSlide.secondaryButtonText}
                     </Button>
                   )}

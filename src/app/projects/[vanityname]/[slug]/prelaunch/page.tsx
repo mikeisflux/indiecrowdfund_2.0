@@ -486,7 +486,7 @@ export default function PrelaunchPage() {
                   variant="outline"
                   size="icon"
                   onClick={() => handleShare("email")}
-                  className="hover:bg-zinc-100"
+                  className="hover:bg-muted"
                 >
                   <EmailIcon />
                 </Button>

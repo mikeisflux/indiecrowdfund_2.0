@@ -687,7 +687,7 @@ export default function AIMarketingPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -698,7 +698,7 @@ export default function AIMarketingPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">AI Marketing & Analytics</h1>
-          <p className="text-zinc-500">Intelligent automation for personalized user experiences</p>
+          <p className="text-muted-foreground">Intelligent automation for personalized user experiences</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {saveMessage && (
@@ -739,7 +739,7 @@ export default function AIMarketingPage() {
                 <Brain className="h-6 w-6 text-violet-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">AI Predictions</p>
+                <p className="text-sm text-muted-foreground">AI Predictions</p>
                 <p className="text-2xl font-bold">{stats?.aiPredictions?.accuracy || "0"}%</p>
                 <p className="text-xs text-emerald-600">{stats?.aiPredictions?.label || "Accuracy rate"}</p>
               </div>
@@ -754,9 +754,9 @@ export default function AIMarketingPage() {
                 <Tag className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Projects Tagged</p>
+                <p className="text-sm text-muted-foreground">Projects Tagged</p>
                 <p className="text-2xl font-bold">{stats?.projectsTagged?.count || "0"}</p>
-                <p className="text-xs text-zinc-500">{stats?.projectsTagged?.totalTags || "0"} {stats?.projectsTagged?.label || "total tags"}</p>
+                <p className="text-xs text-muted-foreground">{stats?.projectsTagged?.totalTags || "0"} {stats?.projectsTagged?.label || "total tags"}</p>
               </div>
             </div>
           </CardContent>
@@ -769,7 +769,7 @@ export default function AIMarketingPage() {
                 <Send className="h-6 w-6 text-emerald-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Emails Sent</p>
+                <p className="text-sm text-muted-foreground">Emails Sent</p>
                 <p className="text-2xl font-bold">{stats?.emailsSent?.count || "0"}</p>
                 <p className="text-xs text-emerald-600">{stats?.emailsSent?.openRate || "0%"} {stats?.emailsSent?.label || "open rate"}</p>
               </div>
@@ -784,7 +784,7 @@ export default function AIMarketingPage() {
                 <TrendingUp className="h-6 w-6 text-amber-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Conversion Lift</p>
+                <p className="text-sm text-muted-foreground">Conversion Lift</p>
                 <p className="text-2xl font-bold">{stats?.conversionLift?.percent || "0"}%</p>
                 <p className="text-xs text-emerald-600">{stats?.conversionLift?.label || "vs non-personalized"}</p>
               </div>
@@ -794,7 +794,8 @@ export default function AIMarketingPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
+        <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max min-w-full">
           <TabsTrigger value="overview">
             <BarChart3 className="mr-2 h-4 w-4" />
             Overview
@@ -824,6 +825,7 @@ export default function AIMarketingPage() {
             Settings
           </TabsTrigger>
         </TabsList>
+        </div>
 
         {/* Overview Tab */}
         <TabsContent value="overview">
@@ -929,7 +931,7 @@ export default function AIMarketingPage() {
           <div className="max-h-96 overflow-y-auto">
             <div className="space-y-3">
               {activityLogs.length === 0 ? (
-                <p className="text-center text-zinc-500 py-8">No activity logged yet</p>
+                <p className="text-center text-muted-foreground py-8">No activity logged yet</p>
               ) : (
                 activityLogs.map((log) => (
                   <div key={log.id} className="flex items-start gap-3 rounded-lg border p-3">
@@ -938,9 +940,9 @@ export default function AIMarketingPage() {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">{log.action}</p>
-                      <p className="text-sm text-zinc-500">{log.details}</p>
+                      <p className="text-sm text-muted-foreground">{log.details}</p>
                     </div>
-                    <span className="text-xs text-zinc-400">
+                    <span className="text-xs text-muted-foreground">
                       {new Date(log.timestamp).toLocaleDateString()}
                     </span>
                   </div>
@@ -967,22 +969,22 @@ export default function AIMarketingPage() {
             {userSegments.map((segment) => (
               <div key={segment.name} className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-zinc-100 p-2">
-                    <Users className="h-5 w-5 text-zinc-600" />
+                  <div className="rounded-full bg-muted p-2">
+                    <Users className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
                     <p className="font-medium">{segment.name}</p>
-                    <p className="text-sm text-zinc-500">{segment.criteria}</p>
+                    <p className="text-sm text-muted-foreground">{segment.criteria}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">{segment.count.toLocaleString()} users</p>
-                  <p className="text-sm text-zinc-500">Avg spend: ${Number(segment.avgSpend).toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">Avg spend: ${Number(segment.avgSpend).toFixed(2)}</p>
                 </div>
               </div>
             ))}
             <div className="rounded-lg border border-dashed p-4 text-center">
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 AI automatically creates and updates segments based on user behavior.
                 New segments will appear here as patterns are detected.
               </p>
@@ -1015,23 +1017,23 @@ export default function AIMarketingPage() {
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-2xl font-bold">{selectedCampaign.recipients.toLocaleString()}</p>
-                  <p className="text-sm text-zinc-500">Recipients</p>
+                  <p className="text-sm text-muted-foreground">Recipients</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-2xl font-bold">
                     {selectedCampaign.recipients > 0 ? ((selectedCampaign.opens / selectedCampaign.recipients) * 100).toFixed(1) : 0}%
                   </p>
-                  <p className="text-sm text-zinc-500">Open Rate</p>
+                  <p className="text-sm text-muted-foreground">Open Rate</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-2xl font-bold">
                     {selectedCampaign.recipients > 0 ? ((selectedCampaign.clicks / selectedCampaign.recipients) * 100).toFixed(1) : 0}%
                   </p>
-                  <p className="text-sm text-zinc-500">Click Rate</p>
+                  <p className="text-sm text-muted-foreground">Click Rate</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-2xl font-bold text-emerald-600">{selectedCampaign.conversions}</p>
-                  <p className="text-sm text-zinc-500">Conversions</p>
+                  <p className="text-sm text-muted-foreground">Conversions</p>
                 </div>
               </div>
               <div className="rounded-lg border p-4">
@@ -1044,16 +1046,16 @@ export default function AIMarketingPage() {
                     {selectedCampaign.status.toUpperCase()}
                   </Badge>
                   {selectedCampaign.sentAt && (
-                    <span className="text-sm text-zinc-500">Sent: {selectedCampaign.sentAt}</span>
+                    <span className="text-sm text-muted-foreground">Sent: {selectedCampaign.sentAt}</span>
                   )}
                   {selectedCampaign.scheduledFor && (
-                    <span className="text-sm text-zinc-500">Scheduled for: {selectedCampaign.scheduledFor}</span>
+                    <span className="text-sm text-muted-foreground">Scheduled for: {selectedCampaign.scheduledFor}</span>
                   )}
                 </div>
               </div>
-              <div className="rounded-lg border bg-zinc-50 p-4 dark:bg-zinc-900">
+              <div className="rounded-lg border bg-muted/50 p-4 dark:bg-zinc-900">
                 <h4 className="font-semibold mb-2">AI-Generated Content</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                   This campaign was created using AI to personalize content for each recipient based on their interests and behavior.
                 </p>
               </div>

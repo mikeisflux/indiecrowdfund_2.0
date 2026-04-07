@@ -366,7 +366,7 @@ export default function EmailPage() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-4" />
-          <p className="text-zinc-500">Loading email settings...</p>
+          <p className="text-muted-foreground">Loading email settings...</p>
         </div>
       </div>
     );
@@ -378,7 +378,7 @@ export default function EmailPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Email Center</h1>
-          <p className="text-zinc-500">Manage mailboxes and send emails</p>
+          <p className="text-muted-foreground">Manage mailboxes and send emails</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button variant="outline" size="sm" asChild className="flex-1 sm:flex-none">
@@ -427,10 +427,10 @@ export default function EmailPage() {
       <Card className="mb-4">
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex-shrink-0">Mailboxes</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-muted-foreground flex-shrink-0">Mailboxes</h3>
             {mailboxes.length === 0 ? (
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
-                <Mail className="h-4 w-4 text-zinc-300" />
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Mail className="h-4 w-4 text-muted-foreground" />
                 <span>No mailboxes yet</span>
                 <Button size="sm" variant="outline" onClick={handleCreateMailbox}>
                   <Plus className="h-3 w-3 mr-1" />
@@ -446,7 +446,7 @@ export default function EmailPage() {
                       className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 cursor-pointer transition-colors border ${
                         selectedMailbox?.id === mailbox.id
                           ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800"
-                          : "hover:bg-zinc-50 border-transparent dark:hover:bg-zinc-800"
+                          : "hover:bg-muted/50 border-transparent dark:hover:bg-zinc-800"
                       }`}
                       onClick={() => setSelectedMailbox(mailbox)}
                     >
@@ -508,7 +508,7 @@ export default function EmailPage() {
           <div className="hidden lg:block w-40 flex-shrink-0">
             <Card className="h-full">
               <CardHeader className="pb-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Folders</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-muted-foreground">Folders</h3>
               </CardHeader>
               <CardContent className="p-2">
                 <div className="space-y-1">
@@ -521,7 +521,7 @@ export default function EmailPage() {
                         className={`w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors ${
                           selectedFolder === key
                             ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
-                            : "hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                            : "hover:bg-muted/50 dark:hover:bg-zinc-800"
                         }`}
                         onClick={() => setSelectedFolder(key)}
                       >
@@ -530,7 +530,7 @@ export default function EmailPage() {
                           <span>{label}</span>
                         </div>
                         {count > 0 && (
-                          <span className="text-xs text-zinc-500">{count}</span>
+                          <span className="text-xs text-muted-foreground">{count}</span>
                         )}
                       </button>
                     );
@@ -547,7 +547,7 @@ export default function EmailPage() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 max-w-sm relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search emails..."
                     className="pl-9"
@@ -579,21 +579,21 @@ export default function EmailPage() {
             <CardContent className="flex-1 overflow-hidden p-0">
               {!selectedMailbox ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <Mail className="h-12 w-12 text-zinc-300 mb-4" />
+                  <Mail className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No mailbox selected</h3>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted-foreground">
                     Select a mailbox from the sidebar or create a new one.
                   </p>
                 </div>
               ) : isLoadingEmails ? (
                 <div className="flex items-center justify-center h-full">
-                  <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : emails.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <Inbox className="h-12 w-12 text-zinc-300 mb-4" />
+                  <Inbox className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No emails</h3>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted-foreground">
                     {selectedFolder === "INBOX"
                       ? "Your inbox is empty."
                       : `No emails in ${FOLDER_LABELS[selectedFolder]?.toLowerCase() || selectedFolder}.`}
@@ -605,7 +605,7 @@ export default function EmailPage() {
                     {emails.map((email) => (
                       <div
                         key={email.id}
-                        className={`flex items-start gap-3 p-3 cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800 ${
+                        className={`flex items-start gap-3 p-3 cursor-pointer transition-colors hover:bg-muted/50 dark:hover:bg-zinc-800 ${
                           !email.isRead ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
                         } ${selectedEmail?.id === email.id ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}
                         onClick={() => handleSelectEmail(email)}
@@ -621,7 +621,7 @@ export default function EmailPage() {
                             className={`h-4 w-4 ${
                               email.isStarred
                                 ? "fill-yellow-400 text-yellow-400"
-                                : "text-zinc-300 hover:text-zinc-400"
+                                : "text-muted-foreground hover:text-muted-foreground"
                             }`}
                           />
                         </button>
@@ -630,11 +630,11 @@ export default function EmailPage() {
                             <span className={`text-sm truncate ${!email.isRead ? "font-semibold" : ""}`}>
                               {selectedFolder === "SENT" ? email.toEmail : (email.fromName || email.fromEmail)}
                             </span>
-                            <span className="text-xs text-zinc-500 flex-shrink-0">
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
                               {new Date(email.sentAt || email.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-                          <p className={`text-sm truncate ${!email.isRead ? "font-medium" : "text-zinc-600 dark:text-zinc-400"}`}>
+                          <p className={`text-sm truncate ${!email.isRead ? "font-medium" : "text-muted-foreground dark:text-muted-foreground"}`}>
                             {email.subject}
                           </p>
                         </div>
@@ -692,7 +692,7 @@ export default function EmailPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-xs text-zinc-500 space-y-1 mt-2">
+                <div className="text-xs text-muted-foreground space-y-1 mt-2">
                   <p><span className="font-medium">From:</span> {selectedEmail.fromName || selectedEmail.fromEmail}</p>
                   <p><span className="font-medium">To:</span> {selectedEmail.toEmail}</p>
                   <p><span className="font-medium">Date:</span> {new Date(selectedEmail.sentAt || selectedEmail.createdAt).toLocaleString()}</p>
@@ -742,9 +742,9 @@ export default function EmailPage() {
               <CardContent className="flex-1 overflow-auto">
                 {/* Attachments Section */}
                 {selectedEmail.attachments && selectedEmail.attachments.count > 0 && (
-                  <div className="mb-4 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+                  <div className="mb-4 p-3 bg-muted/50 dark:bg-zinc-800/50 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <Paperclip className="h-4 w-4 text-zinc-500" />
+                      <Paperclip className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium">
                         {selectedEmail.attachments.count} Attachment{selectedEmail.attachments.count !== 1 ? "s" : ""}
                       </span>
@@ -769,22 +769,22 @@ export default function EmailPage() {
                                 }
                               }}
                             >
-                              <Icon className="h-4 w-4 text-zinc-500 group-hover:text-emerald-600" />
+                              <Icon className="h-4 w-4 text-muted-foreground group-hover:text-emerald-600" />
                               <div className="flex flex-col min-w-0">
                                 <span className="text-sm truncate max-w-[150px]" title={attachment.filename}>
                                   {attachment.filename}
                                 </span>
-                                <span className="text-xs text-zinc-400">
+                                <span className="text-xs text-muted-foreground">
                                   {formatFileSize(attachment.size)}
                                 </span>
                               </div>
-                              <Download className="h-3 w-3 text-zinc-400 group-hover:text-emerald-600 ml-1" />
+                              <Download className="h-3 w-3 text-muted-foreground group-hover:text-emerald-600 ml-1" />
                             </a>
                           );
                         })}
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         Attachment files not available for download
                       </p>
                     )}
@@ -810,9 +810,9 @@ export default function EmailPage() {
                   <p className="text-sm whitespace-pre-wrap">{selectedEmail.bodyText}</p>
                 ) : (
                   <div className="text-center py-8">
-                    <AlertCircle className="h-8 w-8 text-zinc-300 mx-auto mb-2" />
-                    <p className="text-sm text-zinc-500">No email content available</p>
-                    <p className="text-xs text-zinc-400 mt-1">
+                    <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No email content available</p>
+                    <p className="text-xs text-muted-foreground mt-1">
                       bodyHtml: {selectedEmail.bodyHtml?.length || 0} chars,
                       bodyText: {selectedEmail.bodyText?.length || 0} chars
                     </p>
@@ -851,7 +851,7 @@ export default function EmailPage() {
                   </Button>
                 </div>
               </div>
-              <div className="text-sm text-zinc-500 space-y-1">
+              <div className="text-sm text-muted-foreground space-y-1">
                 <p><span className="font-medium">From:</span> {selectedEmail.fromName || selectedEmail.fromEmail}</p>
                 <p><span className="font-medium">To:</span> {selectedEmail.toEmail}</p>
                 <p><span className="font-medium">Date:</span> {new Date(selectedEmail.sentAt || selectedEmail.createdAt).toLocaleString()}</p>
@@ -901,9 +901,9 @@ export default function EmailPage() {
               <div className="max-w-4xl mx-auto">
                 {/* Attachments Section */}
                 {selectedEmail.attachments && selectedEmail.attachments.count > 0 && (
-                  <div className="mb-6 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+                  <div className="mb-6 p-4 bg-muted/50 dark:bg-zinc-800/50 rounded-lg">
                     <div className="flex items-center gap-2 mb-3">
-                      <Paperclip className="h-4 w-4 text-zinc-500" />
+                      <Paperclip className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium">
                         {selectedEmail.attachments.count} Attachment{selectedEmail.attachments.count !== 1 ? "s" : ""}
                       </span>
@@ -927,22 +927,22 @@ export default function EmailPage() {
                                 }
                               }}
                             >
-                              <Icon className="h-4 w-4 text-zinc-500 group-hover:text-emerald-600" />
+                              <Icon className="h-4 w-4 text-muted-foreground group-hover:text-emerald-600" />
                               <div className="flex flex-col min-w-0">
                                 <span className="text-sm truncate max-w-[200px]" title={attachment.filename}>
                                   {attachment.filename}
                                 </span>
-                                <span className="text-xs text-zinc-400">
+                                <span className="text-xs text-muted-foreground">
                                   {formatFileSize(attachment.size)}
                                 </span>
                               </div>
-                              <Download className="h-3 w-3 text-zinc-400 group-hover:text-emerald-600 ml-1" />
+                              <Download className="h-3 w-3 text-muted-foreground group-hover:text-emerald-600 ml-1" />
                             </a>
                           );
                         })}
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         Attachment files not available for download
                       </p>
                     )}
@@ -968,9 +968,9 @@ export default function EmailPage() {
                   <p className="text-sm whitespace-pre-wrap">{selectedEmail.bodyText}</p>
                 ) : (
                   <div className="text-center py-8">
-                    <AlertCircle className="h-8 w-8 text-zinc-300 mx-auto mb-2" />
-                    <p className="text-sm text-zinc-500">No email content available</p>
-                    <p className="text-xs text-zinc-400 mt-1">
+                    <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No email content available</p>
+                    <p className="text-xs text-muted-foreground mt-1">
                       bodyHtml: {selectedEmail.bodyHtml?.length || 0} chars,
                       bodyText: {selectedEmail.bodyText?.length || 0} chars
                     </p>

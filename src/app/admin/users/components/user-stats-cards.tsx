@@ -13,25 +13,25 @@ export function UserStatsCards({ stats }: UserStatsCardsProps) {
       <Card>
         <CardContent className="p-4">
           <p className="text-2xl font-bold">{stats.total.toLocaleString()}</p>
-          <p className="text-xs text-zinc-500">Total Users</p>
+          <p className="text-xs text-muted-foreground">Total Users</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4">
           <p className="text-2xl font-bold text-emerald-600">{stats.users.toLocaleString()}</p>
-          <p className="text-xs text-zinc-500">Regular Users</p>
+          <p className="text-xs text-muted-foreground">Regular Users</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4">
           <p className="text-2xl font-bold text-violet-600">{stats.admins.toLocaleString()}</p>
-          <p className="text-xs text-zinc-500">Admins</p>
+          <p className="text-xs text-muted-foreground">Admins</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4">
           <p className="text-2xl font-bold text-amber-600">{stats.superAdmins}</p>
-          <p className="text-xs text-zinc-500">Super Admins</p>
+          <p className="text-xs text-muted-foreground">Super Admins</p>
         </CardContent>
       </Card>
     </div>

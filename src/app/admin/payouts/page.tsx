@@ -326,7 +326,7 @@ export default function PayoutsPage() {
             </div>
             Creator Payouts
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400 mt-1">
+          <p className="text-muted-foreground dark:text-muted-foreground mt-1">
             Manage payouts to creators for funded campaigns
           </p>
         </div>
@@ -380,7 +380,7 @@ export default function PayoutsPage() {
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "projects"
               ? "border-teal-600 text-teal-600"
-              : "border-transparent text-zinc-500 hover:text-zinc-700"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           Campaign Payouts ({stats.totalProjects})
@@ -390,7 +390,7 @@ export default function PayoutsPage() {
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "whop"
               ? "border-teal-600 text-teal-600"
-              : "border-transparent text-zinc-500 hover:text-zinc-700"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           Whop Campaigns ({whopStats.totalProjects})
@@ -400,7 +400,7 @@ export default function PayoutsPage() {
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "balances"
               ? "border-teal-600 text-teal-600"
-              : "border-transparent text-zinc-500 hover:text-zinc-700"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           Creator Balances ({balanceStats.totalCreatorsWithBalance})

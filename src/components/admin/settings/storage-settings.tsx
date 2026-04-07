@@ -63,12 +63,12 @@ export function StorageSettings({
         <Card className={settings.r2Enabled && settings.r2AccessKeyId ? "border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20" : ""}>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className={`rounded-full p-3 ${settings.r2Enabled && settings.r2AccessKeyId ? "bg-orange-100 dark:bg-orange-900/30" : "bg-zinc-100 dark:bg-zinc-800"}`}>
-                <Cloud className={`h-6 w-6 ${settings.r2Enabled && settings.r2AccessKeyId ? "text-orange-600" : "text-zinc-400"}`} />
+              <div className={`rounded-full p-3 ${settings.r2Enabled && settings.r2AccessKeyId ? "bg-orange-100 dark:bg-orange-900/30" : "bg-muted dark:bg-zinc-800"}`}>
+                <Cloud className={`h-6 w-6 ${settings.r2Enabled && settings.r2AccessKeyId ? "text-orange-600" : "text-muted-foreground"}`} />
               </div>
               <div className="flex-1">
                 <p className="font-semibold">Cloudflare R2</p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Zero egress fee object storage</p>
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">Zero egress fee object storage</p>
               </div>
               <Badge variant={settings.r2Enabled && settings.r2AccessKeyId ? "default" : "secondary"}>
                 {settings.r2Enabled && settings.r2AccessKeyId ? "Connected" : "Not Configured"}
@@ -79,12 +79,12 @@ export function StorageSettings({
         <Card className={settings.digitalDownloadsEnabled ? "border-cyan-200 bg-cyan-50/50 dark:border-cyan-800 dark:bg-cyan-950/20" : ""}>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className={`rounded-full p-3 ${settings.digitalDownloadsEnabled ? "bg-cyan-100 dark:bg-cyan-900/30" : "bg-zinc-100 dark:bg-zinc-800"}`}>
-                <FileDown className={`h-6 w-6 ${settings.digitalDownloadsEnabled ? "text-cyan-600" : "text-zinc-400"}`} />
+              <div className={`rounded-full p-3 ${settings.digitalDownloadsEnabled ? "bg-cyan-100 dark:bg-cyan-900/30" : "bg-muted dark:bg-zinc-800"}`}>
+                <FileDown className={`h-6 w-6 ${settings.digitalDownloadsEnabled ? "text-cyan-600" : "text-muted-foreground"}`} />
               </div>
               <div className="flex-1">
                 <p className="font-semibold">Digital Downloads</p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">PDF distribution for backers</p>
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">PDF distribution for backers</p>
               </div>
               <Badge variant={settings.digitalDownloadsEnabled ? "default" : "secondary"}>
                 {settings.digitalDownloadsEnabled ? "Enabled" : "Disabled"}
@@ -142,7 +142,7 @@ export function StorageSettings({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable R2 Storage</Label>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Use Cloudflare R2 for file storage</p>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">Use Cloudflare R2 for file storage</p>
             </div>
             <Switch
               checked={settings.r2Enabled}
@@ -161,7 +161,7 @@ export function StorageSettings({
                 onSave={onSave}
                 placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
               />
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Find this in your Cloudflare dashboard under R2
               </p>
             </div>
@@ -207,7 +207,7 @@ export function StorageSettings({
                 onChange={(e) => onSettingsChange({ ...settings, r2PublicDomain: e.target.value })}
                 placeholder="files.yourdomain.com"
               />
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Custom domain for public file access (if configured)
               </p>
             </div>
@@ -237,7 +237,7 @@ export function StorageSettings({
               <TestTube className="h-5 w-5 text-orange-600" />
               <div>
                 <p className="font-medium">Test Connection</p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Verify your R2 credentials are working</p>
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">Verify your R2 credentials are working</p>
               </div>
             </div>
             <Button
@@ -258,7 +258,7 @@ export function StorageSettings({
             </Button>
           </div>
 
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-muted-foreground dark:text-muted-foreground">
             Get your R2 credentials from{" "}
             <a
               href="https://dash.cloudflare.com/?to=/:account/r2/api-tokens"
@@ -276,7 +276,7 @@ export function StorageSettings({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <HardDrive className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+            <HardDrive className="h-5 w-5 text-zinc-600 dark:text-muted-foreground" />
             Storage Limits & Security
           </CardTitle>
           <CardDescription>Configure file size limits and allowed types</CardDescription>
@@ -291,7 +291,7 @@ export function StorageSettings({
                 onChange={(e) => onSettingsChange({ ...settings, maxFileSizeMB: e.target.value })}
                 placeholder="50"
               />
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Per file upload limit</p>
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">Per file upload limit</p>
             </div>
             <div className="space-y-2">
               <Label>Max Project Storage (MB)</Label>
@@ -301,7 +301,7 @@ export function StorageSettings({
                 onChange={(e) => onSettingsChange({ ...settings, maxProjectStorageMB: e.target.value })}
                 placeholder="200"
               />
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Total per project</p>
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">Total per project</p>
             </div>
             <div className="space-y-2">
               <Label>Signed URL Expiration (min)</Label>
@@ -311,7 +311,7 @@ export function StorageSettings({
                 onChange={(e) => onSettingsChange({ ...settings, signedUrlExpirationMinutes: e.target.value })}
                 placeholder="60"
               />
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Download link validity</p>
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">Download link validity</p>
             </div>
           </div>
 
@@ -322,7 +322,7 @@ export function StorageSettings({
               onChange={(e) => onSettingsChange({ ...settings, allowedFileTypes: e.target.value })}
               placeholder="pdf,epub,zip,mp3"
             />
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
               Comma-separated list of file extensions (e.g., pdf,epub,zip)
             </p>
           </div>
@@ -349,7 +349,7 @@ export function StorageSettings({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable Digital Downloads</Label>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Allow creators to upload and distribute digital files to backers</p>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">Allow creators to upload and distribute digital files to backers</p>
             </div>
             <Switch
               checked={settings.digitalDownloadsEnabled}
@@ -401,14 +401,14 @@ export function StorageSettings({
         <CardContent>
           <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-100">
             <div className="space-y-1">
-              <p><span className="text-orange-400">R2_ACCOUNT_ID</span>=<span className="text-zinc-400">your-cloudflare-account-id</span></p>
-              <p><span className="text-orange-400">R2_ACCESS_KEY_ID</span>=<span className="text-zinc-400">your-r2-access-key-id</span></p>
-              <p><span className="text-orange-400">R2_SECRET_ACCESS_KEY</span>=<span className="text-zinc-400">your-r2-secret-access-key</span></p>
-              <p><span className="text-orange-400">R2_BUCKET_NAME</span>=<span className="text-zinc-400">your-bucket-name</span></p>
-              <p><span className="text-cyan-400">R2_PUBLIC_DOMAIN</span>=<span className="text-zinc-400">files.yourdomain.com</span> <span className="text-zinc-500"># optional</span></p>
+              <p><span className="text-orange-400">R2_ACCOUNT_ID</span>=<span className="text-muted-foreground">your-cloudflare-account-id</span></p>
+              <p><span className="text-orange-400">R2_ACCESS_KEY_ID</span>=<span className="text-muted-foreground">your-r2-access-key-id</span></p>
+              <p><span className="text-orange-400">R2_SECRET_ACCESS_KEY</span>=<span className="text-muted-foreground">your-r2-secret-access-key</span></p>
+              <p><span className="text-orange-400">R2_BUCKET_NAME</span>=<span className="text-muted-foreground">your-bucket-name</span></p>
+              <p><span className="text-cyan-400">R2_PUBLIC_DOMAIN</span>=<span className="text-muted-foreground">files.yourdomain.com</span> <span className="text-muted-foreground"># optional</span></p>
             </div>
           </div>
-          <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-3 text-sm text-muted-foreground dark:text-muted-foreground">
             API keys entered in this admin panel are stored in the database and will override environment variables.
           </p>
         </CardContent>

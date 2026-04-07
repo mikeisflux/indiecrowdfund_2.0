@@ -121,24 +121,24 @@ export function RetailerDetailDialog({ retailer, open, onOpenChange, onAction, o
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-zinc-500">Business Type</p>
+                <p className="text-xs text-muted-foreground">Business Type</p>
                 <p className="font-medium">{getBusinessTypeBadge(retailer.businessType)}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Years in Business</p>
+                <p className="text-xs text-muted-foreground">Years in Business</p>
                 <p className="font-medium">{retailer.yearsInBusiness || "Not specified"}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Number of Locations</p>
+                <p className="text-xs text-muted-foreground">Number of Locations</p>
                 <p className="font-medium">{retailer.numberOfLocations || "Not specified"}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Annual Revenue</p>
+                <p className="text-xs text-muted-foreground">Annual Revenue</p>
                 <p className="font-medium">{retailer.annualRevenue || "Not specified"}</p>
               </div>
               {retailer.websiteUrl && (
                 <div className="col-span-2">
-                  <p className="text-xs text-zinc-500">Website</p>
+                  <p className="text-xs text-muted-foreground">Website</p>
                   <a
                     href={retailer.websiteUrl}
                     target="_blank"
@@ -160,11 +160,11 @@ export function RetailerDetailDialog({ retailer, open, onOpenChange, onAction, o
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-zinc-500">Contact Name</p>
+                <p className="text-xs text-muted-foreground">Contact Name</p>
                 <p className="font-medium">{retailer.contactName}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Email</p>
+                <p className="text-xs text-muted-foreground">Email</p>
                 <a
                   href={`mailto:${retailer.email}`}
                   className="font-medium text-emerald-600 hover:underline flex items-center gap-1"
@@ -175,7 +175,7 @@ export function RetailerDetailDialog({ retailer, open, onOpenChange, onAction, o
               </div>
               {retailer.phone && (
                 <div>
-                  <p className="text-xs text-zinc-500">Phone</p>
+                  <p className="text-xs text-muted-foreground">Phone</p>
                   <a
                     href={`tel:${retailer.phone}`}
                     className="font-medium flex items-center gap-1"
@@ -193,7 +193,7 @@ export function RetailerDetailDialog({ retailer, open, onOpenChange, onAction, o
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
               <MapPin className="h-4 w-4" /> Address
             </h3>
-            <div className="bg-zinc-50 rounded-lg p-3">
+            <div className="bg-muted/50 rounded-lg p-3">
               <p className="font-medium">
                 {retailer.address && <>{retailer.address}<br /></>}
                 {retailer.city}, {retailer.state} {retailer.zipCode}
@@ -210,18 +210,18 @@ export function RetailerDetailDialog({ retailer, open, onOpenChange, onAction, o
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-zinc-500">Tax ID Type</p>
+                <p className="text-xs text-muted-foreground">Tax ID Type</p>
                 <p className="font-medium">{retailer.taxIdType || "Not provided"}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Tax ID</p>
+                <p className="text-xs text-muted-foreground">Tax ID</p>
                 <p className="font-medium font-mono">
                   {retailer.taxId ? "••••" + retailer.taxId.slice(-4) : "Not provided"}
                 </p>
               </div>
               {retailer.resaleCertificate && (
                 <div className="col-span-2">
-                  <p className="text-xs text-zinc-500">Resale Certificate</p>
+                  <p className="text-xs text-muted-foreground">Resale Certificate</p>
                   <a
                     href={retailer.resaleCertificate}
                     target="_blank"
@@ -244,11 +244,11 @@ export function RetailerDetailDialog({ retailer, open, onOpenChange, onAction, o
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-zinc-500">Total Orders</p>
+                  <p className="text-xs text-muted-foreground">Total Orders</p>
                   <p className="font-medium">{retailer._count.pledges}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-500">Approved On</p>
+                  <p className="text-xs text-muted-foreground">Approved On</p>
                   <p className="font-medium">
                     {retailer.verifiedAt
                       ? new Date(retailer.verifiedAt).toLocaleDateString()

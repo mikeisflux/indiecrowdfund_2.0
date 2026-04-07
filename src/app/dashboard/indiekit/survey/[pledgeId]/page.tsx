@@ -106,7 +106,7 @@ export default function CreatorSurveyViewPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -118,7 +118,7 @@ export default function CreatorSurveyViewPage() {
           <CardContent className="py-12 text-center">
             <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
             <h3 className="text-lg font-semibold mb-2">Unable to Load Survey</h3>
-            <p className="text-zinc-500 mb-4">{error}</p>
+            <p className="text-muted-foreground mb-4">{error}</p>
             <div className="flex gap-2 justify-center">
               <Button variant="outline" onClick={() => router.back()}>
                 <ArrowLeft className="h-4 w-4 mr-2" />

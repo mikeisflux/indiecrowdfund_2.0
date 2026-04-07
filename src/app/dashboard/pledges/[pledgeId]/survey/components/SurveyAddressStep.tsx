@@ -76,7 +76,7 @@ export function SurveyAddressStep({
                       )}
                     </span>
                   </div>
-                  <p className="text-xs text-zinc-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {addr.fullName} — {addr.line1}, {addr.city}, {addr.state} {addr.postalCode}, {addr.country}
                   </p>
                 </button>

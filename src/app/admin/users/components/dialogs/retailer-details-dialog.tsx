@@ -65,7 +65,7 @@ export function RetailerDetailsDialog({
                 {getBusinessTypeBadge(retailer.businessType)}
                 {getRetailerStatusBadge(retailer.status)}
               </div>
-              <p className="text-zinc-500 mt-1">
+              <p className="text-muted-foreground mt-1">
                 Applied on {retailer.createdAt ? new Date(retailer.createdAt).toLocaleDateString() : "N/A"}
               </p>
             </div>
@@ -81,23 +81,23 @@ export function RetailerDetailsDialog({
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Years in Business</span>
+                  <span className="text-muted-foreground">Years in Business</span>
                   <span className="font-medium">{retailer.yearsInBusiness}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Locations</span>
+                  <span className="text-muted-foreground">Locations</span>
                   <span className="font-medium">{retailer.numberOfLocations}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Annual Revenue</span>
+                  <span className="text-muted-foreground">Annual Revenue</span>
                   <span className="font-medium">{retailer.annualRevenue}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Tax ID Type</span>
+                  <span className="text-muted-foreground">Tax ID Type</span>
                   <span className="font-medium">{retailer.taxIdType}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Tax ID</span>
+                  <span className="text-muted-foreground">Tax ID</span>
                   <span className="font-medium">{retailer.taxId}</span>
                 </div>
               </CardContent>
@@ -112,20 +112,20 @@ export function RetailerDetailsDialog({
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Contact Name</span>
+                  <span className="text-muted-foreground">Contact Name</span>
                   <span className="font-medium">{retailer.contactName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Email</span>
+                  <span className="text-muted-foreground">Email</span>
                   <span className="font-medium">{retailer.email}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Phone</span>
+                  <span className="text-muted-foreground">Phone</span>
                   <span className="font-medium">{retailer.phone}</span>
                 </div>
                 {retailer.websiteUrl && (
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Website</span>
+                    <span className="text-muted-foreground">Website</span>
                     <a href={retailer.websiteUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
                       {retailer.websiteUrl}
                     </a>

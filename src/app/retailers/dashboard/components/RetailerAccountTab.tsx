@@ -101,9 +101,9 @@ export function RetailerAccountTab() {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <Building2 className="h-12 w-12 text-zinc-400 mb-4" />
+          <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No retailer account</h3>
-          <p className="text-zinc-500 text-center mb-4">
+          <p className="text-muted-foreground text-center mb-4">
             You don&apos;t have a retailer account yet. Apply to become a retailer to access wholesale pricing.
           </p>
           <Link href="/retailers/apply">
@@ -119,7 +119,7 @@ export function RetailerAccountTab() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold">Account Settings</h2>
-          <p className="text-zinc-500">Manage your retailer account</p>
+          <p className="text-muted-foreground">Manage your retailer account</p>
         </div>
         {getStatusBadge(account.status)}
       </div>
@@ -148,7 +148,7 @@ export function RetailerAccountTab() {
               <div className="space-y-2">
                 <Label htmlFor="website">Website</Label>
                 <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="website" value={account.website} onChange={(e) => setAccount({ ...account, website: e.target.value })} className="pl-10" placeholder="https://example.com" />
                 </div>
               </div>
@@ -173,14 +173,14 @@ export function RetailerAccountTab() {
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="email" type="email" value={account.email} onChange={(e) => setAccount({ ...account, email: e.target.value })} className="pl-10" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="phone" value={account.phone} onChange={(e) => setAccount({ ...account, phone: e.target.value })} className="pl-10" />
                 </div>
               </div>

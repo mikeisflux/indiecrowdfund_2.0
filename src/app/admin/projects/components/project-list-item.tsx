@@ -36,11 +36,11 @@ export function ProjectListItem({
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Project Image */}
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted dark:bg-zinc-800 relative overflow-hidden">
             {project.imageUrl ? (
               <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
             ) : (
-              <FolderKanban className="h-6 w-6 text-zinc-400" />
+              <FolderKanban className="h-6 w-6 text-muted-foreground" />
             )}
           </div>
 
@@ -56,12 +56,12 @@ export function ProjectListItem({
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-zinc-500 truncate">{project.subtitle || "No subtitle"}</p>
+                <p className="text-sm text-muted-foreground truncate">{project.subtitle || "No subtitle"}</p>
               </div>
               <Badge variant="outline">{project.category}</Badge>
             </div>
 
-            <div className="mt-2 flex items-center gap-4 text-xs text-zinc-500">
+            <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <User className="h-3 w-3" />
                 {project.creator.name || project.creator.email}
@@ -99,7 +99,7 @@ export function ProjectListItem({
                     style={{ width: `${Math.min(100, Number(project.goalAmount) > 0 ? (Number(project.currentAmount) / Number(project.goalAmount)) * 100 : 0)}%` }}
                   />
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {Number(project.goalAmount) > 0 ? Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100) : 0}% funded
                 </p>
               </div>
@@ -109,8 +109,8 @@ export function ProjectListItem({
             {project.fulfillment && project.fulfillment.total > 0 && (
               <div className="mt-2">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Package className="h-3 w-3 text-zinc-400" />
-                  <span className="text-xs text-zinc-500">
+                  <Package className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
                     Fulfillment: {Math.round(((project.fulfillment.shipped + project.fulfillment.delivered) / project.fulfillment.total) * 100)}%
                   </span>
                 </div>
@@ -134,7 +134,7 @@ export function ProjectListItem({
                     />
                   )}
                 </div>
-                <div className="flex gap-3 mt-1 text-[10px] text-zinc-400">
+                <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground">
                   {project.fulfillment.delivered > 0 && <span className="flex items-center gap-0.5"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />{project.fulfillment.delivered} delivered</span>}
                   {project.fulfillment.shipped > 0 && <span className="flex items-center gap-0.5"><span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />{project.fulfillment.shipped} shipped</span>}
                   {project.fulfillment.inProgress > 0 && <span className="flex items-center gap-0.5"><span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />{project.fulfillment.inProgress} in progress</span>}

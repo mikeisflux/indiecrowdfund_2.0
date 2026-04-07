@@ -638,7 +638,7 @@ function HowToCard({ howTo }: { howTo: HowToStep }) {
         </div>
         <div>
           <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">{howTo.step}</h4>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{howTo.detail}</p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-muted-foreground leading-relaxed">{howTo.detail}</p>
         </div>
       </div>
     </div>
@@ -691,7 +691,7 @@ function CollapsibleSection({
         className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
           hasActiveTab
             ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100'
-            : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+            : 'text-zinc-700 hover:bg-muted dark:text-muted-foreground dark:hover:bg-zinc-800'
         }`}
       >
         <span>{section.label}</span>
@@ -713,7 +713,7 @@ function CollapsibleSection({
                 className={`w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors text-left ${
                   isActive
                     ? 'bg-emerald-600 text-white'
-                    : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                    : 'text-zinc-600 hover:bg-muted dark:text-muted-foreground dark:hover:bg-zinc-800'
                 }`}
               >
                 <TabIcon className="h-3.5 w-3.5 flex-shrink-0" />
@@ -795,7 +795,7 @@ export default function IndieKitHandbookPage() {
       <div className="lg:hidden sticky top-0 z-20 bg-background border-b border-border px-4 py-3">
         <button
           onClick={() => setMobileNavOpen(!mobileNavOpen)}
-          className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300"
+          className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-muted-foreground"
         >
           {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           {mobileNavOpen ? 'Close Navigation' : 'Browse Sections'}
@@ -820,8 +820,8 @@ export default function IndieKitHandbookPage() {
               ))}
 
               {/* Workflow Quick Reference */}
-              <div className="mt-6 rounded-xl bg-zinc-50 dark:bg-zinc-900 p-4 border border-border">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-3">Fulfillment Workflow</h4>
+              <div className="mt-6 rounded-xl bg-muted/50 dark:bg-zinc-900 p-4 border border-border">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-muted-foreground mb-3">Fulfillment Workflow</h4>
                 <div className="space-y-2">
                   {[
                     { icon: Mail, label: 'Send & Remind', color: 'text-blue-500' },
@@ -831,7 +831,7 @@ export default function IndieKitHandbookPage() {
                     { icon: Truck, label: 'Start Shipping', color: 'text-emerald-500' },
                     { icon: CheckCircle2, label: 'Shipped', color: 'text-green-600' },
                   ].map((step, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                    <div key={i} className="flex items-center gap-2 text-xs text-zinc-600 dark:text-muted-foreground">
                       <step.icon className={`h-3.5 w-3.5 flex-shrink-0 ${step.color}`} />
                       <span>{step.label}</span>
                     </div>
@@ -848,7 +848,7 @@ export default function IndieKitHandbookPage() {
                 {/* Section Header */}
                 <div className="mb-8">
                   <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{currentTab.title}</h2>
-                  <p className="mt-2 text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">{currentTab.description}</p>
+                  <p className="mt-2 text-lg text-zinc-600 dark:text-muted-foreground leading-relaxed">{currentTab.description}</p>
                 </div>
 
                 {/* How To Steps */}

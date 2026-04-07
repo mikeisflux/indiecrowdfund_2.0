@@ -50,7 +50,7 @@ export function ProjectDetailDialog({
         {selectedProject && (
           <>
             <DialogHeader>
-              <div className="flex items-center gap-2 text-zinc-500 text-sm mb-2">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -73,7 +73,7 @@ export function ProjectDetailDialog({
                 )}
                 <div>
                   <span className="block">{selectedProject.title}</span>
-                  <span className="text-sm font-normal text-zinc-500">
+                  <span className="text-sm font-normal text-muted-foreground">
                     by {selectedProject.creator.name || "Unknown"}
                   </span>
                 </div>
@@ -82,13 +82,13 @@ export function ProjectDetailDialog({
 
             <div className="space-y-6 mt-4">
               {/* Payout Status */}
-              <div className="flex items-center justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 dark:bg-zinc-800">
                 <div>
-                  <p className="text-sm text-zinc-500">Payout Status</p>
+                  <p className="text-sm text-muted-foreground">Payout Status</p>
                   <div className="mt-1">{getSettlementBadge(selectedProject.settlementStatus)}</div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted-foreground">
                     {selectedProject.remainingAmount < 0 ? "Creator Owes Back" : "Remaining to Pay"}
                   </p>
                   <p className={`text-2xl font-bold ${
@@ -129,7 +129,7 @@ export function ProjectDetailDialog({
               {/* Fee Breakdown */}
               <div>
                 <h4 className="font-medium mb-3">Financial Summary</h4>
-                <div className="space-y-2 text-sm bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
+                <div className="space-y-2 text-sm bg-muted/50 dark:bg-zinc-800 rounded-lg p-4">
                   <div className="flex justify-between">
                     <span>Total Raised (Completed Pledges)</span>
                     <span className="font-medium">{formatCurrency(selectedProject.totalRaised)}</span>
@@ -154,15 +154,15 @@ export function ProjectDetailDialog({
                       </div>
                     </>
                   )}
-                  <div className="flex justify-between text-zinc-500">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>DivinityCoin Partner Fee (3% + $0.30/txn)</span>
                     <span className="text-red-500">-{formatCurrency(selectedProject.processorFee)}</span>
                   </div>
-                  <div className="flex justify-between text-zinc-500">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Per-Transaction Fee ({selectedProject.backerCount} × $0.30)</span>
                     <span className="text-red-500">-{formatCurrency(selectedProject.perTransactionFee)}</span>
                   </div>
-                  <div className="flex justify-between text-zinc-500">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Platform Fee (3%)</span>
                     <span className="text-red-500">-{formatCurrency(selectedProject.platformFee)}</span>
                   </div>
@@ -207,7 +207,7 @@ export function ProjectDetailDialog({
                             <p className="text-sm font-medium">
                               {refund.type === "full" ? "Full Refund" : "Partial Refund"}: {formatCurrency(refund.amount)}
                             </p>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-muted-foreground">
                               {refund.backerName || refund.backerEmail || "Unknown backer"}
                               {refund.reason && ` — ${refund.reason}`}
                             </p>
@@ -217,7 +217,7 @@ export function ProjectDetailDialog({
                           <Badge variant="outline" className="text-red-600 border-red-300 text-xs">
                             {refund.type === "full" ? "Full" : "Partial"}
                           </Badge>
-                          <p className="text-xs text-zinc-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {format(new Date(refund.date), "MMM d, yyyy")}
                           </p>
                         </div>
@@ -238,12 +238,12 @@ export function ProjectDetailDialog({
                 <h4 className="font-medium mb-3">Creator Information</h4>
                 <div className="flex items-center justify-between p-4 rounded-lg border">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center">
-                      <User className="w-6 h-6 text-zinc-400" />
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                      <User className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="font-medium">{selectedProject.creator.name || "Unknown"}</p>
-                      <p className="text-sm text-zinc-500">{selectedProject.creator.email}</p>
+                      <p className="text-sm text-muted-foreground">{selectedProject.creator.email}</p>
                     </div>
                   </div>
                   {selectedProject.creator.bankAccount && (
@@ -265,10 +265,10 @@ export function ProjectDetailDialog({
                   <h4 className="font-medium mb-3">Bank Account</h4>
                   <div className="p-4 rounded-lg border">
                     <div className="flex items-center gap-3">
-                      <Building className="w-5 h-5 text-zinc-400" />
+                      <Building className="w-5 h-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium">{selectedProject.creator.bankAccount.bankName || "Bank Account"}</p>
-                        <p className="text-sm text-zinc-500">
+                        <p className="text-sm text-muted-foreground">
                           {selectedProject.creator.bankAccount.accountType} ending in ****{selectedProject.creator.bankAccount.accountLastFour}
                         </p>
                       </div>
@@ -313,7 +313,7 @@ export function ProjectDetailDialog({
                           </div>
                           <div>
                             <p className="font-medium">{formatCurrency(settlement.amount)}</p>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-muted-foreground">
                               {settlement.completedAt
                                 ? `Completed ${format(new Date(settlement.completedAt), "MMM d, yyyy")}`
                                 : settlement.processedAt

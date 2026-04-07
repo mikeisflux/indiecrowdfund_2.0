@@ -47,10 +47,10 @@ export function DeleteUserDialog({
               <p className="text-sm text-red-600">{user.email}</p>
             </div>
           </div>
-          <p className="mt-4 text-sm text-zinc-600">
+          <p className="mt-4 text-sm text-muted-foreground">
             This will permanently delete the user account and all associated data including:
           </p>
-          <ul className="mt-2 text-sm text-zinc-600 list-disc list-inside space-y-1">
+          <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside space-y-1">
             <li>{user.projectCount} created projects</li>
             <li>{user.pledgeCount} pledges made</li>
             <li>All account settings and preferences</li>

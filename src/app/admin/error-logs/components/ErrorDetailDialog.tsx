@@ -132,7 +132,7 @@ export function ErrorDetailDialog({
             <h3 className="text-sm font-medium text-muted-foreground">
               Stack Trace
             </h3>
-            <pre className="p-3 rounded-lg bg-zinc-950 text-zinc-300 text-xs overflow-x-auto font-mono leading-5 max-h-64 overflow-y-auto">
+            <pre className="p-3 rounded-lg bg-zinc-950 text-muted-foreground text-xs overflow-x-auto font-mono leading-5 max-h-64 overflow-y-auto">
               {group.latestStack}
             </pre>
           </div>

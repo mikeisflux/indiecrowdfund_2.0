@@ -78,7 +78,7 @@ export function RetailerTable({
       ════════════════════════════════════════════ */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search retailers by name or email…"
             className="pl-9"
@@ -104,15 +104,15 @@ export function RetailerTable({
       <div className="md:hidden space-y-2.5">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-48 gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-zinc-300" />
-            <p className="text-sm text-zinc-400">Loading retailers…</p>
+            <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading retailers…</p>
           </div>
         ) : retailers.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-              <Store className="h-7 w-7 text-zinc-300" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted dark:bg-zinc-800">
+              <Store className="h-7 w-7 text-muted-foreground" />
             </div>
-            <p className="text-sm text-zinc-500">No retailer applications found</p>
+            <p className="text-sm text-muted-foreground">No retailer applications found</p>
           </div>
         ) : (
           retailers.map((retailer) => (
@@ -130,7 +130,7 @@ export function RetailerTable({
                         <p className="font-semibold text-sm leading-tight truncate">
                           {retailer.businessName}
                         </p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {retailer.yearsInBusiness
                             ? `${retailer.yearsInBusiness} yr${retailer.yearsInBusiness !== 1 ? "s" : ""} in business`
                             : "New business"}
@@ -150,19 +150,19 @@ export function RetailerTable({
 
                   {/* Contact */}
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 mb-0.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
                       Contact
                     </p>
                     <p className="font-medium text-sm leading-tight">{retailer.contactName}</p>
-                    <p className="text-xs text-zinc-500">{retailer.email}</p>
+                    <p className="text-xs text-muted-foreground">{retailer.email}</p>
                   </div>
 
                   {/* Location + applied date */}
                   <div className="flex items-center justify-between pt-0.5">
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                       {[retailer.city, retailer.state].filter(Boolean).join(", ") || "—"}
                     </p>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-muted-foreground">
                       Applied{" "}
                       {retailer.createdAt
                         ? new Date(retailer.createdAt).toLocaleDateString()
@@ -233,16 +233,16 @@ export function RetailerTable({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px]">
               <thead>
-                <tr className="border-b bg-zinc-50 dark:bg-zinc-800/60">
+                <tr className="border-b bg-muted/50 dark:bg-zinc-800/60">
                   {["Business", "Type", "Contact", "Location", "Status", "Applied"].map((col) => (
                     <th
                       key={col}
-                      className="p-4 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                      className="p-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-muted-foreground"
                     >
                       {col}
                     </th>
                   ))}
-                  <th className="p-4 w-32 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  <th className="p-4 w-32 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">
                     Actions
                   </th>
                 </tr>
@@ -251,18 +251,18 @@ export function RetailerTable({
                 {isLoading ? (
                   <tr>
                     <td colSpan={7} className="p-12 text-center">
-                      <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-zinc-300" />
-                      <p className="text-sm text-zinc-400">Loading retailers…</p>
+                      <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Loading retailers…</p>
                     </td>
                   </tr>
                 ) : retailers.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="p-12 text-center">
                       <div className="flex flex-col items-center gap-3">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 mx-auto">
-                          <Store className="h-7 w-7 text-zinc-300" />
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted dark:bg-zinc-800 mx-auto">
+                          <Store className="h-7 w-7 text-muted-foreground" />
                         </div>
-                        <p className="text-sm text-zinc-500">No retailer applications found</p>
+                        <p className="text-sm text-muted-foreground">No retailer applications found</p>
                       </div>
                     </td>
                   </tr>
@@ -270,7 +270,7 @@ export function RetailerTable({
                   retailers.map((retailer) => (
                     <tr
                       key={retailer.id}
-                      className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                      className="transition-colors hover:bg-muted/50 dark:hover:bg-zinc-800/50"
                     >
                       {/* Business */}
                       <td className="p-4">
@@ -282,7 +282,7 @@ export function RetailerTable({
                             <p className="font-medium text-sm leading-tight truncate max-w-[180px]">
                               {retailer.businessName}
                             </p>
-                            <p className="text-xs text-zinc-500 mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                               {retailer.yearsInBusiness
                                 ? `${retailer.yearsInBusiness} yr${retailer.yearsInBusiness !== 1 ? "s" : ""} in business`
                                 : "New business"}
@@ -297,11 +297,11 @@ export function RetailerTable({
                       {/* Contact */}
                       <td className="p-4">
                         <p className="font-medium text-sm leading-tight">{retailer.contactName}</p>
-                        <p className="text-xs text-zinc-500 mt-0.5">{retailer.email}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{retailer.email}</p>
                       </td>
 
                       {/* Location */}
-                      <td className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
+                      <td className="p-4 text-sm text-muted-foreground dark:text-muted-foreground">
                         {[retailer.city, retailer.state].filter(Boolean).join(", ") || "—"}
                       </td>
 
@@ -309,7 +309,7 @@ export function RetailerTable({
                       <td className="p-4">{getRetailerStatusBadge(retailer.status)}</td>
 
                       {/* Applied */}
-                      <td className="p-4 text-sm text-zinc-500 tabular-nums">
+                      <td className="p-4 text-sm text-muted-foreground tabular-nums">
                         {retailer.createdAt
                           ? new Date(retailer.createdAt).toLocaleDateString()
                           : "N/A"}

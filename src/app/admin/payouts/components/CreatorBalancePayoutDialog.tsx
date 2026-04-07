@@ -51,10 +51,10 @@ export function CreatorBalancePayoutDialog({
         </DialogHeader>
         {selectedCreator && (
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-zinc-50">
-              <p className="text-sm text-zinc-500">Creator</p>
+            <div className="p-4 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground">Creator</p>
               <p className="font-medium">{selectedCreator.name || selectedCreator.email}</p>
-              <p className="text-xs text-zinc-500">{selectedCreator.email}</p>
+              <p className="text-xs text-muted-foreground">{selectedCreator.email}</p>
             </div>
 
             <div className="p-4 rounded-lg bg-teal-50 border border-teal-200">
@@ -74,7 +74,7 @@ export function CreatorBalancePayoutDialog({
                 onChange={(e) => setSettlementAmount(e.target.value)}
                 max={selectedCreator.balance}
               />
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 Max: {formatCurrency(selectedCreator.balance)}
               </p>
             </div>
@@ -90,12 +90,12 @@ export function CreatorBalancePayoutDialog({
             </div>
 
             {selectedCreator.bankAccount && (
-              <div className="p-4 rounded-lg bg-zinc-50 border">
-                <p className="text-sm text-zinc-500 mb-2">Bank Account</p>
+              <div className="p-4 rounded-lg bg-muted/50 border">
+                <p className="text-sm text-muted-foreground mb-2">Bank Account</p>
                 <div className="flex items-center gap-2">
-                  <Building className="w-4 h-4 text-zinc-500" />
+                  <Building className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium">{selectedCreator.bankAccount.bankName}</span>
-                  <span className="text-zinc-500">****{selectedCreator.bankAccount.accountLastFour}</span>
+                  <span className="text-muted-foreground">****{selectedCreator.bankAccount.accountLastFour}</span>
                   {selectedCreator.bankAccount.isVerified && (
                     <CheckCircle className="w-4 h-4 text-emerald-600" />
                   )}

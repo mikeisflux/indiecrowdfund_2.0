@@ -52,7 +52,7 @@ type ActionHandlers = Omit<UserTableProps, "users" | "isLoading" | "pagination" 
 function avatarClasses(lockedAt: string | null) {
   return lockedAt
     ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300";
+    : "bg-muted text-muted-foreground dark:bg-zinc-700 dark:text-muted-foreground";
 }
 
 function UserActionsMenu({ user, handlers }: { user: User; handlers: ActionHandlers }) {
@@ -203,17 +203,17 @@ export function UserTable({
 
   const loadingState = (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <RefreshCw className="h-8 w-8 animate-spin text-zinc-300" />
-      <p className="text-sm text-zinc-400">Loading users…</p>
+      <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">Loading users…</p>
     </div>
   );
 
   const emptyState = (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-        <Users className="h-8 w-8 text-zinc-300" />
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted dark:bg-zinc-800">
+        <Users className="h-8 w-8 text-muted-foreground" />
       </div>
-      <p className="text-sm text-zinc-500">No users found</p>
+      <p className="text-sm text-muted-foreground">No users found</p>
     </div>
   );
 
@@ -243,8 +243,8 @@ export function UserTable({
                 aria-label={`View details for ${user.name ?? user.email}`}
                 className={`cursor-pointer transition-colors outline-none
                   focus-visible:ring-2 focus-visible:ring-zinc-400
-                  hover:bg-zinc-50 dark:hover:bg-zinc-800/60
-                  active:bg-zinc-100 dark:active:bg-zinc-800
+                  hover:bg-muted/50 dark:hover:bg-zinc-800/60
+                  active:bg-muted dark:active:bg-zinc-800
                   ${user.lockedAt ? "border-red-200 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20" : ""}
                 `}
                 onClick={() => onViewUser(user)}
@@ -286,7 +286,7 @@ export function UserTable({
                       </div>
 
                       {/* Email */}
-                      <p className="text-xs text-zinc-500 truncate mt-0.5">{user.email}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{user.email}</p>
 
                       {/* Role + retailer badges */}
                       <div className="flex items-center gap-1.5 flex-wrap mt-2">
@@ -300,7 +300,7 @@ export function UserTable({
                       </div>
 
                       {/* Stats line */}
-                      <p className="text-xs text-zinc-400 mt-2 tabular-nums">
+                      <p className="text-xs text-muted-foreground mt-2 tabular-nums">
                         {user.projectCount}{" "}
                         {user.projectCount === 1 ? "project" : "projects"}
                         {" · "}
@@ -336,11 +336,11 @@ export function UserTable({
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px]">
                 <thead>
-                  <tr className="border-b bg-zinc-50 dark:bg-zinc-800/60">
+                  <tr className="border-b bg-muted/50 dark:bg-zinc-800/60">
                     {["User", "Role", "Projects", "Pledges", "Joined"].map((col) => (
                       <th
                         key={col}
-                        className="p-4 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                        className="p-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-muted-foreground"
                       >
                         {col}
                       </th>
@@ -359,7 +359,7 @@ export function UserTable({
                     return (
                       <tr
                         key={user.id}
-                        className={`cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
+                        className={`cursor-pointer transition-colors hover:bg-muted/50 dark:hover:bg-zinc-800/50 ${
                           user.lockedAt ? "bg-red-50/50 dark:bg-red-950/20" : ""
                         }`}
                         onClick={() => onViewUser(user)}
@@ -393,7 +393,7 @@ export function UserTable({
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-xs text-zinc-500 truncate mt-0.5">
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
                                 {user.email}
                               </p>
                             </div>
@@ -420,7 +420,7 @@ export function UserTable({
                         <td className="p-4 text-sm tabular-nums">{user.pledgeCount}</td>
 
                         {/* Joined */}
-                        <td className="p-4 text-sm text-zinc-500">
+                        <td className="p-4 text-sm text-muted-foreground">
                           {user.createdAt
                             ? formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })
                             : "N/A"}
@@ -446,13 +446,13 @@ export function UserTable({
       {pagination.total > 0 && (
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between">
           {/* Count — stacks below on mobile, left on sm+ */}
-          <p className="text-sm text-zinc-500 order-2 sm:order-1">
+          <p className="text-sm text-muted-foreground order-2 sm:order-1">
             Showing{" "}
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">
+            <span className="font-medium text-foreground dark:text-muted-foreground">
               {startEntry}–{endEntry}
             </span>{" "}
             of{" "}
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">
+            <span className="font-medium text-foreground dark:text-muted-foreground">
               {pagination.total.toLocaleString()}
             </span>{" "}
             users
@@ -469,7 +469,7 @@ export function UserTable({
             >
               Previous
             </Button>
-            <span className="text-sm text-zinc-500 min-w-[80px] text-center tabular-nums">
+            <span className="text-sm text-muted-foreground min-w-[80px] text-center tabular-nums">
               Page {pagination.page} of {pagination.totalPages}
             </span>
             <Button

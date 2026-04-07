@@ -19,7 +19,7 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
   if (!trafficData) {
     return (
       <Card>
-        <CardContent className="py-12 text-center text-zinc-500">
+        <CardContent className="py-12 text-center text-muted-foreground">
           No traffic data available
         </CardContent>
       </Card>
@@ -41,7 +41,7 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
                 <Monitor className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Desktop</p>
+                <p className="text-sm text-muted-foreground">Desktop</p>
                 <p className="text-2xl font-bold">{formatNumber(trafficData.devices.desktop)}</p>
               </div>
             </div>
@@ -54,7 +54,7 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
                 <Smartphone className="h-6 w-6 text-emerald-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Mobile</p>
+                <p className="text-sm text-muted-foreground">Mobile</p>
                 <p className="text-2xl font-bold">{formatNumber(trafficData.devices.mobile)}</p>
               </div>
             </div>
@@ -67,7 +67,7 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
                 <Tablet className="h-6 w-6 text-violet-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Tablet</p>
+                <p className="text-sm text-muted-foreground">Tablet</p>
                 <p className="text-2xl font-bold">{formatNumber(trafficData.devices.tablet)}</p>
               </div>
             </div>
@@ -82,7 +82,7 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
         </CardHeader>
         <CardContent>
           {trafficData.topReferrers.length === 0 ? (
-            <p className="text-center text-zinc-500 py-8">No referrer data available</p>
+            <p className="text-center text-muted-foreground py-8">No referrer data available</p>
           ) : (
             <div className="space-y-3">
               {trafficData.topReferrers.map((source) => (
@@ -91,7 +91,7 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
                   <div className="flex-1">
                     <Progress value={(source.visits / maxReferrerVisits) * 100} className="h-2" />
                   </div>
-                  <div className="w-24 shrink-0 text-right text-sm text-zinc-500">
+                  <div className="w-24 shrink-0 text-right text-sm text-muted-foreground">
                     {formatNumber(source.visits)} visits
                   </div>
                 </div>
@@ -108,15 +108,15 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
         </CardHeader>
         <CardContent>
           {trafficData.topPages.length === 0 ? (
-            <p className="text-center text-zinc-500 py-8">No page view data available</p>
+            <p className="text-center text-muted-foreground py-8">No page view data available</p>
           ) : (
             <>
               {/* Mobile cards */}
               <div className="space-y-2 md:hidden">
                 {trafficData.topPages.slice(0, 10).map((page) => (
                   <div key={page.path} className="flex flex-col gap-1 rounded-lg border p-3">
-                    <code className="text-xs text-zinc-600 break-all">{page.path}</code>
-                    <span className="text-sm font-medium text-zinc-700">
+                    <code className="text-xs text-muted-foreground break-all">{page.path}</code>
+                    <span className="text-sm font-medium text-foreground">
                       {formatNumber(page.views)} views
                     </span>
                   </div>
@@ -127,7 +127,7 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-zinc-500">
+                    <tr className="border-b text-muted-foreground">
                       <th className="py-2 text-left font-medium">Path</th>
                       <th className="py-2 text-right font-medium">Views</th>
                     </tr>
@@ -136,9 +136,9 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
                     {trafficData.topPages.slice(0, 10).map((page) => (
                       <tr key={page.path} className="border-b last:border-0">
                         <td className="py-3">
-                          <code className="text-zinc-600">{page.path}</code>
+                          <code className="text-muted-foreground">{page.path}</code>
                         </td>
-                        <td className="py-3 text-right text-zinc-500">
+                        <td className="py-3 text-right text-muted-foreground">
                           {formatNumber(page.views)} views
                         </td>
                       </tr>

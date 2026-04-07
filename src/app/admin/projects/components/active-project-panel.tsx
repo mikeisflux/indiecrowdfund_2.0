@@ -291,8 +291,8 @@ export function ActiveProjectPanel({
   if (!project) {
     return (
       <Card className="h-[400px] flex items-center justify-center">
-        <div className="text-center text-zinc-500">
-          <Zap className="h-12 w-12 mx-auto mb-3 text-zinc-300" />
+        <div className="text-center text-muted-foreground">
+          <Zap className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium">Select a campaign to manage</p>
           <p className="text-sm">Click on a campaign to see details and actions</p>
         </div>
@@ -328,19 +328,19 @@ export function ActiveProjectPanel({
             <AccordionContent className="px-4 pb-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Goal</p>
+                  <p className="text-xs text-muted-foreground">Goal</p>
                   <p className="font-semibold">${Number(project.goalAmount).toLocaleString()} {project.currency}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Raised</p>
+                  <p className="text-xs text-muted-foreground">Raised</p>
                   <p className="font-semibold text-emerald-600">${Number(project.currentAmount).toLocaleString()}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Backers</p>
+                  <p className="text-xs text-muted-foreground">Backers</p>
                   <p className="font-semibold">{project.backerCount}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Duration</p>
+                  <p className="text-xs text-muted-foreground">Duration</p>
                   <p className="font-semibold">{formatDuration(project)}</p>
                 </div>
               </div>
@@ -352,7 +352,7 @@ export function ActiveProjectPanel({
             <AccordionTrigger className="px-4">Creator Information</AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 font-semibold text-zinc-600">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted font-semibold text-muted-foreground">
                   {(project.creator.name || project.creator.email).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1">
@@ -368,7 +368,7 @@ export function ActiveProjectPanel({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-zinc-500">{project.creator.email}</p>
+                  <p className="text-sm text-muted-foreground">{project.creator.email}</p>
                 </div>
               </div>
             </AccordionContent>
@@ -376,7 +376,7 @@ export function ActiveProjectPanel({
         </Accordion>
 
         {/* Action Buttons for Active Campaigns */}
-        <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-800/50">
+        <div className="p-4 border-t bg-muted/50 dark:bg-zinc-800/50">
           <div className="flex items-center gap-2 mb-2">
             <Button variant="outline" className="flex-1" asChild>
               <a href={project.creator.vanityUrl ? `/projects/${project.creator.vanityUrl}/${project.slug}` : `/projects/${project.slug}`} target="_blank" rel="noopener noreferrer">
@@ -458,8 +458,8 @@ export function ActiveProjectPanel({
             </Button>
           </div>
           {currentVanityUrl && (
-            <p className="text-xs text-zinc-500 mb-2">
-              Vanity URL: <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">{currentVanityUrl}</code>
+            <p className="text-xs text-muted-foreground mb-2">
+              Vanity URL: <code className="bg-muted dark:bg-zinc-800 px-1 rounded">{currentVanityUrl}</code>
             </p>
           )}
           {backfillMessage && (

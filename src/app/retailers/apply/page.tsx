@@ -295,7 +295,7 @@ export default function RetailerApplyPage() {
               <span
                 key={step.id}
                 className={`text-xs font-medium ${
-                  currentStep >= step.id ? "text-emerald-600" : "text-zinc-400"
+                  currentStep >= step.id ? "text-emerald-600" : "text-muted-foreground"
                 }`}
               >
                 {step.title}
@@ -597,7 +597,7 @@ export default function RetailerApplyPage() {
                     value={formData.resaleCertificate}
                     onChange={(e) => updateField("resaleCertificate", e.target.value)}
                   />
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     If you have a state-issued resale certificate, providing it may expedite approval.
                   </p>
                 </div>
@@ -622,13 +622,13 @@ export default function RetailerApplyPage() {
                   <div className="rounded-lg border p-4">
                     <h4 className="font-semibold text-zinc-900 dark:text-white">Business Information</h4>
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                      <dt className="text-zinc-500">Business Name</dt>
+                      <dt className="text-muted-foreground">Business Name</dt>
                       <dd className="font-medium">{formData.businessName}</dd>
-                      <dt className="text-zinc-500">Business Type</dt>
+                      <dt className="text-muted-foreground">Business Type</dt>
                       <dd className="font-medium">{businessTypes.find(t => t.value === formData.businessType)?.label}</dd>
-                      <dt className="text-zinc-500">Years in Business</dt>
+                      <dt className="text-muted-foreground">Years in Business</dt>
                       <dd className="font-medium">{formData.yearsInBusiness || "N/A"}</dd>
-                      <dt className="text-zinc-500">Locations</dt>
+                      <dt className="text-muted-foreground">Locations</dt>
                       <dd className="font-medium">{formData.numberOfLocations}</dd>
                     </dl>
                   </div>
@@ -636,11 +636,11 @@ export default function RetailerApplyPage() {
                   <div className="rounded-lg border p-4">
                     <h4 className="font-semibold text-zinc-900 dark:text-white">Contact Details</h4>
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                      <dt className="text-zinc-500">Contact Name</dt>
+                      <dt className="text-muted-foreground">Contact Name</dt>
                       <dd className="font-medium">{formData.contactName}</dd>
-                      <dt className="text-zinc-500">Email</dt>
+                      <dt className="text-muted-foreground">Email</dt>
                       <dd className="font-medium">{formData.email}</dd>
-                      <dt className="text-zinc-500">Phone</dt>
+                      <dt className="text-muted-foreground">Phone</dt>
                       <dd className="font-medium">{formData.phone}</dd>
                     </dl>
                   </div>
@@ -657,9 +657,9 @@ export default function RetailerApplyPage() {
                   <div className="rounded-lg border p-4">
                     <h4 className="font-semibold text-zinc-900 dark:text-white">Tax Information</h4>
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                      <dt className="text-zinc-500">Tax ID Type</dt>
+                      <dt className="text-muted-foreground">Tax ID Type</dt>
                       <dd className="font-medium">{formData.taxIdType}</dd>
-                      <dt className="text-zinc-500">Tax ID</dt>
+                      <dt className="text-muted-foreground">Tax ID</dt>
                       <dd className="font-medium">••••••{formData.taxId.slice(-4)}</dd>
                     </dl>
                   </div>

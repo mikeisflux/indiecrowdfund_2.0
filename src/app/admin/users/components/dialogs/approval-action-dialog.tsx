@@ -53,11 +53,11 @@ export function ApprovalActionDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <div className="flex items-center gap-3 mb-4 p-3 bg-zinc-50 rounded-lg">
+          <div className="flex items-center gap-3 mb-4 p-3 bg-muted/50 rounded-lg">
             <Store className="h-5 w-5 text-emerald-600" />
             <div>
               <p className="font-medium">{retailer.businessName}</p>
-              <p className="text-sm text-zinc-500">{retailer.contactName}</p>
+              <p className="text-sm text-muted-foreground">{retailer.contactName}</p>
             </div>
           </div>
 

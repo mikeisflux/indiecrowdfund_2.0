@@ -335,19 +335,19 @@ export function ApiSettings() {
                         {key.environment.toLowerCase()}
                       </Badge>
                     </div>
-                    <div className="mt-1 flex items-center gap-4 text-sm text-zinc-500">
-                      <code className="rounded bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
+                    <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
+                      <code className="rounded bg-muted px-2 py-0.5 dark:bg-zinc-800">
                         {showApiKey === key.id ? key.key : key.key}
                       </code>
                       <button
                         onClick={() => setShowApiKey(showApiKey === key.id ? null : key.id)}
-                        className="text-zinc-400 hover:text-zinc-600"
+                        className="text-muted-foreground hover:text-zinc-600"
                       >
                         {showApiKey === key.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                       <button
                         onClick={() => copyToClipboard(key.key, key.id)}
-                        className="text-zinc-400 hover:text-zinc-600"
+                        className="text-muted-foreground hover:text-zinc-600"
                       >
                         {copiedKey === key.id ? (
                           <CheckCircle className="h-4 w-4 text-green-500" />
@@ -357,7 +357,7 @@ export function ApiSettings() {
                       </button>
                     </div>
                   </div>
-                  <div className="text-right text-sm text-zinc-500">
+                  <div className="text-right text-sm text-muted-foreground">
                     <p>Created: {key.created}</p>
                     <p>Last used: {key.lastUsed}</p>
                   </div>

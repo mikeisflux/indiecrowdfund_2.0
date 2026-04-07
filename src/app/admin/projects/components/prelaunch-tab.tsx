@@ -26,7 +26,7 @@ export function PrelaunchProjectCard({ project, isSelected, onClick }: Prelaunch
     >
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 relative overflow-hidden flex-shrink-0">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted relative overflow-hidden flex-shrink-0">
             {project.imageUrl ? (
               <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
             ) : (
@@ -39,10 +39,10 @@ export function PrelaunchProjectCard({ project, isSelected, onClick }: Prelaunch
               <Badge variant="default" className="bg-amber-500 text-xs">Prelaunch</Badge>
               <Badge variant="outline" className="text-xs">{project.category}</Badge>
             </div>
-            <p className="text-sm text-zinc-500 truncate">
+            <p className="text-sm text-muted-foreground truncate">
               by {project.creator.name || project.creator.email}
             </p>
-            <div className="flex items-center gap-4 mt-1 text-xs text-zinc-500">
+            <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Eye className="h-3 w-3" />
                 {project._count.followers || 0} followers
@@ -94,7 +94,7 @@ export function PrelaunchDetailPanel({
           </CardHeader>
           <CardContent className="space-y-4">
             {selectedProject.imageUrl && (
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-100">
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
                 <Image
                   src={selectedProject.imageUrl}
                   alt={selectedProject.title}
@@ -107,19 +107,19 @@ export function PrelaunchDetailPanel({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Category</p>
+                <p className="text-xs text-muted-foreground">Category</p>
                 <p className="font-medium">{selectedProject.category}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Followers</p>
+                <p className="text-xs text-muted-foreground">Followers</p>
                 <p className="font-medium">{selectedProject._count.followers || 0}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Goal</p>
+                <p className="text-xs text-muted-foreground">Goal</p>
                 <p className="font-medium">${Number(selectedProject.goalAmount).toLocaleString()}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Launch Date</p>
+                <p className="text-xs text-muted-foreground">Launch Date</p>
                 <p className="font-medium">
                   {selectedProject.launchDate
                     ? new Date(selectedProject.launchDate).toLocaleDateString()
@@ -130,7 +130,7 @@ export function PrelaunchDetailPanel({
 
             {selectedProject.subtitle && (
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Subtitle</p>
+                <p className="text-xs text-muted-foreground">Subtitle</p>
                 <p className="text-sm">{selectedProject.subtitle}</p>
               </div>
             )}
@@ -161,8 +161,8 @@ export function PrelaunchDetailPanel({
               </Button>
             </div>
             {prelaunchVanityUrl && (
-              <p className="text-xs text-zinc-500 mt-2">
-                Vanity URL: <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">{prelaunchVanityUrl}</code>
+              <p className="text-xs text-muted-foreground mt-2">
+                Vanity URL: <code className="bg-muted dark:bg-zinc-800 px-1 rounded">{prelaunchVanityUrl}</code>
               </p>
             )}
           </CardContent>
@@ -181,9 +181,9 @@ export function PrelaunchDetailPanel({
         </>
       ) : (
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-          <Sparkles className="h-12 w-12 text-zinc-300 mb-4" />
+          <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="font-medium text-zinc-900 dark:text-white mb-2">Select a prelaunch page</h3>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             Click on a prelaunch page to see details
           </p>
         </CardContent>

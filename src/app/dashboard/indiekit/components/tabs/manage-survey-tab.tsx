@@ -272,9 +272,9 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <ClipboardList className="h-12 w-12 mx-auto text-zinc-300 mb-4" />
+          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Survey Created</h3>
-          <p className="text-zinc-500 mb-4">
+          <p className="text-muted-foreground mb-4">
             Use the Survey Builder to create and send a survey to your backers.
           </p>
         </CardContent>
@@ -286,9 +286,9 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <ClipboardList className="h-12 w-12 mx-auto text-zinc-300 mb-4" />
+          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">Survey Not Sent Yet</h3>
-          <p className="text-zinc-500 mb-4">
+          <p className="text-muted-foreground mb-4">
             Your survey is still in draft mode. Send it from the Survey Builder to start collecting responses.
           </p>
         </CardContent>
@@ -338,17 +338,17 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
           {/* Response Stats */}
           {stats && (
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-zinc-50 rounded-lg">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-2xl font-bold">{stats.totalBackers}</p>
-                <p className="text-sm text-zinc-500">Total Backers</p>
+                <p className="text-sm text-muted-foreground">Total Backers</p>
               </div>
               <div className="text-center p-4 bg-emerald-50 rounded-lg">
                 <p className="text-2xl font-bold text-emerald-600">{stats.completedResponses}</p>
-                <p className="text-sm text-zinc-500">Completed</p>
+                <p className="text-sm text-muted-foreground">Completed</p>
               </div>
               <div className="text-center p-4 bg-amber-50 rounded-lg">
                 <p className="text-2xl font-bold text-amber-600">{stats.totalBackers - stats.completedResponses}</p>
-                <p className="text-sm text-zinc-500">Pending</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
               </div>
             </div>
           )}
@@ -428,7 +428,7 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
             </CardHeader>
             <CardContent>
               {survey.itemQuestions.length === 0 ? (
-                <div className="text-center py-8 text-zinc-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>No item questions configured</p>
                 </div>
@@ -442,7 +442,7 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
                       <div>
                         <h4 className="font-medium">{item.itemName}</h4>
                         {item.itemDescription && (
-                          <p className="text-sm text-zinc-500 mt-1">{item.itemDescription}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{item.itemDescription}</p>
                         )}
                         <div className="flex gap-2 mt-2 flex-wrap">
                           {item.variants.map((v) => (
@@ -484,7 +484,7 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
             </CardHeader>
             <CardContent>
               {survey.backerQuestions.length === 0 ? (
-                <div className="text-center py-8 text-zinc-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>No backer questions configured</p>
                 </div>
@@ -498,7 +498,7 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
                       <div>
                         <h4 className="font-medium">{q.question}</h4>
                         {q.description && (
-                          <p className="text-sm text-zinc-500 mt-1">{q.description}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{q.description}</p>
                         )}
                         <div className="flex gap-2 mt-2">
                           <Badge variant="outline">

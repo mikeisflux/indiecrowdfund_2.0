@@ -399,7 +399,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
               <Link href={currentSlide.secondaryButtonLink}>
                 <Button size="lg" variant="outline" className={cn(
                   "w-full sm:w-auto hover:border-primary/50 hover:bg-primary/5 group glass-card",
-                  currentSlide.textColor === "dark" ? "border-zinc-300" : "border-border/50"
+                  currentSlide.textColor === "dark" ? "border-border" : "border-border/50"
                 )}>
                   {currentSlide.secondaryButtonText}
                   <Rocket className="ml-2 h-4 w-4 group-hover:translate-y-[-2px] transition-transform" />

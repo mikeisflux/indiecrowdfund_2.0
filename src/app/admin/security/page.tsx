@@ -170,7 +170,7 @@ export default function SecurityPage() {
       case "ip_blocked":
         return <Ban className="h-4 w-4 text-red-500" />;
       default:
-        return <Activity className="h-4 w-4 text-zinc-500" />;
+        return <Activity className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -221,7 +221,7 @@ export default function SecurityPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Security</h1>
-          <p className="text-zinc-500">Manage security settings and monitor activity</p>
+          <p className="text-muted-foreground">Manage security settings and monitor activity</p>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
           {saveMessage && (
@@ -254,7 +254,7 @@ export default function SecurityPage() {
                 <Users className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Active Sessions</p>
+                <p className="text-sm text-muted-foreground">Active Sessions</p>
                 <p className="text-2xl font-semibold">{stats.activeUsers}</p>
               </div>
             </div>
@@ -267,7 +267,7 @@ export default function SecurityPage() {
                 <Ban className="h-6 w-6 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Blocked IPs</p>
+                <p className="text-sm text-muted-foreground">Blocked IPs</p>
                 <p className="text-2xl font-semibold">{stats.blockedIPs}</p>
               </div>
             </div>
@@ -280,7 +280,7 @@ export default function SecurityPage() {
                 <AlertTriangle className="h-6 w-6 text-amber-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Failed Logins (24h)</p>
+                <p className="text-sm text-muted-foreground">Failed Logins (24h)</p>
                 <p className="text-2xl font-semibold">{stats.failedLogins24h}</p>
               </div>
             </div>
@@ -293,7 +293,7 @@ export default function SecurityPage() {
                 <Shield className="h-6 w-6 text-emerald-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">2FA Enabled</p>
+                <p className="text-sm text-muted-foreground">2FA Enabled</p>
                 <p className="text-2xl font-semibold">{stats.users2FAEnabled}</p>
               </div>
             </div>
@@ -315,7 +315,7 @@ export default function SecurityPage() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label>Require Two-Factor Authentication</Label>
-                <p className="text-sm text-zinc-500">Require 2FA for all admin users</p>
+                <p className="text-sm text-muted-foreground">Require 2FA for all admin users</p>
               </div>
               <Switch
                 checked={settings.require2FA}
@@ -415,7 +415,7 @@ export default function SecurityPage() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label>Enable IP Rate Limiting</Label>
-                <p className="text-sm text-zinc-500">Block IPs with too many requests</p>
+                <p className="text-sm text-muted-foreground">Block IPs with too many requests</p>
               </div>
               <Switch
                 checked={settings.ipRateLimitEnabled}
@@ -463,7 +463,7 @@ export default function SecurityPage() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label>CSRF Protection</Label>
-                <p className="text-sm text-zinc-500">Cross-site request forgery protection</p>
+                <p className="text-sm text-muted-foreground">Cross-site request forgery protection</p>
               </div>
               <Switch
                 checked={settings.csrfProtection}
@@ -473,7 +473,7 @@ export default function SecurityPage() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label>Content Security Policy</Label>
-                <p className="text-sm text-zinc-500">Enable strict CSP headers</p>
+                <p className="text-sm text-muted-foreground">Enable strict CSP headers</p>
               </div>
               <Switch
                 checked={settings.contentSecurityPolicy}
@@ -506,11 +506,11 @@ export default function SecurityPage() {
                     <span className="font-medium">{getEventLabel(event.type)}</span>
                     <Badge variant="outline" className="text-xs">{event.ip}</Badge>
                   </div>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted-foreground">
                     {event.user} {event.details && `- ${event.details}`}
                   </p>
                 </div>
-                <span className="text-sm text-zinc-400">
+                <span className="text-sm text-muted-foreground">
                   {formatDistanceToNow(event.timestamp, { addSuffix: true })}
                 </span>
               </div>

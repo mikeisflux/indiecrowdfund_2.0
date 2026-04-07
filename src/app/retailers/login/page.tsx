@@ -200,7 +200,7 @@ export default function RetailerLoginPage() {
                 className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
                   loginMethod === "credentials"
                     ? "bg-emerald-100 text-emerald-700"
-                    : "text-zinc-500 hover:text-zinc-700"
+                    : "text-muted-foreground hover:text-zinc-700"
                 }`}
               >
                 Email & Password
@@ -211,7 +211,7 @@ export default function RetailerLoginPage() {
                 className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
                   loginMethod === "accessCode"
                     ? "bg-emerald-100 text-emerald-700"
-                    : "text-zinc-500 hover:text-zinc-700"
+                    : "text-muted-foreground hover:text-zinc-700"
                 }`}
               >
                 Access Code
@@ -231,7 +231,7 @@ export default function RetailerLoginPage() {
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                      <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="email"
                         type="email"
@@ -257,7 +257,7 @@ export default function RetailerLoginPage() {
                       </Link>
                     </div>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                      <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="password"
                         type="password"
@@ -276,7 +276,7 @@ export default function RetailerLoginPage() {
                 <div className="space-y-2">
                   <Label htmlFor="accessCode">Retailer Access Code</Label>
                   <div className="relative">
-                    <Key className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <Key className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       id="accessCode"
                       type="text"
@@ -289,7 +289,7 @@ export default function RetailerLoginPage() {
                       required
                     />
                   </div>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     Your access code was sent to you when your application was approved.
                   </p>
                 </div>
@@ -322,7 +322,7 @@ export default function RetailerLoginPage() {
             </form>
 
             <div className="mt-6 text-center text-sm">
-              <span className="text-zinc-500">Not a certified retailer yet?</span>{" "}
+              <span className="text-muted-foreground">Not a certified retailer yet?</span>{" "}
               <Link
                 href="/retailers/apply"
                 className="font-medium text-emerald-600 hover:underline"

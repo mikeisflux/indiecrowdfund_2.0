@@ -101,7 +101,7 @@ export function AddonSelector({
                           <div className="flex flex-wrap gap-x-4 gap-y-1">
                             {addon.includes.map((item, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-sm">
-                                <span className="w-5 h-5 rounded border border-zinc-300 flex items-center justify-center text-xs text-muted-foreground">
+                                <span className="w-5 h-5 rounded border border-border flex items-center justify-center text-xs text-muted-foreground">
                                   1
                                 </span>
                                 {item}
@@ -118,10 +118,10 @@ export function AddonSelector({
                       <div className="md:hidden bg-gradient-to-r from-zinc-900 to-zinc-800 text-white px-4 py-2 flex items-center justify-between">
                         <span className="font-semibold text-lg">${Number(addon.amount).toFixed(2)}</span>
                         {shipping > 0 && (
-                          <span className="text-zinc-300 text-sm">+${Number(shipping).toFixed(2)} shipping</span>
+                          <span className="text-muted-foreground text-sm">+${Number(shipping).toFixed(2)} shipping</span>
                         )}
                       </div>
-                      <div className="relative aspect-video md:aspect-square bg-zinc-100">
+                      <div className="relative aspect-video md:aspect-square bg-muted">
                         {addon.imageUrl ? (
                           <Image
                             src={addon.imageUrl}
@@ -132,7 +132,7 @@ export function AddonSelector({
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-zinc-400 text-xs uppercase tracking-wider text-center px-2">
+                            <span className="text-muted-foreground text-xs uppercase tracking-wider text-center px-2">
                               {addon.title.split(" ").slice(0, 2).join(" ")}
                             </span>
                           </div>

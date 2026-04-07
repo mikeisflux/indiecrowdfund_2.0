@@ -384,7 +384,7 @@ export default function SurveyBuilderPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -410,7 +410,7 @@ export default function SurveyBuilderPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Backer Survey</h1>
-          <p className="text-zinc-500">
+          <p className="text-muted-foreground">
             Collect shipping addresses and preferences from your backers
           </p>
         </div>
@@ -473,9 +473,9 @@ export default function SurveyBuilderPage() {
       {!survey && (
         <Card>
           <CardContent className="py-12 text-center">
-            <ClipboardList className="h-12 w-12 mx-auto text-zinc-300 mb-4" />
+            <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Create Your Backer Survey</h3>
-            <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Collect shipping addresses and preferences from your backers after your campaign ends.
             </p>
             <Button onClick={createSurvey} disabled={isSaving}>
@@ -562,8 +562,8 @@ export default function SurveyBuilderPage() {
               <CardContent>
                 {itemQuestions.length === 0 ? (
                   <div className="text-center py-8">
-                    <Package className="h-12 w-12 mx-auto text-zinc-300 mb-4" />
-                    <p className="text-zinc-500 mb-4">No item questions yet</p>
+                    <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground mb-4">No item questions yet</p>
                     {isEditable && (
                       <Button onClick={() => {
                         setEditingItem({
@@ -588,7 +588,7 @@ export default function SurveyBuilderPage() {
                           <div className="flex items-start justify-between">
                             <div>
                               <h4 className="font-medium">{item.itemName}</h4>
-                              <p className="text-sm text-zinc-500">
+                              <p className="text-sm text-muted-foreground">
                                 Reward: {rewards.find(r => r.id === item.rewardId)?.title || "Unknown"}
                               </p>
                               <div className="flex gap-2 mt-2">
@@ -659,8 +659,8 @@ export default function SurveyBuilderPage() {
               <CardContent>
                 {backerQuestions.length === 0 ? (
                   <div className="text-center py-8">
-                    <Users className="h-12 w-12 mx-auto text-zinc-300 mb-4" />
-                    <p className="text-zinc-500 mb-4">No backer questions yet</p>
+                    <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground mb-4">No backer questions yet</p>
                     {isEditable && (
                       <Button onClick={() => {
                         setEditingBacker({
@@ -758,7 +758,7 @@ export default function SurveyBuilderPage() {
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">Collect Shipping Addresses</p>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       Ask backers to provide their shipping address
                     </p>
                   </div>

@@ -54,8 +54,8 @@ export function ScanImportDialog({
         <div className="py-4 space-y-4">
           {scanning && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-              <span className="ml-3 text-zinc-500">Scanning for files...</span>
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <span className="ml-3 text-muted-foreground">Scanning for files...</span>
             </div>
           )}
 
@@ -74,7 +74,7 @@ export function ScanImportDialog({
                       {scanResult.scanned.filesystemTotal} total
                     </Badge>
                   </div>
-                  <div className="text-sm text-zinc-500 space-y-1">
+                  <div className="text-sm text-muted-foreground space-y-1">
                     <div className="flex justify-between">
                       <span>Already tracked:</span>
                       <span className="text-emerald-600">{scanResult.scanned.alreadyTracked.filesystem}</span>
@@ -111,7 +111,7 @@ export function ScanImportDialog({
                       {scanResult.scanned.databaseTotal} total
                     </Badge>
                   </div>
-                  <div className="text-sm text-zinc-500 space-y-1">
+                  <div className="text-sm text-muted-foreground space-y-1">
                     <div className="flex justify-between">
                       <span>Already tracked:</span>
                       <span className="text-emerald-600">{scanResult.scanned.alreadyTracked.database}</span>

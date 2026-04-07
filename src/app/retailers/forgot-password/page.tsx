@@ -115,7 +115,7 @@ export default function RetailerForgotPasswordPage() {
             <h1 className="text-2xl font-bold tracking-tight">
               Forgot your password?
             </h1>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted-foreground">
               Enter your email and we&apos;ll send you a reset link
             </p>
           </div>

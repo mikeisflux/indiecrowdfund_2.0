@@ -80,7 +80,7 @@ export function SurveyItemsStep({ data, itemResponses, setItemResponses, onNext,
                   {q.isRequired && <span className="text-red-500 ml-1">*</span>}
                 </Label>
                 {q.description && (
-                  <p className="text-sm text-zinc-500">{q.description}</p>
+                  <p className="text-sm text-muted-foreground">{q.description}</p>
                 )}
                 <QuestionInput
                   type={q.questionType}

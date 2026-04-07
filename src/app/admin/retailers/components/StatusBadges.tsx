@@ -12,7 +12,7 @@ export function getRetailerStatusBadge(status: string) {
     case "REJECTED":
       return <Badge className="bg-red-100 text-red-700"><XCircle className="h-3 w-3 mr-1" /> Rejected</Badge>;
     case "SUSPENDED":
-      return <Badge className="bg-zinc-100 text-zinc-700"><Ban className="h-3 w-3 mr-1" /> Suspended</Badge>;
+      return <Badge className="bg-muted text-foreground"><Ban className="h-3 w-3 mr-1" /> Suspended</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }

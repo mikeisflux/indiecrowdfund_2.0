@@ -47,9 +47,9 @@ interface UploadDialogProps {
 }
 
 function getFileIcon(mimeType: string) {
-  if (mimeType.startsWith("image")) return <ImageIcon className="h-5 w-5 text-zinc-400" />;
-  if (mimeType.startsWith("video")) return <Video className="h-5 w-5 text-zinc-400" />;
-  return <FileText className="h-5 w-5 text-zinc-400" />;
+  if (mimeType.startsWith("image")) return <ImageIcon className="h-5 w-5 text-muted-foreground" />;
+  if (mimeType.startsWith("video")) return <Video className="h-5 w-5 text-muted-foreground" />;
+  return <FileText className="h-5 w-5 text-muted-foreground" />;
 }
 
 export function UploadDialog({
@@ -100,15 +100,15 @@ export function UploadDialog({
             className={`rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
               isDragging
                 ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
-                : "border-zinc-300 dark:border-zinc-700"
+                : "border-border dark:border-zinc-700"
             }`}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
           >
-            <Upload className={`h-10 w-10 mx-auto mb-3 ${isDragging ? "text-emerald-500" : "text-zinc-400"}`} />
+            <Upload className={`h-10 w-10 mx-auto mb-3 ${isDragging ? "text-emerald-500" : "text-muted-foreground"}`} />
             <p className="text-sm font-medium mb-1">Drop files here</p>
-            <p className="text-xs text-zinc-500 mb-3">or click to browse</p>
+            <p className="text-xs text-muted-foreground mb-3">or click to browse</p>
             <label>
               <input
                 type="file"
@@ -130,12 +130,12 @@ export function UploadDialog({
               {uploadingFiles.map((file, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-2 rounded bg-zinc-50 dark:bg-zinc-800"
+                  className="flex items-center justify-between p-2 rounded bg-muted/50 dark:bg-zinc-800"
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {getFileIcon(file.type)}
                     <span className="text-sm truncate">{file.name}</span>
-                    <span className="text-xs text-zinc-500">({formatFileSize(file.size)})</span>
+                    <span className="text-xs text-muted-foreground">({formatFileSize(file.size)})</span>
                   </div>
                   {uploadProgress[file.name] !== undefined ? (
                     uploadProgress[file.name] === 100 ? (
@@ -143,7 +143,7 @@ export function UploadDialog({
                     ) : uploadProgress[file.name] === -1 ? (
                       <Badge variant="destructive">Failed</Badge>
                     ) : (
-                      <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     )
                   ) : (
                     <Button

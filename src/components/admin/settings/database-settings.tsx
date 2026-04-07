@@ -384,7 +384,7 @@ export function DatabaseSettings() {
                 )}
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Status</p>
+                <p className="text-sm text-muted-foreground">Status</p>
                 <p className={`text-lg font-semibold ${isConnected ? "text-emerald-600" : "text-red-600"}`}>
                   {isConnected ? "Connected" : "Disconnected"}
                 </p>
@@ -399,7 +399,7 @@ export function DatabaseSettings() {
                 <Server className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Provider</p>
+                <p className="text-sm text-muted-foreground">Provider</p>
                 <p className="text-lg font-semibold">{data?.provider || "Unknown"}</p>
               </div>
             </div>
@@ -412,7 +412,7 @@ export function DatabaseSettings() {
                 <Clock className="h-6 w-6 text-violet-600" />
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Response Time</p>
+                <p className="text-sm text-muted-foreground">Response Time</p>
                 <p className="text-lg font-semibold">{data?.responseTime || 0}ms</p>
               </div>
             </div>

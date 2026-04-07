@@ -54,41 +54,41 @@ export function BankDetailsDialog({
               </AlertDescription>
             </Alert>
 
-            <div className="space-y-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
+            <div className="space-y-3 bg-muted/50 dark:bg-zinc-800 rounded-lg p-4">
               <div>
-                <Label className="text-xs text-zinc-500">Account Holder</Label>
+                <Label className="text-xs text-muted-foreground">Account Holder</Label>
                 <p className="font-medium">{bankDetails.accountHolder}</p>
               </div>
               <div>
-                <Label className="text-xs text-zinc-500">Bank Name</Label>
+                <Label className="text-xs text-muted-foreground">Bank Name</Label>
                 <p className="font-medium">{bankDetails.bankName}</p>
               </div>
               <div>
-                <Label className="text-xs text-zinc-500">Routing Number</Label>
+                <Label className="text-xs text-muted-foreground">Routing Number</Label>
                 <p className="font-mono font-medium">{bankDetails.routingNumber}</p>
               </div>
               <div>
-                <Label className="text-xs text-zinc-500">Account Number</Label>
+                <Label className="text-xs text-muted-foreground">Account Number</Label>
                 <p className="font-mono font-medium">{bankDetails.accountNumber}</p>
               </div>
               <div>
-                <Label className="text-xs text-zinc-500">Account Type</Label>
+                <Label className="text-xs text-muted-foreground">Account Type</Label>
                 <p className="font-medium capitalize">{bankDetails.accountType}</p>
               </div>
               <div>
-                <Label className="text-xs text-zinc-500">Verification Status</Label>
+                <Label className="text-xs text-muted-foreground">Verification Status</Label>
                 <p className="font-medium">{bankDetails.isVerified ? "Verified" : "Unverified"}</p>
               </div>
             </div>
 
             <div className="pt-2 border-t">
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 Creator: {bankDetails.user.name || "Unknown"} ({bankDetails.user.email})
               </p>
             </div>
           </div>
         ) : (
-          <div className="text-center py-4 text-zinc-500">
+          <div className="text-center py-4 text-muted-foreground">
             Failed to load bank account details
           </div>
         )}

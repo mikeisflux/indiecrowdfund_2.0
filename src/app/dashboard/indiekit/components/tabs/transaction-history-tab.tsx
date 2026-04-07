@@ -213,9 +213,9 @@ export function TransactionHistoryTab({ projectId }: TransactionHistoryTabProps)
 
           {filtered.length === 0 ? (
             <div className="text-center py-12">
-              <Receipt className="h-12 w-12 mx-auto text-zinc-300 mb-4" />
+              <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Transactions Found</h3>
-              <p className="text-zinc-500">
+              <p className="text-muted-foreground">
                 {searchQuery || typeFilter !== "all"
                   ? "Try adjusting your search or filters"
                   : "No completed transactions yet for this project"}

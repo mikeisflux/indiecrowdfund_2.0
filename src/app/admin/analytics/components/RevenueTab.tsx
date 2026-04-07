@@ -24,7 +24,7 @@ export function RevenueTab({ revenueData, formatCurrency }: RevenueTabProps) {
   if (!revenueData) {
     return (
       <Card>
-        <CardContent className="py-12 text-center text-zinc-500">
+        <CardContent className="py-12 text-center text-muted-foreground">
           No revenue data available
         </CardContent>
       </Card>
@@ -43,23 +43,23 @@ export function RevenueTab({ revenueData, formatCurrency }: RevenueTabProps) {
       <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm font-medium text-zinc-500">Gross Revenue</p>
+            <p className="text-sm font-medium text-muted-foreground">Gross Revenue</p>
             <p className="mt-1 text-2xl font-bold">{formatCurrency(grossRevenue)}</p>
-            <p className="mt-1 text-sm text-zinc-500">Total from committed pledges</p>
+            <p className="mt-1 text-sm text-muted-foreground">Total from committed pledges</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm font-medium text-zinc-500">Completed Pledges</p>
+            <p className="text-sm font-medium text-muted-foreground">Completed Pledges</p>
             <p className="mt-1 text-2xl font-bold">{completedCount}</p>
-            <p className="mt-1 text-sm text-zinc-500">Successfully processed</p>
+            <p className="mt-1 text-sm text-muted-foreground">Successfully processed</p>
           </CardContent>
         </Card>
         <Card className="col-span-2 md:col-span-1">
           <CardContent className="p-6">
-            <p className="text-sm font-medium text-zinc-500">Pending Pledges</p>
+            <p className="text-sm font-medium text-muted-foreground">Pending Pledges</p>
             <p className="mt-1 text-2xl font-bold">{pendingCount}</p>
-            <p className="mt-1 text-sm text-zinc-500">Awaiting completion</p>
+            <p className="mt-1 text-sm text-muted-foreground">Awaiting completion</p>
           </CardContent>
         </Card>
       </div>
@@ -71,7 +71,7 @@ export function RevenueTab({ revenueData, formatCurrency }: RevenueTabProps) {
         </CardHeader>
         <CardContent>
           {revenueData.topProjects.length === 0 ? (
-            <p className="text-center text-zinc-500 py-8">No projects yet</p>
+            <p className="text-center text-muted-foreground py-8">No projects yet</p>
           ) : (
             <>
               {/* Mobile cards */}
@@ -79,16 +79,16 @@ export function RevenueTab({ revenueData, formatCurrency }: RevenueTabProps) {
                 {revenueData.topProjects.map((project, i) => (
                   <div key={project.id} className="rounded-lg border p-4 space-y-2">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-sm font-bold text-zinc-600">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-bold text-muted-foreground">
                         #{i + 1}
                       </div>
                       <p className="font-medium line-clamp-2">{project.title}</p>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-zinc-500">{project.backerCount} backers</span>
+                      <span className="text-muted-foreground">{project.backerCount} backers</span>
                       <span className="font-semibold text-emerald-600">
                         {formatCurrency(project.currentAmount)}
-                        <span className="font-normal text-zinc-500"> / {formatCurrency(project.goalAmount)}</span>
+                        <span className="font-normal text-muted-foreground"> / {formatCurrency(project.goalAmount)}</span>
                       </span>
                     </div>
                     <Progress
@@ -107,18 +107,18 @@ export function RevenueTab({ revenueData, formatCurrency }: RevenueTabProps) {
               <div className="hidden md:block space-y-4">
                 {revenueData.topProjects.map((project, i) => (
                   <div key={project.id} className="flex items-center gap-4 rounded-lg border p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 font-bold text-zinc-600">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted font-bold text-muted-foreground">
                       #{i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{project.title}</p>
-                      <p className="text-sm text-zinc-500">{project.backerCount} backers</p>
+                      <p className="text-sm text-muted-foreground">{project.backerCount} backers</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-semibold text-emerald-600">
                         {formatCurrency(project.currentAmount)}
                       </p>
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         of {formatCurrency(project.goalAmount)}
                       </p>
                     </div>
@@ -150,7 +150,7 @@ export function RevenueTab({ revenueData, formatCurrency }: RevenueTabProps) {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-zinc-500">
+                  <tr className="border-b text-muted-foreground">
                     <th className="py-2 text-left font-medium">Status</th>
                     <th className="py-2 text-right font-medium">Count</th>
                     <th className="py-2 text-right font-medium">Total</th>
@@ -160,7 +160,7 @@ export function RevenueTab({ revenueData, formatCurrency }: RevenueTabProps) {
                   {revenueData.byStatus.map((s) => (
                     <tr key={s.status} className="border-b last:border-0">
                       <td className="py-3 font-medium">{s.status}</td>
-                      <td className="py-3 text-right text-zinc-600">{s.count}</td>
+                      <td className="py-3 text-right text-muted-foreground">{s.count}</td>
                       <td className="py-3 text-right font-semibold text-emerald-600">
                         {formatCurrency(s.total)}
                       </td>

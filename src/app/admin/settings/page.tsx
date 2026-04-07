@@ -849,7 +849,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -860,7 +860,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Settings</h1>
-          <p className="text-zinc-500">Configure platform settings and integrations</p>
+          <p className="text-muted-foreground">Configure platform settings and integrations</p>
         </div>
         <div className="flex items-center gap-4">
           {saveMessage && (

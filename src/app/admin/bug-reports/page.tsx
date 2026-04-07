@@ -207,7 +207,7 @@ export default function BugReportsPage() {
       case "MEDIUM":
         return <Badge className="bg-amber-100 text-amber-700">Medium</Badge>;
       default:
-        return <Badge className="bg-zinc-100 text-zinc-700">Low</Badge>;
+        return <Badge className="bg-muted text-foreground">Low</Badge>;
     }
   };
 
@@ -220,7 +220,7 @@ export default function BugReportsPage() {
       case "MEDIUM":
         return <Badge className="bg-amber-100 text-amber-700">Medium</Badge>;
       default:
-        return <Badge className="bg-zinc-100 text-zinc-700">Low</Badge>;
+        return <Badge className="bg-muted text-foreground">Low</Badge>;
     }
   };
 
@@ -237,9 +237,9 @@ export default function BugReportsPage() {
       case "RESOLVED":
         return <Badge className="bg-emerald-100 text-emerald-700"><CheckCircle className="h-3 w-3 mr-1" /> Resolved</Badge>;
       case "CLOSED":
-        return <Badge className="bg-zinc-100 text-zinc-700"><XCircle className="h-3 w-3 mr-1" /> Closed</Badge>;
+        return <Badge className="bg-muted text-foreground"><XCircle className="h-3 w-3 mr-1" /> Closed</Badge>;
       case "WONT_FIX":
-        return <Badge className="bg-zinc-100 text-zinc-700"><Ban className="h-3 w-3 mr-1" /> Won&apos;t Fix</Badge>;
+        return <Badge className="bg-muted text-foreground"><Ban className="h-3 w-3 mr-1" /> Won&apos;t Fix</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -292,7 +292,7 @@ export default function BugReportsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Bug Reports</h1>
-          <p className="text-zinc-500">Track and resolve user-reported issues</p>
+          <p className="text-muted-foreground">Track and resolve user-reported issues</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={() => fetchBugReports()} className="w-full sm:w-auto">
@@ -312,7 +312,7 @@ export default function BugReportsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.new}</p>
-                <p className="text-xs text-zinc-500">New Reports</p>
+                <p className="text-xs text-muted-foreground">New Reports</p>
               </div>
             </div>
           </CardContent>
@@ -326,7 +326,7 @@ export default function BugReportsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.inProgress}</p>
-                <p className="text-xs text-zinc-500">In Progress</p>
+                <p className="text-xs text-muted-foreground">In Progress</p>
               </div>
             </div>
           </CardContent>
@@ -340,7 +340,7 @@ export default function BugReportsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.resolved}</p>
-                <p className="text-xs text-zinc-500">Resolved</p>
+                <p className="text-xs text-muted-foreground">Resolved</p>
               </div>
             </div>
           </CardContent>
@@ -356,7 +356,7 @@ export default function BugReportsPage() {
                 <p className="text-2xl font-bold">
                   {bugReports.filter(r => r.severity === "CRITICAL" && !["RESOLVED", "CLOSED", "WONT_FIX"].includes(r.status)).length}
                 </p>
-                <p className="text-xs text-zinc-500">Critical Issues</p>
+                <p className="text-xs text-muted-foreground">Critical Issues</p>
               </div>
             </div>
           </CardContent>
@@ -383,7 +383,7 @@ export default function BugReportsPage() {
         {/* Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center mt-6">
           <div className="relative flex-1 max-w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search bug reports..."
               value={searchQuery}
@@ -447,7 +447,7 @@ export default function BugReportsPage() {
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Bug className="h-12 w-12 text-emerald-300 mb-4" />
                 <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No open bug reports</h3>
-                <p className="text-sm text-zinc-500 max-w-sm">
+                <p className="text-sm text-muted-foreground max-w-sm">
                   All caught up! No pending bug reports at this time.
                 </p>
               </CardContent>
@@ -462,9 +462,9 @@ export default function BugReportsPage() {
                 }`}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted dark:bg-zinc-800">
                         <Bug className={`h-5 w-5 ${
-                          report.severity === "CRITICAL" ? "text-red-500" : "text-zinc-500"
+                          report.severity === "CRITICAL" ? "text-red-500" : "text-muted-foreground"
                         }`} />
                       </div>
 
@@ -476,11 +476,11 @@ export default function BugReportsPage() {
                           {getStatusBadge(report.status)}
                         </div>
 
-                        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                        <p className="mt-2 text-sm text-muted-foreground dark:text-muted-foreground line-clamp-2">
                           {report.description}
                         </p>
 
-                        <div className="mt-3 flex items-center gap-4 text-xs text-zinc-500">
+                        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             {report.device === "Mobile" ? (
                               <Smartphone className="h-3 w-3" />
@@ -557,20 +557,20 @@ export default function BugReportsPage() {
                 </div>
               ) : closedReports.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <History className="h-12 w-12 text-zinc-300 mb-4" />
-                  <p className="text-sm text-zinc-500">No closed bug reports yet</p>
+                  <History className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-sm text-muted-foreground">No closed bug reports yet</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {closedReports.map((report) => (
                     <div key={report.id} className="flex items-center gap-4 rounded-lg border p-4">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                        report.status === "RESOLVED" ? "bg-emerald-100" : "bg-zinc-100"
+                        report.status === "RESOLVED" ? "bg-emerald-100" : "bg-muted"
                       }`}>
                         {report.status === "RESOLVED" ? (
                           <CheckCircle className="h-5 w-5 text-emerald-600" />
                         ) : (
-                          <XCircle className="h-5 w-5 text-zinc-600" />
+                          <XCircle className="h-5 w-5 text-muted-foreground" />
                         )}
                       </div>
 
@@ -580,12 +580,12 @@ export default function BugReportsPage() {
                           {getCategoryBadge(report.category)}
                           {getStatusBadge(report.status)}
                         </div>
-                        <p className="text-sm text-zinc-500 line-clamp-1">
+                        <p className="text-sm text-muted-foreground line-clamp-1">
                           {report.resolution || "No resolution notes"}
                         </p>
                       </div>
 
-                      <div className="text-right text-sm text-zinc-500">
+                      <div className="text-right text-sm text-muted-foreground">
                         <p>{report.resolvedAt ? formatDate(report.resolvedAt) : formatDate(report.updatedAt)}</p>
                       </div>
 
@@ -631,18 +631,18 @@ export default function BugReportsPage() {
 
               <div className="rounded-lg border p-4 space-y-4">
                 <div>
-                  <p className="text-sm text-zinc-500">Title</p>
+                  <p className="text-sm text-muted-foreground">Title</p>
                   <p className="font-semibold text-lg">{selectedReport.title}</p>
                 </div>
 
                 <div>
-                  <p className="text-sm text-zinc-500">Description</p>
+                  <p className="text-sm text-muted-foreground">Description</p>
                   <p className="whitespace-pre-wrap">{selectedReport.description}</p>
                 </div>
 
                 {selectedReport.steps && (
                   <div>
-                    <p className="text-sm text-zinc-500">Steps to Reproduce</p>
+                    <p className="text-sm text-muted-foreground">Steps to Reproduce</p>
                     <p className="whitespace-pre-wrap">{selectedReport.steps}</p>
                   </div>
                 )}
@@ -650,13 +650,13 @@ export default function BugReportsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {selectedReport.expectedBehavior && (
                     <div>
-                      <p className="text-sm text-zinc-500">Expected Behavior</p>
+                      <p className="text-sm text-muted-foreground">Expected Behavior</p>
                       <p>{selectedReport.expectedBehavior}</p>
                     </div>
                   )}
                   {selectedReport.actualBehavior && (
                     <div>
-                      <p className="text-sm text-zinc-500">Actual Behavior</p>
+                      <p className="text-sm text-muted-foreground">Actual Behavior</p>
                       <p>{selectedReport.actualBehavior}</p>
                     </div>
                   )}
@@ -664,12 +664,12 @@ export default function BugReportsPage() {
 
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
-                    <p className="text-zinc-500">Reporter</p>
+                    <p className="text-muted-foreground">Reporter</p>
                     <p className="font-medium">{selectedReport.name || "Anonymous"}</p>
-                    <p className="text-zinc-600">{selectedReport.email}</p>
+                    <p className="text-muted-foreground">{selectedReport.email}</p>
                   </div>
                   <div>
-                    <p className="text-zinc-500">Device</p>
+                    <p className="text-muted-foreground">Device</p>
                     <p className="font-medium flex items-center gap-1">
                       {selectedReport.device === "Mobile" ? (
                         <Smartphone className="h-4 w-4" />
@@ -680,14 +680,14 @@ export default function BugReportsPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-zinc-500">Submitted</p>
+                    <p className="text-muted-foreground">Submitted</p>
                     <p className="font-medium">{formatDate(selectedReport.createdAt)}</p>
                   </div>
                 </div>
 
                 {selectedReport.pageUrl && (
                   <div>
-                    <p className="text-sm text-zinc-500">Page URL</p>
+                    <p className="text-sm text-muted-foreground">Page URL</p>
                     <a
                       href={selectedReport.pageUrl}
                       target="_blank"
@@ -702,14 +702,14 @@ export default function BugReportsPage() {
 
                 {selectedReport.browser && (
                   <div>
-                    <p className="text-sm text-zinc-500">Browser / User Agent</p>
-                    <p className="text-xs text-zinc-600 break-all">{selectedReport.browser}</p>
+                    <p className="text-sm text-muted-foreground">Browser / User Agent</p>
+                    <p className="text-xs text-muted-foreground break-all">{selectedReport.browser}</p>
                   </div>
                 )}
               </div>
 
               {/* Update Status Section */}
-              <div className="rounded-lg border p-4 space-y-4 bg-zinc-50 dark:bg-zinc-900">
+              <div className="rounded-lg border p-4 space-y-4 bg-muted/50 dark:bg-zinc-900">
                 <h4 className="font-semibold">Update Bug Report</h4>
 
                 <div className="grid grid-cols-2 gap-4">

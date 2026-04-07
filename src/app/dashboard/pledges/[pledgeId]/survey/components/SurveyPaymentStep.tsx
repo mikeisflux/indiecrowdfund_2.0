@@ -136,7 +136,7 @@ export function SurveyPaymentStep({
       </p>
 
       {/* Order Summary */}
-      <Card className="bg-zinc-50">
+      <Card className="bg-muted/50">
         <CardContent className="py-4">
           <h3 className="font-medium mb-3">Order Summary</h3>
           {data.availableAddons && Object.entries(selectedAddons)

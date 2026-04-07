@@ -74,7 +74,7 @@ export function ResultsViewerDialog({
         </DialogHeader>
 
         <Tabs value={resultsViewerTab} onValueChange={onTabChange} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="predictive" className="gap-2">
               <TrendingUp className="h-4 w-4" />
               Predictive
@@ -98,20 +98,20 @@ export function ResultsViewerDialog({
             {runResults["predictive-analytics"] ? (
               <div className="space-y-4 h-full">
                 <div className="grid gap-3 grid-cols-4">
-                  <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
-                    <p className="text-xs text-zinc-500">Total Analyzed</p>
+                  <div className="rounded-lg border bg-muted/50 p-3 dark:bg-zinc-900">
+                    <p className="text-xs text-muted-foreground">Total Analyzed</p>
                     <p className="text-xl font-bold">{runResults["predictive-analytics"]?.summary?.totalAnalyzed || 0}</p>
                   </div>
                   <div className="rounded-lg border bg-emerald-50 p-3 dark:bg-emerald-900/30">
-                    <p className="text-xs text-zinc-500">High Value Prospects</p>
+                    <p className="text-xs text-muted-foreground">High Value Prospects</p>
                     <p className="text-xl font-bold text-emerald-600">{runResults["predictive-analytics"]?.summary?.highValueProspects || 0}</p>
                   </div>
                   <div className="rounded-lg border bg-amber-50 p-3 dark:bg-amber-900/30">
-                    <p className="text-xs text-zinc-500">At Risk Users</p>
+                    <p className="text-xs text-muted-foreground">At Risk Users</p>
                     <p className="text-xl font-bold text-amber-600">{runResults["predictive-analytics"]?.summary?.atRiskUsers || 0}</p>
                   </div>
                   <div className="rounded-lg border bg-blue-50 p-3 dark:bg-blue-900/30">
-                    <p className="text-xs text-zinc-500">Predicted Revenue</p>
+                    <p className="text-xs text-muted-foreground">Predicted Revenue</p>
                     <p className="text-xl font-bold text-blue-600">${(runResults["predictive-analytics"]?.summary?.predictedRevenue || 0).toLocaleString()}</p>
                   </div>
                 </div>
@@ -209,8 +209,8 @@ export function ResultsViewerDialog({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
-                <TrendingUp className="h-12 w-12 mb-4 text-zinc-300" />
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <TrendingUp className="h-12 w-12 mb-4 text-muted-foreground" />
                 <p className="font-medium">No Predictive Analytics Data</p>
                 <p className="text-sm">Run the Predictive Analytics service to see results here</p>
               </div>
@@ -224,7 +224,7 @@ export function ResultsViewerDialog({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{(runResults["smart-segmentation"]?.segments || []).length} Segments Generated</p>
-                    <p className="text-sm text-zinc-500">{runResults["smart-segmentation"]?.totalUsers || 0} total users segmented</p>
+                    <p className="text-sm text-muted-foreground">{runResults["smart-segmentation"]?.totalUsers || 0} total users segmented</p>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => {
                     const data = JSON.stringify(runResults["smart-segmentation"]?.segments || [], null, 2);
@@ -246,13 +246,13 @@ export function ResultsViewerDialog({
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <h4 className="font-semibold text-sm">{segment.name}</h4>
-                            <p className="text-xs text-zinc-500">{segment.description}</p>
+                            <p className="text-xs text-muted-foreground">{segment.description}</p>
                           </div>
                           <Badge variant="secondary">{segment.userCount} users</Badge>
                         </div>
                         <div className="flex items-center gap-4 mb-2">
                           <div className="text-xs">
-                            <span className="text-zinc-500">Engagement:</span>
+                            <span className="text-muted-foreground">Engagement:</span>
                             <span className="ml-1 font-medium">{(segment.avgEngagement * 100).toFixed(0)}%</span>
                           </div>
                         </div>
@@ -280,8 +280,8 @@ export function ResultsViewerDialog({
                 </ScrollArea>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
-                <Users className="h-12 w-12 mb-4 text-zinc-300" />
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <Users className="h-12 w-12 mb-4 text-muted-foreground" />
                 <p className="font-medium">No Segmentation Data</p>
                 <p className="text-sm">Run the Smart Segmentation service to see results here</p>
               </div>
@@ -293,12 +293,12 @@ export function ResultsViewerDialog({
             {runResults["send-time-optimization"] ? (
               <div className="space-y-4">
                 <div className="grid gap-3 grid-cols-3">
-                  <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
-                    <p className="text-xs text-zinc-500">Users Analyzed</p>
+                  <div className="rounded-lg border bg-muted/50 p-3 dark:bg-zinc-900">
+                    <p className="text-xs text-muted-foreground">Users Analyzed</p>
                     <p className="text-xl font-bold">{runResults["send-time-optimization"]?.summary?.totalAnalyzed || 0}</p>
                   </div>
                   <div className="rounded-lg border bg-amber-50 p-3 dark:bg-amber-900/30">
-                    <p className="text-xs text-zinc-500">Peak Hour</p>
+                    <p className="text-xs text-muted-foreground">Peak Hour</p>
                     <p className="text-xl font-bold text-amber-600">
                       {runResults["send-time-optimization"]?.summary?.peakHour !== undefined
                         ? `${runResults["send-time-optimization"].summary.peakHour}:00`
@@ -306,7 +306,7 @@ export function ResultsViewerDialog({
                     </p>
                   </div>
                   <div className="rounded-lg border bg-blue-50 p-3 dark:bg-blue-900/30">
-                    <p className="text-xs text-zinc-500">Run Time</p>
+                    <p className="text-xs text-muted-foreground">Run Time</p>
                     <p className="text-sm font-medium text-blue-600">{services.find(s => s.id === "send-time-optimization")?.lastRun || "N/A"}</p>
                   </div>
                 </div>
@@ -325,16 +325,16 @@ export function ResultsViewerDialog({
                             style={{ height: `${heightPercent}%`, minHeight: slot.count > 0 ? "4px" : "0" }}
                             title={`${slot.hour}:00 - ${slot.count} users`}
                           />
-                          <span className="text-[10px] text-zinc-500">{slot.hour}</span>
+                          <span className="text-[10px] text-muted-foreground">{slot.hour}</span>
                         </div>
                       );
                     })}
                   </div>
-                  <p className="text-xs text-zinc-500 mt-2 text-center">Hour of day (0-23)</p>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">Hour of day (0-23)</p>
                 </div>
 
                 <div className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-zinc-50 border-b dark:bg-zinc-800">
+                  <div className="px-4 py-2 bg-muted/50 border-b dark:bg-zinc-800">
                     <span className="font-medium text-sm">Detailed Distribution</span>
                   </div>
                   <ScrollArea className="h-32">
@@ -359,7 +359,7 @@ export function ResultsViewerDialog({
                                 <TableCell className="py-2">
                                   <div className="flex items-center gap-2">
                                     <Progress value={percent} className="flex-1 h-1.5" />
-                                    <span className="w-10 text-right text-zinc-500">{percent.toFixed(1)}%</span>
+                                    <span className="w-10 text-right text-muted-foreground">{percent.toFixed(1)}%</span>
                                   </div>
                                 </TableCell>
                               </TableRow>
@@ -371,8 +371,8 @@ export function ResultsViewerDialog({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
-                <Clock className="h-12 w-12 mb-4 text-zinc-300" />
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <Clock className="h-12 w-12 mb-4 text-muted-foreground" />
                 <p className="font-medium">No Send Time Data</p>
                 <p className="text-sm">Run the Send Time Optimization service to see results here</p>
               </div>
@@ -384,18 +384,18 @@ export function ResultsViewerDialog({
             {runResults["auto-tagging"] ? (
               <div className="space-y-4">
                 <div className="grid gap-3 grid-cols-3">
-                  <div className="rounded-lg border bg-zinc-50 p-3 dark:bg-zinc-900">
-                    <p className="text-xs text-zinc-500">Projects Processed</p>
+                  <div className="rounded-lg border bg-muted/50 p-3 dark:bg-zinc-900">
+                    <p className="text-xs text-muted-foreground">Projects Processed</p>
                     <p className="text-xl font-bold">{(runResults["auto-tagging"]?.results || []).length}</p>
                   </div>
                   <div className="rounded-lg border bg-emerald-50 p-3 dark:bg-emerald-900/30">
-                    <p className="text-xs text-zinc-500">Successfully Tagged</p>
+                    <p className="text-xs text-muted-foreground">Successfully Tagged</p>
                     <p className="text-xl font-bold text-emerald-600">
                       {(runResults["auto-tagging"]?.results || []).filter(r => r.success).length}
                     </p>
                   </div>
                   <div className="rounded-lg border bg-red-50 p-3 dark:bg-red-900/30">
-                    <p className="text-xs text-zinc-500">Failed / Skipped</p>
+                    <p className="text-xs text-muted-foreground">Failed / Skipped</p>
                     <p className="text-xl font-bold text-red-600">
                       {(runResults["auto-tagging"]?.results || []).filter(r => !r.success).length}
                     </p>
@@ -433,7 +433,7 @@ export function ResultsViewerDialog({
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="py-2 text-xs text-zinc-500 max-w-xs truncate">
+                          <TableCell className="py-2 text-xs text-muted-foreground max-w-xs truncate">
                             {result.reason || "-"}
                           </TableCell>
                         </TableRow>
@@ -443,8 +443,8 @@ export function ResultsViewerDialog({
                 </ScrollArea>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
-                <Tag className="h-12 w-12 mb-4 text-zinc-300" />
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <Tag className="h-12 w-12 mb-4 text-muted-foreground" />
                 <p className="font-medium">No Auto-Tagging Data</p>
                 <p className="text-sm">Run the Auto-Tagging service to see results here</p>
               </div>

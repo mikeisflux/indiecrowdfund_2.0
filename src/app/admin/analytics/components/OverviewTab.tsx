@@ -23,7 +23,7 @@ export function OverviewTab({ categoryData, formatCurrency }: OverviewTabProps) 
         </CardHeader>
         <CardContent>
           {categoryData.length === 0 ? (
-            <p className="text-center text-zinc-500 py-8">No category data available</p>
+            <p className="text-center text-muted-foreground py-8">No category data available</p>
           ) : (
             <div className="space-y-4">
               {categoryData.map((cat) => {
@@ -33,7 +33,7 @@ export function OverviewTab({ categoryData, formatCurrency }: OverviewTabProps) 
                   <div key={cat.category}>
                     <div className="mb-1 flex items-center justify-between text-sm">
                       <span className="font-medium">{cat.category}</span>
-                      <span className="text-zinc-500">
+                      <span className="text-muted-foreground">
                         {formatCurrency(cat.totalFunding)} ({cat.count} projects)
                       </span>
                     </div>

@@ -45,9 +45,9 @@ interface EditFileDialogProps {
 }
 
 function getFileIcon(mimeType: string) {
-  if (mimeType.startsWith("image")) return <ImageIcon className="h-5 w-5 text-zinc-400" />;
-  if (mimeType.startsWith("video")) return <Video className="h-5 w-5 text-zinc-400" />;
-  return <FileText className="h-5 w-5 text-zinc-400" />;
+  if (mimeType.startsWith("image")) return <ImageIcon className="h-5 w-5 text-muted-foreground" />;
+  if (mimeType.startsWith("video")) return <Video className="h-5 w-5 text-muted-foreground" />;
+  return <FileText className="h-5 w-5 text-muted-foreground" />;
 }
 
 export function EditFileDialog({
@@ -74,7 +74,7 @@ export function EditFileDialog({
         <div className="grid gap-6 py-4 md:grid-cols-2">
           {/* Preview */}
           <div>
-            <div className="aspect-square rounded-lg bg-zinc-100 dark:bg-zinc-800 overflow-hidden relative mb-4">
+            <div className="aspect-square rounded-lg bg-muted dark:bg-zinc-800 overflow-hidden relative mb-4">
               {file.thumbnailUrl || (file.mimeType.startsWith("image") && file.url) ? (
                 <Image
                   src={file.thumbnailUrl || file.url}
@@ -90,26 +90,26 @@ export function EditFileDialog({
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Size:</span>
+                <span className="text-muted-foreground">Size:</span>
                 <span>{formatFileSize(file.size)}</span>
               </div>
               {file.width && file.height && (
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Dimensions:</span>
+                  <span className="text-muted-foreground">Dimensions:</span>
                   <span>{file.width} x {file.height}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-zinc-500">Type:</span>
+                <span className="text-muted-foreground">Type:</span>
                 <span>{file.mimeType}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Uploaded:</span>
+                <span className="text-muted-foreground">Uploaded:</span>
                 <span>{new Date(file.createdAt).toLocaleString()}</span>
               </div>
               {file.uploader && (
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">By:</span>
+                  <span className="text-muted-foreground">By:</span>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={file.uploader.image || undefined} />

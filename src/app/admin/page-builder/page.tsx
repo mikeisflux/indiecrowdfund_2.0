@@ -376,7 +376,7 @@ export default function PageBuilderPage() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-4" />
-          <p className="text-zinc-500">Loading page builder...</p>
+          <p className="text-muted-foreground">Loading page builder...</p>
         </div>
       </div>
     );
@@ -388,12 +388,12 @@ export default function PageBuilderPage() {
       <div className="hidden lg:block w-64 flex-shrink-0 overflow-y-auto rounded-lg border bg-white dark:bg-zinc-900">
         <div className="p-4 border-b">
           <h3 className="font-semibold">Components</h3>
-          <p className="text-xs text-zinc-500">Drag and drop to add</p>
+          <p className="text-xs text-muted-foreground">Drag and drop to add</p>
         </div>
         <div className="p-2">
           {componentLibrary.map((category) => (
             <div key={category.category} className="mb-4">
-              <h4 className="px-2 py-1 text-xs font-semibold text-zinc-500 uppercase">
+              <h4 className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
                 {category.category}
               </h4>
               <div className="space-y-1">
@@ -403,12 +403,12 @@ export default function PageBuilderPage() {
                     draggable
                     onDragStart={(e) => handleDragStart(e, item.type)}
                     onDragEnd={handleDragEnd}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2 cursor-grab hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 cursor-grab hover:bg-muted dark:hover:bg-zinc-800 transition-colors ${
                       draggedItem === item.type ? "opacity-50" : ""
                     }`}
                   >
-                    <GripVertical className="h-4 w-4 text-zinc-400" />
-                    <item.icon className="h-4 w-4 text-zinc-600" />
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                    <item.icon className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">{item.label}</span>
                   </div>
                 ))}
@@ -519,11 +519,11 @@ export default function PageBuilderPage() {
 
         {/* Canvas */}
         {pages.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center rounded-lg border bg-zinc-100 dark:bg-zinc-800">
+          <div className="flex-1 flex items-center justify-center rounded-lg border bg-muted dark:bg-zinc-800">
             <div className="text-center">
-              <FileText className="h-12 w-12 text-zinc-300 mx-auto mb-4" />
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No pages yet</h3>
-              <p className="text-sm text-zinc-500 mb-4">Create your first page to get started</p>
+              <p className="text-sm text-muted-foreground mb-4">Create your first page to get started</p>
               <Button onClick={() => setShowNewPageDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Page
@@ -531,7 +531,7 @@ export default function PageBuilderPage() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto rounded-lg border bg-zinc-100 dark:bg-zinc-800">
+          <div className="flex-1 overflow-y-auto rounded-lg border bg-muted dark:bg-zinc-800">
             <div
               className="mx-auto bg-white dark:bg-zinc-900 min-h-full transition-all duration-300"
               style={{ maxWidth: getPreviewWidth() }}
@@ -646,10 +646,10 @@ export default function PageBuilderPage() {
                         {child.type === "featured-projects" && (
                           <div className="grid grid-cols-4 gap-4">
                             {[1, 2, 3, 4].map((i) => (
-                              <div key={i} className="rounded-lg border bg-zinc-50 p-4 dark:bg-zinc-800">
+                              <div key={i} className="rounded-lg border bg-muted/50 p-4 dark:bg-zinc-800">
                                 <div className="h-24 bg-zinc-200 rounded mb-3 dark:bg-zinc-700" />
                                 <div className="h-3 bg-zinc-200 rounded mb-2 dark:bg-zinc-700" />
-                                <div className="h-2 bg-zinc-100 rounded w-2/3 dark:bg-zinc-800" />
+                                <div className="h-2 bg-muted rounded w-2/3 dark:bg-zinc-800" />
                               </div>
                             ))}
                           </div>
@@ -659,14 +659,14 @@ export default function PageBuilderPage() {
                             {(child.settings.stats as Array<{ value: string; label: string }>).map((stat, i) => (
                               <div key={i}>
                                 <p className="text-4xl font-bold text-emerald-600">{stat.value}</p>
-                                <p className="text-zinc-500 mt-1">{stat.label}</p>
+                                <p className="text-muted-foreground mt-1">{stat.label}</p>
                               </div>
                             ))}
                           </div>
                         )}
                         {/* Generic placeholder for other types */}
                         {!["heading", "text", "button", "featured-projects", "stats-counter"].includes(child.type) && (
-                          <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-4 text-center text-sm text-zinc-500">
+                          <div className="bg-muted dark:bg-zinc-800 rounded-lg p-4 text-center text-sm text-muted-foreground">
                             [{child.type}]
                           </div>
                         )}
@@ -741,8 +741,8 @@ export default function PageBuilderPage() {
             </div>
           </div>
         ) : (
-          <div className="p-8 text-center text-zinc-500">
-            <MousePointer className="h-8 w-8 mx-auto mb-3 text-zinc-300" />
+          <div className="p-8 text-center text-muted-foreground">
+            <MousePointer className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
             <p>Select a component to edit its settings</p>
           </div>
         )}
@@ -759,7 +759,7 @@ export default function PageBuilderPage() {
             <div className="grid gap-6 md:grid-cols-2">
               {componentLibrary.map((category) => (
                 <div key={category.category}>
-                  <h4 className="text-sm font-semibold text-zinc-500 mb-2">{category.category}</h4>
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-2">{category.category}</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {category.items.map((item) => (
                       <button
@@ -782,9 +782,9 @@ export default function PageBuilderPage() {
                           }
                           setShowAddDialog(false);
                         }}
-                        className="flex items-center gap-2 rounded-lg border p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-left"
+                        className="flex items-center gap-2 rounded-lg border p-3 hover:bg-muted/50 dark:hover:bg-zinc-800 transition-colors text-left"
                       >
-                        <item.icon className="h-5 w-5 text-zinc-500" />
+                        <item.icon className="h-5 w-5 text-muted-foreground" />
                         <span className="text-sm">{item.label}</span>
                       </button>
                     ))}
@@ -827,7 +827,7 @@ export default function PageBuilderPage() {
                 onChange={(e) => setNewPageSlug(e.target.value.toLowerCase().replace(/\s+/g, "-"))}
                 placeholder="about-us"
               />
-              <p className="text-xs text-zinc-500">Your page will be available at: /{newPageSlug || "slug"}</p>
+              <p className="text-xs text-muted-foreground">Your page will be available at: /{newPageSlug || "slug"}</p>
             </div>
           </div>
           <DialogFooter>

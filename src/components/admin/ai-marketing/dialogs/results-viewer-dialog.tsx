@@ -151,7 +151,7 @@ export function ResultsViewerDialog({
 function EmptyState({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-      <Icon className="h-12 w-12 mb-4 text-zinc-300" />
+      <Icon className="h-12 w-12 mb-4 text-muted-foreground" />
       <p className="font-medium">{title}</p>
       <p className="text-sm">{subtitle}</p>
     </div>

@@ -718,7 +718,7 @@ export function EmailCampaignsTab({
               <p className="text-center font-medium">Auto-Tag Projects</p>
               <p className="text-center text-sm text-muted-foreground">AI analyzes content and generates tags</p>
             </div>
-            <ArrowRight className="h-6 w-6 text-zinc-300" />
+            <ArrowRight className="h-6 w-6 text-muted-foreground" />
             <div className="flex flex-1 flex-col items-center gap-2 p-4">
               <div className="rounded-full bg-blue-100 p-4">
                 <Users className="h-8 w-8 text-blue-600" />
@@ -726,7 +726,7 @@ export function EmailCampaignsTab({
               <p className="text-center font-medium">Match User Interests</p>
               <p className="text-center text-sm text-muted-foreground">Compare tags to user behavior</p>
             </div>
-            <ArrowRight className="h-6 w-6 text-zinc-300" />
+            <ArrowRight className="h-6 w-6 text-muted-foreground" />
             <div className="flex flex-1 flex-col items-center gap-2 p-4">
               <div className="rounded-full bg-emerald-100 p-4">
                 <Send className="h-8 w-8 text-emerald-600" />
@@ -734,7 +734,7 @@ export function EmailCampaignsTab({
               <p className="text-center font-medium">Send Personalized Email</p>
               <p className="text-center text-sm text-muted-foreground">Deliver relevant projects</p>
             </div>
-            <ArrowRight className="h-6 w-6 text-zinc-300" />
+            <ArrowRight className="h-6 w-6 text-muted-foreground" />
             <div className="flex flex-1 flex-col items-center gap-2 p-4">
               <div className="rounded-full bg-amber-100 p-4">
                 <ShoppingCart className="h-8 w-8 text-amber-600" />

@@ -205,7 +205,7 @@ export function StripePaymentForm({
 
       {/* Submit Button */}
       <Button
-        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-12 text-base shadow-lg shadow-emerald-600/20 disabled:bg-zinc-300 disabled:text-zinc-500 disabled:shadow-none transition-all"
+        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-12 text-base shadow-lg shadow-emerald-600/20 disabled:bg-zinc-300 disabled:text-muted-foreground disabled:shadow-none transition-all"
         size="lg"
         onClick={handleSubmit}
         disabled={!stripe || !elements || !agreedToTerms || isProcessing}

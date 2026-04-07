@@ -237,7 +237,7 @@ export default function ThemesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -248,7 +248,7 @@ export default function ThemesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Themes & Styling</h1>
-          <p className="text-zinc-500">Customize your platform&apos;s visual appearance</p>
+          <p className="text-muted-foreground">Customize your platform&apos;s visual appearance</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {saveMessage && (
@@ -829,7 +829,7 @@ export default function ThemesPage() {
                   <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
                       <Label>Allow User Toggle</Label>
-                      <p className="text-sm text-zinc-500">Let users switch between light and dark mode</p>
+                      <p className="text-sm text-muted-foreground">Let users switch between light and dark mode</p>
                     </div>
                     <Switch
                       checked={appearance.allowUserToggle}
@@ -849,7 +849,7 @@ export default function ThemesPage() {
                   <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
                       <Label>Animations</Label>
-                      <p className="text-sm text-zinc-500">Enable smooth animations and transitions</p>
+                      <p className="text-sm text-muted-foreground">Enable smooth animations and transitions</p>
                     </div>
                     <Switch
                       checked={appearance.animationsEnabled}
@@ -862,7 +862,7 @@ export default function ThemesPage() {
                   <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
                       <Label>Reduced Motion</Label>
-                      <p className="text-sm text-zinc-500">Respect user&apos;s reduced motion preference</p>
+                      <p className="text-sm text-muted-foreground">Respect user&apos;s reduced motion preference</p>
                     </div>
                     <Switch
                       checked={appearance.reducedMotion}
@@ -875,7 +875,7 @@ export default function ThemesPage() {
                   <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
                       <Label>High Contrast Mode</Label>
-                      <p className="text-sm text-zinc-500">Increase contrast for better visibility</p>
+                      <p className="text-sm text-muted-foreground">Increase contrast for better visibility</p>
                     </div>
                     <Switch
                       checked={appearance.highContrast}

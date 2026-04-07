@@ -114,16 +114,16 @@ export function SetVanityUrlDialog({
 
         <div className="space-y-4 py-4">
           {/* Project Info */}
-          <div className="rounded-lg border p-3 bg-zinc-50 dark:bg-zinc-800/50">
-            <p className="text-xs text-zinc-500 mb-1">Project</p>
+          <div className="rounded-lg border p-3 bg-muted/50 dark:bg-zinc-800/50">
+            <p className="text-xs text-muted-foreground mb-1">Project</p>
             <p className="font-medium">{projectTitle}</p>
           </div>
 
           {/* Current URL */}
           <div className="space-y-2">
-            <Label className="text-zinc-500">Current URL</Label>
-            <div className="flex items-center gap-2 p-2 rounded border bg-zinc-100 dark:bg-zinc-800 font-mono text-sm">
-              <span className="text-zinc-500">indiecrowdfund.com</span>
+            <Label className="text-muted-foreground">Current URL</Label>
+            <div className="flex items-center gap-2 p-2 rounded border bg-muted dark:bg-zinc-800 font-mono text-sm">
+              <span className="text-muted-foreground">indiecrowdfund.com</span>
               <span className="text-zinc-900 dark:text-white">{currentUrl}</span>
             </div>
           </div>
@@ -142,7 +142,7 @@ export function SetVanityUrlDialog({
               }}
               disabled={isSubmitting || success}
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               3-30 characters. Letters, numbers, hyphens, and underscores only.
             </p>
           </div>
@@ -150,9 +150,9 @@ export function SetVanityUrlDialog({
           {/* New URL Preview */}
           {vanityUrl.trim() && (
             <div className="space-y-2">
-              <Label className="text-zinc-500">New URL Preview</Label>
+              <Label className="text-muted-foreground">New URL Preview</Label>
               <div className="flex items-center gap-2 p-2 rounded border bg-emerald-50 dark:bg-emerald-900/20 font-mono text-sm">
-                <span className="text-zinc-500">indiecrowdfund.com</span>
+                <span className="text-muted-foreground">indiecrowdfund.com</span>
                 <span className="text-emerald-700 dark:text-emerald-400">{newUrl}</span>
               </div>
             </div>
@@ -175,7 +175,7 @@ export function SetVanityUrlDialog({
           )}
 
           {/* Note about legacy URLs */}
-          <div className="text-xs text-zinc-500 border-t pt-4">
+          <div className="text-xs text-muted-foreground border-t pt-4">
             <strong>Note:</strong> The old URL (<code>/projects/{projectSlug}</code>) will continue to work via redirect.
           </div>
         </div>

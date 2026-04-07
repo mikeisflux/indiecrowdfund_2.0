@@ -79,13 +79,13 @@ export function SendEmailDialog({ open, onOpenChange, user }: SendEmailDialogPro
 
         <div className="py-2 space-y-4">
           {/* User badge */}
-          <div className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700 font-medium text-zinc-600 dark:text-zinc-300 text-sm shrink-0">
+          <div className="flex items-center gap-3 p-3 bg-muted/50 dark:bg-zinc-900 rounded-lg">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700 font-medium text-muted-foreground dark:text-muted-foreground text-sm shrink-0">
               {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
               <p className="font-medium text-sm truncate">{user.name || "No name"}</p>
-              <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
             </div>
           </div>
 

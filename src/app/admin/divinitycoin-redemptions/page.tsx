@@ -370,7 +370,7 @@ export default function DivinityCoinRedemptionsPage() {
             </div>
             DC Transactions
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400 mt-1">
+          <p className="text-muted-foreground dark:text-muted-foreground mt-1">
             DivinityCoin transaction history and audit log
           </p>
         </div>
@@ -394,45 +394,45 @@ export default function DivinityCoinRedemptionsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">Payments</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Payments</CardTitle>
             <CreditCard className="w-4 h-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.payments.count}</div>
-            <p className="text-xs text-zinc-500 mt-1">{formatCurrency(stats.payments.total)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{formatCurrency(stats.payments.total)}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">Redemptions</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Redemptions</CardTitle>
             <ArrowDownLeft className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.redemptions.count}</div>
-            <p className="text-xs text-zinc-500 mt-1">{formatCurrency(stats.redemptions.total)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{formatCurrency(stats.redemptions.total)}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">Refunds</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Refunds</CardTitle>
             <Undo2 className="w-4 h-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.refunds.count}</div>
-            <p className="text-xs text-zinc-500 mt-1">{formatCurrency(stats.refunds.total)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{formatCurrency(stats.refunds.total)}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">Total</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
             <DollarSign className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalTransactions}</div>
-            <p className="text-xs text-zinc-500 mt-1">All transactions</p>
+            <p className="text-xs text-muted-foreground mt-1">All transactions</p>
           </CardContent>
         </Card>
       </div>
@@ -442,7 +442,7 @@ export default function DivinityCoinRedemptionsPage() {
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search by user name, email, or description..."
                 className="pl-10"
@@ -483,8 +483,8 @@ export default function DivinityCoinRedemptionsPage() {
               <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
             </div>
           ) : transactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-              <Coins className="w-12 h-12 mb-4 text-zinc-300" />
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <Coins className="w-12 h-12 mb-4 text-muted-foreground" />
               <p className="text-lg font-medium">No transactions found</p>
               <p className="text-sm">DivinityCoin transactions will appear here</p>
             </div>
@@ -505,37 +505,37 @@ export default function DivinityCoinRedemptionsPage() {
                 {transactions.map((txn) => (
                   <TableRow
                     key={txn.id}
-                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    className="hover:bg-muted/50 dark:hover:bg-zinc-800/50"
                   >
-                    <TableCell className="whitespace-nowrap text-sm text-zinc-500">
+                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                       {format(new Date(txn.createdAt), "MMM d, yyyy")}
                       <br />
                       <span className="text-xs">{format(new Date(txn.createdAt), "h:mm a")}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center flex-shrink-0">
-                          <User className="w-4 h-4 text-zinc-400" />
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <User className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">{txn.user.name || "Unknown"}</p>
-                          <p className="text-xs text-zinc-500 truncate">{txn.user.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">{txn.user.email}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>{getTypeBadge(txn.type)}</TableCell>
                     <TableCell>
-                      <p className="text-sm text-zinc-600 truncate max-w-[200px]">
+                      <p className="text-sm text-muted-foreground truncate max-w-[200px]">
                         {txn.description || "—"}
                       </p>
                     </TableCell>
                     <TableCell>
                       {txn.pledge?.project ? (
-                        <p className="text-sm text-zinc-600 truncate max-w-[150px]">
+                        <p className="text-sm text-muted-foreground truncate max-w-[150px]">
                           {txn.pledge.project.title}
                         </p>
                       ) : (
-                        <span className="text-xs text-zinc-400">—</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -560,7 +560,7 @@ export default function DivinityCoinRedemptionsPage() {
                           }}
                           title="View details"
                         >
-                          <Coins className="w-3.5 h-3.5 text-zinc-500" />
+                          <Coins className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -572,7 +572,7 @@ export default function DivinityCoinRedemptionsPage() {
                           }}
                           title="Edit"
                         >
-                          <Pencil className="w-3.5 h-3.5 text-zinc-500" />
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -599,7 +599,7 @@ export default function DivinityCoinRedemptionsPage() {
       {/* Pagination */}
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             Showing {(pagination.page - 1) * pagination.limit + 1}–
             {Math.min(pagination.page * pagination.limit, pagination.totalCount)} of{" "}
             {pagination.totalCount} transactions
@@ -613,7 +613,7 @@ export default function DivinityCoinRedemptionsPage() {
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="text-sm text-zinc-600">
+            <span className="text-sm text-muted-foreground">
               Page {pagination.page} of {pagination.totalPages}
             </span>
             <Button
@@ -642,13 +642,13 @@ export default function DivinityCoinRedemptionsPage() {
 
               <div className="space-y-4 mt-2">
                 {/* Amount & Type */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 dark:bg-zinc-800">
                   <div>
-                    <p className="text-sm text-zinc-500">Type</p>
+                    <p className="text-sm text-muted-foreground">Type</p>
                     <div className="mt-1">{getTypeBadge(selectedTransaction.type)}</div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-zinc-500">Amount</p>
+                    <p className="text-sm text-muted-foreground">Amount</p>
                     <p
                       className={`text-2xl font-bold ${
                         selectedTransaction.amount >= 0 ? "text-emerald-600" : "text-red-600"
@@ -662,14 +662,14 @@ export default function DivinityCoinRedemptionsPage() {
 
                 {/* User Info */}
                 <div className="p-4 rounded-lg border">
-                  <p className="text-sm text-zinc-500 mb-2">User</p>
+                  <p className="text-sm text-muted-foreground mb-2">User</p>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center">
-                      <User className="w-5 h-5 text-zinc-400" />
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      <User className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="font-medium">{selectedTransaction.user.name || "Unknown"}</p>
-                      <p className="text-sm text-zinc-500">{selectedTransaction.user.email}</p>
+                      <p className="text-sm text-muted-foreground">{selectedTransaction.user.email}</p>
                     </div>
                   </div>
                 </div>
@@ -677,7 +677,7 @@ export default function DivinityCoinRedemptionsPage() {
                 {/* Description */}
                 {selectedTransaction.description && (
                   <div className="p-4 rounded-lg border">
-                    <p className="text-sm text-zinc-500 mb-1">Description</p>
+                    <p className="text-sm text-muted-foreground mb-1">Description</p>
                     <p className="text-sm">{selectedTransaction.description}</p>
                   </div>
                 )}
@@ -685,25 +685,25 @@ export default function DivinityCoinRedemptionsPage() {
                 {/* Project/Pledge Info */}
                 {selectedTransaction.pledge && (
                   <div className="p-4 rounded-lg border">
-                    <p className="text-sm text-zinc-500 mb-2">Linked Pledge</p>
+                    <p className="text-sm text-muted-foreground mb-2">Linked Pledge</p>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-zinc-500">Project</span>
+                        <span className="text-muted-foreground">Project</span>
                         <span className="font-medium">{selectedTransaction.pledge.project.title}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-zinc-500">Pledge Amount</span>
+                        <span className="text-muted-foreground">Pledge Amount</span>
                         <span className="font-medium">{formatCurrency(selectedTransaction.pledge.amount)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-zinc-500">Pledge Status</span>
+                        <span className="text-muted-foreground">Pledge Status</span>
                         <Badge variant="outline" className="text-xs">
                           {selectedTransaction.pledge.status}
                         </Badge>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-zinc-500">Pledge ID</span>
-                        <span className="text-xs font-mono text-zinc-400">{selectedTransaction.pledge.id}</span>
+                        <span className="text-muted-foreground">Pledge ID</span>
+                        <span className="text-xs font-mono text-muted-foreground">{selectedTransaction.pledge.id}</span>
                       </div>
                     </div>
                   </div>
@@ -712,12 +712,12 @@ export default function DivinityCoinRedemptionsPage() {
                 {/* Metadata */}
                 {selectedTransaction.metadata && Object.keys(selectedTransaction.metadata).length > 0 && (
                   <div className="p-4 rounded-lg border">
-                    <p className="text-sm text-zinc-500 mb-2">Audit Metadata</p>
+                    <p className="text-sm text-muted-foreground mb-2">Audit Metadata</p>
                     <div className="space-y-1 text-sm">
                       {Object.entries(selectedTransaction.metadata).map(([key, value]) => (
                         <div key={key} className="flex justify-between gap-4">
-                          <span className="text-zinc-500 whitespace-nowrap">{key}</span>
-                          <span className="font-mono text-xs text-zinc-600 truncate text-right">
+                          <span className="text-muted-foreground whitespace-nowrap">{key}</span>
+                          <span className="font-mono text-xs text-muted-foreground truncate text-right">
                             {typeof value === "object" ? JSON.stringify(value) : String(value ?? "—")}
                           </span>
                         </div>
@@ -728,14 +728,14 @@ export default function DivinityCoinRedemptionsPage() {
 
                 {/* Timestamps */}
                 <div className="p-4 rounded-lg border">
-                  <p className="text-sm text-zinc-500 mb-2">Details</p>
+                  <p className="text-sm text-muted-foreground mb-2">Details</p>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-zinc-500">Transaction ID</span>
-                      <span className="font-mono text-xs text-zinc-400">{selectedTransaction.id}</span>
+                      <span className="text-muted-foreground">Transaction ID</span>
+                      <span className="font-mono text-xs text-muted-foreground">{selectedTransaction.id}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-zinc-500">Created</span>
+                      <span className="text-muted-foreground">Created</span>
                       <span>{format(new Date(selectedTransaction.createdAt), "MMM d, yyyy h:mm a")}</span>
                     </div>
                   </div>
@@ -791,15 +791,15 @@ export default function DivinityCoinRedemptionsPage() {
                   value={formUserId}
                   onChange={(e) => setFormUserId(e.target.value)}
                 />
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   The user&apos;s database ID (find in admin Users page)
                 </p>
               </div>
             )}
 
             {editingTransaction && (
-              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800">
-                <p className="text-xs text-zinc-500">User</p>
+              <div className="p-3 rounded-lg bg-muted/50 dark:bg-zinc-800">
+                <p className="text-xs text-muted-foreground">User</p>
                 <p className="font-medium text-sm">
                   {editingTransaction.user.name || editingTransaction.user.email}
                 </p>
@@ -826,7 +826,7 @@ export default function DivinityCoinRedemptionsPage() {
             <div className="space-y-2">
               <Label htmlFor="amount">Amount (USD)</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   id="amount"
                   type="number"
@@ -837,7 +837,7 @@ export default function DivinityCoinRedemptionsPage() {
                   onChange={(e) => setFormAmount(e.target.value)}
                 />
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 Use negative values for deductions (refunds, deductions)
               </p>
             </div>
@@ -898,23 +898,23 @@ export default function DivinityCoinRedemptionsPage() {
           {deleteTarget && (
             <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Type</span>
+                <span className="text-muted-foreground">Type</span>
                 <span className="font-medium">{deleteTarget.type}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Amount</span>
+                <span className="text-muted-foreground">Amount</span>
                 <span className="font-bold">
                   {deleteTarget.amount >= 0 ? "+" : "-"}
                   {formatCurrency(deleteTarget.amount)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">User</span>
+                <span className="text-muted-foreground">User</span>
                 <span>{deleteTarget.user.name || deleteTarget.user.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">ID</span>
-                <span className="font-mono text-xs text-zinc-400">{deleteTarget.id}</span>
+                <span className="text-muted-foreground">ID</span>
+                <span className="font-mono text-xs text-muted-foreground">{deleteTarget.id}</span>
               </div>
             </div>
           )}

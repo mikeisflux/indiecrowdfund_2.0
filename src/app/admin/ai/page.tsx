@@ -331,7 +331,7 @@ export default function AIControlPage() {
             <Brain className="h-6 w-6 sm:h-7 sm:w-7 text-violet-600" />
             AI Control Center
           </h1>
-          <p className="text-zinc-500">Manage and trigger AI services</p>
+          <p className="text-muted-foreground">Manage and trigger AI services</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Badge
@@ -368,7 +368,7 @@ export default function AIControlPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{(stats.totalUsers ?? 0).toLocaleString()}</p>
-                <p className="text-xs text-zinc-500">Total Users</p>
+                <p className="text-xs text-muted-foreground">Total Users</p>
               </div>
             </div>
           </CardContent>
@@ -381,7 +381,7 @@ export default function AIControlPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{(stats.totalProjects ?? 0).toLocaleString()}</p>
-                <p className="text-xs text-zinc-500">Total Projects</p>
+                <p className="text-xs text-muted-foreground">Total Projects</p>
               </div>
             </div>
           </CardContent>
@@ -394,7 +394,7 @@ export default function AIControlPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{(stats.behaviorEvents ?? 0).toLocaleString()}</p>
-                <p className="text-xs text-zinc-500">Events (30 days)</p>
+                <p className="text-xs text-muted-foreground">Events (30 days)</p>
               </div>
             </div>
           </CardContent>
@@ -407,7 +407,7 @@ export default function AIControlPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{(stats.emailsSent ?? 0).toLocaleString()}</p>
-                <p className="text-xs text-zinc-500">Emails (7 days)</p>
+                <p className="text-xs text-muted-foreground">Emails (7 days)</p>
               </div>
             </div>
           </CardContent>
@@ -471,7 +471,7 @@ export default function AIControlPage() {
                     <div className="flex items-center gap-3">
                       <div
                         className={`rounded-lg p-2 ${
-                          service.enabled ? "bg-violet-100 text-violet-600" : "bg-zinc-100 text-zinc-400"
+                          service.enabled ? "bg-violet-100 text-violet-600" : "bg-muted text-muted-foreground"
                         }`}
                       >
                         {service.icon}
@@ -488,17 +488,17 @@ export default function AIControlPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-500">Status</span>
+                    <span className="text-muted-foreground">Status</span>
                     {getStatusBadge(service.status)}
                   </div>
                   {service.lastRun && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-zinc-500">Last Run</span>
+                      <span className="text-muted-foreground">Last Run</span>
                       <span className="text-xs">{service.lastRun}</span>
                     </div>
                   )}
                   {service.result && (
-                    <p className="text-xs text-zinc-600 bg-zinc-50 dark:bg-zinc-900 rounded p-2">
+                    <p className="text-xs text-muted-foreground bg-muted/50 dark:bg-zinc-900 rounded p-2">
                       {service.result}
                     </p>
                   )}
@@ -556,14 +556,14 @@ export default function AIControlPage() {
                         />
                         <div
                           className={`rounded-lg p-2 ${
-                            job.enabled ? "bg-violet-100 text-violet-600" : "bg-zinc-100 text-zinc-400"
+                            job.enabled ? "bg-violet-100 text-violet-600" : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {service?.icon}
                         </div>
                         <div>
                           <p className="font-medium">{service?.name}</p>
-                          <p className="text-xs text-zinc-500">{service?.description}</p>
+                          <p className="text-xs text-muted-foreground">{service?.description}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -590,7 +590,7 @@ export default function AIControlPage() {
                             </SelectContent>
                           </Select>
                           {job.enabled && job.nextRun && (
-                            <p className="text-xs text-zinc-500 mt-1">Next: {job.nextRun}</p>
+                            <p className="text-xs text-muted-foreground mt-1">Next: {job.nextRun}</p>
                           )}
                         </div>
                         <Button
@@ -650,7 +650,7 @@ export default function AIControlPage() {
                   <Input placeholder="0 2 * * *" />
                 </div>
               </div>
-              <div className="text-xs text-zinc-500">
+              <div className="text-xs text-muted-foreground">
                 <p className="font-medium mb-1">CRON Format: minute hour day month weekday</p>
                 <p>Examples:</p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
@@ -673,8 +673,8 @@ export default function AIControlPage() {
           {Object.keys(runResults).length === 0 ? (
             <Card>
               <CardContent className="py-12">
-                <div className="text-center text-zinc-500">
-                  <History className="h-12 w-12 mx-auto mb-4 text-zinc-300" />
+                <div className="text-center text-muted-foreground">
+                  <History className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="font-medium">No runs yet</p>
                   <p className="text-sm">Click &quot;Run Now&quot; on any service to see results here.</p>
                 </div>
@@ -693,16 +693,16 @@ export default function AIControlPage() {
                         </div>
                         <div>
                           <p className="font-medium text-sm">Predictive Analytics</p>
-                          <p className="text-xs text-zinc-500">{services.find(s => s.id === "predictive-analytics")?.lastRun}</p>
+                          <p className="text-xs text-muted-foreground">{services.find(s => s.id === "predictive-analytics")?.lastRun}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <p className="text-zinc-500 text-xs">Analyzed</p>
+                          <p className="text-muted-foreground text-xs">Analyzed</p>
                           <p className="font-semibold">{((runResults["predictive-analytics"] as { summary?: { totalAnalyzed?: number } })?.summary?.totalAnalyzed) || 0}</p>
                         </div>
                         <div>
-                          <p className="text-zinc-500 text-xs">High Value</p>
+                          <p className="text-muted-foreground text-xs">High Value</p>
                           <p className="font-semibold text-emerald-600">{((runResults["predictive-analytics"] as { summary?: { highValueProspects?: number } })?.summary?.highValueProspects) || 0}</p>
                         </div>
                       </div>
@@ -719,16 +719,16 @@ export default function AIControlPage() {
                         </div>
                         <div>
                           <p className="font-medium text-sm">Smart Segmentation</p>
-                          <p className="text-xs text-zinc-500">{services.find(s => s.id === "smart-segmentation")?.lastRun}</p>
+                          <p className="text-xs text-muted-foreground">{services.find(s => s.id === "smart-segmentation")?.lastRun}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <p className="text-zinc-500 text-xs">Segments</p>
+                          <p className="text-muted-foreground text-xs">Segments</p>
                           <p className="font-semibold">{((runResults["smart-segmentation"] as { segments?: unknown[] })?.segments || []).length}</p>
                         </div>
                         <div>
-                          <p className="text-zinc-500 text-xs">Users</p>
+                          <p className="text-muted-foreground text-xs">Users</p>
                           <p className="font-semibold">{((runResults["smart-segmentation"] as { totalUsers?: number })?.totalUsers) || 0}</p>
                         </div>
                       </div>
@@ -745,16 +745,16 @@ export default function AIControlPage() {
                         </div>
                         <div>
                           <p className="font-medium text-sm">Send Time Optimization</p>
-                          <p className="text-xs text-zinc-500">{services.find(s => s.id === "send-time-optimization")?.lastRun}</p>
+                          <p className="text-xs text-muted-foreground">{services.find(s => s.id === "send-time-optimization")?.lastRun}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <p className="text-zinc-500 text-xs">Analyzed</p>
+                          <p className="text-muted-foreground text-xs">Analyzed</p>
                           <p className="font-semibold">{((runResults["send-time-optimization"] as { summary?: { totalAnalyzed?: number } })?.summary?.totalAnalyzed) || 0}</p>
                         </div>
                         <div>
-                          <p className="text-zinc-500 text-xs">Peak Hour</p>
+                          <p className="text-muted-foreground text-xs">Peak Hour</p>
                           <p className="font-semibold text-amber-600">
                             {((runResults["send-time-optimization"] as { summary?: { peakHour?: number } })?.summary?.peakHour) !== undefined
                               ? `${(runResults["send-time-optimization"] as { summary: { peakHour: number } }).summary.peakHour}:00`
@@ -775,16 +775,16 @@ export default function AIControlPage() {
                         </div>
                         <div>
                           <p className="font-medium text-sm">Auto-Tagging</p>
-                          <p className="text-xs text-zinc-500">{services.find(s => s.id === "auto-tagging")?.lastRun}</p>
+                          <p className="text-xs text-muted-foreground">{services.find(s => s.id === "auto-tagging")?.lastRun}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <p className="text-zinc-500 text-xs">Processed</p>
+                          <p className="text-muted-foreground text-xs">Processed</p>
                           <p className="font-semibold">{((runResults["auto-tagging"] as { results?: unknown[] })?.results || []).length}</p>
                         </div>
                         <div>
-                          <p className="text-zinc-500 text-xs">Tagged</p>
+                          <p className="text-muted-foreground text-xs">Tagged</p>
                           <p className="font-semibold text-emerald-600">
                             {((runResults["auto-tagging"] as { results?: { success: boolean }[] })?.results || []).filter(r => r.success).length}
                           </p>
@@ -867,7 +867,7 @@ export default function AIControlPage() {
                             <p className="font-medium text-sm">{segment.name}</p>
                             <Badge variant="secondary" className="text-xs">{segment.userCount}</Badge>
                           </div>
-                          <p className="text-xs text-zinc-500 mb-2">{segment.description}</p>
+                          <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>
                           <div className="flex flex-wrap gap-1">
                             {(Array.isArray(segment.criteria) ? segment.criteria : []).slice(0, 2).map((c, j) => (
                               <Badge key={j} variant="outline" className="text-xs">{c}</Badge>
@@ -911,12 +911,12 @@ export default function AIControlPage() {
                               style={{ height: `${heightPercent}%`, minHeight: slot.count > 0 ? "4px" : "0" }}
                               title={`${slot.hour}:00 - ${slot.count} users`}
                             />
-                            <span className="text-[10px] text-zinc-500">{slot.hour}</span>
+                            <span className="text-[10px] text-muted-foreground">{slot.hour}</span>
                           </div>
                         );
                       })}
                     </div>
-                    <p className="text-xs text-zinc-500 mt-2 text-center">Hour of day (0-23) • Peak hour highlighted in amber</p>
+                    <p className="text-xs text-muted-foreground mt-2 text-center">Hour of day (0-23) • Peak hour highlighted in amber</p>
                   </CardContent>
                 </Card>
               )}
@@ -925,7 +925,7 @@ export default function AIControlPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <History className="h-5 w-5 text-zinc-600" />
+                    <History className="h-5 w-5 text-muted-foreground" />
                     All Run Results (Raw Data)
                   </CardTitle>
                   <CardDescription>Click on any service card above to view detailed results</CardDescription>
@@ -943,14 +943,14 @@ export default function AIControlPage() {
                               </div>
                               <div>
                                 <p className="font-medium">{service?.name}</p>
-                                <p className="text-xs text-zinc-500">{service?.lastRun}</p>
+                                <p className="text-xs text-muted-foreground">{service?.lastRun}</p>
                               </div>
                             </div>
                             <Badge variant={(result as { success?: boolean })?.success ? "default" : "destructive"}>
                               {(result as { success?: boolean })?.success ? "Success" : "Failed"}
                             </Badge>
                           </div>
-                          <pre className="text-xs bg-zinc-50 dark:bg-zinc-900 rounded p-3 overflow-auto max-h-32">
+                          <pre className="text-xs bg-muted/50 dark:bg-zinc-900 rounded p-3 overflow-auto max-h-32">
                             {JSON.stringify(result, null, 2)}
                           </pre>
                         </div>

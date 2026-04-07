@@ -253,7 +253,7 @@ export default function TermsPage() {
                 <select
                   value={activeTab}
                   onChange={(e) => setActiveTab(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-medium dark:border-zinc-700 dark:bg-zinc-800"
+                  className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm font-medium dark:border-zinc-700 dark:bg-zinc-800"
                 >
                   <option value="terms">Terms of Service</option>
                   <option value="privacy">Privacy Policy</option>

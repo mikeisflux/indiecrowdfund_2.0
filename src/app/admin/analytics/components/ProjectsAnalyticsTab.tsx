@@ -27,7 +27,7 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
   if (!projectsData) {
     return (
       <Card>
-        <CardContent className="py-12 text-center text-zinc-500">
+        <CardContent className="py-12 text-center text-muted-foreground">
           No project data available
         </CardContent>
       </Card>
@@ -41,7 +41,7 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
         {projectsData.byStatus.map((status) => (
           <Card key={status.status}>
             <CardContent className="p-6">
-              <p className="text-sm font-medium text-zinc-500">{status.status}</p>
+              <p className="text-sm font-medium text-muted-foreground">{status.status}</p>
               <p className="mt-1 text-2xl font-bold">{status.count}</p>
             </CardContent>
           </Card>
@@ -58,7 +58,7 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
             {Object.entries(projectsData.fundingDistribution).map(([range, count]) => (
               <div key={range} className="text-center p-4 rounded-lg border">
                 <p className="text-2xl font-bold text-zinc-900 dark:text-white">{count}</p>
-                <p className="text-sm text-zinc-500">{range}</p>
+                <p className="text-sm text-muted-foreground">{range}</p>
               </div>
             ))}
           </div>
@@ -72,7 +72,7 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
         </CardHeader>
         <CardContent>
           {projectsData.recent.length === 0 ? (
-            <p className="text-center text-zinc-500 py-8">No recent projects</p>
+            <p className="text-center text-muted-foreground py-8">No recent projects</p>
           ) : (
             <>
               {/* Mobile cards */}
@@ -86,7 +86,7 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
                         {project.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       {project.backerCount} backers &bull; Created{" "}
                       {new Date(project.createdAt).toLocaleDateString()}
                     </p>
@@ -94,7 +94,7 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
                       <span className="font-semibold text-emerald-600">
                         {formatCurrency(project.currentAmount)}
                       </span>
-                      <span className="text-zinc-500">of {formatCurrency(project.goalAmount)}</span>
+                      <span className="text-muted-foreground">of {formatCurrency(project.goalAmount)}</span>
                     </div>
                   </div>
                 ))}
@@ -104,7 +104,7 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-zinc-500">
+                    <tr className="border-b text-muted-foreground">
                       <th className="py-2 text-left font-medium">Project</th>
                       <th className="py-2 text-left font-medium">Category</th>
                       <th className="py-2 text-left font-medium">Status</th>
@@ -129,11 +129,11 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
                         <td className="py-3 text-right font-semibold text-emerald-600">
                           {formatCurrency(project.currentAmount)}
                         </td>
-                        <td className="py-3 text-right text-zinc-500">
+                        <td className="py-3 text-right text-muted-foreground">
                           {formatCurrency(project.goalAmount)}
                         </td>
-                        <td className="py-3 text-right text-zinc-600">{project.backerCount}</td>
-                        <td className="py-3 text-right text-zinc-500 whitespace-nowrap">
+                        <td className="py-3 text-right text-muted-foreground">{project.backerCount}</td>
+                        <td className="py-3 text-right text-muted-foreground whitespace-nowrap">
                           {new Date(project.createdAt).toLocaleDateString()}
                         </td>
                       </tr>

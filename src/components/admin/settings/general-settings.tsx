@@ -121,7 +121,7 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Maintenance Mode</Label>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 Temporarily disable the site for maintenance
               </p>
             </div>
@@ -145,8 +145,8 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
             <div className="space-y-4">
               <Label>Site Logo</Label>
               <div className="flex items-center gap-4">
-                <div className="flex h-24 w-48 items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 bg-zinc-50">
-                  <span className="text-2xl font-bold text-zinc-400">Logo</span>
+                <div className="flex h-24 w-48 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50">
+                  <span className="text-2xl font-bold text-muted-foreground">Logo</span>
                 </div>
                 <Button variant="outline">
                   <Upload className="mr-2 h-4 w-4" />
@@ -157,8 +157,8 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
             <div className="space-y-4">
               <Label>Favicon</Label>
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 bg-zinc-50">
-                  <Globe className="h-6 w-6 text-zinc-400" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50">
+                  <Globe className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <Button variant="outline">
                   <Upload className="mr-2 h-4 w-4" />
@@ -185,7 +185,7 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
               hasExistingValue={settings.googlePlacesApiKey === "••••••••"}
               placeholder="AIza..."
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               Used for location autocomplete in project creation. Get your API key from{" "}
               <a
                 href="https://console.cloud.google.com/apis/credentials"
@@ -199,7 +199,7 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
             </p>
           </div>
           <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-100">
-            <p><span className="text-blue-400">GOOGLE_PLACES_API_KEY</span>=<span className="text-zinc-400">your-api-key</span></p>
+            <p><span className="text-blue-400">GOOGLE_PLACES_API_KEY</span>=<span className="text-muted-foreground">your-api-key</span></p>
           </div>
         </CardContent>
       </Card>

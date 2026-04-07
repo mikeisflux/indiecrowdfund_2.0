@@ -285,7 +285,7 @@ export default function ErrorLogsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <div className="text-2xl font-bold text-zinc-500">
+              <div className="text-2xl font-bold text-muted-foreground">
                 {stats.ignored}
               </div>
             </CardContent>

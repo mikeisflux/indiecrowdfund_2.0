@@ -180,7 +180,7 @@ export function MailboxDialog({
               id="isDefault"
               checked={isDefault}
               onChange={(e) => setIsDefault(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300"
+              className="h-4 w-4 rounded border-border"
             />
             <Label htmlFor="isDefault" className="text-sm font-normal">
               Set as default mailbox
@@ -193,7 +193,7 @@ export function MailboxDialog({
               id="isCreatorMailbox"
               checked={isCreatorMailbox}
               onChange={(e) => setIsCreatorMailbox(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300"
+              className="h-4 w-4 rounded border-border"
             />
             <Label htmlFor="isCreatorMailbox" className="text-sm font-normal">
               Creator mailbox (hide from Email Center)

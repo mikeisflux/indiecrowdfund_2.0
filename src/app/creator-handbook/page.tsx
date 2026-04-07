@@ -159,12 +159,12 @@ function FieldCard({ field }: { field: FieldInfo }) {
             Required
           </span>
         ) : (
-          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-zinc-600">
             Optional
           </span>
         )}
       </div>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{field.description}</p>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-muted-foreground">{field.description}</p>
       {field.tips && (
         <div className="mt-2 flex gap-2 rounded bg-purple-50 dark:bg-purple-950/30 p-2">
           <Info className="h-4 w-4 flex-shrink-0 text-purple-600 dark:text-purple-400 mt-0.5" />
@@ -208,7 +208,7 @@ export default function CreatorHandbookPage() {
                     className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left ${
                       isActive
                         ? 'bg-purple-100 text-purple-900 dark:bg-purple-900/30 dark:text-purple-100'
-                        : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                        : 'text-zinc-600 hover:bg-muted dark:text-muted-foreground dark:hover:bg-zinc-800'
                     }`}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
@@ -225,7 +225,7 @@ export default function CreatorHandbookPage() {
               <>
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{currentTab.title}</h2>
-                  <p className="mt-1 text-zinc-600 dark:text-zinc-400">{currentTab.description}</p>
+                  <p className="mt-1 text-zinc-600 dark:text-muted-foreground">{currentTab.description}</p>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   {currentTab.fields.map((field) => (

@@ -100,7 +100,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable Stripe</Label>
-              <p className="text-sm text-zinc-500">Accept payments via Stripe</p>
+              <p className="text-sm text-muted-foreground">Accept payments via Stripe</p>
             </div>
             <Switch
               checked={settings.stripeEnabled}
@@ -146,7 +146,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 placeholder="whsec_..."
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-zinc-500">For regular Stripe events (payments, etc.)</p>
+              <p className="text-xs text-muted-foreground">For regular Stripe events (payments, etc.)</p>
             </div>
             <div className="space-y-2">
               <Label>Connect Webhook Secret</Label>
@@ -158,7 +158,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 placeholder="whsec_..."
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-zinc-500">For Connect events (account updates, etc.)</p>
+              <p className="text-xs text-muted-foreground">For Connect events (account updates, etc.)</p>
             </div>
           </div>
         </CardContent>
@@ -180,7 +180,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable DivinityCoin</Label>
-              <p className="text-sm text-zinc-500">Accept payments via DivinityCoin credits (3% partner fee + 3% platform = ~6% total)</p>
+              <p className="text-sm text-muted-foreground">Accept payments via DivinityCoin credits (3% partner fee + 3% platform = ~6% total)</p>
             </div>
             <Switch
               checked={settings.divinityCoinEnabled}
@@ -253,12 +253,12 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               placeholder="pk_live_... (DivinityCoin's Stripe key for card form)"
               forceShowValue={showAllKeys}
             />
-            <p className="text-xs text-zinc-500">DivinityCoin&apos;s Stripe publishable key used to render the card form on the pledge page. Card data goes directly to Stripe on DC&apos;s account.</p>
+            <p className="text-xs text-muted-foreground">DivinityCoin&apos;s Stripe publishable key used to render the card form on the pledge page. Card data goes directly to Stripe on DC&apos;s account.</p>
           </div>
 
-          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+          <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">DivinityCoin Fee Structure:</p>
-            <ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
+            <ul className="list-disc list-inside text-zinc-600 dark:text-muted-foreground space-y-1">
               <li>3% partner fee (DivinityCoin processing)</li>
               <li>Platform fee to creator: 3% (configurable) = ~6% total</li>
               <li>Settlements processed via wire transfer to your bank</li>
@@ -287,7 +287,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable PayPal</Label>
-              <p className="text-sm text-zinc-500">Allow creators to use PayPal as their payment processor</p>
+              <p className="text-sm text-muted-foreground">Allow creators to use PayPal as their payment processor</p>
             </div>
             <Switch
               checked={settings.paypalEnabled}
@@ -306,7 +306,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 placeholder="AXxxxx..."
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-zinc-500">Public client ID from PayPal Developer Dashboard</p>
+              <p className="text-xs text-muted-foreground">Public client ID from PayPal Developer Dashboard</p>
             </div>
             <div className="space-y-2">
               <Label>Client Secret</Label>
@@ -318,7 +318,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 placeholder="EHxxxx..."
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-zinc-500">Private secret — never expose to clients</p>
+              <p className="text-xs text-muted-foreground">Private secret — never expose to clients</p>
             </div>
           </div>
 
@@ -330,7 +330,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onChange={(e) => onSettingsChange({ ...settings, paypalWebhookId: e.target.value })}
                 placeholder="From PayPal Dashboard → Webhooks"
               />
-              <p className="text-xs text-zinc-500">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/paypal</code></p>
+              <p className="text-xs text-muted-foreground">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/paypal</code></p>
             </div>
             <div className="space-y-2">
               <Label>Mode</Label>
@@ -349,9 +349,9 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
             </div>
           </div>
 
-          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+          <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">PayPal Setup:</p>
-            <ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
+            <ul className="list-disc list-inside text-zinc-600 dark:text-muted-foreground space-y-1">
               <li>Advanced Checkout: inline card fields + PayPal wallet button on pledge page</li>
               <li>Payouts API: creators add their PayPal email, platform pays out on campaign end</li>
               <li>Enable &quot;Payouts&quot; in your PayPal app permissions (Apps &amp; Credentials)</li>
@@ -378,7 +378,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable Whop</Label>
-              <p className="text-sm text-zinc-500">Allow creators to use Whop as their payment processor</p>
+              <p className="text-sm text-muted-foreground">Allow creators to use Whop as their payment processor</p>
             </div>
             <Switch
               checked={settings.whopEnabled}
@@ -397,7 +397,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 placeholder="Company API key from Whop dashboard"
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-zinc-500">From Whop Dashboard → Developer → Company API keys</p>
+              <p className="text-xs text-muted-foreground">From Whop Dashboard → Developer → Company API keys</p>
             </div>
             <div className="space-y-2">
               <Label>Webhook Secret</Label>
@@ -409,7 +409,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 placeholder="Webhook signing secret"
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-zinc-500">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/whop</code></p>
+              <p className="text-xs text-muted-foreground">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/whop</code></p>
             </div>
           </div>
 
@@ -421,7 +421,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onChange={(e) => onSettingsChange({ ...settings, whopPlanId: e.target.value })}
                 placeholder="plan_xxxxxxxxxxxxx"
               />
-              <p className="text-xs text-zinc-500">Base plan from Whop Dashboard → Checkout links</p>
+              <p className="text-xs text-muted-foreground">Base plan from Whop Dashboard → Checkout links</p>
             </div>
             <div className="space-y-2">
               <Label>Company ID</Label>
@@ -430,7 +430,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onChange={(e) => onSettingsChange({ ...settings, whopCompanyId: e.target.value })}
                 placeholder="biz_xxxxxxxxxxxxx"
               />
-              <p className="text-xs text-zinc-500">Your platform company ID (visible in Whop dashboard URL)</p>
+              <p className="text-xs text-muted-foreground">Your platform company ID (visible in Whop dashboard URL)</p>
             </div>
           </div>
 
@@ -450,9 +450,9 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
             </Select>
           </div>
 
-          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+          <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">Whop Setup:</p>
-            <ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
+            <ul className="list-disc list-inside text-zinc-600 dark:text-muted-foreground space-y-1">
               <li>Embedded in-page checkout — no redirect, no popup</li>
               <li>Card payments settle to USDC automatically</li>
               <li>Create a Plan in Checkout links (base template — price is overridden per pledge)</li>
@@ -471,7 +471,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Automatic Payouts</Label>
-              <p className="text-sm text-zinc-500">Automatically process creator payouts</p>
+              <p className="text-sm text-muted-foreground">Automatically process creator payouts</p>
             </div>
             <Switch
               checked={settings.autoPayouts}
@@ -528,7 +528,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable reCAPTCHA</Label>
-              <p className="text-sm text-zinc-500">Show CAPTCHA on registration to prevent bots</p>
+              <p className="text-sm text-muted-foreground">Show CAPTCHA on registration to prevent bots</p>
             </div>
             <Switch
               checked={settings.recaptchaEnabled}
@@ -549,7 +549,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 placeholder="6Le..."
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-zinc-500">Public key shown on your website</p>
+              <p className="text-xs text-muted-foreground">Public key shown on your website</p>
             </div>
             <div className="space-y-2">
               <Label>Secret Key</Label>
@@ -561,13 +561,13 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 placeholder="6Le..."
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-zinc-500">Private key for server-side verification</p>
+              <p className="text-xs text-muted-foreground">Private key for server-side verification</p>
             </div>
           </div>
 
-          <div className="rounded-lg bg-zinc-50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+          <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
             <p className="font-medium">How to get reCAPTCHA keys:</p>
-            <ol className="list-decimal list-inside text-zinc-600 dark:text-zinc-400 space-y-1">
+            <ol className="list-decimal list-inside text-zinc-600 dark:text-muted-foreground space-y-1">
               <li>Go to the Google reCAPTCHA Admin Console</li>
               <li>Register a new site with reCAPTCHA v2 &quot;I&apos;m not a robot&quot;</li>
               <li>Add your domain(s) to the allowed list</li>

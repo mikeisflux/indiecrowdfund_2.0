@@ -184,8 +184,8 @@ export default async function SuccessStoriesPage() {
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
                   <stat.icon className="h-6 w-6 text-orange-600" />
                 </div>
-                <p className="text-3xl font-bold text-zinc-900 dark:text-white lg:text-4xl">{stat.value}</p>
-                <p className="mt-1 text-sm text-zinc-500">{stat.label}</p>
+                <p className="text-3xl font-bold text-foreground lg:text-4xl">{stat.value}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -200,10 +200,10 @@ export default async function SuccessStoriesPage() {
               <Star className="mr-1 h-3 w-3" />
               Featured Campaigns
             </Badge>
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Campaigns That Made History
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               These creators took a leap of faith and their communities showed up in a big way.
             </p>
           </div>
@@ -213,10 +213,10 @@ export default async function SuccessStoriesPage() {
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
                 <Rocket className="h-10 w-10 text-orange-600" />
               </div>
-              <h3 className="text-xl font-semibold text-zinc-900 dark:text-white mb-2">
+              <h3 className="text-xl font-semibold text-foreground mb-2">
                 Be the First Success Story!
               </h3>
-              <p className="mx-auto max-w-md text-zinc-600 dark:text-zinc-400 mb-6">
+              <p className="mx-auto max-w-md text-muted-foreground mb-6">
                 No projects have reached their funding goals yet. Your project could be the first success story featured here!
               </p>
               <Link href="/projects/new">
@@ -236,14 +236,14 @@ export default async function SuccessStoriesPage() {
                   }`}
                 >
                   <div className={index % 2 === 1 ? "lg:col-start-2" : ""}>
-                    <div className="relative aspect-video overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
+                    <div className="relative aspect-video overflow-hidden rounded-2xl bg-muted">
                       {story.image ? (
                         <Image src={story.image} alt={story.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="text-center">
                             <Trophy className="mx-auto h-16 w-16 text-orange-400" />
-                            <p className="mt-2 text-sm text-zinc-500">Funded Campaign</p>
+                            <p className="mt-2 text-sm text-muted-foreground">Funded Campaign</p>
                           </div>
                         </div>
                       )}
@@ -255,38 +255,38 @@ export default async function SuccessStoriesPage() {
 
                   <div className={index % 2 === 1 ? "lg:col-start-1" : ""}>
                     <Badge variant="outline" className="mb-2">{story.category}</Badge>
-                    <h3 className="text-2xl font-bold text-zinc-900 dark:text-white lg:text-3xl">
+                    <h3 className="text-2xl font-bold text-foreground lg:text-3xl">
                       {story.title}
                     </h3>
-                    <p className="mt-2 text-zinc-600 dark:text-zinc-400">by {story.creator}</p>
+                    <p className="mt-2 text-muted-foreground">by {story.creator}</p>
 
                     <div className="mt-6 grid grid-cols-3 gap-4">
                       <div>
                         <p className="text-2xl font-bold text-emerald-600">
                           {formatCurrency(story.raised)}
                         </p>
-                        <p className="text-sm text-zinc-500">Raised</p>
+                        <p className="text-sm text-muted-foreground">Raised</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+                        <p className="text-2xl font-bold text-foreground">
                           {story.backers.toLocaleString()}
                         </p>
-                        <p className="text-sm text-zinc-500">Backers</p>
+                        <p className="text-sm text-muted-foreground">Backers</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+                        <p className="text-2xl font-bold text-foreground">
                           {Math.round((story.raised / story.goal) * 100)}%
                         </p>
-                        <p className="text-sm text-zinc-500">Funded</p>
+                        <p className="text-sm text-muted-foreground">Funded</p>
                       </div>
                     </div>
 
                     <div className="mt-6 border-l-4 border-orange-500 pl-4">
                       <Quote className="h-6 w-6 text-orange-500 mb-2" />
-                      <p className="text-zinc-600 dark:text-zinc-400 italic">
+                      <p className="text-muted-foreground italic">
                         A successfully funded project on IndieCrowdfund!
                       </p>
-                      <footer className="mt-2 text-sm font-medium text-zinc-900 dark:text-white">
+                      <footer className="mt-2 text-sm font-medium text-foreground">
                         — {story.creator}
                       </footer>
                     </div>
@@ -299,20 +299,20 @@ export default async function SuccessStoriesPage() {
       </section>
 
       {/* Category Breakdown */}
-      <section className="py-12 bg-muted/30 dark:bg-zinc-900 relative">
+      <section className="py-12 bg-muted/30 dark:bg-card relative">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Success Across Categories
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               From tech gadgets to tabletop games, creators are finding success in every category.
             </p>
           </div>
 
           {categoryStats.length === 0 ? (
             <div className="mt-12 text-center py-8">
-              <p className="text-zinc-500">No category data available yet. Be the first to launch a project!</p>
+              <p className="text-muted-foreground">No category data available yet. Be the first to launch a project!</p>
             </div>
           ) : (
             <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -321,12 +321,12 @@ export default async function SuccessStoriesPage() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-zinc-900 dark:text-white">{category.name}</h3>
-                        <p className="text-sm text-zinc-500">{category.projects} project{category.projects !== 1 ? 's' : ''}</p>
+                        <h3 className="font-semibold text-foreground">{category.name}</h3>
+                        <p className="text-sm text-muted-foreground">{category.projects} project{category.projects !== 1 ? 's' : ''}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-emerald-600">{category.funded}</p>
-                        <p className="text-xs text-zinc-500">total raised</p>
+                        <p className="text-xs text-muted-foreground">total raised</p>
                       </div>
                     </div>
                   </CardContent>
@@ -341,10 +341,10 @@ export default async function SuccessStoriesPage() {
       <section className="py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Join Our Creator Community
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Thousands of creators trust IndieCrowdfund to bring their ideas to life.
             </p>
           </div>
@@ -353,7 +353,7 @@ export default async function SuccessStoriesPage() {
             <Card className="relative">
               <CardContent className="pt-8 pb-6">
                 <Quote className="absolute top-4 left-4 h-8 w-8 text-orange-200" />
-                <p className="text-zinc-600 dark:text-zinc-400 relative z-10">
+                <p className="text-muted-foreground relative z-10">
                   Start your journey today and join our growing community of successful creators and passionate backers.
                 </p>
                 <div className="mt-6 pt-4 border-t">
@@ -368,7 +368,7 @@ export default async function SuccessStoriesPage() {
             <Card className="relative">
               <CardContent className="pt-8 pb-6">
                 <Quote className="absolute top-4 left-4 h-8 w-8 text-orange-200" />
-                <p className="text-zinc-600 dark:text-zinc-400 relative z-10">
+                <p className="text-muted-foreground relative z-10">
                   Discover innovative projects from creators around the world and be part of bringing new ideas to life.
                 </p>
                 <div className="mt-6 pt-4 border-t">
@@ -383,7 +383,7 @@ export default async function SuccessStoriesPage() {
             <Card className="relative">
               <CardContent className="pt-8 pb-6">
                 <Quote className="absolute top-4 left-4 h-8 w-8 text-orange-200" />
-                <p className="text-zinc-600 dark:text-zinc-400 relative z-10">
+                <p className="text-muted-foreground relative z-10">
                   Need help getting started? Our creator resources and guides will help you launch a successful campaign.
                 </p>
                 <div className="mt-6 pt-4 border-t">

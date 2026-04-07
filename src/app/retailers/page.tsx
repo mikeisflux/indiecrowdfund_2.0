@@ -440,20 +440,20 @@ export default async function RetailersPage() {
             <div className="grid gap-8 md:grid-cols-2 md:items-center">
               <div>
                 <h2 className="text-3xl font-bold text-white">Dedicated Retailer Support</h2>
-                <p className="mt-4 text-zinc-400">
+                <p className="mt-4 text-muted-foreground">
                   Our retailer success team is here to help you every step of the way.
                   From onboarding to ongoing support, we&apos;re committed to your success.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-4">
-                  <div className="flex items-center gap-2 text-zinc-300">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <HeadphonesIcon className="h-5 w-5 text-emerald-400" />
                     <span>Priority Support</span>
                   </div>
-                  <div className="flex items-center gap-2 text-zinc-300">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <Globe className="h-5 w-5 text-emerald-400" />
                     <span>Dedicated Account Manager</span>
                   </div>
-                  <div className="flex items-center gap-2 text-zinc-300">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <Zap className="h-5 w-5 text-emerald-400" />
                     <span>Fast Response Times</span>
                   </div>
@@ -466,7 +466,7 @@ export default async function RetailersPage() {
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-muted-foreground">
                   Questions? Email us at{" "}
                   <a href="mailto:retailers@indiecrowdfund.com" className="text-emerald-400 hover:underline">
                     retailers@indiecrowdfund.com

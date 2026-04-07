@@ -655,7 +655,7 @@ async function PastCampaignsSection() {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="p-2 rounded-lg bg-gradient-to-br from-zinc-500/20 to-slate-500/20">
-                <Archive className="h-5 w-5 text-zinc-500" />
+                <Archive className="h-5 w-5 text-muted-foreground" />
               </div>
               <h2 className="text-2xl font-bold md:text-3xl">Past Projects</h2>
             </div>
@@ -684,7 +684,7 @@ async function PastCampaignsSection() {
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-500/10 to-slate-500/10">
-                      <Archive className="h-12 w-12 text-zinc-400/50" />
+                      <Archive className="h-12 w-12 text-muted-foreground/50" />
                     </div>
                   )}
                   <Badge className={`absolute left-3 top-3 shadow-lg ${project.wasSuccessful ? 'bg-gradient-to-r from-emerald-500 to-green-600 border-0' : 'bg-zinc-500/80 backdrop-blur-sm'}`}>

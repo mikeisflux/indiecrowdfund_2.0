@@ -397,7 +397,7 @@ export default function AdminLayout({
 
             {/* Search */}
             <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search pages..."
@@ -473,13 +473,13 @@ export default function AdminLayout({
                   </Avatar>
                   <div className="hidden text-left md:block">
                     <p className="text-sm font-medium">{session.user.name || session.user.email}</p>
-                    <p className="text-xs text-zinc-500">Super Admin</p>
+                    <p className="text-xs text-muted-foreground">Super Admin</p>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-zinc-400" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <div className="px-2 py-1.5 text-sm text-zinc-500 border-b mb-1">
+                <div className="px-2 py-1.5 text-sm text-muted-foreground border-b mb-1">
                   {session.user.email}
                 </div>
                 <DropdownMenuItem asChild>

@@ -117,8 +117,8 @@ export function ProjectDetailPanel({
   if (!project) {
     return (
       <Card className="h-[400px] flex items-center justify-center">
-        <div className="text-center text-zinc-500">
-          <FolderKanban className="h-12 w-12 mx-auto mb-3 text-zinc-300" />
+        <div className="text-center text-muted-foreground">
+          <FolderKanban className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium">Select a project to review</p>
           <p className="text-sm">Click on a project from the queue to see details</p>
         </div>
@@ -146,19 +146,19 @@ export function ProjectDetailPanel({
             <AccordionContent className="px-4 pb-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Goal</p>
+                  <p className="text-xs text-muted-foreground">Goal</p>
                   <p className="font-semibold">${Number(project.goalAmount).toLocaleString()} {project.currency}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Duration</p>
+                  <p className="text-xs text-muted-foreground">Duration</p>
                   <p className="font-semibold">{formatDuration(project)}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Category</p>
+                  <p className="text-xs text-muted-foreground">Category</p>
                   <p className="font-semibold">{project.category}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Rewards</p>
+                  <p className="text-xs text-muted-foreground">Rewards</p>
                   <p className="font-semibold">{project.rewards.length} tiers</p>
                 </div>
               </div>
@@ -182,9 +182,9 @@ export function ProjectDetailPanel({
 
               {project.description && (
                 <div className="mt-4">
-                  <p className="text-xs text-zinc-500 mb-1">Description Preview</p>
+                  <p className="text-xs text-muted-foreground mb-1">Description Preview</p>
                   <div
-                    className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 prose prose-sm max-w-none"
+                    className="text-sm text-muted-foreground dark:text-muted-foreground line-clamp-3 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(project.description) }}
                   />
                 </div>
@@ -192,9 +192,9 @@ export function ProjectDetailPanel({
 
               {project.risks && (
                 <div className="mt-4">
-                  <p className="text-xs text-zinc-500 mb-1">Risks & Challenges</p>
+                  <p className="text-xs text-muted-foreground mb-1">Risks & Challenges</p>
                   <div
-                    className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 prose prose-sm max-w-none"
+                    className="text-sm text-muted-foreground dark:text-muted-foreground line-clamp-2 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(project.risks) }}
                   />
                 </div>
@@ -207,7 +207,7 @@ export function ProjectDetailPanel({
             <AccordionTrigger className="px-4">Creator Information</AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 font-semibold text-zinc-600">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted font-semibold text-muted-foreground">
                   {(project.creator.name || project.creator.email || "?").charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1">
@@ -223,17 +223,17 @@ export function ProjectDetailPanel({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-zinc-500">{project.creator.email}</p>
+                  <p className="text-sm text-muted-foreground">{project.creator.email}</p>
                 </div>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Total Projects</p>
+                  <p className="text-xs text-muted-foreground">Total Projects</p>
                   <p className="font-semibold">{project.creator._count.createdProjects}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-zinc-500">Member Since</p>
+                  <p className="text-xs text-muted-foreground">Member Since</p>
                   <p className="font-semibold">{formatDate(project.creator.createdAt)}</p>
                 </div>
               </div>
@@ -259,14 +259,14 @@ export function ProjectDetailPanel({
               ) : chargebackCard.exists ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
-                      <CreditCard className="h-5 w-5 text-zinc-600" />
+                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="font-medium">
                         {chargebackCard.brand} ending in {chargebackCard.lastFour}
                       </p>
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         Expires {chargebackCard.expMonth != null ? String(chargebackCard.expMonth).padStart(2, "0") : "??"}/{chargebackCard.expYear ?? "??"}
                       </p>
                     </div>
@@ -292,9 +292,9 @@ export function ProjectDetailPanel({
                       )}
                     </Button>
                   ) : (
-                    <div className="space-y-2 rounded-lg border p-3 bg-zinc-50 dark:bg-zinc-800/50">
+                    <div className="space-y-2 rounded-lg border p-3 bg-muted/50 dark:bg-zinc-800/50">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-medium text-zinc-500">Decrypted Card Details</p>
+                        <p className="text-xs font-medium text-muted-foreground">Decrypted Card Details</p>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -307,24 +307,24 @@ export function ProjectDetailPanel({
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <p className="text-xs text-zinc-500">Card Number</p>
+                          <p className="text-xs text-muted-foreground">Card Number</p>
                           <p className="font-mono">{fullCardDetails.cardNumber}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-zinc-500">Expiry</p>
+                          <p className="text-xs text-muted-foreground">Expiry</p>
                           <p className="font-mono">{fullCardDetails.expMonth}/{fullCardDetails.expYear}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-zinc-500">CVC</p>
+                          <p className="text-xs text-muted-foreground">CVC</p>
                           <p className="font-mono">{fullCardDetails.cvc}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-zinc-500">Brand</p>
+                          <p className="text-xs text-muted-foreground">Brand</p>
                           <p>{fullCardDetails.brand}</p>
                         </div>
                       </div>
                       <div className="pt-2 border-t text-sm">
-                        <p className="text-xs text-zinc-500 mb-1">Billing Address</p>
+                        <p className="text-xs text-muted-foreground mb-1">Billing Address</p>
                         <p>{fullCardDetails.billingName}</p>
                         <p>{fullCardDetails.billingLine1}</p>
                         {fullCardDetails.billingLine2 && <p>{fullCardDetails.billingLine2}</p>}
@@ -367,7 +367,7 @@ export function ProjectDetailPanel({
         </Accordion>
 
         {/* Action Buttons */}
-        <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-800/50">
+        <div className="p-4 border-t bg-muted/50 dark:bg-zinc-800/50">
           <div className="flex items-center gap-2 mb-2">
             <Button variant="outline" className="flex-1" asChild>
               <a href={currentVanityUrl ? (isPrelaunch ? `/projects/${currentVanityUrl}/${project.slug}/prelaunch` : `/projects/${currentVanityUrl}/${project.slug}`) : (isPrelaunch ? `/projects/${project.slug}/prelaunch` : `/projects/${project.slug}`)} target="_blank" rel="noopener noreferrer">
@@ -385,8 +385,8 @@ export function ProjectDetailPanel({
             </Button>
           </div>
           {currentVanityUrl && (
-            <p className="text-xs text-zinc-500 mb-4">
-              Vanity URL: <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">{currentVanityUrl}</code>
+            <p className="text-xs text-muted-foreground mb-4">
+              Vanity URL: <code className="bg-muted dark:bg-zinc-800 px-1 rounded">{currentVanityUrl}</code>
             </p>
           )}
 

@@ -42,7 +42,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Require Two-Factor Authentication</Label>
-              <p className="text-sm text-zinc-500">Require 2FA for all admin users</p>
+              <p className="text-sm text-muted-foreground">Require 2FA for all admin users</p>
             </div>
             <Switch
               checked={settings.require2FA}
@@ -118,7 +118,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable Global Rate Limiting</Label>
-              <p className="text-sm text-zinc-500">Limit requests per IP across all endpoints</p>
+              <p className="text-sm text-muted-foreground">Limit requests per IP across all endpoints</p>
             </div>
             <Switch
               checked={settings.globalRateLimitEnabled}
@@ -139,7 +139,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
                 onChange={(e) => onSettingsChange({ ...settings, globalRateLimit: e.target.value })}
                 disabled={!settings.globalRateLimitEnabled}
               />
-              <p className="text-xs text-zinc-500">Maximum requests allowed per window</p>
+              <p className="text-xs text-muted-foreground">Maximum requests allowed per window</p>
             </div>
             <div className="space-y-2">
               <Label>Window Duration (seconds)</Label>
@@ -151,7 +151,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
                 onChange={(e) => onSettingsChange({ ...settings, globalRateLimitWindow: e.target.value })}
                 disabled={!settings.globalRateLimitEnabled}
               />
-              <p className="text-xs text-zinc-500">Time window for rate limit (recommended: 60)</p>
+              <p className="text-xs text-muted-foreground">Time window for rate limit (recommended: 60)</p>
             </div>
           </div>
 
@@ -162,7 +162,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
               value={settings.ipWhitelist}
               onChange={(e) => onSettingsChange({ ...settings, ipWhitelist: e.target.value })}
             />
-            <p className="text-xs text-zinc-500">IPs that bypass rate limiting</p>
+            <p className="text-xs text-muted-foreground">IPs that bypass rate limiting</p>
           </div>
         </CardContent>
       </Card>
@@ -176,7 +176,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable Login Rate Limiting</Label>
-              <p className="text-sm text-zinc-500">Protect login endpoints against brute force attacks</p>
+              <p className="text-sm text-muted-foreground">Protect login endpoints against brute force attacks</p>
             </div>
             <Switch
               checked={settings.loginRateLimitEnabled}
@@ -197,7 +197,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
                 onChange={(e) => onSettingsChange({ ...settings, loginRateLimit: e.target.value })}
                 disabled={!settings.loginRateLimitEnabled}
               />
-              <p className="text-xs text-zinc-500">Failed login attempts before lockout (recommended: 5)</p>
+              <p className="text-xs text-muted-foreground">Failed login attempts before lockout (recommended: 5)</p>
             </div>
             <div className="space-y-2">
               <Label>Window Duration (seconds)</Label>
@@ -209,7 +209,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
                 onChange={(e) => onSettingsChange({ ...settings, loginRateLimitWindow: e.target.value })}
                 disabled={!settings.loginRateLimitEnabled}
               />
-              <p className="text-xs text-zinc-500">Time window for login limits (recommended: 300 / 5 min)</p>
+              <p className="text-xs text-muted-foreground">Time window for login limits (recommended: 300 / 5 min)</p>
             </div>
           </div>
 
@@ -225,7 +225,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
                   value={settings.passwordResetRateLimit}
                   onChange={(e) => onSettingsChange({ ...settings, passwordResetRateLimit: e.target.value })}
                 />
-                <p className="text-xs text-zinc-500">Recommended: 3</p>
+                <p className="text-xs text-muted-foreground">Recommended: 3</p>
               </div>
               <div className="space-y-2">
                 <Label>Window Duration (seconds)</Label>
@@ -236,7 +236,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
                   value={settings.passwordResetRateLimitWindow}
                   onChange={(e) => onSettingsChange({ ...settings, passwordResetRateLimitWindow: e.target.value })}
                 />
-                <p className="text-xs text-zinc-500">Recommended: 900 (15 min)</p>
+                <p className="text-xs text-muted-foreground">Recommended: 900 (15 min)</p>
               </div>
             </div>
           </div>
@@ -252,7 +252,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>CSRF Protection</Label>
-              <p className="text-sm text-zinc-500">Enable cross-site request forgery protection</p>
+              <p className="text-sm text-muted-foreground">Enable cross-site request forgery protection</p>
             </div>
             <Switch
               checked={settings.csrfProtection}
@@ -265,7 +265,7 @@ export function SecuritySettings({ settings, onSettingsChange }: SecuritySetting
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Content Security Policy</Label>
-              <p className="text-sm text-zinc-500">Enable strict CSP headers</p>
+              <p className="text-sm text-muted-foreground">Enable strict CSP headers</p>
             </div>
             <Switch
               checked={settings.contentSecurityPolicy}

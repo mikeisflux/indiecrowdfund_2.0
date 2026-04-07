@@ -50,13 +50,13 @@ export function RoleDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
-          <div className="flex items-center gap-3 mb-4 p-3 bg-zinc-50 rounded-lg">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200 font-medium text-zinc-600">
+          <div className="flex items-center gap-3 mb-4 p-3 bg-muted/50 rounded-lg">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200 font-medium text-muted-foreground">
               {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
             </div>
             <div>
               <p className="font-medium">{user.name || "No name"}</p>
-              <p className="text-sm text-zinc-500">{user.email}</p>
+              <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
           </div>
 
@@ -74,7 +74,7 @@ export function RoleDialog({
                 <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {selectedRole === "USER" && "Regular user with standard access."}
               {selectedRole === "CREATOR" && "Creators have activated prelaunch pages or marketplace books."}
               {selectedRole === "COOL_KIDS" && "Cool Kids users have enhanced campaign limits."}

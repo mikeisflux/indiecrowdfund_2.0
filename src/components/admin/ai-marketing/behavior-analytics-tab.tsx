@@ -330,7 +330,7 @@ export function BehaviorAnalyticsTab({
           <div className="space-y-2">
             {liveEvents.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Activity className="h-12 w-12 mx-auto mb-3 text-zinc-300" />
+                <Activity className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                 <p className="font-medium">No events recorded yet</p>
                 <p className="text-sm">User behavior will appear here in real-time as visitors interact with your site.</p>
               </div>

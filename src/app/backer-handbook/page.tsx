@@ -146,7 +146,7 @@ function StepCard({ step, number }: { step: Step; number: number }) {
         </div>
         <div className="flex-1">
           <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">{step.title}</h4>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{step.description}</p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-muted-foreground">{step.description}</p>
           {step.tip && (
             <div className="mt-2 flex gap-2 rounded bg-blue-50 dark:bg-blue-950/30 p-2">
               <Info className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
@@ -192,7 +192,7 @@ export default function BackerHandbookPage() {
                     className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left ${
                       isActive
                         ? 'bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-100'
-                        : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                        : 'text-zinc-600 hover:bg-muted dark:text-muted-foreground dark:hover:bg-zinc-800'
                     }`}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
@@ -209,7 +209,7 @@ export default function BackerHandbookPage() {
               <>
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{currentTab.title}</h2>
-                  <p className="mt-1 text-zinc-600 dark:text-zinc-400">{currentTab.description}</p>
+                  <p className="mt-1 text-zinc-600 dark:text-muted-foreground">{currentTab.description}</p>
                 </div>
 
                 {currentTab.alert && (

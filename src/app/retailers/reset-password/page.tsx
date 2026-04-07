@@ -92,7 +92,7 @@ function ResetPasswordContent() {
     return (
       <div className="flex flex-col items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
-        <p className="mt-4 text-sm text-zinc-500">Validating reset link...</p>
+        <p className="mt-4 text-sm text-muted-foreground">Validating reset link...</p>
       </div>
     );
   }
@@ -146,7 +146,7 @@ function ResetPasswordContent() {
         <div className="space-y-2">
           <Label htmlFor="password">New Password</Label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="password"
               name="password"
@@ -160,13 +160,13 @@ function ResetPasswordContent() {
               minLength={8}
             />
           </div>
-          <p className="text-xs text-zinc-500">Must be at least 8 characters</p>
+          <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="confirmPassword">Confirm Password</Label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="confirmPassword"
               name="confirmPassword"
@@ -239,7 +239,7 @@ export default function RetailerResetPasswordPage() {
             <h1 className="text-2xl font-bold tracking-tight">
               Reset your password
             </h1>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted-foreground">
               Enter your new password below
             </p>
           </div>
@@ -247,7 +247,7 @@ export default function RetailerResetPasswordPage() {
           <Suspense fallback={
             <div className="flex flex-col items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
-              <p className="mt-4 text-sm text-zinc-500">Loading...</p>
+              <p className="mt-4 text-sm text-muted-foreground">Loading...</p>
             </div>
           }>
             <ResetPasswordContent />

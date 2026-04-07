@@ -210,9 +210,9 @@ export function LibraryCard({
         <h3 className={cn("font-medium text-white line-clamp-2 transition-colors", hoverTextColor)}>
           {item.title}
         </h3>
-        <p className="text-xs text-zinc-400 line-clamp-1">{item.subtitle}</p>
+        <p className="text-xs text-muted-foreground line-clamp-1">{item.subtitle}</p>
         <div className="flex items-center justify-between pt-1">
-          <span className="text-xs text-zinc-500">{formatFileSize(item.fileSize)}</span>
+          <span className="text-xs text-muted-foreground">{formatFileSize(item.fileSize)}</span>
           {progress && (
             <span className={cn("text-xs", progressTextColor)}>{progressPercent}% read</span>
           )}

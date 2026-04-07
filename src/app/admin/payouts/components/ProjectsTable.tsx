@@ -51,8 +51,8 @@ export function ProjectsTable({
   );
 
   const emptyState = (
-    <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-      <Banknote className="w-12 h-12 mb-4 text-zinc-300" />
+    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+      <Banknote className="w-12 h-12 mb-4 text-muted-foreground" />
       <p className="text-lg font-medium">No payouts found</p>
       <p className="text-sm">Projects that have raised money will appear here</p>
     </div>
@@ -68,8 +68,8 @@ export function ProjectsTable({
         className="w-12 h-9 rounded object-cover shrink-0"
       />
     ) : (
-      <div className="w-12 h-9 rounded bg-zinc-100 flex items-center justify-center shrink-0">
-        <Banknote className="w-5 h-5 text-zinc-400" />
+      <div className="w-12 h-9 rounded bg-muted flex items-center justify-center shrink-0">
+        <Banknote className="w-5 h-5 text-muted-foreground" />
       </div>
     );
 
@@ -103,7 +103,7 @@ export function ProjectsTable({
     }
     if (project.paymentProcessor === "WHOP") {
       return (
-        <Badge variant="outline" className="text-xs text-zinc-800 border-zinc-800 dark:text-zinc-200 dark:border-zinc-200">
+        <Badge variant="outline" className="text-xs text-zinc-800 border-zinc-800 dark:text-zinc-200 dark:border-border">
           Whop
         </Badge>
       );
@@ -129,7 +129,7 @@ export function ProjectsTable({
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search by project title or creator..."
                 className="pl-10"
@@ -182,7 +182,7 @@ export function ProjectsTable({
                     {projects.map((project) => (
                       <TableRow
                         key={project.id}
-                        className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                        className="cursor-pointer hover:bg-muted/50 dark:hover:bg-zinc-800/50"
                         onClick={() => onSelectProject(project)}
                       >
                         <TableCell>
@@ -193,18 +193,18 @@ export function ProjectsTable({
                                 <p className="font-medium truncate max-w-[200px]">{project.title}</p>
                                 <ProcessorBadge project={project} />
                               </div>
-                              <p className="text-xs text-zinc-500">{project.backerCount} backers</p>
+                              <p className="text-xs text-muted-foreground">{project.backerCount} backers</p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0">
-                              <User className="w-4 h-4 text-zinc-400" />
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                              <User className="w-4 h-4 text-muted-foreground" />
                             </div>
                             <div>
                               <p className="font-medium text-sm">{project.creator.name || "Unknown"}</p>
-                              <p className="text-xs text-zinc-500">{project.creator.email}</p>
+                              <p className="text-xs text-muted-foreground">{project.creator.email}</p>
                             </div>
                           </div>
                         </TableCell>
@@ -212,7 +212,7 @@ export function ProjectsTable({
                           <BankStatusBadge project={project} />
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="text-zinc-600">{formatCurrency(project.totalRaised)}</span>
+                          <span className="text-muted-foreground">{formatCurrency(project.totalRaised)}</span>
                         </TableCell>
                         <TableCell className="text-right">
                           {project.totalRefunded > 0 ? (
@@ -220,7 +220,7 @@ export function ProjectsTable({
                               -{formatCurrency(project.totalRefunded)}
                             </span>
                           ) : (
-                            <span className="text-zinc-400">-</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -233,7 +233,7 @@ export function ProjectsTable({
                         </TableCell>
                         <TableCell>{getSettlementBadge(project.settlementStatus)}</TableCell>
                         <TableCell>
-                          <ChevronRight className="w-4 h-4 text-zinc-400" />
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -247,7 +247,7 @@ export function ProjectsTable({
                   <button
                     key={project.id}
                     type="button"
-                    className="w-full text-left p-4 space-y-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                    className="w-full text-left p-4 space-y-3 hover:bg-muted/50 dark:hover:bg-zinc-800/50 transition-colors"
                     onClick={() => onSelectProject(project)}
                   >
                     {/* Project header: image + title + settlement badge */}
@@ -258,11 +258,11 @@ export function ProjectsTable({
                           <p className="font-semibold text-sm leading-snug line-clamp-2">
                             {project.title}
                           </p>
-                          <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+                          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
                           <ProcessorBadge project={project} />
-                          <span className="text-xs text-zinc-400">{project.backerCount} backers</span>
+                          <span className="text-xs text-muted-foreground">{project.backerCount} backers</span>
                         </div>
                       </div>
                     </div>
@@ -275,36 +275,36 @@ export function ProjectsTable({
 
                     {/* Creator */}
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center shrink-0">
-                        <User className="w-3 h-3 text-zinc-400" />
+                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <User className="w-3 h-3 text-muted-foreground" />
                       </div>
-                      <p className="text-xs text-zinc-500 truncate">
+                      <p className="text-xs text-muted-foreground truncate">
                         {project.creator.name || "Unknown"} &middot; {project.creator.email}
                       </p>
                     </div>
 
                     {/* Key financials grid */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
-                        <p className="text-[10px] uppercase tracking-wide text-zinc-400 mb-0.5">Total Raised</p>
+                      <div className="rounded-lg bg-muted/50 dark:bg-zinc-800/50 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Total Raised</p>
                         <p className="text-sm font-medium">{formatCurrency(project.totalRaised)}</p>
                       </div>
-                      <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
-                        <p className="text-[10px] uppercase tracking-wide text-zinc-400 mb-0.5">Remaining</p>
+                      <div className="rounded-lg bg-muted/50 dark:bg-zinc-800/50 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Remaining</p>
                         <p className={`text-sm font-bold ${remainingColor(project.remainingAmount)}`}>
                           {formatRemaining(project.remainingAmount)}
                         </p>
                       </div>
                       {project.totalRefunded > 0 && (
                         <div className="rounded-lg bg-red-50 dark:bg-red-900/10 px-3 py-2">
-                          <p className="text-[10px] uppercase tracking-wide text-zinc-400 mb-0.5">Refunds</p>
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Refunds</p>
                           <p className="text-sm font-medium text-red-600">
                             -{formatCurrency(project.totalRefunded)}
                           </p>
                         </div>
                       )}
-                      <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
-                        <p className="text-[10px] uppercase tracking-wide text-zinc-400 mb-0.5">Amount Owed</p>
+                      <div className="rounded-lg bg-muted/50 dark:bg-zinc-800/50 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Amount Owed</p>
                         <p className="text-sm font-medium">{formatCurrency(project.amountOwed)}</p>
                       </div>
                     </div>

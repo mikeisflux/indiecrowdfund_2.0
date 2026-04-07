@@ -313,7 +313,7 @@ export default function SurveyResponsesPage() {
   if (isLoading && responses.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -329,7 +329,7 @@ export default function SurveyResponsesPage() {
           </Button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Survey Responses</h1>
-            <p className="text-zinc-500 text-sm sm:text-base">View and export backer survey responses</p>
+            <p className="text-muted-foreground text-sm sm:text-base">View and export backer survey responses</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -359,12 +359,12 @@ export default function SurveyResponsesPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-zinc-100 rounded-lg">
+              <div className="p-2 bg-muted rounded-lg">
                 <Users className="h-5 w-5 text-zinc-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-zinc-500">Total Responses</p>
+                <p className="text-sm text-muted-foreground">Total Responses</p>
               </div>
             </div>
           </CardContent>
@@ -377,7 +377,7 @@ export default function SurveyResponsesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.completed}</p>
-                <p className="text-sm text-zinc-500">Completed</p>
+                <p className="text-sm text-muted-foreground">Completed</p>
               </div>
             </div>
           </CardContent>
@@ -390,7 +390,7 @@ export default function SurveyResponsesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.incomplete}</p>
-                <p className="text-sm text-zinc-500">Incomplete</p>
+                <p className="text-sm text-muted-foreground">Incomplete</p>
               </div>
             </div>
           </CardContent>
@@ -403,7 +403,7 @@ export default function SurveyResponsesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.responseRate}%</p>
-                <p className="text-sm text-zinc-500">Response Rate</p>
+                <p className="text-sm text-muted-foreground">Response Rate</p>
               </div>
             </div>
           </CardContent>
@@ -415,7 +415,7 @@ export default function SurveyResponsesPage() {
         <CardContent className="py-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name or email..."
                 value={searchQuery}
@@ -469,8 +469,8 @@ export default function SurveyResponsesPage() {
         <CardContent>
           {filteredResponses.length === 0 ? (
             <div className="text-center py-12">
-              <Users className="h-12 w-12 mx-auto text-zinc-300 mb-4" />
-              <p className="text-zinc-500">No responses found</p>
+              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No responses found</p>
             </div>
           ) : (
             <Table>
@@ -490,14 +490,14 @@ export default function SurveyResponsesPage() {
                     <TableCell>
                       <div>
                         <p className="font-medium">{response.pledge?.user?.name || "Unknown"}</p>
-                        <p className="text-sm text-zinc-500">{response.pledge?.user?.email || ""}</p>
+                        <p className="text-sm text-muted-foreground">{response.pledge?.user?.email || ""}</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
                         <p className="font-medium">{response.pledge?.reward?.title || "Unknown"}</p>
                         {response.pledge?.addons?.length > 0 && (
-                          <p className="text-sm text-zinc-500">
+                          <p className="text-sm text-muted-foreground">
                             +{response.pledge.addons.length} addon(s)
                           </p>
                         )}
@@ -520,14 +520,14 @@ export default function SurveyResponsesPage() {
                       {response.shippingAddress ? (
                         <div className="text-sm">
                           <p>{response.shippingAddress.city}, {response.shippingAddress.state}</p>
-                          <p className="text-zinc-500">{response.shippingAddress.country}</p>
+                          <p className="text-muted-foreground">{response.shippingAddress.country}</p>
                         </div>
                       ) : (
-                        <span className="text-zinc-400">-</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-zinc-500">
+                      <span className="text-sm text-muted-foreground">
                         {formatDate(response.completedAt)}
                       </span>
                     </TableCell>
@@ -553,7 +553,7 @@ export default function SurveyResponsesPage() {
           {/* Pagination */}
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 Page {pagination.page} of {pagination.totalPages}
               </p>
               <div className="flex gap-2">
@@ -592,26 +592,26 @@ export default function SurveyResponsesPage() {
             <div className="space-y-6">
               {/* Backer Info */}
               <div>
-                <h3 className="font-semibold text-sm text-zinc-500 uppercase tracking-wide mb-3">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
                   Backer Information
                 </h3>
                 <Card>
                   <CardContent className="py-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-zinc-500">Name</p>
+                        <p className="text-sm text-muted-foreground">Name</p>
                         <p className="font-medium">{selectedResponse.pledge?.user?.name || "-"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-zinc-500">Email</p>
+                        <p className="text-sm text-muted-foreground">Email</p>
                         <p className="font-medium">{selectedResponse.pledge?.user?.email || "-"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-zinc-500">Reward</p>
+                        <p className="text-sm text-muted-foreground">Reward</p>
                         <p className="font-medium">{selectedResponse.pledge?.reward?.title || "-"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-zinc-500">Status</p>
+                        <p className="text-sm text-muted-foreground">Status</p>
                         <div>
                           {selectedResponse.isComplete ? (
                             <Badge className="bg-emerald-100 text-emerald-700">Complete</Badge>
@@ -628,7 +628,7 @@ export default function SurveyResponsesPage() {
               {/* Shipping Address */}
               {selectedResponse.shippingAddress && (
                 <div>
-                  <h3 className="font-semibold text-sm text-zinc-500 uppercase tracking-wide mb-3">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
                     <MapPin className="h-4 w-4 inline mr-1" />
                     Shipping Address
                     {selectedResponse.addressLocked && (
@@ -647,7 +647,7 @@ export default function SurveyResponsesPage() {
                       </p>
                       <p>{selectedResponse.shippingAddress.country}</p>
                       {selectedResponse.shippingAddress.phone && (
-                        <p className="text-zinc-500 mt-2">Phone: {selectedResponse.shippingAddress.phone}</p>
+                        <p className="text-muted-foreground mt-2">Phone: {selectedResponse.shippingAddress.phone}</p>
                       )}
                     </CardContent>
                   </Card>
@@ -657,7 +657,7 @@ export default function SurveyResponsesPage() {
               {/* Item Responses */}
               {selectedResponse.itemResponses && Object.keys(selectedResponse.itemResponses).length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-sm text-zinc-500 uppercase tracking-wide mb-3">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
                     <Package className="h-4 w-4 inline mr-1" />
                     Item Selections
                   </h3>
@@ -672,13 +672,13 @@ export default function SurveyResponsesPage() {
                             )}
                             {itemResponse.variants && Object.entries(itemResponse.variants).map(([variantId, value]) => (
                               <div key={variantId} className="flex items-center justify-between py-1">
-                                <span className="text-sm text-zinc-500">{getVariantType(itemId, variantId)}:</span>
+                                <span className="text-sm text-muted-foreground">{getVariantType(itemId, variantId)}:</span>
                                 <Badge variant="outline">{value}</Badge>
                               </div>
                             ))}
                             {itemResponse.customAnswers && Object.entries(itemResponse.customAnswers).map(([qId, answer]) => (
                               <div key={qId} className="py-1">
-                                <p className="text-sm text-zinc-500">{getCustomQuestionText(itemId, qId)}</p>
+                                <p className="text-sm text-muted-foreground">{getCustomQuestionText(itemId, qId)}</p>
                                 <p className="font-medium">{Array.isArray(answer) ? answer.join(", ") : answer}</p>
                               </div>
                             ))}
@@ -693,7 +693,7 @@ export default function SurveyResponsesPage() {
               {/* Backer Responses */}
               {selectedResponse.backerResponses && Object.keys(selectedResponse.backerResponses).length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-sm text-zinc-500 uppercase tracking-wide mb-3">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
                     <Users className="h-4 w-4 inline mr-1" />
                     Backer Answers
                   </h3>
@@ -703,7 +703,7 @@ export default function SurveyResponsesPage() {
                         const question = getBackerQuestion(questionId);
                         return (
                           <div key={questionId} className="border-b last:border-0 pb-3 last:pb-0">
-                            <p className="text-sm text-zinc-500">{question?.question || `Question ${questionId}`}</p>
+                            <p className="text-sm text-muted-foreground">{question?.question || `Question ${questionId}`}</p>
                             <p className="font-medium">
                               {Array.isArray(answer) ? answer.join(", ") : answer || "-"}
                             </p>
@@ -716,7 +716,7 @@ export default function SurveyResponsesPage() {
               )}
 
               {/* Timestamps */}
-              <div className="text-sm text-zinc-500 pt-4 border-t">
+              <div className="text-sm text-muted-foreground pt-4 border-t">
                 <p>Created: {formatDate(selectedResponse.createdAt)}</p>
                 {selectedResponse.completedAt && (
                   <p>Completed: {formatDate(selectedResponse.completedAt)}</p>

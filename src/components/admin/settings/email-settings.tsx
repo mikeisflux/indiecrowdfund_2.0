@@ -334,7 +334,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Email Verification Required</Label>
-              <p className="text-sm text-zinc-500">Require users to verify email before pledging</p>
+              <p className="text-sm text-muted-foreground">Require users to verify email before pledging</p>
             </div>
             <Switch
               checked={settings.emailVerificationRequired}
@@ -347,7 +347,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Welcome Email</Label>
-              <p className="text-sm text-zinc-500">Send welcome email to new users</p>
+              <p className="text-sm text-muted-foreground">Send welcome email to new users</p>
             </div>
             <Switch
               checked={settings.welcomeEmailEnabled}
@@ -360,7 +360,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Pledge Confirmation</Label>
-              <p className="text-sm text-zinc-500">Send confirmation emails for pledges</p>
+              <p className="text-sm text-muted-foreground">Send confirmation emails for pledges</p>
             </div>
             <Switch
               checked={settings.pledgeConfirmationEnabled}
@@ -373,7 +373,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Project Update Notifications</Label>
-              <p className="text-sm text-zinc-500">Notify backers when creators post updates</p>
+              <p className="text-sm text-muted-foreground">Notify backers when creators post updates</p>
             </div>
             <Switch
               checked={settings.projectUpdateNotifications}

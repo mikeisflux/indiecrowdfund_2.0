@@ -118,7 +118,7 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-4" />
-          <p className="text-zinc-500">Loading projects...</p>
+          <p className="text-muted-foreground">Loading projects...</p>
         </div>
       </div>
     );
@@ -130,7 +130,7 @@ export default function ProjectsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Project Review Center</h1>
-          <p className="text-zinc-500">Review and approve project submissions</p>
+          <p className="text-muted-foreground">Review and approve project submissions</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button
@@ -230,9 +230,9 @@ export default function ProjectsPage() {
           {filteredProjects.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <FolderKanban className="h-12 w-12 text-zinc-300 mb-4" />
+                <FolderKanban className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No projects pending review</h3>
-                <p className="text-sm text-zinc-500 max-w-sm">
+                <p className="text-sm text-muted-foreground max-w-sm">
                   All submitted projects have been reviewed. New submissions will appear here.
                 </p>
               </CardContent>
@@ -273,9 +273,9 @@ export default function ProjectsPage() {
           {activeProjects.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Zap className="h-12 w-12 text-zinc-300 mb-4" />
+                <Zap className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No active campaigns</h3>
-                <p className="text-sm text-zinc-500 max-w-sm">
+                <p className="text-sm text-muted-foreground max-w-sm">
                   There are no live campaigns currently running.
                 </p>
               </CardContent>
@@ -328,9 +328,9 @@ export default function ProjectsPage() {
           {filteredPrelaunchReviewProjects.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Sparkles className="h-12 w-12 text-zinc-300 mb-4" />
+                <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No prelaunch pages pending review</h3>
-                <p className="text-sm text-zinc-500 max-w-sm">
+                <p className="text-sm text-muted-foreground max-w-sm">
                   All prelaunch submissions have been reviewed. New submissions will appear here.
                 </p>
               </CardContent>
@@ -376,7 +376,7 @@ export default function ProjectsPage() {
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Sparkles className="h-12 w-12 text-amber-300 mb-4" />
                 <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No prelaunch pages</h3>
-                <p className="text-sm text-zinc-500 max-w-sm">
+                <p className="text-sm text-muted-foreground max-w-sm">
                   There are no active prelaunch pages currently published.
                 </p>
               </CardContent>
@@ -419,9 +419,9 @@ export default function ProjectsPage() {
           {closedProjects.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Archive className="h-12 w-12 text-zinc-300 mb-4" />
+                <Archive className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No closed campaigns</h3>
-                <p className="text-sm text-zinc-500 max-w-sm">
+                <p className="text-sm text-muted-foreground max-w-sm">
                   Campaigns that have ended will appear here.
                 </p>
               </CardContent>
@@ -476,9 +476,9 @@ export default function ProjectsPage() {
           {filteredUnsubmittedProjects.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <FileEdit className="h-12 w-12 text-zinc-300 mb-4" />
+                <FileEdit className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No unsubmitted projects</h3>
-                <p className="text-sm text-zinc-500 max-w-sm">
+                <p className="text-sm text-muted-foreground max-w-sm">
                   There are no saved draft projects that haven&apos;t been submitted for review.
                 </p>
               </CardContent>

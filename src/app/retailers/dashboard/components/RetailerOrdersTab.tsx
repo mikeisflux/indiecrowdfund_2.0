@@ -112,7 +112,7 @@ export function RetailerOrdersTab({ onNavigateToProjects }: RetailerOrdersTabPro
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold">My Orders</h2>
-          <p className="text-zinc-500">View and manage your wholesale orders</p>
+          <p className="text-muted-foreground">View and manage your wholesale orders</p>
         </div>
         <Button variant="outline" className="w-full sm:w-auto">
           <Download className="mr-2 h-4 w-4" />
@@ -122,7 +122,7 @@ export function RetailerOrdersTab({ onNavigateToProjects }: RetailerOrdersTabPro
 
       <div className="flex gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by project name or invoice number..."
             value={searchQuery}
@@ -139,9 +139,9 @@ export function RetailerOrdersTab({ onNavigateToProjects }: RetailerOrdersTabPro
       {filteredOrders.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="h-12 w-12 text-zinc-400 mb-4" />
+            <Package className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No orders yet</h3>
-            <p className="text-zinc-500 text-center mb-4">
+            <p className="text-muted-foreground text-center mb-4">
               When you place wholesale orders for projects, they will appear here.
             </p>
             <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={onNavigateToProjects}>
@@ -157,15 +157,15 @@ export function RetailerOrdersTab({ onNavigateToProjects }: RetailerOrdersTabPro
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     {order.projectImage && (
-                      <div className="h-16 w-16 rounded-lg bg-zinc-100 overflow-hidden flex-shrink-0">
+                      <div className="h-16 w-16 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                         <Image src={order.projectImage} alt={order.projectTitle} width={64} height={64} className="h-full w-full object-cover" />
                       </div>
                     )}
                     <div>
                       <CardTitle className="text-lg">{order.projectTitle}</CardTitle>
-                      <p className="text-sm text-zinc-500">Invoice: {order.invoiceNumber}</p>
+                      <p className="text-sm text-muted-foreground">Invoice: {order.invoiceNumber}</p>
                       {order.purchaseOrderNumber && (
-                        <p className="text-sm text-zinc-500">PO: {order.purchaseOrderNumber}</p>
+                        <p className="text-sm text-muted-foreground">PO: {order.purchaseOrderNumber}</p>
                       )}
                     </div>
                   </div>
@@ -178,15 +178,15 @@ export function RetailerOrdersTab({ onNavigateToProjects }: RetailerOrdersTabPro
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                       Quantity: {order.quantity} units @ ${Number(order.unitPrice).toFixed(2)} each
                     </p>
                     <div className="flex items-center gap-2">
                       <p className="text-xl font-bold text-emerald-600">${Number(order.totalAmount).toLocaleString()}</p>
-                      <p className="text-sm text-zinc-400 line-through">${Number(order.originalAmount).toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground line-through">${Number(order.originalAmount).toLocaleString()}</p>
                       <Badge className="bg-emerald-100 text-emerald-700">{order.discountPercent}% off</Badge>
                     </div>
-                    <p className="text-xs text-zinc-500">Ordered: {new Date(order.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground">Ordered: {new Date(order.createdAt).toLocaleDateString()}</p>
                     {order.trackingNumber && (
                       <p className="text-xs text-blue-600">Tracking: {order.trackingNumber}</p>
                     )}

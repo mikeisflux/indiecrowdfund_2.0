@@ -170,7 +170,7 @@ export default function RetailerInvoicesPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Invoices</h1>
-            <p className="text-zinc-500">View and download your invoices</p>
+            <p className="text-muted-foreground">View and download your invoices</p>
           </div>
           <Button variant="outline" className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
@@ -180,7 +180,7 @@ export default function RetailerInvoicesPage() {
 
         <div className="flex gap-4 mb-6">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by invoice number or project..."
               value={searchQuery}
@@ -197,9 +197,9 @@ export default function RetailerInvoicesPage() {
         {filteredInvoices.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <FileText className="h-12 w-12 text-zinc-400 mb-4" />
+              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No invoices yet</h3>
-              <p className="text-zinc-500 text-center mb-4">
+              <p className="text-muted-foreground text-center mb-4">
                 Your invoices will appear here once you place wholesale orders.
               </p>
               <Link href="/retailers/projects">
@@ -215,7 +215,7 @@ export default function RetailerInvoicesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg">{invoice.invoiceNumber}</CardTitle>
-                      <p className="text-sm text-zinc-500">{invoice.projectTitle}</p>
+                      <p className="text-sm text-muted-foreground">{invoice.projectTitle}</p>
                     </div>
                     {getStatusBadge(invoice.status)}
                   </div>
@@ -226,10 +226,10 @@ export default function RetailerInvoicesPage() {
                       <p className="text-xl font-bold text-emerald-600">
                         ${Number(invoice.amount).toLocaleString()}
                       </p>
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         Due: {new Date(invoice.dueDate).toLocaleDateString()}
                       </p>
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-muted-foreground">
                         Issued: {new Date(invoice.createdAt).toLocaleDateString()}
                       </p>
                       {invoice.paidAt && (

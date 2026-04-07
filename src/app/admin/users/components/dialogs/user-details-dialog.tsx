@@ -98,7 +98,7 @@ export function UserDetailsDialog({
           {/* Overview Tab */}
           <TabsContent value="overview" className="py-4">
             <div className="flex items-start gap-6">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold text-zinc-600">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold text-muted-foreground">
                 {user.name?.charAt(0) || (user.email?.charAt(0) || "U").toUpperCase()}
               </div>
               <div className="flex-1">
@@ -111,8 +111,8 @@ export function UserDetailsDialog({
                     </Badge>
                   )}
                 </div>
-                <p className="text-zinc-500">{user.email}</p>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="text-muted-foreground">{user.email}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
                   Member since {user.createdAt ? formatDistanceToNow(new Date(user.createdAt), { addSuffix: true }) : "N/A"}
                 </p>
               </div>
@@ -123,14 +123,14 @@ export function UserDetailsDialog({
                 <CardContent className="p-4 text-center">
                   <Star className="h-6 w-6 mx-auto text-blue-500 mb-2" />
                   <p className="text-2xl font-bold">{user.pledgeCount}</p>
-                  <p className="text-xs text-zinc-500">Pledges Made</p>
+                  <p className="text-xs text-muted-foreground">Pledges Made</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
                   <Crown className="h-6 w-6 mx-auto text-violet-500 mb-2" />
                   <p className="text-2xl font-bold">{user.projectCount}</p>
-                  <p className="text-xs text-zinc-500">Projects Created</p>
+                  <p className="text-xs text-muted-foreground">Projects Created</p>
                 </CardContent>
               </Card>
             </div>
@@ -139,7 +139,7 @@ export function UserDetailsDialog({
             {user.divinityCoinBalance > 0 && (
               <div className="mt-6 flex items-center justify-between rounded-lg border p-4">
                 <div>
-                  <p className="text-sm text-zinc-500">DivinityCoin Wallet Balance</p>
+                  <p className="text-sm text-muted-foreground">DivinityCoin Wallet Balance</p>
                   <p className="text-lg font-bold text-emerald-600">
                     ${Number(user.divinityCoinBalance).toFixed(2)}
                   </p>
@@ -181,9 +181,9 @@ export function UserDetailsDialog({
           {/* Backer History Tab */}
           <TabsContent value="pledges" className="py-4">
             {loadingPledges ? (
-              <div className="text-center py-8 text-zinc-500">Loading pledges...</div>
+              <div className="text-center py-8 text-muted-foreground">Loading pledges...</div>
             ) : pledges.length === 0 ? (
-              <div className="text-center py-8 text-zinc-500">No pledges found</div>
+              <div className="text-center py-8 text-muted-foreground">No pledges found</div>
             ) : (
               <div className="space-y-4">
                 {pledges.map((pledge) => (
@@ -209,7 +209,7 @@ export function UserDetailsDialog({
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-zinc-500 mt-1">
+                          <p className="text-sm text-muted-foreground mt-1">
                             {pledge.reward?.title || "No reward"} • {new Date(pledge.createdAt).toLocaleDateString()}
                           </p>
                           <p className="text-lg font-semibold mt-2">
@@ -282,9 +282,9 @@ export function UserDetailsDialog({
           {/* Email History Tab */}
           <TabsContent value="emails" className="py-4">
             {loadingEmails ? (
-              <div className="text-center py-8 text-zinc-500">Loading emails...</div>
+              <div className="text-center py-8 text-muted-foreground">Loading emails...</div>
             ) : emails.length === 0 ? (
-              <div className="text-center py-8 text-zinc-500">No emails found</div>
+              <div className="text-center py-8 text-muted-foreground">No emails found</div>
             ) : (
               <div className="space-y-4">
                 {emails.map((email) => (
@@ -294,14 +294,14 @@ export function UserDetailsDialog({
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{email.type.replace(/_/g, " ")}</Badge>
-                            <span className="text-sm text-zinc-500">
+                            <span className="text-sm text-muted-foreground">
                               {new Date(email.sentAt).toLocaleString()}
                             </span>
                           </div>
                           <p className="font-medium mt-2">{email.subject || "No subject"}</p>
-                          <p className="text-sm text-zinc-500">To: {email.recipientEmail}</p>
+                          <p className="text-sm text-muted-foreground">To: {email.recipientEmail}</p>
                           {email.project && (
-                            <p className="text-sm text-zinc-500">Project: {email.project.title}</p>
+                            <p className="text-sm text-muted-foreground">Project: {email.project.title}</p>
                           )}
                         </div>
                         <div className="flex gap-2">

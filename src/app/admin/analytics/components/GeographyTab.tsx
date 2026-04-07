@@ -21,7 +21,7 @@ export function GeographyTab({ geographyData, formatNumber }: GeographyTabProps)
   if (!geographyData) {
     return (
       <Card>
-        <CardContent className="py-12 text-center text-zinc-500">
+        <CardContent className="py-12 text-center text-muted-foreground">
           No geographic data available
         </CardContent>
       </Card>
@@ -45,7 +45,7 @@ export function GeographyTab({ geographyData, formatNumber }: GeographyTabProps)
         </CardHeader>
         <CardContent>
           {geographyData.countries.length === 0 ? (
-            <p className="text-center text-zinc-500 py-8">
+            <p className="text-center text-muted-foreground py-8">
               No visitor country data yet. Country data is captured automatically from visitor IP
               addresses and will appear here as users browse the site.
             </p>
@@ -62,7 +62,7 @@ export function GeographyTab({ geographyData, formatNumber }: GeographyTabProps)
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-medium">{formatNumber(country.visits)}</p>
-                    <p className="text-xs text-zinc-500">visitors</p>
+                    <p className="text-xs text-muted-foreground">visitors</p>
                   </div>
                 </div>
               ))}
@@ -83,7 +83,7 @@ export function GeographyTab({ geographyData, formatNumber }: GeographyTabProps)
           </CardHeader>
           <CardContent>
             {!geographyData.userLocations || geographyData.userLocations.length === 0 ? (
-              <p className="text-center text-zinc-500 py-8">No user location data available</p>
+              <p className="text-center text-muted-foreground py-8">No user location data available</p>
             ) : (
               <div className="space-y-2">
                 {geographyData.userLocations.map((loc, i) => (
@@ -110,7 +110,7 @@ export function GeographyTab({ geographyData, formatNumber }: GeographyTabProps)
           </CardHeader>
           <CardContent>
             {!geographyData.backerLocations || geographyData.backerLocations.length === 0 ? (
-              <p className="text-center text-zinc-500 py-8">No backer location data available</p>
+              <p className="text-center text-muted-foreground py-8">No backer location data available</p>
             ) : (
               <div className="space-y-2">
                 {geographyData.backerLocations.map((loc, i) => (
@@ -138,7 +138,7 @@ export function GeographyTab({ geographyData, formatNumber }: GeographyTabProps)
         </CardHeader>
         <CardContent>
           {geographyData.cities.length === 0 ? (
-            <p className="text-center text-zinc-500 py-8">No project location data available</p>
+            <p className="text-center text-muted-foreground py-8">No project location data available</p>
           ) : (
             <div className="space-y-2">
               {geographyData.cities.map((city, i) => (

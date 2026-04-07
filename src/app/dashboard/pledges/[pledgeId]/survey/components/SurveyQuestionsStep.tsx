@@ -31,7 +31,7 @@ export function SurveyQuestionsStep({ data, backerResponses, setBackerResponses,
               {q.isRequired && <span className="text-red-500 ml-1">*</span>}
             </Label>
             {q.description && (
-              <p className="text-sm text-zinc-500">{q.description}</p>
+              <p className="text-sm text-muted-foreground">{q.description}</p>
             )}
             <QuestionInput
               questionId={q.id}

@@ -190,14 +190,14 @@ export default function NotificationsPage() {
       case "message":
         return <MessageSquare className="h-5 w-5 text-purple-500" />;
       default:
-        return <Bell className="h-5 w-5 text-zinc-500" />;
+        return <Bell className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-zinc-400" />
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -208,7 +208,7 @@ export default function NotificationsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Notifications</h1>
-          <p className="text-zinc-500">
+          <p className="text-muted-foreground">
             {unreadCount > 0 ? `${unreadCount} unread notifications` : "All caught up!"}
           </p>
         </div>
@@ -253,8 +253,8 @@ export default function NotificationsPage() {
             <CardContent>
               {filteredNotifications.length === 0 ? (
                 <div className="py-12 text-center">
-                  <Bell className="mx-auto h-12 w-12 text-zinc-300" />
-                  <p className="mt-4 text-zinc-500">No notifications</p>
+                  <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <p className="mt-4 text-muted-foreground">No notifications</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -264,7 +264,7 @@ export default function NotificationsPage() {
                       className={`flex items-start gap-4 rounded-lg border p-4 transition-colors ${
                         !notification.read
                           ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20"
-                          : "border-zinc-200 dark:border-zinc-800"
+                          : "border-border dark:border-zinc-800"
                       }`}
                     >
                       <div className="flex-shrink-0 mt-0.5">
@@ -273,14 +273,14 @@ export default function NotificationsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className={`font-medium ${!notification.read ? "text-zinc-900 dark:text-white" : "text-zinc-700 dark:text-zinc-300"}`}>
+                            <p className={`font-medium ${!notification.read ? "text-zinc-900 dark:text-white" : "text-foreground dark:text-muted-foreground"}`}>
                               {notification.title}
                             </p>
-                            <p className="text-sm text-zinc-500 mt-0.5">
+                            <p className="text-sm text-muted-foreground mt-0.5">
                               {notification.message}
                             </p>
                           </div>
-                          <span className="flex-shrink-0 text-xs text-zinc-400">
+                          <span className="flex-shrink-0 text-xs text-muted-foreground">
                             {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
                           </span>
                         </div>
@@ -303,7 +303,7 @@ export default function NotificationsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-zinc-400 hover:text-red-500"
+                            className="text-muted-foreground hover:text-red-500"
                             onClick={() => deleteNotification(notification.id)}
                           >
                             <Trash2 className="h-3 w-3" />
@@ -428,17 +428,17 @@ export default function NotificationsPage() {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-zinc-500">Today</span>
+                  <span className="text-sm text-muted-foreground">Today</span>
                   <Badge variant="secondary">
                     {stats?.today || 0} notifications
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-zinc-500">This week</span>
+                  <span className="text-sm text-muted-foreground">This week</span>
                   <Badge variant="secondary">{stats?.thisWeek || 0} notifications</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-zinc-500">Unread</span>
+                  <span className="text-sm text-muted-foreground">Unread</span>
                   <Badge variant={(stats?.unread || 0) > 0 ? "default" : "secondary"}>
                     {stats?.unread || 0}
                   </Badge>

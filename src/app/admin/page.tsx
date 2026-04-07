@@ -169,7 +169,7 @@ export default function AdminDashboard() {
       case "LIVE":
         return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Approved</Badge>;
       case "DRAFT":
-        return <Badge className="bg-zinc-100 text-zinc-700 hover:bg-zinc-100">Draft</Badge>;
+        return <Badge className="bg-muted text-foreground hover:bg-muted">Draft</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -270,7 +270,7 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-4" />
-          <p className="text-zinc-500">Loading dashboard...</p>
+          <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -282,7 +282,7 @@ export default function AdminDashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Dashboard</h1>
-          <p className="text-zinc-500">Welcome back! Here&apos;s what&apos;s happening with your platform.</p>
+          <p className="text-muted-foreground">Welcome back! Here&apos;s what&apos;s happening with your platform.</p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -361,7 +361,7 @@ export default function AdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium text-zinc-500">{stat.title}</p>
+                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
                   <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">
                     {stat.value}
                   </p>
@@ -392,7 +392,7 @@ export default function AdminDashboard() {
                     {stat.change}
                   </span>
                 )}
-                <span className="text-sm text-zinc-500">vs last period</span>
+                <span className="text-sm text-muted-foreground">vs last period</span>
               </div>
             </CardContent>
             <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${
@@ -420,12 +420,12 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="space-y-4">
               {recentProjects.length === 0 ? (
-                <p className="text-center text-zinc-500 py-8">No projects requiring action</p>
+                <p className="text-center text-muted-foreground py-8">No projects requiring action</p>
               ) : (
                 recentProjects.slice(0, 5).map((project) => (
                   <div
                     key={project.id}
-                    className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50 dark:hover:bg-zinc-800/50"
                   >
                     <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700" />
                     <div className="flex-1 min-w-0">
@@ -435,7 +435,7 @@ export default function AdminDashboard() {
                         </h4>
                         {getStatusBadge(project.status)}
                       </div>
-                      <div className="mt-1 flex items-center gap-3 text-sm text-zinc-500">
+                      <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
                         <span>by {project.creator?.name || project.creator?.email}</span>
                         <span>•</span>
                         <span>{project.category}</span>
@@ -445,7 +445,7 @@ export default function AdminDashboard() {
                       {project.currentAmount > 0 && (
                         <div className="mt-2">
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-zinc-500">
+                            <span className="text-muted-foreground">
                               {formatCurrency(project.currentAmount)} / {formatCurrency(project.goalAmount)}
                             </span>
                             <span className="font-medium">
@@ -479,7 +479,7 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="space-y-4">
               {activityItems.length === 0 ? (
-                <p className="text-center text-zinc-500 py-4">No recent activity</p>
+                <p className="text-center text-muted-foreground py-4">No recent activity</p>
               ) : (
                 activityItems.map((activity) => (
                   <div key={activity.id} className="flex gap-3">
@@ -491,8 +491,8 @@ export default function AdminDashboard() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-zinc-700 dark:text-zinc-300">{activity.title}</p>
-                      <p className="text-xs text-zinc-500">{formatRelativeTime(activity.timestamp)}</p>
+                      <p className="text-sm text-foreground dark:text-muted-foreground">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground">{formatRelativeTime(activity.timestamp)}</p>
                     </div>
                   </div>
                 ))

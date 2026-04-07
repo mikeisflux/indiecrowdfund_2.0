@@ -20,7 +20,7 @@ export function ReviewStatsCards({ stats, flaggedCount }: ReviewStatsCardsProps)
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.pending}</p>
-              <p className="text-xs text-zinc-500">Pending Review</p>
+              <p className="text-xs text-muted-foreground">Pending Review</p>
             </div>
           </div>
         </CardContent>
@@ -34,7 +34,7 @@ export function ReviewStatsCards({ stats, flaggedCount }: ReviewStatsCardsProps)
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.approvedToday}</p>
-              <p className="text-xs text-zinc-500">Approved Today</p>
+              <p className="text-xs text-muted-foreground">Approved Today</p>
             </div>
           </div>
         </CardContent>
@@ -48,7 +48,7 @@ export function ReviewStatsCards({ stats, flaggedCount }: ReviewStatsCardsProps)
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.rejectedToday}</p>
-              <p className="text-xs text-zinc-500">Rejected Today</p>
+              <p className="text-xs text-muted-foreground">Rejected Today</p>
             </div>
           </div>
         </CardContent>
@@ -62,7 +62,7 @@ export function ReviewStatsCards({ stats, flaggedCount }: ReviewStatsCardsProps)
             </div>
             <div>
               <p className="text-2xl font-bold">{flaggedCount}</p>
-              <p className="text-xs text-zinc-500">Flagged Projects</p>
+              <p className="text-xs text-muted-foreground">Flagged Projects</p>
             </div>
           </div>
         </CardContent>

@@ -45,7 +45,7 @@ export function NewFolderDialog({
               value={folderName}
               onChange={(e) => onFolderNameChange(e.target.value)}
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               Folder will be created when you upload files to it
             </p>
           </div>

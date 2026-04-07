@@ -299,7 +299,7 @@ export default function AnalyticsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Analytics</h1>
-          <p className="text-zinc-500">Comprehensive platform metrics and insights</p>
+          <p className="text-muted-foreground">Comprehensive platform metrics and insights</p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -330,7 +330,7 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-500">Total Revenue</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
                 <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-white">
                   {overviewData ? formatCurrency(overviewData.revenue.current) : "-"}
                 </p>
@@ -347,7 +347,7 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-500">New Users</p>
+                <p className="text-sm font-medium text-muted-foreground">New Users</p>
                 <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-white">
                   {overviewData ? formatNumber(overviewData.users.current) : "-"}
                 </p>
@@ -364,11 +364,11 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-500">Total Pledges</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Pledges</p>
                 <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-white">
                   {overviewData ? formatNumber(overviewData.revenue.count) : "-"}
                 </p>
-                <p className="mt-1 text-sm text-zinc-500">in selected period</p>
+                <p className="mt-1 text-sm text-muted-foreground">in selected period</p>
               </div>
               <div className="rounded-full bg-violet-100 p-3 dark:bg-violet-900/30">
                 <ShoppingCart className="h-6 w-6 text-violet-600" />
@@ -381,11 +381,11 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-500">Conversion Rate</p>
+                <p className="text-sm font-medium text-muted-foreground">Conversion Rate</p>
                 <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-white">
                   {overviewData ? `${overviewData.conversionRate}%` : "-"}
                 </p>
-                <p className="mt-1 text-sm text-zinc-500">views to pledges</p>
+                <p className="mt-1 text-sm text-muted-foreground">views to pledges</p>
               </div>
               <div className="rounded-full bg-amber-100 p-3 dark:bg-amber-900/30">
                 <Target className="h-6 w-6 text-amber-600" />

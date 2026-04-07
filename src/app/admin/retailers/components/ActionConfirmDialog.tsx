@@ -49,7 +49,7 @@ export function ActionConfirmDialog({
           <AlertDialogTitle className="flex items-center gap-2">
             {actionType === "APPROVE" && <CheckCircle className="h-5 w-5 text-emerald-600" />}
             {actionType === "REJECT" && <XCircle className="h-5 w-5 text-red-600" />}
-            {actionType === "SUSPEND" && <Ban className="h-5 w-5 text-zinc-600" />}
+            {actionType === "SUSPEND" && <Ban className="h-5 w-5 text-muted-foreground" />}
             {actionType === "REACTIVATE" && <CheckCircle className="h-5 w-5 text-emerald-600" />}
             {actionType === "REQUEST_INFO" && <AlertTriangle className="h-5 w-5 text-blue-600" />}
             {actionType === "APPROVE" && "Approve Retailer Application"}

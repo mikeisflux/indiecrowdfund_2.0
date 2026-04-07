@@ -193,9 +193,9 @@ export default function RetailerAccountPage() {
         {!account ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <Building2 className="h-12 w-12 text-zinc-400 mb-4" />
+              <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No retailer account</h3>
-              <p className="text-zinc-500 text-center mb-4">
+              <p className="text-muted-foreground text-center mb-4">
                 You don&apos;t have a retailer account yet. Apply to become a retailer to access wholesale pricing.
               </p>
               <Link href="/retailers/apply">
@@ -208,7 +208,7 @@ export default function RetailerAccountPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold">Account Settings</h1>
-                <p className="text-zinc-500">Manage your retailer account</p>
+                <p className="text-muted-foreground">Manage your retailer account</p>
               </div>
               {getStatusBadge(account.status)}
             </div>
@@ -248,7 +248,7 @@ export default function RetailerAccountPage() {
                     <div className="space-y-2">
                       <Label htmlFor="website">Website</Label>
                       <div className="relative">
-                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="website"
                           value={account.website}
@@ -287,7 +287,7 @@ export default function RetailerAccountPage() {
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="email"
                           type="email"
@@ -300,7 +300,7 @@ export default function RetailerAccountPage() {
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone</Label>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="phone"
                           value={account.phone}

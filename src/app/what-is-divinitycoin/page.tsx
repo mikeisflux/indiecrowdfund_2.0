@@ -79,14 +79,14 @@ function FAQItem({ faq }: { faq: FAQ }) {
     <div className="rounded-lg border border-border bg-card/80 backdrop-blur-sm overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between p-4 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+        className="flex w-full items-center justify-between p-4 text-left hover:bg-muted/50 dark:hover:bg-zinc-800/50 transition-colors"
       >
         <span className="font-medium text-zinc-900 dark:text-zinc-100">{faq.question}</span>
-        <ArrowRight className={`h-5 w-5 text-zinc-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+        <ArrowRight className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-90' : ''}`} />
       </button>
       {isOpen && (
-        <div className="border-t border-border px-4 py-3 bg-zinc-50 dark:bg-zinc-800/30">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">{faq.answer}</p>
+        <div className="border-t border-border px-4 py-3 bg-muted/50 dark:bg-zinc-800/30">
+          <p className="text-sm text-zinc-600 dark:text-muted-foreground">{faq.answer}</p>
         </div>
       )}
     </div>
@@ -142,7 +142,7 @@ export default function WhatIsDivinityCoinPage() {
               <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
                 DivinityCoin is a Payment Processor
               </h2>
-              <p className="text-zinc-700 dark:text-zinc-300 text-lg">
+              <p className="text-zinc-700 dark:text-muted-foreground text-lg">
                 DivinityCoin is an <strong>alternative payment sub-processor</strong> used by some creators on IndieCrowdfund.
                 When you back a project that uses DivinityCoin, you simply enter your <strong>credit or debit card</strong> at checkout.
                 It is <strong>NOT</strong> a cryptocurrency, token, or wallet system — just a secure way to pay with your card.
@@ -162,27 +162,27 @@ export default function WhatIsDivinityCoinPage() {
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300">An <strong>alternative payment sub-processor</strong> for IndieCrowdfund</span>
+                <span className="text-zinc-700 dark:text-muted-foreground">An <strong>alternative payment sub-processor</strong> for IndieCrowdfund</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300">A <strong>seamless card payment</strong> experience — enter your card and go</span>
+                <span className="text-zinc-700 dark:text-muted-foreground">A <strong>seamless card payment</strong> experience — enter your card and go</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300"><strong>PCI-compliant</strong> — bank-level encryption and security</span>
+                <span className="text-zinc-700 dark:text-muted-foreground"><strong>PCI-compliant</strong> — bank-level encryption and security</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300">A way to <strong>support all content types</strong> including NSFW/adult projects</span>
+                <span className="text-zinc-700 dark:text-muted-foreground">A way to <strong>support all content types</strong> including NSFW/adult projects</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300">Accepts <strong>Visa, Mastercard, Amex, and Discover</strong></span>
+                <span className="text-zinc-700 dark:text-muted-foreground">Accepts <strong>Visa, Mastercard, Amex, and Discover</strong></span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300"><strong>Easy to use</strong> — no setup, accounts, or credits needed</span>
+                <span className="text-zinc-700 dark:text-muted-foreground"><strong>Easy to use</strong> — no setup, accounts, or credits needed</span>
               </li>
             </ul>
           </div>
@@ -196,27 +196,27 @@ export default function WhatIsDivinityCoinPage() {
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
                 <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300">A <strong>cryptocurrency</strong> or blockchain token</span>
+                <span className="text-zinc-700 dark:text-muted-foreground">A <strong>cryptocurrency</strong> or blockchain token</span>
               </li>
               <li className="flex items-start gap-3">
                 <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300">A <strong>wallet system</strong> where you pre-load credits</span>
+                <span className="text-zinc-700 dark:text-muted-foreground">A <strong>wallet system</strong> where you pre-load credits</span>
               </li>
               <li className="flex items-start gap-3">
                 <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300">An <strong>investment</strong> or speculative asset</span>
+                <span className="text-zinc-700 dark:text-muted-foreground">An <strong>investment</strong> or speculative asset</span>
               </li>
               <li className="flex items-start gap-3">
                 <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300"><strong>Volatile</strong> — it doesn&apos;t fluctuate in value</span>
+                <span className="text-zinc-700 dark:text-muted-foreground"><strong>Volatile</strong> — it doesn&apos;t fluctuate in value</span>
               </li>
               <li className="flex items-start gap-3">
                 <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300">Requiring a <strong>special account</strong> or software to use</span>
+                <span className="text-zinc-700 dark:text-muted-foreground">Requiring a <strong>special account</strong> or software to use</span>
               </li>
               <li className="flex items-start gap-3">
                 <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span className="text-zinc-700 dark:text-zinc-300"><strong>Tradeable</strong> on exchanges or between users</span>
+                <span className="text-zinc-700 dark:text-muted-foreground"><strong>Tradeable</strong> on exchanges or between users</span>
               </li>
             </ul>
           </div>
@@ -231,7 +231,7 @@ export default function WhatIsDivinityCoinPage() {
                 <ShoppingBag className="h-6 w-6 text-amber-600" />
               </div>
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">1. Find a Project</h4>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                 Browse projects on IndieCrowdfund or the digital marketplace. Some creators use DivinityCoin as their payment processor.
               </p>
             </div>
@@ -240,7 +240,7 @@ export default function WhatIsDivinityCoinPage() {
                 <CreditCard className="h-6 w-6 text-amber-600" />
               </div>
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">2. Enter Your Card</h4>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                 At checkout, enter your credit or debit card details into the secure payment form. Visa, Mastercard, Amex, and Discover accepted.
               </p>
             </div>
@@ -249,7 +249,7 @@ export default function WhatIsDivinityCoinPage() {
                 <Lock className="h-6 w-6 text-amber-600" />
               </div>
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">3. Secure Processing</h4>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                 DivinityCoin securely processes your payment through their PCI-compliant system. Your card details are encrypted end-to-end.
               </p>
             </div>
@@ -258,7 +258,7 @@ export default function WhatIsDivinityCoinPage() {
                 <Heart className="h-6 w-6 text-amber-600" />
               </div>
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">4. You&apos;re Done!</h4>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                 Your pledge or purchase is confirmed instantly. That&apos;s it — simple as any online card payment.
               </p>
             </div>
@@ -271,7 +271,7 @@ export default function WhatIsDivinityCoinPage() {
             <CreditCard className="h-6 w-6 inline-block mr-2 text-amber-500" />
             Standard Checkout vs DivinityCoin: What&apos;s the Difference?
           </h2>
-          <p className="text-center text-zinc-600 dark:text-zinc-400 mb-6 max-w-3xl mx-auto">
+          <p className="text-center text-zinc-600 dark:text-muted-foreground mb-6 max-w-3xl mx-auto">
             Both are secure payment processors. The main difference is which content types they support.
             As a backer, the checkout experience is nearly identical for both.
           </p>
@@ -281,7 +281,7 @@ export default function WhatIsDivinityCoinPage() {
                 <CreditCard className="h-5 w-5 text-blue-600" />
                 <h4 className="font-semibold text-blue-800 dark:text-blue-200">Standard Checkout (Default)</h4>
               </div>
-              <ul className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <ul className="space-y-2 text-sm text-zinc-700 dark:text-muted-foreground">
                 <li>• Enter your card at checkout</li>
                 <li>• Payment processed directly</li>
                 <li>• Supports credit, debit, Apple Pay, Google Pay</li>
@@ -295,7 +295,7 @@ export default function WhatIsDivinityCoinPage() {
                 <Coins className="h-5 w-5 text-amber-600" />
                 <h4 className="font-semibold text-amber-800 dark:text-amber-200">DivinityCoin</h4>
               </div>
-              <ul className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <ul className="space-y-2 text-sm text-zinc-700 dark:text-muted-foreground">
                 <li>• Enter your card at checkout</li>
                 <li>• Payment processed through DivinityCoin</li>
                 <li>• Supports Visa, Mastercard, Amex, Discover</li>
@@ -316,7 +316,7 @@ export default function WhatIsDivinityCoinPage() {
                 <Sparkles className="h-6 w-6 text-purple-500" />
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">All Content Types</h4>
               </div>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                 DivinityCoin supports all creative content including NSFW and adult-oriented projects that standard payment processors may not allow.
               </p>
             </div>
@@ -325,7 +325,7 @@ export default function WhatIsDivinityCoinPage() {
                 <Shield className="h-6 w-6 text-emerald-500" />
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Compliance Built-in</h4>
               </div>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                 DivinityCoin handles regulatory compliance behind the scenes, providing creators with a worry-free payment acceptance solution.
               </p>
             </div>
@@ -334,7 +334,7 @@ export default function WhatIsDivinityCoinPage() {
                 <Zap className="h-6 w-6 text-blue-500" />
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Seamless Experience</h4>
               </div>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                 Backers experience the same simple card-entry checkout flow regardless of whether the project uses the standard processor or DivinityCoin.
               </p>
             </div>
@@ -344,7 +344,7 @@ export default function WhatIsDivinityCoinPage() {
         {/* The Checkout Experience */}
         <div className="mb-12 rounded-xl border border-border bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-6">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">The DivinityCoin Checkout Experience</h2>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-6">Here&apos;s exactly what happens when you back a project or buy from the marketplace using DivinityCoin:</p>
+          <p className="text-zinc-600 dark:text-muted-foreground mb-6">Here&apos;s exactly what happens when you back a project or buy from the marketplace using DivinityCoin:</p>
           <div className="space-y-4">
             <div className="flex items-start gap-4">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-600 text-white font-bold text-sm">
@@ -352,7 +352,7 @@ export default function WhatIsDivinityCoinPage() {
               </div>
               <div>
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Select Your Reward or Product</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                   Choose your reward tier and any add-ons (for pledges), or select a book/product (for marketplace). This is the same as any project.
                 </p>
               </div>
@@ -363,7 +363,7 @@ export default function WhatIsDivinityCoinPage() {
               </div>
               <div>
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">See the Secure Payment Form</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                   At checkout, you&apos;ll see a &quot;Secure Payment&quot; header with card brand logos (Visa, Mastercard, Amex, Discover) and a lock icon. This is DivinityCoin&apos;s secure payment form.
                 </p>
               </div>
@@ -374,7 +374,7 @@ export default function WhatIsDivinityCoinPage() {
               </div>
               <div>
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Enter Your Card Details</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                   Enter your card number, expiration date, and CVC. You can also pay via bank where available. Your details are encrypted and never stored by IndieCrowdfund.
                 </p>
               </div>
@@ -385,7 +385,7 @@ export default function WhatIsDivinityCoinPage() {
               </div>
               <div>
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Confirm and You&apos;re Done</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm text-zinc-600 dark:text-muted-foreground">
                   Click the pay button and your pledge or purchase is confirmed. You&apos;ll receive a confirmation email, and digital purchases are delivered to your Digital Library instantly.
                 </p>
               </div>
@@ -399,13 +399,13 @@ export default function WhatIsDivinityCoinPage() {
             <Store className="h-6 w-6 text-purple-600" />
             <h2 className="text-xl font-bold text-purple-800 dark:text-purple-200">For Creators: Using DivinityCoin</h2>
           </div>
-          <p className="text-zinc-700 dark:text-zinc-300 mb-4">
+          <p className="text-zinc-700 dark:text-muted-foreground mb-4">
             As a creator, you can choose DivinityCoin as your payment processor. Here&apos;s what you need to know:
           </p>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="rounded-lg bg-white dark:bg-zinc-800/50 p-4">
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Benefits</h4>
-              <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
+              <ul className="space-y-1 text-sm text-zinc-600 dark:text-muted-foreground">
                 <li>• Supports all content types including NSFW/adult</li>
                 <li>• Backers pay with their regular credit/debit cards</li>
                 <li>• Built-in compliance handling</li>
@@ -414,7 +414,7 @@ export default function WhatIsDivinityCoinPage() {
             </div>
             <div className="rounded-lg bg-white dark:bg-zinc-800/50 p-4">
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">How It Works</h4>
-              <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
+              <ul className="space-y-1 text-sm text-zinc-600 dark:text-muted-foreground">
                 <li>• Select DivinityCoin in your project or IndieKit settings</li>
                 <li>• Backers enter their card at checkout seamlessly</li>
                 <li>• DivinityCoin processes the payment securely</li>
@@ -441,28 +441,28 @@ export default function WhatIsDivinityCoinPage() {
               <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-medium text-zinc-900 dark:text-zinc-100">PCI-Compliant Processing</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">All payments processed through PCI DSS Level 1 certified infrastructure.</p>
+                <p className="text-sm text-zinc-600 dark:text-muted-foreground">All payments processed through PCI DSS Level 1 certified infrastructure.</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-medium text-zinc-900 dark:text-zinc-100">Card Data Never Stored</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">IndieCrowdfund never sees, stores, or processes your card details.</p>
+                <p className="text-sm text-zinc-600 dark:text-muted-foreground">IndieCrowdfund never sees, stores, or processes your card details.</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-medium text-zinc-900 dark:text-zinc-100">End-to-End Encryption</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">All data is encrypted in transit with TLS 1.2+ and at rest with AES-256.</p>
+                <p className="text-sm text-zinc-600 dark:text-muted-foreground">All data is encrypted in transit with TLS 1.2+ and at rest with AES-256.</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-medium text-zinc-900 dark:text-zinc-100">Refund Protection</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">Failed campaigns = no charge. Refunds processed back to your original card.</p>
+                <p className="text-sm text-zinc-600 dark:text-muted-foreground">Failed campaigns = no charge. Refunds processed back to your original card.</p>
               </div>
             </div>
           </div>

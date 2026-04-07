@@ -8,7 +8,7 @@ export function StatusBadge({ status }: { status: string }) {
     APPROVED: { label: "Approved", className: "bg-blue-100 text-blue-700 border-blue-200" },
     LIVE: { label: "Live", className: "bg-emerald-100 text-emerald-700 border-emerald-200" },
     REJECTED: { label: "Rejected", className: "bg-rose-100 text-rose-700 border-rose-200" },
-    ARCHIVED: { label: "Archived", className: "bg-zinc-100 text-zinc-700 border-zinc-200" },
+    ARCHIVED: { label: "Archived", className: "bg-muted text-foreground border-border" },
   };
 
   const config = configs[status] || { label: status, className: "bg-gray-500/20 text-gray-400 border-gray-500/30" };

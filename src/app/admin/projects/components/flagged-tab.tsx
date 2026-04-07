@@ -25,7 +25,7 @@ export function FlaggedTab({ flaggedProjects, onReviewProject }: FlaggedTabProps
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <CheckCircle className="h-12 w-12 text-emerald-300 mb-4" />
             <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No flagged projects</h3>
-            <p className="text-sm text-zinc-500">All projects look good!</p>
+            <p className="text-sm text-muted-foreground">All projects look good!</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -33,11 +33,11 @@ export function FlaggedTab({ flaggedProjects, onReviewProject }: FlaggedTabProps
               const flags = getFlags(project);
               return (
                 <div key={project.id} className="flex items-center gap-4 rounded-lg border border-red-200 bg-red-50/50 p-4 dark:bg-red-950/10">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 relative overflow-hidden">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted relative overflow-hidden">
                     {project.imageUrl ? (
                       <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
                     ) : (
-                      <FolderKanban className="h-6 w-6 text-zinc-400" />
+                      <FolderKanban className="h-6 w-6 text-muted-foreground" />
                     )}
                   </div>
 
@@ -46,7 +46,7 @@ export function FlaggedTab({ flaggedProjects, onReviewProject }: FlaggedTabProps
                       <h4 className="font-semibold">{project.title}</h4>
                       <Badge variant="outline">{project.category}</Badge>
                     </div>
-                    <p className="text-sm text-zinc-500">by {project.creator.name || project.creator.email}</p>
+                    <p className="text-sm text-muted-foreground">by {project.creator.name || project.creator.email}</p>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {flags.map((flag) => getFlagBadge(flag))}
                     </div>

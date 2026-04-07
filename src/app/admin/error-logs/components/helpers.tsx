@@ -66,7 +66,7 @@ export function statusColor(status: string) {
     case "RESOLVED":
       return "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400";
     case "IGNORED":
-      return "bg-zinc-500/20 text-zinc-600 dark:text-zinc-400";
+      return "bg-zinc-500/20 text-muted-foreground dark:text-muted-foreground";
     default:
       return "bg-muted text-muted-foreground";
   }

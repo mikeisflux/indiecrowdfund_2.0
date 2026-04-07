@@ -40,9 +40,9 @@ export function MoveFilesDialog({
             <button
               key={folder}
               onClick={() => onMove(folder)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border hover:bg-muted/50 dark:hover:bg-zinc-800 transition-colors"
             >
-              <Folder className="h-5 w-5 text-zinc-400" />
+              <Folder className="h-5 w-5 text-muted-foreground" />
               <span className="capitalize">{folder}</span>
             </button>
           ))}

@@ -144,7 +144,7 @@ export function ComposeEmailDialog({
           <div className="flex flex-col items-center justify-center py-8">
             <CheckCircle className="h-12 w-12 text-emerald-500 mb-4" />
             <h3 className="font-medium text-lg">Email Sent!</h3>
-            <p className="text-sm text-zinc-500">Your email has been sent to {to}</p>
+            <p className="text-sm text-muted-foreground">Your email has been sent to {to}</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -228,7 +228,7 @@ export function ComposeEmailDialog({
                 <Paperclip className="h-4 w-4" />
                 Attachments ({prefill.attachments.length})
               </Label>
-              <div className="flex flex-wrap gap-2 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border">
+              <div className="flex flex-wrap gap-2 p-3 bg-muted/50 dark:bg-zinc-800/50 rounded-lg border">
                 {prefill.attachments.map((att, index) => {
                   const FileTypeIcon = getFileIcon(att.contentType || "");
                   return (
@@ -236,7 +236,7 @@ export function ComposeEmailDialog({
                       key={index}
                       className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-800 rounded-md border text-sm"
                     >
-                      <FileTypeIcon className="h-4 w-4 text-zinc-500" />
+                      <FileTypeIcon className="h-4 w-4 text-muted-foreground" />
                       <span className="truncate max-w-[150px]">{att.filename}</span>
                     </div>
                   );

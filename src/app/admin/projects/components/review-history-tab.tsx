@@ -28,9 +28,9 @@ export function ReviewHistoryTab({ reviewHistory }: ReviewHistoryTabProps) {
       <CardContent>
         {reviewHistory.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <History className="h-12 w-12 text-zinc-300 mb-4" />
+            <History className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="font-medium text-zinc-900 dark:text-white mb-2">No review history yet</h3>
-            <p className="text-sm text-zinc-500">Review decisions will appear here.</p>
+            <p className="text-sm text-muted-foreground">Review decisions will appear here.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -83,11 +83,11 @@ export function ReviewHistoryTab({ reviewHistory }: ReviewHistoryTabProps) {
                       {review.action.replace(/_/g, " ")}
                     </Badge>
                   </div>
-                  <p className="text-sm text-zinc-500 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     by {review.project.creator.name || review.project.creator.email}
                   </p>
                   {review.notes && (
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2 line-clamp-2">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-2 line-clamp-2">
                       {review.notes}
                     </p>
                   )}
@@ -97,13 +97,13 @@ export function ReviewHistoryTab({ reviewHistory }: ReviewHistoryTabProps) {
                     </p>
                   )}
                   {review.previousStatus && review.newStatus && (
-                    <p className="text-xs text-zinc-400 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Status: {review.previousStatus} → {review.newStatus}
                     </p>
                   )}
                 </div>
 
-                <div className="text-right text-sm text-zinc-500 flex-shrink-0">
+                <div className="text-right text-sm text-muted-foreground flex-shrink-0">
                   <p className="font-medium">{review.reviewer?.name || review.reviewer?.email || "System"}</p>
                   <p>{formatDate(review.createdAt)}</p>
                 </div>

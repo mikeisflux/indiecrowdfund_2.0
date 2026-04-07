@@ -60,7 +60,7 @@ export function SurveyAddonsStep({
             <CardContent className="py-4">
               <div className="flex gap-4">
                 {addon.imageUrl && (
-                  <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-zinc-100 shrink-0">
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
                     <Image
                       src={addon.imageUrl}
                       alt={addon.title}
@@ -72,13 +72,13 @@ export function SurveyAddonsStep({
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold">{addon.title}</h3>
                   {addon.description && (
-                    <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{addon.description}</p>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{addon.description}</p>
                   )}
                   <p className="text-lg font-semibold text-emerald-600 mt-2">
                     ${addon.price.toFixed(2)}
                   </p>
                   {addon.quantityAvailable !== null && (
-                    <p className="text-xs text-zinc-400 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {addon.quantityAvailable} remaining
                     </p>
                   )}

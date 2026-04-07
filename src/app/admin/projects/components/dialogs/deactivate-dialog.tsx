@@ -35,7 +35,7 @@ export function DeactivateDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
             Are you sure you want to deactivate this campaign? The campaign will be unpublished and sent back to the review queue.
           </p>
         </div>

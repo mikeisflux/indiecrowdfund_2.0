@@ -217,7 +217,7 @@ export default function RetailerProjectsPage() {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Browse Projects</h1>
-          <p className="text-zinc-500">
+          <p className="text-muted-foreground">
             Discover campaigns with retailer access and get 50% wholesale discount on all orders.
           </p>
         </div>
@@ -240,7 +240,7 @@ export default function RetailerProjectsPage() {
         {/* Filters & Search */}
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search projects by name, creator, or category..."
               className="pl-10"
@@ -300,7 +300,7 @@ export default function RetailerProjectsPage() {
         </div>
 
         {/* Results Count */}
-        <p className="text-sm text-zinc-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Showing {projects.length} retailer-eligible projects
         </p>
 
@@ -315,7 +315,7 @@ export default function RetailerProjectsPage() {
             {projects.map((project) => (
               <Link key={project.id} href={`/retailers/projects/${project.id}`}>
                 <Card className="overflow-hidden hover:shadow-lg transition-all cursor-pointer group">
-                  <div className="aspect-[4/3] bg-zinc-100 relative overflow-hidden">
+                  <div className="aspect-[4/3] bg-muted relative overflow-hidden">
                     <Image
                       src={project.imageUrl}
                       alt={project.title}
@@ -337,7 +337,7 @@ export default function RetailerProjectsPage() {
                       <Badge variant="outline" className="text-xs">
                         {project.category}
                       </Badge>
-                      <span className="text-xs text-zinc-400">
+                      <span className="text-xs text-muted-foreground">
                         by {project.creator.name}
                       </span>
                     </div>
@@ -345,29 +345,29 @@ export default function RetailerProjectsPage() {
                     <h3 className="font-semibold text-lg mb-2 line-clamp-1 group-hover:text-emerald-600 transition-colors">
                       {project.title}
                     </h3>
-                    <p className="text-sm text-zinc-500 mb-4 line-clamp-2">
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                       {project.subtitle}
                     </p>
 
                     {/* Pricing */}
                     <div className="bg-emerald-50 rounded-lg p-3 mb-4">
-                      <p className="text-xs text-zinc-500 mb-1">Wholesale pricing from</p>
+                      <p className="text-xs text-muted-foreground mb-1">Wholesale pricing from</p>
                       <div className="flex items-baseline gap-2">
                         <span className="text-xl font-bold text-emerald-600">
                           ${Number(project.rewards[0]?.retailerPrice).toFixed(2)}
                         </span>
-                        <span className="text-sm text-zinc-400 line-through">
+                        <span className="text-sm text-muted-foreground line-through">
                           ${Number(project.rewards[0]?.amount).toFixed(2)}
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Min order: {project.retailerMinQuantity} units
                       </p>
                     </div>
 
                     {/* Progress */}
                     <div className="space-y-2">
-                      <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full bg-emerald-600 rounded-full transition-all"
                           style={{
@@ -382,7 +382,7 @@ export default function RetailerProjectsPage() {
                         <span className="font-medium text-emerald-600">
                           {getFundingPercent(project.currentAmount, project.goalAmount)}% funded
                         </span>
-                        <span className="text-zinc-500 flex items-center gap-1">
+                        <span className="text-muted-foreground flex items-center gap-1">
                           <Users className="h-3 w-3" />
                           {project.backerCount} backers
                         </span>
@@ -405,7 +405,7 @@ export default function RetailerProjectsPage() {
               <Link key={project.id} href={`/retailers/projects/${project.id}`}>
                 <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                   <div className="flex flex-col sm:flex-row">
-                    <div className="w-full sm:w-64 h-48 bg-zinc-100 relative flex-shrink-0">
+                    <div className="w-full sm:w-64 h-48 bg-muted relative flex-shrink-0">
                       <Image
                         src={project.imageUrl}
                         alt={project.title}
@@ -421,7 +421,7 @@ export default function RetailerProjectsPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline">{project.category}</Badge>
-                            <span className="text-sm text-zinc-400">
+                            <span className="text-sm text-muted-foreground">
                               by {project.creator.name}
                             </span>
                             {project.daysLeft <= 7 && (
@@ -434,7 +434,7 @@ export default function RetailerProjectsPage() {
                           <h3 className="font-semibold text-xl mb-2 hover:text-emerald-600 transition-colors">
                             {project.title}
                           </h3>
-                          <p className="text-zinc-500 mb-4 line-clamp-2">
+                          <p className="text-muted-foreground mb-4 line-clamp-2">
                             {project.subtitle}
                           </p>
 
@@ -446,11 +446,11 @@ export default function RetailerProjectsPage() {
                                 funded
                               </span>
                             </div>
-                            <div className="flex items-center gap-1 text-zinc-500">
+                            <div className="flex items-center gap-1 text-muted-foreground">
                               <Users className="h-4 w-4" />
                               <span>{project.backerCount} backers</span>
                             </div>
-                            <div className="flex items-center gap-1 text-zinc-500">
+                            <div className="flex items-center gap-1 text-muted-foreground">
                               <Calendar className="h-4 w-4" />
                               <span>{project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}</span>
                             </div>
@@ -459,16 +459,16 @@ export default function RetailerProjectsPage() {
 
                         <div className="shrink-0 text-right">
                           <div className="bg-emerald-50 rounded-lg p-4 w-[160px] sm:w-[180px]">
-                            <p className="text-xs text-zinc-500 mb-1">Wholesale price from</p>
+                            <p className="text-xs text-muted-foreground mb-1">Wholesale price from</p>
                             <div className="flex items-baseline justify-end gap-2">
                               <span className="text-2xl font-bold text-emerald-600">
                                 ${Number(project.rewards[0]?.retailerPrice).toFixed(2)}
                               </span>
-                              <span className="text-sm text-zinc-400 line-through">
+                              <span className="text-sm text-muted-foreground line-through">
                                 ${Number(project.rewards[0]?.amount).toFixed(2)}
                               </span>
                             </div>
-                            <p className="text-xs text-zinc-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               Min: {project.retailerMinQuantity} units
                             </p>
                           </div>

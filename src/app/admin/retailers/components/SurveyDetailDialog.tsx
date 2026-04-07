@@ -57,8 +57,8 @@ export function SurveyDetailDialog({ survey, open, onOpenChange }: SurveyDetailD
 
         <div className="space-y-6 py-4">
           {/* Overall Rating */}
-          <div className="text-center p-6 bg-zinc-50 rounded-lg">
-            <p className="text-sm text-zinc-500 mb-2">Overall Rating</p>
+          <div className="text-center p-6 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground mb-2">Overall Rating</p>
             <div className="flex items-center justify-center gap-2 mb-2">
               <StarRating rating={survey.rating} size="lg" />
             </div>
@@ -90,19 +90,19 @@ export function SurveyDetailDialog({ survey, open, onOpenChange }: SurveyDetailD
           <div>
             <h3 className="text-sm font-semibold mb-3">Category Ratings</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <span className="text-sm">Product Quality</span>
                 <StarRating rating={survey.productQuality} />
               </div>
-              <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <span className="text-sm">Shipping Speed</span>
                 <StarRating rating={survey.shippingSpeed} />
               </div>
-              <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <span className="text-sm">Packaging</span>
                 <StarRating rating={survey.packaging} />
               </div>
-              <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <span className="text-sm">Communication</span>
                 <StarRating rating={survey.communication} />
               </div>
@@ -113,8 +113,8 @@ export function SurveyDetailDialog({ survey, open, onOpenChange }: SurveyDetailD
           {survey.feedback && (
             <div>
               <h3 className="text-sm font-semibold mb-2">Feedback</h3>
-              <div className="p-4 bg-zinc-50 rounded-lg">
-                <p className="text-sm text-zinc-700 whitespace-pre-wrap">{survey.feedback}</p>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm text-foreground whitespace-pre-wrap">{survey.feedback}</p>
               </div>
             </div>
           )}
@@ -139,7 +139,7 @@ export function SurveyDetailDialog({ survey, open, onOpenChange }: SurveyDetailD
                     )}
                     <div className="flex-1">
                       <p className="font-medium">{survey.order.project?.title || "Unknown Project"}</p>
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         {survey.order.quantity}x {survey.order.reward?.title || "Item"}
                       </p>
                       <p className="text-sm font-medium mt-1">
@@ -149,7 +149,7 @@ export function SurveyDetailDialog({ survey, open, onOpenChange }: SurveyDetailD
                     <Badge variant="outline">{survey.order.status}</Badge>
                   </div>
                   {survey.order.invoiceNumber && (
-                    <p className="text-xs text-zinc-500 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       Invoice: {survey.order.invoiceNumber}
                     </p>
                   )}
@@ -165,15 +165,15 @@ export function SurveyDetailDialog({ survey, open, onOpenChange }: SurveyDetailD
             </h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-zinc-500">Business</p>
+                <p className="text-muted-foreground">Business</p>
                 <p className="font-medium">{survey.retailer.businessName}</p>
               </div>
               <div>
-                <p className="text-zinc-500">Contact</p>
+                <p className="text-muted-foreground">Contact</p>
                 <p className="font-medium">{survey.retailer.contactName}</p>
               </div>
               <div className="col-span-2">
-                <p className="text-zinc-500">Email</p>
+                <p className="text-muted-foreground">Email</p>
                 <a href={`mailto:${survey.retailer.email}`} className="font-medium text-emerald-600 hover:underline">
                   {survey.retailer.email}
                 </a>
@@ -182,7 +182,7 @@ export function SurveyDetailDialog({ survey, open, onOpenChange }: SurveyDetailD
           </div>
 
           {/* Timestamps */}
-          <div className="text-xs text-zinc-500 border-t pt-4">
+          <div className="text-xs text-muted-foreground border-t pt-4">
             <div className="flex justify-between">
               <span>Survey sent: {survey.sentAt ? new Date(survey.sentAt).toLocaleString() : "Not sent"}</span>
               <span>Completed: {survey.completedAt ? new Date(survey.completedAt).toLocaleString() : "Pending"}</span>

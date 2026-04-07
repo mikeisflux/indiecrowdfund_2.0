@@ -400,7 +400,8 @@ export function PackagesTab({
 
       {/* Process Tabs */}
       <Tabs defaultValue="by-group">
-        <TabsList className="grid w-full grid-cols-5">
+        <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max min-w-full">
           <TabsTrigger value="instructions">Instructions</TabsTrigger>
           <TabsTrigger value="connect">1. Connect</TabsTrigger>
           {fulfillmentMethod === "shopify" && (
@@ -412,6 +413,7 @@ export function PackagesTab({
           <TabsTrigger value="process-all">3a. Process All</TabsTrigger>
           <TabsTrigger value="by-group">3b. Process by Group</TabsTrigger>
         </TabsList>
+        </div>
 
         {/* Instructions Tab */}
         <TabsContent value="instructions" className="space-y-6">

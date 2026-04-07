@@ -41,7 +41,7 @@ export function MakeLiveDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
             Are you sure you want to make this campaign live? The campaign will be published and start accepting pledges immediately.
           </p>
           <div className="flex items-center gap-2 mt-4">

@@ -69,12 +69,12 @@ export function SocialSettings({
         <Card className={settings.facebookEnabled && settings.facebookAppId ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20" : ""}>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className={`rounded-full p-3 ${settings.facebookEnabled && settings.facebookAppId ? "bg-blue-100" : "bg-zinc-100"}`}>
-                <Facebook className={`h-6 w-6 ${settings.facebookEnabled && settings.facebookAppId ? "text-blue-600" : "text-zinc-400"}`} />
+              <div className={`rounded-full p-3 ${settings.facebookEnabled && settings.facebookAppId ? "bg-blue-100" : "bg-muted"}`}>
+                <Facebook className={`h-6 w-6 ${settings.facebookEnabled && settings.facebookAppId ? "text-blue-600" : "text-muted-foreground"}`} />
               </div>
               <div className="flex-1">
                 <p className="font-semibold">Facebook / Instagram</p>
-                <p className="text-sm text-zinc-500">Meta Graph API</p>
+                <p className="text-sm text-muted-foreground">Meta Graph API</p>
               </div>
               <Badge variant={settings.facebookEnabled && settings.facebookAppId ? "default" : "secondary"}>
                 {settings.facebookEnabled && settings.facebookAppId ? "Connected" : "Not Configured"}
@@ -85,12 +85,12 @@ export function SocialSettings({
         <Card className={settings.youtubeEnabled && settings.youtubeClientId ? "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20" : ""}>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className={`rounded-full p-3 ${settings.youtubeEnabled && settings.youtubeClientId ? "bg-red-100" : "bg-zinc-100"}`}>
-                <Youtube className={`h-6 w-6 ${settings.youtubeEnabled && settings.youtubeClientId ? "text-red-600" : "text-zinc-400"}`} />
+              <div className={`rounded-full p-3 ${settings.youtubeEnabled && settings.youtubeClientId ? "bg-red-100" : "bg-muted"}`}>
+                <Youtube className={`h-6 w-6 ${settings.youtubeEnabled && settings.youtubeClientId ? "text-red-600" : "text-muted-foreground"}`} />
               </div>
               <div className="flex-1">
                 <p className="font-semibold">YouTube</p>
-                <p className="text-sm text-zinc-500">Community Posts</p>
+                <p className="text-sm text-muted-foreground">Community Posts</p>
               </div>
               <Badge variant={settings.youtubeEnabled && settings.youtubeClientId ? "default" : "secondary"}>
                 {settings.youtubeEnabled && settings.youtubeClientId ? "Connected" : "Not Configured"}
@@ -101,12 +101,12 @@ export function SocialSettings({
         <Card className={settings.twitterEnabled && settings.twitterApiKey ? "border-sky-200 bg-sky-50/50 dark:border-sky-800 dark:bg-sky-950/20" : ""}>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className={`rounded-full p-3 ${settings.twitterEnabled && settings.twitterApiKey ? "bg-sky-100" : "bg-zinc-100"}`}>
-                <Twitter className={`h-6 w-6 ${settings.twitterEnabled && settings.twitterApiKey ? "text-sky-500" : "text-zinc-400"}`} />
+              <div className={`rounded-full p-3 ${settings.twitterEnabled && settings.twitterApiKey ? "bg-sky-100" : "bg-muted"}`}>
+                <Twitter className={`h-6 w-6 ${settings.twitterEnabled && settings.twitterApiKey ? "text-sky-500" : "text-muted-foreground"}`} />
               </div>
               <div className="flex-1">
                 <p className="font-semibold">Twitter / X</p>
-                <p className="text-sm text-zinc-500">Posts & Threads</p>
+                <p className="text-sm text-muted-foreground">Posts & Threads</p>
               </div>
               <Badge variant={settings.twitterEnabled && settings.twitterApiKey ? "default" : "secondary"}>
                 {settings.twitterEnabled && settings.twitterApiKey ? "Connected" : "Not Configured"}
@@ -136,7 +136,7 @@ export function SocialSettings({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable Facebook/Instagram</Label>
-              <p className="text-sm text-zinc-500">Allow creators to connect their Facebook Pages and Instagram accounts</p>
+              <p className="text-sm text-muted-foreground">Allow creators to connect their Facebook Pages and Instagram accounts</p>
             </div>
             <Switch
               checked={settings.facebookEnabled}
@@ -194,7 +194,7 @@ export function SocialSettings({
               hasExistingValue={settings.facebookPageAccessToken === "••••••••"}
               placeholder="For server-to-server API calls"
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               Create an app at <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">developers.facebook.com</a>. Required scopes: pages_manage_posts, instagram_basic, instagram_content_publish
             </p>
           </div>
@@ -221,7 +221,7 @@ export function SocialSettings({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable YouTube</Label>
-              <p className="text-sm text-zinc-500">Allow creators to post community updates to their YouTube channel</p>
+              <p className="text-sm text-muted-foreground">Allow creators to post community updates to their YouTube channel</p>
             </div>
             <Switch
               checked={settings.youtubeEnabled}
@@ -279,7 +279,7 @@ export function SocialSettings({
               hasExistingValue={settings.youtubeApiKey === "••••••••"}
               placeholder="For public data access"
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               Create credentials at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-red-600 hover:underline">Google Cloud Console</a>. Enable YouTube Data API v3.
             </p>
           </div>
@@ -306,7 +306,7 @@ export function SocialSettings({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable Twitter/X</Label>
-              <p className="text-sm text-zinc-500">Allow creators to post tweets and threads about their campaigns</p>
+              <p className="text-sm text-muted-foreground">Allow creators to post tweets and threads about their campaigns</p>
             </div>
             <Switch
               checked={settings.twitterEnabled}
@@ -389,7 +389,7 @@ export function SocialSettings({
             </div>
           </div>
 
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             Create an app at <a href="https://developer.twitter.com" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">developer.twitter.com</a>. Requires at least Basic tier for posting.
           </p>
         </CardContent>
@@ -409,7 +409,7 @@ export function SocialSettings({
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Stability AI</Label>
-                <p className="text-sm text-zinc-500">Generate images with Stable Diffusion</p>
+                <p className="text-sm text-muted-foreground">Generate images with Stable Diffusion</p>
               </div>
               <Switch
                 checked={settings.stabilityEnabled}
@@ -428,7 +428,7 @@ export function SocialSettings({
                   hasExistingValue={settings.stabilityApiKey === "••••••••"}
                   placeholder="Your Stability AI API key"
                 />
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   Get your key from <a href="https://platform.stability.ai" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">platform.stability.ai</a>
                 </p>
               </div>
@@ -447,7 +447,7 @@ export function SocialSettings({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Auto-Post on Project Launch</Label>
-              <p className="text-sm text-zinc-500">Automatically post to connected accounts when a project goes live</p>
+              <p className="text-sm text-muted-foreground">Automatically post to connected accounts when a project goes live</p>
             </div>
             <Switch
               checked={settings.autoPostEnabled}
@@ -460,7 +460,7 @@ export function SocialSettings({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Require Post Approval</Label>
-              <p className="text-sm text-zinc-500">AI-generated content must be reviewed before posting</p>
+              <p className="text-sm text-muted-foreground">AI-generated content must be reviewed before posting</p>
             </div>
             <Switch
               checked={settings.postApprovalRequired}
@@ -478,7 +478,7 @@ export function SocialSettings({
               onChange={(e) => onSettingsChange({ ...settings, defaultHashtags: e.target.value })}
               rows={2}
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               These hashtags will be suggested for all social posts. Creators can modify them per post.
             </p>
           </div>
@@ -496,21 +496,21 @@ export function SocialSettings({
         <CardContent>
           <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-100">
             <div className="space-y-1">
-              <p className="text-zinc-500"># Facebook/Instagram</p>
-              <p><span className="text-blue-400">FACEBOOK_APP_ID</span>=<span className="text-zinc-400">your-app-id</span></p>
-              <p><span className="text-blue-400">FACEBOOK_APP_SECRET</span>=<span className="text-zinc-400">your-app-secret</span></p>
-              <p className="text-zinc-500 mt-2"># YouTube</p>
-              <p><span className="text-red-400">YOUTUBE_CLIENT_ID</span>=<span className="text-zinc-400">your-client-id</span></p>
-              <p><span className="text-red-400">YOUTUBE_CLIENT_SECRET</span>=<span className="text-zinc-400">your-client-secret</span></p>
-              <p className="text-zinc-500 mt-2"># Twitter/X</p>
-              <p><span className="text-sky-400">TWITTER_API_KEY</span>=<span className="text-zinc-400">your-api-key</span></p>
-              <p><span className="text-sky-400">TWITTER_API_SECRET</span>=<span className="text-zinc-400">your-api-secret</span></p>
-              <p><span className="text-sky-400">TWITTER_BEARER_TOKEN</span>=<span className="text-zinc-400">your-bearer-token</span></p>
-              <p className="text-zinc-500 mt-2"># Image Generation</p>
-              <p><span className="text-purple-400">STABILITY_API_KEY</span>=<span className="text-zinc-400">your-stability-key</span></p>
+              <p className="text-muted-foreground"># Facebook/Instagram</p>
+              <p><span className="text-blue-400">FACEBOOK_APP_ID</span>=<span className="text-muted-foreground">your-app-id</span></p>
+              <p><span className="text-blue-400">FACEBOOK_APP_SECRET</span>=<span className="text-muted-foreground">your-app-secret</span></p>
+              <p className="text-muted-foreground mt-2"># YouTube</p>
+              <p><span className="text-red-400">YOUTUBE_CLIENT_ID</span>=<span className="text-muted-foreground">your-client-id</span></p>
+              <p><span className="text-red-400">YOUTUBE_CLIENT_SECRET</span>=<span className="text-muted-foreground">your-client-secret</span></p>
+              <p className="text-muted-foreground mt-2"># Twitter/X</p>
+              <p><span className="text-sky-400">TWITTER_API_KEY</span>=<span className="text-muted-foreground">your-api-key</span></p>
+              <p><span className="text-sky-400">TWITTER_API_SECRET</span>=<span className="text-muted-foreground">your-api-secret</span></p>
+              <p><span className="text-sky-400">TWITTER_BEARER_TOKEN</span>=<span className="text-muted-foreground">your-bearer-token</span></p>
+              <p className="text-muted-foreground mt-2"># Image Generation</p>
+              <p><span className="text-purple-400">STABILITY_API_KEY</span>=<span className="text-muted-foreground">your-stability-key</span></p>
             </div>
           </div>
-          <p className="mt-3 text-sm text-zinc-500">
+          <p className="mt-3 text-sm text-muted-foreground">
             API keys entered in this admin panel are stored in the database and will override environment variables.
           </p>
         </CardContent>

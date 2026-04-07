@@ -54,7 +54,7 @@ export function CreateSettlementDialog({
           <div>
             <Label htmlFor="amount">Settlement Amount</Label>
             <div className="relative mt-1">
-              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-4 h-4" />
+              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 id="amount"
                 type="number"
@@ -65,7 +65,7 @@ export function CreateSettlementDialog({
                 placeholder="0.00"
               />
             </div>
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Max: {formatCurrency(selectedProject?.remainingAmount || 0)}
             </p>
           </div>

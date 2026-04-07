@@ -32,7 +32,7 @@ export function SurveyLockedState({ data }: SurveyLockedStateProps) {
         <CardContent className="py-4">
           <div className="flex items-center gap-4">
             {data.pledge.projectImage && (
-              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-zinc-100">
+              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted">
                 <Image
                   src={data.pledge.projectImage}
                   alt={data.pledge.projectTitle}
@@ -43,7 +43,7 @@ export function SurveyLockedState({ data }: SurveyLockedStateProps) {
             )}
             <div>
               <h1 className="font-semibold">{data.pledge.projectTitle}</h1>
-              <p className="text-sm text-zinc-500">{data.pledge.rewardTitle}</p>
+              <p className="text-sm text-muted-foreground">{data.pledge.rewardTitle}</p>
             </div>
           </div>
         </CardContent>

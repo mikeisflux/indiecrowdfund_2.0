@@ -54,12 +54,12 @@ export function AiSettings({
       <Card className={settings.anthropicEnabled && settings.anthropicApiKey ? "border-violet-200 bg-violet-50/50 dark:border-violet-800 dark:bg-violet-950/20" : ""}>
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
-            <div className={`rounded-full p-3 ${settings.anthropicEnabled && settings.anthropicApiKey ? "bg-violet-100" : "bg-zinc-100"}`}>
-              <Sparkles className={`h-6 w-6 ${settings.anthropicEnabled && settings.anthropicApiKey ? "text-violet-600" : "text-zinc-400"}`} />
+            <div className={`rounded-full p-3 ${settings.anthropicEnabled && settings.anthropicApiKey ? "bg-violet-100" : "bg-muted"}`}>
+              <Sparkles className={`h-6 w-6 ${settings.anthropicEnabled && settings.anthropicApiKey ? "text-violet-600" : "text-muted-foreground"}`} />
             </div>
             <div className="flex-1">
               <p className="font-semibold">Anthropic Claude</p>
-              <p className="text-sm text-zinc-500">Powers all AI features: auto-tagging, marketing copy, moderation, fraud detection</p>
+              <p className="text-sm text-muted-foreground">Powers all AI features: auto-tagging, marketing copy, moderation, fraud detection</p>
             </div>
             <Badge variant={settings.anthropicEnabled && settings.anthropicApiKey ? "default" : "secondary"}>
               {settings.anthropicEnabled && settings.anthropicApiKey ? "Connected" : "Not Configured"}
@@ -88,7 +88,7 @@ export function AiSettings({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable AI Features</Label>
-              <p className="text-sm text-zinc-500">Use Anthropic Claude for all AI-powered features</p>
+              <p className="text-sm text-muted-foreground">Use Anthropic Claude for all AI-powered features</p>
             </div>
             <Switch
               checked={settings.anthropicEnabled}
@@ -127,7 +127,7 @@ export function AiSettings({
                   Test
                 </Button>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:underline">console.anthropic.com</a>
               </p>
             </div>
@@ -155,7 +155,7 @@ export function AiSettings({
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label>Auto-Tagging</Label>
-                  <p className="text-sm text-zinc-500">Automatically suggest categories and tags for projects</p>
+                  <p className="text-sm text-muted-foreground">Automatically suggest categories and tags for projects</p>
                 </div>
                 <Switch
                   checked={settings.autoTagging}
@@ -167,7 +167,7 @@ export function AiSettings({
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label>Marketing Copy</Label>
-                  <p className="text-sm text-zinc-500">Generate social posts and promotional content</p>
+                  <p className="text-sm text-muted-foreground">Generate social posts and promotional content</p>
                 </div>
                 <Switch
                   checked={settings.marketingCopy}
@@ -179,7 +179,7 @@ export function AiSettings({
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label>Content Moderation</Label>
-                  <p className="text-sm text-zinc-500">Automatically review project content for policy violations</p>
+                  <p className="text-sm text-muted-foreground">Automatically review project content for policy violations</p>
                 </div>
                 <Switch
                   checked={settings.contentModeration}
@@ -191,7 +191,7 @@ export function AiSettings({
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label>Fraud Detection</Label>
-                  <p className="text-sm text-zinc-500">Analyze projects for potential scams</p>
+                  <p className="text-sm text-muted-foreground">Analyze projects for potential scams</p>
                 </div>
                 <Switch
                   checked={settings.fraudDetection}
@@ -204,7 +204,7 @@ export function AiSettings({
 
             <div className="space-y-2">
               <Label>Moderation Sensitivity</Label>
-              <p className="text-sm text-zinc-500 mb-2">
+              <p className="text-sm text-muted-foreground mb-2">
                 Projects with a risk score above this threshold will be flagged for manual review
               </p>
               <div className="flex items-center gap-4">
@@ -221,7 +221,7 @@ export function AiSettings({
                   {(parseFloat(settings.moderationThreshold) * 100).toFixed(0)}%
                 </span>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 Lower = more strict (more projects flagged), Higher = more lenient
               </p>
             </div>
@@ -239,9 +239,9 @@ export function AiSettings({
         </CardHeader>
         <CardContent>
           <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-100">
-            <p><span className="text-violet-400">ANTHROPIC_API_KEY</span>=<span className="text-zinc-400">your-anthropic-api-key</span></p>
+            <p><span className="text-violet-400">ANTHROPIC_API_KEY</span>=<span className="text-muted-foreground">your-anthropic-api-key</span></p>
           </div>
-          <p className="mt-3 text-sm text-zinc-500">
+          <p className="mt-3 text-sm text-muted-foreground">
             API keys entered in this admin panel are stored in the database and will override environment variables.
           </p>
         </CardContent>

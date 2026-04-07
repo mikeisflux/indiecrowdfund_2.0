@@ -88,7 +88,7 @@ export function AddUserDialog({
               onChange={(e) => onUserDataChange({ ...userData, password: e.target.value })}
               placeholder="Enter password"
             />
-            <p className="text-xs text-zinc-500">Password must be at least 8 characters</p>
+            <p className="text-xs text-muted-foreground">Password must be at least 8 characters</p>
           </div>
 
           <div className="space-y-2">
@@ -119,7 +119,7 @@ export function AddUserDialog({
                 <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {userData.role === "USER" && "Regular user with standard access."}
               {userData.role === "COOL_KIDS" && "Cool Kids users have enhanced campaign limits."}
               {userData.role === "ADMIN" && "Admin users can manage projects and users."}
@@ -127,10 +127,10 @@ export function AddUserDialog({
             </p>
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
             <div>
               <Label htmlFor="add-user-retailer" className="font-medium">Retailer Access</Label>
-              <p className="text-xs text-zinc-500 mt-1">Enable access to retailer portal and wholesale pricing</p>
+              <p className="text-xs text-muted-foreground mt-1">Enable access to retailer portal and wholesale pricing</p>
             </div>
             <Switch
               id="add-user-retailer"

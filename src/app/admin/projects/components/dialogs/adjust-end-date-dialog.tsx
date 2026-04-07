@@ -120,8 +120,8 @@ export function AdjustEndDateDialog({
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
-          <div className="rounded-lg border p-3 bg-zinc-50 dark:bg-zinc-800/50">
-            <p className="text-xs text-zinc-500 mb-1">Current End Date</p>
+          <div className="rounded-lg border p-3 bg-muted/50 dark:bg-zinc-800/50">
+            <p className="text-xs text-muted-foreground mb-1">Current End Date</p>
             <p className="text-sm font-medium">{formatDisplayDate(currentEndDate)}</p>
           </div>
 
@@ -147,7 +147,7 @@ export function AdjustEndDateDialog({
 
           {newEndDate && !isPast && (
             <div className="rounded-lg border p-3">
-              <p className="text-xs text-zinc-500 mb-1">New End Date Preview</p>
+              <p className="text-xs text-muted-foreground mb-1">New End Date Preview</p>
               <p className="text-sm font-medium">{formatDisplayDate(new Date(newEndDate).toISOString())}</p>
             </div>
           )}

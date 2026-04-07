@@ -50,7 +50,7 @@ export function IdVerificationSettings({ settings, onSettingsChange, onSave }: I
           <div className="flex items-center justify-between rounded-lg border p-4 bg-violet-50/50 dark:bg-violet-900/20">
             <div className="space-y-0.5">
               <Label className="text-base font-medium">Enable ID Verification</Label>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 Require users to verify their identity before viewing age-restricted projects
               </p>
             </div>
@@ -115,7 +115,7 @@ export function IdVerificationSettings({ settings, onSettingsChange, onSave }: I
                   }
                   placeholder="https://yourdomain.com/api/verify-id/callback"
                 />
-                <p className="text-xs text-zinc-500">Webhook URL for Shufti Pro to send verification results</p>
+                <p className="text-xs text-muted-foreground">Webhook URL for Shufti Pro to send verification results</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="shuftiRedirect">Redirect URL</Label>
@@ -127,7 +127,7 @@ export function IdVerificationSettings({ settings, onSettingsChange, onSave }: I
                   }
                   placeholder="https://yourdomain.com/verification-complete"
                 />
-                <p className="text-xs text-zinc-500">URL to redirect users after verification</p>
+                <p className="text-xs text-muted-foreground">URL to redirect users after verification</p>
               </div>
             </div>
 
@@ -149,7 +149,7 @@ export function IdVerificationSettings({ settings, onSettingsChange, onSave }: I
                     <SelectItem value="25">25 years</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-zinc-500">Minimum age required for verification</p>
+                <p className="text-xs text-muted-foreground">Minimum age required for verification</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="verifyMode">Verification Mode</Label>
@@ -177,14 +177,14 @@ export function IdVerificationSettings({ settings, onSettingsChange, onSave }: I
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-zinc-500">Use sandbox for testing, production for live verifications</p>
+                <p className="text-xs text-muted-foreground">Use sandbox for testing, production for live verifications</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border p-4 bg-zinc-50 dark:bg-zinc-800/50">
+          <div className="rounded-lg border p-4 bg-muted/50 dark:bg-zinc-800/50">
             <h4 className="font-medium mb-2">How ID Verification Works</h4>
-            <ul className="text-sm text-zinc-600 dark:text-zinc-400 space-y-2">
+            <ul className="text-sm text-zinc-600 dark:text-muted-foreground space-y-2">
               <li className="flex items-start gap-2">
                 <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                 <span>Users attempting to view restricted projects are prompted to verify their identity</span>

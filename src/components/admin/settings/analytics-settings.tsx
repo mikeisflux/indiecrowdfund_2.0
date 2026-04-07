@@ -39,7 +39,7 @@ export function AnalyticsSettings({ settings, onSettingsChange, onSave }: Analyt
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable Google Analytics 4</Label>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 Inject the GA4 tracking script on every page
               </p>
             </div>
@@ -77,7 +77,7 @@ export function AnalyticsSettings({ settings, onSettingsChange, onSave }: Analyt
                 GA4 IDs start with &ldquo;G-&rdquo; (e.g., G-XXXXXXXXXX)
               </p>
             )}
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               Find your Measurement ID in{" "}
               <a
                 href="https://analytics.google.com"
@@ -92,10 +92,10 @@ export function AnalyticsSettings({ settings, onSettingsChange, onSave }: Analyt
           </div>
 
           <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-100 space-y-1">
-            <p className="text-zinc-500 text-xs mb-2"># Optional env var override</p>
+            <p className="text-muted-foreground text-xs mb-2"># Optional env var override</p>
             <p>
               <span className="text-blue-400">NEXT_PUBLIC_GA_MEASUREMENT_ID</span>
-              =<span className="text-zinc-400">G-XXXXXXXXXX</span>
+              =<span className="text-muted-foreground">G-XXXXXXXXXX</span>
             </p>
           </div>
 
@@ -121,7 +121,7 @@ export function AnalyticsSettings({ settings, onSettingsChange, onSave }: Analyt
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label>Enable Google Tag Manager</Label>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 Inject the GTM container script on every page
               </p>
             </div>
@@ -159,7 +159,7 @@ export function AnalyticsSettings({ settings, onSettingsChange, onSave }: Analyt
                 GTM IDs start with &ldquo;GTM-&rdquo; (e.g., GTM-XXXXXXX)
               </p>
             )}
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               Find your Container ID in{" "}
               <a
                 href="https://tagmanager.google.com"

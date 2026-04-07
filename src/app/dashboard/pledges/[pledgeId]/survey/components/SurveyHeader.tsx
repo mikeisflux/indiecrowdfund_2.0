@@ -38,7 +38,7 @@ export function SurveyHeader({ data, steps, currentStep, currentStepIndex }: Sur
         <CardContent className="py-4">
           <div className="flex items-center gap-4">
             {data.pledge.projectImage && (
-              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-zinc-100">
+              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted">
                 <Image
                   src={data.pledge.projectImage}
                   alt={data.pledge.projectTitle}
@@ -49,7 +49,7 @@ export function SurveyHeader({ data, steps, currentStep, currentStepIndex }: Sur
             )}
             <div>
               <h1 className="font-semibold">{data.pledge.projectTitle}</h1>
-              <p className="text-sm text-zinc-500">{data.pledge.rewardTitle}</p>
+              <p className="text-sm text-muted-foreground">{data.pledge.rewardTitle}</p>
               {data.response.isComplete && (
                 <Badge className="mt-1 bg-emerald-100 text-emerald-700">
                   <CheckCircle className="h-3 w-3 mr-1" />

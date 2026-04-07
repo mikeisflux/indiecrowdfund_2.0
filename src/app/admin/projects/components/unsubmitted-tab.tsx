@@ -25,11 +25,11 @@ export function UnsubmittedProjectCard({ project, isSelected, onClick }: Unsubmi
     >
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 relative overflow-hidden flex-shrink-0">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted relative overflow-hidden flex-shrink-0">
             {project.imageUrl ? (
               <Image src={project.imageUrl} alt="" fill sizes="48px" className="object-cover" />
             ) : (
-              <FileEdit className="h-6 w-6 text-zinc-400" />
+              <FileEdit className="h-6 w-6 text-muted-foreground" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -40,10 +40,10 @@ export function UnsubmittedProjectCard({ project, isSelected, onClick }: Unsubmi
                 <Badge variant="outline" className="text-xs">{project.category}</Badge>
               )}
             </div>
-            <p className="text-sm text-zinc-500 truncate">
+            <p className="text-sm text-muted-foreground truncate">
               by {project.creator.name || project.creator.email}
             </p>
-            <div className="flex items-center gap-4 mt-1 text-xs text-zinc-500">
+            <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
               <span>
                 Created: {new Date(project.createdAt).toLocaleDateString()}
               </span>
@@ -84,7 +84,7 @@ export function UnsubmittedDetailPanel({ selectedProject }: UnsubmittedDetailPan
           </CardHeader>
           <CardContent className="space-y-4">
             {selectedProject.imageUrl && (
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-100">
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
                 <Image
                   src={selectedProject.imageUrl}
                   alt={selectedProject.title}
@@ -97,11 +97,11 @@ export function UnsubmittedDetailPanel({ selectedProject }: UnsubmittedDetailPan
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Category</p>
+                <p className="text-xs text-muted-foreground">Category</p>
                 <p className="font-medium">{selectedProject.category || "Not set"}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Goal</p>
+                <p className="text-xs text-muted-foreground">Goal</p>
                 <p className="font-medium">
                   {selectedProject.goalAmount && Number(selectedProject.goalAmount) > 0
                     ? `$${Number(selectedProject.goalAmount).toLocaleString()}`
@@ -109,26 +109,26 @@ export function UnsubmittedDetailPanel({ selectedProject }: UnsubmittedDetailPan
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Created</p>
+                <p className="text-xs text-muted-foreground">Created</p>
                 <p className="font-medium">{new Date(selectedProject.createdAt).toLocaleDateString()}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Creator Email</p>
+                <p className="text-xs text-muted-foreground">Creator Email</p>
                 <p className="font-medium text-xs truncate">{selectedProject.creator.email}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Rewards</p>
+                <p className="text-xs text-muted-foreground">Rewards</p>
                 <p className="font-medium">{selectedProject.rewards?.length || 0}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Email Verified</p>
+                <p className="text-xs text-muted-foreground">Email Verified</p>
                 <p className="font-medium">{selectedProject.creator.emailVerified ? "Yes" : "No"}</p>
               </div>
             </div>
 
             {selectedProject.subtitle && (
               <div className="space-y-1">
-                <p className="text-xs text-zinc-500">Subtitle</p>
+                <p className="text-xs text-muted-foreground">Subtitle</p>
                 <p className="text-sm">{selectedProject.subtitle}</p>
               </div>
             )}
@@ -148,9 +148,9 @@ export function UnsubmittedDetailPanel({ selectedProject }: UnsubmittedDetailPan
         </>
       ) : (
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-          <FileEdit className="h-12 w-12 text-zinc-300 mb-4" />
+          <FileEdit className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="font-medium text-zinc-900 dark:text-white mb-2">Select a project</h3>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             Click on a project to see details
           </p>
         </CardContent>

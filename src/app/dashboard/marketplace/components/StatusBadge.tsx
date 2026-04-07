@@ -18,7 +18,7 @@ export function StatusBadge({ status }: { status: MarketplaceBook["status"] }) {
     APPROVED: { label: "Approved", icon: CheckCircle, className: "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30" },
     LIVE: { label: "Live", icon: CheckCircle, className: "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" },
     REJECTED: { label: "Rejected", icon: XCircle, className: "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30" },
-    ARCHIVED: { label: "Archived", icon: AlertCircle, className: "bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 border-zinc-500/30" },
+    ARCHIVED: { label: "Archived", icon: AlertCircle, className: "bg-zinc-500/20 text-zinc-600 dark:text-muted-foreground border-zinc-500/30" },
   };
 
   const config = statusConfig[status];

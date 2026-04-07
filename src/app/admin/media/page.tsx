@@ -278,9 +278,9 @@ export default function MediaPage() {
   };
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith("image")) return <ImageIcon className="h-5 w-5 text-zinc-400" />;
-    if (mimeType.startsWith("video")) return <Video className="h-5 w-5 text-zinc-400" />;
-    return <FileText className="h-5 w-5 text-zinc-400" />;
+    if (mimeType.startsWith("image")) return <ImageIcon className="h-5 w-5 text-muted-foreground" />;
+    if (mimeType.startsWith("video")) return <Video className="h-5 w-5 text-muted-foreground" />;
+    return <FileText className="h-5 w-5 text-muted-foreground" />;
   };
 
   // Open edit dialog
@@ -481,7 +481,7 @@ export default function MediaPage() {
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                 currentFolder === null
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                  : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  : "text-muted-foreground hover:bg-muted dark:text-muted-foreground dark:hover:bg-zinc-800"
               }`}
             >
               <FolderOpen className="h-4 w-4" />
@@ -504,7 +504,7 @@ export default function MediaPage() {
                     ? "bg-emerald-100 ring-2 ring-emerald-500 dark:bg-emerald-900"
                     : currentFolder === folderName
                     ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    : "text-muted-foreground hover:bg-muted dark:text-muted-foreground dark:hover:bg-zinc-800"
                 }`}
               >
                 <Folder className="h-4 w-4" />
@@ -532,7 +532,7 @@ export default function MediaPage() {
                 "All Media"
               )}
             </h1>
-            <p className="text-zinc-500">
+            <p className="text-muted-foreground">
               {stats?.totalFiles || 0} files • {formatFileSize(stats?.totalSize || 0)}
             </p>
           </div>
@@ -561,7 +561,7 @@ export default function MediaPage() {
               </div>
               <div>
                 <p className="text-lg font-bold">{stats?.totalFiles || 0}</p>
-                <p className="text-[10px] text-zinc-500">Total</p>
+                <p className="text-[10px] text-muted-foreground">Total</p>
               </div>
             </div>
           </Card>
@@ -572,7 +572,7 @@ export default function MediaPage() {
               </div>
               <div>
                 <p className="text-lg font-bold">{stats?.images || 0}</p>
-                <p className="text-[10px] text-zinc-500">Images</p>
+                <p className="text-[10px] text-muted-foreground">Images</p>
               </div>
             </div>
           </Card>
@@ -583,7 +583,7 @@ export default function MediaPage() {
               </div>
               <div>
                 <p className="text-lg font-bold">{stats?.videos || 0}</p>
-                <p className="text-[10px] text-zinc-500">Videos</p>
+                <p className="text-[10px] text-muted-foreground">Videos</p>
               </div>
             </div>
           </Card>
@@ -594,7 +594,7 @@ export default function MediaPage() {
               </div>
               <div>
                 <p className="text-lg font-bold">{stats?.documents || 0}</p>
-                <p className="text-[10px] text-zinc-500">Docs</p>
+                <p className="text-[10px] text-muted-foreground">Docs</p>
               </div>
             </div>
           </Card>
@@ -605,7 +605,7 @@ export default function MediaPage() {
               </div>
               <div>
                 <p className="text-lg font-bold">{formatFileSize(stats?.totalSize || 0)}</p>
-                <p className="text-[10px] text-zinc-500">Size</p>
+                <p className="text-[10px] text-muted-foreground">Size</p>
               </div>
             </div>
           </Card>
@@ -615,7 +615,7 @@ export default function MediaPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search files..."
                 value={searchQuery}
@@ -640,7 +640,7 @@ export default function MediaPage() {
           <div className="flex items-center gap-2">
             {selectedFiles.length > 0 && (
               <div className="flex items-center gap-2 mr-4">
-                <span className="text-sm text-zinc-500">
+                <span className="text-sm text-muted-foreground">
                   {selectedFiles.length} selected
                 </span>
                 <Button
@@ -695,7 +695,7 @@ export default function MediaPage() {
               checked={selectedFiles.length === files.length && files.length > 0}
               onCheckedChange={selectAll}
             />
-            <span className="text-sm text-zinc-500">Select all</span>
+            <span className="text-sm text-muted-foreground">Select all</span>
           </div>
         )}
 
@@ -704,18 +704,18 @@ export default function MediaPage() {
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           )}
 
           {/* Empty State */}
           {!loading && files.length === 0 && (
             <div className="text-center py-12">
-              <ImageIcon className="h-12 w-12 mx-auto text-zinc-300 mb-4" />
+              <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-2">
                 No media files found
               </h3>
-              <p className="text-zinc-500 mb-4">
+              <p className="text-muted-foreground mb-4">
                 {searchQuery || typeFilter !== "all" || currentFolder
                   ? "Try adjusting your filters"
                   : "Upload some files to get started"}
@@ -760,7 +760,7 @@ export default function MediaPage() {
                   </div>
 
                   <div
-                    className="aspect-square rounded bg-zinc-100 mb-2 flex items-center justify-center dark:bg-zinc-700 overflow-hidden relative cursor-pointer"
+                    className="aspect-square rounded bg-muted mb-2 flex items-center justify-center dark:bg-zinc-700 overflow-hidden relative cursor-pointer"
                     onClick={() => openEditDialog(file)}
                   >
                     {file.thumbnailUrl || (file.mimeType.startsWith("image") && file.url) ? (
@@ -782,7 +782,7 @@ export default function MediaPage() {
                     <Badge variant="outline" className="text-[9px] px-1">
                       {file.folder}
                     </Badge>
-                    <span className="text-[10px] text-zinc-500">
+                    <span className="text-[10px] text-muted-foreground">
                       {formatFileSize(file.size)}
                     </span>
                   </div>
@@ -796,7 +796,7 @@ export default function MediaPage() {
                           {file.uploader.name?.[0] || file.uploader.email[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-[10px] text-zinc-500 truncate">
+                      <span className="text-[10px] text-muted-foreground truncate">
                         {file.uploader.name || file.uploader.email}
                       </span>
                     </div>
@@ -848,7 +848,7 @@ export default function MediaPage() {
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b bg-zinc-50 dark:bg-zinc-800">
+                  <tr className="border-b bg-muted/50 dark:bg-zinc-800">
                     <th className="p-3 text-left w-10">
                       <Checkbox
                         checked={selectedFiles.length === files.length && files.length > 0}
@@ -871,7 +871,7 @@ export default function MediaPage() {
                       draggable
                       onDragStart={(e) => handleFileDragStart(e, file)}
                       onDragEnd={() => setDraggedFile(null)}
-                      className={`border-b hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-grab ${
+                      className={`border-b hover:bg-muted/50 dark:hover:bg-zinc-800 cursor-grab ${
                         draggedFile?.id === file.id ? "opacity-50" : ""
                       }`}
                     >
@@ -883,7 +883,7 @@ export default function MediaPage() {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded bg-zinc-100 flex items-center justify-center dark:bg-zinc-700 overflow-hidden relative shrink-0">
+                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center dark:bg-zinc-700 overflow-hidden relative shrink-0">
                             {file.thumbnailUrl || (file.mimeType.startsWith("image") && file.url) ? (
                               <Image
                                 src={file.thumbnailUrl || file.url}
@@ -907,20 +907,20 @@ export default function MediaPage() {
                                 {file.uploader.name?.[0] || file.uploader.email[0]}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="text-sm text-zinc-600 dark:text-zinc-400 truncate max-w-[120px]">
+                            <span className="text-sm text-muted-foreground dark:text-muted-foreground truncate max-w-[120px]">
                               {file.uploader.name || file.uploader.email}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-sm text-zinc-400">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </td>
-                      <td className="p-3 text-sm text-zinc-500">{file.mimeType.split("/")[1]}</td>
-                      <td className="p-3 text-sm text-zinc-500">{formatFileSize(file.size)}</td>
+                      <td className="p-3 text-sm text-muted-foreground">{file.mimeType.split("/")[1]}</td>
+                      <td className="p-3 text-sm text-muted-foreground">{formatFileSize(file.size)}</td>
                       <td className="p-3">
                         <Badge variant="secondary" className="text-xs">{file.folder}</Badge>
                       </td>
-                      <td className="p-3 text-sm text-zinc-500">
+                      <td className="p-3 text-sm text-muted-foreground">
                         {new Date(file.createdAt).toLocaleDateString()}
                       </td>
                       <td className="p-3">
@@ -962,7 +962,7 @@ export default function MediaPage() {
         {/* Pagination */}
         {pagination && pagination.totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted-foreground">
               Showing {((pagination.page - 1) * pagination.limit) + 1} to{" "}
               {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
               {pagination.total} files

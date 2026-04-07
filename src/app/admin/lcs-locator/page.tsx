@@ -275,7 +275,7 @@ export default function AdminLCSLocatorPage() {
       West: "text-purple-600 border-purple-600",
       International: "text-pink-600 border-pink-600",
     };
-    return colors[region || ""] || "text-zinc-500 border-zinc-500";
+    return colors[region || ""] || "text-muted-foreground border-zinc-500";
   };
 
   return (
@@ -289,7 +289,7 @@ export default function AdminLCSLocatorPage() {
             </div>
             LCS Locator
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400 mt-1">
+          <p className="text-muted-foreground dark:text-muted-foreground mt-1">
             Manage comic shops in the store locator directory
           </p>
         </div>
@@ -313,7 +313,7 @@ export default function AdminLCSLocatorPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">Total Shops</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Shops</CardTitle>
             <Store className="w-4 h-4 text-orange-600" />
           </CardHeader>
           <CardContent>
@@ -322,7 +322,7 @@ export default function AdminLCSLocatorPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">States</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">States</CardTitle>
             <MapPin className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -331,7 +331,7 @@ export default function AdminLCSLocatorPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">Regions</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Regions</CardTitle>
             <Globe className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
@@ -340,8 +340,8 @@ export default function AdminLCSLocatorPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-600">This Page</CardTitle>
-            <Search className="w-4 h-4 text-zinc-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">This Page</CardTitle>
+            <Search className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{shops.length}</div>
@@ -354,7 +354,7 @@ export default function AdminLCSLocatorPage() {
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search by name, city, or email..."
                 className="pl-10"
@@ -411,8 +411,8 @@ export default function AdminLCSLocatorPage() {
               <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
             </div>
           ) : shops.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-              <Store className="w-12 h-12 mb-4 text-zinc-300" />
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <Store className="w-12 h-12 mb-4 text-muted-foreground" />
               <p className="text-lg font-medium">No shops found</p>
               <p className="text-sm">Add comic shops to the locator directory</p>
             </div>
@@ -429,24 +429,24 @@ export default function AdminLCSLocatorPage() {
               </TableHeader>
               <TableBody>
                 {shops.map((shop) => (
-                  <TableRow key={shop.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                  <TableRow key={shop.id} className="hover:bg-muted/50 dark:hover:bg-zinc-800/50">
                     <TableCell>
                       <div>
                         <p className="font-medium">{shop.name}</p>
                         {shop.address && (
-                          <p className="text-xs text-zinc-500 truncate max-w-[200px]">{shop.address}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">{shop.address}</p>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm">
-                        <MapPin className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                        <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                         <span>
                           {shop.city}{shop.state ? `, ${shop.state}` : ""} {shop.zipCode || ""}
                         </span>
                       </div>
                       {shop.country !== "USA" && (
-                        <p className="text-xs text-zinc-400 ml-5">{shop.country}</p>
+                        <p className="text-xs text-muted-foreground ml-5">{shop.country}</p>
                       )}
                     </TableCell>
                     <TableCell>
@@ -455,28 +455,28 @@ export default function AdminLCSLocatorPage() {
                           {shop.region}
                         </Badge>
                       ) : (
-                        <span className="text-xs text-zinc-400">—</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-0.5">
                         {shop.phone && (
-                          <div className="flex items-center gap-1 text-xs text-zinc-500">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Phone className="w-3 h-3" /> {shop.phone}
                           </div>
                         )}
                         {shop.email && (
-                          <div className="flex items-center gap-1 text-xs text-zinc-500">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Mail className="w-3 h-3" /> <span className="truncate max-w-[150px]">{shop.email}</span>
                           </div>
                         )}
                         {shop.website && (
-                          <div className="flex items-center gap-1 text-xs text-zinc-500">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Globe className="w-3 h-3" /> <span className="truncate max-w-[150px]">{shop.website}</span>
                           </div>
                         )}
                         {!shop.phone && !shop.email && !shop.website && (
-                          <span className="text-xs text-zinc-400">—</span>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </div>
                     </TableCell>
@@ -489,7 +489,7 @@ export default function AdminLCSLocatorPage() {
                           onClick={() => openEditDialog(shop)}
                           title="Edit"
                         >
-                          <Pencil className="w-3.5 h-3.5 text-zinc-500" />
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -513,7 +513,7 @@ export default function AdminLCSLocatorPage() {
       {/* Pagination */}
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             Showing {(pagination.page - 1) * pagination.limit + 1}–
             {Math.min(pagination.page * pagination.limit, pagination.totalCount)} of{" "}
             {pagination.totalCount} shops
@@ -527,7 +527,7 @@ export default function AdminLCSLocatorPage() {
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="text-sm text-zinc-600">
+            <span className="text-sm text-muted-foreground">
               Page {pagination.page} of {pagination.totalPages}
             </span>
             <Button
@@ -648,16 +648,16 @@ export default function AdminLCSLocatorPage() {
           {deleteTarget && (
             <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Name</span>
+                <span className="text-muted-foreground">Name</span>
                 <span className="font-medium">{deleteTarget.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Location</span>
+                <span className="text-muted-foreground">Location</span>
                 <span>{deleteTarget.city}{deleteTarget.state ? `, ${deleteTarget.state}` : ""}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">ID</span>
-                <span className="font-mono text-xs text-zinc-400">{deleteTarget.id}</span>
+                <span className="text-muted-foreground">ID</span>
+                <span className="font-mono text-xs text-muted-foreground">{deleteTarget.id}</span>
               </div>
             </div>
           )}

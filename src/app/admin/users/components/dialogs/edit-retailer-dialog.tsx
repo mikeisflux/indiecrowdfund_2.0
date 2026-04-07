@@ -113,7 +113,7 @@ export function EditRetailerDialog({
         <div className="py-4 space-y-6">
           {/* Contact Info */}
           <div>
-            <h4 className="text-sm font-medium text-zinc-700 mb-3">Contact Information</h4>
+            <h4 className="text-sm font-medium text-foreground mb-3">Contact Information</h4>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-retailer-contact">Contact Name</Label>
@@ -153,7 +153,7 @@ export function EditRetailerDialog({
 
           {/* Business Info */}
           <div>
-            <h4 className="text-sm font-medium text-zinc-700 mb-3">Business Information</h4>
+            <h4 className="text-sm font-medium text-foreground mb-3">Business Information</h4>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-retailer-business-name">Business Name</Label>
@@ -214,7 +214,7 @@ export function EditRetailerDialog({
 
           {/* Address */}
           <div>
-            <h4 className="text-sm font-medium text-zinc-700 mb-3">Address</h4>
+            <h4 className="text-sm font-medium text-foreground mb-3">Address</h4>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="edit-retailer-address">Street Address</Label>
@@ -261,7 +261,7 @@ export function EditRetailerDialog({
 
           {/* Tax Info */}
           <div>
-            <h4 className="text-sm font-medium text-zinc-700 mb-3">Tax Information</h4>
+            <h4 className="text-sm font-medium text-foreground mb-3">Tax Information</h4>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-retailer-tax-type">Tax ID Type</Label>

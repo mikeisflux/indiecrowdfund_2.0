@@ -24,14 +24,14 @@ export function SurveyErrorState({ error, errorStatus, pledgeId, onRetry }: Surv
         <h3 className="text-lg font-semibold mb-2">
           {isNotFound ? "No Survey Available" : "Unable to Load Survey"}
         </h3>
-        <p className="text-zinc-500 mb-4">
+        <p className="text-muted-foreground mb-4">
           {isNotFound
             ? "The creator hasn't sent a survey for this project yet. Check back later."
             : error}
         </p>
         {isForbiddenOrUnauth && (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               This usually means your session has expired or you&apos;re signed in with a different account than the one that made this pledge.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
