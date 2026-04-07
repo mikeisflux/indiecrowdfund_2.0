@@ -33,8 +33,8 @@ export async function GET() {
     }
 
     // Check if user is admin
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
 
@@ -110,8 +110,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is admin
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
 
@@ -187,8 +187,8 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Check if user is admin
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
 

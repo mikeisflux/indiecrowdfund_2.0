@@ -406,6 +406,7 @@ export async function processPendingPledgesForProject(projectId: string) {
       projectId,
       status: "PENDING",
       chargedImmediately: false,
+      deletedAt: null,
       OR: [
         { stripePaymentMethodId: { not: null } },
         { stripeSetupIntentId: { not: null } },

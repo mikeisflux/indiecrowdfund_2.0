@@ -16,8 +16,8 @@ export async function GET(
     }
 
     // Check admin status
-    const currentUser = await db.user.findUnique({
-      where: { id: session.user.id },
+    const currentUser = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
 

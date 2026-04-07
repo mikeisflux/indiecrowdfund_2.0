@@ -10,8 +10,8 @@ async function getAdminUserId(): Promise<string | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
+  const user = await db.user.findFirst({
+    where: { id: session.user.id, deletedAt: null },
     select: { role: true },
   });
 
@@ -196,8 +196,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify user exists
-    const user = await db.user.findUnique({
-      where: { id: userId },
+    const user = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: { id: true },
     });
 

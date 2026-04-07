@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Admin-only check
-    const adminUser = await db.user.findUnique({
-      where: { id: session.user.id },
+    const adminUser = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
 
@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Get the user
-    const targetUser = await db.user.findUnique({
-      where: { id: userId },
+    const targetUser = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: {
         id: true,
         name: true,

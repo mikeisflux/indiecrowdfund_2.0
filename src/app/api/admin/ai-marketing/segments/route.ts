@@ -17,8 +17,8 @@ interface SubscriberSegment {
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) return { error: "Unauthorized", status: 401 };
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+  const user = await prisma.user.findFirst({
+    where: { id: session.user.id, deletedAt: null },
     select: { role: true },
   });
   if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {

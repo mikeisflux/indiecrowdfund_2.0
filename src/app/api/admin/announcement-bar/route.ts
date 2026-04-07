@@ -38,8 +38,8 @@ async function requireAdmin() {
     return null;
   }
 
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
+  const user = await db.user.findFirst({
+    where: { id: session.user.id, deletedAt: null },
     select: { role: true, id: true },
   });
 

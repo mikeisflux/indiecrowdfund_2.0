@@ -20,8 +20,8 @@ async function requireAdmin() {
     return { error: "Unauthorized", status: 401 };
   }
 
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
+  const user = await db.user.findFirst({
+    where: { id: session.user.id, deletedAt: null },
     select: { role: true }
   });
 
@@ -180,8 +180,8 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const user = await db.user.findUnique({
-      where: { id: userId },
+    const user = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -681,8 +681,8 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Get user info before deletion
-    const userToDelete = await db.user.findUnique({
-      where: { id: userId },
+    const userToDelete = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: { email: true }
     });
 

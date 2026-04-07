@@ -50,7 +50,7 @@ export async function PUT(
     }
 
     // Check if vanity URL is already taken
-    const existing = await db.user.findUnique({
+    const existing = await db.user.findFirst({
       where: { vanityUrl: vanityUrl.toLowerCase() },
     });
 
@@ -103,8 +103,8 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: userId },
+    const user = await db.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: {
         id: true,
         name: true,

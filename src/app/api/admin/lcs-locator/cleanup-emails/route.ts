@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 
 // Helper to check admin status
 async function isAdmin(userId: string): Promise<boolean> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
+  const user = await db.user.findFirst({
+    where: { id: userId, deletedAt: null },
     select: { role: true },
   });
   return user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";

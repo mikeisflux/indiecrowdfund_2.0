@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) return { error: "Unauthorized", status: 401 };
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
+  const user = await db.user.findFirst({
+    where: { id: session.user.id, deletedAt: null },
     select: { role: true },
   });
   if (user?.role !== "SUPER_ADMIN") return { error: "Forbidden - Super Admin access required", status: 403 };

@@ -16,8 +16,8 @@ async function requireAdmin() {
     return { error: "Unauthorized", status: 401 };
   }
 
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
+  const user = await db.user.findFirst({
+    where: { id: session.user.id, deletedAt: null },
     select: { role: true },
   });
 
@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Get admin's name for tagging
-    const admin = await db.user.findUnique({
-      where: { id: authResult.user.id },
+    const admin = await db.user.findFirst({
+      where: { id: authResult.user.id, deletedAt: null },
       select: { name: true },
     });
 

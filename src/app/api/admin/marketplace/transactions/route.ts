@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
       select: { role: true },
     });
 
