@@ -33,7 +33,11 @@ import {
   HelpCircle,
   Loader2,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { DigitalFile, DistributionRule, FulfillmentStats } from "../../types";
@@ -66,6 +70,13 @@ export function DigitalTab({
   const [confirmDeleteRule, setConfirmDeleteRule] = useState<DistributionRule | null>(null);
   const [confirmDeleteFile, setConfirmDeleteFile] = useState<DigitalFile | null>(null);
   const [showViewDownloads, setShowViewDownloads] = useState(false);
+  // Replace file state
+  const [replaceFile, setReplaceFile] = useState<DigitalFile | null>(null);
+  const [replaceFileInput, setReplaceFileInput] = useState<File | null>(null);
+  const [replaceNotify, setReplaceNotify] = useState(true);
+  const [replaceAffectedCount, setReplaceAffectedCount] = useState<number | null>(null);
+  const [replaceStep, setReplaceStep] = useState<"select" | "uploading" | "done">("select");
+  const [replaceProgress, setReplaceProgress] = useState(0);
 
   const handleBlastNotifications = async () => {
     if (!projectId) {
@@ -234,6 +245,85 @@ export function DigitalTab({
       toast.error(error instanceof Error ? error.message : "Failed to delete file");
     } finally {
       setDeletingFileId(null);
+    }
+  };
+
+  const openReplaceDialog = (file: DigitalFile) => {
+    setReplaceFile(file);
+    setReplaceFileInput(null);
+    setReplaceNotify(true);
+    setReplaceAffectedCount(null);
+    setReplaceStep("select");
+    setReplaceProgress(0);
+  };
+
+  const handleReplaceUpload = async () => {
+    if (!replaceFile || !replaceFileInput || !projectId) return;
+
+    setReplaceStep("uploading");
+    setReplaceProgress(10);
+
+    try {
+      // Step 1: get presigned URL
+      const urlRes = await apiFetch("/api/creator/digital-files", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "get_replace_url",
+          fileId: replaceFile.id,
+          fileName: replaceFileInput.name,
+          fileSize: replaceFileInput.size,
+          mimeType: replaceFileInput.type || "application/octet-stream",
+        }),
+      });
+
+      if (!urlRes.ok) {
+        const err = await urlRes.json();
+        throw new Error(err.error || "Failed to get upload URL");
+      }
+
+      const { uploadUrl, newStorageKey, affectedCount } = await urlRes.json();
+      setReplaceAffectedCount(affectedCount);
+      setReplaceProgress(30);
+
+      // Step 2: upload directly to R2
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: replaceFileInput,
+        headers: { "Content-Type": replaceFileInput.type || "application/octet-stream" },
+      });
+
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      setReplaceProgress(75);
+
+      // Step 3: confirm replace
+      const confirmRes = await apiFetch("/api/creator/digital-files", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "confirm_replace",
+          fileId: replaceFile.id,
+          newStorageKey,
+          fileName: replaceFileInput.name,
+          fileSize: replaceFileInput.size,
+          mimeType: replaceFileInput.type || "application/octet-stream",
+          notifyBackers: replaceNotify,
+        }),
+      });
+
+      if (!confirmRes.ok) {
+        const err = await confirmRes.json();
+        throw new Error(err.error || "Failed to confirm replacement");
+      }
+
+      setReplaceProgress(100);
+      setReplaceStep("done");
+      toast.success(`"${replaceFile.name}" replaced successfully`);
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Replace failed");
+      setReplaceStep("select");
+      setReplaceProgress(0);
     }
   };
 
@@ -473,6 +563,15 @@ export function DigitalTab({
                     </Button>
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={() => openReplaceDialog(file)}
+                      title="Replace with corrected version"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Replace
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="ghost"
                       onClick={() => setConfirmDeleteFile(file)}
                       disabled={deletingFileId === file.id}
@@ -584,6 +683,107 @@ export function DigitalTab({
                 "Delete"
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Replace File Dialog */}
+      <Dialog open={!!replaceFile} onOpenChange={(open) => { if (!open && replaceStep !== "uploading") { setReplaceFile(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-teal-600" />
+              Replace File
+            </DialogTitle>
+            <DialogDescription>
+              Upload a corrected version of <strong>{replaceFile?.name}</strong>.
+              Backers will automatically receive the updated file — no redistribution needed.
+            </DialogDescription>
+          </DialogHeader>
+
+          {replaceStep === "select" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="replace-file-input">Select replacement file</Label>
+                <Input
+                  id="replace-file-input"
+                  type="file"
+                  onChange={(e) => setReplaceFileInput(e.target.files?.[0] ?? null)}
+                  accept=".pdf,.epub,.zip,.mp3"
+                />
+                {replaceFileInput && (
+                  <p className="text-xs text-muted-foreground">
+                    {replaceFileInput.name} — {(replaceFileInput.size / 1024 / 1024).toFixed(1)} MB
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <Checkbox
+                  id="replace-notify"
+                  checked={replaceNotify}
+                  onCheckedChange={(v) => setReplaceNotify(!!v)}
+                />
+                <Label htmlFor="replace-notify" className="text-sm cursor-pointer">
+                  Email backers who already received this file
+                </Label>
+              </div>
+              {replaceNotify && (
+                <p className="text-xs text-muted-foreground">
+                  Backers with existing downloads will receive an email letting them know a corrected version is available.
+                </p>
+              )}
+            </div>
+          )}
+
+          {replaceStep === "uploading" && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
+                <span className="text-sm">
+                  {replaceProgress < 30 ? "Preparing upload…" : replaceProgress < 75 ? "Uploading file…" : "Finalising…"}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-teal-600 transition-all duration-300"
+                  style={{ width: `${replaceProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {replaceStep === "done" && (
+            <div className="space-y-3 py-2">
+              <div className="flex items-center gap-3 text-green-600">
+                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">✓</div>
+                <span className="font-medium">File replaced successfully</span>
+              </div>
+              {replaceAffectedCount !== null && (
+                <p className="text-sm text-muted-foreground">
+                  {replaceAffectedCount} backer{replaceAffectedCount !== 1 ? "s" : ""} will see the updated file.
+                  {replaceNotify && replaceAffectedCount > 0 && " Notification emails have been sent."}
+                </p>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            {replaceStep === "select" && (
+              <>
+                <Button variant="outline" onClick={() => setReplaceFile(null)}>Cancel</Button>
+                <Button
+                  className="bg-teal-600 hover:bg-teal-700"
+                  onClick={handleReplaceUpload}
+                  disabled={!replaceFileInput}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Upload Replacement
+                </Button>
+              </>
+            )}
+            {replaceStep === "done" && (
+              <Button onClick={() => setReplaceFile(null)}>Close</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
