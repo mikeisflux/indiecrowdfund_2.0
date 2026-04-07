@@ -353,60 +353,60 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/creator/indiekit/address/route.ts` ✅
 - [x] `src/app/api/creator/indiekit/backers/route.ts` ✅
 - [x] `src/app/api/creator/indiekit/campaigns/route.ts` ✅
-- [ ] `src/app/api/creator/indiekit/digital/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/easypost/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/export/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/feedback/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/fulfillment/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/build-package-groups.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/compute-stats.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-digital-files.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-distribution-rules.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-email-campaigns.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-products.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-segments.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/format-timeline.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/index.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/post-campaign-sales.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/process-backers.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/helpers/workflow.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/integrations/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/modifiers/route.ts` ⬜
+- [x] `src/app/api/creator/indiekit/digital/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/easypost/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/export/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/feedback/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/fulfillment/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/build-package-groups.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/compute-stats.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-digital-files.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-distribution-rules.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-email-campaigns.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-products.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-segments.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/format-timeline.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/index.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/post-campaign-sales.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/process-backers.ts` ✅
+- [x] `src/app/api/creator/indiekit/helpers/workflow.ts` ✅
+- [x] `src/app/api/creator/indiekit/integrations/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/modifiers/route.ts` 🔧
 - [x] `src/app/api/creator/indiekit/notes/route.ts` ✅
-- [ ] `src/app/api/creator/indiekit/orders/notify-balance/route.ts` ⬜
+- [x] `src/app/api/creator/indiekit/orders/notify-balance/route.ts` ✅
 - [x] `src/app/api/creator/indiekit/orders/route.ts` ✅
-- [ ] `src/app/api/creator/indiekit/products/route.ts` ⬜
+- [x] `src/app/api/creator/indiekit/products/route.ts` ✅
 - [x] `src/app/api/creator/indiekit/route.ts` ✅
-- [ ] `src/app/api/creator/indiekit/segments/backers/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/segments/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/settings/image/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/settings/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shipping-providers/credentials/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shipping/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shippo/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shipstation/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/credentials/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/oauth/authorize/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/oauth/callback/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/shopify/sku-mapping/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/stamps/route.ts` ⬜
+- [x] `src/app/api/creator/indiekit/segments/backers/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/segments/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/settings/image/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/settings/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shipping-providers/credentials/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shipping/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shippo/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shipstation/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/credentials/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/oauth/authorize/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/oauth/callback/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/shopify/sku-mapping/route.ts` 🔧
+- [x] `src/app/api/creator/indiekit/stamps/route.ts` ✅
 - [x] `src/app/api/creator/indiekit/surveys/[pledgeId]/route.ts` ✅
 - [x] `src/app/api/creator/indiekit/surveys/route.ts` ✅
-- [ ] `src/app/api/creator/indiekit/timeline/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/transactions/route.ts` ⬜
-- [ ] `src/app/api/creator/indiekit/updates/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/books/[id]/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/books/[id]/submit/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/books/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/company/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/discount-codes/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/files/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/files/upload/route.ts` ⬜
-- [ ] `src/app/api/creator/marketplace/route.ts` ⬜
-- [ ] `src/app/api/creator/media/upload/route.ts` ⬜
-- [ ] `src/app/api/creator/paypal-bank-account/route.ts` ⬜
-- [ ] `src/app/api/creator/paypal/route.ts` ⬜
+- [x] `src/app/api/creator/indiekit/timeline/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/transactions/route.ts` ✅
+- [x] `src/app/api/creator/indiekit/updates/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/books/[id]/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/books/[id]/submit/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/books/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/company/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/discount-codes/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/files/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/files/upload/route.ts` ✅
+- [x] `src/app/api/creator/marketplace/route.ts` ✅
+- [x] `src/app/api/creator/media/upload/route.ts` ✅
+- [x] `src/app/api/creator/paypal-bank-account/route.ts` ✅
+- [x] `src/app/api/creator/paypal/route.ts` ✅
 - [x] `src/app/api/creator/pledges/[pledgeId]/route.ts` ✅
 - [x] `src/app/api/creator/pledges/bulk-delete/route.ts` ✅
 - [x] `src/app/api/creator/prelaunch-pages/route.ts` ✅
@@ -415,7 +415,7 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
   - Race condition protection: uses `updateMany` with `status: "PENDING"` as atomic guard before payment processor call; reverts to PENDING on payment failure. Well-implemented.
 - [x] `src/app/api/creator/refund-requests/route.ts` ✅
 - [x] `src/app/api/creator/stripe/portal/route.ts` ✅
-- [ ] `src/app/api/creator/whop-bank-account/route.ts` ⬜
+- [x] `src/app/api/creator/whop-bank-account/route.ts` ✅
 - [x] `src/app/api/cron/ai-marketing/route.ts` ✅
 - [x] `src/app/api/cron/cleanup-pledges/route.ts` ✅
 - [x] `src/app/api/cron/cleanup-projects/route.ts` ✅
