@@ -69,9 +69,9 @@ export function RewardsTab({
   };
 
   return (
-    <div className="lg:flex lg:gap-8">
+    <div className="md:flex md:gap-8">
       {/* Left Sidebar - sticky with independent scroll */}
-      <div className="hidden lg:block lg:w-[280px] lg:flex-shrink-0">
+      <div className="hidden md:block md:w-[220px] lg:w-[280px] md:flex-shrink-0">
         <div className="sticky top-20">
           <h3 className="text-lg font-semibold mb-4">Available rewards</h3>
           <div className="h-[calc(100vh-140px)] overflow-y-auto pr-2">
@@ -136,9 +136,9 @@ export function RewardsTab({
             >
               {isSelected ? (
                 /* ===== EXPANDED VIEW (selected reward) ===== */
-                <div className="grid gap-8 lg:grid-cols-9 pb-8 mb-4 border-b last:border-b-0 last:mb-0 last:pb-0">
+                <div className="grid gap-8 md:grid-cols-9 pb-8 mb-4 border-b last:border-b-0 last:mb-0 last:pb-0">
                   {/* Reward Card */}
-                  <div className="lg:col-span-5">
+                  <div className="md:col-span-5">
                     <Card
                       className={`overflow-hidden cursor-pointer transition-all ring-2 ring-[#05ce78] ring-offset-2 ${isUnavailable ? "opacity-60" : ""}`}
                       onClick={() => handleCardClick(reward.id)}
@@ -234,7 +234,7 @@ export function RewardsTab({
                   </div>
 
                   {/* Right Sidebar - Description, Items, Add-ons */}
-                  <div className="lg:col-span-4 space-y-6">
+                  <div className="md:col-span-4 space-y-6">
                     {/* Reward Description */}
                     <div>
                       <p className="text-sm leading-relaxed">{reward.description}</p>

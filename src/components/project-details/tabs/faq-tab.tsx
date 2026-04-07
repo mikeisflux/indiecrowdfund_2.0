@@ -41,9 +41,9 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
   return (
     <div className="space-y-12">
       {/* FAQ Main Section */}
-      <div className="grid gap-8 lg:grid-cols-12">
+      <div className="grid gap-8 md:grid-cols-12">
         {/* Left - FAQ Questions */}
-        <div className="lg:col-span-8">
+        <div className="md:col-span-7 lg:col-span-8">
           <h2 className="text-2xl font-semibold mb-6">Frequently Asked Questions</h2>
           {faqs.length > 3 && (
             <div className="relative mb-6">
@@ -84,7 +84,7 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
         </div>
 
         {/* Right - Ask a Question */}
-        <div className="lg:col-span-4">
+        <div className="md:col-span-5 lg:col-span-4">
           <div className="sticky top-20">
             <p className="text-muted-foreground mb-4">
               Don&apos;t see the answer to your question? Ask the project creator directly.

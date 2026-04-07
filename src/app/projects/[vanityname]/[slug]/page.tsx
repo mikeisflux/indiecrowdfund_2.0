@@ -556,9 +556,9 @@ export default function ProjectPage() {
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>{project.subtitle}</p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-5">
+          <div className="grid gap-8 md:grid-cols-5">
             {/* Media - Takes 3 columns */}
-            <div className="lg:col-span-3 animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '200ms' }}>
+            <div className="md:col-span-3 animate-in fade-in slide-in-from-left-4 duration-500" style={{ animationDelay: '200ms' }}>
               <div className="aspect-video overflow-hidden rounded-2xl bg-muted relative shadow-2xl shadow-black/20 ring-1 ring-border/50">
                 {project.videoUrl ? (
                   (() => {
@@ -633,7 +633,7 @@ export default function ProjectPage() {
             </div>
 
             {/* Stats - Takes 2 columns */}
-            <div className="lg:col-span-2 space-y-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms' }}>
+            <div className="md:col-span-2 space-y-5 animate-in fade-in slide-in-from-right-4 duration-500" style={{ animationDelay: '300ms' }}>
               {/* Stats card */}
               <div className="glass-card rounded-2xl p-6 space-y-5">
                 {/* Progress bar */}

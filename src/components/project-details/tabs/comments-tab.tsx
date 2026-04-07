@@ -117,9 +117,9 @@ export function CommentsTab({
   return (
     <div className="space-y-12">
       {/* Comments Main Section */}
-      <div className="grid gap-8 lg:grid-cols-12">
+      <div className="grid gap-8 md:grid-cols-12">
         {/* Left - Comments List */}
-        <div className="lg:col-span-8">
+        <div className="md:col-span-7 lg:col-span-8">
           {/* Comment Form for Backers */}
           {canComment ? (
             <div className="mb-8">
@@ -391,7 +391,7 @@ export function CommentsTab({
         </div>
 
         {/* Right - Guidelines */}
-        <div className="lg:col-span-4">
+        <div className="md:col-span-5 lg:col-span-4">
           <div className="sticky top-20">
             <p className="text-muted-foreground text-sm mb-4">
               This is your space to offer support and feedback. Remember to{" "}

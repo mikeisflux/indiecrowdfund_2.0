@@ -415,7 +415,8 @@ export default function AIControlPage() {
       </div>
 
       <Tabs defaultValue="services">
-        <TabsList>
+        <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max min-w-full">
           <TabsTrigger value="services" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
             AI Services
@@ -429,6 +430,7 @@ export default function AIControlPage() {
             Run History
           </TabsTrigger>
         </TabsList>
+        </div>
 
         {/* AI Services Tab */}
         <TabsContent value="services" className="mt-6 space-y-6">

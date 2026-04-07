@@ -81,7 +81,7 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
   }, [storyNavItems]);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-12">
+    <div className="grid gap-8 md:grid-cols-12">
       {/* Left Sidebar - Story Navigation */}
       <div className="hidden lg:block lg:col-span-2">
         <nav className="sticky top-20 space-y-1">
@@ -103,7 +103,7 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
       </div>
 
       {/* Main Content */}
-      <div className="lg:col-span-6 min-w-0">
+      <div className="md:col-span-7 lg:col-span-6 min-w-0">
         <div className="prose prose-sm sm:prose lg:prose-lg max-w-none dark:prose-invert prose-headings:font-serif prose-img:rounded-lg prose-img:my-4 prose-img:max-w-full prose-img:h-auto prose-a:text-primary prose-a:underline">
           <h2 className="text-2xl font-serif">Story</h2>
           <div
@@ -126,7 +126,7 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
       </div>
 
       {/* Right Sidebar */}
-      <div className="lg:col-span-4 space-y-6">
+      <div className="md:col-span-5 lg:col-span-4 space-y-6">
         {/* Creator Card */}
         <Card>
           <CardContent className="p-4">
