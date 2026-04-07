@@ -252,28 +252,33 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/admin/media/scan/route.ts` ✅
 - [x] `src/app/api/admin/media/upload/route.ts` ✅
 - [x] `src/app/api/admin/notifications/route.ts` ✅
-- [ ] `src/app/api/admin/pages/route.ts` ⬜
-- [ ] `src/app/api/admin/payouts/divinitycoin/route.ts` ⬜
-- [ ] `src/app/api/admin/payouts/paypal/route.ts` ⬜
-- [ ] `src/app/api/admin/payouts/route.ts` ⬜
-- [ ] `src/app/api/admin/payouts/whop/route.ts` ⬜
-- [ ] `src/app/api/admin/pledges/[pledgeId]/route.ts` ⬜
-- [ ] `src/app/api/admin/pledges/cleanup/route.ts` ⬜
-- [ ] `src/app/api/admin/prelaunch/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/[projectId]/adjust-end-date/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/[projectId]/backfill-backer-numbers/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/[projectId]/process-pledges/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/history/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/link-preview/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/review/route.ts` ⬜
-- [ ] `src/app/api/admin/projects/status/route.ts` ⬜
+- [x] `src/app/api/admin/pages/route.ts` ✅
+- [x] `src/app/api/admin/payouts/divinitycoin/route.ts` ✅
+- [x] `src/app/api/admin/payouts/paypal/route.ts` ✅
+- [x] `src/app/api/admin/payouts/route.ts` ✅
+- [x] `src/app/api/admin/payouts/whop/route.ts` ✅
+- [x] `src/app/api/admin/pledges/[pledgeId]/route.ts` ✅
+- [x] `src/app/api/admin/pledges/cleanup/route.ts` 🔧
+  - Fixed: findUnique → findFirst with deletedAt: null for admin role check
+- [x] `src/app/api/admin/prelaunch/route.ts` ✅
+- [x] `src/app/api/admin/projects/[projectId]/adjust-end-date/route.ts` ✅
+- [x] `src/app/api/admin/projects/[projectId]/backfill-backer-numbers/route.ts` ✅
+- [x] `src/app/api/admin/projects/[projectId]/process-pledges/route.ts` ✅
+- [x] `src/app/api/admin/projects/history/route.ts` ✅
+- [x] `src/app/api/admin/projects/link-preview/route.ts` ✅
+- [x] `src/app/api/admin/projects/review/route.ts` 🔧
+  - Fixed: findUnique → findFirst with deletedAt: null for admin role check
+- [x] `src/app/api/admin/projects/status/route.ts` ✅
 - [ ] `src/app/api/admin/promo-popup/route.ts` ⬜
 - [ ] `src/app/api/admin/recalculate-pledge-amounts/route.ts` ⬜
 - [ ] `src/app/api/admin/reconcile-pledges/route.ts` ⬜
 - [ ] `src/app/api/admin/reports/route.ts` ⬜
-- [ ] `src/app/api/admin/retailers/resend-approval/route.ts` ⬜
-- [ ] `src/app/api/admin/retailers/route.ts` ⬜
-- [ ] `src/app/api/admin/retailers/surveys/route.ts` ⬜
+- [x] `src/app/api/admin/retailers/resend-approval/route.ts` 🔧
+  - Fixed: findUnique → findFirst with deletedAt: null for admin role check
+- [x] `src/app/api/admin/retailers/route.ts` 🔧
+  - Fixed: findUnique → findFirst with deletedAt: null (3 handlers)
+- [x] `src/app/api/admin/retailers/surveys/route.ts` 🔧
+  - Fixed: findUnique → findFirst with deletedAt: null for admin role check
 - [ ] `src/app/api/admin/security/encrypt-secrets/route.ts` ⬜
 - [ ] `src/app/api/admin/security/stats/route.ts` ⬜
 - [ ] `src/app/api/admin/seo/audit/route.ts` ⬜
