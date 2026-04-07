@@ -1075,38 +1075,38 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/lib/auth/rate-limit.ts` ✅
 - [x] `src/lib/auth/recaptcha.ts` ✅
 - [x] `src/lib/auth/session.ts` ✅
-- [ ] `src/lib/bot-blocker.ts` ⬜
-- [ ] `src/lib/circuit-breaker.ts` ⬜
-- [ ] `src/lib/consent.ts` ⬜
-- [ ] `src/lib/correlation.ts` ⬜
-- [ ] `src/lib/csrf.ts` ⬜
-- [ ] `src/lib/db/index.ts` ⬜
-- [ ] `src/lib/email.ts` ⬜
-- [ ] `src/lib/email/email-config.ts` ⬜
-- [ ] `src/lib/email/email-templates-auth.ts` ⬜
-- [ ] `src/lib/email/email-templates-misc.ts` ⬜
-- [ ] `src/lib/email/email-templates-pledge.ts` ⬜
-- [ ] `src/lib/email/email-templates-project.ts` ⬜
-- [ ] `src/lib/email/sendgrid-verify.ts` ⬜
-- [ ] `src/lib/encryption.ts` ⬜
-- [ ] `src/lib/error-tracker.ts` ⬜
-- [ ] `src/lib/feature-flags.ts` ⬜
-- [ ] `src/lib/fetch-utils.ts` ⬜
-- [ ] `src/lib/gdpr/execute-deletions.ts` ⬜
-- [ ] `src/lib/local-books-db.ts` ⬜
-- [ ] `src/lib/logger.ts` ⬜
-- [ ] `src/lib/metrics.ts` ⬜
-- [ ] `src/lib/notifications.ts` ⬜
-- [ ] `src/lib/notifications/core.ts` ⬜
-- [ ] `src/lib/notifications/email-templates.ts` ⬜
-- [ ] `src/lib/notifications/index.ts` ⬜
-- [ ] `src/lib/notifications/marketplace-notifications.ts` ⬜
-- [ ] `src/lib/notifications/pledge-notifications.ts` ⬜
-  - Fixed: processUnsentConfirmationEmails() — both Pledge queries (completed and pending) were missing `deletedAt: null`, allowing soft-deleted pledges to be processed and confirmation emails re-sent
-- [ ] `src/lib/notifications/project-notifications.ts` ⬜
-- [ ] `src/lib/notifications/social-notifications.ts` ⬜
-- [ ] `src/lib/notifications/types.ts` ⬜
-- [ ] `src/lib/oauth/config.ts` ⬜
+- [x] `src/lib/bot-blocker.ts` ✅
+- [x] `src/lib/circuit-breaker.ts` ✅
+- [x] `src/lib/consent.ts` ✅
+- [x] `src/lib/correlation.ts` ✅
+- [x] `src/lib/csrf.ts` ✅
+- [x] `src/lib/db/index.ts` ✅
+- [x] `src/lib/email.ts` ✅
+- [x] `src/lib/email/email-config.ts` 🔧
+  - Fixed: `addWhitelistBanner()` interpolated `fromEmail` directly into HTML without escaping — XSS if email address contains `<` or `>` chars. Added `const safeFromEmail = escapeHtmlForEmail(fromEmail)` using the already-exported function and replaced the interpolation.
+- [x] `src/lib/email/email-templates-auth.ts` ✅
+- [x] `src/lib/email/email-templates-misc.ts` ✅
+- [x] `src/lib/email/email-templates-pledge.ts` ✅
+- [x] `src/lib/email/email-templates-project.ts` ✅
+- [x] `src/lib/email/sendgrid-verify.ts` ✅
+- [x] `src/lib/encryption.ts` ✅
+- [x] `src/lib/error-tracker.ts` ✅
+- [x] `src/lib/feature-flags.ts` ✅
+- [x] `src/lib/fetch-utils.ts` ✅
+- [x] `src/lib/gdpr/execute-deletions.ts` ✅
+- [x] `src/lib/local-books-db.ts` ✅
+- [x] `src/lib/logger.ts` ✅
+- [x] `src/lib/metrics.ts` ✅
+- [x] `src/lib/notifications.ts` ✅
+- [x] `src/lib/notifications/core.ts` ✅
+- [x] `src/lib/notifications/email-templates.ts` ✅
+- [x] `src/lib/notifications/index.ts` ✅
+- [x] `src/lib/notifications/marketplace-notifications.ts` ✅
+- [x] `src/lib/notifications/pledge-notifications.ts` ✅
+- [x] `src/lib/notifications/project-notifications.ts` ✅
+- [x] `src/lib/notifications/social-notifications.ts` ✅
+- [x] `src/lib/notifications/types.ts` ✅
+- [x] `src/lib/oauth/config.ts` ✅
 - [x] `src/lib/payments/divinitycoin/cards.ts` ✅
 - [x] `src/lib/payments/divinitycoin/client.ts` ✅
 - [x] `src/lib/payments/divinitycoin/config.ts` ✅
@@ -1158,5 +1158,5 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/lib/utils/sanitize.ts` ✅
 - [x] `src/lib/vault.ts` ✅
 - [x] `src/middleware.ts` ✅
-- [ ] `src/types/api.ts` ⬜
-- [ ] `src/types/index.ts` ⬜
+- [x] `src/types/api.ts` ✅
+- [x] `src/types/index.ts` ✅
