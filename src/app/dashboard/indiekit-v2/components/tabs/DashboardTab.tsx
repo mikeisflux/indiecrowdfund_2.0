@@ -27,7 +27,8 @@ export function DashboardTab({ stats, backers, timeline, projectId, onSwitchTab 
   return (
     <div className="space-y-4">
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <TabsList className="bg-muted/50">
+        <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max bg-muted/50">
           <TabsTrigger value="overview">
             <LayoutDashboard className="h-4 w-4 mr-2" />
             Overview
@@ -37,6 +38,7 @@ export function DashboardTab({ stats, backers, timeline, projectId, onSwitchTab 
             Charts & Breakdown
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="overview">
           <OverviewTab

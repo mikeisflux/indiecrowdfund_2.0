@@ -203,7 +203,7 @@ export default function RetailerProjectDetailPage() {
 
   if (isLoading || !project) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     );
@@ -212,14 +212,14 @@ export default function RetailerProjectDetailPage() {
   const fundingPercent = Math.round((Number(project.currentAmount) / Number(project.goalAmount)) * 100);
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-emerald-500/5">
       {/* Header */}
-      <header className="bg-white border-b border-zinc-200 sticky top-0 z-50">
+      <header className="bg-background/80 backdrop-blur-xl border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             <Link
               href="/retailers/projects"
-              className="flex items-center gap-2 text-zinc-600 hover:text-zinc-900"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-5 w-5" />
               <span>Back to Projects</span>
@@ -233,8 +233,8 @@ export default function RetailerProjectDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Project Header */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="aspect-video bg-zinc-100 relative">
+            <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+              <div className="aspect-video bg-muted relative">
                 <Image
                   src={project.imageUrl}
                   alt={project.title}
@@ -249,29 +249,29 @@ export default function RetailerProjectDetailPage() {
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <Badge variant="outline">{project.category}</Badge>
-                  <span className="text-sm text-zinc-500">by {project.creator.name}</span>
+                  <span className="text-sm text-muted-foreground">by {project.creator.name}</span>
                 </div>
                 <h1 className="text-3xl font-bold mb-3">{project.title}</h1>
-                <p className="text-zinc-600 text-lg">{project.subtitle}</p>
+                <p className="text-muted-foreground text-lg">{project.subtitle}</p>
               </div>
             </div>
 
             {/* Campaign Stats */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-card rounded-xl border border-border shadow-sm p-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-emerald-600">
                     ${Number(project.currentAmount).toLocaleString()}
                   </p>
-                  <p className="text-sm text-zinc-500">pledged of ${Number(project.goalAmount).toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">pledged of ${Number(project.goalAmount).toLocaleString()}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold">{fundingPercent}%</p>
-                  <p className="text-sm text-zinc-500">funded</p>
+                  <p className="text-sm text-muted-foreground">funded</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold">{project.backerCount}</p>
-                  <p className="text-sm text-zinc-500">backers</p>
+                  <p className="text-sm text-muted-foreground">backers</p>
                 </div>
                 <div className="text-center">
                   {project.endDate ? (
@@ -284,12 +284,12 @@ export default function RetailerProjectDetailPage() {
                   ) : (
                     <>
                       <p className="text-2xl font-bold">{project.daysLeft}</p>
-                      <p className="text-sm text-zinc-500">days left</p>
+                      <p className="text-sm text-muted-foreground">days left</p>
                     </>
                   )}
                 </div>
               </div>
-              <div className="h-3 bg-zinc-100 rounded-full overflow-hidden">
+              <div className="h-3 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-emerald-600 rounded-full"
                   style={{ width: `${Math.min(fundingPercent, 100)}%` }}
@@ -298,9 +298,9 @@ export default function RetailerProjectDetailPage() {
             </div>
 
             {/* Reward Tiers / Order Section */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-card rounded-xl border border-border shadow-sm p-6">
               <h2 className="text-xl font-bold mb-2">Select Products</h2>
-              <p className="text-zinc-500 mb-6">
+              <p className="text-muted-foreground mb-6">
                 Choose the items and quantities for your wholesale order. Minimum order:{" "}
                 <span className="font-medium">{project.retailerMinQuantity} units</span>
                 {project.retailerMaxQuantity && (
@@ -323,11 +323,11 @@ export default function RetailerProjectDetailPage() {
                       key={reward.id}
                       className={`border rounded-xl p-5 transition-all ${
                         quantity > 0
-                          ? "border-emerald-300 bg-emerald-50/50"
-                          : "border-zinc-200 hover:border-zinc-300"
+                          ? "border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20"
+                          : "border-border hover:border-border/80"
                       }`}
                     >
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="font-semibold text-lg">{reward.title}</h3>
@@ -337,16 +337,16 @@ export default function RetailerProjectDetailPage() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-zinc-600 mb-3">{reward.description}</p>
-                          <p className="text-sm text-zinc-500">
+                          <p className="text-muted-foreground mb-3">{reward.description}</p>
+                          <p className="text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4 inline mr-1" />
                             Est. delivery: {reward.estimatedDelivery}
                           </p>
                         </div>
 
-                        <div className="text-right ml-6">
+                        <div className="text-right sm:ml-6 shrink-0">
                           <div className="mb-3">
-                            <p className="text-sm text-zinc-400 line-through">
+                            <p className="text-sm text-muted-foreground line-through">
                               Retail: ${Number(reward.amount).toFixed(2)}
                             </p>
                             <p className="text-2xl font-bold text-emerald-600">
@@ -397,7 +397,7 @@ export default function RetailerProjectDetailPage() {
             </div>
 
             {/* About Section */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-card rounded-xl border border-border shadow-sm p-6">
               <h2 className="text-xl font-bold mb-4">About This Project</h2>
               <div className="prose prose-zinc max-w-none">
                 <p className="whitespace-pre-line">{project.description}</p>
@@ -417,8 +417,8 @@ export default function RetailerProjectDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {orderItems.length === 0 ? (
-                    <div className="text-center py-6 text-zinc-500">
-                      <Package className="h-12 w-12 mx-auto mb-3 text-zinc-300" />
+                    <div className="text-center py-6 text-muted-foreground">
+                      <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
                       <p>No items selected</p>
                       <p className="text-sm">
                         Select products to create your wholesale order
@@ -439,7 +439,7 @@ export default function RetailerProjectDetailPage() {
                             >
                               <div>
                                 <p className="font-medium">{reward.title}</p>
-                                <p className="text-zinc-500">Qty: {item.quantity}</p>
+                                <p className="text-muted-foreground">Qty: {item.quantity}</p>
                               </div>
                               <p className="font-medium">
                                 ${(Number(reward.retailerPrice) * item.quantity).toFixed(2)}
@@ -451,12 +451,12 @@ export default function RetailerProjectDetailPage() {
 
                       <div className="border-t pt-4 space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-zinc-500">Total Quantity</span>
+                          <span className="text-muted-foreground">Total Quantity</span>
                           <span>{getTotalQuantity()} units</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-zinc-500">Retail Value</span>
-                          <span className="line-through text-zinc-400">
+                          <span className="text-muted-foreground">Retail Value</span>
+                          <span className="line-through text-muted-foreground/60">
                             ${getTotalRetailValue().toFixed(2)}
                           </span>
                         </div>
@@ -473,7 +473,7 @@ export default function RetailerProjectDetailPage() {
                       </div>
 
                       {!canPlaceOrder() && getTotalQuantity() > 0 && (
-                        <div className="flex items-start gap-2 p-3 bg-yellow-50 text-yellow-700 rounded-lg text-sm">
+                        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 rounded-lg text-sm border border-amber-200 dark:border-amber-800">
                           <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                           <div>
                             {getTotalQuantity() < project.retailerMinQuantity && (
@@ -567,15 +567,15 @@ export default function RetailerProjectDetailPage() {
                 <CardContent className="p-5">
                   <h4 className="font-semibold mb-3">About the Creator</h4>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="h-12 w-12 rounded-full bg-zinc-200"></div>
+                    <div className="h-12 w-12 rounded-full bg-muted"></div>
                     <div>
                       <p className="font-medium">{project.creator.name}</p>
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-muted-foreground">
                         {project.creator.projectCount} projects
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm text-zinc-600">{project.creator.bio}</p>
+                  <p className="text-sm text-muted-foreground">{project.creator.bio}</p>
                 </CardContent>
               </Card>
             </div>

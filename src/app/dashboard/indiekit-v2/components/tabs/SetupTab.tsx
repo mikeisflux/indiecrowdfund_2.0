@@ -27,7 +27,8 @@ export function SetupTab({
   return (
     <div className="space-y-4">
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <TabsList className="bg-muted/50">
+        <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max bg-muted/50">
           <TabsTrigger value="products">
             <BoxIcon className="h-4 w-4 mr-2" />
             Products
@@ -37,6 +38,7 @@ export function SetupTab({
             SKU Mapping
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="products">
           <ProductsTab products={products} projectId={projectId} />

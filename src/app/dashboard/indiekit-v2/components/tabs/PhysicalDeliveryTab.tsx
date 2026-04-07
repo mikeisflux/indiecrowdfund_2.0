@@ -37,7 +37,8 @@ export function PhysicalDeliveryTab({
   return (
     <div className="space-y-4">
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <TabsList className="bg-muted/50">
+        <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max bg-muted/50">
           <TabsTrigger value="packages">
             <Box className="h-4 w-4 mr-2" />
             Packages
@@ -47,6 +48,7 @@ export function PhysicalDeliveryTab({
             Shipping Config
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="packages">
           <PackagesTab

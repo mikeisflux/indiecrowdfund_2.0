@@ -389,7 +389,8 @@ export default function PublicProfilePage() {
           {/* Projects */}
           <div className="lg:col-span-2">
             <Tabs defaultValue="created" className="w-full">
-              <TabsList className={`grid w-full ${(profile.ratings?.count ?? 0) > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+              <div className="overflow-x-auto pb-1">
+              <TabsList className="inline-flex w-max min-w-full">
                 <TabsTrigger value="created">
                   Created ({profile.createdProjects?.length || 0})
                 </TabsTrigger>
@@ -403,6 +404,7 @@ export default function PublicProfilePage() {
                   </TabsTrigger>
                 )}
               </TabsList>
+              </div>
 
               <TabsContent value="created" className="mt-6">
                 {profile.createdProjects?.length > 0 ? (

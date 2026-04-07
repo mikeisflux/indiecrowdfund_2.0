@@ -374,7 +374,7 @@ export default function PayoutsPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-zinc-200">
+      <div className="flex gap-2 border-b border-border overflow-x-auto">
         <button
           onClick={() => setActiveTab("projects")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${

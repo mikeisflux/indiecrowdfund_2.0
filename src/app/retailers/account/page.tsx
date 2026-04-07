@@ -103,7 +103,7 @@ export default function RetailerAccountPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50">
+      <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Skeleton className="h-10 w-48 mb-8" />
           <div className="space-y-6">
@@ -152,30 +152,30 @@ export default function RetailerAccountPage() {
       </header>
 
       {/* Navigation Tabs */}
-      <nav className="bg-white border-b border-zinc-200">
+      <nav className="bg-background/60 backdrop-blur border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-4 sm:gap-8 overflow-x-auto">
             <Link
               href="/retailers/dashboard"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
+              className="py-4 px-1 border-b-2 border-transparent text-muted-foreground hover:text-foreground font-medium text-sm whitespace-nowrap"
             >
               Dashboard
             </Link>
             <Link
               href="/retailers/projects"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
+              className="py-4 px-1 border-b-2 border-transparent text-muted-foreground hover:text-foreground font-medium text-sm whitespace-nowrap"
             >
               Browse Projects
             </Link>
             <Link
               href="/retailers/orders"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
+              className="py-4 px-1 border-b-2 border-transparent text-muted-foreground hover:text-foreground font-medium text-sm whitespace-nowrap"
             >
               My Orders
             </Link>
             <Link
               href="/retailers/invoices"
-              className="py-4 px-1 border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 font-medium text-sm whitespace-nowrap"
+              className="py-4 px-1 border-b-2 border-transparent text-muted-foreground hover:text-foreground font-medium text-sm whitespace-nowrap"
             >
               Invoices
             </Link>

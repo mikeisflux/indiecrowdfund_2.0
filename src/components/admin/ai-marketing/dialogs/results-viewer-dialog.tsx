@@ -77,7 +77,7 @@ export function ResultsViewerDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={onTabChange} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="inline-flex w-max min-w-full">
             <TabsTrigger value="predictive" className="gap-2">
               <TrendingUp className="h-4 w-4" />
               Predictive

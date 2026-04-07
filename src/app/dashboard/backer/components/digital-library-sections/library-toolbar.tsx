@@ -59,7 +59,7 @@ export function LibraryToolbar({
 
       {/* Source Filter */}
       <Select value={sourceFilter} onValueChange={(v) => onSourceFilterChange(v as SourceFilter)}>
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-full sm:w-[160px]">
           <Filter className="w-4 h-4 mr-2" />
           <SelectValue placeholder="All Sources" />
         </SelectTrigger>
@@ -73,7 +73,7 @@ export function LibraryToolbar({
 
       {/* Status Filter */}
       <Select value={statusFilter} onValueChange={(v) => onStatusFilterChange(v as StatusFilter)}>
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-full sm:w-[140px]">
           <BookOpen className="w-4 h-4 mr-2" />
           <SelectValue placeholder="All Status" />
         </SelectTrigger>
@@ -87,7 +87,7 @@ export function LibraryToolbar({
 
       {/* Sort */}
       <Select value={sortBy} onValueChange={(v) => onSortChange(v as SortOption)}>
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-full sm:w-[160px]">
           <SortAsc className="w-4 h-4 mr-2" />
           <SelectValue placeholder="Sort by" />
         </SelectTrigger>

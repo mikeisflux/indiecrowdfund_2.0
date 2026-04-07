@@ -26,7 +26,8 @@ export function ReportsTab({ timeline, projectId, stats }: ReportsTabProps) {
   return (
     <div className="space-y-4">
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <TabsList className="bg-muted/50">
+        <div className="overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max bg-muted/50">
           <TabsTrigger value="analytics">
             <BarChart3 className="h-4 w-4 mr-2" />
             Analytics
@@ -40,6 +41,7 @@ export function ReportsTab({ timeline, projectId, stats }: ReportsTabProps) {
             Export
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="analytics">
           <CountsTab
