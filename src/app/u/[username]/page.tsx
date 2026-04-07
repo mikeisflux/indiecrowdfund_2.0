@@ -389,17 +389,17 @@ export default function PublicProfilePage() {
           {/* Projects */}
           <div className="lg:col-span-2">
             <Tabs defaultValue="created" className="w-full">
-              <TabsList className={`grid w-full ${profile.ratings?.count > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+              <TabsList className={`grid w-full ${(profile.ratings?.count ?? 0) > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
                 <TabsTrigger value="created">
                   Created ({profile.createdProjects?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="backed">
                   Backed ({profile.backedProjects?.length || 0})
                 </TabsTrigger>
-                {profile.ratings?.count > 0 && (
+                {(profile.ratings?.count ?? 0) > 0 && (
                   <TabsTrigger value="reviews" className="flex items-center gap-1">
                     <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                    Reviews ({profile.ratings.count})
+                    Reviews ({profile.ratings?.count})
                   </TabsTrigger>
                 )}
               </TabsList>
@@ -482,8 +482,8 @@ export default function PublicProfilePage() {
                           {/* Star distribution */}
                           <div className="pt-2 space-y-1">
                             {[5, 4, 3, 2, 1].map((star) => {
-                              const count = profile.ratings.distribution[star] || 0;
-                              const pct = profile.ratings.count > 0 ? (count / profile.ratings.count) * 100 : 0;
+                              const count = profile.ratings?.distribution[star] || 0;
+                              const pct = (profile.ratings?.count ?? 0) > 0 ? (count / profile.ratings!.count) * 100 : 0;
                               return (
                                 <div key={star} className="flex items-center gap-2 text-xs">
                                   <span className="w-3 text-right text-muted-foreground">{star}</span>

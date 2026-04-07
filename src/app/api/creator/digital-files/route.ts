@@ -346,7 +346,7 @@ export async function PATCH(request: NextRequest) {
           select: { pledgeId: true },
         });
 
-        const pledgeIds = distributions.map((d) => d.pledgeId);
+        const pledgeIds = distributions.map((d: { pledgeId: string }) => d.pledgeId);
         const pledges = pledgeIds.length > 0
           ? await db.pledge.findMany({
               where: { id: { in: pledgeIds } },
