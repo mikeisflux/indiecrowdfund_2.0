@@ -18,6 +18,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Retailer tokens are prefixed with "rtl_" to prevent cross-system token
+    // acceptance — a user-issued reset token must not be accepted here.
+    if (!token.startsWith("rtl_")) {
+      return NextResponse.json(
+        { error: "Invalid or expired reset link" },
+        { status: 400 }
+      );
+    }
+
     if (password.length < 8 || password.length > 1000) {
       return NextResponse.json(
         { error: "Password must be between 8 and 1000 characters" },
@@ -99,6 +108,11 @@ export async function GET(req: NextRequest) {
         { valid: false, error: "Token is required" },
         { status: 400 }
       );
+    }
+
+    // Reject tokens that don't have the retailer prefix (cross-system guard)
+    if (!token.startsWith("rtl_")) {
+      return NextResponse.json({ valid: false, error: "Invalid token" });
     }
 
     const resetToken = await db.passwordResetToken.findUnique({

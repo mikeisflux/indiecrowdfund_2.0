@@ -68,8 +68,9 @@ export async function POST(req: NextRequest) {
         where: { email: retailer.email },
       });
 
-      // Generate a secure token
-      const token = crypto.randomUUID();
+      // Generate a secure token with a "rtl_" prefix to namespace it away
+      // from main-user password-reset tokens (both live in the same table).
+      const token = `rtl_${crypto.randomUUID()}`;
       const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
       // Create the reset token

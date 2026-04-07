@@ -508,15 +508,18 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/app/api/recommendations/route.ts` ✅
 - [x] `src/app/api/retailers/account/route.ts` ✅
 - [x] `src/app/api/retailers/apply/route.ts` ✅
-- [x] `src/app/api/retailers/forgot-password/route.ts` ✅
+- [x] `src/app/api/retailers/forgot-password/route.ts` 🔧
+  - Fixed: Reset tokens shared the same `PasswordResetToken` table as main-user reset tokens with no namespace separator — a token issued to a user email could be accepted by the retailer reset-password endpoint and vice versa; retailer tokens are now prefixed with `rtl_`
 - [x] `src/app/api/retailers/invoices/route.ts` ✅
-- [x] `src/app/api/retailers/login/route.ts` ✅
+- [x] `src/app/api/retailers/login/route.ts` 🔧
+  - Fixed: `recordRetailerLoginAttempt(success=true)` was called before the retailer status check — a PENDING/SUSPENDED retailer who knew their correct password could clear the rate-limit counter on every attempt; the success record is now recorded only after status is confirmed APPROVED
 - [x] `src/app/api/retailers/logout/route.ts` ✅
 - [x] `src/app/api/retailers/me/route.ts` ✅
 - [x] `src/app/api/retailers/orders/route.ts` ✅
 - [x] `src/app/api/retailers/projects/[id]/route.ts` ✅
 - [x] `src/app/api/retailers/projects/route.ts` ✅
-- [x] `src/app/api/retailers/reset-password/route.ts` ✅
+- [x] `src/app/api/retailers/reset-password/route.ts` 🔧
+  - Fixed: No prefix check on incoming token allowed user-issued reset tokens to be accepted by the retailer endpoint (cross-system token acceptance); both POST and GET handlers now reject any token that does not start with `rtl_`
 - [x] `src/app/api/retailers/session-auth/route.ts` ✅
 - [x] `src/app/api/rewards/[id]/copy-to-addon/route.ts` ✅
 - [x] `src/app/api/rewards/[id]/end/route.ts` ✅

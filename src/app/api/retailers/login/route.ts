@@ -147,10 +147,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Record successful login (clears rate limit)
-    await recordRetailerLoginAttempt(clientIP, identifier, true);
-
-    // Check retailer status
+    // Check retailer status BEFORE recording success so a non-APPROVED
+    // retailer with a correct password cannot clear the rate-limit counter
+    // and effectively bypass brute-force protection.
     if (retailer.status === "PENDING") {
       return NextResponse.json(
         { error: "Your application is still under review. You will receive an email when approved." },
@@ -185,6 +184,9 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+
+    // Record successful login (clears rate limit) — only after status is confirmed APPROVED
+    await recordRetailerLoginAttempt(clientIP, identifier, true);
 
     // Update last login
     await db.retailer.update({
