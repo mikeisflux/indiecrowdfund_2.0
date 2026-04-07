@@ -1057,21 +1057,23 @@ Full line-by-line security and quality audit of all 1,118 TypeScript/TSX source 
 - [x] `src/components/ui/tooltip.tsx` ✅
 - [x] `src/components/user-profile-dropdown.tsx` ✅
 - [ ] `src/instrumentation.ts` ⬜
-- [ ] `src/lib/ai/anthropic.ts` ⬜
-- [ ] `src/lib/ai/automation.ts` ⬜
-- [ ] `src/lib/ai/index.ts` ⬜
-- [ ] `src/lib/ai/marketing-services.ts` ⬜
-- [ ] `src/lib/ai/settings-integration.ts` ⬜
-- [ ] `src/lib/ai/user-interests.ts` ⬜
-- [ ] `src/lib/api-error.ts` ⬜
-- [ ] `src/lib/audit.ts` ⬜
-- [ ] `src/lib/auth-helpers.ts` ⬜
+- [x] `src/lib/ai/anthropic.ts` ✅
+- [x] `src/lib/ai/automation.ts` 🔧
+  - Fixed: `generateAutomatedEmailHtml()` interpolated all AI-generated content (subject, preheader, personalizedIntro, footer, project.title, recommendationReason, callToAction) directly into HTML without escaping — XSS via AI output. Fixed by importing `escapeHtmlForEmail` from `@/lib/email` and wrapping every interpolated value.
+- [x] `src/lib/ai/index.ts` ✅
+- [x] `src/lib/ai/marketing-services.ts` ✅
+- [x] `src/lib/ai/settings-integration.ts` ✅
+- [x] `src/lib/ai/user-interests.ts` 🔧
+  - Fixed: `findMatchingProjectsForUser()` made a redundant 3rd DB query — `profile` was fetched, then after creating a new profile, `newProfile` was fetched inside the `if` block but scoped out, then line 407 did another `db.userInterestProfile.findUnique` via `profile ?? await ...`. Changed `const profile` to `let profile`, reassigned after creation, eliminated the redundant query.
+- [x] `src/lib/api-error.ts` ✅
+- [x] `src/lib/audit.ts` ✅
+- [x] `src/lib/auth-helpers.ts` ✅
 - [x] `src/lib/auth/actions.ts` ✅
-- [ ] `src/lib/auth/constants.ts` ⬜
-- [ ] `src/lib/auth/email-access.ts` ⬜
-- [ ] `src/lib/auth/index.ts` ⬜
-- [ ] `src/lib/auth/rate-limit.ts` ⬜
-- [ ] `src/lib/auth/recaptcha.ts` ⬜
+- [x] `src/lib/auth/constants.ts` ✅
+- [x] `src/lib/auth/email-access.ts` ✅
+- [x] `src/lib/auth/index.ts` ✅
+- [x] `src/lib/auth/rate-limit.ts` ✅
+- [x] `src/lib/auth/recaptcha.ts` ✅
 - [x] `src/lib/auth/session.ts` ✅
 - [ ] `src/lib/bot-blocker.ts` ⬜
 - [ ] `src/lib/circuit-breaker.ts` ⬜
