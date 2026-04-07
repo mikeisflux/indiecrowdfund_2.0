@@ -97,7 +97,7 @@ export function ResultsViewerDialog({
           <TabsContent value="predictive" className="flex-1 overflow-hidden mt-4">
             {runResults["predictive-analytics"] ? (
               <div className="space-y-4 h-full">
-                <div className="grid gap-3 grid-cols-4">
+                <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
                   <div className="rounded-lg border bg-muted/50 p-3 dark:bg-zinc-900">
                     <p className="text-xs text-muted-foreground">Total Analyzed</p>
                     <p className="text-xl font-bold">{runResults["predictive-analytics"]?.summary?.totalAnalyzed || 0}</p>

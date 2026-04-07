@@ -395,7 +395,7 @@ export function DigitalTab({
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {/* Process Distribution Button - only show when there are pending rules */}
           {distributionRules.filter(r => r.status === "not_started").length > 0 && (
             <div className="mb-6 p-4 bg-teal-50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800 rounded-lg">

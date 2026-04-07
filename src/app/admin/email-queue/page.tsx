@@ -272,7 +272,7 @@ export default function EmailQueuePage() {
               <AlertTriangle className="h-4 w-4 text-blue-500" />
               <p className="text-sm font-medium">Microsoft Domain Emails (Outlook, Hotmail, Live, MSN)</p>
             </div>
-            <div className="grid grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               <div>
                 <p className="text-xs text-muted-foreground">Pending</p>
                 <p className="text-lg font-bold">{microsoftStats.pending}</p>

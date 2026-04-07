@@ -473,6 +473,7 @@ export default function SurveyResponsesPage() {
               <p className="text-muted-foreground">No responses found</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -548,6 +549,7 @@ export default function SurveyResponsesPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
 
           {/* Pagination */}

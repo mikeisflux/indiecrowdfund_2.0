@@ -663,7 +663,7 @@ export default function CronManagementPage() {
             {/* Schedule Fields */}
             <div>
               <Label className="mb-2 block">Schedule (Cron Expression)</Label>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 <div>
                   <Label className="text-xs text-muted-foreground">Minute</Label>
                   <Input

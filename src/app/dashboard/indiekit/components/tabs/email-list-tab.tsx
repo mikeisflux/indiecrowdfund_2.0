@@ -288,7 +288,7 @@ export function EmailListTab({ projectId, hasActiveCampaign = false }: EmailList
 
       {/* Members Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           {isLoading && members.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

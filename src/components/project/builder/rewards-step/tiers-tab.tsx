@@ -383,7 +383,7 @@ export function TiersTab({
       </div>
 
       {tiers.length > 0 ? (
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           {/* Table Header with Sort */}
           <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
             <div className="grid grid-cols-12 gap-4 flex-1 text-sm font-medium text-muted-foreground">

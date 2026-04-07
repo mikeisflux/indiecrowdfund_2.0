@@ -418,7 +418,7 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
           <CardTitle>Your Segments</CardTitle>
           <CardDescription>Manage and use your backer segments</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

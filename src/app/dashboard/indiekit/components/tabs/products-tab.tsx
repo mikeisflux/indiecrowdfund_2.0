@@ -229,7 +229,7 @@ export function ProductsTab({ products = [] }: ProductsTabProps) {
             Showing {filteredProducts.length} of {products.length} products
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

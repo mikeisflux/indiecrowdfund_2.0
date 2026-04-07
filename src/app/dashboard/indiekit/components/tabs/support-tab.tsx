@@ -340,7 +340,7 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
 
           {/* Search Results */}
           {searchQuery && (
-            <div className="mt-4 border rounded-lg">
+            <div className="mt-4 border rounded-lg overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -414,7 +414,7 @@ export function SupportTab({ backers = [], projectId, onRefresh }: SupportTabPro
           <CardTitle>Recent Backers</CardTitle>
           <CardDescription>Latest backers to look up for support</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

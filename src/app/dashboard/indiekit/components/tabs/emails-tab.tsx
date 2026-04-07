@@ -546,7 +546,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
 
       {/* Email Campaign List */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
