@@ -184,19 +184,8 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
-        {/* GTM — inline directly in <head> for guaranteed SSR inclusion and detection */}
-        {gtmId && (
-          // eslint-disable-next-line @next/next/no-before-interactive-script-outside-document
-          <script
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{
-              __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`,
-            }}
-          />
-        )}
-        {/* GA4 — inline in <head> for guaranteed SSR inclusion and crawler detection */}
-        {ga4Id && !gtmId && (
+        {/* GA4 — must be first in <head> for Google verification and crawler detection */}
+        {ga4Id && (
           <>
             {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
             <script
@@ -211,6 +200,17 @@ export default async function RootLayout({
               }}
             />
           </>
+        )}
+        <link rel="manifest" href="/manifest.json" />
+        {/* GTM — inline directly in <head> for guaranteed SSR inclusion and detection */}
+        {gtmId && (
+          // eslint-disable-next-line @next/next/no-before-interactive-script-outside-document
+          <script
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{
+              __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`,
+            }}
+          />
         )}
       </head>
       <body
