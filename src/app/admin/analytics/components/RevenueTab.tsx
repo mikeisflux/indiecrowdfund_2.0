@@ -40,7 +40,7 @@ export function RevenueTab({ revenueData, formatCurrency }: RevenueTabProps) {
   return (
     <div className="space-y-6">
       {/* Summary stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardContent className="p-6">
             <p className="text-sm font-medium text-muted-foreground">Gross Revenue</p>

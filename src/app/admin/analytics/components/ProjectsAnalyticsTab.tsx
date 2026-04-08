@@ -37,7 +37,7 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
   return (
     <div className="space-y-6">
       {/* Status distribution */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {projectsData.byStatus.map((status) => (
           <Card key={status.status}>
             <CardContent className="p-6">
@@ -54,7 +54,7 @@ export function ProjectsAnalyticsTab({ projectsData, formatCurrency }: ProjectsA
           <CardTitle>Funding Progress Distribution</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             {Object.entries(projectsData.fundingDistribution).map(([range, count]) => (
               <div key={range} className="text-center p-4 rounded-lg border">
                 <p className="text-2xl font-bold text-zinc-900 dark:text-white">{count}</p>

@@ -33,7 +33,7 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
   return (
     <div className="space-y-6">
       {/* Device breakdown */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">

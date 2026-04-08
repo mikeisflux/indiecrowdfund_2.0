@@ -453,7 +453,7 @@ export default function PublicProfilePage() {
                     <CardContent className="pt-6">
                       <div className="flex flex-col sm:flex-row gap-6">
                         {/* Big score */}
-                        <div className="flex flex-col items-center justify-center min-w-[120px] py-4 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20">
+                        <div className="flex flex-col items-center justify-center min-w-[80px] sm:min-w-[120px] py-4 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20">
                           <span className="text-5xl font-bold text-amber-500">{profile.ratings.avg.overall}</span>
                           <div className="mt-2">
                             <AggregateRating value={profile.ratings.avg.overall} count={0} size="sm" />

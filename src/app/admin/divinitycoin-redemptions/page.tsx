@@ -391,7 +391,7 @@ export default function DivinityCoinRedemptionsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Payments</CardTitle>
@@ -489,6 +489,7 @@ export default function DivinityCoinRedemptionsPage() {
               <p className="text-sm">DivinityCoin transactions will appear here</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -592,6 +593,7 @@ export default function DivinityCoinRedemptionsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
