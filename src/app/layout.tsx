@@ -195,6 +195,23 @@ export default async function RootLayout({
             }}
           />
         )}
+        {/* GA4 — inline in <head> for guaranteed SSR inclusion and crawler detection */}
+        {ga4Id && !gtmId && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${ga4Id}`}
+            />
+            {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
+            <script
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${ga4Id}');`,
+              }}
+            />
+          </>
+        )}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
