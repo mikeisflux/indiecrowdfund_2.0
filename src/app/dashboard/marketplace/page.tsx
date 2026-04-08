@@ -306,7 +306,7 @@ export default function CreatorMarketplaceDashboard() {
       <main className="container relative py-8">
         {/* Stats Overview */}
         {stats && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <StatsCard
               title="Total Revenue"
               value={stats.totalRevenue ?? 0}

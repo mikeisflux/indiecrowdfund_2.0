@@ -286,7 +286,7 @@ export default function ActivityPage() {
 
       <div className="container py-8 max-w-3xl relative">
         {/* Stats Cards */}
-        <div className="mb-8 grid gap-4 grid-cols-2 md:grid-cols-4">
+        <div className="mb-8 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
           <Card className="bg-card/50 backdrop-blur border-border/50">
             <CardContent className="p-4 text-center">
               <Package className="h-6 w-6 mx-auto mb-2 text-primary" />

@@ -297,7 +297,7 @@ export default function PrelaunchPage() {
           )}
 
           {/* Category & Location */}
-          <div className="flex items-center justify-center gap-4 text-white/80 text-sm mb-8">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-white/80 text-sm mb-8">
             <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30">
               {project.category}
               {project.subcategory && ` / ${project.subcategory}`}
@@ -311,7 +311,7 @@ export default function PrelaunchPage() {
           </div>
 
           {/* Follower Count & Follow Button */}
-          <div className="flex justify-center gap-3 mb-8">
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
               <Users className="h-4 w-4 text-white" />
               <span className="text-white font-medium">

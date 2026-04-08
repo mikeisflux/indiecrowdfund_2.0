@@ -201,7 +201,7 @@ export default function SecurityPage() {
           </div>
           <div className="h-10 w-32 bg-muted animate-pulse rounded" />
         </div>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}><CardContent className="p-6"><div className="flex items-center gap-4"><div className="h-12 w-12 rounded-full bg-muted animate-pulse" /><div className="space-y-2"><div className="h-3 w-20 bg-muted animate-pulse rounded" /><div className="h-6 w-10 bg-muted animate-pulse rounded" /></div></div></CardContent></Card>
           ))}
@@ -246,7 +246,7 @@ export default function SecurityPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">

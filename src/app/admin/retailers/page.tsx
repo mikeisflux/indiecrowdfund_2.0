@@ -579,7 +579,7 @@ export default function RetailersPage() {
             setSurveyFilter(value);
             setSurveyPagination((prev) => ({ ...prev, page: 1 }));
           }}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter surveys" />
             </SelectTrigger>
             <SelectContent>

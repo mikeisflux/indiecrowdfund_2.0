@@ -185,7 +185,7 @@ export default async function RetailersPage() {
               <Store className="mr-1 h-3 w-3" />
               Retailer Partner Program
             </Badge>
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white">
               Bring Crowdfunded Products<br />to Your Customers
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-xl text-emerald-100">
@@ -248,7 +248,7 @@ export default async function RetailersPage() {
               <Sparkles className="mr-1 h-3 w-3" />
               Platform Features
             </Badge>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">
               Everything You Need to Succeed
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
@@ -283,7 +283,7 @@ export default async function RetailersPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">
               How It Works
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
@@ -323,7 +323,7 @@ export default async function RetailersPage() {
                 <Award className="mr-1 h-3 w-3" />
                 Partner Benefits
               </Badge>
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">
                 Why Retailers Choose Us
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
@@ -381,7 +381,7 @@ export default async function RetailersPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">
               Trusted by Retailers Everywhere
             </h2>
           </div>
@@ -439,7 +439,7 @@ export default async function RetailersPage() {
           >
             <div className="grid gap-8 md:grid-cols-2 md:items-center">
               <div>
-                <h2 className="text-3xl font-bold text-white">Dedicated Retailer Support</h2>
+                <h2 className="text-xl sm:text-3xl font-bold text-white">Dedicated Retailer Support</h2>
                 <p className="mt-4 text-muted-foreground">
                   Our retailer success team is here to help you every step of the way.
                   From onboarding to ongoing support, we&apos;re committed to your success.

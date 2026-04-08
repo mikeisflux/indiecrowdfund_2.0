@@ -175,7 +175,7 @@ export function PromoPopup() {
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-4">
               <IconComponent className="h-7 w-7" />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight">{slide.title}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{slide.title}</h2>
             <p className="text-white/80 mt-1 text-sm">{slide.subtitle}</p>
           </div>
 
