@@ -75,6 +75,11 @@ export async function GET(request: Request) {
         currency: true,
         category: true,
         tags: true,
+        mediaCategory: true,
+        audioFileUrl: true,
+        audioDuration: true,
+        albumId: true,
+        trackNumber: true,
         purchaseCount: true,
         viewCount: true,
         isFeatured: true,
@@ -127,6 +132,11 @@ export async function GET(request: Request) {
       isFeatured: book.isFeatured,
       isStaffPick: book.isStaffPick,
       publishedAt: book.publishedAt,
+      // Audio fields (music)
+      audioUrl: book.audioFileUrl ? `/api/marketplace/stream/${book.slug}` : undefined,
+      audioDuration: book.audioDuration,
+      albumId: book.albumId,
+      trackNumber: book.trackNumber,
       creator: {
         id: book.creator.id,
         name: book.creator.name,

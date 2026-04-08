@@ -21,6 +21,7 @@ import {
   Film,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { MusicBrowse } from "@/components/marketplace/music-browse";
 
 interface Book {
   id: string;
@@ -577,12 +578,7 @@ export default function MarketplacePage() {
 
           {/* Music Tab Content */}
           <TabsContent value="music">
-            <ComingSoonSection
-              category="Music"
-              icon={Music}
-              description="Independent artists will soon be able to sell albums, singles, and EPs directly to fans. Stream previews, purchase downloads, and support the artists you love."
-              gradient="from-emerald-500 to-teal-600"
-            />
+            <MusicBrowse />
           </TabsContent>
 
           {/* Movies Tab Content */}

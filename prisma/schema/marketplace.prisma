@@ -22,8 +22,8 @@ model MarketplaceBook {
   price             Decimal  @db.Decimal(10, 2)
   currency          String   @default("USD")
 
-  // Digital File
-  pdfFileUrl        String   // R2 storage URL
+  // Digital File (comics/books)
+  pdfFileUrl        String   @default("") // R2 storage URL
   pdfFileName       String?
   pdfFileSize       Int?     // In bytes
 
@@ -32,6 +32,18 @@ model MarketplaceBook {
   pdfCoverExtractedAt DateTime?
   pdfCoverExtractionFailed Boolean @default(false)
   pdfTotalPages     Int?     // Total page count
+
+  // Audio File (music)
+  audioFileUrl      String?  // R2 storage URL for audio
+  audioFileName     String?
+  audioFileSize     Int?     // In bytes
+  audioDuration     Int?     // Duration in seconds
+  audioStreamUrl    String?  // Public streaming URL (lower quality)
+
+  // Album (music)
+  albumId           String?
+  album             MarketplaceAlbum? @relation(fields: [albumId], references: [id])
+  trackNumber       Int?     // Position in album
 
   // Content Flags
   hasAdultContent   Boolean  @default(false)
@@ -85,6 +97,55 @@ model MarketplaceBook {
   @@index([category])
   @@index([createdAt])
   @@index([deletedAt])
+  @@index([albumId])
+}
+
+// ============================================
+// MARKETPLACE ALBUMS (Music)
+// ============================================
+
+model MarketplaceAlbum {
+  id                String   @id @default(cuid())
+  creatorId         String
+  creator           User     @relation("MarketplaceAlbumCreator", fields: [creatorId], references: [id])
+
+  // Basic Info
+  title             String
+  slug              String
+  description       String?  @db.Text
+
+  // Media
+  coverImageUrl     String?
+
+  // Categorization
+  category          String?  // Genre
+  tags              String[] @default([])
+
+  // Album type
+  albumType         String   @default("album") // album, single, ep
+
+  // Status
+  isPublished       Boolean  @default(false)
+  publishedAt       DateTime?
+
+  // Stats
+  totalTracks       Int      @default(0)
+  totalDuration     Int      @default(0) // Total seconds
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
+
+  // Relations
+  tracks            MarketplaceBook[]
+  companyId         String?
+  company           CompanyProfile? @relation(fields: [companyId], references: [id])
+
+  @@unique([creatorId, slug])
+  @@index([creatorId])
+  @@index([isPublished])
+  @@index([deletedAt])
 }
 
 enum MarketplaceBookStatus {
@@ -132,6 +193,7 @@ model CompanyProfile {
 
   // Relations
   books             MarketplaceBook[]
+  albums            MarketplaceAlbum[]
 
   @@index([slug])
   @@index([isActive])

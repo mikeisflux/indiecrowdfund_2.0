@@ -112,6 +112,7 @@ model User {
 
   // Marketplace relations
   marketplaceBooks     MarketplaceBook[]     @relation("MarketplaceCreator")
+  marketplaceAlbums    MarketplaceAlbum[]    @relation("MarketplaceAlbumCreator")
   marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")
   marketplaceReviews   MarketplaceBookReview[] @relation("MarketplaceReviewer")
   marketplaceDiscountCodes MarketplaceDiscountCode[] @relation("MarketplaceDiscountCreator")
