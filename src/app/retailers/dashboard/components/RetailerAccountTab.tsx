@@ -201,7 +201,7 @@ export function RetailerAccountTab() {
               <Label htmlFor="address">Street Address</Label>
               <Input id="address" value={account.address} onChange={(e) => setAccount({ ...account, address: e.target.value })} />
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
                 <Input id="city" value={account.city} onChange={(e) => setAccount({ ...account, city: e.target.value })} />

@@ -333,7 +333,7 @@ export default function RetailerAccountPage() {
                     />
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                     <div className="space-y-2">
                       <Label htmlFor="city">City</Label>
                       <Input

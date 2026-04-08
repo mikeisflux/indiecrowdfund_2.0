@@ -114,7 +114,7 @@ export function RewardForm({
         </Button>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-3">
+      <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3">
         {/* Main Form */}
         <div className="md:col-span-2 space-y-6">
           <div>

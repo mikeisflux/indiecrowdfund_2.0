@@ -65,7 +65,7 @@ export function SocialSettings({
   return (
     <TabsContent value="social" className="mt-6 space-y-6">
       {/* Social Media Status Overview */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <Card className={settings.facebookEnabled && settings.facebookAppId ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20" : ""}>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">

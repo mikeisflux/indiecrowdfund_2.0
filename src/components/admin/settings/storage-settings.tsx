@@ -282,7 +282,7 @@ export function StorageSettings({
           <CardDescription>Configure file size limits and allowed types</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Max File Size (MB)</Label>
               <Input

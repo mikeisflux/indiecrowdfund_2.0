@@ -190,7 +190,7 @@ export function BehaviorAnalyticsTab({
 
           <div className="mt-6 space-y-4">
             <h4 className="font-semibold">Advanced Features</h4>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <Label>Session Recording</Label>
@@ -235,7 +235,7 @@ export function BehaviorAnalyticsTab({
       </Card>
 
       {/* Stats Summary */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Today&apos;s Events</p>

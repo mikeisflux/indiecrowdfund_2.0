@@ -221,7 +221,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
         {/* Notifications List */}
         <div className="md:col-span-2">
           <Card>

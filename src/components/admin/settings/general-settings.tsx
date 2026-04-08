@@ -69,7 +69,7 @@ export function GeneralSettings({ settings, onSettingsChange, onSave }: GeneralS
             />
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
               <Select

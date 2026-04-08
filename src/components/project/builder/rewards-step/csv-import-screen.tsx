@@ -92,7 +92,7 @@ export function CSVImportScreen({
 
       {!importType ? (
         // Show import type selection
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
           {/* Import Items Card */}
           <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setImportType("items")}>
             <CardContent className="p-6 space-y-4">

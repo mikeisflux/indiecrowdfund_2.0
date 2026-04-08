@@ -364,7 +364,7 @@ export default function HelpPage() {
             </p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3">
             {contactOptions.map((option, index) => (
               <Card
                 key={option.title}

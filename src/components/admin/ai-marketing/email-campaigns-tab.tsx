@@ -378,7 +378,7 @@ export function EmailCampaignsTab({
   return (
     <div className="mt-6 space-y-6">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardContent className="p-6">
             <p className="text-sm text-muted-foreground">Total Sent</p>
@@ -426,7 +426,7 @@ export function EmailCampaignsTab({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
             <div className="rounded-lg border p-4">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-blue-100 p-2">

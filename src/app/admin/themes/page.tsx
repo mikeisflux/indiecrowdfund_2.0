@@ -311,7 +311,7 @@ export default function ThemesPage() {
                   <CardDescription>Quick-start with a pre-designed color scheme</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                     {presetThemes.map((preset) => (
                       <button
                         key={preset.id}

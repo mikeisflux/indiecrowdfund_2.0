@@ -372,7 +372,7 @@ export function DatabaseSettings() {
   return (
     <TabsContent value="database" className="mt-6 space-y-6">
       {/* Connection Status Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
