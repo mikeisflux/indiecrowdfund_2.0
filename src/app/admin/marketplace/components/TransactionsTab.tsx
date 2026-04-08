@@ -146,6 +146,7 @@ export function TransactionsTab({
               <p>No transactions found</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
@@ -244,6 +245,7 @@ export function TransactionsTab({
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

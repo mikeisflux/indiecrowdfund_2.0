@@ -355,7 +355,7 @@ export default function SocialHubPage() {
 
           {/* Create & Post Tab */}
           <TabsContent value="create" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
               {/* AI Content Generator */}
               <Card className="md:col-span-2">
                 <CardHeader>
@@ -600,7 +600,7 @@ export default function SocialHubPage() {
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
             {/* Summary Stats - will be populated when social analytics API is available */}
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">

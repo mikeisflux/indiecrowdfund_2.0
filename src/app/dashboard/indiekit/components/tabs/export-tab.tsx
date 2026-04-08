@@ -267,7 +267,7 @@ export function ExportTab({ exportHistory = [], projectId }: ExportTabProps) {
       </div>
 
       {/* Quick Export Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <Card
           className="cursor-pointer hover:border-teal-500 transition-colors"
           onClick={() => handleExport("backers")}

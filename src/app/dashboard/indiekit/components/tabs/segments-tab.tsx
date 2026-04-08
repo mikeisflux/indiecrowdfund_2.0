@@ -376,7 +376,7 @@ export function SegmentsTab({ segments = [], projectId, onRefresh }: SegmentsTab
       </div>
 
       {/* Segment Types Info */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-2">

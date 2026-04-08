@@ -139,7 +139,7 @@ export function DigitalDownloadsTab() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 mb-6">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-24" />
           ))}
@@ -195,7 +195,7 @@ export function DigitalDownloadsTab() {
       isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
     )}>
       {/* Stats Header */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <Card className="glass-card glass-card-hover group relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <CardContent className="p-5">

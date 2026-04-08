@@ -502,7 +502,7 @@ export function PackagesTab({
           </div>
 
           {/* Service Box, Add New Orders Box, Search Box Row */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             <Card>
               <CardContent className="pt-6">
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>
@@ -642,7 +642,7 @@ export function PackagesTab({
           </div>
 
           {/* Service Box, Add New Orders Box, Search Box Row */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             <Card>
               <CardContent className="pt-6">
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connected Service</h4>

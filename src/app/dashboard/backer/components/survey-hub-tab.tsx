@@ -91,7 +91,7 @@ export function SurveyHubTab() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 mb-6">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 rounded-lg bg-muted/50 animate-pulse" />
           ))}
@@ -156,7 +156,7 @@ export function SurveyHubTab() {
       isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
     )}>
       {/* Stats Header */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         {/* Completion Progress */}
         <Card className="glass-card glass-card-hover relative overflow-hidden col-span-1 md:col-span-1">
           <CardContent className="p-5">

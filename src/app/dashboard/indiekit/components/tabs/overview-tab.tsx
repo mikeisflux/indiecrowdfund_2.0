@@ -264,7 +264,7 @@ export function OverviewTab({ stats, backers, timeline = [], projectId, onSwitch
       </Card>
 
       {/* Key Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
@@ -324,7 +324,7 @@ export function OverviewTab({ stats, backers, timeline = [], projectId, onSwitch
           <CardTitle>Charge Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
             <div className="rounded-lg border p-4 text-center">
               <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 mb-2">
                 <Circle className="h-5 w-5 text-gray-600" />

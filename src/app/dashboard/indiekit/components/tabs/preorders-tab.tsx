@@ -55,7 +55,7 @@ export function PreOrdersTab({ stats, hasActiveCampaign = false }: PreOrdersTabP
   return (
     <div className="space-y-6">
       {/* Pre-Order Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">

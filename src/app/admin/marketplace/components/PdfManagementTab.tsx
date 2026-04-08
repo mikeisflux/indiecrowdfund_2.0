@@ -209,6 +209,7 @@ export function PdfManagementTab({
               <p>No books found</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
@@ -358,6 +359,7 @@ export function PdfManagementTab({
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

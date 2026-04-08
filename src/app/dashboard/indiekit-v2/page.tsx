@@ -516,7 +516,7 @@ export default function IndieKitV2Page() {
           {/* Main Content */}
           <div className="lg:col-span-3">
             {/* Stats Overview Cards */}
-            <div className="grid gap-4 md:grid-cols-4 mb-6">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 mb-6">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2">
