@@ -46,7 +46,7 @@ export default function StripeRefreshPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <RefreshCw className={`h-10 w-10 text-primary ${isLoading ? "animate-spin" : ""}`} />
           </div>
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-xl sm:text-2xl">
             {isLoading ? "Refreshing..." : "Session Expired"}
           </CardTitle>
           <CardDescription>

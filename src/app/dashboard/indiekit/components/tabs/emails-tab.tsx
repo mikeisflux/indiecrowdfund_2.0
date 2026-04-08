@@ -496,7 +496,7 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
 
       {/* Email Campaign Stats Summary */}
       {emailCampaigns.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-2">

@@ -31,7 +31,7 @@ export function PaymentsTab({ stats, onOpenChargePreview }: PaymentsTabProps) {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Status Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             <div className="rounded-lg border p-4 text-center">
               <div className="flex items-center justify-center gap-1 mb-2">
                 <AlertCircle className="h-4 w-4 text-gray-500" />

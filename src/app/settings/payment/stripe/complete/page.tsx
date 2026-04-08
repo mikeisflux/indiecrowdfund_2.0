@@ -53,7 +53,7 @@ export default function StripeCompletePage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <CheckCircle className="h-10 w-10 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">Stripe Connected!</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl">Stripe Connected!</CardTitle>
             <CardDescription>
               Your Stripe account is now connected and ready to receive payments.
             </CardDescription>
@@ -91,7 +91,7 @@ export default function StripeCompletePage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Almost There!</CardTitle>
+          <CardTitle className="text-xl sm:text-2xl">Almost There!</CardTitle>
           <CardDescription>
             Your Stripe account setup is not yet complete. Please finish the onboarding process to start receiving payments.
           </CardDescription>

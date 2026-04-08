@@ -34,7 +34,7 @@ export default function ChooseRoleClient() {
       <div className="relative z-10 w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12 animate-[fadeInDown_0.5s_ease-out]">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent mb-4">
+          <h1 className="text-xl sm:text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent mb-4">
             Welcome to IndieCrowdfund
           </h1>
           <p className="text-lg text-muted-foreground">
@@ -47,7 +47,7 @@ export default function ChooseRoleClient() {
           {/* Backer Card */}
           <button
             onClick={() => handleChoice("backer")}
-            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-card/50 border border-border/50 p-8 text-left shadow-xl hover:shadow-2xl hover:border-primary/30 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 animate-[fadeInLeft_0.5s_ease-out_0.2s_both]"
+            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-card/50 border border-border/50 p-4 sm:p-8 text-left shadow-xl hover:shadow-2xl hover:border-primary/30 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 animate-[fadeInLeft_0.5s_ease-out_0.2s_both]"
           >
             {/* Glow effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -94,7 +94,7 @@ export default function ChooseRoleClient() {
           {/* Creator Card */}
           <button
             onClick={() => handleChoice("creator")}
-            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-card/50 border border-border/50 p-8 text-left shadow-xl hover:shadow-2xl hover:border-purple-500/30 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 animate-[fadeInRight_0.5s_ease-out_0.3s_both]"
+            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-card/50 border border-border/50 p-4 sm:p-8 text-left shadow-xl hover:shadow-2xl hover:border-purple-500/30 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 animate-[fadeInRight_0.5s_ease-out_0.3s_both]"
           >
             {/* Glow effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

@@ -501,7 +501,7 @@ export default function BackerDashboard() {
         </header>
 
         <div className="container relative py-8">
-          <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
               <Card key={i} className="bg-card/50 backdrop-blur border-border/50">
                 <CardHeader className="pb-2">
@@ -626,7 +626,7 @@ export default function BackerDashboard() {
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
           <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
                 Welcome back{data?.user?.name ? `, ${data.user.name}` : ""}!
               </h1>
               <p className="text-muted-foreground text-lg">

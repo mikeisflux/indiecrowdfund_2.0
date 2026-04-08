@@ -329,7 +329,7 @@ export function TeaserPagesTab({ hasActiveCampaign = false }: TeaserPagesTabProp
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">URL</p>
                       {page.prelaunchActive ? (

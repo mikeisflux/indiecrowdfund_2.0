@@ -453,7 +453,7 @@ export default function ProfilePage() {
                   <div className="space-y-2">
                     <Label htmlFor="vanityUrl">Username</Label>
                     <div className="flex items-center">
-                      <span className="text-sm text-muted-foreground mr-2">indiecrowdfund.com/projects/</span>
+                      <span className="hidden sm:inline text-sm text-muted-foreground mr-2">indiecrowdfund.com/projects/</span>
                       <Input
                         id="vanityUrl"
                         value={profile.vanityUrl || ""}
