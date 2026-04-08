@@ -116,7 +116,7 @@ export function ResultsViewerDialog({
                   </div>
                 </div>
 
-                <div className="grid gap-4 grid-cols-2 flex-1">
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 flex-1">
                   <div className="rounded-lg border overflow-hidden">
                     <div className="px-4 py-2 bg-emerald-50 border-b flex items-center justify-between dark:bg-emerald-900/30">
                       <span className="font-medium text-sm flex items-center gap-2">
@@ -292,7 +292,7 @@ export function ResultsViewerDialog({
           <TabsContent value="sendtime" className="flex-1 overflow-hidden mt-4">
             {runResults["send-time-optimization"] ? (
               <div className="space-y-4">
-                <div className="grid gap-3 grid-cols-3">
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
                   <div className="rounded-lg border bg-muted/50 p-3 dark:bg-zinc-900">
                     <p className="text-xs text-muted-foreground">Users Analyzed</p>
                     <p className="text-xl font-bold">{runResults["send-time-optimization"]?.summary?.totalAnalyzed || 0}</p>
@@ -383,7 +383,7 @@ export function ResultsViewerDialog({
           <TabsContent value="tagging" className="flex-1 overflow-hidden mt-4">
             {runResults["auto-tagging"] ? (
               <div className="space-y-4">
-                <div className="grid gap-3 grid-cols-3">
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
                   <div className="rounded-lg border bg-muted/50 p-3 dark:bg-zinc-900">
                     <p className="text-xs text-muted-foreground">Projects Processed</p>
                     <p className="text-xl font-bold">{(runResults["auto-tagging"]?.results || []).length}</p>

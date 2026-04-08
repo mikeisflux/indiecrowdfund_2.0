@@ -278,7 +278,7 @@ export function EmailDialog({
         {/* Main Content */}
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar Navigation */}
-          <div className="w-[200px] border-r bg-muted/30 p-4">
+          <div className="w-[120px] sm:w-[200px] border-r bg-muted/30 p-4">
             <nav className="space-y-1">
               {steps.map((step) => (
                 <button

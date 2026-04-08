@@ -241,7 +241,7 @@ export function AiSuggestionsTab({
           {/* Summary */}
           <Card className="border-emerald-500/20">
             <CardContent className="pt-6">
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                 <div className="p-4 rounded-lg bg-red-500/10">
                   <p className="text-2xl font-bold text-red-400">
                     {aiSuggestions.filter((s) => s.priority === "critical").length}

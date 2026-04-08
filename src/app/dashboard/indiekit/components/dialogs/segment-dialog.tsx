@@ -208,7 +208,7 @@ export function SegmentDialog({
                   <span className="text-sm text-muted-foreground pt-2 w-10">AND</span>
                 )}
                 <div className={`flex-1 grid gap-2 ${index > 0 ? "" : "ml-10"}`}>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <Select
                       value={rule.field}
                       onValueChange={(v) => updateRule(rule.id, { field: v, operator: "", value: "" })}
