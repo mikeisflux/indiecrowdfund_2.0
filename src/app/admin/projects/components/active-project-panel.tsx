@@ -326,7 +326,7 @@ export function ActiveProjectPanel({
           <AccordionItem value="overview">
             <AccordionTrigger className="px-4">Campaign Overview</AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Goal</p>
                   <p className="font-semibold">${Number(project.goalAmount).toLocaleString()} {project.currency}</p>
