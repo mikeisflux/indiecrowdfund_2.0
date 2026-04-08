@@ -31,7 +31,7 @@ const geistMono = localFont({
   preload: false,
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.indiecrowdfund.com";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
