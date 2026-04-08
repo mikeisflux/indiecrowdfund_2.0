@@ -291,7 +291,7 @@ export default async function RetailersPage() {
             </p>
           </div>
 
-          <div className="mt-16 grid gap-8 md:grid-cols-4">
+          <div className="mt-16 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
             {[
               { step: "1", title: "Apply", description: "Submit your retailer application with your business details and tax ID." },
               { step: "2", title: "Get Verified", description: "Our team reviews your application within 2-3 business days." },
@@ -386,7 +386,7 @@ export default async function RetailersPage() {
             </h2>
           </div>
 
-          <div className="mt-16 grid gap-8 md:grid-cols-3">
+          <div className="mt-16 grid gap-8 sm:grid-cols-2 md:grid-cols-3">
             {/* Demo placeholder cards - testimonials coming soon */}
             {[0, 1, 2].map((index) => (
               <Card
