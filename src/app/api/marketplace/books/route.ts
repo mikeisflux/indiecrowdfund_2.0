@@ -80,6 +80,9 @@ export async function GET(request: Request) {
         audioDuration: true,
         albumId: true,
         trackNumber: true,
+        videoFileUrl: true,
+        videoDuration: true,
+        videoResolution: true,
         purchaseCount: true,
         viewCount: true,
         isFeatured: true,
@@ -137,6 +140,10 @@ export async function GET(request: Request) {
       audioDuration: book.audioDuration,
       albumId: book.albumId,
       trackNumber: book.trackNumber,
+      // Video fields (movies)
+      videoUrl: book.videoFileUrl ? `/api/marketplace/watch/${book.slug}` : undefined,
+      videoDuration: book.videoDuration,
+      videoResolution: book.videoResolution,
       creator: {
         id: book.creator.id,
         name: book.creator.name,

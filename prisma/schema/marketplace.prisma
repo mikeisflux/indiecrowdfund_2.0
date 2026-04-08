@@ -40,6 +40,14 @@ model MarketplaceBook {
   audioDuration     Int?     // Duration in seconds
   audioStreamUrl    String?  // Public streaming URL (lower quality)
 
+  // Video File (movies)
+  videoFileUrl      String?  // R2 storage URL for video
+  videoFileName     String?
+  videoFileSize     BigInt?  // In bytes (BigInt for large files)
+  videoDuration     Int?     // Duration in seconds
+  videoStreamUrl    String?  // Public streaming URL
+  videoResolution   String?  // e.g. "1080p", "4K"
+
   // Album (music)
   albumId           String?
   album             MarketplaceAlbum? @relation(fields: [albumId], references: [id])
