@@ -178,7 +178,7 @@ export default async function SuccessStoriesPage() {
       {/* Stats Section */}
       <section className="py-12 border-b">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:gap-8 md:grid-cols-4">
             {stats.map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
@@ -260,21 +260,21 @@ export default async function SuccessStoriesPage() {
                     </h3>
                     <p className="mt-2 text-muted-foreground">by {story.creator}</p>
 
-                    <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
+                    <div className="mt-6 grid grid-cols-3 gap-1 sm:gap-4">
                       <div>
-                        <p className="text-2xl font-bold text-emerald-600">
+                        <p className="text-lg sm:text-2xl font-bold text-emerald-600">
                           {formatCurrency(story.raised)}
                         </p>
                         <p className="text-sm text-muted-foreground">Raised</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-foreground">
+                        <p className="text-lg sm:text-2xl font-bold text-foreground">
                           {story.backers.toLocaleString()}
                         </p>
                         <p className="text-sm text-muted-foreground">Backers</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-foreground">
+                        <p className="text-lg sm:text-2xl font-bold text-foreground">
                           {Math.round((story.raised / story.goal) * 100)}%
                         </p>
                         <p className="text-sm text-muted-foreground">Funded</p>
@@ -349,7 +349,7 @@ export default async function SuccessStoriesPage() {
             </p>
           </div>
 
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
+          <div className="mt-12 grid gap-4 sm:gap-8 sm:grid-cols-2 md:grid-cols-3">
             <Card className="relative">
               <CardContent className="pt-8 pb-6">
                 <Quote className="absolute top-4 left-4 h-8 w-8 text-orange-200" />
