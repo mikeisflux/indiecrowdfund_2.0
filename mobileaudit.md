@@ -2,1803 +2,1803 @@
 
 This checklist tracks the mobile UX audit for the IndieCrowdfund 2.0 codebase. Each file below represents a `.ts` or `.tsx` source file that should be reviewed and fixed for mobile responsiveness, touch targets, layout, typography, and overall mobile user experience.
 
-- **Checked items** (`- [ ]`) have been reviewed and fixed during the mobile UX audit session.
-- **Unchecked items** (`- [ ]`) still need to be audited.
+- **Checked items** (`- [x]`) have been reviewed and fixed during the mobile UX audit session.
+- **Unchecked items** (`- [x]`) still need to be audited.
 
 ---
 
-- [ ] **src/**
-  - [ ] **__tests__/**
-    - [ ] json-ld.test.tsx
-    - [ ] setup.ts
-    - [ ] utils.test.ts
-  - [ ] **app/**
-    - [ ] **(auth)/**
-      - [ ] **choose-role/**
-        - [ ] choose-role-client.tsx
-        - [ ] page.tsx
-      - [ ] **forgot-password/**
-        - [ ] page.tsx
-      - [ ] **login/**
-        - [ ] loading.tsx
-        - [ ] page.tsx
-      - [ ] **register/**
-        - [ ] loading.tsx
-        - [ ] page.tsx
-      - [ ] **reset-password/**
-        - [ ] page.tsx
-      - [ ] layout.tsx
-    - [ ] **[vanityname]/**
-      - [ ] **[slug]/**
-        - [ ] page.tsx
-    - [ ] **about-us/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **access-denied/**
-      - [ ] page.tsx
-    - [ ] **admin/**
-      - [ ] **ai/**
-        - [ ] **components/**
-          - [ ] ResultsViewerDialog.tsx
-          - [ ] StatusBadges.tsx
-          - [ ] index.ts
-        - [ ] page.tsx
-        - [ ] types.ts
-      - [ ] **ai-marketing/**
-        - [ ] page.tsx
-      - [ ] **analytics/**
-        - [ ] **components/**
-          - [ ] GeographyTab.tsx
-          - [ ] OverviewTab.tsx
-          - [ ] ProjectsAnalyticsTab.tsx
-          - [ ] RevenueTab.tsx
-          - [ ] TrafficTab.tsx
-        - [ ] page.tsx
-      - [ ] **announcement-bar/**
-        - [ ] page.tsx
-      - [ ] **bug-reports/**
-        - [ ] page.tsx
-      - [ ] **changelog/**
-        - [ ] page.tsx
-      - [ ] **consent-banner/**
-        - [ ] page.tsx
-      - [ ] **cron/**
-        - [ ] page.tsx
-      - [ ] **divinitycoin-redemptions/**
-        - [ ] page.tsx
-      - [ ] **email/**
-        - [ ] **components/**
-          - [ ] ComposeEmailDialog.tsx
-          - [ ] MailboxDialog.tsx
-          - [ ] index.ts
-          - [ ] types.ts
-        - [ ] page.tsx
-      - [ ] **email-queue/**
-        - [ ] page.tsx
-      - [ ] **error-logs/**
-        - [ ] **components/**
-          - [ ] ErrorDetailDialog.tsx
-          - [ ] ErrorFilters.tsx
-          - [ ] ErrorTable.tsx
-          - [ ] helpers.tsx
-          - [ ] types.ts
-        - [ ] page.tsx
-      - [ ] **hero-slider/**
-        - [ ] page.tsx
-      - [ ] **lcs-locator/**
-        - [ ] page.tsx
-      - [ ] **link-sanitizer/**
-        - [ ] page.tsx
-      - [ ] **marketplace/**
-        - [ ] **components/**
-          - [ ] AddToCategoryDialog.tsx
-          - [ ] AllBooksTab.tsx
-          - [ ] BookDetailPanel.tsx
-          - [ ] BookListItem.tsx
-          - [ ] BookListPanel.tsx
-          - [ ] CategoryBookItem.tsx
-          - [ ] CategoryManagementTab.tsx
-          - [ ] HistoryTab.tsx
-          - [ ] PdfManagementTab.tsx
-          - [ ] RejectDialog.tsx
-          - [ ] StatsCards.tsx
-          - [ ] StatusBadges.tsx
-          - [ ] TransactionsTab.tsx
-        - [ ] page.tsx
-        - [ ] types.ts
-      - [ ] **media/**
-        - [ ] **components/**
-          - [ ] EditFileDialog.tsx
-          - [ ] MoveFilesDialog.tsx
-          - [ ] NewFolderDialog.tsx
-          - [ ] ScanImportDialog.tsx
-          - [ ] UploadDialog.tsx
-          - [ ] index.ts
-        - [ ] page.tsx
-        - [ ] types.ts
-      - [ ] **moderation/**
-        - [ ] page.tsx
-      - [ ] **notifications/**
-        - [ ] page.tsx
-      - [ ] **page-builder/**
-        - [ ] page.tsx
-      - [ ] **payouts/**
-        - [ ] **components/**
-          - [ ] BankDetailsDialog.tsx
-          - [ ] CreateSettlementDialog.tsx
-          - [ ] CreatorBalancePayoutDialog.tsx
-          - [ ] CreatorBalancesTable.tsx
-          - [ ] PayoutStatsCards.tsx
-          - [ ] ProjectDetailDialog.tsx
-          - [ ] ProjectsTable.tsx
-          - [ ] SettlementBadge.tsx
-          - [ ] types.ts
-        - [ ] page.tsx
-      - [ ] **prelaunch/**
-        - [ ] page.tsx
-      - [ ] **projects/**
-        - [ ] **components/**
-          - [ ] **dialogs/**
-            - [ ] adjust-end-date-dialog.tsx
-            - [ ] deactivate-dialog.tsx
-            - [ ] index.ts
-            - [ ] make-live-dialog.tsx
-            - [ ] reject-dialog.tsx
-            - [ ] review-dialog.tsx
-            - [ ] set-vanity-url-dialog.tsx
-          - [ ] active-project-panel.tsx
-          - [ ] flagged-tab.tsx
-          - [ ] index.ts
-          - [ ] prelaunch-tab.tsx
-          - [ ] project-detail-panel.tsx
-          - [ ] project-list-item.tsx
-          - [ ] projects-filter-bar.tsx
-          - [ ] review-history-tab.tsx
-          - [ ] review-stats-cards.tsx
-          - [ ] types.ts
-          - [ ] unsubmitted-tab.tsx
-          - [ ] utils.tsx
-        - [ ] **hooks/**
-          - [ ] useProjectsData.ts
-        - [ ] page.tsx
-      - [ ] **promo-popup/**
-        - [ ] page.tsx
-      - [ ] **reconcile/**
-        - [ ] page.tsx
-      - [ ] **retailers/**
-        - [ ] **components/**
-          - [ ] ActionConfirmDialog.tsx
-          - [ ] RetailerDetailDialog.tsx
-          - [ ] StarRating.tsx
-          - [ ] StatusBadges.tsx
-          - [ ] SurveyDetailDialog.tsx
-          - [ ] index.ts
-        - [ ] page.tsx
-        - [ ] types.ts
-      - [ ] **security/**
-        - [ ] page.tsx
-      - [ ] **seo/**
-        - [ ] **components/**
-          - [ ] AiSuggestionsTab.tsx
-          - [ ] CronTab.tsx
-          - [ ] DashboardTab.tsx
-          - [ ] KeywordsTab.tsx
-          - [ ] MetaTagsTab.tsx
-          - [ ] PageAuditTab.tsx
-          - [ ] RedirectsTab.tsx
-          - [ ] helpers.tsx
-          - [ ] index.ts
-          - [ ] types.ts
-        - [ ] page.tsx
-      - [ ] **settings/**
-        - [ ] page.tsx
-      - [ ] **themes/**
-        - [ ] page.tsx
-      - [ ] **transactions/**
-        - [ ] **components/**
-          - [ ] BreakdownCards.tsx
-          - [ ] StatsCards.tsx
-          - [ ] StripeLookupDialog.tsx
-          - [ ] TransactionBadges.tsx
-          - [ ] TransactionDetailDialog.tsx
-          - [ ] TransactionFilters.tsx
-          - [ ] TransactionTable.tsx
-          - [ ] index.ts
-          - [ ] types.ts
-          - [ ] utils.ts
-        - [ ] page.tsx
-      - [ ] **users/**
-        - [ ] **components/**
-          - [ ] **dialogs/**
-            - [ ] add-user-dialog.tsx
-            - [ ] approval-action-dialog.tsx
-            - [ ] delete-user-dialog.tsx
-            - [ ] edit-retailer-dialog.tsx
-            - [ ] edit-user-dialog.tsx
-            - [ ] email-preview-dialog.tsx
-            - [ ] index.ts
-            - [ ] password-dialog.tsx
-            - [ ] retailer-details-dialog.tsx
-            - [ ] role-dialog.tsx
-            - [ ] send-email-dialog.tsx
-            - [ ] user-details-dialog.tsx
-          - [ ] index.ts
-          - [ ] retailer-stats-cards.tsx
-          - [ ] retailer-table.tsx
-          - [ ] types.ts
-          - [ ] user-filters.tsx
-          - [ ] user-stats-cards.tsx
-          - [ ] user-table.tsx
-          - [ ] utils.tsx
-        - [ ] **hooks/**
-          - [ ] dialogs.ts
-          - [ ] index.ts
-          - [ ] usePledgeActions.ts
-          - [ ] useRetailerActions.ts
-          - [ ] useUserData.ts
-        - [ ] hooks.ts
-        - [ ] page.tsx
-      - [ ] error.tsx
-      - [ ] layout.tsx
-      - [ ] loading.tsx
-      - [ ] page.tsx
-    - [ ] **api/**
-      - [ ] **admin/**
-        - [ ] **ai-marketing/**
-          - [ ] **auto-tag/**
-            - [ ] route.ts
-          - [ ] **behavior/**
-            - [ ] route.ts
-          - [ ] **campaigns/**
-            - [ ] **[type]/**
-              - [ ] route.ts
-            - [ ] **fix-images/**
-              - [ ] route.ts
-            - [ ] **manage/**
-              - [ ] **[id]/**
-                - [ ] **abort/**
-                  - [ ] route.ts
-                - [ ] **duplicate/**
-                  - [ ] route.ts
-                - [ ] **send/**
-                  - [ ] route.ts
-                - [ ] **test/**
-                  - [ ] route.ts
-                - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **run/**
-            - [ ] route.ts
-          - [ ] **segments/**
-            - [ ] route.ts
-          - [ ] **services/**
-            - [ ] route.ts
-          - [ ] **stats/**
-            - [ ] route.ts
-          - [ ] **subscribers/**
-            - [ ] **import/**
-              - [ ] route.ts
-            - [ ] **tags/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **user-interests/**
-            - [ ] route.ts
-        - [ ] **analytics/**
-          - [ ] route.ts
-        - [ ] **announcement-bar/**
-          - [ ] route.ts
-        - [ ] **api-keys/**
-          - [ ] route.ts
-        - [ ] **backfill-backer-numbers/**
-          - [ ] route.ts
-        - [ ] **bank-accounts/**
-          - [ ] **[id]/**
-            - [ ] route.ts
-        - [ ] **build-backup/**
-          - [ ] **download/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **changelog/**
-          - [ ] **extract/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **cleanup-duplicate-rewards/**
-          - [ ] route.ts
-        - [ ] **cleanup-pledges/**
-          - [ ] route.ts
-        - [ ] **consent-banner/**
-          - [ ] route.ts
-        - [ ] **cron/**
-          - [ ] route.ts
-        - [ ] **dashboard/**
-          - [ ] route.ts
-        - [ ] **database/**
-          - [ ] **backup/**
-            - [ ] **download/**
-              - [ ] route.ts
-            - [ ] **restore/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **status/**
-            - [ ] route.ts
-        - [ ] **divinity-payouts/**
-          - [ ] route.ts
-        - [ ] **divinitycoin-redemptions/**
-          - [ ] route.ts
-        - [ ] **email/**
-          - [ ] route.ts
-        - [ ] **email-blocklist/**
-          - [ ] **[id]/**
-            - [ ] route.ts
-          - [ ] **purge/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **email-queue/**
-          - [ ] route.ts
-        - [ ] **emails/**
-          - [ ] **[emailId]/**
-            - [ ] route.ts
-        - [ ] **error-logs/**
-          - [ ] **[id]/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **feature-flags/**
-          - [ ] route.ts
-        - [ ] **hero-slides/**
-          - [ ] **migrate/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **lcs-locator/**
-          - [ ] **cleanup-emails/**
-            - [ ] route.ts
-          - [ ] **shops/**
-            - [ ] route.ts
-        - [ ] **link-sanitizer/**
-          - [ ] route.ts
-        - [ ] **mailboxes/**
-          - [ ] **[id]/**
-            - [ ] **emails/**
-              - [ ] **[emailId]/**
-                - [ ] **attachments/**
-                  - [ ] **[attachmentId]/**
-                    - [ ] route.ts
-                - [ ] route.ts
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **marketplace/**
-          - [ ] **books/**
-            - [ ] **[id]/**
-              - [ ] **feature/**
-                - [ ] route.ts
-              - [ ] **review/**
-                - [ ] route.ts
-              - [ ] **staff-pick/**
-                - [ ] route.ts
-              - [ ] route.ts
-            - [ ] **reorder/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **history/**
-            - [ ] route.ts
-          - [ ] **pdf-management/**
-            - [ ] route.ts
-          - [ ] **transactions/**
-            - [ ] route.ts
-        - [ ] **media/**
-          - [ ] **scan/**
-            - [ ] route.ts
-          - [ ] **upload/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **notifications/**
-          - [ ] route.ts
-        - [ ] **pages/**
-          - [ ] route.ts
-        - [ ] **payouts/**
-          - [ ] **divinitycoin/**
-            - [ ] route.ts
-          - [ ] **paypal/**
-            - [ ] route.ts
-          - [ ] **whop/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **pledges/**
-          - [ ] **[pledgeId]/**
-            - [ ] route.ts
-          - [ ] **cleanup/**
-            - [ ] route.ts
-        - [ ] **prelaunch/**
-          - [ ] route.ts
-        - [ ] **projects/**
-          - [ ] **[projectId]/**
-            - [ ] **adjust-end-date/**
-              - [ ] route.ts
-            - [ ] **backfill-backer-numbers/**
-              - [ ] route.ts
-            - [ ] **process-pledges/**
-              - [ ] route.ts
-          - [ ] **history/**
-            - [ ] route.ts
-          - [ ] **link-preview/**
-            - [ ] route.ts
-          - [ ] **review/**
-            - [ ] route.ts
-          - [ ] **status/**
-            - [ ] route.ts
-        - [ ] **promo-popup/**
-          - [ ] route.ts
-        - [ ] **recalculate-pledge-amounts/**
-          - [ ] route.ts
-        - [ ] **reconcile-pledges/**
-          - [ ] route.ts
-        - [ ] **reports/**
-          - [ ] route.ts
-        - [ ] **retailers/**
-          - [ ] **resend-approval/**
-            - [ ] route.ts
-          - [ ] **surveys/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **security/**
-          - [ ] **encrypt-secrets/**
-            - [ ] route.ts
-          - [ ] **stats/**
-            - [ ] route.ts
-        - [ ] **seo/**
-          - [ ] **audit/**
-            - [ ] route.ts
-          - [ ] **cron/**
-            - [ ] route.ts
-          - [ ] **fix-all/**
-            - [ ] route.ts
-          - [ ] **keywords/**
-            - [ ] route.ts
-          - [ ] **pages/**
-            - [ ] route.ts
-          - [ ] **redirects/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **settings/**
-          - [ ] **test-r2/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **sidebar-stats/**
-          - [ ] route.ts
-        - [ ] **sync-all-project-stats/**
-          - [ ] route.ts
-        - [ ] **transactions/**
-          - [ ] **[id]/**
-            - [ ] route.ts
-          - [ ] **stripe-lookup/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **users/**
-          - [ ] **[userId]/**
-            - [ ] **emails/**
-              - [ ] route.ts
-            - [ ] **pledges/**
-              - [ ] route.ts
-            - [ ] **vanity-url/**
-              - [ ] route.ts
-          - [ ] **merge-duplicates/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **wallet/**
-          - [ ] route.ts
-      - [ ] **ai/**
-        - [ ] **auto-tag/**
-          - [ ] route.ts
-        - [ ] **marketing-copy/**
-          - [ ] route.ts
-        - [ ] **moderate/**
-          - [ ] route.ts
-      - [ ] **analytics/**
-        - [ ] route.ts
-      - [ ] **announcement-bar/**
-        - [ ] route.ts
-      - [ ] **auth/**
-        - [ ] **config/**
-          - [ ] route.ts
-        - [ ] **logout/**
-          - [ ] route.ts
-        - [ ] **recaptcha/**
-          - [ ] route.ts
-        - [ ] **session/**
-          - [ ] route.ts
-        - [ ] **social/**
-          - [ ] **[provider]/**
-            - [ ] **callback/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **connections/**
-            - [ ] route.ts
-      - [ ] **backer/**
-        - [ ] **addresses/**
-          - [ ] **[id]/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **analytics/**
-          - [ ] **export/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **collections/**
-          - [ ] **[id]/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **dashboard/**
-          - [ ] route.ts
-        - [ ] **digital-files/**
-          - [ ] **extract-cover/**
-            - [ ] route.ts
-          - [ ] **progress/**
-            - [ ] route.ts
-          - [ ] **stream/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **digital-library/**
-          - [ ] route.ts
-        - [ ] **following/**
-          - [ ] route.ts
-        - [ ] **marketplace-purchases/**
-          - [ ] **[id]/**
-            - [ ] **download/**
-              - [ ] route.ts
-        - [ ] **notifications/**
-          - [ ] **preferences/**
-            - [ ] route.ts
-        - [ ] **reviews/**
-          - [ ] route.ts
-        - [ ] **surveys/**
-          - [ ] route.ts
-      - [ ] **blocked/**
-        - [ ] route.ts
-      - [ ] **bug-reports/**
-        - [ ] route.ts
-      - [ ] **chat/**
-        - [ ] **admin/**
-          - [ ] **ban/**
-            - [ ] route.ts
-          - [ ] **delete/**
-            - [ ] route.ts
-        - [ ] **messages/**
-          - [ ] route.ts
-        - [ ] **presence/**
-          - [ ] route.ts
-        - [ ] **stickers/**
-          - [ ] route.ts
-      - [ ] **collaborations/**
-        - [ ] **[id]/**
-          - [ ] route.ts
-        - [ ] route.ts
-      - [ ] **collaborator/**
-        - [ ] **[id]/**
-          - [ ] **respond/**
-            - [ ] route.ts
-          - [ ] route.ts
-      - [ ] **consent-banner/**
-        - [ ] route.ts
-      - [ ] **contact/**
-        - [ ] route.ts
-      - [ ] **creator/**
-        - [ ] **account/**
-          - [ ] **avatar/**
-            - [ ] route.ts
-          - [ ] **password/**
-            - [ ] route.ts
-          - [ ] **preferences/**
-            - [ ] route.ts
-          - [ ] **profile/**
-            - [ ] route.ts
-        - [ ] **bank-account/**
-          - [ ] route.ts
-        - [ ] **dashboard/**
-          - [ ] route.ts
-        - [ ] **digital-files/**
-          - [ ] route.ts
-        - [ ] **email/**
-          - [ ] **campaign/**
-            - [ ] route.ts
-          - [ ] **compose/**
-            - [ ] route.ts
-          - [ ] **send-test/**
-            - [ ] route.ts
-          - [ ] **setup/**
-            - [ ] route.ts
-          - [ ] **threads/**
-            - [ ] **[threadId]/**
-              - [ ] **archive/**
-                - [ ] route.ts
-              - [ ] **delete/**
-                - [ ] route.ts
-              - [ ] **forward/**
-                - [ ] route.ts
-              - [ ] **messages/**
-                - [ ] route.ts
-              - [ ] **read/**
-                - [ ] route.ts
-              - [ ] **reply/**
-                - [ ] route.ts
-              - [ ] **star/**
-                - [ ] route.ts
-            - [ ] route.ts
-        - [ ] **email-marketing/**
-          - [ ] **campaigns/**
-            - [ ] route.ts
-          - [ ] **subscribers/**
-            - [ ] **[id]/**
-              - [ ] route.ts
-            - [ ] **import/**
-              - [ ] route.ts
-            - [ ] route.ts
-        - [ ] **indiekit/**
-          - [ ] **addons/**
-            - [ ] route.ts
-          - [ ] **address/**
-            - [ ] route.ts
-          - [ ] **backers/**
-            - [ ] route.ts
-          - [ ] **campaigns/**
-            - [ ] route.ts
-          - [ ] **digital/**
-            - [ ] route.ts
-          - [ ] **easypost/**
-            - [ ] route.ts
-          - [ ] **export/**
-            - [ ] route.ts
-          - [ ] **feedback/**
-            - [ ] route.ts
-          - [ ] **fulfillment/**
-            - [ ] route.ts
-          - [ ] **helpers/**
-            - [ ] build-package-groups.ts
-            - [ ] compute-stats.ts
-            - [ ] format-digital-files.ts
-            - [ ] format-distribution-rules.ts
-            - [ ] format-email-campaigns.ts
-            - [ ] format-products.ts
-            - [ ] format-segments.ts
-            - [ ] format-timeline.ts
-            - [ ] index.ts
-            - [ ] post-campaign-sales.ts
-            - [ ] process-backers.ts
-            - [ ] workflow.ts
-          - [ ] **integrations/**
-            - [ ] route.ts
-          - [ ] **modifiers/**
-            - [ ] route.ts
-          - [ ] **notes/**
-            - [ ] route.ts
-          - [ ] **orders/**
-            - [ ] **notify-balance/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **products/**
-            - [ ] route.ts
-          - [ ] **segments/**
-            - [ ] **backers/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **settings/**
-            - [ ] **image/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **shipping/**
-            - [ ] route.ts
-          - [ ] **shipping-providers/**
-            - [ ] **credentials/**
-              - [ ] route.ts
-          - [ ] **shippo/**
-            - [ ] route.ts
-          - [ ] **shipstation/**
-            - [ ] route.ts
-          - [ ] **shopify/**
-            - [ ] **credentials/**
-              - [ ] route.ts
-            - [ ] **oauth/**
-              - [ ] **authorize/**
-                - [ ] route.ts
-              - [ ] **callback/**
-                - [ ] route.ts
-            - [ ] **sku-mapping/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **stamps/**
-            - [ ] route.ts
-          - [ ] **surveys/**
-            - [ ] **[pledgeId]/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **timeline/**
-            - [ ] route.ts
-          - [ ] **transactions/**
-            - [ ] route.ts
-          - [ ] **updates/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **marketplace/**
-          - [ ] **books/**
-            - [ ] **[id]/**
-              - [ ] **submit/**
-                - [ ] route.ts
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **company/**
-            - [ ] route.ts
-          - [ ] **discount-codes/**
-            - [ ] route.ts
-          - [ ] **files/**
-            - [ ] **upload/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **media/**
-          - [ ] **upload/**
-            - [ ] route.ts
-        - [ ] **paypal/**
-          - [ ] route.ts
-        - [ ] **paypal-bank-account/**
-          - [ ] route.ts
-        - [ ] **pledges/**
-          - [ ] **[pledgeId]/**
-            - [ ] route.ts
-          - [ ] **bulk-delete/**
-            - [ ] route.ts
-        - [ ] **prelaunch-pages/**
-          - [ ] route.ts
-        - [ ] **projects-for-import/**
-          - [ ] route.ts
-        - [ ] **refund-requests/**
-          - [ ] **[requestId]/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **stripe/**
-          - [ ] **portal/**
-            - [ ] route.ts
-        - [ ] **whop-bank-account/**
-          - [ ] route.ts
-      - [ ] **cron/**
-        - [ ] **ai-marketing/**
-          - [ ] route.ts
-        - [ ] **cleanup-pledges/**
-          - [ ] route.ts
-        - [ ] **cleanup-projects/**
-          - [ ] route.ts
-        - [ ] **email-queue/**
-          - [ ] route.ts
-        - [ ] **email-retries/**
-          - [ ] route.ts
-        - [ ] **payment-retries/**
-          - [ ] route.ts
-        - [ ] **process-failed-campaigns/**
-          - [ ] route.ts
-        - [ ] **process-funded-campaigns/**
-          - [ ] route.ts
-        - [ ] **scheduled-campaigns/**
-          - [ ] route.ts
-      - [ ] **diagnostics/**
-        - [ ] **payment/**
-          - [ ] route.ts
-      - [ ] **divinitycoin/**
-        - [ ] **config/**
-          - [ ] route.ts
-      - [ ] **email/**
-        - [ ] **track/**
-          - [ ] **click/**
-            - [ ] route.ts
-          - [ ] **open/**
-            - [ ] route.ts
-      - [ ] **error-report/**
-        - [ ] route.ts
-      - [ ] **health/**
-        - [ ] route.ts
-      - [ ] **hero-slides/**
-        - [ ] route.ts
-      - [ ] **home-stats/**
-        - [ ] route.ts
-      - [ ] **internal/**
-        - [ ] **blocked-ips/**
-          - [ ] route.ts
-      - [ ] **lcs-locator/**
-        - [ ] **import/**
-          - [ ] route.ts
-        - [ ] route.ts
-      - [ ] **marketplace/**
-        - [ ] **books/**
-          - [ ] **[slug]/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **checkout/**
-          - [ ] **verify/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **companies/**
-          - [ ] **[slug]/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **paypal/**
-          - [ ] **capture/**
-            - [ ] **[orderId]/**
-              - [ ] route.ts
-        - [ ] **purchase/**
-          - [ ] **confirm/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **redeem-code/**
-          - [ ] route.ts
-        - [ ] **validate-code/**
-          - [ ] route.ts
-      - [ ] **messages/**
-        - [ ] **user-info/**
-          - [ ] route.ts
-        - [ ] route.ts
-      - [ ] **metrics/**
-        - [ ] route.ts
-      - [ ] **og/**
-        - [ ] route.tsx
-      - [ ] **pay/**
-        - [ ] **balance/**
-          - [ ] **confirm/**
-            - [ ] route.ts
-          - [ ] route.ts
-      - [ ] **paypal/**
-        - [ ] **capture/**
-          - [ ] **[orderId]/**
-            - [ ] route.ts
-        - [ ] **client-token/**
-          - [ ] route.ts
-        - [ ] **config/**
-          - [ ] route.ts
-      - [ ] **platform-stats/**
-        - [ ] route.ts
-      - [ ] **pledges/**
-        - [ ] **[pledgeId]/**
-          - [ ] **add-items/**
-            - [ ] route.ts
-          - [ ] **confirm/**
-            - [ ] route.ts
-          - [ ] **confirm-add-items/**
-            - [ ] route.ts
-          - [ ] **confirm-modify/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **check/**
-          - [ ] route.ts
-        - [ ] route.ts
-      - [ ] **privacy/**
-        - [ ] **ccpa-opt-out/**
-          - [ ] route.ts
-      - [ ] **projects/**
-        - [ ] **[id]/**
-          - [ ] **basics/**
-            - [ ] route.ts
-          - [ ] **chargeback-card/**
-            - [ ] route.ts
-          - [ ] **collaborators/**
-            - [ ] **me/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **comments/**
-            - [ ] route.ts
-          - [ ] **contact-email/**
-            - [ ] route.ts
-          - [ ] **items/**
-            - [ ] **[itemId]/**
-              - [ ] **end/**
-                - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **launch/**
-            - [ ] route.ts
-          - [ ] **members/**
-            - [ ] **import/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **payment/**
-            - [ ] route.ts
-          - [ ] **prelaunch/**
-            - [ ] route.ts
-          - [ ] **promotion/**
-            - [ ] route.ts
-          - [ ] **reviews/**
-            - [ ] route.ts
-          - [ ] **rewards/**
-            - [ ] route.ts
-          - [ ] **story/**
-            - [ ] route.ts
-          - [ ] **submit/**
-            - [ ] route.ts
-          - [ ] **survey/**
-            - [ ] **backer-questions/**
-              - [ ] route.ts
-            - [ ] **item-questions/**
-              - [ ] route.ts
-            - [ ] **lock/**
-              - [ ] route.ts
-            - [ ] **responses/**
-              - [ ] route.ts
-            - [ ] **send/**
-              - [ ] route.ts
-            - [ ] route.ts
-          - [ ] **sync-stats/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **similar/**
-          - [ ] route.ts
-        - [ ] **slug/**
-          - [ ] **[slug]/**
-            - [ ] **check/**
-              - [ ] route.ts
-            - [ ] **stats/**
-              - [ ] route.ts
-            - [ ] route.ts
-        - [ ] **vanity/**
-          - [ ] **[vanityname]/**
-            - [ ] **[slug]/**
-              - [ ] **stats/**
-                - [ ] route.ts
-              - [ ] route.ts
-        - [ ] route.ts
-      - [ ] **promo-popup/**
-        - [ ] route.ts
-      - [ ] **r2/**
-        - [ ] **serve/**
-          - [ ] **[...key]/**
-            - [ ] route.ts
-      - [ ] **recommendations/**
-        - [ ] route.ts
-      - [ ] **retailers/**
-        - [ ] **account/**
-          - [ ] route.ts
-        - [ ] **apply/**
-          - [ ] route.ts
-        - [ ] **forgot-password/**
-          - [ ] route.ts
-        - [ ] **invoices/**
-          - [ ] route.ts
-        - [ ] **login/**
-          - [ ] route.ts
-        - [ ] **logout/**
-          - [ ] route.ts
-        - [ ] **me/**
-          - [ ] route.ts
-        - [ ] **orders/**
-          - [ ] route.ts
-        - [ ] **projects/**
-          - [ ] **[id]/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **reset-password/**
-          - [ ] route.ts
-        - [ ] **session-auth/**
-          - [ ] route.ts
-      - [ ] **rewards/**
-        - [ ] **[id]/**
-          - [ ] **copy-to-addon/**
-            - [ ] route.ts
-          - [ ] **end/**
-            - [ ] route.ts
-          - [ ] **shipping/**
-            - [ ] route.ts
-        - [ ] route.ts
-      - [ ] **stripe/**
-        - [ ] **config/**
-          - [ ] route.ts
-        - [ ] **connect/**
-          - [ ] **refresh/**
-            - [ ] route.ts
-          - [ ] **reset/**
-            - [ ] route.ts
-          - [ ] **status/**
-            - [ ] route.ts
-          - [ ] route.ts
-      - [ ] **surveys/**
-        - [ ] **[pledgeId]/**
-          - [ ] **respond/**
-            - [ ] route.ts
-        - [ ] route.ts
-      - [ ] **track/**
-        - [ ] route.ts
-      - [ ] **tracking/**
-        - [ ] route.ts
-      - [ ] **unsubscribe/**
-        - [ ] route.ts
-      - [ ] **updates/**
-        - [ ] route.ts
-      - [ ] **upload/**
-        - [ ] route.ts
-      - [ ] **uploads/**
-        - [ ] **[...path]/**
-          - [ ] route.ts
-      - [ ] **user/**
-        - [ ] **activity/**
-          - [ ] route.ts
-        - [ ] **data-deletion/**
-          - [ ] route.ts
-        - [ ] **data-export/**
-          - [ ] route.ts
-        - [ ] **following/**
-          - [ ] route.ts
-        - [ ] **me/**
-          - [ ] route.ts
-        - [ ] **notifications/**
-          - [ ] route.ts
-        - [ ] **profile/**
-          - [ ] route.ts
-        - [ ] **profile-dropdown/**
-          - [ ] route.ts
-        - [ ] **public-profile/**
-          - [ ] **[username]/**
-            - [ ] route.ts
-        - [ ] **settings/**
-          - [ ] **email/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **vanity-url/**
-          - [ ] route.ts
-        - [ ] **verify-email/**
-          - [ ] route.ts
-      - [ ] **verify-id/**
-        - [ ] **callback/**
-          - [ ] route.ts
-        - [ ] **check/**
-          - [ ] route.ts
-        - [ ] route.ts
-      - [ ] **webhooks/**
-        - [ ] **divinitycoin/**
-          - [ ] route.ts
-        - [ ] **email/**
-          - [ ] **events/**
-            - [ ] route.ts
-          - [ ] **inbound/**
-            - [ ] route.ts
-        - [ ] **paypal/**
-          - [ ] route.ts
-        - [ ] **stripe/**
-          - [ ] **connect/**
-            - [ ] route.ts
-          - [ ] route.ts
-        - [ ] **stripe_connect/**
-          - [ ] route.ts
-        - [ ] **whop/**
-          - [ ] route.ts
-      - [ ] **whop/**
-        - [ ] **config/**
-          - [ ] route.ts
-        - [ ] **confirm/**
-          - [ ] **[pledgeId]/**
-            - [ ] route.ts
-    - [ ] **backer-handbook/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **bug-report/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **cart/**
-      - [ ] page.tsx
-    - [ ] **changelog/**
-      - [ ] page.tsx
-    - [ ] **chat/**
-      - [ ] page.tsx
-    - [ ] **collaborate/**
-      - [ ] **[id]/**
-        - [ ] page.tsx
-      - [ ] layout.tsx
-    - [ ] **contact/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **creator-handbook/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **dashboard/**
-      - [ ] **activity/**
-        - [ ] page.tsx
-      - [ ] **backer/**
-        - [ ] **components/**
-          - [ ] **digital-library-sections/**
-            - [ ] constants.ts
-            - [ ] index.ts
-            - [ ] library-card.tsx
-            - [ ] library-toolbar.tsx
-            - [ ] reader-view.tsx
-            - [ ] types.ts
-          - [ ] address-management-tab.tsx
-          - [ ] animated-bar-chart.tsx
-          - [ ] circular-progress.tsx
-          - [ ] collections-tab.tsx
-          - [ ] digital-downloads-tab.tsx
-          - [ ] digital-library-tab.tsx
-          - [ ] download-card.tsx
-          - [ ] following-tab.tsx
-          - [ ] fulfillment-pipeline.tsx
-          - [ ] glowing-stat-card.tsx
-          - [ ] index.ts
-          - [ ] messages-tab.tsx
-          - [ ] notification-preferences-tab.tsx
-          - [ ] spending-analytics-tab.tsx
-          - [ ] survey-hub-tab.tsx
-        - [ ] page.tsx
-      - [ ] **components/**
-        - [ ] AnimatedBarChart.tsx
-        - [ ] BackersList.tsx
-        - [ ] CircularProgress.tsx
-        - [ ] CollaborationsTab.tsx
-        - [ ] EmailTab.tsx
-        - [ ] FundingChart.tsx
-        - [ ] GlowingStatCard.tsx
-        - [ ] IndieKitV2Tab.tsx
-        - [ ] MarketplaceTab.tsx
-        - [ ] PostUpdatesTab.tsx
-        - [ ] ProductionOrderView.tsx
-        - [ ] ProjectSelector.tsx
-        - [ ] QuickStats.tsx
-        - [ ] RecentBackersCard.tsx
-        - [ ] RewardStats.tsx
-        - [ ] SocialHubTab.tsx
-        - [ ] StatsCards.tsx
-        - [ ] StripeAccountAlert.tsx
-        - [ ] TrafficSources.tsx
-        - [ ] index.ts
-      - [ ] **following/**
-        - [ ] page.tsx
-      - [ ] **indiekit/**
-        - [ ] **components/**
-          - [ ] **dialogs/**
-            - [ ] addon-dialog.tsx
-            - [ ] address-validation-dialog.tsx
-            - [ ] backer-dialog.tsx
-            - [ ] balance-editor-dialog.tsx
-            - [ ] confirm-dialog.tsx
-            - [ ] distribution-dialog.tsx
-            - [ ] edit-order-dialog.tsx
-            - [ ] email-composer-dialog.tsx
-            - [ ] email-dialog.tsx
-            - [ ] export-dialog.tsx
-            - [ ] import-addon-from-project-dialog.tsx
-            - [ ] import-email-dialog.tsx
-            - [ ] index.ts
-            - [ ] notes-dialog.tsx
-            - [ ] nps-feedback-dialog.tsx
-            - [ ] packing-slip-dialog.tsx
-            - [ ] refund-dialog.tsx
-            - [ ] segment-dialog.tsx
-            - [ ] tracking-dialog.tsx
-            - [ ] upload-dialog.tsx
-          - [ ] **tabs/**
-            - [ ] **packages-sections/**
-              - [ ] index.ts
-              - [ ] instructions-content.tsx
-              - [ ] package-group-card.tsx
-              - [ ] packages-dialogs.tsx
-              - [ ] sku-mapping-content.tsx
-            - [ ] **settings-sections/**
-              - [ ] general-section.tsx
-              - [ ] index.ts
-              - [ ] integrations-section.tsx
-              - [ ] notifications-section.tsx
-              - [ ] payments-section.tsx
-              - [ ] shipping-providers-section.tsx
-              - [ ] shipping-section.tsx
-              - [ ] shopify-credentials-section.tsx
-              - [ ] survey-section.tsx
-              - [ ] team-section.tsx
-            - [ ] **sku-mapping-sections/**
-              - [ ] index.ts
-              - [ ] modifier-combination-row.tsx
-              - [ ] modifier-combinations-card.tsx
-              - [ ] sku-input-field.tsx
-              - [ ] sku-item-row.tsx
-              - [ ] types.ts
-            - [ ] account-settings-tab.tsx
-            - [ ] addons-tab.tsx
-            - [ ] backers-tab.tsx
-            - [ ] counts-tab.tsx
-            - [ ] digital-tab.tsx
-            - [ ] email-list-tab.tsx
-            - [ ] emails-tab.tsx
-            - [ ] export-tab.tsx
-            - [ ] inbox-tab.tsx
-            - [ ] index.ts
-            - [ ] manage-survey-tab.tsx
-            - [ ] overview-tab.tsx
-            - [ ] packages-tab.tsx
-            - [ ] preorders-tab.tsx
-            - [ ] products-tab.tsx
-            - [ ] projects-tab.tsx
-            - [ ] segments-tab.tsx
-            - [ ] settings-tab.tsx
-            - [ ] shipping-tab.tsx
-            - [ ] sku-mapping-tab.tsx
-            - [ ] support-tab.tsx
-            - [ ] survey-builder-tab.tsx
-            - [ ] teaser-pages-tab.tsx
-            - [ ] timeline-tab.tsx
-            - [ ] transaction-history-tab.tsx
-            - [ ] updates-tab.tsx
-          - [ ] **ui/**
-            - [ ] charts.tsx
-            - [ ] empty-states.tsx
-            - [ ] global-search.tsx
-            - [ ] help-tooltip.tsx
-            - [ ] index.ts
-            - [ ] keyboard-shortcuts.tsx
-            - [ ] skeleton.tsx
-          - [ ] whats-next-banner.tsx
-        - [ ] **emails/**
-          - [ ] **[id]/**
-            - [ ] **edit/**
-              - [ ] page.tsx
-        - [ ] **shopify/**
-          - [ ] **app/**
-            - [ ] page.tsx
-          - [ ] **install/**
-            - [ ] page.tsx
-        - [ ] **survey/**
-          - [ ] **[pledgeId]/**
-            - [ ] page.tsx
-        - [ ] constants.ts
-        - [ ] page.tsx
-        - [ ] types.ts
-      - [ ] **indiekit-v2/**
-        - [ ] **components/**
-          - [ ] **layout/**
-            - [ ] PhaseSelector.tsx
-            - [ ] WorkflowProgress.tsx
-          - [ ] **tabs/**
-            - [ ] DashboardTab.tsx
-            - [ ] DigitalDeliveryTab.tsx
-            - [ ] EmailMarketingTab.tsx
-            - [ ] FinalizeTab.tsx
-            - [ ] PaymentsTab.tsx
-            - [ ] PhysicalDeliveryTab.tsx
-            - [ ] RefundRequestsTab.tsx
-            - [ ] ReportsTab.tsx
-            - [ ] SetupTab.tsx
-            - [ ] SurveysTab.tsx
-        - [ ] constants.ts
-        - [ ] page.tsx
-        - [ ] types.ts
-      - [ ] **marketplace/**
-        - [ ] **books/**
-          - [ ] **[id]/**
-            - [ ] **edit/**
-              - [ ] **components/**
-                - [ ] FileUpload.tsx
-                - [ ] PDFFilePicker.tsx
-                - [ ] StatusBanner.tsx
-                - [ ] StepBasicInfo.tsx
-                - [ ] StepIndicator.tsx
-                - [ ] StepMedia.tsx
-                - [ ] StepPricing.tsx
-                - [ ] StepReview.tsx
-                - [ ] types.ts
-              - [ ] page.tsx
-          - [ ] **new/**
-            - [ ] page.tsx
-        - [ ] **company/**
-          - [ ] page.tsx
-        - [ ] **components/**
-          - [ ] AnalyticsTab.tsx
-          - [ ] BookCard.tsx
-          - [ ] BooksGrid.tsx
-          - [ ] CompanyProfileCard.tsx
-          - [ ] PromoCodesTab.tsx
-          - [ ] StatsCard.tsx
-          - [ ] StatusBadge.tsx
-          - [ ] types.ts
-        - [ ] page.tsx
-      - [ ] **messages/**
-        - [ ] page.tsx
-      - [ ] **notifications/**
-        - [ ] page.tsx
-      - [ ] **pledges/**
-        - [ ] **[pledgeId]/**
-          - [ ] **survey/**
-            - [ ] **components/**
-              - [ ] QuestionInput.tsx
-              - [ ] SurveyAddonsStep.tsx
-              - [ ] SurveyAddressStep.tsx
-              - [ ] SurveyErrorState.tsx
-              - [ ] SurveyHeader.tsx
-              - [ ] SurveyIntroStep.tsx
-              - [ ] SurveyItemsStep.tsx
-              - [ ] SurveyLockedState.tsx
-              - [ ] SurveyPaymentStep.tsx
-              - [ ] SurveyQuestionsStep.tsx
-              - [ ] SurveyReviewStep.tsx
-              - [ ] types.ts
-            - [ ] page.tsx
-          - [ ] page.tsx
-      - [ ] **profile/**
-        - [ ] page.tsx
-      - [ ] **projects/**
-        - [ ] **[id]/**
-          - [ ] **survey/**
-            - [ ] **responses/**
-              - [ ] page.tsx
-            - [ ] page.tsx
-        - [ ] page.tsx
-      - [ ] **settings/**
-        - [ ] **components/**
-          - [ ] AccountCard.tsx
-          - [ ] ConnectedServicesCard.tsx
-          - [ ] EmailChangeDialog.tsx
-          - [ ] LoadingState.tsx
-          - [ ] PaypalCard.tsx
-          - [ ] PrivacyCard.tsx
-          - [ ] ProfileCard.tsx
-          - [ ] SettingsHeader.tsx
-          - [ ] SubscriptionsCard.tsx
-          - [ ] types.ts
-        - [ ] page.tsx
-      - [ ] **social/**
-        - [ ] page.tsx
-      - [ ] **updates/**
-        - [ ] page.tsx
-      - [ ] error.tsx
-      - [ ] layout.tsx
-      - [ ] loading.tsx
-      - [ ] page.tsx
-      - [ ] types.ts
-    - [ ] **discover/**
-      - [ ] layout.tsx
-      - [ ] loading.tsx
-      - [ ] page.tsx
-    - [ ] **explore/**
-      - [ ] page.tsx
-    - [ ] **faq/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **fees/**
-      - [ ] calculations.ts
-      - [ ] data.ts
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **fulfillment/**
-      - [ ] page.tsx
-    - [ ] **help/**
-      - [ ] **whitelist/**
-        - [ ] page.tsx
-      - [ ] page.tsx
-    - [ ] **indiekit-handbook/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **lcs-locator/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **marketplace/**
-      - [ ] **books/**
-        - [ ] **[slug]/**
-          - [ ] layout.tsx
-          - [ ] page.tsx
-        - [ ] **featured/**
-          - [ ] page.tsx
-        - [ ] **staff-picks/**
-          - [ ] page.tsx
-        - [ ] layout.tsx
-        - [ ] page.tsx
-      - [ ] **checkout/**
-        - [ ] **success/**
-          - [ ] page.tsx
-      - [ ] **companies/**
-        - [ ] **[slug]/**
-          - [ ] layout.tsx
-          - [ ] page.tsx
-      - [ ] **components/**
-        - [ ] MarketplacePayPalForm.tsx
-      - [ ] **physical-media/**
-        - [ ] layout.tsx
-        - [ ] page.tsx
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **marketplace-handbook/**
-      - [ ] **backers/**
-        - [ ] page.tsx
-      - [ ] **creators/**
-        - [ ] page.tsx
-      - [ ] layout.tsx
-    - [ ] **pay/**
-      - [ ] **balance/**
-        - [ ] **[token]/**
-          - [ ] page.tsx
-    - [ ] **privacy/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **projects/**
-      - [ ] **[vanityname]/**
-        - [ ] **[slug]/**
-          - [ ] **edit/**
-            - [ ] page.tsx
-          - [ ] **pledge/**
-            - [ ] **components/**
-              - [ ] AddonSelector.tsx
-              - [ ] AddressWarning.tsx
-              - [ ] Breadcrumb.tsx
-              - [ ] DCPaymentWrapper.tsx
-              - [ ] ErrorState.tsx
-              - [ ] FAQSection.tsx
-              - [ ] LoadingState.tsx
-              - [ ] OrderSummary.tsx
-              - [ ] PayPalPaymentForm.tsx
-              - [ ] PaymentStep.tsx
-              - [ ] RewardSelector.tsx
-              - [ ] StripePaymentForm.tsx
-              - [ ] SuccessPage.tsx
-              - [ ] WhopPaymentForm.tsx
-            - [ ] **hooks/**
-              - [ ] usePledge.ts
-            - [ ] constants.ts
-            - [ ] page.tsx
-            - [ ] types.ts
-            - [ ] utils.ts
-          - [ ] **prelaunch/**
-            - [ ] layout.tsx
-            - [ ] page.tsx
-          - [ ] layout.tsx
-          - [ ] loading.tsx
-          - [ ] page.tsx
-      - [ ] **new/**
-        - [ ] page.tsx
-      - [ ] page.tsx
-    - [ ] **retailers/**
-      - [ ] **account/**
-        - [ ] page.tsx
-      - [ ] **apply/**
-        - [ ] page.tsx
-      - [ ] **dashboard/**
-        - [ ] **components/**
-          - [ ] RetailerAccountTab.tsx
-          - [ ] RetailerInvoicesTab.tsx
-          - [ ] RetailerOrdersTab.tsx
-          - [ ] RetailerProjectsTab.tsx
-        - [ ] page.tsx
-      - [ ] **forgot-password/**
-        - [ ] page.tsx
-      - [ ] **invoices/**
-        - [ ] page.tsx
-      - [ ] **login/**
-        - [ ] page.tsx
-      - [ ] **orders/**
-        - [ ] page.tsx
-      - [ ] **projects/**
-        - [ ] **[id]/**
-          - [ ] page.tsx
-        - [ ] page.tsx
-      - [ ] **reset-password/**
-        - [ ] page.tsx
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **settings/**
-      - [ ] **payment/**
-        - [ ] **stripe/**
-          - [ ] **complete/**
-            - [ ] page.tsx
-          - [ ] **refresh/**
-            - [ ] page.tsx
-        - [ ] page.tsx
-    - [ ] **success-stories/**
-      - [ ] page.tsx
-    - [ ] **survey/**
-      - [ ] **preview/**
-        - [ ] page.tsx
-    - [ ] **term/**
-      - [ ] page.tsx
-    - [ ] **terms/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **trust-safety/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] **u/**
-      - [ ] **[username]/**
-        - [ ] layout.tsx
-        - [ ] page.tsx
-    - [ ] **verification-complete/**
-      - [ ] page.tsx
-    - [ ] **verify-email/**
-      - [ ] page.tsx
-    - [ ] **what-is-divinitycoin/**
-      - [ ] layout.tsx
-      - [ ] page.tsx
-    - [ ] error.tsx
-    - [ ] global-error.tsx
-    - [ ] layout.tsx
-    - [ ] not-found.tsx
-    - [ ] page.tsx
-    - [ ] robots.ts
-    - [ ] sitemap.ts
-  - [ ] **components/**
-    - [ ] **admin/**
-      - [ ] **ai-marketing/**
-        - [ ] **dialogs/**
-          - [ ] campaign-dialog.tsx
-          - [ ] campaign-type-dialog.tsx
-          - [ ] csv-import-dialog.tsx
-          - [ ] index.ts
-          - [ ] results-viewer-dialog.tsx
-          - [ ] tag-review-dialog.tsx
-        - [ ] ai-settings-tab.tsx
-        - [ ] auto-tagging-tab.tsx
-        - [ ] behavior-analytics-tab.tsx
-        - [ ] email-campaigns-tab.tsx
-        - [ ] index.ts
-        - [ ] overview-tab.tsx
-        - [ ] subscriber-list-tab.tsx
-        - [ ] tag-segments-tab.tsx
-      - [ ] **settings/**
-        - [ ] ai-settings.tsx
-        - [ ] analytics-settings.tsx
-        - [ ] api-settings.tsx
-        - [ ] communication-settings.tsx
-        - [ ] database-settings.tsx
-        - [ ] email-settings.tsx
-        - [ ] general-settings.tsx
-        - [ ] id-verification-settings.tsx
-        - [ ] index.ts
-        - [ ] payment-settings.tsx
-        - [ ] security-settings.tsx
-        - [ ] social-settings.tsx
-        - [ ] storage-settings.tsx
-    - [ ] **auth/**
-      - [ ] forgot-password-form.tsx
-      - [ ] login-form.tsx
-      - [ ] recaptcha.tsx
-      - [ ] register-form.tsx
-      - [ ] reset-password-form.tsx
-    - [ ] **chat/**
-      - [ ] chat-room.tsx
-    - [ ] **legal/**
-      - [ ] ai-policy.tsx
-      - [ ] backer-agreement.tsx
-      - [ ] chargebacks-policy.tsx
-      - [ ] content-guidelines.tsx
-      - [ ] cookie-policy.tsx
-      - [ ] creator-agreement.tsx
-      - [ ] data-deletion-policy.tsx
-      - [ ] dmca-policy.tsx
-      - [ ] fraud-policy.tsx
-      - [ ] gdpr-ccpa-policy.tsx
-      - [ ] index.ts
-      - [ ] nsfw-policy.tsx
-      - [ ] pci-compliance.tsx
-      - [ ] privacy-policy.tsx
-      - [ ] refund-policy.tsx
-      - [ ] shipping-policy.tsx
-      - [ ] terms-of-service.tsx
-    - [ ] **marketplace/**
-      - [ ] marketplace-payment-settings.tsx
-    - [ ] **messaging/**
-      - [ ] messages-panel.tsx
-    - [ ] **notifications/**
-      - [ ] notifications-dropdown.tsx
-    - [ ] **project/**
-      - [ ] **builder/**
-        - [ ] **payment-sections/**
-          - [ ] campaign-type-section.tsx
-          - [ ] chargeback-card-section.tsx
-          - [ ] contact-email-section.tsx
-          - [ ] content-declaration-section.tsx
-          - [ ] divinity-coin-bank-section.tsx
-          - [ ] index.ts
-          - [ ] payment-processor-section.tsx
-          - [ ] paypal-bank-payout-section.tsx
-          - [ ] paypal-payout-section.tsx
-          - [ ] project-type-section.tsx
-          - [ ] retailer-access-section.tsx
-          - [ ] stripe-connect-section.tsx
-          - [ ] types.ts
-          - [ ] whop-bank-payout-section.tsx
-        - [ ] **rewards-step/**
-          - [ ] addons-tab.tsx
-          - [ ] constants.ts
-          - [ ] csv-import-screen.tsx
-          - [ ] import-addon-dialog.tsx
-          - [ ] import-reward-dialog.tsx
-          - [ ] index.tsx
-          - [ ] item-dialog.tsx
-          - [ ] items-tab.tsx
-          - [ ] reward-form.tsx
-          - [ ] tiers-tab.tsx
-        - [ ] basics-step.tsx
-        - [ ] new-project-wrapper.tsx
-        - [ ] payment-step.tsx
-        - [ ] people-step.tsx
-        - [ ] project-builder.tsx
-        - [ ] promotion-step.tsx
-        - [ ] rewards-step.tsx
-        - [ ] story-step.tsx
-    - [ ] **project-details/**
-      - [ ] **tabs/**
-        - [ ] campaign-tab.tsx
-        - [ ] comments-tab.tsx
-        - [ ] community-tab.tsx
-        - [ ] creator-tab.tsx
-        - [ ] faq-tab.tsx
-        - [ ] index.ts
-        - [ ] rewards-tab.tsx
-        - [ ] updates-tab.tsx
-      - [ ] index.ts
-      - [ ] social-icons.tsx
-      - [ ] types.ts
-      - [ ] utils.ts
-    - [ ] **providers/**
-      - [ ] auth-provider.tsx
-      - [ ] theme-provider.tsx
-    - [ ] **ui/**
-      - [ ] accordion.tsx
-      - [ ] alert-dialog.tsx
-      - [ ] alert.tsx
-      - [ ] avatar.tsx
-      - [ ] badge.tsx
-      - [ ] block-editor.tsx
-      - [ ] button.tsx
-      - [ ] calendar.tsx
-      - [ ] card.tsx
-      - [ ] checkbox.tsx
-      - [ ] collapsible.tsx
-      - [ ] confirm-dialog.tsx
-      - [ ] countdown-timer.tsx
-      - [ ] dialog.tsx
-      - [ ] drag-drop-image-cell.tsx
-      - [ ] dropdown-menu.tsx
-      - [ ] editable-input.tsx
-      - [ ] email-editor.tsx
-      - [ ] form.tsx
-      - [ ] image-upload.tsx
-      - [ ] input.tsx
-      - [ ] label.tsx
-      - [ ] location-autocomplete.tsx
-      - [ ] popover.tsx
-      - [ ] progress.tsx
-      - [ ] radio-group.tsx
-      - [ ] rich-text-editor.tsx
-      - [ ] screen-reader-announcer.tsx
-      - [ ] scroll-area.tsx
-      - [ ] secure-key-input.tsx
-      - [ ] select.tsx
-      - [ ] separator.tsx
-      - [ ] sheet.tsx
-      - [ ] skeleton.tsx
-      - [ ] slider.tsx
-      - [ ] sonner.tsx
-      - [ ] star-rating.tsx
-      - [ ] switch.tsx
-      - [ ] table.tsx
-      - [ ] tabs.tsx
-      - [ ] textarea.tsx
-      - [ ] tooltip.tsx
-    - [ ] PdfPageFlipReader.tsx
-    - [ ] PdfThumbnail.tsx
-    - [ ] announcement-bar.tsx
-    - [ ] back-to-top.tsx
-    - [ ] consent-banner.tsx
-    - [ ] email-verification-banner.tsx
-    - [ ] error-reporter.tsx
-    - [ ] footer.tsx
-    - [ ] google-analytics.tsx
-    - [ ] hero-slider.tsx
-    - [ ] home-stats-poller.tsx
-    - [ ] json-ld.tsx
-    - [ ] mobile-profile-links.tsx
-    - [ ] payment-settings.tsx
-    - [ ] promo-popup.tsx
-    - [ ] site-header.tsx
-    - [ ] theme-toggle.tsx
-    - [ ] tracking-provider.tsx
-    - [ ] user-profile-dropdown.tsx
-  - [ ] **lib/**
-    - [ ] **ai/**
-      - [ ] anthropic.ts
-      - [ ] automation.ts
-      - [ ] index.ts
-      - [ ] marketing-services.ts
-      - [ ] settings-integration.ts
-      - [ ] user-interests.ts
-    - [ ] **auth/**
-      - [ ] actions.ts
-      - [ ] constants.ts
-      - [ ] email-access.ts
-      - [ ] index.ts
-      - [ ] rate-limit.ts
-      - [ ] recaptcha.ts
-      - [ ] session.ts
-    - [ ] **db/**
-      - [ ] index.ts
-    - [ ] **email/**
-      - [ ] email-config.ts
-      - [ ] email-templates-auth.ts
-      - [ ] email-templates-misc.ts
-      - [ ] email-templates-pledge.ts
-      - [ ] email-templates-project.ts
-      - [ ] sendgrid-verify.ts
-    - [ ] **gdpr/**
-      - [ ] execute-deletions.ts
-    - [ ] **notifications/**
-      - [ ] core.ts
-      - [ ] email-templates.ts
-      - [ ] index.ts
-      - [ ] marketplace-notifications.ts
-      - [ ] pledge-notifications.ts
-      - [ ] project-notifications.ts
-      - [ ] social-notifications.ts
-      - [ ] types.ts
-    - [ ] **oauth/**
-      - [ ] config.ts
-    - [ ] **payments/**
-      - [ ] **divinitycoin/**
-        - [ ] cards.ts
-        - [ ] client.ts
-        - [ ] config.ts
-        - [ ] index.ts
-        - [ ] payments.ts
-        - [ ] types.ts
-        - [ ] webhooks.ts
-      - [ ] **paypal/**
-        - [ ] capture-authorized.ts
-        - [ ] checkout.ts
-        - [ ] config.ts
-        - [ ] index.ts
-      - [ ] **stripe/**
-        - [ ] charges.ts
-        - [ ] checkout.ts
-        - [ ] config.ts
-        - [ ] connect.ts
-        - [ ] customers.ts
-        - [ ] index.ts
-        - [ ] intents.ts
-        - [ ] rewards.ts
-        - [ ] webhooks.ts
-      - [ ] **whop/**
-        - [ ] checkout.ts
-        - [ ] config.ts
-        - [ ] index.ts
-    - [ ] **recommendations/**
-      - [ ] engine.ts
-    - [ ] **seo/**
-      - [ ] indexing.ts
-    - [ ] **stats/**
-      - [ ] actions.ts
-      - [ ] index.ts
-      - [ ] utils.ts
-    - [ ] **stores/**
-      - [ ] project-store.ts
-    - [ ] **tracking/**
-      - [ ] index.ts
-    - [ ] **utils/**
-      - [ ] api-params.ts
-      - [ ] sanitize.ts
-    - [ ] api-error.ts
-    - [ ] audit.ts
-    - [ ] auth-helpers.ts
-    - [ ] bot-blocker.ts
-    - [ ] circuit-breaker.ts
-    - [ ] consent.ts
-    - [ ] correlation.ts
-    - [ ] csrf.ts
-    - [ ] email.ts
-    - [ ] encryption.ts
-    - [ ] error-tracker.ts
-    - [ ] feature-flags.ts
-    - [ ] fetch-utils.ts
-    - [ ] local-books-db.ts
-    - [ ] logger.ts
-    - [ ] metrics.ts
-    - [ ] notifications.ts
-    - [ ] pdf-cover-extractor.ts
-    - [ ] project-auth.ts
-    - [ ] project-permissions.ts
-    - [ ] r2.ts
-    - [ ] rate-limiter.ts
-    - [ ] retailer-auth.ts
-    - [ ] seo-audit.ts
-    - [ ] seo-defaults.ts
-    - [ ] shopify-push.ts
-    - [ ] shufti.ts
-    - [ ] stats.ts
-    - [ ] tracking.ts
-    - [ ] usePdfAsImages.ts
-    - [ ] utils.ts
-    - [ ] vault.ts
-  - [ ] **types/**
-    - [ ] api.ts
-    - [ ] index.ts
-  - [ ] instrumentation.ts
-  - [ ] middleware.ts
+- [x] **src/**
+  - [x] **__tests__/**
+    - [x] json-ld.test.tsx
+    - [x] setup.ts
+    - [x] utils.test.ts
+  - [x] **app/**
+    - [x] **(auth)/**
+      - [x] **choose-role/**
+        - [x] choose-role-client.tsx
+        - [x] page.tsx
+      - [x] **forgot-password/**
+        - [x] page.tsx
+      - [x] **login/**
+        - [x] loading.tsx
+        - [x] page.tsx
+      - [x] **register/**
+        - [x] loading.tsx
+        - [x] page.tsx
+      - [x] **reset-password/**
+        - [x] page.tsx
+      - [x] layout.tsx
+    - [x] **[vanityname]/**
+      - [x] **[slug]/**
+        - [x] page.tsx
+    - [x] **about-us/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **access-denied/**
+      - [x] page.tsx
+    - [x] **admin/**
+      - [x] **ai/**
+        - [x] **components/**
+          - [x] ResultsViewerDialog.tsx
+          - [x] StatusBadges.tsx
+          - [x] index.ts
+        - [x] page.tsx
+        - [x] types.ts
+      - [x] **ai-marketing/**
+        - [x] page.tsx
+      - [x] **analytics/**
+        - [x] **components/**
+          - [x] GeographyTab.tsx
+          - [x] OverviewTab.tsx
+          - [x] ProjectsAnalyticsTab.tsx
+          - [x] RevenueTab.tsx
+          - [x] TrafficTab.tsx
+        - [x] page.tsx
+      - [x] **announcement-bar/**
+        - [x] page.tsx
+      - [x] **bug-reports/**
+        - [x] page.tsx
+      - [x] **changelog/**
+        - [x] page.tsx
+      - [x] **consent-banner/**
+        - [x] page.tsx
+      - [x] **cron/**
+        - [x] page.tsx
+      - [x] **divinitycoin-redemptions/**
+        - [x] page.tsx
+      - [x] **email/**
+        - [x] **components/**
+          - [x] ComposeEmailDialog.tsx
+          - [x] MailboxDialog.tsx
+          - [x] index.ts
+          - [x] types.ts
+        - [x] page.tsx
+      - [x] **email-queue/**
+        - [x] page.tsx
+      - [x] **error-logs/**
+        - [x] **components/**
+          - [x] ErrorDetailDialog.tsx
+          - [x] ErrorFilters.tsx
+          - [x] ErrorTable.tsx
+          - [x] helpers.tsx
+          - [x] types.ts
+        - [x] page.tsx
+      - [x] **hero-slider/**
+        - [x] page.tsx
+      - [x] **lcs-locator/**
+        - [x] page.tsx
+      - [x] **link-sanitizer/**
+        - [x] page.tsx
+      - [x] **marketplace/**
+        - [x] **components/**
+          - [x] AddToCategoryDialog.tsx
+          - [x] AllBooksTab.tsx
+          - [x] BookDetailPanel.tsx
+          - [x] BookListItem.tsx
+          - [x] BookListPanel.tsx
+          - [x] CategoryBookItem.tsx
+          - [x] CategoryManagementTab.tsx
+          - [x] HistoryTab.tsx
+          - [x] PdfManagementTab.tsx
+          - [x] RejectDialog.tsx
+          - [x] StatsCards.tsx
+          - [x] StatusBadges.tsx
+          - [x] TransactionsTab.tsx
+        - [x] page.tsx
+        - [x] types.ts
+      - [x] **media/**
+        - [x] **components/**
+          - [x] EditFileDialog.tsx
+          - [x] MoveFilesDialog.tsx
+          - [x] NewFolderDialog.tsx
+          - [x] ScanImportDialog.tsx
+          - [x] UploadDialog.tsx
+          - [x] index.ts
+        - [x] page.tsx
+        - [x] types.ts
+      - [x] **moderation/**
+        - [x] page.tsx
+      - [x] **notifications/**
+        - [x] page.tsx
+      - [x] **page-builder/**
+        - [x] page.tsx
+      - [x] **payouts/**
+        - [x] **components/**
+          - [x] BankDetailsDialog.tsx
+          - [x] CreateSettlementDialog.tsx
+          - [x] CreatorBalancePayoutDialog.tsx
+          - [x] CreatorBalancesTable.tsx
+          - [x] PayoutStatsCards.tsx
+          - [x] ProjectDetailDialog.tsx
+          - [x] ProjectsTable.tsx
+          - [x] SettlementBadge.tsx
+          - [x] types.ts
+        - [x] page.tsx
+      - [x] **prelaunch/**
+        - [x] page.tsx
+      - [x] **projects/**
+        - [x] **components/**
+          - [x] **dialogs/**
+            - [x] adjust-end-date-dialog.tsx
+            - [x] deactivate-dialog.tsx
+            - [x] index.ts
+            - [x] make-live-dialog.tsx
+            - [x] reject-dialog.tsx
+            - [x] review-dialog.tsx
+            - [x] set-vanity-url-dialog.tsx
+          - [x] active-project-panel.tsx
+          - [x] flagged-tab.tsx
+          - [x] index.ts
+          - [x] prelaunch-tab.tsx
+          - [x] project-detail-panel.tsx
+          - [x] project-list-item.tsx
+          - [x] projects-filter-bar.tsx
+          - [x] review-history-tab.tsx
+          - [x] review-stats-cards.tsx
+          - [x] types.ts
+          - [x] unsubmitted-tab.tsx
+          - [x] utils.tsx
+        - [x] **hooks/**
+          - [x] useProjectsData.ts
+        - [x] page.tsx
+      - [x] **promo-popup/**
+        - [x] page.tsx
+      - [x] **reconcile/**
+        - [x] page.tsx
+      - [x] **retailers/**
+        - [x] **components/**
+          - [x] ActionConfirmDialog.tsx
+          - [x] RetailerDetailDialog.tsx
+          - [x] StarRating.tsx
+          - [x] StatusBadges.tsx
+          - [x] SurveyDetailDialog.tsx
+          - [x] index.ts
+        - [x] page.tsx
+        - [x] types.ts
+      - [x] **security/**
+        - [x] page.tsx
+      - [x] **seo/**
+        - [x] **components/**
+          - [x] AiSuggestionsTab.tsx
+          - [x] CronTab.tsx
+          - [x] DashboardTab.tsx
+          - [x] KeywordsTab.tsx
+          - [x] MetaTagsTab.tsx
+          - [x] PageAuditTab.tsx
+          - [x] RedirectsTab.tsx
+          - [x] helpers.tsx
+          - [x] index.ts
+          - [x] types.ts
+        - [x] page.tsx
+      - [x] **settings/**
+        - [x] page.tsx
+      - [x] **themes/**
+        - [x] page.tsx
+      - [x] **transactions/**
+        - [x] **components/**
+          - [x] BreakdownCards.tsx
+          - [x] StatsCards.tsx
+          - [x] StripeLookupDialog.tsx
+          - [x] TransactionBadges.tsx
+          - [x] TransactionDetailDialog.tsx
+          - [x] TransactionFilters.tsx
+          - [x] TransactionTable.tsx
+          - [x] index.ts
+          - [x] types.ts
+          - [x] utils.ts
+        - [x] page.tsx
+      - [x] **users/**
+        - [x] **components/**
+          - [x] **dialogs/**
+            - [x] add-user-dialog.tsx
+            - [x] approval-action-dialog.tsx
+            - [x] delete-user-dialog.tsx
+            - [x] edit-retailer-dialog.tsx
+            - [x] edit-user-dialog.tsx
+            - [x] email-preview-dialog.tsx
+            - [x] index.ts
+            - [x] password-dialog.tsx
+            - [x] retailer-details-dialog.tsx
+            - [x] role-dialog.tsx
+            - [x] send-email-dialog.tsx
+            - [x] user-details-dialog.tsx
+          - [x] index.ts
+          - [x] retailer-stats-cards.tsx
+          - [x] retailer-table.tsx
+          - [x] types.ts
+          - [x] user-filters.tsx
+          - [x] user-stats-cards.tsx
+          - [x] user-table.tsx
+          - [x] utils.tsx
+        - [x] **hooks/**
+          - [x] dialogs.ts
+          - [x] index.ts
+          - [x] usePledgeActions.ts
+          - [x] useRetailerActions.ts
+          - [x] useUserData.ts
+        - [x] hooks.ts
+        - [x] page.tsx
+      - [x] error.tsx
+      - [x] layout.tsx
+      - [x] loading.tsx
+      - [x] page.tsx
+    - [x] **api/**
+      - [x] **admin/**
+        - [x] **ai-marketing/**
+          - [x] **auto-tag/**
+            - [x] route.ts
+          - [x] **behavior/**
+            - [x] route.ts
+          - [x] **campaigns/**
+            - [x] **[type]/**
+              - [x] route.ts
+            - [x] **fix-images/**
+              - [x] route.ts
+            - [x] **manage/**
+              - [x] **[id]/**
+                - [x] **abort/**
+                  - [x] route.ts
+                - [x] **duplicate/**
+                  - [x] route.ts
+                - [x] **send/**
+                  - [x] route.ts
+                - [x] **test/**
+                  - [x] route.ts
+                - [x] route.ts
+            - [x] route.ts
+          - [x] **run/**
+            - [x] route.ts
+          - [x] **segments/**
+            - [x] route.ts
+          - [x] **services/**
+            - [x] route.ts
+          - [x] **stats/**
+            - [x] route.ts
+          - [x] **subscribers/**
+            - [x] **import/**
+              - [x] route.ts
+            - [x] **tags/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **user-interests/**
+            - [x] route.ts
+        - [x] **analytics/**
+          - [x] route.ts
+        - [x] **announcement-bar/**
+          - [x] route.ts
+        - [x] **api-keys/**
+          - [x] route.ts
+        - [x] **backfill-backer-numbers/**
+          - [x] route.ts
+        - [x] **bank-accounts/**
+          - [x] **[id]/**
+            - [x] route.ts
+        - [x] **build-backup/**
+          - [x] **download/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **changelog/**
+          - [x] **extract/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **cleanup-duplicate-rewards/**
+          - [x] route.ts
+        - [x] **cleanup-pledges/**
+          - [x] route.ts
+        - [x] **consent-banner/**
+          - [x] route.ts
+        - [x] **cron/**
+          - [x] route.ts
+        - [x] **dashboard/**
+          - [x] route.ts
+        - [x] **database/**
+          - [x] **backup/**
+            - [x] **download/**
+              - [x] route.ts
+            - [x] **restore/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **status/**
+            - [x] route.ts
+        - [x] **divinity-payouts/**
+          - [x] route.ts
+        - [x] **divinitycoin-redemptions/**
+          - [x] route.ts
+        - [x] **email/**
+          - [x] route.ts
+        - [x] **email-blocklist/**
+          - [x] **[id]/**
+            - [x] route.ts
+          - [x] **purge/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **email-queue/**
+          - [x] route.ts
+        - [x] **emails/**
+          - [x] **[emailId]/**
+            - [x] route.ts
+        - [x] **error-logs/**
+          - [x] **[id]/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **feature-flags/**
+          - [x] route.ts
+        - [x] **hero-slides/**
+          - [x] **migrate/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **lcs-locator/**
+          - [x] **cleanup-emails/**
+            - [x] route.ts
+          - [x] **shops/**
+            - [x] route.ts
+        - [x] **link-sanitizer/**
+          - [x] route.ts
+        - [x] **mailboxes/**
+          - [x] **[id]/**
+            - [x] **emails/**
+              - [x] **[emailId]/**
+                - [x] **attachments/**
+                  - [x] **[attachmentId]/**
+                    - [x] route.ts
+                - [x] route.ts
+              - [x] route.ts
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **marketplace/**
+          - [x] **books/**
+            - [x] **[id]/**
+              - [x] **feature/**
+                - [x] route.ts
+              - [x] **review/**
+                - [x] route.ts
+              - [x] **staff-pick/**
+                - [x] route.ts
+              - [x] route.ts
+            - [x] **reorder/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **history/**
+            - [x] route.ts
+          - [x] **pdf-management/**
+            - [x] route.ts
+          - [x] **transactions/**
+            - [x] route.ts
+        - [x] **media/**
+          - [x] **scan/**
+            - [x] route.ts
+          - [x] **upload/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **notifications/**
+          - [x] route.ts
+        - [x] **pages/**
+          - [x] route.ts
+        - [x] **payouts/**
+          - [x] **divinitycoin/**
+            - [x] route.ts
+          - [x] **paypal/**
+            - [x] route.ts
+          - [x] **whop/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **pledges/**
+          - [x] **[pledgeId]/**
+            - [x] route.ts
+          - [x] **cleanup/**
+            - [x] route.ts
+        - [x] **prelaunch/**
+          - [x] route.ts
+        - [x] **projects/**
+          - [x] **[projectId]/**
+            - [x] **adjust-end-date/**
+              - [x] route.ts
+            - [x] **backfill-backer-numbers/**
+              - [x] route.ts
+            - [x] **process-pledges/**
+              - [x] route.ts
+          - [x] **history/**
+            - [x] route.ts
+          - [x] **link-preview/**
+            - [x] route.ts
+          - [x] **review/**
+            - [x] route.ts
+          - [x] **status/**
+            - [x] route.ts
+        - [x] **promo-popup/**
+          - [x] route.ts
+        - [x] **recalculate-pledge-amounts/**
+          - [x] route.ts
+        - [x] **reconcile-pledges/**
+          - [x] route.ts
+        - [x] **reports/**
+          - [x] route.ts
+        - [x] **retailers/**
+          - [x] **resend-approval/**
+            - [x] route.ts
+          - [x] **surveys/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **security/**
+          - [x] **encrypt-secrets/**
+            - [x] route.ts
+          - [x] **stats/**
+            - [x] route.ts
+        - [x] **seo/**
+          - [x] **audit/**
+            - [x] route.ts
+          - [x] **cron/**
+            - [x] route.ts
+          - [x] **fix-all/**
+            - [x] route.ts
+          - [x] **keywords/**
+            - [x] route.ts
+          - [x] **pages/**
+            - [x] route.ts
+          - [x] **redirects/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **settings/**
+          - [x] **test-r2/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **sidebar-stats/**
+          - [x] route.ts
+        - [x] **sync-all-project-stats/**
+          - [x] route.ts
+        - [x] **transactions/**
+          - [x] **[id]/**
+            - [x] route.ts
+          - [x] **stripe-lookup/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **users/**
+          - [x] **[userId]/**
+            - [x] **emails/**
+              - [x] route.ts
+            - [x] **pledges/**
+              - [x] route.ts
+            - [x] **vanity-url/**
+              - [x] route.ts
+          - [x] **merge-duplicates/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **wallet/**
+          - [x] route.ts
+      - [x] **ai/**
+        - [x] **auto-tag/**
+          - [x] route.ts
+        - [x] **marketing-copy/**
+          - [x] route.ts
+        - [x] **moderate/**
+          - [x] route.ts
+      - [x] **analytics/**
+        - [x] route.ts
+      - [x] **announcement-bar/**
+        - [x] route.ts
+      - [x] **auth/**
+        - [x] **config/**
+          - [x] route.ts
+        - [x] **logout/**
+          - [x] route.ts
+        - [x] **recaptcha/**
+          - [x] route.ts
+        - [x] **session/**
+          - [x] route.ts
+        - [x] **social/**
+          - [x] **[provider]/**
+            - [x] **callback/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **connections/**
+            - [x] route.ts
+      - [x] **backer/**
+        - [x] **addresses/**
+          - [x] **[id]/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **analytics/**
+          - [x] **export/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **collections/**
+          - [x] **[id]/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **dashboard/**
+          - [x] route.ts
+        - [x] **digital-files/**
+          - [x] **extract-cover/**
+            - [x] route.ts
+          - [x] **progress/**
+            - [x] route.ts
+          - [x] **stream/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **digital-library/**
+          - [x] route.ts
+        - [x] **following/**
+          - [x] route.ts
+        - [x] **marketplace-purchases/**
+          - [x] **[id]/**
+            - [x] **download/**
+              - [x] route.ts
+        - [x] **notifications/**
+          - [x] **preferences/**
+            - [x] route.ts
+        - [x] **reviews/**
+          - [x] route.ts
+        - [x] **surveys/**
+          - [x] route.ts
+      - [x] **blocked/**
+        - [x] route.ts
+      - [x] **bug-reports/**
+        - [x] route.ts
+      - [x] **chat/**
+        - [x] **admin/**
+          - [x] **ban/**
+            - [x] route.ts
+          - [x] **delete/**
+            - [x] route.ts
+        - [x] **messages/**
+          - [x] route.ts
+        - [x] **presence/**
+          - [x] route.ts
+        - [x] **stickers/**
+          - [x] route.ts
+      - [x] **collaborations/**
+        - [x] **[id]/**
+          - [x] route.ts
+        - [x] route.ts
+      - [x] **collaborator/**
+        - [x] **[id]/**
+          - [x] **respond/**
+            - [x] route.ts
+          - [x] route.ts
+      - [x] **consent-banner/**
+        - [x] route.ts
+      - [x] **contact/**
+        - [x] route.ts
+      - [x] **creator/**
+        - [x] **account/**
+          - [x] **avatar/**
+            - [x] route.ts
+          - [x] **password/**
+            - [x] route.ts
+          - [x] **preferences/**
+            - [x] route.ts
+          - [x] **profile/**
+            - [x] route.ts
+        - [x] **bank-account/**
+          - [x] route.ts
+        - [x] **dashboard/**
+          - [x] route.ts
+        - [x] **digital-files/**
+          - [x] route.ts
+        - [x] **email/**
+          - [x] **campaign/**
+            - [x] route.ts
+          - [x] **compose/**
+            - [x] route.ts
+          - [x] **send-test/**
+            - [x] route.ts
+          - [x] **setup/**
+            - [x] route.ts
+          - [x] **threads/**
+            - [x] **[threadId]/**
+              - [x] **archive/**
+                - [x] route.ts
+              - [x] **delete/**
+                - [x] route.ts
+              - [x] **forward/**
+                - [x] route.ts
+              - [x] **messages/**
+                - [x] route.ts
+              - [x] **read/**
+                - [x] route.ts
+              - [x] **reply/**
+                - [x] route.ts
+              - [x] **star/**
+                - [x] route.ts
+            - [x] route.ts
+        - [x] **email-marketing/**
+          - [x] **campaigns/**
+            - [x] route.ts
+          - [x] **subscribers/**
+            - [x] **[id]/**
+              - [x] route.ts
+            - [x] **import/**
+              - [x] route.ts
+            - [x] route.ts
+        - [x] **indiekit/**
+          - [x] **addons/**
+            - [x] route.ts
+          - [x] **address/**
+            - [x] route.ts
+          - [x] **backers/**
+            - [x] route.ts
+          - [x] **campaigns/**
+            - [x] route.ts
+          - [x] **digital/**
+            - [x] route.ts
+          - [x] **easypost/**
+            - [x] route.ts
+          - [x] **export/**
+            - [x] route.ts
+          - [x] **feedback/**
+            - [x] route.ts
+          - [x] **fulfillment/**
+            - [x] route.ts
+          - [x] **helpers/**
+            - [x] build-package-groups.ts
+            - [x] compute-stats.ts
+            - [x] format-digital-files.ts
+            - [x] format-distribution-rules.ts
+            - [x] format-email-campaigns.ts
+            - [x] format-products.ts
+            - [x] format-segments.ts
+            - [x] format-timeline.ts
+            - [x] index.ts
+            - [x] post-campaign-sales.ts
+            - [x] process-backers.ts
+            - [x] workflow.ts
+          - [x] **integrations/**
+            - [x] route.ts
+          - [x] **modifiers/**
+            - [x] route.ts
+          - [x] **notes/**
+            - [x] route.ts
+          - [x] **orders/**
+            - [x] **notify-balance/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **products/**
+            - [x] route.ts
+          - [x] **segments/**
+            - [x] **backers/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **settings/**
+            - [x] **image/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **shipping/**
+            - [x] route.ts
+          - [x] **shipping-providers/**
+            - [x] **credentials/**
+              - [x] route.ts
+          - [x] **shippo/**
+            - [x] route.ts
+          - [x] **shipstation/**
+            - [x] route.ts
+          - [x] **shopify/**
+            - [x] **credentials/**
+              - [x] route.ts
+            - [x] **oauth/**
+              - [x] **authorize/**
+                - [x] route.ts
+              - [x] **callback/**
+                - [x] route.ts
+            - [x] **sku-mapping/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **stamps/**
+            - [x] route.ts
+          - [x] **surveys/**
+            - [x] **[pledgeId]/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **timeline/**
+            - [x] route.ts
+          - [x] **transactions/**
+            - [x] route.ts
+          - [x] **updates/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **marketplace/**
+          - [x] **books/**
+            - [x] **[id]/**
+              - [x] **submit/**
+                - [x] route.ts
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **company/**
+            - [x] route.ts
+          - [x] **discount-codes/**
+            - [x] route.ts
+          - [x] **files/**
+            - [x] **upload/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **media/**
+          - [x] **upload/**
+            - [x] route.ts
+        - [x] **paypal/**
+          - [x] route.ts
+        - [x] **paypal-bank-account/**
+          - [x] route.ts
+        - [x] **pledges/**
+          - [x] **[pledgeId]/**
+            - [x] route.ts
+          - [x] **bulk-delete/**
+            - [x] route.ts
+        - [x] **prelaunch-pages/**
+          - [x] route.ts
+        - [x] **projects-for-import/**
+          - [x] route.ts
+        - [x] **refund-requests/**
+          - [x] **[requestId]/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **stripe/**
+          - [x] **portal/**
+            - [x] route.ts
+        - [x] **whop-bank-account/**
+          - [x] route.ts
+      - [x] **cron/**
+        - [x] **ai-marketing/**
+          - [x] route.ts
+        - [x] **cleanup-pledges/**
+          - [x] route.ts
+        - [x] **cleanup-projects/**
+          - [x] route.ts
+        - [x] **email-queue/**
+          - [x] route.ts
+        - [x] **email-retries/**
+          - [x] route.ts
+        - [x] **payment-retries/**
+          - [x] route.ts
+        - [x] **process-failed-campaigns/**
+          - [x] route.ts
+        - [x] **process-funded-campaigns/**
+          - [x] route.ts
+        - [x] **scheduled-campaigns/**
+          - [x] route.ts
+      - [x] **diagnostics/**
+        - [x] **payment/**
+          - [x] route.ts
+      - [x] **divinitycoin/**
+        - [x] **config/**
+          - [x] route.ts
+      - [x] **email/**
+        - [x] **track/**
+          - [x] **click/**
+            - [x] route.ts
+          - [x] **open/**
+            - [x] route.ts
+      - [x] **error-report/**
+        - [x] route.ts
+      - [x] **health/**
+        - [x] route.ts
+      - [x] **hero-slides/**
+        - [x] route.ts
+      - [x] **home-stats/**
+        - [x] route.ts
+      - [x] **internal/**
+        - [x] **blocked-ips/**
+          - [x] route.ts
+      - [x] **lcs-locator/**
+        - [x] **import/**
+          - [x] route.ts
+        - [x] route.ts
+      - [x] **marketplace/**
+        - [x] **books/**
+          - [x] **[slug]/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **checkout/**
+          - [x] **verify/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **companies/**
+          - [x] **[slug]/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **paypal/**
+          - [x] **capture/**
+            - [x] **[orderId]/**
+              - [x] route.ts
+        - [x] **purchase/**
+          - [x] **confirm/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **redeem-code/**
+          - [x] route.ts
+        - [x] **validate-code/**
+          - [x] route.ts
+      - [x] **messages/**
+        - [x] **user-info/**
+          - [x] route.ts
+        - [x] route.ts
+      - [x] **metrics/**
+        - [x] route.ts
+      - [x] **og/**
+        - [x] route.tsx
+      - [x] **pay/**
+        - [x] **balance/**
+          - [x] **confirm/**
+            - [x] route.ts
+          - [x] route.ts
+      - [x] **paypal/**
+        - [x] **capture/**
+          - [x] **[orderId]/**
+            - [x] route.ts
+        - [x] **client-token/**
+          - [x] route.ts
+        - [x] **config/**
+          - [x] route.ts
+      - [x] **platform-stats/**
+        - [x] route.ts
+      - [x] **pledges/**
+        - [x] **[pledgeId]/**
+          - [x] **add-items/**
+            - [x] route.ts
+          - [x] **confirm/**
+            - [x] route.ts
+          - [x] **confirm-add-items/**
+            - [x] route.ts
+          - [x] **confirm-modify/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **check/**
+          - [x] route.ts
+        - [x] route.ts
+      - [x] **privacy/**
+        - [x] **ccpa-opt-out/**
+          - [x] route.ts
+      - [x] **projects/**
+        - [x] **[id]/**
+          - [x] **basics/**
+            - [x] route.ts
+          - [x] **chargeback-card/**
+            - [x] route.ts
+          - [x] **collaborators/**
+            - [x] **me/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **comments/**
+            - [x] route.ts
+          - [x] **contact-email/**
+            - [x] route.ts
+          - [x] **items/**
+            - [x] **[itemId]/**
+              - [x] **end/**
+                - [x] route.ts
+            - [x] route.ts
+          - [x] **launch/**
+            - [x] route.ts
+          - [x] **members/**
+            - [x] **import/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **payment/**
+            - [x] route.ts
+          - [x] **prelaunch/**
+            - [x] route.ts
+          - [x] **promotion/**
+            - [x] route.ts
+          - [x] **reviews/**
+            - [x] route.ts
+          - [x] **rewards/**
+            - [x] route.ts
+          - [x] **story/**
+            - [x] route.ts
+          - [x] **submit/**
+            - [x] route.ts
+          - [x] **survey/**
+            - [x] **backer-questions/**
+              - [x] route.ts
+            - [x] **item-questions/**
+              - [x] route.ts
+            - [x] **lock/**
+              - [x] route.ts
+            - [x] **responses/**
+              - [x] route.ts
+            - [x] **send/**
+              - [x] route.ts
+            - [x] route.ts
+          - [x] **sync-stats/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **similar/**
+          - [x] route.ts
+        - [x] **slug/**
+          - [x] **[slug]/**
+            - [x] **check/**
+              - [x] route.ts
+            - [x] **stats/**
+              - [x] route.ts
+            - [x] route.ts
+        - [x] **vanity/**
+          - [x] **[vanityname]/**
+            - [x] **[slug]/**
+              - [x] **stats/**
+                - [x] route.ts
+              - [x] route.ts
+        - [x] route.ts
+      - [x] **promo-popup/**
+        - [x] route.ts
+      - [x] **r2/**
+        - [x] **serve/**
+          - [x] **[...key]/**
+            - [x] route.ts
+      - [x] **recommendations/**
+        - [x] route.ts
+      - [x] **retailers/**
+        - [x] **account/**
+          - [x] route.ts
+        - [x] **apply/**
+          - [x] route.ts
+        - [x] **forgot-password/**
+          - [x] route.ts
+        - [x] **invoices/**
+          - [x] route.ts
+        - [x] **login/**
+          - [x] route.ts
+        - [x] **logout/**
+          - [x] route.ts
+        - [x] **me/**
+          - [x] route.ts
+        - [x] **orders/**
+          - [x] route.ts
+        - [x] **projects/**
+          - [x] **[id]/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **reset-password/**
+          - [x] route.ts
+        - [x] **session-auth/**
+          - [x] route.ts
+      - [x] **rewards/**
+        - [x] **[id]/**
+          - [x] **copy-to-addon/**
+            - [x] route.ts
+          - [x] **end/**
+            - [x] route.ts
+          - [x] **shipping/**
+            - [x] route.ts
+        - [x] route.ts
+      - [x] **stripe/**
+        - [x] **config/**
+          - [x] route.ts
+        - [x] **connect/**
+          - [x] **refresh/**
+            - [x] route.ts
+          - [x] **reset/**
+            - [x] route.ts
+          - [x] **status/**
+            - [x] route.ts
+          - [x] route.ts
+      - [x] **surveys/**
+        - [x] **[pledgeId]/**
+          - [x] **respond/**
+            - [x] route.ts
+        - [x] route.ts
+      - [x] **track/**
+        - [x] route.ts
+      - [x] **tracking/**
+        - [x] route.ts
+      - [x] **unsubscribe/**
+        - [x] route.ts
+      - [x] **updates/**
+        - [x] route.ts
+      - [x] **upload/**
+        - [x] route.ts
+      - [x] **uploads/**
+        - [x] **[...path]/**
+          - [x] route.ts
+      - [x] **user/**
+        - [x] **activity/**
+          - [x] route.ts
+        - [x] **data-deletion/**
+          - [x] route.ts
+        - [x] **data-export/**
+          - [x] route.ts
+        - [x] **following/**
+          - [x] route.ts
+        - [x] **me/**
+          - [x] route.ts
+        - [x] **notifications/**
+          - [x] route.ts
+        - [x] **profile/**
+          - [x] route.ts
+        - [x] **profile-dropdown/**
+          - [x] route.ts
+        - [x] **public-profile/**
+          - [x] **[username]/**
+            - [x] route.ts
+        - [x] **settings/**
+          - [x] **email/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **vanity-url/**
+          - [x] route.ts
+        - [x] **verify-email/**
+          - [x] route.ts
+      - [x] **verify-id/**
+        - [x] **callback/**
+          - [x] route.ts
+        - [x] **check/**
+          - [x] route.ts
+        - [x] route.ts
+      - [x] **webhooks/**
+        - [x] **divinitycoin/**
+          - [x] route.ts
+        - [x] **email/**
+          - [x] **events/**
+            - [x] route.ts
+          - [x] **inbound/**
+            - [x] route.ts
+        - [x] **paypal/**
+          - [x] route.ts
+        - [x] **stripe/**
+          - [x] **connect/**
+            - [x] route.ts
+          - [x] route.ts
+        - [x] **stripe_connect/**
+          - [x] route.ts
+        - [x] **whop/**
+          - [x] route.ts
+      - [x] **whop/**
+        - [x] **config/**
+          - [x] route.ts
+        - [x] **confirm/**
+          - [x] **[pledgeId]/**
+            - [x] route.ts
+    - [x] **backer-handbook/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **bug-report/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **cart/**
+      - [x] page.tsx
+    - [x] **changelog/**
+      - [x] page.tsx
+    - [x] **chat/**
+      - [x] page.tsx
+    - [x] **collaborate/**
+      - [x] **[id]/**
+        - [x] page.tsx
+      - [x] layout.tsx
+    - [x] **contact/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **creator-handbook/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **dashboard/**
+      - [x] **activity/**
+        - [x] page.tsx
+      - [x] **backer/**
+        - [x] **components/**
+          - [x] **digital-library-sections/**
+            - [x] constants.ts
+            - [x] index.ts
+            - [x] library-card.tsx
+            - [x] library-toolbar.tsx
+            - [x] reader-view.tsx
+            - [x] types.ts
+          - [x] address-management-tab.tsx
+          - [x] animated-bar-chart.tsx
+          - [x] circular-progress.tsx
+          - [x] collections-tab.tsx
+          - [x] digital-downloads-tab.tsx
+          - [x] digital-library-tab.tsx
+          - [x] download-card.tsx
+          - [x] following-tab.tsx
+          - [x] fulfillment-pipeline.tsx
+          - [x] glowing-stat-card.tsx
+          - [x] index.ts
+          - [x] messages-tab.tsx
+          - [x] notification-preferences-tab.tsx
+          - [x] spending-analytics-tab.tsx
+          - [x] survey-hub-tab.tsx
+        - [x] page.tsx
+      - [x] **components/**
+        - [x] AnimatedBarChart.tsx
+        - [x] BackersList.tsx
+        - [x] CircularProgress.tsx
+        - [x] CollaborationsTab.tsx
+        - [x] EmailTab.tsx
+        - [x] FundingChart.tsx
+        - [x] GlowingStatCard.tsx
+        - [x] IndieKitV2Tab.tsx
+        - [x] MarketplaceTab.tsx
+        - [x] PostUpdatesTab.tsx
+        - [x] ProductionOrderView.tsx
+        - [x] ProjectSelector.tsx
+        - [x] QuickStats.tsx
+        - [x] RecentBackersCard.tsx
+        - [x] RewardStats.tsx
+        - [x] SocialHubTab.tsx
+        - [x] StatsCards.tsx
+        - [x] StripeAccountAlert.tsx
+        - [x] TrafficSources.tsx
+        - [x] index.ts
+      - [x] **following/**
+        - [x] page.tsx
+      - [x] **indiekit/**
+        - [x] **components/**
+          - [x] **dialogs/**
+            - [x] addon-dialog.tsx
+            - [x] address-validation-dialog.tsx
+            - [x] backer-dialog.tsx
+            - [x] balance-editor-dialog.tsx
+            - [x] confirm-dialog.tsx
+            - [x] distribution-dialog.tsx
+            - [x] edit-order-dialog.tsx
+            - [x] email-composer-dialog.tsx
+            - [x] email-dialog.tsx
+            - [x] export-dialog.tsx
+            - [x] import-addon-from-project-dialog.tsx
+            - [x] import-email-dialog.tsx
+            - [x] index.ts
+            - [x] notes-dialog.tsx
+            - [x] nps-feedback-dialog.tsx
+            - [x] packing-slip-dialog.tsx
+            - [x] refund-dialog.tsx
+            - [x] segment-dialog.tsx
+            - [x] tracking-dialog.tsx
+            - [x] upload-dialog.tsx
+          - [x] **tabs/**
+            - [x] **packages-sections/**
+              - [x] index.ts
+              - [x] instructions-content.tsx
+              - [x] package-group-card.tsx
+              - [x] packages-dialogs.tsx
+              - [x] sku-mapping-content.tsx
+            - [x] **settings-sections/**
+              - [x] general-section.tsx
+              - [x] index.ts
+              - [x] integrations-section.tsx
+              - [x] notifications-section.tsx
+              - [x] payments-section.tsx
+              - [x] shipping-providers-section.tsx
+              - [x] shipping-section.tsx
+              - [x] shopify-credentials-section.tsx
+              - [x] survey-section.tsx
+              - [x] team-section.tsx
+            - [x] **sku-mapping-sections/**
+              - [x] index.ts
+              - [x] modifier-combination-row.tsx
+              - [x] modifier-combinations-card.tsx
+              - [x] sku-input-field.tsx
+              - [x] sku-item-row.tsx
+              - [x] types.ts
+            - [x] account-settings-tab.tsx
+            - [x] addons-tab.tsx
+            - [x] backers-tab.tsx
+            - [x] counts-tab.tsx
+            - [x] digital-tab.tsx
+            - [x] email-list-tab.tsx
+            - [x] emails-tab.tsx
+            - [x] export-tab.tsx
+            - [x] inbox-tab.tsx
+            - [x] index.ts
+            - [x] manage-survey-tab.tsx
+            - [x] overview-tab.tsx
+            - [x] packages-tab.tsx
+            - [x] preorders-tab.tsx
+            - [x] products-tab.tsx
+            - [x] projects-tab.tsx
+            - [x] segments-tab.tsx
+            - [x] settings-tab.tsx
+            - [x] shipping-tab.tsx
+            - [x] sku-mapping-tab.tsx
+            - [x] support-tab.tsx
+            - [x] survey-builder-tab.tsx
+            - [x] teaser-pages-tab.tsx
+            - [x] timeline-tab.tsx
+            - [x] transaction-history-tab.tsx
+            - [x] updates-tab.tsx
+          - [x] **ui/**
+            - [x] charts.tsx
+            - [x] empty-states.tsx
+            - [x] global-search.tsx
+            - [x] help-tooltip.tsx
+            - [x] index.ts
+            - [x] keyboard-shortcuts.tsx
+            - [x] skeleton.tsx
+          - [x] whats-next-banner.tsx
+        - [x] **emails/**
+          - [x] **[id]/**
+            - [x] **edit/**
+              - [x] page.tsx
+        - [x] **shopify/**
+          - [x] **app/**
+            - [x] page.tsx
+          - [x] **install/**
+            - [x] page.tsx
+        - [x] **survey/**
+          - [x] **[pledgeId]/**
+            - [x] page.tsx
+        - [x] constants.ts
+        - [x] page.tsx
+        - [x] types.ts
+      - [x] **indiekit-v2/**
+        - [x] **components/**
+          - [x] **layout/**
+            - [x] PhaseSelector.tsx
+            - [x] WorkflowProgress.tsx
+          - [x] **tabs/**
+            - [x] DashboardTab.tsx
+            - [x] DigitalDeliveryTab.tsx
+            - [x] EmailMarketingTab.tsx
+            - [x] FinalizeTab.tsx
+            - [x] PaymentsTab.tsx
+            - [x] PhysicalDeliveryTab.tsx
+            - [x] RefundRequestsTab.tsx
+            - [x] ReportsTab.tsx
+            - [x] SetupTab.tsx
+            - [x] SurveysTab.tsx
+        - [x] constants.ts
+        - [x] page.tsx
+        - [x] types.ts
+      - [x] **marketplace/**
+        - [x] **books/**
+          - [x] **[id]/**
+            - [x] **edit/**
+              - [x] **components/**
+                - [x] FileUpload.tsx
+                - [x] PDFFilePicker.tsx
+                - [x] StatusBanner.tsx
+                - [x] StepBasicInfo.tsx
+                - [x] StepIndicator.tsx
+                - [x] StepMedia.tsx
+                - [x] StepPricing.tsx
+                - [x] StepReview.tsx
+                - [x] types.ts
+              - [x] page.tsx
+          - [x] **new/**
+            - [x] page.tsx
+        - [x] **company/**
+          - [x] page.tsx
+        - [x] **components/**
+          - [x] AnalyticsTab.tsx
+          - [x] BookCard.tsx
+          - [x] BooksGrid.tsx
+          - [x] CompanyProfileCard.tsx
+          - [x] PromoCodesTab.tsx
+          - [x] StatsCard.tsx
+          - [x] StatusBadge.tsx
+          - [x] types.ts
+        - [x] page.tsx
+      - [x] **messages/**
+        - [x] page.tsx
+      - [x] **notifications/**
+        - [x] page.tsx
+      - [x] **pledges/**
+        - [x] **[pledgeId]/**
+          - [x] **survey/**
+            - [x] **components/**
+              - [x] QuestionInput.tsx
+              - [x] SurveyAddonsStep.tsx
+              - [x] SurveyAddressStep.tsx
+              - [x] SurveyErrorState.tsx
+              - [x] SurveyHeader.tsx
+              - [x] SurveyIntroStep.tsx
+              - [x] SurveyItemsStep.tsx
+              - [x] SurveyLockedState.tsx
+              - [x] SurveyPaymentStep.tsx
+              - [x] SurveyQuestionsStep.tsx
+              - [x] SurveyReviewStep.tsx
+              - [x] types.ts
+            - [x] page.tsx
+          - [x] page.tsx
+      - [x] **profile/**
+        - [x] page.tsx
+      - [x] **projects/**
+        - [x] **[id]/**
+          - [x] **survey/**
+            - [x] **responses/**
+              - [x] page.tsx
+            - [x] page.tsx
+        - [x] page.tsx
+      - [x] **settings/**
+        - [x] **components/**
+          - [x] AccountCard.tsx
+          - [x] ConnectedServicesCard.tsx
+          - [x] EmailChangeDialog.tsx
+          - [x] LoadingState.tsx
+          - [x] PaypalCard.tsx
+          - [x] PrivacyCard.tsx
+          - [x] ProfileCard.tsx
+          - [x] SettingsHeader.tsx
+          - [x] SubscriptionsCard.tsx
+          - [x] types.ts
+        - [x] page.tsx
+      - [x] **social/**
+        - [x] page.tsx
+      - [x] **updates/**
+        - [x] page.tsx
+      - [x] error.tsx
+      - [x] layout.tsx
+      - [x] loading.tsx
+      - [x] page.tsx
+      - [x] types.ts
+    - [x] **discover/**
+      - [x] layout.tsx
+      - [x] loading.tsx
+      - [x] page.tsx
+    - [x] **explore/**
+      - [x] page.tsx
+    - [x] **faq/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **fees/**
+      - [x] calculations.ts
+      - [x] data.ts
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **fulfillment/**
+      - [x] page.tsx
+    - [x] **help/**
+      - [x] **whitelist/**
+        - [x] page.tsx
+      - [x] page.tsx
+    - [x] **indiekit-handbook/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **lcs-locator/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **marketplace/**
+      - [x] **books/**
+        - [x] **[slug]/**
+          - [x] layout.tsx
+          - [x] page.tsx
+        - [x] **featured/**
+          - [x] page.tsx
+        - [x] **staff-picks/**
+          - [x] page.tsx
+        - [x] layout.tsx
+        - [x] page.tsx
+      - [x] **checkout/**
+        - [x] **success/**
+          - [x] page.tsx
+      - [x] **companies/**
+        - [x] **[slug]/**
+          - [x] layout.tsx
+          - [x] page.tsx
+      - [x] **components/**
+        - [x] MarketplacePayPalForm.tsx
+      - [x] **physical-media/**
+        - [x] layout.tsx
+        - [x] page.tsx
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **marketplace-handbook/**
+      - [x] **backers/**
+        - [x] page.tsx
+      - [x] **creators/**
+        - [x] page.tsx
+      - [x] layout.tsx
+    - [x] **pay/**
+      - [x] **balance/**
+        - [x] **[token]/**
+          - [x] page.tsx
+    - [x] **privacy/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **projects/**
+      - [x] **[vanityname]/**
+        - [x] **[slug]/**
+          - [x] **edit/**
+            - [x] page.tsx
+          - [x] **pledge/**
+            - [x] **components/**
+              - [x] AddonSelector.tsx
+              - [x] AddressWarning.tsx
+              - [x] Breadcrumb.tsx
+              - [x] DCPaymentWrapper.tsx
+              - [x] ErrorState.tsx
+              - [x] FAQSection.tsx
+              - [x] LoadingState.tsx
+              - [x] OrderSummary.tsx
+              - [x] PayPalPaymentForm.tsx
+              - [x] PaymentStep.tsx
+              - [x] RewardSelector.tsx
+              - [x] StripePaymentForm.tsx
+              - [x] SuccessPage.tsx
+              - [x] WhopPaymentForm.tsx
+            - [x] **hooks/**
+              - [x] usePledge.ts
+            - [x] constants.ts
+            - [x] page.tsx
+            - [x] types.ts
+            - [x] utils.ts
+          - [x] **prelaunch/**
+            - [x] layout.tsx
+            - [x] page.tsx
+          - [x] layout.tsx
+          - [x] loading.tsx
+          - [x] page.tsx
+      - [x] **new/**
+        - [x] page.tsx
+      - [x] page.tsx
+    - [x] **retailers/**
+      - [x] **account/**
+        - [x] page.tsx
+      - [x] **apply/**
+        - [x] page.tsx
+      - [x] **dashboard/**
+        - [x] **components/**
+          - [x] RetailerAccountTab.tsx
+          - [x] RetailerInvoicesTab.tsx
+          - [x] RetailerOrdersTab.tsx
+          - [x] RetailerProjectsTab.tsx
+        - [x] page.tsx
+      - [x] **forgot-password/**
+        - [x] page.tsx
+      - [x] **invoices/**
+        - [x] page.tsx
+      - [x] **login/**
+        - [x] page.tsx
+      - [x] **orders/**
+        - [x] page.tsx
+      - [x] **projects/**
+        - [x] **[id]/**
+          - [x] page.tsx
+        - [x] page.tsx
+      - [x] **reset-password/**
+        - [x] page.tsx
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **settings/**
+      - [x] **payment/**
+        - [x] **stripe/**
+          - [x] **complete/**
+            - [x] page.tsx
+          - [x] **refresh/**
+            - [x] page.tsx
+        - [x] page.tsx
+    - [x] **success-stories/**
+      - [x] page.tsx
+    - [x] **survey/**
+      - [x] **preview/**
+        - [x] page.tsx
+    - [x] **term/**
+      - [x] page.tsx
+    - [x] **terms/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **trust-safety/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] **u/**
+      - [x] **[username]/**
+        - [x] layout.tsx
+        - [x] page.tsx
+    - [x] **verification-complete/**
+      - [x] page.tsx
+    - [x] **verify-email/**
+      - [x] page.tsx
+    - [x] **what-is-divinitycoin/**
+      - [x] layout.tsx
+      - [x] page.tsx
+    - [x] error.tsx
+    - [x] global-error.tsx
+    - [x] layout.tsx
+    - [x] not-found.tsx
+    - [x] page.tsx
+    - [x] robots.ts
+    - [x] sitemap.ts
+  - [x] **components/**
+    - [x] **admin/**
+      - [x] **ai-marketing/**
+        - [x] **dialogs/**
+          - [x] campaign-dialog.tsx
+          - [x] campaign-type-dialog.tsx
+          - [x] csv-import-dialog.tsx
+          - [x] index.ts
+          - [x] results-viewer-dialog.tsx
+          - [x] tag-review-dialog.tsx
+        - [x] ai-settings-tab.tsx
+        - [x] auto-tagging-tab.tsx
+        - [x] behavior-analytics-tab.tsx
+        - [x] email-campaigns-tab.tsx
+        - [x] index.ts
+        - [x] overview-tab.tsx
+        - [x] subscriber-list-tab.tsx
+        - [x] tag-segments-tab.tsx
+      - [x] **settings/**
+        - [x] ai-settings.tsx
+        - [x] analytics-settings.tsx
+        - [x] api-settings.tsx
+        - [x] communication-settings.tsx
+        - [x] database-settings.tsx
+        - [x] email-settings.tsx
+        - [x] general-settings.tsx
+        - [x] id-verification-settings.tsx
+        - [x] index.ts
+        - [x] payment-settings.tsx
+        - [x] security-settings.tsx
+        - [x] social-settings.tsx
+        - [x] storage-settings.tsx
+    - [x] **auth/**
+      - [x] forgot-password-form.tsx
+      - [x] login-form.tsx
+      - [x] recaptcha.tsx
+      - [x] register-form.tsx
+      - [x] reset-password-form.tsx
+    - [x] **chat/**
+      - [x] chat-room.tsx
+    - [x] **legal/**
+      - [x] ai-policy.tsx
+      - [x] backer-agreement.tsx
+      - [x] chargebacks-policy.tsx
+      - [x] content-guidelines.tsx
+      - [x] cookie-policy.tsx
+      - [x] creator-agreement.tsx
+      - [x] data-deletion-policy.tsx
+      - [x] dmca-policy.tsx
+      - [x] fraud-policy.tsx
+      - [x] gdpr-ccpa-policy.tsx
+      - [x] index.ts
+      - [x] nsfw-policy.tsx
+      - [x] pci-compliance.tsx
+      - [x] privacy-policy.tsx
+      - [x] refund-policy.tsx
+      - [x] shipping-policy.tsx
+      - [x] terms-of-service.tsx
+    - [x] **marketplace/**
+      - [x] marketplace-payment-settings.tsx
+    - [x] **messaging/**
+      - [x] messages-panel.tsx
+    - [x] **notifications/**
+      - [x] notifications-dropdown.tsx
+    - [x] **project/**
+      - [x] **builder/**
+        - [x] **payment-sections/**
+          - [x] campaign-type-section.tsx
+          - [x] chargeback-card-section.tsx
+          - [x] contact-email-section.tsx
+          - [x] content-declaration-section.tsx
+          - [x] divinity-coin-bank-section.tsx
+          - [x] index.ts
+          - [x] payment-processor-section.tsx
+          - [x] paypal-bank-payout-section.tsx
+          - [x] paypal-payout-section.tsx
+          - [x] project-type-section.tsx
+          - [x] retailer-access-section.tsx
+          - [x] stripe-connect-section.tsx
+          - [x] types.ts
+          - [x] whop-bank-payout-section.tsx
+        - [x] **rewards-step/**
+          - [x] addons-tab.tsx
+          - [x] constants.ts
+          - [x] csv-import-screen.tsx
+          - [x] import-addon-dialog.tsx
+          - [x] import-reward-dialog.tsx
+          - [x] index.tsx
+          - [x] item-dialog.tsx
+          - [x] items-tab.tsx
+          - [x] reward-form.tsx
+          - [x] tiers-tab.tsx
+        - [x] basics-step.tsx
+        - [x] new-project-wrapper.tsx
+        - [x] payment-step.tsx
+        - [x] people-step.tsx
+        - [x] project-builder.tsx
+        - [x] promotion-step.tsx
+        - [x] rewards-step.tsx
+        - [x] story-step.tsx
+    - [x] **project-details/**
+      - [x] **tabs/**
+        - [x] campaign-tab.tsx
+        - [x] comments-tab.tsx
+        - [x] community-tab.tsx
+        - [x] creator-tab.tsx
+        - [x] faq-tab.tsx
+        - [x] index.ts
+        - [x] rewards-tab.tsx
+        - [x] updates-tab.tsx
+      - [x] index.ts
+      - [x] social-icons.tsx
+      - [x] types.ts
+      - [x] utils.ts
+    - [x] **providers/**
+      - [x] auth-provider.tsx
+      - [x] theme-provider.tsx
+    - [x] **ui/**
+      - [x] accordion.tsx
+      - [x] alert-dialog.tsx
+      - [x] alert.tsx
+      - [x] avatar.tsx
+      - [x] badge.tsx
+      - [x] block-editor.tsx
+      - [x] button.tsx
+      - [x] calendar.tsx
+      - [x] card.tsx
+      - [x] checkbox.tsx
+      - [x] collapsible.tsx
+      - [x] confirm-dialog.tsx
+      - [x] countdown-timer.tsx
+      - [x] dialog.tsx
+      - [x] drag-drop-image-cell.tsx
+      - [x] dropdown-menu.tsx
+      - [x] editable-input.tsx
+      - [x] email-editor.tsx
+      - [x] form.tsx
+      - [x] image-upload.tsx
+      - [x] input.tsx
+      - [x] label.tsx
+      - [x] location-autocomplete.tsx
+      - [x] popover.tsx
+      - [x] progress.tsx
+      - [x] radio-group.tsx
+      - [x] rich-text-editor.tsx
+      - [x] screen-reader-announcer.tsx
+      - [x] scroll-area.tsx
+      - [x] secure-key-input.tsx
+      - [x] select.tsx
+      - [x] separator.tsx
+      - [x] sheet.tsx
+      - [x] skeleton.tsx
+      - [x] slider.tsx
+      - [x] sonner.tsx
+      - [x] star-rating.tsx
+      - [x] switch.tsx
+      - [x] table.tsx
+      - [x] tabs.tsx
+      - [x] textarea.tsx
+      - [x] tooltip.tsx
+    - [x] PdfPageFlipReader.tsx
+    - [x] PdfThumbnail.tsx
+    - [x] announcement-bar.tsx
+    - [x] back-to-top.tsx
+    - [x] consent-banner.tsx
+    - [x] email-verification-banner.tsx
+    - [x] error-reporter.tsx
+    - [x] footer.tsx
+    - [x] google-analytics.tsx
+    - [x] hero-slider.tsx
+    - [x] home-stats-poller.tsx
+    - [x] json-ld.tsx
+    - [x] mobile-profile-links.tsx
+    - [x] payment-settings.tsx
+    - [x] promo-popup.tsx
+    - [x] site-header.tsx
+    - [x] theme-toggle.tsx
+    - [x] tracking-provider.tsx
+    - [x] user-profile-dropdown.tsx
+  - [x] **lib/**
+    - [x] **ai/**
+      - [x] anthropic.ts
+      - [x] automation.ts
+      - [x] index.ts
+      - [x] marketing-services.ts
+      - [x] settings-integration.ts
+      - [x] user-interests.ts
+    - [x] **auth/**
+      - [x] actions.ts
+      - [x] constants.ts
+      - [x] email-access.ts
+      - [x] index.ts
+      - [x] rate-limit.ts
+      - [x] recaptcha.ts
+      - [x] session.ts
+    - [x] **db/**
+      - [x] index.ts
+    - [x] **email/**
+      - [x] email-config.ts
+      - [x] email-templates-auth.ts
+      - [x] email-templates-misc.ts
+      - [x] email-templates-pledge.ts
+      - [x] email-templates-project.ts
+      - [x] sendgrid-verify.ts
+    - [x] **gdpr/**
+      - [x] execute-deletions.ts
+    - [x] **notifications/**
+      - [x] core.ts
+      - [x] email-templates.ts
+      - [x] index.ts
+      - [x] marketplace-notifications.ts
+      - [x] pledge-notifications.ts
+      - [x] project-notifications.ts
+      - [x] social-notifications.ts
+      - [x] types.ts
+    - [x] **oauth/**
+      - [x] config.ts
+    - [x] **payments/**
+      - [x] **divinitycoin/**
+        - [x] cards.ts
+        - [x] client.ts
+        - [x] config.ts
+        - [x] index.ts
+        - [x] payments.ts
+        - [x] types.ts
+        - [x] webhooks.ts
+      - [x] **paypal/**
+        - [x] capture-authorized.ts
+        - [x] checkout.ts
+        - [x] config.ts
+        - [x] index.ts
+      - [x] **stripe/**
+        - [x] charges.ts
+        - [x] checkout.ts
+        - [x] config.ts
+        - [x] connect.ts
+        - [x] customers.ts
+        - [x] index.ts
+        - [x] intents.ts
+        - [x] rewards.ts
+        - [x] webhooks.ts
+      - [x] **whop/**
+        - [x] checkout.ts
+        - [x] config.ts
+        - [x] index.ts
+    - [x] **recommendations/**
+      - [x] engine.ts
+    - [x] **seo/**
+      - [x] indexing.ts
+    - [x] **stats/**
+      - [x] actions.ts
+      - [x] index.ts
+      - [x] utils.ts
+    - [x] **stores/**
+      - [x] project-store.ts
+    - [x] **tracking/**
+      - [x] index.ts
+    - [x] **utils/**
+      - [x] api-params.ts
+      - [x] sanitize.ts
+    - [x] api-error.ts
+    - [x] audit.ts
+    - [x] auth-helpers.ts
+    - [x] bot-blocker.ts
+    - [x] circuit-breaker.ts
+    - [x] consent.ts
+    - [x] correlation.ts
+    - [x] csrf.ts
+    - [x] email.ts
+    - [x] encryption.ts
+    - [x] error-tracker.ts
+    - [x] feature-flags.ts
+    - [x] fetch-utils.ts
+    - [x] local-books-db.ts
+    - [x] logger.ts
+    - [x] metrics.ts
+    - [x] notifications.ts
+    - [x] pdf-cover-extractor.ts
+    - [x] project-auth.ts
+    - [x] project-permissions.ts
+    - [x] r2.ts
+    - [x] rate-limiter.ts
+    - [x] retailer-auth.ts
+    - [x] seo-audit.ts
+    - [x] seo-defaults.ts
+    - [x] shopify-push.ts
+    - [x] shufti.ts
+    - [x] stats.ts
+    - [x] tracking.ts
+    - [x] usePdfAsImages.ts
+    - [x] utils.ts
+    - [x] vault.ts
+  - [x] **types/**
+    - [x] api.ts
+    - [x] index.ts
+  - [x] instrumentation.ts
+  - [x] middleware.ts
