@@ -131,7 +131,7 @@ export default function WhatIsDivinityCoinPage() {
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
 
         {/* Key Message Box */}
-        <div className="mb-12 rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 p-8">
+        <div className="mb-12 rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 p-4 sm:p-6 md:p-8">
           <div className="flex flex-col md:flex-row gap-6 items-center">
             <div className="flex-shrink-0">
               <div className="p-4 bg-amber-100 dark:bg-amber-900/50 rounded-full">
@@ -152,7 +152,7 @@ export default function WhatIsDivinityCoinPage() {
         </div>
 
         {/* What DivinityCoin IS vs IS NOT */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
+        <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 mb-12">
           {/* IS */}
           <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -225,7 +225,7 @@ export default function WhatIsDivinityCoinPage() {
         {/* How It Works Section */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 text-center">How DivinityCoin Works</h2>
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div className="rounded-xl border border-border bg-card/80 backdrop-blur-sm p-5 text-center">
               <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center mb-3">
                 <ShoppingBag className="h-6 w-6 text-amber-600" />
@@ -275,7 +275,7 @@ export default function WhatIsDivinityCoinPage() {
             Both are secure payment processors. The main difference is which content types they support.
             As a backer, the checkout experience is nearly identical for both.
           </p>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-5">
               <div className="flex items-center gap-2 mb-3">
                 <CreditCard className="h-5 w-5 text-blue-600" />
@@ -310,7 +310,7 @@ export default function WhatIsDivinityCoinPage() {
         {/* Why Creators Choose DivinityCoin */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 text-center">Why Some Creators Use DivinityCoin</h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div className="rounded-xl border border-border bg-card/80 backdrop-blur-sm p-5">
               <div className="flex items-center gap-3 mb-3">
                 <Sparkles className="h-6 w-6 text-purple-500" />
@@ -402,7 +402,7 @@ export default function WhatIsDivinityCoinPage() {
           <p className="text-zinc-700 dark:text-muted-foreground mb-4">
             As a creator, you can choose DivinityCoin as your payment processor. Here&apos;s what you need to know:
           </p>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="rounded-lg bg-white dark:bg-zinc-800/50 p-4">
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Benefits</h4>
               <ul className="space-y-1 text-sm text-zinc-600 dark:text-muted-foreground">
@@ -436,7 +436,7 @@ export default function WhatIsDivinityCoinPage() {
             <Shield className="h-6 w-6 text-emerald-600" />
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Security & Protection</h2>
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <div>
@@ -482,7 +482,7 @@ export default function WhatIsDivinityCoinPage() {
         </div>
 
         {/* CTA Section */}
-        <div className="rounded-2xl bg-gradient-to-r from-amber-600 to-orange-500 p-8 text-center text-white">
+        <div className="rounded-2xl bg-gradient-to-r from-amber-600 to-orange-500 p-4 sm:p-6 md:p-8 text-center text-white">
           <Coins className="h-12 w-12 mx-auto mb-4" />
           <h3 className="text-2xl font-bold">Ready to Back a Project?</h3>
           <p className="mt-2 text-amber-100 max-w-xl mx-auto">

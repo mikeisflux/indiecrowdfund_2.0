@@ -157,7 +157,7 @@ export default function TrustSafetyPage() {
             <Badge className="bg-green-500/20 text-green-300 border-green-500/30 mb-6">
               Trust & Safety
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-6">
               Supporting Creators, Protecting Backers
             </h1>
             <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
@@ -195,7 +195,7 @@ export default function TrustSafetyPage() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
               {trustPillars.map((pillar) => (
                 <Card key={pillar.title} className="border-2 hover:border-primary/20 transition-colors">
                   <CardContent className="p-6">
@@ -447,7 +447,7 @@ export default function TrustSafetyPage() {
       <section className="py-12 bg-muted/50 relative">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               <Link href="/terms" className="group">
                 <Card className="h-full transition-shadow group-hover:shadow-md">
                   <CardContent className="p-6 text-center">

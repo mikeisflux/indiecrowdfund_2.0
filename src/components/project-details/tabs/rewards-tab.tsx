@@ -171,7 +171,7 @@ export function RewardsTab({
                         </div>
 
                         {/* Backers and Shipping */}
-                        <div className="grid grid-cols-2 gap-6 mb-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 mb-6">
                           <div>
                             <p className="text-xs text-muted-foreground uppercase mb-1">Backers</p>
                             <div className="flex items-center gap-2">

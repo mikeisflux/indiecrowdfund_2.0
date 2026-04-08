@@ -12,8 +12,8 @@ export function CreatorTab({ creator }: CreatorTabProps) {
   return (
     <div className="max-w-3xl mx-auto">
       <Card>
-        <CardContent className="p-8">
-          <div className="flex items-start gap-6 mb-6">
+        <CardContent className="p-4 sm:p-6 md:p-8">
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-6 mb-6">
             <Avatar className="h-20 w-20">
               <AvatarImage src={creator.image} />
               <AvatarFallback className="bg-black text-white text-2xl">
