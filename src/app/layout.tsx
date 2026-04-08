@@ -161,8 +161,7 @@ export default async function RootLayout({
       if (platformSettings.gtmEnabled && platformSettings.googleTagManagerId && validGtmId(platformSettings.googleTagManagerId)) {
         gtmId = platformSettings.googleTagManagerId;
       }
-      // Only inject GA4 directly if GTM is not active (avoid double-tracking)
-      if (platformSettings.gaEnabled && platformSettings.googleAnalyticsId && !gtmId) {
+      if (platformSettings.gaEnabled && platformSettings.googleAnalyticsId) {
         ga4Id = platformSettings.googleAnalyticsId;
       }
     }
@@ -171,14 +170,14 @@ export default async function RootLayout({
     if (!gtmId && process.env.NEXT_PUBLIC_GTM_ID && validGtmId(process.env.NEXT_PUBLIC_GTM_ID)) {
       gtmId = process.env.NEXT_PUBLIC_GTM_ID;
     }
-    if (!ga4Id && !gtmId && process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
+    if (!ga4Id && process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
       ga4Id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
     }
   } catch (error) {
     console.error("Layout data fetch error:", error);
     // Still try env var fallbacks if DB fetch failed entirely
     if (process.env.NEXT_PUBLIC_GTM_ID && validGtmId(process.env.NEXT_PUBLIC_GTM_ID)) gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-    else if (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) ga4Id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+    if (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) ga4Id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   }
 
   return (
