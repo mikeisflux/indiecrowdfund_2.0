@@ -34,7 +34,7 @@ export default function ChooseRoleClient() {
       <div className="relative z-10 w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12 animate-[fadeInDown_0.5s_ease-out]">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent mb-4">
             Welcome to IndieCrowdfund
           </h1>
           <p className="text-lg text-muted-foreground">
