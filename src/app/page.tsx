@@ -379,7 +379,7 @@ function ProjectSectionSkeleton() {
   return (
     <div className="py-8 md:py-12 relative">
       <div className="container">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="h-8 w-48 bg-muted rounded animate-pulse mb-2" />
             <div className="h-4 w-64 bg-muted rounded animate-pulse" />
@@ -448,7 +448,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
   return (
     <section className="py-8 md:py-12 relative">
       <div className="container">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-500/20 glow-pulse">
@@ -560,7 +560,7 @@ async function PrelaunchProjectsSection({ userId }: { userId: string | undefined
     <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent" />
       <div className="container relative">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 glow-pulse">
@@ -651,7 +651,7 @@ async function PastCampaignsSection() {
     <section className="relative border-t border-border/50 py-8 md:py-12 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-muted/20 to-transparent" />
       <div className="container relative">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="p-2 rounded-lg bg-gradient-to-br from-zinc-500/20 to-slate-500/20">

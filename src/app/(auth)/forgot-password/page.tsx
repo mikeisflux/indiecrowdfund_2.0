@@ -38,7 +38,7 @@ export default function ForgotPasswordPage() {
 
           {/* Main card */}
           <div
-            className="glass-card rounded-2xl border p-8 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500"
+            className="glass-card rounded-2xl border p-6 sm:p-8 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500"
             style={{ animationDelay: '100ms' }}
           >
             {/* Icon */}
