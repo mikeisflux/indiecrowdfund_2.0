@@ -141,7 +141,7 @@ export async function GET(request: Request) {
       albumId: book.albumId,
       trackNumber: book.trackNumber,
       // Video fields (movies)
-      videoUrl: book.videoFileUrl ? `/api/marketplace/watch/${book.slug}` : undefined,
+      movieUrl: book.videoFileUrl ? `/api/marketplace/watch/${book.slug}` : undefined,
       videoDuration: book.videoDuration,
       videoResolution: book.videoResolution,
       creator: {
