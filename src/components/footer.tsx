@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="border-t py-12 bg-background">
       <div className="container">
-        <div className="grid gap-8 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <div>
             <h4 className="mb-4 font-semibold">IndieCrowdfund</h4>
             <p className="text-sm text-muted-foreground">

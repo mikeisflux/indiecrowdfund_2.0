@@ -296,7 +296,7 @@ export function SubscriberListTab({ onImportCSV }: SubscriberListTabProps) {
   return (
     <div className="mt-6 space-y-6">
       {/* Category Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         {Object.entries(categoryInfo).map(([key, info]) => {
           const Icon = info.icon;
           const count = counts?.[key as keyof SubscriberCounts] || 0;
