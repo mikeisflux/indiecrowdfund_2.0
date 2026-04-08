@@ -664,11 +664,11 @@ export default function AboutUsPage() {
             <Badge className="bg-white/20 text-white border-0 mb-4 animate-in fade-in zoom-in duration-500">
               About IndieCrowdfund
             </Badge>
-            <h1 className="text-4xl md:text-6xl font-bold mb-4 text-white animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-4 text-white animate-in fade-in slide-in-from-bottom-4 duration-700">
               Empowering Independent Creators Since 2024
             </h1>
             <p
-              className="text-xl md:text-2xl text-white/80 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700"
+              className="text-base sm:text-xl md:text-2xl text-white/80 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700"
               style={{ animationDelay: '100ms' }}
             >
               We&apos;re building the most powerful and creator-friendly crowdfunding platform for comics, games, art, and creative projects.

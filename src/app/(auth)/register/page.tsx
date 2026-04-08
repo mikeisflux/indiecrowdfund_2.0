@@ -53,7 +53,7 @@ export default function RegisterPage() {
 
           {/* Benefits */}
           <div
-            className="flex justify-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500"
+            className="flex flex-wrap justify-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500"
             style={{ animationDelay: '50ms' }}
           >
             {benefits.map((benefit, index) => (

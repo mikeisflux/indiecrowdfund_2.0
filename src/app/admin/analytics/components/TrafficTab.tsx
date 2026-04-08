@@ -87,11 +87,11 @@ export function TrafficTab({ trafficData, formatNumber }: TrafficTabProps) {
             <div className="space-y-3">
               {trafficData.topReferrers.map((source) => (
                 <div key={source.referrer} className="flex items-center gap-3">
-                  <div className="w-28 shrink-0 font-medium truncate text-sm">{source.referrer}</div>
+                  <div className="w-20 sm:w-28 shrink-0 font-medium truncate text-sm">{source.referrer}</div>
                   <div className="flex-1">
                     <Progress value={(source.visits / maxReferrerVisits) * 100} className="h-2" />
                   </div>
-                  <div className="w-24 shrink-0 text-right text-sm text-muted-foreground">
+                  <div className="w-16 sm:w-24 shrink-0 text-right text-sm text-muted-foreground">
                     {formatNumber(source.visits)} visits
                   </div>
                 </div>

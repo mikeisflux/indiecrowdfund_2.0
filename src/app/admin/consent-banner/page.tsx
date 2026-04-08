@@ -305,7 +305,7 @@ export default function ConsentBannerPage() {
         <CardContent>
           <div className="space-y-3">
             {banner.content.links.map((link, index) => (
-              <div key={index} className="flex items-end gap-3 p-3 rounded-lg border">
+              <div key={index} className="flex flex-col sm:flex-row items-end gap-3 p-3 rounded-lg border">
                 <div className="flex-1 space-y-2">
                   <Label className="text-xs">Label</Label>
                   <Input

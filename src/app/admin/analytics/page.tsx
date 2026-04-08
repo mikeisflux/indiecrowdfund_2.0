@@ -301,7 +301,7 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Analytics</h1>
           <p className="text-muted-foreground">Comprehensive platform metrics and insights</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-full sm:w-[160px]">
               <Calendar className="mr-2 h-4 w-4" />

@@ -370,7 +370,7 @@ export default function HeroSliderPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -391,7 +391,7 @@ export default function HeroSliderPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
         {/* Slides List */}
         <div className="md:col-span-2 space-y-4">
           <Card>
@@ -868,7 +868,7 @@ export default function HeroSliderPage() {
               {(editingSlide?.mediaType === "YOUTUBE" || editingSlide?.mediaType === "VIDEO") && (
                 <div className="rounded-lg border p-4 space-y-4">
                   <h5 className="font-medium text-sm">Video Playback Settings</h5>
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div className="flex items-center justify-between rounded-lg bg-muted/50 dark:bg-zinc-900 p-3">
                       <div>
                         <Label className="text-sm">Autoplay</Label>
@@ -913,7 +913,7 @@ export default function HeroSliderPage() {
             <div className="space-y-4">
               <h4 className="font-medium">Display Settings</h4>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Text Alignment</Label>
                   <Select
@@ -1061,7 +1061,7 @@ export default function HeroSliderPage() {
               />
 
               <div
-                className={`absolute inset-0 flex flex-col justify-center p-8 ${
+                className={`absolute inset-0 flex flex-col justify-center p-4 sm:p-8 ${
                   previewSlide.textColor === "dark" ? "text-zinc-900" : "text-white"
                 } ${
                   previewSlide.textAlignment === "left"
@@ -1076,7 +1076,7 @@ export default function HeroSliderPage() {
                     {previewSlide.subtitle}
                   </p>
                 )}
-                <h2 className={`text-4xl font-bold mb-4 drop-shadow-lg ${previewSlide.textColor === "dark" ? "text-zinc-900" : ""}`}>
+                <h2 className={`text-2xl sm:text-4xl font-bold mb-4 drop-shadow-lg ${previewSlide.textColor === "dark" ? "text-zinc-900" : ""}`}>
                   {previewSlide.title}
                 </h2>
                 {previewSlide.description && previewSlide.showDescription !== false && (
