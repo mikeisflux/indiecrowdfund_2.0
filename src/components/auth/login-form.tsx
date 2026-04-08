@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { login } from "@/lib/auth/actions";
@@ -9,10 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { Recaptcha } from "./recaptcha";
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState<string | null>(null);
+  const [isRecaptchaEnabled, setIsRecaptchaEnabled] = useState(false);
+  const [recaptchaFailed, setRecaptchaFailed] = useState(false);
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
   const searchParams = useSearchParams();
   // Support both 'callbackUrl' and 'redirect' params
   const callbackUrl = searchParams?.get("callbackUrl") || searchParams?.get("redirect") || "/choose-role";
@@ -26,6 +32,50 @@ export function LoginForm() {
         : "An error occurred. Please try again.");
     }
   }, [searchParams]);
+
+  // Fetch reCAPTCHA settings from API (supports both DB and env config)
+  useEffect(() => {
+    async function fetchRecaptchaSettings() {
+      try {
+        const res = await fetch("/api/auth/recaptcha");
+        if (res.ok) {
+          const data = await res.json();
+          setIsRecaptchaEnabled(data.enabled);
+          setRecaptchaSiteKey(data.siteKey);
+        }
+      } catch (err) {
+        console.error("Failed to fetch reCAPTCHA settings:", err);
+      }
+    }
+    fetchRecaptchaSettings();
+  }, []);
+
+  // Timeout for reCAPTCHA loading - if it doesn't load in 10s, allow fallback
+  useEffect(() => {
+    if (!isRecaptchaEnabled || !recaptchaSiteKey) return;
+
+    const timeout = setTimeout(() => {
+      if (!recaptchaLoaded && !recaptchaToken) {
+        console.warn("[reCAPTCHA] Failed to load - may be blocked by browser/extension");
+        setRecaptchaFailed(true);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isRecaptchaEnabled, recaptchaSiteKey, recaptchaLoaded, recaptchaToken]);
+
+  const handleRecaptchaVerify = useCallback((token: string) => {
+    setRecaptchaToken(token);
+    setRecaptchaLoaded(true);
+  }, []);
+
+  const handleRecaptchaLoad = useCallback(() => {
+    setRecaptchaLoaded(true);
+  }, []);
+
+  const handleRecaptchaExpire = useCallback(() => {
+    setRecaptchaToken(null);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -46,7 +96,18 @@ export function LoginForm() {
       return;
     }
 
+    // Check reCAPTCHA if enabled (but allow if reCAPTCHA failed to load)
+    if (isRecaptchaEnabled && !recaptchaToken && !recaptchaFailed) {
+      setError("Please complete the CAPTCHA");
+      return;
+    }
+
     setIsLoading(true);
+
+    // Add reCAPTCHA token if available
+    if (recaptchaToken) {
+      formData.set("recaptchaToken", recaptchaToken);
+    }
 
     try {
       const result = await login(formData, callbackUrl);
@@ -124,7 +185,31 @@ export function LoginForm() {
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        {/* reCAPTCHA - only show if enabled and not failed */}
+        {isRecaptchaEnabled && recaptchaSiteKey && !recaptchaFailed && (
+          <div className="flex justify-center">
+            <Recaptcha
+              siteKey={recaptchaSiteKey}
+              onVerify={handleRecaptchaVerify}
+              onExpire={handleRecaptchaExpire}
+              onLoad={handleRecaptchaLoad}
+            />
+          </div>
+        )}
+
+        {/* Warning when reCAPTCHA failed to load */}
+        {recaptchaFailed && (
+          <p className="text-xs text-muted-foreground text-center">
+            Security verification couldn&apos;t load (may be blocked by your browser or an extension).
+            You can still sign in.
+          </p>
+        )}
+
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isLoading || (isRecaptchaEnabled && !recaptchaToken && !recaptchaFailed)}
+        >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Sign in
         </Button>

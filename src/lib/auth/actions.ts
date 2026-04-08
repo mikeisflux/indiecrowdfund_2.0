@@ -236,6 +236,14 @@ export async function login(formData: FormData, callbackUrl?: string) {
     };
   }
 
+  // Verify reCAPTCHA if token provided
+  const recaptchaToken = formData.get("recaptchaToken") as string | null;
+  const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIP);
+  if (!recaptchaResult.valid) {
+    authActionsLogger.info({ data: clientIP }, "[Login] reCAPTCHA failed from IP:");
+    return { error: { _form: [recaptchaResult.error || "CAPTCHA verification failed"] } };
+  }
+
   // Find user — explicit select avoids requesting columns that may not exist yet in DB
   // (e.g. failedLoginAttempts before migration is run)
   const user = await db.user.findFirst({
