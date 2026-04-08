@@ -22,8 +22,8 @@ export async function GET() {
       },
     });
 
-    // If database has reCAPTCHA enabled with a site key, use it
-    if (settings?.recaptchaEnabled && settings?.recaptchaSiteKey) {
+    // If database has a site key, use it (regardless of enabled flag)
+    if (settings?.recaptchaSiteKey) {
       return NextResponse.json({
         enabled: true,
         siteKey: settings.recaptchaSiteKey,
