@@ -343,7 +343,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
           {currentSlide.subtitle && currentSlide.showSubtitle !== false && (
             <p
               className={cn(
-                "mb-2 text-lg font-medium text-primary animate-fade-in-up",
+                "mb-2 text-base sm:text-lg font-medium text-primary animate-fade-in-up",
                 isTransitioning && "opacity-0"
               )}
               key={`subtitle-${currentIndex}`}
@@ -353,7 +353,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
           )}
           <h1
             className={cn(
-              "mb-2 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up",
+              "mb-2 text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl animate-fade-in-up font-bold tracking-tight",
               isTransitioning && "opacity-0",
               currentSlide.textColor === "dark" && "text-zinc-900"
             )}
@@ -365,7 +365,7 @@ export function HeroSlider({ initialSlides = [], autoPlayInterval = 6000 }: Hero
           {currentSlide.description && currentSlide.showDescription !== false && (
             <p
               className={cn(
-                "mt-6 mb-4 text-lg md:text-xl max-w-2xl animate-fade-in-up",
+                "mt-4 sm:mt-6 mb-4 text-sm sm:text-lg md:text-xl max-w-2xl animate-fade-in-up",
                 currentSlide.textColor === "dark" ? "text-muted-foreground" : "text-muted-foreground",
                 currentSlide.textAlignment === "center" && "mx-auto",
                 currentSlide.textAlignment === "right" && "ml-auto",

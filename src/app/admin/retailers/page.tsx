@@ -263,7 +263,7 @@ export default function RetailersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl font-bold">{totalRetailers}</p>
@@ -543,7 +543,7 @@ export default function RetailersPage() {
         </div>
 
         {/* Survey Stats */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <p className="text-2xl font-bold">{surveyStats.total}</p>

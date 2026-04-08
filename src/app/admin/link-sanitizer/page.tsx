@@ -312,7 +312,7 @@ export default function LinkSanitizerPage() {
               </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -327,7 +327,7 @@ export default function LinkSanitizerPage() {
               </SelectContent>
             </Select>
             <Select value={unusedFilter} onValueChange={setUnusedFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Unused Filter" />
               </SelectTrigger>
               <SelectContent>
@@ -379,6 +379,7 @@ export default function LinkSanitizerPage() {
               <p className="text-muted-foreground">No projects found</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -469,6 +470,7 @@ export default function LinkSanitizerPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

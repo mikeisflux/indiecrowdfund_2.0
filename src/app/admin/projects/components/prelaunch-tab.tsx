@@ -105,7 +105,7 @@ export function PrelaunchDetailPanel({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Category</p>
                 <p className="font-medium">{selectedProject.category}</p>

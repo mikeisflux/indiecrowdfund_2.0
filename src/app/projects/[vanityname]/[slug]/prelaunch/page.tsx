@@ -285,13 +285,13 @@ export default function PrelaunchPage() {
           </div>
 
           {/* Title */}
-          <h1 className="text-4xl md:text-5xl font-bold text-center text-white mb-4">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-center text-white mb-4">
             {project.title}
           </h1>
 
           {/* Subtitle */}
           {project.subtitle && (
-            <p className="text-xl text-center text-white/90 mb-6 max-w-2xl mx-auto">
+            <p className="text-base sm:text-xl text-center text-white/90 mb-6 max-w-2xl mx-auto">
               {project.subtitle}
             </p>
           )}
