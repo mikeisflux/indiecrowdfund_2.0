@@ -247,13 +247,6 @@ export default function PublicProfilePage() {
                 <p className="text-muted-foreground">@{profile.vanityUrl}</p>
               )}
 
-              {/* Creator rating badge */}
-              {profile.ratings?.avg?.overall && profile.ratings.count > 0 && (
-                <div className="mt-2">
-                  <AggregateRating value={profile.ratings.avg.overall} count={profile.ratings.count} size="sm" />
-                </div>
-              )}
-
               {/* Location */}
               {profile.location && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
@@ -262,6 +255,18 @@ export default function PublicProfilePage() {
                 </div>
               )}
             </div>
+
+            {/* Creator Rating Widget */}
+            {profile.ratings?.avg?.overall && profile.ratings.count > 0 && (
+              <div className="flex flex-col items-center gap-1 px-5 py-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 shrink-0">
+                <span className="text-3xl font-bold text-amber-500 leading-none">
+                  {Math.round((profile.ratings.avg.overall / 5) * 100)}%
+                </span>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">satisfaction</span>
+                <AggregateRating value={profile.ratings.avg.overall} count={0} size="sm" />
+                <span className="text-xs text-muted-foreground">{profile.ratings.count} {profile.ratings.count === 1 ? "review" : "reviews"}</span>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-2">
