@@ -405,7 +405,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
         {/* Projects needing attention */}
         <Card className="md:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">

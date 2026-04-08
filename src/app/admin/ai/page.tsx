@@ -465,7 +465,7 @@ export default function AIControlPage() {
           </Card>
 
           {/* Services Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((service) => (
               <Card key={service.id} className={!service.enabled ? "opacity-60" : ""}>
                 <CardHeader className="pb-3">
@@ -685,7 +685,7 @@ export default function AIControlPage() {
           ) : (
             <>
               {/* Results Summary Cards */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {runResults["predictive-analytics"] && (
                   <Card className="cursor-pointer hover:border-blue-300 transition-colors" onClick={() => { setResultsViewerTab("predictive"); setShowResultsViewer(true); }}>
                     <CardContent className="p-4">

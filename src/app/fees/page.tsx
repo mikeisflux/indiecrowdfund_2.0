@@ -479,8 +479,8 @@ export default function FeesPage() {
               Our fees are competitive with other major crowdfunding platforms
             </p>
           </div>
-          <div className="mt-12 overflow-hidden rounded-2xl border glass-card shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: "100ms" }}>
-            <table className="w-full">
+          <div className="mt-12 overflow-x-auto rounded-2xl border glass-card shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: "100ms" }}>
+            <table className="w-full min-w-[500px]">
               <thead className="bg-muted/50 dark:bg-zinc-900">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-zinc-900 dark:text-white">Platform</th>

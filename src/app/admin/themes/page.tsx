@@ -280,7 +280,7 @@ export default function ThemesPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
         {/* Editor Panel */}
         <div className="md:col-span-2 space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -497,7 +497,7 @@ export default function ThemesPage() {
                   <CardTitle>Status Colors</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-6 md:grid-cols-4">
+                  <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
                     <div className="space-y-3">
                       <Label>Success</Label>
                       <div className="flex gap-2">
@@ -802,7 +802,7 @@ export default function ThemesPage() {
                   <CardTitle>Color Mode</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     {[
                       { value: "light", label: "Light", icon: Sun },
                       { value: "dark", label: "Dark", icon: Moon },
