@@ -731,7 +731,7 @@ export default function AIMarketingPage() {
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -1014,7 +1014,7 @@ export default function AIMarketingPage() {
           </DialogHeader>
           {selectedCampaign && (
             <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-2xl font-bold">{selectedCampaign.recipients.toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground">Recipients</p>

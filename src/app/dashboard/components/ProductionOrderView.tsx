@@ -310,6 +310,8 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
         <CardContent className="pb-4">
           {productionOrderStats.items.length > 0 ? (
             <div className="rounded-lg border border-border/50 overflow-hidden">
+              <div className="overflow-x-auto">
+              <div className="min-w-[440px]">
               {/* Header */}
               <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
                 <div>Item Name</div>
@@ -388,6 +390,8 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                   </div>
                 );
               })}
+              </div>
+              </div>
             </div>
           ) : (
             <div className="py-6 text-center">
