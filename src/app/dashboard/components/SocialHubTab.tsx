@@ -478,7 +478,7 @@ export function SocialHubTab() {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
             {[
               { label: "Total Impressions", value: "0" },
               { label: "Engagements", value: "0" },

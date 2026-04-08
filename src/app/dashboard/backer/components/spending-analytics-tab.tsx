@@ -187,7 +187,7 @@ export function SpendingAnalyticsTab() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="glass-card glass-card-hover relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <CardContent className="p-5">
@@ -258,7 +258,7 @@ export function SpendingAnalyticsTab() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         {/* Monthly Spending Chart */}
         <Card className="glass-card">
           <CardHeader>
@@ -354,7 +354,7 @@ export function SpendingAnalyticsTab() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             <div className="text-center p-6 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
               <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-500/20 flex items-center justify-center">
                 <CheckCircle className="h-8 w-8 text-emerald-500" />

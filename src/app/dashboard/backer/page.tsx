@@ -622,7 +622,7 @@ export default function BackerDashboard() {
 
       <div className="container relative py-8">
         {/* Hero Section with Explore CTA */}
-        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 border border-border/50 p-8">
+        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 border border-border/50 p-4 sm:p-6 md:p-8">
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
           <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
@@ -644,7 +644,7 @@ export default function BackerDashboard() {
         </div>
 
         {/* Stats Overview - Animated */}
-        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <GlowingStatCard
             title="Projects Backed"
             value={stats.totalBacked}

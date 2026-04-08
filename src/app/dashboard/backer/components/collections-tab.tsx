@@ -340,7 +340,7 @@ export function CollectionsTab() {
                   </Link>
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">
                   {selectedCollection.projects.map((project, index) => {
                     const fundingPercent = (Number(project.currentAmount) / Number(project.goalAmount)) * 100;
                     return (
@@ -442,7 +442,7 @@ export function CollectionsTab() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {collections.map((collection, index) => {
                 const colorClass = COLOR_STYLES[collection.color || "blue"];
                 return (
