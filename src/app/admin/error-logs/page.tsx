@@ -241,7 +241,7 @@ export default function ErrorLogsPage() {
 
       {/* Stats cards */}
       {stats && (
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           <Card className="border-red-500/30">
             <CardHeader className="pb-1 pt-3 px-3">
               <CardTitle className="text-xs text-muted-foreground font-medium">
