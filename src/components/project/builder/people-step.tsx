@@ -225,7 +225,7 @@ export function PeopleStep() {
       </div>
 
       {/* Your Profile Section */}
-      <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
+      <div className="grid gap-8 md:grid-cols-[300px_1fr]">
         <div>
           <h3 className="text-lg font-semibold">Your profile</h3>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -280,7 +280,7 @@ export function PeopleStep() {
       </div>
 
       {/* Collaborators Section */}
-      <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
+      <div className="grid gap-8 md:grid-cols-[300px_1fr]">
         <div>
           <h3 className="text-lg font-semibold">Collaborators (optional)</h3>
           <p className="mt-1 text-sm text-muted-foreground">

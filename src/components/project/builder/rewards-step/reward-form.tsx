@@ -114,9 +114,9 @@ export function RewardForm({
         </Button>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-8 md:grid-cols-3">
         {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="md:col-span-2 space-y-6">
           <div>
             <h2 className="text-2xl font-semibold mb-2">
               {isEditing ? "Edit reward" : "Add a reward"}

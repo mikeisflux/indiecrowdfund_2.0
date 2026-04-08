@@ -320,8 +320,8 @@ export default function RetailerDashboardPage() {
               </Card>
             </div>
 
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="md:col-span-2">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>

@@ -258,7 +258,7 @@ export function SpendingAnalyticsTab() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         {/* Monthly Spending Chart */}
         <Card className="glass-card">
           <CardHeader>

@@ -193,9 +193,9 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
   return (
     <div className="space-y-4">
       {/* Production Progress + Status Breakdown */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         {/* Circular Progress - now tied to inStock */}
-        <Card className="lg:col-span-1 bg-card/50 backdrop-blur border-border/50">
+        <Card className="md:col-span-1 bg-card/50 backdrop-blur border-border/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-center flex items-center justify-center gap-2 text-base">
               <div className="p-1.5 rounded-lg bg-emerald-500/20">

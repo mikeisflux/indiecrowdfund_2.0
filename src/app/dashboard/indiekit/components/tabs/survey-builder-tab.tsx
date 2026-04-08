@@ -591,7 +591,7 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
 
         {/* General Questions Tab */}
         <TabsContent value="general" className="mt-6">
-          <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+          <div className="grid gap-6 md:grid-cols-[240px_1fr]">
             {/* Question Types Panel */}
             <div className="space-y-4">
               <Card>

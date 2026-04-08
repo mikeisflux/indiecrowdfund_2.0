@@ -296,8 +296,8 @@ export function SocialHubTab() {
 
         {/* Create & Post Tab */}
         <TabsContent value="create" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Wand2 className="h-5 w-5 text-primary" />

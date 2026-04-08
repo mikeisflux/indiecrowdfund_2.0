@@ -435,9 +435,9 @@ export default function BookDetailPage() {
           Back to Marketplace
         </Link>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="md:col-span-2 space-y-6">
             {/* Cover Image / Video */}
             {book.videoUrl ? (
               <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border border-border">
