@@ -80,7 +80,7 @@ export function MetaTagsTab({
                   placeholder="Search pages..."
                   value={pageSearch}
                   onChange={(e) => onPageSearchChange(e.target.value)}
-                  className="pl-9 w-60"
+                  className="pl-9 w-full sm:w-60"
                 />
               </div>
               <Button

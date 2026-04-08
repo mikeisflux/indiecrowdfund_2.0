@@ -385,7 +385,7 @@ export function TiersTab({
       {tiers.length > 0 ? (
         <div className="border rounded-lg overflow-x-auto">
           {/* Table Header with Sort */}
-          <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30 min-w-[580px]">
             <div className="grid grid-cols-12 gap-4 flex-1 text-sm font-medium text-muted-foreground">
               <div className="col-span-1"></div>
               <div className="col-span-2">Pledge amount</div>

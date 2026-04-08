@@ -66,7 +66,7 @@ export function PageAuditTab({
                 placeholder="Filter by path..."
                 value={auditSearch}
                 onChange={(e) => setAuditSearch(e.target.value)}
-                className="pl-9 w-60"
+                className="pl-9 w-full sm:w-60"
               />
             </div>
             <Button
