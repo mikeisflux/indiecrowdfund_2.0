@@ -405,9 +405,9 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Projects needing attention */}
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Projects Requiring Action</CardTitle>
             <Link href="/admin/projects">

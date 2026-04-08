@@ -397,8 +397,8 @@ export default function BookDetailPage() {
       <div className="min-h-screen bg-background">
         <div className="container py-8">
           <Skeleton className="h-8 w-32 mb-8" />
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="md:col-span-2 space-y-6">
               <Skeleton className="aspect-video rounded-2xl" />
               <Skeleton className="h-64 rounded-xl" />
             </div>

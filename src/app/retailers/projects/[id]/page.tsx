@@ -229,9 +229,9 @@ export default function RetailerProjectDetailPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="md:col-span-2 space-y-6">
             {/* Project Header */}
             <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
               <div className="aspect-video bg-muted relative">
@@ -406,7 +406,7 @@ export default function RetailerProjectDetailPage() {
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="md:col-span-1">
             <div className="sticky top-24 space-y-6">
               <Card>
                 <CardHeader>

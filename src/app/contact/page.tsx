@@ -156,7 +156,7 @@ export default function ContactPage() {
 
       <div className="container relative py-12">
         <div className="mx-auto max-w-4xl">
-          <div className="grid gap-8 lg:grid-cols-3">
+          <div className="grid gap-8 md:grid-cols-3">
             {/* Contact Info */}
             <div className="space-y-6">
               <Card
@@ -229,7 +229,7 @@ export default function ContactPage() {
             </div>
 
             {/* Contact Form */}
-            <div className="lg:col-span-2">
+            <div className="md:col-span-2">
               <Card
                 className="glass-card border shadow-xl animate-in fade-in slide-in-from-right-4 duration-500"
                 style={{ animationDelay: '100ms' }}

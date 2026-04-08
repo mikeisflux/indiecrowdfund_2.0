@@ -81,7 +81,7 @@ export function SettingsTab({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+      <div className="grid gap-6 md:grid-cols-[220px_1fr]">
         {/* Settings Navigation */}
         <Card>
           <CardContent className="p-2">

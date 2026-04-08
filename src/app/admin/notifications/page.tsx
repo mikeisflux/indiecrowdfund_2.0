@@ -221,9 +221,9 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Notifications List */}
-        <div className="lg:col-span-2">
+        <div className="md:col-span-2">
           <Card>
             <CardHeader className="pb-3">
               <Tabs value={activeTab} onValueChange={setActiveTab}>

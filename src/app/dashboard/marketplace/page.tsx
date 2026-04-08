@@ -278,7 +278,7 @@ export default function CreatorMarketplaceDashboard() {
 
       {/* Sub Navigation */}
       <div className="border-b border-border bg-muted/50 backdrop-blur-sm">
-        <div className="container flex items-center justify-between py-3">
+        <div className="container flex flex-wrap items-center gap-3 py-3">
           <Link
             href={`/dashboard?project=${searchParams?.get("project") || ""}`}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -286,7 +286,7 @@ export default function CreatorMarketplaceDashboard() {
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-auto">
             <Link href="/dashboard/marketplace/company">
               <Button variant="outline" className="border-border">
                 <Building2 className="w-4 h-4 mr-2" />

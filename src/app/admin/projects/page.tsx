@@ -238,7 +238,7 @@ export default function ProjectsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-4">
                 {filteredProjects.map((project) => (
                   <ProjectListItem
@@ -281,7 +281,7 @@ export default function ProjectsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-4">
                 {paginatedActiveProjects.map((project) => (
                   <ProjectListItem
@@ -336,7 +336,7 @@ export default function ProjectsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-4">
                 {filteredPrelaunchReviewProjects.map((project) => (
                   <ProjectListItem
@@ -382,7 +382,7 @@ export default function ProjectsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-4">
                 {filteredPrelaunchProjects.map((project) => (
                   <PrelaunchProjectCard
@@ -427,7 +427,7 @@ export default function ProjectsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-4">
                 {paginatedClosedProjects.map((project) => (
                   <ProjectListItem
@@ -484,7 +484,7 @@ export default function ProjectsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-4">
                 {filteredUnsubmittedProjects.map((project) => (
                   <UnsubmittedProjectCard

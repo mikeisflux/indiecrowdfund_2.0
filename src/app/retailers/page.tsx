@@ -317,7 +317,7 @@ export default async function RetailersPage() {
       {/* Benefits Section */}
       <section className="relative py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div className="grid gap-12 md:grid-cols-2 md:items-center">
             <div className="animate-in fade-in slide-in-from-left-4 duration-500">
               <Badge className="mb-4 bg-primary/10 text-primary border-0">
                 <Award className="mr-1 h-3 w-3" />

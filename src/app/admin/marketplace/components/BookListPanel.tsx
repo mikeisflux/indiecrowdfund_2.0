@@ -31,7 +31,7 @@ export function BookListPanel({
   title,
 }: BookListPanelProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Book List */}
       <div className="rounded-xl bg-muted/50 border border-border overflow-hidden max-h-[800px]">
         <div className="p-4 border-b border-border">

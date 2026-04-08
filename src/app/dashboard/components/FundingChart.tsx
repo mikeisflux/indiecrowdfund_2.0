@@ -29,7 +29,7 @@ export function FundingChart({
   }));
 
   return (
-    <Card className="lg:col-span-2 bg-card/50 backdrop-blur border-border/50">
+    <Card className="md:col-span-2 bg-card/50 backdrop-blur border-border/50">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-primary/20">

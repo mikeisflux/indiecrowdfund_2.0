@@ -231,11 +231,11 @@ export default async function SuccessStoriesPage() {
               {successfulProjects.map((story, index) => (
                 <div
                   key={story.id}
-                  className={`grid gap-8 lg:grid-cols-2 lg:items-center ${
-                    index % 2 === 1 ? "lg:grid-flow-dense" : ""
+                  className={`grid gap-8 md:grid-cols-2 md:items-center ${
+                    index % 2 === 1 ? "md:grid-flow-dense" : ""
                   }`}
                 >
-                  <div className={index % 2 === 1 ? "lg:col-start-2" : ""}>
+                  <div className={index % 2 === 1 ? "md:col-start-2" : ""}>
                     <div className="relative aspect-video overflow-hidden rounded-2xl bg-muted">
                       {story.image ? (
                         <Image src={story.image} alt={story.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
@@ -253,7 +253,7 @@ export default async function SuccessStoriesPage() {
                     </div>
                   </div>
 
-                  <div className={index % 2 === 1 ? "lg:col-start-1" : ""}>
+                  <div className={index % 2 === 1 ? "md:col-start-1" : ""}>
                     <Badge variant="outline" className="mb-2">{story.category}</Badge>
                     <h3 className="text-2xl font-bold text-foreground lg:text-3xl">
                       {story.title}

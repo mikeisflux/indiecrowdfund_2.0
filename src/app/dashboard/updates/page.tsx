@@ -359,9 +359,9 @@ export default function UpdatesPage() {
 
       <div className="container relative py-6">
         {/* Page Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <FileText className="h-6 w-6 text-primary" />
               Post Updates
             </h1>
@@ -371,7 +371,7 @@ export default function UpdatesPage() {
           </div>
           <Button
             onClick={handleCreate}
-            className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
+            className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 w-full sm:w-auto"
             disabled={!selectedProjectId}
           >
             <Plus className="h-4 w-4 mr-2" />

@@ -72,7 +72,7 @@ export function GeographyTab({ geographyData, formatNumber }: GeographyTabProps)
       </Card>
 
       {/* User & Backer Locations */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         {/* User Locations */}
         <Card>
           <CardHeader>

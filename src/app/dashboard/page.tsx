@@ -405,7 +405,7 @@ export default function CreatorDashboard() {
               </div>
 
               <TabsContent value="overview" className="space-y-6">
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid gap-6 md:grid-cols-3">
                   <FundingChart
                     fundingData={data.fundingData}
                     timeRange={timeRange}

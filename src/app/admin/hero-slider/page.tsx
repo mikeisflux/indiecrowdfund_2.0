@@ -391,9 +391,9 @@ export default function HeroSliderPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Slides List */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="md:col-span-2 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Slides</CardTitle>

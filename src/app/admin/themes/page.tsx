@@ -280,11 +280,11 @@ export default function ThemesPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Editor Panel */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="md:col-span-2 space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="flex w-full overflow-x-auto lg:grid lg:grid-cols-4">
+            <TabsList className="flex w-full overflow-x-auto md:grid md:grid-cols-4">
               <TabsTrigger value="colors" className="whitespace-nowrap">
                 <Palette className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Colors</span>
