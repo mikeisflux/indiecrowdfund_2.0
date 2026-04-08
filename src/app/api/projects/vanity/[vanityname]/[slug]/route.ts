@@ -131,6 +131,23 @@ export async function GET(
       goalAmount: project.goalAmount,
     });
 
+    // Fetch creator rating aggregation
+    const ratingAgg = await db.backerReview.aggregate({
+      where: {
+        creatorId: project.creator.id,
+        isPublished: true,
+        isHidden: false,
+        overallRating: { not: null },
+      },
+      _avg: {
+        overallRating: true,
+        deliveryRating: true,
+        qualityRating: true,
+        communicationRating: true,
+      },
+      _count: { overallRating: true },
+    });
+
     // Transform to the expected format - include ALL fields needed for editing
     const formattedProject = {
       id: project.id,
@@ -192,6 +209,15 @@ export async function GET(
         vanityUrl: project.creator.vanityUrl || "",
         projectsCreated: project.creator._count.createdProjects,
         projectsBacked: project.creator._count.pledges,
+        ratings: {
+          avg: {
+            overall: ratingAgg._avg.overallRating ? Number(ratingAgg._avg.overallRating.toFixed(1)) : null,
+            delivery: ratingAgg._avg.deliveryRating ? Number(ratingAgg._avg.deliveryRating.toFixed(1)) : null,
+            quality: ratingAgg._avg.qualityRating ? Number(ratingAgg._avg.qualityRating.toFixed(1)) : null,
+            communication: ratingAgg._avg.communicationRating ? Number(ratingAgg._avg.communicationRating.toFixed(1)) : null,
+          },
+          count: ratingAgg._count.overallRating,
+        },
       },
       // Updates and comments
       updates: project.updates.map((u: { id: string; title: string; content: string; publishedAt: Date | null; createdAt: Date }) => ({

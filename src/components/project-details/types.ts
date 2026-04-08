@@ -1,13 +1,25 @@
 // TypeScript interfaces for project data
 
+export interface ProjectCreatorRatings {
+  avg: {
+    overall: number | null;
+    delivery: number | null;
+    quality: number | null;
+    communication: number | null;
+  };
+  count: number;
+}
+
 export interface ProjectCreator {
   id: string;
   name: string;
   image: string;
   bio: string;
   location: string;
+  vanityUrl?: string;
   projectsCreated: number;
   projectsBacked: number;
+  ratings?: ProjectCreatorRatings;
 }
 
 export interface ProjectUpdate {
