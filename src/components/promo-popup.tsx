@@ -155,7 +155,7 @@ export function PromoPopup() {
 
         {/* Slide content */}
         <div
-          className="relative p-8 pb-6 text-white flex flex-col"
+          className="relative p-4 sm:p-8 pb-4 sm:pb-6 text-white flex flex-col"
           style={{
             background: `linear-gradient(135deg, ${slide.gradientFrom} 0%, ${slide.gradientTo} 100%)`,
           }}

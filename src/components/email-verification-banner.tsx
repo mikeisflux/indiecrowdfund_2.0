@@ -81,7 +81,12 @@ export function EmailVerificationBanner() {
               ) : (
                 <Mail className="h-3 w-3 mr-1" />
               )}
-              {sending ? "Sending..." : "Resend Verification Email"}
+              {sending ? "Sending..." : (
+                <>
+                  <span className="sm:hidden">Resend</span>
+                  <span className="hidden sm:inline">Resend Verification Email</span>
+                </>
+              )}
             </Button>
           )}
           <button
