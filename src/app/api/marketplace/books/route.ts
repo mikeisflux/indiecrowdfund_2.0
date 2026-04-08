@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const featured = searchParams.get("featured") === "true";
     const staffPick = searchParams.get("staffPick") === "true";
+    const mediaCategory = searchParams.get("mediaCategory");
     const category = searchParams.get("category");
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
@@ -31,6 +32,10 @@ export async function GET(request: Request) {
       status: "LIVE",
       deletedAt: null,
     };
+
+    if (mediaCategory) {
+      where.mediaCategory = mediaCategory;
+    }
 
     if (featured) {
       where.isFeatured = true;

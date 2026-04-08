@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     const {
       title,
       description,
+      mediaCategory = "comics",
       category,
       price,
       currency = "USD",
@@ -120,6 +121,7 @@ export async function POST(request: Request) {
         title: title.trim(),
         slug,
         description: description.trim(),
+        mediaCategory: mediaCategory || "comics",
         category: category || null,
         price,
         currency,

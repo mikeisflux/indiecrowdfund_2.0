@@ -303,22 +303,22 @@ export default function MarketplacePage() {
   const fetchMarketplaceData = async () => {
     setLoading(true);
     try {
-      // Fetch featured books
-      const featuredRes = await fetch("/api/marketplace/books?featured=true&limit=12");
+      // Fetch featured comics
+      const featuredRes = await fetch("/api/marketplace/books?featured=true&mediaCategory=comics&limit=12");
       if (featuredRes.ok) {
         const data = await featuredRes.json();
         setFeaturedBooks(data.books || []);
       }
 
-      // Fetch staff picks
-      const staffRes = await fetch("/api/marketplace/books?staffPick=true&limit=12");
+      // Fetch staff picks (comics)
+      const staffRes = await fetch("/api/marketplace/books?staffPick=true&mediaCategory=comics&limit=12");
       if (staffRes.ok) {
         const data = await staffRes.json();
         setStaffPicks(data.books || []);
       }
 
-      // Fetch all books (15 for display + Show More tile fills 2 rows of 8)
-      const allRes = await fetch("/api/marketplace/books?limit=15");
+      // Fetch all comics (15 for display + Show More tile fills 2 rows of 8)
+      const allRes = await fetch("/api/marketplace/books?mediaCategory=comics&limit=15");
       if (allRes.ok) {
         const data = await allRes.json();
         setAllBooks(data.books || []);

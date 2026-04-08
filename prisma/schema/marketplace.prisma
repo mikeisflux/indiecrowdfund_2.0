@@ -55,6 +55,7 @@ model MarketplaceBook {
   staffPickOrder    Int?
 
   // Categorization
+  mediaCategory     String   @default("comics") // Top-level: comics, music, movies
   category          String?
   tags              String[] @default([])
 
@@ -80,6 +81,7 @@ model MarketplaceBook {
   @@index([status])
   @@index([isFeatured])
   @@index([isStaffPick])
+  @@index([mediaCategory])
   @@index([category])
   @@index([createdAt])
   @@index([deletedAt])

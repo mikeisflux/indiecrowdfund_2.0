@@ -114,6 +114,7 @@ export async function PUT(
     const {
       title,
       description,
+      mediaCategory,
       category,
       price,
       currency,
@@ -131,6 +132,7 @@ export async function PUT(
 
     if (title !== undefined) updateData.title = title.trim();
     if (description !== undefined) updateData.description = description.trim();
+    if (mediaCategory !== undefined) updateData.mediaCategory = mediaCategory;
     if (category !== undefined) updateData.category = category;
     if (price !== undefined) updateData.price = price;
     if (currency !== undefined) updateData.currency = currency;
