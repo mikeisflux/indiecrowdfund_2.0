@@ -116,7 +116,7 @@ export default function FAQPage() {
               <HelpCircle className="h-7 w-7 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
                 Frequently Asked Questions
               </h1>
               <p className="text-muted-foreground">Find answers to common questions about IndieCrowdfund</p>

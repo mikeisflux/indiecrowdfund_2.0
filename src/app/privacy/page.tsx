@@ -386,7 +386,7 @@ export default function PrivacyPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <Mail className="h-12 w-12 text-primary mx-auto mb-4" />
-            <h2 className="text-3xl font-bold mb-4">Questions About Privacy?</h2>
+            <h2 className="text-xl sm:text-3xl font-bold mb-4">Questions About Privacy?</h2>
             <p className="text-lg text-muted-foreground mb-8">
               If you have any questions or concerns about our privacy practices, we&apos;re here to help.
             </p>

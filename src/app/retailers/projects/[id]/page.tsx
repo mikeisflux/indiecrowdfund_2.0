@@ -251,7 +251,7 @@ export default function RetailerProjectDetailPage() {
                   <Badge variant="outline">{project.category}</Badge>
                   <span className="text-sm text-muted-foreground">by {project.creator.name}</span>
                 </div>
-                <h1 className="text-3xl font-bold mb-3">{project.title}</h1>
+                <h1 className="text-xl sm:text-3xl font-bold mb-3">{project.title}</h1>
                 <p className="text-muted-foreground text-lg">{project.subtitle}</p>
               </div>
             </div>

@@ -171,7 +171,7 @@ export default function BackerHandbookPage() {
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-blue-100 hover:text-white mb-4">
             <ArrowLeft className="h-4 w-4" /> Back to Home
           </Link>
-          <h1 className="text-3xl font-bold">Backer Handbook</h1>
+          <h1 className="text-xl sm:text-3xl font-bold">Backer Handbook</h1>
           <p className="mt-1 text-blue-100">Your complete guide to backing projects from start to finish</p>
         </div>
       </div>
