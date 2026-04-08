@@ -161,7 +161,7 @@ export default async function RootLayout({
       if (platformSettings.gtmEnabled && platformSettings.googleTagManagerId && validGtmId(platformSettings.googleTagManagerId)) {
         gtmId = platformSettings.googleTagManagerId;
       }
-      if (platformSettings.gaEnabled && platformSettings.googleAnalyticsId) {
+      if (platformSettings.googleAnalyticsId) {
         ga4Id = platformSettings.googleAnalyticsId;
       }
     }
