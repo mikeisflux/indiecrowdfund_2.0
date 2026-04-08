@@ -396,12 +396,12 @@ export default function RetailerDashboardPage() {
 
             {/* Featured Projects */}
             <div className="mt-8">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-bold">Featured Projects</h2>
                   <p className="text-muted-foreground">Trending campaigns with retailer access</p>
                 </div>
-                <Button variant="outline" onClick={() => setActiveTab("projects")}>
+                <Button variant="outline" onClick={() => setActiveTab("projects")} className="w-full sm:w-auto">
                   View All Projects<ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>

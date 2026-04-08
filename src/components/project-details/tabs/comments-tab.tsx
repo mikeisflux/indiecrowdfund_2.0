@@ -413,7 +413,7 @@ export function CommentsTab({
       {/* Similar Projects Section */}
       {similarProjects.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <h3 className="text-lg font-semibold">Similar projects to check out</h3>
             <Button variant="outline" size="sm">
               See more

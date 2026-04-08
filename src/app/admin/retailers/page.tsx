@@ -526,7 +526,7 @@ export default function RetailersPage() {
 
       {/* Satisfaction Surveys Section */}
       <div className="mt-12 pt-8 border-t">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
               <MessageSquare className="h-5 w-5" />
@@ -536,7 +536,7 @@ export default function RetailersPage() {
               Feedback from retailers after receiving their orders
             </p>
           </div>
-          <Button onClick={fetchSurveys} variant="outline" size="sm">
+          <Button onClick={fetchSurveys} variant="outline" size="sm" className="w-full sm:w-auto">
             <RefreshCw className={`h-4 w-4 mr-2 ${isSurveysLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>

@@ -663,7 +663,7 @@ export function RewardForm({
         </div>
 
         {/* Preview Sidebar */}
-        <div className="lg:col-span-1">
+        <div className="md:col-span-1">
           <div className="sticky top-4">
             <h3 className="font-semibold mb-4">Reward preview</h3>
             <p className="text-sm text-muted-foreground mb-4">
