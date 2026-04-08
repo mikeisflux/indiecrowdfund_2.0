@@ -120,7 +120,7 @@ export default function WhatIsDivinityCoinPage() {
               <Coins className="h-12 w-12" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold">What is DivinityCoin?</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold">What is DivinityCoin?</h1>
           <p className="mt-2 text-amber-100 text-lg">
             A seamless payment processor for creators — pay with your card, not crypto
           </p>

@@ -88,7 +88,7 @@ export default function FeaturedBooksPage() {
 
       <main className="container relative py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Featured Books</h1>
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground mb-2">Featured Books</h1>
           <p className="text-muted-foreground">Hand-picked selections from our editorial team</p>
         </div>
 

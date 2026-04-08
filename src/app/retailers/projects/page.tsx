@@ -216,7 +216,7 @@ export default function RetailerProjectsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Browse Projects</h1>
+          <h1 className="text-xl sm:text-3xl font-bold mb-2">Browse Projects</h1>
           <p className="text-muted-foreground">
             Discover campaigns with retailer access and get 50% wholesale discount on all orders.
           </p>

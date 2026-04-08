@@ -351,7 +351,7 @@ export default function MarketplaceCreatorHandbookPage() {
             <BookOpen className="h-10 w-10" />
             <Star className="h-10 w-10" />
           </div>
-          <h1 className="text-4xl font-bold">Digital Marketplace Handbook</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold">Digital Marketplace Handbook</h1>
           <p className="mt-2 text-primary-foreground/80 text-lg">
             For Creators & Authors
           </p>

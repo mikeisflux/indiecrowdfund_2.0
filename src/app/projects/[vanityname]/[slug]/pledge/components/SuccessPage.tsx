@@ -99,7 +99,7 @@ export function SuccessPage({
           </div>
 
           {/* Main message */}
-          <h1 className="mb-3 text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+          <h1 className="mb-3 text-2xl sm:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
             {isModifyMode
               ? "Pledge updated successfully!"
               : isAddItemsMode

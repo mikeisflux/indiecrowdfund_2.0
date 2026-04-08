@@ -88,7 +88,7 @@ export default function StaffPicksPage() {
 
       <main className="container relative py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Staff Picks</h1>
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground mb-2">Staff Picks</h1>
           <p className="text-muted-foreground">Curated recommendations from our team</p>
         </div>
 

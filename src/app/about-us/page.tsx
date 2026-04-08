@@ -729,7 +729,7 @@ export default function AboutUsPage() {
       <section className="relative py-8">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">Our Mission</h2>
+            <h2 className="text-xl sm:text-3xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">Our Mission</h2>
             <p
               className="text-xl text-muted-foreground mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
               style={{ animationDelay: '100ms' }}
@@ -766,7 +766,7 @@ export default function AboutUsPage() {
               <Sparkles className="mr-1 h-3 w-3" />
               Platform Features
             </Badge>
-            <h2 className="text-3xl font-bold mb-4">
+            <h2 className="text-xl sm:text-3xl font-bold mb-4">
               Everything You Need to Succeed
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -828,7 +828,7 @@ export default function AboutUsPage() {
         <div className="relative container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-3xl font-bold mb-4 text-white">Why Choose IndieCrowdfund?</h2>
+              <h2 className="text-xl sm:text-3xl font-bold mb-4 text-white">Why Choose IndieCrowdfund?</h2>
               <p className="text-xl text-white/80">
                 We&apos;re not just another crowdfunding platform. Here&apos;s what sets us apart.
               </p>
@@ -880,7 +880,7 @@ export default function AboutUsPage() {
       <section className="relative py-8">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
+            <h2 className="text-xl sm:text-3xl font-bold mb-4">Ready to Get Started?</h2>
             <p className="text-xl text-muted-foreground mb-8">
               Join thousands of creators who have successfully funded their projects on IndieCrowdfund.
             </p>

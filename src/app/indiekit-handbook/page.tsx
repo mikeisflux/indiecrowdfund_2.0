@@ -776,7 +776,7 @@ export default function IndieKitHandbookPage() {
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-emerald-100 hover:text-white mb-4 transition-colors">
             <ArrowLeft className="h-4 w-4" /> Back to Home
           </Link>
-          <h1 className="text-4xl font-bold tracking-tight">IndieKit Handbook</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">IndieKit Handbook</h1>
           <p className="mt-2 text-lg text-emerald-100 max-w-2xl">
             Your complete guide to managing fulfillment, backer communication, surveys, shipping, and everything in between.
           </p>

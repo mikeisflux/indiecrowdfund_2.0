@@ -28,7 +28,7 @@ export default function PhysicalMediaPage() {
           <div className="inline-flex items-center justify-center p-4 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 mb-6">
             <Package className="h-10 w-10 text-amber-600 dark:text-amber-400" />
           </div>
-          <h1 className="text-4xl font-bold text-foreground mb-4">
+          <h1 className="text-2xl sm:text-4xl font-bold text-foreground mb-4">
             Prefer Physical Books?
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

@@ -204,7 +204,7 @@ export default function CompanyProfilePage() {
           {/* Info */}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-foreground">{company.name}</h1>
+              <h1 className="text-xl sm:text-3xl font-bold text-foreground">{company.name}</h1>
               {company.isVerified && (
                 <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/30">
                   <CheckCircle className="w-3 h-3 mr-1" />

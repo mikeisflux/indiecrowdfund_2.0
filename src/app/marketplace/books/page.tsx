@@ -159,7 +159,7 @@ export default function AllBooksPage() {
         </Link>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <h1 className="text-3xl font-bold text-foreground">All Books</h1>
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground">All Books</h1>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative flex-1 sm:flex-none">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
