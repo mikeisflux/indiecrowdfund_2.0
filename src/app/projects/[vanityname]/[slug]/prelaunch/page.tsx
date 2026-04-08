@@ -97,7 +97,13 @@ export default function PrelaunchPage() {
   }, []);
 
   useEffect(() => {
+    // Wait for session to finish loading before fetching — avoids race condition
+    // where permission checks run with undefined session on slower mobile networks
+    if (sessionStatus === "loading") return;
+
     const fetchProject = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const apiUrl = `/api/projects/vanity/${vanityname}/${slug}`;
         const response = await fetch(apiUrl);
@@ -158,7 +164,7 @@ export default function PrelaunchPage() {
     };
 
     fetchProject();
-  }, [vanityname, slug, session?.user?.id, session?.user?.role, projectPath]);
+  }, [vanityname, slug, sessionStatus, session?.user?.id, session?.user?.role, projectPath]);
 
   const handleSubscribe = async () => {
     if (!session?.user) {
