@@ -127,6 +127,7 @@ export default function HeroSliderPage() {
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
   const [needsMigration, setNeedsMigration] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -157,6 +158,32 @@ export default function HeroSliderPage() {
       toast.error("Migration failed");
     } finally {
       setIsMigrating(false);
+    }
+  };
+
+  // Seed feature slides
+  const seedFeatureSlides = async () => {
+    setIsSeeding(true);
+    try {
+      const response = await apiFetch("/api/admin/hero-slides/seed-features", {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (response.ok) {
+        if (data.created > 0) {
+          toast.success(`Added ${data.created} feature slides!`);
+        } else {
+          toast.info(data.message || "Feature slides already exist");
+        }
+        fetchSlides();
+      } else {
+        toast.error(data.error || "Failed to seed feature slides");
+      }
+    } catch (error) {
+      console.error("Seed error:", error);
+      toast.error("Failed to seed feature slides");
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -363,10 +390,25 @@ export default function HeroSliderPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Hero Slider</h1>
           <p className="text-muted-foreground">Manage the hero section slides on the home page</p>
         </div>
-        <Button onClick={openCreateDialog} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Slide
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={seedFeatureSlides} variant="outline" className="gap-2" disabled={isSeeding}>
+            {isSeeding ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Seeding...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Seed Feature Slides
+              </>
+            )}
+          </Button>
+          <Button onClick={openCreateDialog} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Slide
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
