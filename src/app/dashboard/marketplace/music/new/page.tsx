@@ -290,8 +290,7 @@ function TrackUploader({
       try {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("folder", "marketplace-audio");
-        const res = await apiFetch("/api/upload", { method: "POST", body: formData });
+        const res = await apiFetch("/api/creator/marketplace/audio/upload", { method: "POST", body: formData });
         if (!res.ok) throw new Error(`Failed to upload ${file.name}`);
         const data = await res.json();
 
