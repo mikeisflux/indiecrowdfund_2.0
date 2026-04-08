@@ -847,7 +847,7 @@ export default function IndieKitHandbookPage() {
               <>
                 {/* Section Header */}
                 <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{currentTab.title}</h2>
+                  <h2 className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{currentTab.title}</h2>
                   <p className="mt-2 text-lg text-zinc-600 dark:text-muted-foreground leading-relaxed">{currentTab.description}</p>
                 </div>
 

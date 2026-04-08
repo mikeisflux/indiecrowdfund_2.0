@@ -189,7 +189,7 @@ export default function TrustSafetyPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">How We Build Trust</h2>
+              <h2 className="text-xl sm:text-3xl font-bold mb-4">How We Build Trust</h2>
               <p className="text-lg text-muted-foreground">
                 Our multi-layered approach helps ensure a safe and positive experience for everyone.
               </p>
@@ -222,7 +222,7 @@ export default function TrustSafetyPage() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <Shield className="h-12 w-12 text-primary mx-auto mb-4" />
-              <h2 className="text-3xl font-bold mb-4">Backer Protections</h2>
+              <h2 className="text-xl sm:text-3xl font-bold mb-4">Backer Protections</h2>
               <p className="text-lg text-muted-foreground">
                 We&apos;ve built safeguards to help protect your interests as a backer.
               </p>
@@ -249,7 +249,7 @@ export default function TrustSafetyPage() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <FileText className="h-12 w-12 text-primary mx-auto mb-4" />
-              <h2 className="text-3xl font-bold mb-4">Creator Responsibilities</h2>
+              <h2 className="text-xl sm:text-3xl font-bold mb-4">Creator Responsibilities</h2>
               <p className="text-lg text-muted-foreground">
                 Creators who launch on IndieCrowdfund agree to these commitments.
               </p>
@@ -280,7 +280,7 @@ export default function TrustSafetyPage() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <Scale className="h-12 w-12 text-primary mx-auto mb-4" />
-              <h2 className="text-3xl font-bold mb-4">Dispute Resolution</h2>
+              <h2 className="text-xl sm:text-3xl font-bold mb-4">Dispute Resolution</h2>
               <p className="text-lg text-muted-foreground">
                 If you have concerns about a project, here&apos;s how to seek resolution.
               </p>
@@ -327,7 +327,7 @@ export default function TrustSafetyPage() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <Ban className="h-12 w-12 text-red-600 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold mb-4">Prohibited Content</h2>
+              <h2 className="text-xl sm:text-3xl font-bold mb-4">Prohibited Content</h2>
               <p className="text-lg text-muted-foreground">
                 We do not allow projects that include:
               </p>
@@ -360,7 +360,7 @@ export default function TrustSafetyPage() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <HelpCircle className="h-12 w-12 text-primary mx-auto mb-4" />
-              <h2 className="text-3xl font-bold mb-4">Common Questions</h2>
+              <h2 className="text-xl sm:text-3xl font-bold mb-4">Common Questions</h2>
             </div>
 
             <div className="space-y-4">
@@ -421,7 +421,7 @@ export default function TrustSafetyPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <Mail className="h-12 w-12 text-primary mx-auto mb-4" />
-            <h2 className="text-3xl font-bold mb-4">Need Help?</h2>
+            <h2 className="text-xl sm:text-3xl font-bold mb-4">Need Help?</h2>
             <p className="text-lg text-muted-foreground mb-8">
               Our trust and safety team is here to help with any concerns.
             </p>
