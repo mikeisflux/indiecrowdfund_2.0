@@ -260,7 +260,7 @@ export default async function SuccessStoriesPage() {
                     </h3>
                     <p className="mt-2 text-muted-foreground">by {story.creator}</p>
 
-                    <div className="mt-6 grid grid-cols-3 gap-4">
+                    <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
                       <div>
                         <p className="text-2xl font-bold text-emerald-600">
                           {formatCurrency(story.raised)}

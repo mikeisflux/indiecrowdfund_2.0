@@ -7,7 +7,7 @@ interface StatsCardsProps {
 
 export function StatsCards({ stats }: StatsCardsProps) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <div className="p-4 rounded-xl bg-card border">
         <div className="flex items-center gap-2 text-amber-600">
           <Clock className="w-4 h-4" />

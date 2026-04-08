@@ -46,7 +46,7 @@ export function TransactionsTab({
   return (
     <div className="space-y-6">
       {/* Transaction Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <div className="p-4 rounded-xl bg-card border">
           <div className="flex items-center gap-2 text-emerald-600">
             <DollarSign className="w-4 h-4" />
