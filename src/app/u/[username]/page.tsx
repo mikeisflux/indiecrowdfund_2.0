@@ -256,29 +256,47 @@ export default function PublicProfilePage() {
               )}
             </div>
 
-            {/* Creator Rating Widget — always visible */}
-            <div className="flex flex-col items-center gap-1 px-5 py-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 shrink-0 min-w-[110px]">
+            {/* Creator Rating Widget — prominent display */}
+            <div className="flex flex-col items-center shrink-0">
               {profile.ratings?.avg?.overall && profile.ratings.count > 0 ? (
                 <>
-                  <span className="text-3xl font-bold text-amber-500 leading-none">
+                  <span className="text-5xl md:text-6xl font-extrabold text-amber-500 leading-none">
                     {Math.round((profile.ratings.avg.overall / 5) * 100)}%
                   </span>
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">satisfaction</span>
-                  <AggregateRating value={profile.ratings.avg.overall} count={0} size="sm" />
-                  <span className="text-xs text-muted-foreground">{profile.ratings.count} {profile.ratings.count === 1 ? "review" : "reviews"}</span>
+                  <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mt-1">satisfaction</span>
+                  <div className="flex items-center gap-1 mt-2">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const fill = Math.min(1, Math.max(0, (profile.ratings?.avg?.overall ?? 0) - (star - 1)));
+                      return (
+                        <span key={star} className="relative inline-block">
+                          <svg className="h-6 w-6 text-muted-foreground/20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                          </svg>
+                          {fill > 0 && (
+                            <span className="absolute inset-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
+                              <svg className="h-6 w-6 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                              </svg>
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <span className="text-sm text-muted-foreground mt-1">{profile.ratings.count} {profile.ratings.count === 1 ? "review" : "reviews"}</span>
                 </>
               ) : (
                 <>
-                  <span className="text-3xl font-bold text-muted-foreground/40 leading-none">—</span>
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">satisfaction</span>
-                  <div className="flex items-center gap-0.5">
+                  <span className="text-5xl md:text-6xl font-extrabold text-muted-foreground/30 leading-none">—</span>
+                  <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mt-1">satisfaction</span>
+                  <div className="flex items-center gap-1 mt-2">
                     {[1,2,3,4,5].map(s => (
-                      <svg key={s} className="h-3.5 w-3.5 text-muted-foreground/20" viewBox="0 0 24 24" fill="currentColor">
+                      <svg key={s} className="h-6 w-6 text-muted-foreground/20" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                       </svg>
                     ))}
                   </div>
-                  <span className="text-xs text-muted-foreground">no reviews yet</span>
+                  <span className="text-sm text-muted-foreground mt-1">no reviews yet</span>
                 </>
               )}
             </div>
