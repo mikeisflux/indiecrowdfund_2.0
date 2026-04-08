@@ -151,7 +151,7 @@ export default function FeesPage() {
       <section className="relative py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Payment Options</h2>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">Payment Options</h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               We offer multiple payment solutions to best fit your needs
             </p>
@@ -296,7 +296,7 @@ export default function FeesPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
         <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Estimate Your Earnings</h2>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">Estimate Your Earnings</h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Use the slider to see how much you&apos;ll take home at different funding levels
             </p>
@@ -446,7 +446,7 @@ export default function FeesPage() {
       <section className="relative py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">What&apos;s Included</h2>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">What&apos;s Included</h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Your platform fee covers everything you need to run a successful campaign
             </p>
@@ -474,7 +474,7 @@ export default function FeesPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-muted/50" />
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">How We Compare</h2>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">How We Compare</h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Our fees are competitive with other major crowdfunding platforms
             </p>
@@ -512,7 +512,7 @@ export default function FeesPage() {
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <HelpCircle className="mx-auto h-12 w-12 text-emerald-600" />
-            <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Common Questions</h2>
+            <h2 className="mt-4 text-xl sm:text-3xl md:text-4xl font-bold tracking-tight">Common Questions</h2>
           </div>
           <div className="mt-12 space-y-6">
             <div className="rounded-lg border p-6">
@@ -553,7 +553,7 @@ export default function FeesPage() {
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-sm mb-6 animate-in fade-in zoom-in duration-500">
             <Gift className="h-7 w-7 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-white sm:text-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-white animate-in fade-in slide-in-from-bottom-4 duration-500">
             Ready to Launch Your Campaign?
           </h2>
           <p className="mt-4 text-xl text-emerald-100 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: "100ms" }}>

@@ -100,7 +100,7 @@ export default function ContactPage() {
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-xl">
               <CheckCircle className="h-10 w-10 text-white" />
             </div>
-            <h1 className="mb-4 text-3xl font-bold">Message Sent!</h1>
+            <h1 className="mb-4 text-xl sm:text-3xl font-bold">Message Sent!</h1>
             <p className="mb-8 text-muted-foreground">
               Thank you for reaching out. Our support team will get back to you within 24-48 hours.
             </p>
