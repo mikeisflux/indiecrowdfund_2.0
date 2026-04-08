@@ -132,7 +132,7 @@ export default function FeesPage() {
               <DollarSign className="mr-1 h-3 w-3" />
               Transparent Pricing
             </Badge>
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white">
               Simple, Fair Pricing
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-xl text-emerald-100">

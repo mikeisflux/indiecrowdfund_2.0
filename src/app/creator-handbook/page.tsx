@@ -194,10 +194,10 @@ export default function CreatorHandbookPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="flex gap-8">
+        <div className="flex flex-col gap-4 md:flex-row md:gap-8">
           {/* Sidebar Navigation */}
-          <aside className="w-64 flex-shrink-0">
-            <nav className="sticky top-8 space-y-1">
+          <aside className="w-full md:w-64 md:flex-shrink-0">
+            <nav className="flex flex-wrap gap-1 md:sticky md:top-8 md:flex-col md:space-y-1">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;

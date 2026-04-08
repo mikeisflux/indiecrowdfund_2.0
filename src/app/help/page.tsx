@@ -185,7 +185,7 @@ export default function HelpPage() {
               <HelpCircle className="mr-1 h-3 w-3" />
               Help Center
             </Badge>
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white">
               How Can We Help?
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-xl text-blue-100">
