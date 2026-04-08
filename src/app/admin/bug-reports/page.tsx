@@ -303,7 +303,7 @@ export default function BugReportsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -647,7 +647,7 @@ export default function BugReportsPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {selectedReport.expectedBehavior && (
                     <div>
                       <p className="text-sm text-muted-foreground">Expected Behavior</p>
@@ -662,7 +662,7 @@ export default function BugReportsPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Reporter</p>
                     <p className="font-medium">{selectedReport.name || "Anonymous"}</p>
@@ -712,7 +712,7 @@ export default function BugReportsPage() {
               <div className="rounded-lg border p-4 space-y-4 bg-muted/50 dark:bg-zinc-900">
                 <h4 className="font-semibold">Update Bug Report</h4>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label>Status</Label>
                     <Select value={newStatus} onValueChange={setNewStatus}>

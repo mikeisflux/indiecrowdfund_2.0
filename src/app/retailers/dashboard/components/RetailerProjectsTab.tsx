@@ -199,7 +199,7 @@ export function RetailerProjectsTab() {
           <Loader2 className="h-12 w-12 animate-spin text-emerald-600" />
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {projects.map((project) => (
             <Link key={project.id} href={`/retailers/projects/${project.id}`}>
               <Card className="overflow-hidden hover:shadow-lg transition-all cursor-pointer group">

@@ -261,7 +261,7 @@ export default function RetailerDashboardPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -320,7 +320,7 @@ export default function RetailerDashboardPage() {
               </Card>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
               <div className="md:col-span-2">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
@@ -406,7 +406,7 @@ export default function RetailerDashboardPage() {
                 </Button>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                 {featuredProjects.map((project) => (
                   <Link key={project.id} href={`/retailers/projects/${project.id}`}>
                     <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">

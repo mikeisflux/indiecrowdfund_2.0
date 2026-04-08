@@ -385,7 +385,7 @@ function ProjectSectionSkeleton() {
             <div className="h-4 w-64 bg-muted rounded animate-pulse" />
           </div>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="glass-card rounded-2xl overflow-hidden">
               <div className="aspect-video bg-muted animate-pulse" />
@@ -466,7 +466,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
           </Link>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {featuredProjects.map((project, index) => (
             <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
@@ -578,7 +578,7 @@ async function PrelaunchProjectsSection({ userId }: { userId: string | undefined
           </Link>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {prelaunchProjects.map((project, index) => (
             <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-amber-500/20">
@@ -669,7 +669,7 @@ async function PastCampaignsSection() {
           </Link>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {pastCampaigns.map((project, index) => (
             <Link key={project.id} href={project.projectUrl} className="animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <Card className="project-card overflow-hidden h-full glass-card glass-card-hover rounded-2xl border-border/50">
@@ -830,8 +830,8 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="glass-card glass-card-hover rounded-2xl p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0s' }}>
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <div className="glass-card glass-card-hover rounded-2xl p-4 sm:p-6 md:p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0s' }}>
               <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-emerald-500/20 group-hover:glow-pulse transition-all">
                 <Rocket className="h-10 w-10 text-primary" />
                 <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
@@ -843,7 +843,7 @@ export default async function HomePage() {
                 Set up your campaign with a compelling story, reward tiers, and funding goal.
               </p>
             </div>
-            <div className="glass-card glass-card-hover rounded-2xl p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <div className="glass-card glass-card-hover rounded-2xl p-4 sm:p-6 md:p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 group-hover:glow-pulse-cyan transition-all">
                 <Heart className="h-10 w-10 text-cyan-500" />
                 <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
@@ -855,7 +855,7 @@ export default async function HomePage() {
                 Share your project with the world and build a community of backers.
               </p>
             </div>
-            <div className="glass-card glass-card-hover rounded-2xl p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <div className="glass-card glass-card-hover rounded-2xl p-4 sm:p-6 md:p-8 text-center group animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 group-hover:glow-pulse-purple transition-all">
                 <Zap className="h-10 w-10 text-purple-500" />
                 <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">

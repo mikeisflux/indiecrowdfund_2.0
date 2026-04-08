@@ -90,7 +90,7 @@ export function RewardSelector({
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Your shipping location:</span>
           <Select value={shippingCountry} onValueChange={setShippingCountry}>
-            <SelectTrigger className="w-52 h-8">
+            <SelectTrigger className="w-full sm:w-52 h-8">
               <SelectValue>
                 {SHIPPING_COUNTRIES.find(c => c.code === shippingCountry)?.name || shippingCountry}
               </SelectValue>

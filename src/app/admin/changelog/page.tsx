@@ -485,6 +485,7 @@ export default function AdminChangelogPage() {
               </Button>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -578,6 +579,7 @@ export default function AdminChangelogPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
