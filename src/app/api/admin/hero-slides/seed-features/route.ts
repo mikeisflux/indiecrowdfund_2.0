@@ -152,10 +152,10 @@ const featureSlides = [
     isActive: true,
   },
   {
-    title: "Secure Payments with Stripe",
-    subtitle: "Trusted, direct-to-creator payment processing",
+    title: "NSFW Guaranteed Friendly Payments",
+    subtitle: "Powered by Divinity Coin and Whop",
     description:
-      "Every transaction is handled by Stripe Connect — the same payment infrastructure used by the world's biggest platforms. Creators get paid directly, backers get purchase protection. Simple.",
+      "No more payment processor headaches for adult content creators. IndieCrowdfund supports NSFW-friendly payments through Divinity Coin and Whop — so you can fund your projects without restrictions or surprise account freezes.",
     buttonText: "Discover Projects",
     buttonLink: "/discover",
     showPrimaryButton: true,
