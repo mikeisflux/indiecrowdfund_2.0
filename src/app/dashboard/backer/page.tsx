@@ -8,7 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -60,7 +60,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StarRating } from "@/components/ui/star-rating";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
-import { formatTimeRemaining } from "@/lib/utils";
+import { cn, formatTimeRemaining } from "@/lib/utils";
 import {
   GlowingStatCard,
   AnimatedBarChart,
@@ -712,63 +712,132 @@ export default function BackerDashboard() {
           {/* Main Content */}
           <div className="md:col-span-2" ref={tabsRef}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <div className="overflow-x-auto pb-1">
-              <TabsList className="bg-card/50 backdrop-blur border border-border/50 p-1 inline-flex w-max h-auto gap-1">
-                <TabsTrigger value="backed" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                  <Package className="mr-2 h-4 w-4" />
-                  Backed ({backedProjects.length})
-                </TabsTrigger>
-                <TabsTrigger value="saved" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                  <Heart className="mr-2 h-4 w-4" />
-                  Saved ({savedProjects.length})
-                </TabsTrigger>
-                <TabsTrigger value="messages" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white relative">
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Messages
-                  {unreadMessages > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold animate-pulse">
-                      {unreadMessages > 9 ? "9+" : unreadMessages}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="downloads" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white">
-                  <Download className="mr-2 h-4 w-4" />
-                  Downloads
-                </TabsTrigger>
-                <TabsTrigger value="surveys" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white relative">
-                  <ClipboardList className="mr-2 h-4 w-4" />
-                  Surveys
-                  {stats.pendingSurveys > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold animate-pulse">
-                      {stats.pendingSurveys}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="addresses" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Addresses
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white">
-                  <PieChart className="mr-2 h-4 w-4" />
-                  Analytics
-                </TabsTrigger>
-                <TabsTrigger value="collections" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-500 data-[state=active]:text-white">
-                  <FolderHeart className="mr-2 h-4 w-4" />
-                  Collections
-                </TabsTrigger>
-                <TabsTrigger value="notifications" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                  <BellRing className="mr-2 h-4 w-4" />
-                  Notifications
-                </TabsTrigger>
-                <TabsTrigger value="following" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
-                  <Users className="mr-2 h-4 w-4" />
-                  Following
-                </TabsTrigger>
-                <TabsTrigger value="digital-library" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white">
-                  <Library className="mr-2 h-4 w-4" />
-                  Digital Library
-                </TabsTrigger>
-              </TabsList>
+              {/* Sectioned Navigation */}
+              <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur divide-y divide-border/30">
+                {/* My Projects */}
+                <div className="p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">My Projects</p>
+                  <div className="flex flex-wrap gap-1">
+                    {([
+                      { value: "backed", icon: Package, label: `Backed (${backedProjects.length})`, gradient: "from-primary to-purple-500" },
+                      { value: "saved", icon: Heart, label: `Saved (${savedProjects.length})`, gradient: "from-primary to-purple-500" },
+                      { value: "collections", icon: FolderHeart, label: "Collections", gradient: "from-pink-500 to-rose-500" },
+                      { value: "following", icon: Users, label: "Following", gradient: "from-cyan-500 to-teal-500" },
+                    ] as const).map(({ value, icon: Icon, label, gradient }) => (
+                      <button
+                        key={value}
+                        onClick={() => setActiveTab(value)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                          activeTab === value
+                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Communication */}
+                <div className="p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Communication</p>
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      onClick={() => setActiveTab("messages")}
+                      className={cn(
+                        "relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                        activeTab === "messages"
+                          ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      Messages
+                      {unreadMessages > 0 && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold animate-pulse">
+                          {unreadMessages > 9 ? "9+" : unreadMessages}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("notifications")}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                        activeTab === "notifications"
+                          ? "bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <BellRing className="h-3.5 w-3.5" />
+                      Notifications
+                    </button>
+                  </div>
+                </div>
+
+                {/* Fulfillment */}
+                <div className="p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Fulfillment</p>
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      onClick={() => setActiveTab("surveys")}
+                      className={cn(
+                        "relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                        activeTab === "surveys"
+                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <ClipboardList className="h-3.5 w-3.5" />
+                      Surveys
+                      {stats.pendingSurveys > 0 && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold animate-pulse">
+                          {stats.pendingSurveys}
+                        </span>
+                      )}
+                    </button>
+                    {([
+                      { value: "addresses", icon: MapPin, label: "Addresses", gradient: "from-blue-500 to-indigo-500" },
+                      { value: "downloads", icon: Download, label: "Downloads", gradient: "from-emerald-500 to-cyan-500" },
+                      { value: "digital-library", icon: Library, label: "Digital Library", gradient: "from-amber-500 to-orange-500" },
+                    ] as const).map(({ value, icon: Icon, label, gradient }) => (
+                      <button
+                        key={value}
+                        onClick={() => setActiveTab(value)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                          activeTab === value
+                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Insights */}
+                <div className="p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Insights</p>
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      onClick={() => setActiveTab("analytics")}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                        activeTab === "analytics"
+                          ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <PieChart className="h-3.5 w-3.5" />
+                      Analytics
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <TabsContent value="backed" className="space-y-4">
