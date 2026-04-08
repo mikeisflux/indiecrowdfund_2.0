@@ -21,7 +21,8 @@ export function TrafficSources({ referrers }: TrafficSourcesProps) {
       </CardHeader>
       <CardContent>
         {referrers.length > 0 ? (
-          <div className="space-y-4">
+          <div className="overflow-x-auto">
+            <div className="space-y-4 min-w-[430px]">
             {referrers.map((referrer, i) => (
               <div key={i} className="flex items-center gap-4 p-2 rounded-xl hover:bg-muted/20 transition-colors">
                 <div className="w-28 text-sm font-medium truncate">
@@ -52,6 +53,7 @@ export function TrafficSources({ referrers }: TrafficSourcesProps) {
               <div className="w-16 text-right">Visits</div>
               <div className="w-16 text-right">Pledges</div>
               <div className="w-24 text-right">Amount</div>
+            </div>
             </div>
           </div>
         ) : (

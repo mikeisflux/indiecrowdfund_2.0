@@ -13,7 +13,7 @@ interface UpdatesTabProps {
 export function UpdatesTab({ updates }: UpdatesTabProps) {
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <h2 className="text-2xl font-semibold mb-6">Updates</h2>
+      <h2 className="text-xl sm:text-2xl font-semibold mb-6">Updates</h2>
       {updates.map((update) => (
         <Card key={update.id} id={`update-${update.id}`}>
           <CardContent className="p-6">

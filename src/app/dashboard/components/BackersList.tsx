@@ -309,14 +309,14 @@ export function BackersList({
   return (
     <>
       <Card className="bg-card/50 backdrop-blur border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-blue-500/20">
               <Users className="h-4 w-4 text-blue-500" />
             </div>
             All Backers
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="hover:border-primary/50 bg-card/50">
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="hover:border-primary/50 bg-card/50 w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
