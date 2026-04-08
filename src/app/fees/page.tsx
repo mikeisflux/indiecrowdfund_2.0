@@ -162,7 +162,7 @@ export default function FeesPage() {
             className="w-full"
             onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
           >
-            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 mb-8">
+            <TabsList className="grid w-full sm:max-w-2xl mx-auto grid-cols-3 mb-8">
               <TabsTrigger value="whop" className="flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" /> Whop
               </TabsTrigger>
@@ -412,7 +412,7 @@ export default function FeesPage() {
               {/* Quick comparison */}
               <div className="mt-8 pt-8 border-t">
                 <h4 className="text-sm font-medium text-muted-foreground mb-4">Compare with other platforms at ${amount.toLocaleString()}</h4>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "whop" ? "ring-2 ring-zinc-400 bg-muted dark:bg-zinc-700" : "bg-muted dark:bg-zinc-800"}`}>
                     <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (Whop)</div>
                     <div className="font-bold text-zinc-700 dark:text-muted-foreground">${whopFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>

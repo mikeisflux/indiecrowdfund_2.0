@@ -904,7 +904,7 @@ export default async function HomePage() {
             <span className="text-sm font-medium">Start Your Journey Today</span>
           </div>
 
-          <h2 className="mb-6 text-3xl md:text-5xl font-bold leading-tight">
+          <h2 className="mb-6 text-2xl sm:text-3xl md:text-5xl font-bold leading-tight">
             Ready to bring your
             <span className="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-white">
               idea to life?

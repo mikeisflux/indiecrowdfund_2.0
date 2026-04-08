@@ -845,7 +845,7 @@ export default function MediaPage() {
 
           {/* Files List */}
           {!loading && files.length > 0 && viewMode === "list" && (
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50 dark:bg-zinc-800">

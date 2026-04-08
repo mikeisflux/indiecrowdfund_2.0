@@ -145,7 +145,7 @@ export default function ContactPage() {
             <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg mb-4">
               <Sparkles className="h-7 w-7 text-primary-foreground" />
             </div>
-            <h1 className="mb-4 text-4xl font-bold tracking-tight">Contact Support</h1>
+            <h1 className="mb-4 text-2xl sm:text-4xl font-bold tracking-tight">Contact Support</h1>
             <p className="text-lg text-muted-foreground">
               Have a question or need help? We&apos;re here for you. Fill out the form below
               and our team will get back to you as soon as possible.

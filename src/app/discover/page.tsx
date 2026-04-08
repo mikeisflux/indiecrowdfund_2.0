@@ -269,7 +269,7 @@ function DiscoverContent() {
             <Search className="h-3.5 w-3.5 text-primary" />
             <span className="text-sm font-medium text-primary">Explore & Discover</span>
           </div>
-          <h1 className="mb-3 text-4xl md:text-5xl font-bold">
+          <h1 className="mb-3 text-2xl sm:text-4xl md:text-5xl font-bold">
             Discover{" "}
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-emerald-500 to-cyan-500">
               Amazing Projects

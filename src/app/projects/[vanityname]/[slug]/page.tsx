@@ -781,7 +781,7 @@ export default function ProjectPage() {
       {/* Info Bar */}
       <section className="border-b border-border/50 py-6 relative">
         <div className="container">
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
             <div className="flex items-start gap-3 glass-card rounded-xl p-4">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20">
                 <Handshake className="h-5 w-5 text-black" />

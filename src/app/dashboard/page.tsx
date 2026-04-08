@@ -243,7 +243,7 @@ export default function CreatorDashboard() {
             <div className="mx-auto mb-6 w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center animate-pulse">
               <Plus className="h-12 w-12 text-primary" />
             </div>
-            <h1 className="mb-2 text-3xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+            <h1 className="mb-2 text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               Create Your First Project
             </h1>
             <p className="mb-8 text-muted-foreground">
@@ -405,7 +405,7 @@ export default function CreatorDashboard() {
               </div>
 
               <TabsContent value="overview" className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
                   <FundingChart
                     fundingData={data.fundingData}
                     timeRange={timeRange}
