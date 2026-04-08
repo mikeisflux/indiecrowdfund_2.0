@@ -8,6 +8,13 @@ const nextConfig = {
   distDir: process.env.NEXT_BUILD_OUTPUT || '.next',
   async redirects() {
     return [
+      // Redirect www to non-www (Google verification and SEO)
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.indiecrowdfund.com' }],
+        destination: 'https://indiecrowdfund.com/:path*',
+        permanent: true,
+      },
       { source: '/cookies', destination: '/privacy#cookies', permanent: true },
     ];
   },
