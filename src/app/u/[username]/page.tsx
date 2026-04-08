@@ -397,10 +397,15 @@ export default function PublicProfilePage() {
                 <TabsTrigger value="backed">
                   Backed ({profile.backedProjects?.length || 0})
                 </TabsTrigger>
-                {(profile.ratings?.count ?? 0) > 0 && (
+                {(profile.ratings?.count ?? 0) > 0 ? (
                   <TabsTrigger value="reviews" className="flex items-center gap-1">
                     <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
                     Reviews ({profile.ratings?.count})
+                  </TabsTrigger>
+                ) : (
+                  <TabsTrigger value="reviews" className="flex items-center gap-1">
+                    <Star className="h-3.5 w-3.5 text-muted-foreground" />
+                    Reviews
                   </TabsTrigger>
                 )}
               </TabsList>
@@ -447,6 +452,18 @@ export default function PublicProfilePage() {
               </TabsContent>
 
               <TabsContent value="reviews" className="mt-6 space-y-6">
+                {/* Empty state */}
+                {(profile.ratings?.count ?? 0) === 0 && (
+                  <EmptyState
+                    icon={Star}
+                    title="No reviews yet"
+                    description={
+                      isOwnProfile
+                        ? "You haven't received any backer reviews yet. Reviews appear after backers receive their rewards."
+                        : `${displayName} hasn't received any backer reviews yet.`
+                    }
+                  />
+                )}
                 {/* Rating breakdown */}
                 {profile.ratings?.avg?.overall && (
                   <Card>
