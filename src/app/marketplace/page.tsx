@@ -17,6 +17,8 @@ import {
   TrendingUp,
   Search,
   Book as BookIcon,
+  Music,
+  Film,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -183,7 +185,7 @@ function ShowMoreTile({ href }: { href: string }) {
           <ArrowRight className="h-6 w-6 text-purple-500 dark:text-purple-400 group-hover:translate-x-1 transition-transform" />
         </div>
         <span className="text-purple-600 dark:text-purple-400 font-semibold text-sm">Show More</span>
-        <span className="text-muted-foreground text-xs mt-1">View all books</span>
+        <span className="text-muted-foreground text-xs mt-1">View all</span>
       </div>
     </Link>
   );
@@ -247,8 +249,46 @@ function BookSection({
   );
 }
 
+// Coming Soon placeholder for categories not yet populated
+function ComingSoonSection({
+  category,
+  icon: Icon,
+  description,
+  gradient,
+}: {
+  category: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  gradient: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
+      <div className={`p-6 rounded-2xl bg-gradient-to-br ${gradient} mb-6`}>
+        <Icon className="h-16 w-16 text-white" />
+      </div>
+      <h2 className="text-3xl font-bold text-foreground mb-3">{category} Coming Soon</h2>
+      <p className="text-muted-foreground max-w-md mb-8">
+        {description}
+      </p>
+      <div className="flex gap-3">
+        <Link href="/projects/new">
+          <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
+            Be the First Creator
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
+        <Link href="/discover">
+          <Button variant="outline">
+            Browse Campaigns
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function MarketplacePage() {
-  const [activeTab, setActiveTab] = useState("books");
+  const [activeTab, setActiveTab] = useState("comics");
   const [searchQuery, setSearchQuery] = useState("");
   const [featuredBooks, setFeaturedBooks] = useState<Book[]>([]);
   const [staffPicks, setStaffPicks] = useState<Book[]>([]);
@@ -354,13 +394,13 @@ export default function MarketplacePage() {
               Digital Marketplace
             </h1>
             <p className="text-sm text-muted-foreground max-w-xl mb-4">
-              Discover and purchase digital books from independent creators.
+              Discover and purchase digital comics, music, and movies from independent creators.
               Instant delivery to your Digital Library.
             </p>
             <div className="relative max-w-md">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
-                placeholder="Search books and publishers..."
+                placeholder="Search the marketplace..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-12 bg-background border-border h-12 rounded-xl"
@@ -369,27 +409,34 @@ export default function MarketplacePage() {
           </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Category Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsList className="bg-muted/50 backdrop-blur-sm border border-border rounded-xl p-1.5 w-fit">
             <TabsTrigger
-              value="books"
+              value="comics"
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-6 py-2.5 text-muted-foreground"
             >
               <BookOpen className="w-4 h-4 mr-2" />
-              Sort by Book
+              Comics
             </TabsTrigger>
             <TabsTrigger
-              value="companies"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/30 data-[state=active]:to-blue-500/30 data-[state=active]:text-foreground rounded-lg px-6 py-2.5 text-muted-foreground"
+              value="music"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500/30 data-[state=active]:to-teal-500/30 data-[state=active]:text-foreground rounded-lg px-6 py-2.5 text-muted-foreground"
             >
-              <Building2 className="w-4 h-4 mr-2" />
-              Sort by Company
+              <Music className="w-4 h-4 mr-2" />
+              Music
+            </TabsTrigger>
+            <TabsTrigger
+              value="movies"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500/30 data-[state=active]:to-orange-500/30 data-[state=active]:text-foreground rounded-lg px-6 py-2.5 text-muted-foreground"
+            >
+              <Film className="w-4 h-4 mr-2" />
+              Movies
             </TabsTrigger>
           </TabsList>
 
-          {/* Books Tab Content */}
-          <TabsContent value="books" className="space-y-8">
+          {/* Comics Tab Content */}
+          <TabsContent value="comics" className="space-y-8">
             {searchQuery ? (
               <section className="space-y-4">
                 <h2 className="text-xl font-bold text-foreground">
@@ -398,7 +445,7 @@ export default function MarketplacePage() {
                 {filteredBooks.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No books found matching your search</p>
+                    <p>No comics found matching your search</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
@@ -438,7 +485,7 @@ export default function MarketplacePage() {
                     ) : featuredBooks.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                        <p className="text-sm">No featured books yet</p>
+                        <p className="text-sm">No featured comics yet</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -487,51 +534,65 @@ export default function MarketplacePage() {
                   </section>
                 </div>
 
-                {/* All Books Section - Full Width */}
+                {/* All Comics Section - Full Width */}
                 <BookSection
-                  title="All Books"
+                  title="All Comics"
                   books={allBooks}
                   viewAllHref="/marketplace/books"
                   loading={loading}
                   icon={TrendingUp}
                 />
+
+                {/* Publishers & Creators */}
+                <section className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20">
+                      <Building2 className="h-5 w-5 text-cyan-500 dark:text-cyan-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-foreground">Publishers & Creators</h2>
+                  </div>
+
+                  {loading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                        <Skeleton key={i} className="h-48 rounded-xl" />
+                      ))}
+                    </div>
+                  ) : filteredCompanies.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No publishers available yet</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {filteredCompanies.map((company) => (
+                        <CompanyTile key={company.id} company={company} />
+                      ))}
+                    </div>
+                  )}
+                </section>
               </>
             )}
           </TabsContent>
 
-          {/* Companies Tab Content */}
-          <TabsContent value="companies" className="space-y-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20">
-                  <Building2 className="h-5 w-5 text-cyan-500 dark:text-cyan-400" />
-                </div>
-                <h2 className="text-xl font-bold text-foreground">Publishers & Creators</h2>
-              </div>
-            </div>
+          {/* Music Tab Content */}
+          <TabsContent value="music">
+            <ComingSoonSection
+              category="Music"
+              icon={Music}
+              description="Independent artists will soon be able to sell albums, singles, and EPs directly to fans. Stream previews, purchase downloads, and support the artists you love."
+              gradient="from-emerald-500 to-teal-600"
+            />
+          </TabsContent>
 
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <Skeleton key={i} className="h-48 rounded-xl" />
-                ))}
-              </div>
-            ) : filteredCompanies.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>
-                  {searchQuery
-                    ? "No companies found matching your search"
-                    : "No companies available yet"}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {filteredCompanies.map((company) => (
-                  <CompanyTile key={company.id} company={company} />
-                ))}
-              </div>
-            )}
+          {/* Movies Tab Content */}
+          <TabsContent value="movies">
+            <ComingSoonSection
+              category="Movies"
+              icon={Film}
+              description="Independent filmmakers will soon be able to distribute short films, features, and documentaries directly to audiences. Watch trailers, rent or buy, and support indie cinema."
+              gradient="from-rose-500 to-orange-600"
+            />
           </TabsContent>
         </Tabs>
       </main>
