@@ -207,9 +207,9 @@ function CoverImageUploader({
       <p className="text-xs text-muted-foreground">
         Recommended: 3000x3000px square image. JPG or PNG, max 10MB.
       </p>
-      <div className="flex items-start gap-6">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
         {/* Preview */}
-        <div className="relative w-48 h-48 rounded-xl overflow-hidden bg-muted border-2 border-dashed border-border shrink-0">
+        <div className="relative w-36 h-36 sm:w-48 sm:h-48 rounded-xl overflow-hidden bg-muted border-2 border-dashed border-border shrink-0">
           {url ? (
             <>
               <Image src={url} alt="Cover" fill className="object-cover" />
@@ -360,28 +360,28 @@ function TrackUploader({
           {tracks.map((track, idx) => (
             <div
               key={track.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border"
+              className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl bg-muted/50 border border-border"
             >
-              <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span className="text-sm text-muted-foreground w-6 text-right shrink-0">
+              <GripVertical className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:block" />
+              <span className="text-sm text-muted-foreground w-5 sm:w-6 text-right shrink-0">
                 {idx + 1}
               </span>
               <Input
                 value={track.title}
                 onChange={(e) => onUpdate(track.id, "title", e.target.value)}
-                className="flex-1 h-9"
+                className="flex-1 h-8 sm:h-9 text-sm"
                 placeholder="Track title"
               />
-              <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+              <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                 <Clock className="w-3 h-3" />
                 <span>{formatDuration(track.audioDuration)}</span>
               </div>
-              <span className="text-xs text-muted-foreground shrink-0">
+              <span className="text-xs text-muted-foreground shrink-0 hidden md:block">
                 {formatSize(track.audioFileSize)}
               </span>
               <button
                 onClick={() => onRemove(track.id)}
-                className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                className="p-1 text-muted-foreground hover:text-destructive transition-colors shrink-0"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -864,8 +864,8 @@ export default function NewMusicPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Preview Card */}
-              <div className="flex gap-6">
-                <div className="relative w-40 h-40 rounded-xl overflow-hidden bg-muted shrink-0">
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-xl overflow-hidden bg-muted shrink-0 mx-auto sm:mx-0">
                   {formData.coverImageUrl ? (
                     <Image
                       src={formData.coverImageUrl}

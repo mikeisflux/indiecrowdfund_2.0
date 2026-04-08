@@ -257,10 +257,10 @@ export default function PublicProfilePage() {
             </div>
 
             {/* Creator Rating Widget — prominent display */}
-            <div className="flex flex-col items-center shrink-0">
+            <div className="flex flex-col items-center md:items-center shrink-0 w-full md:w-auto">
               {profile.ratings?.avg?.overall && profile.ratings.count > 0 ? (
                 <>
-                  <span className="text-5xl md:text-6xl font-extrabold text-amber-500 leading-none">
+                  <span className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-amber-500 leading-none">
                     {Math.round((profile.ratings.avg.overall / 5) * 100)}%
                   </span>
                   <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mt-1">satisfaction</span>
@@ -287,7 +287,7 @@ export default function PublicProfilePage() {
                 </>
               ) : (
                 <>
-                  <span className="text-5xl md:text-6xl font-extrabold text-muted-foreground/30 leading-none">—</span>
+                  <span className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-muted-foreground/30 leading-none">—</span>
                   <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mt-1">satisfaction</span>
                   <div className="flex items-center gap-1 mt-2">
                     {[1,2,3,4,5].map(s => (

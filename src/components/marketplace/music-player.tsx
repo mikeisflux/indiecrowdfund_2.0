@@ -397,10 +397,10 @@ function MusicPlayerBar({ analyser }: { analyser: AnalyserNode | null }) {
         </div>
       </div>
 
-      <div className="flex items-center h-[72px] px-4 gap-4">
+      <div className="flex items-center h-[64px] sm:h-[72px] px-2 sm:px-4 gap-2 sm:gap-4">
         {/* Left — Track Info */}
-        <div className="flex items-center gap-3 min-w-0 w-[280px] shrink-0">
-          <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-none sm:w-[280px] shrink-0">
+          <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden bg-muted shrink-0">
             {currentTrack.coverImage ? (
               <Image
                 src={currentTrack.coverImage}
@@ -411,23 +411,23 @@ function MusicPlayerBar({ analyser }: { analyser: AnalyserNode | null }) {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500/30 to-pink-500/30">
-                <Music className="w-5 h-5 text-muted-foreground" />
+                <Music className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
               </div>
             )}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{currentTrack.title}</p>
-            <p className="text-xs text-muted-foreground truncate">{currentTrack.artist}</p>
+            <p className="text-xs sm:text-sm font-medium text-foreground truncate">{currentTrack.title}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{currentTrack.artist}</p>
           </div>
         </div>
 
-        {/* Center — Controls */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-1 max-w-[600px] mx-auto">
-          <div className="flex items-center gap-4">
+        {/* Center — Controls (simplified on mobile) */}
+        <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 sm:flex-1 sm:max-w-[600px] sm:mx-auto">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button
               onClick={toggleShuffle}
               className={cn(
-                "p-1.5 rounded-full transition-colors hover:bg-muted",
+                "p-1.5 rounded-full transition-colors hover:bg-muted hidden sm:block",
                 isShuffled ? "text-purple-500" : "text-muted-foreground"
               )}
               title="Shuffle"
@@ -436,33 +436,33 @@ function MusicPlayerBar({ analyser }: { analyser: AnalyserNode | null }) {
             </button>
             <button
               onClick={prevTrack}
-              className="p-1.5 rounded-full text-foreground hover:bg-muted transition-colors"
+              className="p-1 sm:p-1.5 rounded-full text-foreground hover:bg-muted transition-colors"
               title="Previous"
             >
-              <SkipBack className="w-5 h-5 fill-current" />
+              <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
             </button>
             <button
               onClick={togglePlay}
-              className="p-2.5 rounded-full bg-foreground text-background hover:scale-105 transition-transform"
+              className="p-2 sm:p-2.5 rounded-full bg-foreground text-background hover:scale-105 transition-transform"
               title={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
-                <Pause className="w-5 h-5 fill-current" />
+                <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
               ) : (
-                <Play className="w-5 h-5 fill-current ml-0.5" />
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-0.5" />
               )}
             </button>
             <button
               onClick={nextTrack}
-              className="p-1.5 rounded-full text-foreground hover:bg-muted transition-colors"
+              className="p-1 sm:p-1.5 rounded-full text-foreground hover:bg-muted transition-colors"
               title="Next"
             >
-              <SkipForward className="w-5 h-5 fill-current" />
+              <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
             </button>
             <button
               onClick={cycleRepeat}
               className={cn(
-                "p-1.5 rounded-full transition-colors hover:bg-muted relative",
+                "p-1.5 rounded-full transition-colors hover:bg-muted relative hidden sm:block",
                 repeatMode !== "off" ? "text-purple-500" : "text-muted-foreground"
               )}
               title={`Repeat: ${repeatMode}`}
@@ -473,11 +473,10 @@ function MusicPlayerBar({ analyser }: { analyser: AnalyserNode | null }) {
               )}
             </button>
           </div>
-          <div className="flex items-center gap-2 w-full text-xs text-muted-foreground">
+          <div className="hidden sm:flex items-center gap-2 w-full text-xs text-muted-foreground">
             <span className="w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
             <div
-              ref={progressRef}
-              className="flex-1 h-1 bg-muted rounded-full cursor-pointer group hidden sm:block"
+              className="flex-1 h-1 bg-muted rounded-full cursor-pointer group"
               onClick={handleProgressClick}
               onMouseDown={() => setIsDragging(true)}
             >
@@ -492,18 +491,18 @@ function MusicPlayerBar({ analyser }: { analyser: AnalyserNode | null }) {
           </div>
         </div>
 
-        {/* Right — Volume + Visualizer + Download */}
-        <div className="flex items-center gap-3 w-[280px] shrink-0 justify-end">
+        {/* Right — Volume + Visualizer + Download (hidden on mobile except close) */}
+        <div className="flex items-center gap-2 sm:gap-3 sm:w-[280px] shrink-0 justify-end">
           <AudioVisualizer
             analyser={analyser}
             isPlaying={isPlaying}
             width={100}
             height={32}
             barCount={24}
-            className="hidden md:block"
+            className="hidden lg:block"
           />
 
-          <div className="flex items-center gap-1.5">
+          <div className="hidden sm:flex items-center gap-1.5">
             <button
               onClick={toggleMute}
               className="p-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -517,13 +516,13 @@ function MusicPlayerBar({ analyser }: { analyser: AnalyserNode | null }) {
               step={0.01}
               value={isMuted ? 0 : volume}
               onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="w-20 h-1 accent-purple-500 cursor-pointer hidden sm:block"
+              className="w-20 h-1 accent-purple-500 cursor-pointer hidden md:block"
             />
           </div>
 
           {currentTrack.price !== undefined && currentTrack.price > 0 && (
             <button
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity"
+              className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity"
               title={`Buy for $${currentTrack.price.toFixed(2)}`}
             >
               <Download className="w-3.5 h-3.5" />

@@ -97,15 +97,15 @@ function HScrollSection({
   };
 
   return (
-    <section className={cn("space-y-4", className)}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-            <Icon className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+    <section className={cn("space-y-3 sm:space-y-4", className)}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 shrink-0">
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 dark:text-purple-400" />
           </div>
-          <h2 className="text-xl font-bold text-foreground">{title}</h2>
+          <h2 className="text-base sm:text-xl font-bold text-foreground truncate">{title}</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <button
             onClick={() => scroll("left")}
             disabled={!canScrollLeft}
@@ -146,7 +146,7 @@ function HScrollSection({
 
 function AlbumCard({ item, onPlay }: { item: MusicItem; onPlay: (item: MusicItem) => void }) {
   return (
-    <div className="group shrink-0 w-[180px]">
+    <div className="group shrink-0 w-[140px] sm:w-[180px]">
       <div className="relative aspect-square rounded-xl overflow-hidden bg-muted mb-2">
         {item.coverImage ? (
           <Image
@@ -349,7 +349,7 @@ export function MusicBrowse() {
           <HScrollSection title="Featured" icon={Star} seeAllHref="/marketplace/music/featured">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="shrink-0 w-[180px]">
+                  <div key={i} className="shrink-0 w-[140px] sm:w-[180px]">
                     <Skeleton className="aspect-square rounded-xl mb-2" />
                     <Skeleton className="h-4 w-3/4 mb-1" />
                     <Skeleton className="h-3 w-1/2" />
@@ -360,7 +360,7 @@ export function MusicBrowse() {
                   <AlbumCard key={item.id} item={item} onPlay={handlePlay} />
                 ))
               : Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="shrink-0 w-[180px]">
+                  <div key={i} className="shrink-0 w-[140px] sm:w-[180px]">
                     <div className="aspect-square rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-2 border-dashed border-purple-500/20 flex items-center justify-center mb-2">
                       <Music className="w-8 h-8 text-muted-foreground/30" />
                     </div>
@@ -422,7 +422,7 @@ export function MusicBrowse() {
           <HScrollSection title="Staff Picks" icon={Sparkles} seeAllHref="/marketplace/music/staff-picks">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="shrink-0 w-[180px]">
+                  <div key={i} className="shrink-0 w-[140px] sm:w-[180px]">
                     <Skeleton className="aspect-square rounded-xl mb-2" />
                     <Skeleton className="h-4 w-3/4 mb-1" />
                     <Skeleton className="h-3 w-1/2" />
@@ -433,7 +433,7 @@ export function MusicBrowse() {
                   <AlbumCard key={item.id} item={item} onPlay={handlePlay} />
                 ))
               : Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="shrink-0 w-[180px]">
+                  <div key={i} className="shrink-0 w-[140px] sm:w-[180px]">
                     <div className="aspect-square rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-2 border-dashed border-purple-500/20 flex items-center justify-center mb-2">
                       <Sparkles className="w-8 h-8 text-muted-foreground/30" />
                     </div>
@@ -446,7 +446,7 @@ export function MusicBrowse() {
           <HScrollSection title="New Releases" icon={Clock} seeAllHref="/marketplace/music/new">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="shrink-0 w-[180px]">
+                  <div key={i} className="shrink-0 w-[140px] sm:w-[180px]">
                     <Skeleton className="aspect-square rounded-xl mb-2" />
                     <Skeleton className="h-4 w-3/4 mb-1" />
                     <Skeleton className="h-3 w-1/2" />
@@ -457,7 +457,7 @@ export function MusicBrowse() {
                   <AlbumCard key={item.id} item={item} onPlay={handlePlay} />
                 ))
               : Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="shrink-0 w-[180px]">
+                  <div key={i} className="shrink-0 w-[140px] sm:w-[180px]">
                     <div className="aspect-square rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-2 border-dashed border-emerald-500/20 flex items-center justify-center mb-2">
                       <Disc3 className="w-8 h-8 text-muted-foreground/30" />
                     </div>

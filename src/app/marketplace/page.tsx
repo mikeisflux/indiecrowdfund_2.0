@@ -412,26 +412,26 @@ export default function MarketplacePage() {
 
         {/* Category Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="bg-muted/50 backdrop-blur-sm border border-border rounded-xl p-1.5 w-fit">
+          <TabsList className="bg-muted/50 backdrop-blur-sm border border-border rounded-xl p-1 sm:p-1.5 w-full sm:w-fit">
             <TabsTrigger
               value="comics"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-6 py-2.5 text-muted-foreground"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-pink-500/30 data-[state=active]:text-foreground rounded-lg px-3 sm:px-6 py-2 sm:py-2.5 text-muted-foreground flex-1 sm:flex-none text-xs sm:text-sm"
             >
-              <BookOpen className="w-4 h-4 mr-2" />
+              <BookOpen className="w-4 h-4 mr-1.5 sm:mr-2" />
               Comics
             </TabsTrigger>
             <TabsTrigger
               value="music"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500/30 data-[state=active]:to-teal-500/30 data-[state=active]:text-foreground rounded-lg px-6 py-2.5 text-muted-foreground"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500/30 data-[state=active]:to-teal-500/30 data-[state=active]:text-foreground rounded-lg px-3 sm:px-6 py-2 sm:py-2.5 text-muted-foreground flex-1 sm:flex-none text-xs sm:text-sm"
             >
-              <Music className="w-4 h-4 mr-2" />
+              <Music className="w-4 h-4 mr-1.5 sm:mr-2" />
               Music
             </TabsTrigger>
             <TabsTrigger
               value="movies"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500/30 data-[state=active]:to-orange-500/30 data-[state=active]:text-foreground rounded-lg px-6 py-2.5 text-muted-foreground"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500/30 data-[state=active]:to-orange-500/30 data-[state=active]:text-foreground rounded-lg px-3 sm:px-6 py-2 sm:py-2.5 text-muted-foreground flex-1 sm:flex-none text-xs sm:text-sm"
             >
-              <Film className="w-4 h-4 mr-2" />
+              <Film className="w-4 h-4 mr-1.5 sm:mr-2" />
               Movies
             </TabsTrigger>
           </TabsList>
