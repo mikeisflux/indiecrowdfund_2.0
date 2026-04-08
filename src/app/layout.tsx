@@ -112,8 +112,10 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
+  modal,
 }: Readonly<{
   children: React.ReactNode;
+  modal: React.ReactNode;
 }>) {
   // Fetch auth, announcements, and analytics settings in parallel to minimize TTFB
   let session = null;
@@ -250,6 +252,7 @@ export default async function RootLayout({
               <main id="main-content">
                 {children}
               </main>
+              {modal}
             </TrackingProvider>
             </ScreenReaderAnnouncer>
             <Toaster />
