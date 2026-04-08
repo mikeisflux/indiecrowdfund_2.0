@@ -42,6 +42,7 @@ export async function GET(
         title: book.title,
         slug: book.slug,
         description: book.description,
+        mediaCategory: book.mediaCategory,
         category: book.category,
         price: Number(book.price),
         currency: book.currency,

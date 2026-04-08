@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { BlockEditor } from "@/components/ui/block-editor";
 import { FileText, AlertTriangle } from "lucide-react";
-import { BookFormData, CATEGORIES } from "./types";
+import { BookFormData, MEDIA_CATEGORIES, COMICS_GENRES, GENRES_BY_MEDIA_CATEGORY } from "./types";
 
 interface StepBasicInfoProps {
   formData: BookFormData;
@@ -23,6 +23,8 @@ interface StepBasicInfoProps {
 }
 
 export function StepBasicInfo({ formData, canEdit, isLive, updateForm }: StepBasicInfoProps) {
+  const genres = GENRES_BY_MEDIA_CATEGORY[formData.mediaCategory] || COMICS_GENRES;
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
@@ -55,17 +57,40 @@ export function StepBasicInfo({ formData, canEdit, isLive, updateForm }: StepBas
         </div>
 
         <div className="space-y-2">
-          <Label>Category *</Label>
+          <Label>Type *</Label>
+          <Select
+            value={formData.mediaCategory}
+            onValueChange={(value) => {
+              updateForm("mediaCategory", value);
+              updateForm("category", "");
+            }}
+            disabled={!canEdit && !isLive}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a type" />
+            </SelectTrigger>
+            <SelectContent>
+              {MEDIA_CATEGORIES.map((mc) => (
+                <SelectItem key={mc.value} value={mc.value}>
+                  {mc.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Genre *</Label>
           <Select
             value={formData.category}
             onValueChange={(value) => updateForm("category", value)}
             disabled={!canEdit && !isLive}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select a category" />
+              <SelectValue placeholder="Select a genre" />
             </SelectTrigger>
             <SelectContent>
-              {CATEGORIES.map((cat) => (
+              {genres.map((cat) => (
                 <SelectItem key={cat.value} value={cat.value}>
                   {cat.label}
                 </SelectItem>

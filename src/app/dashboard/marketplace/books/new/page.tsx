@@ -51,6 +51,7 @@ interface ExistingFile {
 interface BookFormData {
   title: string;
   description: string;
+  mediaCategory: string;
   category: string;
   price: string;
   currency: string;
@@ -65,7 +66,13 @@ interface BookFormData {
   tags: string[];
 }
 
-const CATEGORIES = [
+const MEDIA_CATEGORIES = [
+  { value: "comics", label: "Comics" },
+  { value: "music", label: "Music" },
+  { value: "movies", label: "Movies" },
+];
+
+const COMICS_GENRES = [
   { value: "superhero", label: "Superhero" },
   { value: "manga", label: "Manga" },
   { value: "action-adventure", label: "Action/Adventure" },
@@ -83,6 +90,58 @@ const CATEGORIES = [
   { value: "children", label: "Children's/All Ages" },
   { value: "other", label: "Other" },
 ];
+
+const MUSIC_GENRES = [
+  { value: "hip-hop", label: "Hip-Hop/Rap" },
+  { value: "rnb", label: "R&B/Soul" },
+  { value: "pop", label: "Pop" },
+  { value: "rock", label: "Rock" },
+  { value: "indie-rock", label: "Indie Rock" },
+  { value: "electronic", label: "Electronic/EDM" },
+  { value: "jazz", label: "Jazz" },
+  { value: "classical", label: "Classical" },
+  { value: "country", label: "Country" },
+  { value: "folk", label: "Folk/Acoustic" },
+  { value: "metal", label: "Metal" },
+  { value: "punk", label: "Punk" },
+  { value: "latin", label: "Latin" },
+  { value: "afrobeats", label: "Afrobeats" },
+  { value: "reggae", label: "Reggae/Dancehall" },
+  { value: "lo-fi", label: "Lo-Fi/Chill" },
+  { value: "soundtrack", label: "Soundtrack/Score" },
+  { value: "experimental", label: "Experimental" },
+  { value: "gospel", label: "Gospel" },
+  { value: "other", label: "Other" },
+];
+
+const MOVIE_GENRES = [
+  { value: "action", label: "Action" },
+  { value: "comedy", label: "Comedy" },
+  { value: "drama", label: "Drama" },
+  { value: "horror", label: "Horror" },
+  { value: "thriller", label: "Thriller/Suspense" },
+  { value: "sci-fi", label: "Sci-Fi" },
+  { value: "fantasy", label: "Fantasy" },
+  { value: "documentary", label: "Documentary" },
+  { value: "animation", label: "Animation" },
+  { value: "romance", label: "Romance" },
+  { value: "short-film", label: "Short Film" },
+  { value: "indie-film", label: "Indie Film" },
+  { value: "music-video", label: "Music Video" },
+  { value: "webseries", label: "Web Series" },
+  { value: "noir", label: "Noir" },
+  { value: "mockumentary", label: "Mockumentary" },
+  { value: "experimental", label: "Experimental" },
+  { value: "martial-arts", label: "Martial Arts" },
+  { value: "western", label: "Western" },
+  { value: "other", label: "Other" },
+];
+
+const GENRES_BY_MEDIA_CATEGORY: Record<string, { value: string; label: string }[]> = {
+  comics: COMICS_GENRES,
+  music: MUSIC_GENRES,
+  movies: MOVIE_GENRES,
+};
 
 const STEPS = [
   { id: 1, title: "Basic Info", icon: FileText },
@@ -580,6 +639,7 @@ function createInitialFormData(): BookFormData {
   return {
     title: "",
     description: "",
+    mediaCategory: "comics",
     category: "",
     price: "",
     currency: "USD",
@@ -661,7 +721,7 @@ function NewBookForm() {
           return false;
         }
         if (!formData.category) {
-          toast.error("Please select a category");
+          toast.error("Please select a genre");
           return false;
         }
         return true;
@@ -798,16 +858,38 @@ function NewBookForm() {
               </div>
 
               <div className="space-y-2">
-                <Label>Category *</Label>
+                <Label>Type *</Label>
+                <Select
+                  value={formData.mediaCategory}
+                  onValueChange={(value) => {
+                    updateForm("mediaCategory", value);
+                    updateForm("category", "");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEDIA_CATEGORIES.map((mc) => (
+                      <SelectItem key={mc.value} value={mc.value}>
+                        {mc.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Genre *</Label>
                 <Select
                   value={formData.category}
                   onValueChange={(value) => updateForm("category", value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder="Select a genre" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((cat) => (
+                    {(GENRES_BY_MEDIA_CATEGORY[formData.mediaCategory] || COMICS_GENRES).map((cat) => (
                       <SelectItem key={cat.value} value={cat.value}>
                         {cat.label}
                       </SelectItem>
@@ -1032,7 +1114,11 @@ function NewBookForm() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
                     <h3 className="text-xl font-bold text-white">{formData.title || "Untitled"}</h3>
-                    <p className="text-white/70 mt-1">{CATEGORIES.find(c => c.value === formData.category)?.label || "No category"}</p>
+                    <p className="text-white/70 mt-1">
+                      {MEDIA_CATEGORIES.find(mc => mc.value === formData.mediaCategory)?.label || "Comics"}
+                      {" — "}
+                      {(GENRES_BY_MEDIA_CATEGORY[formData.mediaCategory] || COMICS_GENRES).find(c => c.value === formData.category)?.label || "No genre"}
+                    </p>
                   </div>
                 </div>
                 <div className="p-4">

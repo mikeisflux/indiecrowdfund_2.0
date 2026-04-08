@@ -37,6 +37,7 @@ export default function EditBookPage() {
   const [formData, setFormData] = useState<BookFormData>({
     title: "",
     description: "",
+    mediaCategory: "comics",
     category: "",
     price: "",
     currency: "USD",
@@ -91,6 +92,7 @@ export default function EditBookPage() {
         setFormData({
           title: book.title,
           description: book.description,
+          mediaCategory: book.mediaCategory || "comics",
           category: book.category || "",
           price: book.price.toString(),
           currency: book.currency,
@@ -136,7 +138,7 @@ export default function EditBookPage() {
           return false;
         }
         if (!formData.category) {
-          toast.error("Please select a category");
+          toast.error("Please select a genre");
           return false;
         }
         return true;

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Eye } from "lucide-react";
-import { BookFormData, CATEGORIES } from "./types";
+import { BookFormData, MEDIA_CATEGORIES, COMICS_GENRES, GENRES_BY_MEDIA_CATEGORY } from "./types";
 
 interface StepReviewProps {
   formData: BookFormData;
@@ -39,7 +39,11 @@ export function StepReview({ formData, bookStatus }: StepReviewProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4">
               <h3 className="text-lg font-bold text-white line-clamp-2">{formData.title || "Untitled"}</h3>
-              <p className="text-white/70 mt-1">{CATEGORIES.find(c => c.value === formData.category)?.label || "No category"}</p>
+              <p className="text-white/70 mt-1">
+                {MEDIA_CATEGORIES.find(mc => mc.value === formData.mediaCategory)?.label || "Comics"}
+                {" — "}
+                {(GENRES_BY_MEDIA_CATEGORY[formData.mediaCategory] || COMICS_GENRES).find(c => c.value === formData.category)?.label || "No genre"}
+              </p>
             </div>
           </div>
           <div className="p-4">
