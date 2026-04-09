@@ -2,6 +2,7 @@ export interface MarketplaceBook {
   id: string;
   title: string;
   slug: string;
+  mediaCategory: string;
   coverImage: string | null;
   price: number;
   currency: string;

@@ -51,6 +51,15 @@ export async function GET(
         promoVideoUrl: book.promoVideoUrl,
         pdfFileUrl: book.pdfFileUrl,
         pdfFileSize: book.pdfFileSize,
+        audioFileUrl: book.audioFileUrl,
+        audioFileName: book.audioFileName,
+        audioFileSize: book.audioFileSize,
+        audioDuration: book.audioDuration,
+        videoFileUrl: book.videoFileUrl,
+        videoFileName: book.videoFileName,
+        videoFileSize: book.videoFileSize ? Number(book.videoFileSize) : null,
+        videoDuration: book.videoDuration,
+        videoResolution: book.videoResolution,
         isNsfw: book.hasAdultContent,
         tags: book.tags,
         status: book.status,
@@ -125,6 +134,15 @@ export async function PUT(
       pdfFileUrl,
       pdfFileName,
       pdfFileSize,
+      audioFileUrl,
+      audioFileName,
+      audioFileSize,
+      audioDuration,
+      videoFileUrl,
+      videoFileName,
+      videoFileSize,
+      videoDuration,
+      videoResolution,
       isNsfw,
       tags,
     } = body;
@@ -144,6 +162,15 @@ export async function PUT(
     if (pdfFileUrl !== undefined) updateData.pdfFileUrl = pdfFileUrl;
     if (pdfFileName !== undefined) updateData.pdfFileName = pdfFileName;
     if (pdfFileSize !== undefined) updateData.pdfFileSize = pdfFileSize ? parseInt(String(pdfFileSize)) : null;
+    if (audioFileUrl !== undefined) updateData.audioFileUrl = audioFileUrl;
+    if (audioFileName !== undefined) updateData.audioFileName = audioFileName;
+    if (audioFileSize !== undefined) updateData.audioFileSize = audioFileSize ? parseInt(String(audioFileSize)) : null;
+    if (audioDuration !== undefined) updateData.audioDuration = audioDuration ? parseInt(String(audioDuration)) : null;
+    if (videoFileUrl !== undefined) updateData.videoFileUrl = videoFileUrl;
+    if (videoFileName !== undefined) updateData.videoFileName = videoFileName;
+    if (videoFileSize !== undefined) updateData.videoFileSize = videoFileSize ? BigInt(videoFileSize) : null;
+    if (videoDuration !== undefined) updateData.videoDuration = videoDuration ? parseInt(String(videoDuration)) : null;
+    if (videoResolution !== undefined) updateData.videoResolution = videoResolution;
     if (isNsfw !== undefined) {
       updateData.hasAdultContent = isNsfw;
       updateData.promoContentSfw = !isNsfw;

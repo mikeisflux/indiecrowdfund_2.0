@@ -80,7 +80,13 @@ export function BookCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/dashboard/marketplace/books/${book.id}/edit`}>
+                <Link href={
+                  book.mediaCategory === "music"
+                    ? `/dashboard/marketplace/music/${book.id}/edit`
+                    : book.mediaCategory === "movies"
+                    ? `/dashboard/marketplace/movies/${book.id}/edit`
+                    : `/dashboard/marketplace/books/${book.id}/edit`
+                }>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
                 </Link>
