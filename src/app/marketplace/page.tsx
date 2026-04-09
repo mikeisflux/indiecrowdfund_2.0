@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MusicBrowse } from "@/components/marketplace/music-browse";
+import { MovieBrowse } from "@/components/marketplace/movie-browse";
 
 interface Book {
   id: string;
@@ -250,43 +251,7 @@ function BookSection({
   );
 }
 
-// Coming Soon placeholder for categories not yet populated
-function ComingSoonSection({
-  category,
-  icon: Icon,
-  description,
-  gradient,
-}: {
-  category: string;
-  icon: React.ComponentType<{ className?: string }>;
-  description: string;
-  gradient: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
-      <div className={`p-6 rounded-2xl bg-gradient-to-br ${gradient} mb-6`}>
-        <Icon className="h-16 w-16 text-white" />
-      </div>
-      <h2 className="text-3xl font-bold text-foreground mb-3">{category} Coming Soon</h2>
-      <p className="text-muted-foreground max-w-md mb-8">
-        {description}
-      </p>
-      <div className="flex gap-3">
-        <Link href="/projects/new">
-          <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
-            Be the First Creator
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
-        <Link href="/discover">
-          <Button variant="outline">
-            Browse Campaigns
-          </Button>
-        </Link>
-      </div>
-    </div>
-  );
-}
+
 
 export default function MarketplacePage() {
   const [activeTab, setActiveTab] = useState("comics");
@@ -583,12 +548,7 @@ export default function MarketplacePage() {
 
           {/* Movies Tab Content */}
           <TabsContent value="movies">
-            <ComingSoonSection
-              category="Movies"
-              icon={Film}
-              description="Independent filmmakers will soon be able to distribute short films, features, and documentaries directly to audiences. Watch trailers, rent or buy, and support indie cinema."
-              gradient="from-rose-500 to-orange-600"
-            />
+            <MovieBrowse />
           </TabsContent>
         </Tabs>
       </main>
