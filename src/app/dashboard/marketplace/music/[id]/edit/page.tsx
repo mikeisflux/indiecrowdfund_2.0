@@ -118,7 +118,11 @@ export default function EditMusicPage() {
       const fd = new FormData();
       fd.append("file", file);
       const res = await apiFetch("/api/creator/marketplace/audio/upload", { method: "POST", body: fd });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        let errorMsg = "Upload failed";
+        try { const d = await res.json(); errorMsg = d.error || errorMsg; } catch { /* non-JSON response */ }
+        throw new Error(errorMsg);
+      }
       const data = await res.json();
       setAudioFileUrl(data.url);
       setAudioFileName(file.name);
@@ -163,12 +167,18 @@ export default function EditMusicPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title, description, category: genre, promoImageUrl: coverImageUrl,
-          audioFileUrl, audioFileName, audioFileSize, audioDuration,
+          audioFileUrl, audioFileName,
+          audioFileSize: audioFileSize ? Number(audioFileSize) : null,
+          audioDuration: audioDuration ? Number(audioDuration) : null,
           price: parseFloat(price), currency, paymentProcessor,
           isNsfw, tags,
         }),
       });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
+      if (!res.ok) {
+        let errorMsg = "Failed to save";
+        try { const d = await res.json(); errorMsg = d.error || errorMsg; } catch { /* non-JSON response */ }
+        throw new Error(errorMsg);
+      }
       toast.success("Track updated!");
       router.push("/dashboard/marketplace");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to save"); }

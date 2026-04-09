@@ -170,12 +170,19 @@ export default function EditMoviePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title, description, category: genre, promoImageUrl: coverImageUrl,
-          videoFileUrl, videoFileName, videoFileSize, videoDuration, videoResolution,
+          videoFileUrl, videoFileName,
+          videoFileSize: videoFileSize ? Number(videoFileSize) : null,
+          videoDuration: videoDuration ? Number(videoDuration) : null,
+          videoResolution,
           price: parseFloat(price), currency, paymentProcessor,
           isNsfw, tags,
         }),
       });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
+      if (!res.ok) {
+        let errorMsg = "Failed to save";
+        try { const d = await res.json(); errorMsg = d.error || errorMsg; } catch { /* non-JSON response */ }
+        throw new Error(errorMsg);
+      }
       toast.success("Film updated!");
       router.push("/dashboard/marketplace");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to save"); }
