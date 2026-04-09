@@ -4,14 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
   Play,
   ChevronLeft,
   ChevronRight,
-  Search,
   Music,
   Disc3,
   TrendingUp,
@@ -258,7 +257,6 @@ function SongRow({
 
 export function MusicBrowse() {
   const { playTrack } = useMusicPlayer();
-  const [searchQuery, setSearchQuery] = useState("");
   const [hotSongs, setHotSongs] = useState<MusicItem[]>([]);
   const [featured, setFeatured] = useState<MusicItem[]>([]);
   const [newReleases, setNewReleases] = useState<MusicItem[]>([]);
@@ -316,48 +314,8 @@ export function MusicBrowse() {
     playTrack(itemToTrack(item), hotSongs.map(itemToTrack));
   };
 
-  const filteredSongs = searchQuery
-    ? hotSongs.filter(
-        (s) =>
-          s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          s.creator.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : null;
-
   return (
     <div className="space-y-10 pb-24">
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-        <Input
-          placeholder="Search songs, artists, albums..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-12 bg-background border-border h-12 rounded-xl"
-        />
-      </div>
-
-      {/* Search Results */}
-      {filteredSongs ? (
-        <section className="space-y-4">
-          <h2 className="text-xl font-bold text-foreground">
-            Search Results for &quot;{searchQuery}&quot;
-          </h2>
-          {filteredSongs.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No songs found matching your search</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1">
-              {filteredSongs.map((item, i) => (
-                <SongRow key={item.id} item={item} index={i} onPlay={handlePlay} />
-              ))}
-            </div>
-          )}
-        </section>
-      ) : (
-        <>
           {/* Featured Albums — horizontal scroll cards */}
           <HScrollSection title="Featured" icon={Star} seeAllHref="/marketplace/music/featured">
             {loading
@@ -509,8 +467,6 @@ export function MusicBrowse() {
               ))}
             </div>
           </section>
-        </>
-      )}
     </div>
   );
 }

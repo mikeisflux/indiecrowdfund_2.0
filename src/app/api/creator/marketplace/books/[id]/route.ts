@@ -220,6 +220,8 @@ export async function PUT(
     if (requiresReReview) {
       const changedItems = [];
       if (pdfChanged) changedItems.push("PDF file");
+      if (audioChanged) changedItems.push("audio file");
+      if (videoChanged) changedItems.push("video file");
       if (coverImageChanged) changedItems.push("cover image");
 
       await prisma.marketplaceBookReview.create({
