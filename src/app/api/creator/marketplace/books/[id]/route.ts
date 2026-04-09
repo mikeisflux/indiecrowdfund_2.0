@@ -183,10 +183,12 @@ export async function PUT(
       updateData.rejectionReason = null;
     }
 
-    // If the book is LIVE and PDF or cover image was changed, require re-review
+    // If the book is LIVE and a file or cover was changed, require re-review
     const pdfChanged = pdfFileUrl !== undefined && pdfFileUrl !== existingBook.pdfFileUrl;
+    const audioChanged = audioFileUrl !== undefined && audioFileUrl !== existingBook.audioFileUrl;
+    const videoChanged = videoFileUrl !== undefined && videoFileUrl !== existingBook.videoFileUrl;
     const coverImageChanged = promoImageUrl !== undefined && promoImageUrl !== existingBook.coverImageUrl;
-    const requiresReReview = existingBook.status === "LIVE" && (pdfChanged || coverImageChanged);
+    const requiresReReview = existingBook.status === "LIVE" && (pdfChanged || audioChanged || videoChanged || coverImageChanged);
 
     // Debug logging
     creatorMarketplaceBooksLogger.info({ data: {

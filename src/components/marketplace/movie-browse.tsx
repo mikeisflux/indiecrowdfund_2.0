@@ -87,7 +87,7 @@ function HeroSpotlight({ movie }: { movie: MovieItem }) {
           unoptimized
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-zinc-950" />
+        <div className="absolute inset-0 bg-gradient-to-br from-muted to-background" />
       )}
 
       {/* Gradient overlays — Netflix style */}
@@ -154,7 +154,7 @@ function HeroSpotlight({ movie }: { movie: MovieItem }) {
 function PosterCard({ item, rank }: { item: MovieItem; rank?: number }) {
   return (
     <Link href={`/marketplace/books/${item.slug}`} className="shrink-0 w-[130px] sm:w-[150px] md:w-[170px] lg:w-[185px] group relative">
-      <div className="relative aspect-[2/3] rounded-md overflow-hidden bg-zinc-800">
+      <div className="relative aspect-[2/3] rounded-md overflow-hidden bg-muted">
         {item.coverImage ? (
           <Image
             src={item.coverImage}
@@ -164,8 +164,8 @@ function PosterCard({ item, rank }: { item: MovieItem; rank?: number }) {
             unoptimized={item.coverImage.endsWith(".gif")}
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center">
-            <Film className="w-8 h-8 text-zinc-600" />
+          <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/10 flex items-center justify-center">
+            <Film className="w-8 h-8 text-muted-foreground/30" />
           </div>
         )}
 
@@ -200,7 +200,7 @@ function PosterCard({ item, rank }: { item: MovieItem; rank?: number }) {
       </div>
 
       {/* Title below card */}
-      <p className="text-xs sm:text-sm text-foreground font-medium truncate mt-1.5 group-hover:text-white transition-colors">
+      <p className="text-xs sm:text-sm text-foreground font-medium truncate mt-1.5 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
         {item.title}
       </p>
       {item.stats.views > 0 && (
@@ -278,8 +278,8 @@ function MovieRow({
             ))
           : Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="shrink-0 w-[130px] sm:w-[150px] md:w-[170px] lg:w-[185px]">
-                <div className="aspect-[2/3] rounded-md bg-zinc-800/50 border border-dashed border-zinc-700 flex items-center justify-center">
-                  <Film className="w-6 h-6 text-zinc-700" />
+                <div className="aspect-[2/3] rounded-md bg-muted/50 border border-dashed border-border flex items-center justify-center">
+                  <Film className="w-6 h-6 text-muted-foreground/30" />
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-1">Awaiting uploads...</p>
               </div>
