@@ -163,7 +163,7 @@ export default function EditMusicPage() {
     setSaving(true);
     try {
       const res = await apiFetch(`/api/creator/marketplace/books/${bookId}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title, description, category: genre, promoImageUrl: coverImageUrl,
