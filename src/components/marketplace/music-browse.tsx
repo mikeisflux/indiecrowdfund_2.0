@@ -19,6 +19,7 @@ import {
   Sparkles,
   Clock,
   ArrowRight,
+  Headphones,
 } from "lucide-react";
 import { useMusicPlayer, MusicTrack } from "./music-player";
 import { cn } from "@/lib/utils";
@@ -185,6 +186,12 @@ function AlbumCard({ item, onPlay }: { item: MusicItem; onPlay: (item: MusicItem
       <p className="text-xs text-muted-foreground truncate">
         {item.company?.name || item.creator.name}
       </p>
+      {item.stats.views > 0 && (
+        <p className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+          <Headphones className="w-3 h-3" />
+          {item.stats.views.toLocaleString()} {item.stats.views === 1 ? "stream" : "streams"}
+        </p>
+      )}
     </div>
   );
 }
@@ -232,6 +239,12 @@ function SongRow({
           {item.company?.name || item.creator.name}
         </p>
       </div>
+      {item.stats.views > 0 && (
+        <span className="hidden sm:flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+          <Headphones className="w-3 h-3" />
+          {item.stats.views.toLocaleString()}
+        </span>
+      )}
       {item.price > 0 && (
         <span className="text-xs text-muted-foreground shrink-0">
           ${Number(item.price).toFixed(2)}
