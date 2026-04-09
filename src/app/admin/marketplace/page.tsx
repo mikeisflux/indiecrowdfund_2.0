@@ -46,9 +46,9 @@ import { AddToCategoryDialog } from "./components/AddToCategoryDialog";
 // ─── Category config ─────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { value: "comics", label: "Comics", icon: BookOpen, color: "text-blue-500", activeBg: "data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-400" },
-  { value: "music", label: "Music", icon: Music, color: "text-emerald-500", activeBg: "data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400" },
-  { value: "movies", label: "Movies", icon: Film, color: "text-rose-500", activeBg: "data-[state=active]:bg-rose-500/10 data-[state=active]:text-rose-700 dark:data-[state=active]:text-rose-400" },
+  { value: "comics", label: "Comics", icon: BookOpen, color: "text-blue-500" },
+  { value: "music", label: "Music", icon: Music, color: "text-emerald-500" },
+  { value: "movies", label: "Movies", icon: Film, color: "text-rose-500" },
 ] as const;
 
 type MediaCategory = "comics" | "music" | "movies";

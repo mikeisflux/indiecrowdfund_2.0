@@ -109,7 +109,7 @@ function HeroSpotlight({ movie }: { movie: MovieItem }) {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-tight mb-2">
             {movie.title}
           </h2>
-          <div className="flex items-center gap-3 text-sm text-white/70 mb-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-white/70 mb-3">
             <span>{movie.company?.name || movie.creator.name}</span>
             {movie.category && (
               <>
@@ -134,16 +134,16 @@ function HeroSpotlight({ movie }: { movie: MovieItem }) {
               {movie.description}
             </p>
           )}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link href={`/marketplace/books/${movie.slug}`}>
-              <Button className="bg-white text-black hover:bg-white/90 font-semibold gap-2">
-                <Play className="w-4 h-4 fill-current" />
+              <Button size="sm" className="bg-white text-black hover:bg-white/90 font-semibold gap-1.5 sm:gap-2 text-xs sm:text-sm h-8 sm:h-10 px-3 sm:px-4">
+                <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
                 Watch Now
               </Button>
             </Link>
             <Link href={`/marketplace/books/${movie.slug}`}>
-              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 gap-2">
-                <Info className="w-4 h-4" />
+              <Button size="sm" variant="outline" className="border-white/30 text-white hover:bg-white/10 gap-1.5 sm:gap-2 text-xs sm:text-sm h-8 sm:h-10 px-3 sm:px-4">
+                <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 More Info
               </Button>
             </Link>
