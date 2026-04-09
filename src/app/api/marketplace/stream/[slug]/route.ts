@@ -84,7 +84,7 @@ export async function GET(
               const end = match[2] ? parseInt(match[2]) : fileBuffer.length - 1;
               const chunk = fileBuffer.subarray(start, end + 1);
 
-              return new Response(chunk, {
+              return new Response(new Uint8Array(chunk), {
                 status: 206,
                 headers: {
                   "Content-Type": contentType,
@@ -97,7 +97,7 @@ export async function GET(
             }
           }
 
-          return new Response(fileBuffer, {
+          return new Response(new Uint8Array(fileBuffer), {
             status: 200,
             headers: {
               "Content-Type": contentType,
