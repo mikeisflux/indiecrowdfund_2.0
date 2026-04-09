@@ -102,6 +102,10 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     audio.addEventListener("ended", () => {
       handleTrackEnd();
     });
+    audio.addEventListener("error", () => {
+      console.error("Audio playback error — source may be unavailable");
+      setState((s) => ({ ...s, isPlaying: false }));
+    });
 
     return () => {
       audio.pause();
@@ -139,7 +143,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       if (prev.repeatMode === "one") {
         if (audioRef.current) {
           audioRef.current.currentTime = 0;
-          audioRef.current.play();
+          audioRef.current.play().catch(() => {});
         }
         return prev;
       }
@@ -162,7 +166,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       const next = prev.queue[nextIdx];
       if (next && audioRef.current) {
         audioRef.current.src = next.audioUrl;
-        audioRef.current.play();
+        audioRef.current.play().catch(() => {});
         return { ...prev, currentTrack: next, isPlaying: true, currentTime: 0 };
       }
       return { ...prev, isPlaying: false };
@@ -175,7 +179,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       if (audioRef.current) {
         audioRef.current.src = track.audioUrl;
         audioRef.current.volume = state.isMuted ? 0 : state.volume;
-        audioRef.current.play();
+        audioRef.current.play().catch(() => {});
         setState((s) => ({
           ...s,
           currentTrack: track,
@@ -196,7 +200,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       if (audioRef.current && track) {
         audioRef.current.src = track.audioUrl;
         audioRef.current.volume = state.isMuted ? 0 : state.volume;
-        audioRef.current.play();
+        audioRef.current.play().catch(() => {});
         setState((s) => ({
           ...s,
           currentTrack: track,
@@ -215,7 +219,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     if (state.isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play();
+      audioRef.current.play().catch(() => {});
     }
     setState((s) => ({ ...s, isPlaying: !s.isPlaying }));
   }, [state.isPlaying, state.currentTrack, ensureAudioContext]);
