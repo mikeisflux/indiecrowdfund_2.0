@@ -1,9 +1,27 @@
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Star, Sparkles } from "lucide-react";
+import { BookOpen, Star, Sparkles, Music, Film } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./StatusBadges";
 import { MarketplaceBook } from "../types";
+
+const mediaCategoryIcon = (mc: string) => {
+  if (mc === "music") return <Music className="w-3 h-3" />;
+  if (mc === "movies") return <Film className="w-3 h-3" />;
+  return <BookOpen className="w-3 h-3" />;
+};
+
+const mediaCategoryLabel = (mc: string) => {
+  if (mc === "music") return "Music";
+  if (mc === "movies") return "Movie";
+  return "Comic";
+};
+
+const mediaCategoryStyle = (mc: string) => {
+  if (mc === "music") return "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800";
+  if (mc === "movies") return "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800";
+  return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800";
+};
 
 interface BookListItemProps {
   book: MarketplaceBook;
@@ -43,6 +61,10 @@ export function BookListItem({ book, isSelected, onClick }: BookListItemProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h4 className="font-medium text-foreground truncate">{book.title}</h4>
+          <Badge className={cn("text-[10px] border gap-1 px-1.5 py-0", mediaCategoryStyle(book.mediaCategory))}>
+            {mediaCategoryIcon(book.mediaCategory)}
+            {mediaCategoryLabel(book.mediaCategory)}
+          </Badge>
           {book.isNsfw && (
             <Badge variant="destructive" className="text-xs">
               NSFW

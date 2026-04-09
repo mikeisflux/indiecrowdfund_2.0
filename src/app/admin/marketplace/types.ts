@@ -3,10 +3,13 @@ export interface MarketplaceBook {
   title: string;
   slug: string;
   description: string;
+  mediaCategory: string;
   category: string | null;
   coverImage: string | null;
   promoVideoUrl: string | null;
   pdfFileUrl: string;
+  audioFileUrl: string | null;
+  videoFileUrl: string | null;
   price: number;
   currency: string;
   paymentProcessor: string;

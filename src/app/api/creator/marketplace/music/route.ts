@@ -100,7 +100,7 @@ export async function POST(request: Request) {
         data: {
           creatorId: session.user.id,
           companyId: company?.id || null,
-          title: track.title?.trim() || `Track ${i + 1}`,
+          title: (tracks.length === 1 ? title.trim() : track.title?.trim()) || `Track ${i + 1}`,
           slug: trackSlug,
           description: description?.trim() || "",
           mediaCategory: "music",

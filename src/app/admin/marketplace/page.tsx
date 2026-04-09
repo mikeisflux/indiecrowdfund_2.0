@@ -19,7 +19,17 @@ import {
   Sparkles,
   CreditCard,
   HardDrive,
+  Music,
+  Film,
+  Filter,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Import types
 import {
@@ -54,6 +64,7 @@ export default function AdminMarketplacePage() {
   const [allBooks, setAllBooks] = useState<MarketplaceBook[]>([]);
   const [selectedBook, setSelectedBook] = useState<MarketplaceBook | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mediaCategoryFilter, setMediaCategoryFilter] = useState<"all" | "comics" | "music" | "movies">("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
@@ -120,23 +131,16 @@ export default function AdminMarketplacePage() {
   const availableForFeatured = liveBooks.filter((b) => !b.isFeatured);
   const availableForStaffPick = liveBooks.filter((b) => !b.isStaffPick);
 
-  const filteredPending = pendingBooks.filter(
-    (book) =>
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.creator.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const matchesMediaFilter = (book: MarketplaceBook) =>
+    mediaCategoryFilter === "all" || book.mediaCategory === mediaCategoryFilter;
 
-  const filteredLive = liveBooks.filter(
-    (book) =>
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.creator.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const matchesSearch = (book: MarketplaceBook) =>
+    book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    book.creator.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const filteredAll = allBooks.filter(
-    (book) =>
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.creator.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPending = pendingBooks.filter((b) => matchesMediaFilter(b) && matchesSearch(b));
+  const filteredLive = liveBooks.filter((b) => matchesMediaFilter(b) && matchesSearch(b));
+  const filteredAll = allBooks.filter((b) => matchesMediaFilter(b) && matchesSearch(b));
 
   // Fetch functions
   const fetchBooks = useCallback(async () => {
@@ -655,7 +659,7 @@ export default function AdminMarketplacePage() {
             </TabsTrigger>
             <TabsTrigger value="all" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
               <BookOpen className="w-4 h-4 mr-2" />
-              All Books
+              All Items
             </TabsTrigger>
             <TabsTrigger value="history" className="data-[state=active]:bg-background text-muted-foreground data-[state=active]:text-foreground">
               <History className="w-4 h-4 mr-2" />
@@ -675,14 +679,34 @@ export default function AdminMarketplacePage() {
           </TabsList>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
-            <Input
-              placeholder="Search books..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/70"
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Select value={mediaCategoryFilter} onValueChange={(v) => setMediaCategoryFilter(v as "all" | "comics" | "music" | "movies")}>
+              <SelectTrigger className="w-[130px] bg-muted/50 border-border">
+                <Filter className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="comics">
+                  <span className="flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5" /> Comics</span>
+                </SelectItem>
+                <SelectItem value="music">
+                  <span className="flex items-center gap-1.5"><Music className="w-3.5 h-3.5" /> Music</span>
+                </SelectItem>
+                <SelectItem value="movies">
+                  <span className="flex items-center gap-1.5"><Film className="w-3.5 h-3.5" /> Movies</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative flex-1 sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
+              <Input
+                placeholder="Search items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/70"
+              />
+            </div>
           </div>
         </div>
 
