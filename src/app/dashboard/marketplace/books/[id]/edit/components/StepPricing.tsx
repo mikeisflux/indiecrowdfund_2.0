@@ -71,7 +71,7 @@ export function StepPricing({ formData, canEdit, isLive, updateForm }: StepPrici
           <Label>Payment Processor</Label>
           <Select
             value={formData.paymentProcessor}
-            onValueChange={(value: "STRIPE" | "DIVINITYCOIN" | "PAYPAL") => updateForm("paymentProcessor", value)}
+            onValueChange={(value: "PAYPAL" | "DIVINITYCOIN" | "WHOP") => updateForm("paymentProcessor", value)}
             disabled={formData.isNsfw || (!canEdit && !isLive)}
           >
             <SelectTrigger>
@@ -80,7 +80,7 @@ export function StepPricing({ formData, canEdit, isLive, updateForm }: StepPrici
             <SelectContent>
               <SelectItem value="PAYPAL">PayPal (Card + PayPal Wallet)</SelectItem>
               <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
-              <SelectItem value="STRIPE">Stripe (Legacy)</SelectItem>
+              <SelectItem value="WHOP">Whop</SelectItem>
             </SelectContent>
           </Select>
           {formData.isNsfw && (

@@ -68,7 +68,7 @@ interface MusicFormData {
   // Pricing
   price: string;
   currency: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
+  paymentProcessor: "PAYPAL" | "DIVINITYCOIN" | "WHOP";
   isNsfw: boolean;
 
   // Tags
@@ -825,8 +825,8 @@ export default function NewMusicPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PAYPAL">PayPal</SelectItem>
-                    <SelectItem value="STRIPE">Stripe</SelectItem>
                     <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
+                    <SelectItem value="WHOP">Whop</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -55,7 +55,7 @@ interface BookFormData {
   category: string;
   price: string;
   currency: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
+  paymentProcessor: "PAYPAL" | "DIVINITYCOIN" | "WHOP";
   promoImageUrl: string;
   promoVideoUrl: string;
   pdfFileUrl: string;
@@ -925,7 +925,7 @@ function NewBookForm() {
                   checked={formData.isNsfw}
                   onCheckedChange={(checked) => {
                     updateForm("isNsfw", checked);
-                    if (checked && (formData.paymentProcessor === "STRIPE" || formData.paymentProcessor === "PAYPAL")) {
+                    if (checked && (formData.paymentProcessor === "PAYPAL" || formData.paymentProcessor === "WHOP")) {
                       updateForm("paymentProcessor", "DIVINITYCOIN");
                     }
                   }}
@@ -1045,7 +1045,7 @@ function NewBookForm() {
                 <Label>Payment Processor</Label>
                 <Select
                   value={formData.paymentProcessor}
-                  onValueChange={(value: "STRIPE" | "DIVINITYCOIN" | "PAYPAL") => updateForm("paymentProcessor", value)}
+                  onValueChange={(value: "PAYPAL" | "DIVINITYCOIN" | "WHOP") => updateForm("paymentProcessor", value)}
                   disabled={formData.isNsfw}
                 >
                   <SelectTrigger>
@@ -1054,7 +1054,7 @@ function NewBookForm() {
                   <SelectContent>
                     <SelectItem value="PAYPAL">PayPal (Card + PayPal Wallet)</SelectItem>
                     <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
-                    <SelectItem value="STRIPE">Stripe (Legacy)</SelectItem>
+                    <SelectItem value="WHOP">Whop</SelectItem>
                   </SelectContent>
                 </Select>
                 {formData.isNsfw && (
@@ -1132,9 +1132,9 @@ function NewBookForm() {
                         ? "bg-purple-500/20 text-purple-600 dark:text-purple-300"
                         : formData.paymentProcessor === "PAYPAL"
                         ? "bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                        : "bg-blue-500/20 text-blue-600 dark:text-blue-300"
+                        : "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300"
                     }>
-                      {formData.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : formData.paymentProcessor === "PAYPAL" ? "PayPal" : "Stripe"}
+                      {formData.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : formData.paymentProcessor === "PAYPAL" ? "PayPal" : "Whop"}
                     </Badge>
                   </div>
                 </div>

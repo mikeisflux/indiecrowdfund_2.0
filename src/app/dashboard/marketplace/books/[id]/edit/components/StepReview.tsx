@@ -57,9 +57,9 @@ export function StepReview({ formData, bookStatus }: StepReviewProps) {
                   ? "bg-purple-500/20 text-purple-600 dark:text-purple-300"
                   : formData.paymentProcessor === "PAYPAL"
                   ? "bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                  : "bg-blue-500/20 text-blue-600 dark:text-blue-300"
+                  : "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300"
               }>
-                {formData.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : formData.paymentProcessor === "PAYPAL" ? "PayPal" : "Stripe"}
+                {formData.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : formData.paymentProcessor === "PAYPAL" ? "PayPal" : "Whop"}
               </Badge>
             </div>
           </div>

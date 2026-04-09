@@ -5,7 +5,7 @@ export interface BookFormData {
   category: string;
   price: string;
   currency: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
+  paymentProcessor: "PAYPAL" | "DIVINITYCOIN" | "WHOP";
   promoImageUrl: string;
   promoVideoUrl: string;
   pdfFileUrl: string;
@@ -25,7 +25,7 @@ export interface BookData {
   category: string;
   price: number;
   currency: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
+  paymentProcessor: "PAYPAL" | "DIVINITYCOIN" | "WHOP";
   coverImage: string | null;
   promoVideoUrl: string | null;
   pdfFileUrl: string;
