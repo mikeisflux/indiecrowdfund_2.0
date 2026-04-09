@@ -155,11 +155,20 @@ export default function PublicProfilePage() {
     }
 
     try {
-      const res = await apiFetch(`/api/user/${profile?.id}/follow`, {
-        method: isFollowing ? "DELETE" : "POST",
-      });
-      if (res.ok) {
-        setIsFollowing(!isFollowing);
+      if (isFollowing) {
+        const res = await apiFetch("/api/backer/following", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ creatorId: profile?.id }),
+        });
+        if (res.ok) setIsFollowing(false);
+      } else {
+        const res = await apiFetch("/api/backer/following", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ creatorId: profile?.id, action: "follow" }),
+        });
+        if (res.ok) setIsFollowing(true);
       }
     } catch (error) {
       console.error("Follow error:", error);
