@@ -136,7 +136,7 @@ export async function GET(request: Request) {
       isStaffPick: book.isStaffPick,
       publishedAt: book.publishedAt,
       // Audio fields (music)
-      audioUrl: book.audioFileUrl ? `/api/marketplace/stream/${book.slug}` : undefined,
+      audioUrl: (book.mediaCategory === "music") ? `/api/marketplace/stream/${book.slug}` : undefined,
       audioDuration: book.audioDuration,
       albumId: book.albumId,
       trackNumber: book.trackNumber,

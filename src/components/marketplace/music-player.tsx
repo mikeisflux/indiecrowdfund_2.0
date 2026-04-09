@@ -113,16 +113,21 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
 
   const ensureAudioContext = useCallback(() => {
     if (!audioCtxRef.current && audioRef.current) {
-      const ctx = new AudioContext();
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 128;
-      analyser.smoothingTimeConstant = 0.8;
-      const source = ctx.createMediaElementSource(audioRef.current);
-      source.connect(analyser);
-      analyser.connect(ctx.destination);
-      audioCtxRef.current = ctx;
-      analyserRef.current = analyser;
-      sourceRef.current = source;
+      try {
+        const ctx = new AudioContext();
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 128;
+        analyser.smoothingTimeConstant = 0.8;
+        const source = ctx.createMediaElementSource(audioRef.current);
+        source.connect(analyser);
+        analyser.connect(ctx.destination);
+        audioCtxRef.current = ctx;
+        analyserRef.current = analyser;
+        sourceRef.current = source;
+      } catch {
+        // AudioContext may fail if audio source is cross-origin
+        // Visualizer won't work but playback continues fine
+      }
     }
     if (audioCtxRef.current?.state === "suspended") {
       audioCtxRef.current.resume();
@@ -496,10 +501,10 @@ function MusicPlayerBar({ analyser }: { analyser: AnalyserNode | null }) {
           <AudioVisualizer
             analyser={analyser}
             isPlaying={isPlaying}
-            width={100}
-            height={32}
-            barCount={24}
-            className="hidden lg:block"
+            width={120}
+            height={36}
+            barCount={28}
+            className="hidden md:block"
           />
 
           <div className="hidden sm:flex items-center gap-1.5">
