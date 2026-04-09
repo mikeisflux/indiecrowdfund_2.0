@@ -228,7 +228,11 @@ export async function GET() {
         }))
       },
       pendingReviews,
-      pledgesByDay
+      pledgesByDay: pledgesByDay.map((d) => ({
+        date: d.date,
+        total: Number(d.total || 0),
+        count: Number(d.count || 0),
+      })),
     });
   } catch (error) {
     adminDashboardLogger.error({ err: String(error) }, "Error fetching dashboard stats:");
