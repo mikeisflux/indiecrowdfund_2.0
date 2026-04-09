@@ -20,7 +20,17 @@ import {
   BarChart3,
   Loader2,
   Ticket,
+  Music,
+  Film,
+  ChevronDown,
+  Upload,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { MarketplacePaymentSettings } from "@/components/marketplace/marketplace-payment-settings";
@@ -293,12 +303,35 @@ export default function CreatorMarketplaceDashboard() {
                 {company ? "Edit Company" : "Create Company"}
               </Button>
             </Link>
-            <Link href="/dashboard/marketplace/books/new">
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                <Plus className="w-4 h-4 mr-2" />
-                New Book
-              </Button>
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Digital Media
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/marketplace/books/new" className="flex items-center gap-2 cursor-pointer">
+                    <BookOpen className="w-4 h-4" />
+                    New Comic
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/marketplace/music/new" className="flex items-center gap-2 cursor-pointer">
+                    <Music className="w-4 h-4" />
+                    New Music
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/marketplace/movies/new" className="flex items-center gap-2 cursor-pointer">
+                    <Film className="w-4 h-4" />
+                    New Movie
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
