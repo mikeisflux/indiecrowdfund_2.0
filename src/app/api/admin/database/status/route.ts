@@ -45,7 +45,7 @@ export async function GET() {
       db.user.count({ where: { deletedAt: null } }),
       db.project.count({ where: { deletedAt: null } }),
       db.pledge.count({ where: { deletedAt: null } }),
-      db.mediaFile.count({ where: { deletedAt: null } }),
+      db.mediaFile.count(),
     ]);
 
     // Get database provider from DATABASE_URL
