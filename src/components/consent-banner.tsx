@@ -138,7 +138,7 @@ export function ConsentBanner() {
   if (!isVisible || !content) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[99] animate-in slide-in-from-bottom duration-500">
+    <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-500">
       <div className="mx-auto max-w-7xl px-4 pb-4">
         <div className="rounded-xl border border-border bg-background/95 backdrop-blur-lg shadow-2xl p-4 sm:p-6">
           <div className="flex flex-col gap-3">
