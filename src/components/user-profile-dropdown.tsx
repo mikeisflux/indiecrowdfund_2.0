@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import {
   Plus,
   LogOut,
@@ -116,7 +116,7 @@ export function UserProfileDropdown() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-[min(calc(100vw-16px),580px)] p-0"
+        className="w-[min(calc(100vw-16px),580px)] p-0 max-h-[calc(100vh-80px)] overflow-y-auto"
         side="bottom"
         align="end"
         sideOffset={8}
@@ -124,7 +124,6 @@ export function UserProfileDropdown() {
         collisionPadding={{ top: 16, right: 8, bottom: 16, left: 8 }}
         avoidCollisions={true}
       >
-        <ScrollArea className="max-h-[calc(100vh-100px)]">
           {/* Mobile: Single column layout, Desktop: 3 columns */}
           <div className="md:grid md:grid-cols-3 md:divide-x">
 
@@ -316,7 +315,6 @@ export function UserProfileDropdown() {
               Log out
             </button>
           </div>
-        </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
   );
