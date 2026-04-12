@@ -50,7 +50,6 @@ export async function GET(req: NextRequest) {
     const segment = await db.backerSegment.findFirst({
       where: {
         id: segmentId,
-        deletedAt: null,
         projectId,
       },
     });
