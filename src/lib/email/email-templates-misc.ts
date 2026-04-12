@@ -547,7 +547,7 @@ export async function sendDigitalDeliveryEmail(
       to: email,
       subject: `Your digital rewards for "${projectTitle}" are ready!`,
       html,
-      priority: EMAIL_PRIORITY.HIGH,
+      priority: EMAIL_PRIORITY.CREATOR,
     });
 
     return { success: true };
