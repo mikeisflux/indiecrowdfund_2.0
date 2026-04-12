@@ -127,9 +127,9 @@ export async function GET() {
       take: 5,
     }) : [];
 
-    // Helper to build project URL with vanity URL
+    // Helper to build project URL with vanity URL — fallback to dashboard if no vanity
     const buildProjectUrl = (slug: string, creatorVanityUrl?: string | null) =>
-      creatorVanityUrl ? `/projects/${creatorVanityUrl}/${slug}` : `/projects/${slug}`;
+      creatorVanityUrl ? `/projects/${creatorVanityUrl}/${slug}` : null;
 
     return NextResponse.json({
       backedProjects: backedPledges.map((p) => ({
