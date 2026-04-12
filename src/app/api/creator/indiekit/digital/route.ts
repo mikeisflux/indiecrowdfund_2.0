@@ -24,20 +24,36 @@ async function sendDeliveryEmailsForPledges(
     });
     if (!project) return { sent: 0, failed: 0 };
 
-    // Load pledges with user emails + all distributed files
+    // Load pledges with user emails
     const pledges = await db.pledge.findMany({
       where: { id: { in: pledgeIds } },
       select: {
         id: true,
         user: { select: { email: true, name: true } },
-        digitalDistributions: {
-          where: { distributedAt: { not: null } },
-          select: {
-            digitalFile: { select: { name: true } },
-          },
-        },
       },
     });
+
+    // Load distributions for these pledges (separate query since there's no
+    // explicit relation from Pledge → DigitalDistribution)
+    const distributions = await db.digitalDistribution.findMany({
+      where: {
+        pledgeId: { in: pledgeIds },
+        distributedAt: { not: null },
+      },
+      select: {
+        pledgeId: true,
+        digitalFile: { select: { name: true } },
+      },
+    });
+
+    // Map pledgeId → set of file names
+    const filesByPledgeId = new Map<string, Set<string>>();
+    for (const d of distributions) {
+      if (!d.digitalFile?.name) continue;
+      const set = filesByPledgeId.get(d.pledgeId) || new Set<string>();
+      set.add(d.digitalFile.name);
+      filesByPledgeId.set(d.pledgeId, set);
+    }
 
     // Group by email so each backer gets one email even across multiple pledges
     type Bucket = { name: string | null; files: Set<string> };
@@ -46,8 +62,9 @@ async function sendDeliveryEmailsForPledges(
       if (!p.user?.email) continue;
       const email = p.user.email.toLowerCase();
       const existing = byEmail.get(email) || { name: p.user.name, files: new Set<string>() };
-      for (const d of p.digitalDistributions) {
-        if (d.digitalFile?.name) existing.files.add(d.digitalFile.name);
+      const pledgeFiles = filesByPledgeId.get(p.id);
+      if (pledgeFiles) {
+        for (const name of pledgeFiles) existing.files.add(name);
       }
       byEmail.set(email, existing);
     }
@@ -601,25 +618,42 @@ export async function POST(req: NextRequest) {
     // Handle blast notifications — retroactively email all backers who already
     // received digital files, letting them know their downloads are ready.
     if (action === "blast_notifications" || action === "resend_all_delivery_emails") {
-      // Find every pledge for this project that has at least one distributed file
-      const pledgesWithDistributions = await db.pledge.findMany({
+      // Get all digital files for this project
+      const files = await db.digitalFile.findMany({
+        where: { projectId },
+        select: { id: true },
+      });
+      const fileIds = files.map((f) => f.id);
+
+      // Find every distribution that has been marked as delivered
+      const distributions = await db.digitalDistribution.findMany({
         where: {
+          digitalFileId: { in: fileIds },
+          distributedAt: { not: null },
+        },
+        select: { pledgeId: true },
+      });
+
+      // Get unique pledge IDs
+      const pledgeIds = Array.from(new Set(distributions.map((d) => d.pledgeId)));
+
+      // Filter to only active (non-deleted, completed) pledges
+      const activePledges = await db.pledge.findMany({
+        where: {
+          id: { in: pledgeIds },
           projectId,
           status: "COMPLETED",
           deletedAt: null,
-          digitalDistributions: {
-            some: { distributedAt: { not: null } },
-          },
         },
         select: { id: true },
       });
+      const activePledgeIds = activePledges.map((p) => p.id);
 
-      const pledgeIds = pledgesWithDistributions.map((p) => p.id);
-      const emailResult = await sendDeliveryEmailsForPledges(projectId, pledgeIds);
+      const emailResult = await sendDeliveryEmailsForPledges(projectId, activePledgeIds);
 
       return NextResponse.json({
         success: true,
-        count: pledgeIds.length,
+        count: activePledgeIds.length,
         emailsSent: emailResult.sent,
         emailsFailed: emailResult.failed,
       });

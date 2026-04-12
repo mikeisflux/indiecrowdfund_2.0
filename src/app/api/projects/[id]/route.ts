@@ -92,7 +92,7 @@ const rewardItemSchema = z.object({
   id: z.string().optional(),
   title: z.string().max(200),
   description: z.string().max(1000).optional(),
-  imageUrl: z.string().max(2048).optional(),
+  imageUrl: z.string().max(8192).optional(),
 });
 
 // Schema for rewards
@@ -102,7 +102,7 @@ const rewardSchema = z.object({
   title: z.string().max(200),
   description: z.string().max(5000).optional().nullable(),
   amount: z.number(),
-  imageUrl: z.string().max(2048).optional().nullable(),
+  imageUrl: z.string().max(8192).optional().nullable(),
   estimatedDelivery: z.string().max(100).optional().nullable(),
   shippingType: z.enum(["WORLDWIDE", "SELECTED_COUNTRIES", "NO_SHIPPING"]),
   shippingCountries: z.array(z.string().max(10)).max(250).optional(),
@@ -136,8 +136,8 @@ const updateProjectSchema = z.object({
   secondaryCategory: z.string().max(100).optional().nullable(),
   secondarySubcategory: z.string().max(100).optional().nullable(),
   location: z.string().max(200).optional().nullable(),
-  imageUrl: z.string().max(2048).optional().nullable(),
-  videoUrl: z.string().max(2048).optional().nullable(),
+  imageUrl: z.string().max(8192).optional().nullable(),
+  videoUrl: z.string().max(8192).optional().nullable(),
   goalAmount: z.number().positive().optional(),
   durationType: z.enum(["FIXED_DAYS", "END_DATE"]).optional(),
   durationDays: z.number().min(1).max(60).optional().nullable(),
