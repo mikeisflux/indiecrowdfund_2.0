@@ -100,7 +100,12 @@ export function DigitalTab({
         throw new Error(data.error || "Failed to send notifications");
       }
 
-      toast.success(`Sending ${data.count || stats?.digitalDownloads || 0} notification emails`);
+      const sent = data.emailsSent ?? data.count ?? 0;
+      if (sent > 0) {
+        toast.success(`Queued ${sent} delivery notification email${sent === 1 ? "" : "s"}`);
+      } else {
+        toast.info("No backers to notify — no digital files have been distributed yet");
+      }
       onRefresh?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send notifications");
@@ -352,16 +357,21 @@ export function DigitalTab({
         </div>
       </div>
 
-      {/* Blast Notification Banner */}
-      <Card className="bg-muted/50">
+      {/* Retroactive Notification Banner */}
+      <Card className="bg-muted/50 border-teal-500/30">
         <CardContent className="py-6 text-center">
-          <p className="text-sm text-muted-foreground mb-4">
-            Send email notifications to backers receiving digital downloads.
+          <h3 className="text-base font-semibold text-foreground mb-1">
+            Resend Delivery Notifications
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+            Retroactively email every backer who already received their digital files,
+            letting them know their downloads are ready. Useful if notifications
+            weren&apos;t sent during the original distribution.
           </p>
           <Button
             className="bg-teal-600 hover:bg-teal-700"
             onClick={handleBlastNotifications}
-            disabled={isBlastingEmails || (stats?.digitalDownloads || 0) === 0}
+            disabled={isBlastingEmails}
           >
             {isBlastingEmails ? (
               <>
@@ -371,7 +381,7 @@ export function DigitalTab({
             ) : (
               <>
                 <Mail className="h-4 w-4 mr-2" />
-                Blast {stats?.digitalDownloads || 0} Notification Emails
+                Send Delivery Emails to All Fulfilled Backers
               </>
             )}
           </Button>

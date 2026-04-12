@@ -470,3 +470,92 @@ export async function addToCreatorEmailList(options: {
     return { success: false, isNew: false };
   }
 }
+
+/**
+ * Send digital delivery notification to a backer when their digital files are ready.
+ */
+export async function sendDigitalDeliveryEmail(
+  email: string,
+  backerName: string | null,
+  projectTitle: string,
+  fileCount: number,
+  fileNames: string[]
+): Promise<{ success: boolean }> {
+  try {
+    const displayName = backerName || "there";
+    const filesListHtml = fileNames
+      .slice(0, 10)
+      .map((n) => `<li style="margin: 4px 0; color: #334155;">${escapeHtml(n)}</li>`)
+      .join("");
+    const moreCount = fileNames.length > 10 ? fileNames.length - 10 : 0;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Your digital rewards are ready — ${APP_NAME}</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+          </div>
+
+          <div style="background: #f0fdf4; border-radius: 8px; padding: 30px; margin-bottom: 20px; border: 1px solid #bbf7d0;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <div style="display: inline-block; background: #22c55e; color: white; padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+                DIGITAL REWARDS DELIVERED
+              </div>
+            </div>
+
+            <h2 style="margin-top: 0; color: #15803d; text-align: center;">Your Files Are Ready! 🎉</h2>
+
+            <p>Hi ${escapeHtml(displayName)},</p>
+
+            <p>Great news! Your digital rewards for <strong>${escapeHtml(projectTitle)}</strong> have been delivered and are now available in your Digital Library.</p>
+
+            <div style="background: white; border-radius: 6px; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e;">
+              <p style="margin: 0 0 12px 0; color: #666; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${fileCount} ${fileCount === 1 ? "File" : "Files"} Delivered</p>
+              <ul style="margin: 0; padding-left: 20px; color: #334155;">
+                ${filesListHtml}
+                ${moreCount > 0 ? `<li style="margin: 4px 0; color: #64748b; font-style: italic;">...and ${moreCount} more</li>` : ""}
+              </ul>
+            </div>
+
+            <p>Head to your Digital Library to download your files, read comics in the built-in page-flip reader, or stream music and movies right in your browser.</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/dashboard/backer?tab=digital-downloads" style="display: inline-block; background: #22c55e; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                Access Your Downloads
+              </a>
+            </div>
+
+            <p style="color: #666; font-size: 14px; text-align: center;">
+              Thanks for backing this project and being part of the ${APP_NAME} community!
+            </p>
+          </div>
+
+          <div style="text-align: center; color: #999; font-size: 12px;">
+            <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await queueEmail({
+      to: email,
+      subject: `Your digital rewards for "${projectTitle}" are ready!`,
+      html,
+      priority: EMAIL_PRIORITY.HIGH,
+    });
+
+    return { success: true };
+  } catch (error) {
+    emailEmailTemplatesMiscLogger.error(
+      { err: String(error), email },
+      "[sendDigitalDeliveryEmail] Failed to queue email"
+    );
+    return { success: false };
+  }
+}

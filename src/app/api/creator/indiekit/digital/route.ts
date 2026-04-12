@@ -4,6 +4,83 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitDigitalLogger = logger.child({ module: "creator-indiekit-digital" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendDigitalDeliveryEmail } from "@/lib/email/email-templates-misc";
+
+/**
+ * Group pledge IDs by backer and send digital delivery emails.
+ * Each backer gets one email listing all files they just received for the project.
+ */
+async function sendDeliveryEmailsForPledges(
+  projectId: string,
+  pledgeIds: string[]
+): Promise<{ sent: number; failed: number }> {
+  if (pledgeIds.length === 0) return { sent: 0, failed: 0 };
+
+  try {
+    // Load project title once
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      select: { title: true },
+    });
+    if (!project) return { sent: 0, failed: 0 };
+
+    // Load pledges with user emails + all distributed files
+    const pledges = await db.pledge.findMany({
+      where: { id: { in: pledgeIds } },
+      select: {
+        id: true,
+        user: { select: { email: true, name: true } },
+        digitalDistributions: {
+          where: { distributedAt: { not: null } },
+          select: {
+            digitalFile: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    // Group by email so each backer gets one email even across multiple pledges
+    type Bucket = { name: string | null; files: Set<string> };
+    const byEmail = new Map<string, Bucket>();
+    for (const p of pledges) {
+      if (!p.user?.email) continue;
+      const email = p.user.email.toLowerCase();
+      const existing = byEmail.get(email) || { name: p.user.name, files: new Set<string>() };
+      for (const d of p.digitalDistributions) {
+        if (d.digitalFile?.name) existing.files.add(d.digitalFile.name);
+      }
+      byEmail.set(email, existing);
+    }
+
+    let sent = 0;
+    let failed = 0;
+    for (const [email, bucket] of byEmail) {
+      const fileNames = Array.from(bucket.files);
+      if (fileNames.length === 0) continue;
+      const result = await sendDigitalDeliveryEmail(
+        email,
+        bucket.name,
+        project.title,
+        fileNames.length,
+        fileNames
+      );
+      if (result.success) sent++;
+      else failed++;
+    }
+
+    creatorIndiekitDigitalLogger.info(
+      { projectId, sent, failed },
+      "[Digital Delivery] Emails queued"
+    );
+    return { sent, failed };
+  } catch (err) {
+    creatorIndiekitDigitalLogger.error(
+      { err: String(err), projectId },
+      "[Digital Delivery] Failed to send emails"
+    );
+    return { sent: 0, failed: pledgeIds.length };
+  }
+}
 
 // GET distribution rules for a project
 export async function GET(req: NextRequest) {
@@ -344,6 +421,7 @@ export async function POST(req: NextRequest) {
       // Create DigitalDistribution records for each eligible pledge
       const now = new Date();
       let createdCount = 0;
+      const distributedPledgeIds: string[] = [];
       for (const pledge of eligiblePledges) {
         try {
           await db.digitalDistribution.upsert({
@@ -363,6 +441,7 @@ export async function POST(req: NextRequest) {
             },
           });
           createdCount++;
+          distributedPledgeIds.push(pledge.id);
         } catch (e) {
           creatorIndiekitDigitalLogger.error({ err: String(e) }, `Failed to create distribution for pledge ${pledge.id}:`);
         }
@@ -389,10 +468,15 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // Send delivery notification emails to backers
+      const emailResult = await sendDeliveryEmailsForPledges(projectId, distributedPledgeIds);
+
       return NextResponse.json({
         success: true,
         distributedCount: createdCount,
         totalEligible: eligiblePledges.length,
+        emailsSent: emailResult.sent,
+        emailsFailed: emailResult.failed,
       });
     }
 
@@ -400,6 +484,7 @@ export async function POST(req: NextRequest) {
     if (action === "start_all_distributions" && ruleIds && Array.isArray(ruleIds)) {
       let totalDistributed = 0;
       let totalEligible = 0;
+      const allDistributedPledgeIds = new Set<string>();
       const now = new Date();
 
       for (const ruleId of ruleIds) {
@@ -466,6 +551,7 @@ export async function POST(req: NextRequest) {
               },
             });
             createdCount++;
+            allDistributedPledgeIds.add(pledge.id);
           } catch (e) {
             creatorIndiekitDigitalLogger.error({ err: String(e) }, `Failed to create distribution for pledge ${pledge.id}:`);
           }
@@ -496,30 +582,46 @@ export async function POST(req: NextRequest) {
         totalEligible += eligiblePledges.length;
       }
 
+      // Send delivery notification emails to all backers that received files
+      const emailResult = await sendDeliveryEmailsForPledges(
+        projectId,
+        Array.from(allDistributedPledgeIds)
+      );
+
       return NextResponse.json({
         success: true,
         updatedCount: ruleIds.length,
         totalDistributed,
         totalEligible,
+        emailsSent: emailResult.sent,
+        emailsFailed: emailResult.failed,
       });
     }
 
-    // Handle blast notifications
-    if (action === "blast_notifications") {
-      // Count eligible backers with digital downloads
-      const count = await db.pledge.count({
+    // Handle blast notifications — retroactively email all backers who already
+    // received digital files, letting them know their downloads are ready.
+    if (action === "blast_notifications" || action === "resend_all_delivery_emails") {
+      // Find every pledge for this project that has at least one distributed file
+      const pledgesWithDistributions = await db.pledge.findMany({
         where: {
           projectId,
           status: "COMPLETED",
           deletedAt: null,
+          digitalDistributions: {
+            some: { distributedAt: { not: null } },
+          },
         },
+        select: { id: true },
       });
 
-      // TODO: Actually queue notification emails here
+      const pledgeIds = pledgesWithDistributions.map((p) => p.id);
+      const emailResult = await sendDeliveryEmailsForPledges(projectId, pledgeIds);
 
       return NextResponse.json({
         success: true,
-        count,
+        count: pledgeIds.length,
+        emailsSent: emailResult.sent,
+        emailsFailed: emailResult.failed,
       });
     }
 
