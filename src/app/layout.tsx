@@ -185,6 +185,23 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Browser compatibility shim — defines globals that misbehaving browser
+            injections try to access (Brave on iOS injects Firefox reader-mode code,
+            crypto wallets set window.ethereum, etc.) Runs before any other script. */}
+        {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
+        <script
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{
+              if(typeof window!=='undefined'){
+                // Firefox reader-mode global (Brave on iOS references this)
+                if(!window.__firefox__)window.__firefox__={reader:{checkReadability:function(){},readerize:function(){return null}}};
+                // Ethereum wallet stub — prevents crashes when sites assume it exists
+                if(!window.ethereum)window.ethereum={isMetaMask:false,selectedAddress:null,request:function(){return Promise.reject(new Error('No wallet'))},on:function(){},removeListener:function(){}};
+              }
+            }catch(e){}})();`,
+          }}
+        />
         {/* GA4 — must be first in <head> for Google verification and crawler detection */}
         {ga4Id && (
           <>

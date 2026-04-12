@@ -30,15 +30,44 @@ export function ErrorReporter() {
       });
     };
 
+    // Patterns that indicate browser/extension/third-party noise, not our code
+    const BROWSER_NOISE_PATTERNS = [
+      // Generic cross-origin error with no useful info
+      /^Script error\.?$/,
+      // Chunk load failures — stale cached page after deploy; global-error.tsx auto-reloads
+      /Loading chunk/,
+      /ChunkLoadError/,
+      // Browser extensions
+      /moz-extension:\/\//,
+      /chrome-extension:\/\//,
+      /safari-extension:\/\//,
+      // Browser-injected scripts (Firefox reader mode, Brave's copy, etc.)
+      /__firefox__/,
+      /window\.__firefox__/,
+      // Facebook in-app browser WebView lifecycle errors
+      /Java object is gone/,
+      /Error invoking postMessage/,
+      // Browser feature detection noise
+      /Permission denied to access property/,
+      /cross-origin object/,
+      // ResizeObserver loop limit — benign browser warning, not a real error
+      /ResizeObserver loop/,
+      // Network aborts from users navigating away
+      /The operation was aborted/,
+      /AbortError/,
+      // iOS Safari privacy-mode quota errors
+      /QuotaExceededError/,
+    ];
+
+    const isBrowserNoise = (message?: string, stack?: string): boolean => {
+      const text = `${message || ""} ${stack || ""}`;
+      return BROWSER_NOISE_PATTERNS.some((pattern) => pattern.test(text));
+    };
+
     const handleError = (event: ErrorEvent) => {
-      // "Script error." is a generic cross-origin error with no useful info — skip it
-      if (!event.message || event.message === "Script error." || event.message === "Script error") {
-        return;
-      }
-      // Chunk load failures = stale cached page after a deploy; global-error.tsx auto-reloads
-      if (event.message?.includes("Loading chunk") || event.error?.name === "ChunkLoadError") {
-        return;
-      }
+      if (!event.message) return;
+      if (isBrowserNoise(event.message, event.error?.stack)) return;
+      if (event.error?.name === "ChunkLoadError") return;
       reportError(
         event.message || "Unhandled error",
         event.error?.stack
@@ -49,10 +78,8 @@ export function ErrorReporter() {
       const error = event.reason;
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
-      // Suppress chunk load errors from promise rejections too
-      if (message?.includes("Loading chunk") || (error instanceof Error && error.name === "ChunkLoadError")) {
-        return;
-      }
+      if (isBrowserNoise(message, stack)) return;
+      if (error instanceof Error && error.name === "ChunkLoadError") return;
       reportError(`Unhandled Promise Rejection: ${message}`, stack);
     };
 
