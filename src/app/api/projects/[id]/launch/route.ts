@@ -95,6 +95,18 @@ export async function POST(
       );
     }
 
+    // Require vanity URL to launch — prevents broken project URLs
+    if (!project.creator.vanityUrl) {
+      return NextResponse.json(
+        {
+          error: "You must set your vanity URL on your profile before launching a project.",
+          action: "set-vanity-url",
+          redirectTo: "/dashboard/profile?setup=vanity",
+        },
+        { status: 400 }
+      );
+    }
+
     // Validate Stripe Connect account is fully set up before launching
     // Skip for non-Stripe processors — they handle payouts independently
     if (project.paymentProcessor === "STRIPE") {

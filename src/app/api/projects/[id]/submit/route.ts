@@ -28,7 +28,7 @@ export async function POST(
       include: {
         rewards: true,
         creator: {
-          select: { id: true, email: true, name: true },
+          select: { id: true, email: true, name: true, vanityUrl: true },
         },
       },
     });
@@ -92,6 +92,10 @@ export async function POST(
 
     if (!project.contactEmail) {
       validationErrors.push("Contact email is required");
+    }
+
+    if (!project.creator.vanityUrl) {
+      validationErrors.push("You must set your vanity URL on your profile before submitting a project");
     }
 
     // Check chargeback card
