@@ -13,6 +13,7 @@ interface StripeAccountAlertProps {
 
 export function StripeAccountAlert({ projectId }: StripeAccountAlertProps) {
   const [processor, setProcessor] = useState<string | null>(null);
+  const [isNsfw, setIsNsfw] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
   const [switching, setSwitching] = useState(false);
@@ -27,6 +28,7 @@ export function StripeAccountAlert({ projectId }: StripeAccountAlertProps) {
       if (!res.ok) return;
       const data = await res.json();
       setProcessor(data.paymentProcessor || null);
+      setIsNsfw(Boolean(data.hasAdultContent) || Boolean(data.hasRiskyContent));
     } catch {
       // non-fatal
     } finally {
@@ -60,7 +62,8 @@ export function StripeAccountAlert({ projectId }: StripeAccountAlertProps) {
     }
   };
 
-  if (loading || dismissed || !projectId || processor !== "STRIPE") return null;
+  // Only show for non-NSFW projects currently using Stripe
+  if (loading || dismissed || !projectId || processor !== "STRIPE" || isNsfw) return null;
 
   return (
     <div className="container relative mb-4">
