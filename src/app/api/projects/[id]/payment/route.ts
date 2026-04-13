@@ -50,7 +50,16 @@ export async function POST(
 
     // For launched projects, only allow retailer settings changes (super admins can change anything)
     const isSuperAdmin = session.user.role === "SUPER_ADMIN";
-    const launchedAllowedFields = ["allowRetailerPledges", "retailerDiscount", "retailerMinQuantity"];
+    const launchedAllowedFields = [
+      "allowRetailerPledges",
+      "retailerDiscount",
+      "retailerMinQuantity",
+      // NSFW content flags can always be toggled — if flipping to NSFW on a live
+      // project, we also auto-correct campaignType/paymentProcessor below.
+      "hasAdultContent",
+      "hasRiskyContent",
+      "promoContentSfw",
+    ];
 
     if (permission.isLaunched && !isSuperAdmin) {
       const requestedFields = Object.keys(data).filter(key => data[key as keyof typeof data] !== undefined);
