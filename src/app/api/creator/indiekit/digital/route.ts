@@ -623,7 +623,7 @@ export async function POST(req: NextRequest) {
         where: { projectId },
         select: { id: true },
       });
-      const fileIds = files.map((f) => f.id);
+      const fileIds = files.map((f: { id: string }) => f.id);
 
       // Find every distribution that has been marked as delivered
       const distributions = await db.digitalDistribution.findMany({
@@ -635,7 +635,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Get unique pledge IDs
-      const pledgeIds = Array.from(new Set(distributions.map((d) => d.pledgeId)));
+      const pledgeIds = Array.from(new Set(distributions.map((d: { pledgeId: string }) => d.pledgeId)));
 
       // Filter to only active (non-deleted, completed) pledges
       const activePledges = await db.pledge.findMany({
