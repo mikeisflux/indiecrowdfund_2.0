@@ -38,6 +38,9 @@ export async function GET(
             slug: true,
             imageUrl: true,
             status: true,
+            creator: {
+              select: { vanityUrl: true },
+            },
           },
         },
         reward: {
@@ -52,9 +55,18 @@ export async function GET(
     });
 
     // Convert Decimal fields to numbers for JSON serialization
-    const serializedPledges = pledges.map(pledge => ({
+    // and flatten creator vanity URL onto the project for easy access
+    const serializedPledges = pledges.map((pledge) => ({
       ...pledge,
       amount: Number(pledge.amount),
+      project: {
+        id: pledge.project.id,
+        title: pledge.project.title,
+        slug: pledge.project.slug,
+        imageUrl: pledge.project.imageUrl,
+        status: pledge.project.status,
+        creatorVanityUrl: pledge.project.creator?.vanityUrl || null,
+      },
       reward: pledge.reward ? {
         ...pledge.reward,
         amount: Number(pledge.reward.amount),

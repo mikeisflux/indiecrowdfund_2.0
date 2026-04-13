@@ -192,14 +192,20 @@ export function UserDetailsDialog({
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <a
-                              href={pledge.project.creatorVanityUrl ? `/projects/${pledge.project.creatorVanityUrl}/${pledge.project.slug}` : `/projects/${pledge.project.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-medium hover:underline"
-                            >
-                              {pledge.project.title}
-                            </a>
+                            {pledge.project.creatorVanityUrl ? (
+                              <a
+                                href={`/projects/${pledge.project.creatorVanityUrl}/${pledge.project.slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium hover:underline"
+                              >
+                                {pledge.project.title}
+                              </a>
+                            ) : (
+                              <span className="font-medium text-muted-foreground" title="Creator has no vanity URL set">
+                                {pledge.project.title}
+                              </span>
+                            )}
                             <Badge variant={pledge.status === "COMPLETED" ? "default" : "secondary"}>
                               {pledge.status}
                             </Badge>
