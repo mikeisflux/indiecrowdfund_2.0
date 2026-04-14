@@ -486,17 +486,28 @@ export async function middleware(req: NextRequest) {
   const clientIP = getClientIP(req);
   const userAgent = req.headers.get("user-agent") || "none";
 
-  // On first request after PM2 restart, BLOCK until we've loaded blocked IPs
-  // from the database. This prevents the race condition where requests slip
-  // through before the cache is populated. Subsequent syncs are non-blocking.
-  if (!pathname.startsWith("/api/internal/")) {
-    if (!isInitialized) {
-      if (!initPromise) {
-        initPromise = syncBlockedIPsFromDb().catch(() => {});
+  // ============ Emergency Kill Switch ============
+  // Set DISABLE_BOT_BLOCKER=true in the environment (and restart PM2) to
+  // bypass all bot protection — IP blocking, scanner detection, rate
+  // limits, server-action validation, crawler allowlist checks. Use this
+  // to rule out the middleware as a cause of 3rd-party integration
+  // failures (Facebook sharing, etc.). Security headers, CSRF, maintenance
+  // mode, and protected-route auth further down still apply.
+  const botBlockerDisabled = process.env.DISABLE_BOT_BLOCKER === "true";
+
+  if (!botBlockerDisabled) {
+    // On first request after PM2 restart, BLOCK until we've loaded blocked IPs
+    // from the database. This prevents the race condition where requests slip
+    // through before the cache is populated. Subsequent syncs are non-blocking.
+    if (!pathname.startsWith("/api/internal/")) {
+      if (!isInitialized) {
+        if (!initPromise) {
+          initPromise = syncBlockedIPsFromDb().catch(() => {});
+        }
+        await initPromise;
+      } else {
+        syncBlockedIPsFromDb().catch(() => {});
       }
-      await initPromise;
-    } else {
-      syncBlockedIPsFromDb().catch(() => {});
     }
   }
 
@@ -509,6 +520,12 @@ export async function middleware(req: NextRequest) {
     url.searchParams.set("status", String(status));
     return NextResponse.rewrite(url);
   }
+
+  // Log once per request when the kill switch is on, so you can see in
+  // pm2 logs that the bypass is active.
+  if (botBlockerDisabled) {
+    console.log(`[Bot Blocker DISABLED] ${pathname} ua="${userAgent.slice(0, 100)}"`);
+  } else {
 
   // Trusted crawlers bypass all bot protection — Google's crawlers, plus
   // every major social/search platform that fetches pages for OG previews
@@ -627,6 +644,7 @@ export async function middleware(req: NextRequest) {
       });
     }
   }
+  } // end: bot-blocker kill switch else
 
   // Check for maintenance mode (set MAINTENANCE_MODE=true in env)
   const isMaintenanceMode = process.env.MAINTENANCE_MODE === "true";
