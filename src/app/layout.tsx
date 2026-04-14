@@ -105,6 +105,13 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  // Meta / Facebook domain verification — required for Meta Business Manager
+  // to trust the domain and allow URL sharing in the Sharing Debugger. Without
+  // this, Facebook silently rejects share attempts even when the OG tags are
+  // perfectly valid.
+  other: {
+    "facebook-domain-verification": "wixhi9qabkxkdaocihnmbb7uvd2s4",
+  },
   alternates: {
     canonical: SITE_URL,
   },
