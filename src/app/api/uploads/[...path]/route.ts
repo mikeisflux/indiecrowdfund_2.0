@@ -108,8 +108,28 @@ export async function GET(
     const fileBuffer = await readFile(finalPath);
 
     // Support format conversion via ?format=jpeg (useful for og:image compatibility)
+    // ALSO auto-convert WebP → JPEG when a social-media crawler fetches the file.
+    // Facebook, X, LinkedIn, etc. reject WebP images entirely, which breaks share
+    // previews even though the HTML and OG tags are perfectly valid.
     const requestedFormat = req.nextUrl.searchParams.get("format");
-    if (requestedFormat === "jpeg" && ext === ".webp") {
+    const userAgent = (req.headers.get("user-agent") || "").toLowerCase();
+    const isSocialCrawlerUA =
+      userAgent.includes("facebookexternalhit") ||
+      userAgent.includes("facebookcatalog") ||
+      userAgent.includes("facebot") ||
+      userAgent.includes("meta-externalagent") ||
+      userAgent.includes("meta-externalfetcher") ||
+      userAgent.includes("twitterbot") ||
+      userAgent.includes("linkedinbot") ||
+      userAgent.includes("pinterest") ||
+      userAgent.includes("slackbot") ||
+      userAgent.includes("discordbot") ||
+      userAgent.includes("telegrambot") ||
+      userAgent.includes("whatsapp");
+    const shouldConvertToJpeg =
+      ext === ".webp" && (requestedFormat === "jpeg" || isSocialCrawlerUA);
+
+    if (shouldConvertToJpeg) {
       try {
         const jpegBuffer = await sharp(fileBuffer).jpeg({ quality: 85 }).toBuffer();
         return new NextResponse(new Uint8Array(jpegBuffer), {
@@ -117,6 +137,9 @@ export async function GET(
             "Content-Type": "image/jpeg",
             "Content-Length": String(jpegBuffer.length),
             "Cache-Control": "public, max-age=31536000, immutable",
+            // Vary on User-Agent so CDN caches don't serve the JPEG to browsers
+            // or the WebP to crawlers.
+            "Vary": "User-Agent",
           },
         });
       } catch (conversionError) {
