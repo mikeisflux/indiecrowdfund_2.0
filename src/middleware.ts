@@ -516,6 +516,14 @@ export async function middleware(req: NextRequest) {
   // WhatsApp, Telegram, Apple, etc.). Without this, share-link dialogs fail
   // with "Sorry, the post that you're sharing couldn't be loaded".
   if (isTrustedCrawler(clientIP, userAgent)) {
+    // Log social crawler hits so we can verify deployment and diagnose
+    // "Sharing Debugger can't fetch" problems. Skip Google to keep logs
+    // tidy — Google hits are constant background noise.
+    if (isSocialCrawler(userAgent)) {
+      console.log(
+        `[Crawler Allow] ${pathname} ip=${clientIP} ua="${userAgent.slice(0, 200)}"`
+      );
+    }
     return NextResponse.next();
   }
 
