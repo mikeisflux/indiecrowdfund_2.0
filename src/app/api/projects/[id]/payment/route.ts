@@ -59,6 +59,13 @@ export async function POST(
       "hasAdultContent",
       "hasRiskyContent",
       "promoContentSfw",
+      // campaignType is allowed on launched projects ONLY for upgrades to
+      // KEEP_IT_ALL (validated below). This lets NSFW creators fix projects
+      // that got stuck on ALL_OR_NOTHING from before the NSFW→KEEP_IT_ALL
+      // auto-correction existed. We never allow downgrading KEEP_IT_ALL →
+      // ALL_OR_NOTHING on a live project because that breaks backer
+      // expectations and payment collection timing.
+      "campaignType",
     ];
 
     if (permission.isLaunched && !isSuperAdmin) {
@@ -70,6 +77,23 @@ export async function POST(
           { error: `Cannot edit ${disallowedFields.join(", ")} on a launched campaign` },
           { status: 400 }
         );
+      }
+
+      // Block downgrading from KEEP_IT_ALL → ALL_OR_NOTHING on a launched
+      // project. Leave no-op saves alone (client re-sends the current value
+      // on every save, so blocking ALL_OR_NOTHING outright would break every
+      // non-NSFW launched project's retailer settings save).
+      if (data.campaignType === "ALL_OR_NOTHING") {
+        const existing = await db.project.findFirst({
+          where: { id: projectId, deletedAt: null },
+          select: { campaignType: true },
+        });
+        if (existing?.campaignType === "KEEP_IT_ALL") {
+          return NextResponse.json(
+            { error: "Cannot change a launched campaign back to All or Nothing" },
+            { status: 400 }
+          );
+        }
       }
     }
 

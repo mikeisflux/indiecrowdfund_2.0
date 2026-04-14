@@ -151,6 +151,7 @@ export async function GET(
       // Payment settings
       projectType: project.projectType,
       paymentProcessor: project.paymentProcessor,
+      campaignType: project.campaignType,
       hasAdultContent: project.hasAdultContent,
       hasRiskyContent: project.hasRiskyContent,
       promoContentSfw: project.promoContentSfw,

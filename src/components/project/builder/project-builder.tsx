@@ -311,9 +311,17 @@ export function ProjectBuilder() {
         })
       );
 
-      // Save payment settings - for launched projects, only send retailer settings
+      // Save payment settings - for launched projects, send retailer settings
+      // PLUS NSFW flags and campaignType. NSFW projects must be KEEP_IT_ALL
+      // (Stripe/PayPal-style holds aren't possible with DivinityCoin/Whop), and
+      // without sending these fields the server-side NSFW → KEEP_IT_ALL
+      // auto-correction never fires on a live campaign.
       const paymentPayload = isLive
         ? {
+            hasAdultContent: payment.hasAdultContent || false,
+            hasRiskyContent: payment.hasRiskyContent || false,
+            promoContentSfw: payment.promoContentSfw !== false,
+            campaignType: payment.campaignType || "ALL_OR_NOTHING",
             allowRetailerPledges: payment.allowRetailerPledges || false,
             retailerDiscount: Number(payment.retailerDiscount) || 50,
             retailerMinQuantity: Number(payment.retailerMinQuantity) || 5,
