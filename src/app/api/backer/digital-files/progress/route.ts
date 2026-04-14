@@ -131,18 +131,28 @@ export async function POST(request: Request) {
         backerDigitalFilesProgressLogger.info("MarketplacePurchase update skipped - table may not exist");
       }
     } else {
-      // Find the user's pledge for this file
-      const distribution = await prisma.digitalDistribution.findFirst({
+      // DigitalDistribution has no `pledge` relation — only a scalar `pledgeId`.
+      // Look up the user's pledges first, then find a matching distribution.
+      const userPledges = await prisma.pledge.findMany({
         where: {
-          digitalFileId: fileId,
-          pledge: {
-            userId: session.user.id,
-          },
+          userId: session.user.id,
+          deletedAt: null,
+          status: { in: ["PENDING", "COMPLETED"] },
         },
-        select: {
-          id: true,
-        },
+        select: { id: true },
       });
+
+      const userPledgeIds = userPledges.map((p) => p.id);
+
+      const distribution = userPledgeIds.length > 0
+        ? await prisma.digitalDistribution.findFirst({
+            where: {
+              digitalFileId: fileId,
+              pledgeId: { in: userPledgeIds },
+            },
+            select: { id: true },
+          })
+        : null;
 
       if (!distribution) {
         return NextResponse.json(

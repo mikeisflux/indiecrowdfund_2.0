@@ -490,16 +490,21 @@ export async function middleware(req: NextRequest) {
     if (!isValidServerActionId(serverActionId)) {
       console.log(`[Bot Blocker] Invalid action ID "${serverActionId}" from IP ${clientIP}`);
 
-      // Record suspicious activity and potentially block
-      recordSuspiciousRequest(
-        clientIP,
-        `Invalid server action ID: ${serverActionId}`,
-        { actionId: serverActionId, path: pathname, userAgent }
-      );
+      // Instantly block — real users cannot forge action IDs like "xxx" or "gay".
+      // Escalate straight to a 7-day block so repeat probes stop hitting the app.
+      blockedIPCache.set(clientIP, { expiresAt: Date.now() + SCANNER_BLOCK_DURATION_MS });
+      persistBlockedIP(clientIP, `Invalid server action ID probe: ${serverActionId}`, {
+        actionId: serverActionId,
+        path: pathname,
+        userAgent,
+      });
 
-      // Rewrite to API endpoint to prevent Next.js renderErrorToResponseImpl from
-      // trying to resolve the invalid action ID and logging the error again
-      return rewriteToBlocked("Bad Request - Invalid action ID", 400);
+      // Return a direct response (not a rewrite) so Next.js never attempts to
+      // resolve the bogus action ID and log a "Failed to find Server Action" error.
+      return new NextResponse("Forbidden", {
+        status: 403,
+        headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" },
+      });
     }
 
     // Rate limit server action requests per IP (catches brute-force action ID guessing)
@@ -511,7 +516,10 @@ export async function middleware(req: NextRequest) {
         "Server action rate limit exceeded",
         { actionId: serverActionId, path: pathname, userAgent }
       );
-      return rewriteToBlocked("Too Many Requests", 429);
+      return new NextResponse("Too Many Requests", {
+        status: 429,
+        headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" },
+      });
     }
 
     // Detect suspicious server action patterns:
@@ -526,7 +534,10 @@ export async function middleware(req: NextRequest) {
         "Server action with no referer, origin, or session",
         { actionId: serverActionId, path: pathname, userAgent }
       );
-      return rewriteToBlocked("Bad Request", 400);
+      return new NextResponse("Bad Request", {
+        status: 400,
+        headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" },
+      });
     }
   }
 

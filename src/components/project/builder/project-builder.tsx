@@ -163,12 +163,59 @@ export function ProjectBuilder() {
         if (newProjectId) {
           setProjectId(newProjectId);
 
+          // Save items FIRST so the ProjectItem records exist before rewards
+          // reference them via projectItemId (FK constraint). Without this
+          // step the batch rewards endpoint silently drops each reward with a
+          // FK error, making it look like "the reward wasn't saved".
+          const oldToNewItemIdMap: Record<string, string> = {};
+          const itemsToSave = items.filter((item) => item.title);
+          const itemSaveResults = await Promise.allSettled(
+            itemsToSave.map((item) =>
+              apiFetch(`/api/projects/${newProjectId}/items`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  title: item.title,
+                  description: item.description || "",
+                  imageUrl: item.imageUrl || undefined,
+                }),
+              }).then(async (res) => {
+                if (!res.ok) throw new Error(`Failed to save item: ${res.status}`);
+                return { oldId: item.id, result: await res.json() };
+              })
+            )
+          );
+          itemSaveResults.forEach((res) => {
+            if (res.status === "fulfilled") {
+              const { oldId, result } = res.value;
+              if (oldId && result.item?.id) {
+                oldToNewItemIdMap[oldId] = result.item.id;
+              }
+            } else {
+              console.error("Failed to save item:", res.reason);
+            }
+          });
+
+          // Rewrite reward items to reference the newly-created ProjectItem IDs
+          const rewardsWithRealItemIds = transformedRewards.map((reward) => ({
+            ...reward,
+            items: reward.items.map((item) => {
+              const oldId = item.id || item.projectItemId || "";
+              const newId = oldToNewItemIdMap[oldId];
+              return {
+                ...item,
+                id: newId || undefined,
+                projectItemId: newId || null,
+              };
+            }),
+          }));
+
           // Save rewards (batch) and collaborators in parallel for new projects
-          const rewardsPromise = transformedRewards.length > 0
+          const rewardsPromise = rewardsWithRealItemIds.length > 0
             ? apiFetch(`/api/projects/${newProjectId}/rewards`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", },
-                body: JSON.stringify({ rewards: transformedRewards }),
+                body: JSON.stringify({ rewards: rewardsWithRealItemIds }),
               })
             : Promise.resolve(new Response());
 
@@ -188,6 +235,15 @@ export function ProjectBuilder() {
             try {
               const rewardsData = await rewardsResult.value.json();
               if (rewardsData.results) {
+                const failedRewards = rewardsData.results.filter(
+                  (r: { success: boolean }) => !r.success
+                );
+                if (failedRewards.length > 0) {
+                  console.error("Some rewards failed to save:", failedRewards);
+                  toast.error(
+                    `${failedRewards.length} reward(s) failed to save. Please try again.`
+                  );
+                }
                 rewardsData.results.forEach((result: { success: boolean; reward?: { id: string } }, idx: number) => {
                   if (result.success && result.reward?.id && idx < rewards.length) {
                     const existingReward = rewards[idx];
@@ -592,7 +648,8 @@ export function ProjectBuilder() {
                 variant="outline"
                 size="sm"
                 onClick={isApproved ? handleSaveApprovedProject : handleSaveAndExit}
-                disabled={isSaving || isSubmitting || isLaunching}
+                disabled={isSaving || isSubmitting || isLaunching || isSubFormOpen}
+                title={isSubFormOpen ? "Finish saving the current form first" : undefined}
               >
                 {isSaving ? (
                   <>
@@ -626,7 +683,7 @@ export function ProjectBuilder() {
                   }
                   setCurrentStep(index);
                 }}
-                disabled={isSaving}
+                disabled={isSaving || isSubFormOpen}
                 className={cn(
                   "flex min-w-[140px] flex-col items-center border-b-2 px-4 py-3 text-sm transition-colors",
                   currentStep === index
