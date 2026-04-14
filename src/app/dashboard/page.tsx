@@ -45,7 +45,6 @@ import { SocialHubTab } from "./components/SocialHubTab";
 import { IndieKitV2Tab } from "./components/IndieKitV2Tab";
 import { MarketplaceTab } from "./components/MarketplaceTab";
 import { EmailTab } from "./components/EmailTab";
-import { StripeAccountAlert } from "./components/StripeAccountAlert";
 
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
@@ -314,11 +313,6 @@ export default function CreatorDashboard() {
         selectedProject={project}
         onProjectChange={handleProjectChange}
       />
-
-      {/* PayPal Migration Alert — shown when selected project is still on Stripe */}
-      <div className="pt-4">
-        <StripeAccountAlert projectId={selectedProjectId} />
-      </div>
 
       <div className="container relative py-6">
         {project && stats ? (
