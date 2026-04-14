@@ -109,6 +109,81 @@ function isGoogleCrawler(ip: string, userAgent: string): boolean {
   return false;
 }
 
+// ============ Social / Search Crawler Allowlist ============
+// Crawlers from social media platforms must NEVER be blocked — they fetch
+// our pages to extract Open Graph metadata for link previews. If they're
+// blocked, share dialogs show "Sorry, the post that you're sharing couldn't
+// be loaded" because the OG tags can't be scraped. This covers Facebook
+// (Meta), X (Twitter), LinkedIn, Pinterest, Reddit, Slack, Discord,
+// WhatsApp, Telegram, Bing, DuckDuckGo, Apple, Yandex, Baidu, and assorted
+// preview/SEO bots. User-agent matching is sufficient — these crawlers
+// don't spoof their UA, and IP ranges change too often to maintain.
+const SOCIAL_CRAWLER_UA_PATTERNS = [
+  // Meta (Facebook, Instagram, WhatsApp, Threads)
+  "facebookexternalhit",
+  "facebookcatalog",
+  "facebookbot",
+  "facebot",
+  "meta-externalagent",
+  "meta-externalfetcher",
+  "whatsapp",
+  "instagram",
+  // X / Twitter
+  "twitterbot",
+  // LinkedIn
+  "linkedinbot",
+  // Pinterest
+  "pinterest",
+  "pinterestbot",
+  // Reddit
+  "redditbot",
+  // Slack
+  "slackbot",
+  "slack-imgproxy",
+  // Discord
+  "discordbot",
+  // Telegram
+  "telegrambot",
+  // Microsoft Bing
+  "bingbot",
+  "bingpreview",
+  "adidxbot",
+  "msnbot",
+  // DuckDuckGo
+  "duckduckbot",
+  "duckduckgo-favicons-bot",
+  // Apple
+  "applebot",
+  // Yandex
+  "yandexbot",
+  "yandeximages",
+  // Baidu
+  "baiduspider",
+  // Other common preview/SEO bots
+  "embedly",
+  "iframely",
+  "vkshare",
+  "w3c_validator",
+  "tumblr",
+  "bitlybot",
+  "skypeuripreview",
+  "nuzzel",
+  "outbrain",
+  "quora link preview",
+  "showyoubot",
+  "yahoo! slurp",
+  "yahoo link preview",
+];
+
+function isSocialCrawler(userAgent: string): boolean {
+  const ua = userAgent.toLowerCase();
+  return SOCIAL_CRAWLER_UA_PATTERNS.some((p) => ua.includes(p));
+}
+
+function isTrustedCrawler(ip: string, userAgent: string): boolean {
+  return isGoogleCrawler(ip, userAgent) || isSocialCrawler(userAgent);
+}
+
 // ============ Bot Detection & IP Blocking ============
 // In-memory cache with database persistence via internal API
 // Survives PM2 restarts by loading from database on startup
@@ -435,8 +510,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // Google crawlers (Googlebot, AdsBot, GTM detection, Search Console) bypass all bot protection
-  if (isGoogleCrawler(clientIP, userAgent)) {
+  // Trusted crawlers bypass all bot protection — Google's crawlers, plus
+  // every major social/search platform that fetches pages for OG previews
+  // (Facebook, X/Twitter, LinkedIn, Bing, Pinterest, Reddit, Slack, Discord,
+  // WhatsApp, Telegram, Apple, etc.). Without this, share-link dialogs fail
+  // with "Sorry, the post that you're sharing couldn't be loaded".
+  if (isTrustedCrawler(clientIP, userAgent)) {
     return NextResponse.next();
   }
 
