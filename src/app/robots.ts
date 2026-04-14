@@ -62,12 +62,52 @@ export default function robots(): MetadataRoute.Robots {
         disallow: PRIVATE_PATHS,
       },
       {
+        userAgent: "facebookexternalhit",
+        allow: "/",
+        disallow: PRIVATE_PATHS,
+      },
+      {
+        userAgent: "meta-externalagent",
+        allow: "/",
+        disallow: PRIVATE_PATHS,
+      },
+      {
+        userAgent: "meta-externalfetcher",
+        allow: "/",
+        disallow: PRIVATE_PATHS,
+      },
+      {
         userAgent: "Twitterbot",
         allow: "/",
         disallow: PRIVATE_PATHS,
       },
       {
         userAgent: "LinkedInBot",
+        allow: "/",
+        disallow: PRIVATE_PATHS,
+      },
+      {
+        userAgent: "Slackbot",
+        allow: "/",
+        disallow: PRIVATE_PATHS,
+      },
+      {
+        userAgent: "Discordbot",
+        allow: "/",
+        disallow: PRIVATE_PATHS,
+      },
+      {
+        userAgent: "WhatsApp",
+        allow: "/",
+        disallow: PRIVATE_PATHS,
+      },
+      {
+        userAgent: "TelegramBot",
+        allow: "/",
+        disallow: PRIVATE_PATHS,
+      },
+      {
+        userAgent: "Pinterest",
         allow: "/",
         disallow: PRIVATE_PATHS,
       },
