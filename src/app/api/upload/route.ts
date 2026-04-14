@@ -24,7 +24,7 @@ const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
 
 // Size limits
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB for images
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB for videos
+const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB for videos
 
 const WEBP_QUALITY = 85;
 
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
     // Validate file size based on type
     const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
     const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
-    const maxSizeLabel = isVideo ? "100MB" : "10MB";
+    const maxSizeLabel = isVideo ? "200MB" : "10MB";
 
     if (file.size > maxSize) {
       return NextResponse.json(

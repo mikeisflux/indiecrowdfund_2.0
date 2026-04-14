@@ -117,10 +117,10 @@ export function BasicsStep() {
       return;
     }
 
-    // Validate file size (100MB max)
-    const maxSize = 100 * 1024 * 1024;
+    // Validate file size (200MB max)
+    const maxSize = 200 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error("Video file must be less than 100MB");
+      toast.error("Video file must be less than 200MB");
       return;
     }
 
@@ -608,7 +608,7 @@ export function BasicsStep() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-3">
-                      Upload MP4, WebM, or MOV (max 100MB) or paste a YouTube/Vimeo link
+                      Upload MP4, WebM, or MOV (max 200MB) or paste a YouTube/Vimeo link
                     </p>
                   </>
                 )}
