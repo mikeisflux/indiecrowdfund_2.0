@@ -75,6 +75,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: {
       canonical: projectUrl,
     },
+    // Explicitly include Meta domain-verification on every project page.
+    // In theory Next.js inherits `other` from the root layout, but some
+    // Next.js versions silently drop parent `other` when the child sets
+    // any metadata at all. Belt-and-suspenders so the tag is guaranteed
+    // to appear in the <head> of every project URL.
+    other: {
+      "facebook-domain-verification": "wixhi9qabkxkdaocihnmbb7uvd2s4",
+    },
     openGraph: {
       title: `${project.title} - Back This Project on IndieCrowdfund`,
       description: plainDescription,

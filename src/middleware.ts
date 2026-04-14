@@ -27,6 +27,7 @@ const csrfExemptRoutes = [
   "/api/health",
   "/api/track", // Analytics tracking endpoint
   "/api/blocked", // Bot/blocked request sink
+  "/api/internal", // Internal API called by middleware itself (localhost-only auth)
   "/api/admin/ai-marketing/campaigns/fix-images", // One-time fix script
   "/api/retailers/login", // Protected by CAPTCHA and rate limiting instead
   "/api/retailers/forgot-password", // Protected by CAPTCHA and rate limiting instead
