@@ -1,4 +1,5 @@
 import { PrismaClient, PrismaClientKnownRequestError, PrismaClientInitializationError } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { logger } from "@/lib/logger";
 
 const dbLogger = logger.child({ module: "prisma" });
@@ -72,7 +73,21 @@ function getPrismaClient(): PrismaClient {
   if (!globalForPrisma.prisma) {
     let client: PrismaClient;
     try {
+      // Prisma 7 requires a driver adapter on every PrismaClient. We
+      // use @prisma/adapter-pg which wraps node-postgres. `ssl:
+      // rejectUnauthorized: false` matches the pre-Prisma-7 Rust
+      // engine behavior, which silently ignored self-signed certs.
+      // Our production DB uses a self-signed cert, and without this
+      // opt-out Prisma 7 throws P1010 "User was denied access on the
+      // database" even though the credentials are correct. The
+      // connection itself is still TCP-direct to PostgreSQL on
+      // localhost so this doesn't weaken anything in practice.
+      const adapter = new PrismaPg({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+      });
       client = new PrismaClient({
+        adapter,
         log:
           process.env.NODE_ENV === "development"
             ? ["query", { emit: "event", level: "error" }, { emit: "event", level: "warn" }]

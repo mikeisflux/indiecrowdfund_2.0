@@ -5,7 +5,10 @@ const adminMarketplacePdfManagementLogger = logger.child({ module: "admin-market
 import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getR2Storage } from "@/lib/r2";
-import { Decimal } from "@prisma/client/runtime/library";
+// In Prisma 7 the old `@prisma/client/runtime/library` export path is
+// gone; `Decimal` now lives on the `Prisma` namespace of the generated
+// client. Import it as a type-only to avoid pulling any runtime code.
+import type { Prisma } from "@prisma/client";
 import { formatFileSize } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +25,7 @@ interface PdfBookRecord {
   pdfCoverImageUrl: string | null;
   pdfTotalPages: number | null;
   coverImageUrl: string | null;
-  price: Decimal;
+  price: Prisma.Decimal;
   purchaseCount: number;
   createdAt: Date;
   publishedAt: Date | null;

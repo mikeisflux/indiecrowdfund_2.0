@@ -13,6 +13,9 @@ generator client {
 }
 
 datasource db {
+  // The `url` field moved to prisma.config.ts in Prisma 7 — the
+  // `url`, `directUrl`, and `shadowDatabaseUrl` fields in schema
+  // datasource blocks are deprecated. Provider must stay here so
+  // Prisma knows which connector/dialect to generate for.
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }

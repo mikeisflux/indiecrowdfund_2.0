@@ -24,7 +24,9 @@ declare module "@prisma/client" {
   }
 
   export class PrismaClient {
-    constructor(options?: { log?: any[] });
+    // Stub kept permissive — Prisma 7 added `adapter`, `errorFormat`,
+    // and other options; real types come from the generated client.
+    constructor(options?: any);
     $connect(): Promise<void>;
     $disconnect(): Promise<void>;
     $executeRaw(query: any, ...values: any[]): Promise<number>;
@@ -127,7 +129,7 @@ declare module "@prisma/client" {
 
   export type Role = "USER" | "ADMIN" | "CREATOR";
 
-  // Prisma namespace for JSON types and error classes
+  // Prisma namespace for JSON types, Decimal, and error classes
   export namespace Prisma {
     export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
     export interface JsonObject {
@@ -139,6 +141,10 @@ declare module "@prisma/client" {
       [key: string]: InputJsonValue;
     }
     export type InputJsonArray = InputJsonValue[];
+    // Decimal used to live at `@prisma/client/runtime/library` in
+    // Prisma 6 and earlier; Prisma 7 exports it from this namespace.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    export type Decimal = any;
   }
 
   // Error classes used at runtime
