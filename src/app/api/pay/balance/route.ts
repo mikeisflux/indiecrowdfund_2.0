@@ -207,15 +207,26 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Store the payment intent ID in pledge metadata
-      await db.pledge.update({
-        where: { id: pledge.id },
-        data: {
-          metadata: {
-            ...meta,
-            balancePaymentIntentId: paymentIntent.id,
+      // Store the payment intent ID in pledge metadata. Re-read the
+      // metadata inside a FOR UPDATE row lock so a concurrent order
+      // edit or balance payment initiation doesn't clobber fields
+      // we need to preserve.
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${pledge.id} FOR UPDATE`;
+        const fresh = await tx.pledge.findUnique({
+          where: { id: pledge.id },
+          select: { metadata: true },
+        });
+        const freshMeta = (fresh?.metadata as Record<string, unknown>) || {};
+        await tx.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            metadata: {
+              ...freshMeta,
+              balancePaymentIntentId: paymentIntent.id,
+            },
           },
-        },
+        });
       });
 
       return NextResponse.json({
@@ -262,14 +273,22 @@ export async function POST(req: NextRequest) {
 
       const dcData = await dcResponse.json();
 
-      await db.pledge.update({
-        where: { id: pledge.id },
-        data: {
-          metadata: {
-            ...meta,
-            balanceDivinityCoinPaymentId: dcData.paymentId,
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${pledge.id} FOR UPDATE`;
+        const fresh = await tx.pledge.findUnique({
+          where: { id: pledge.id },
+          select: { metadata: true },
+        });
+        const freshMeta = (fresh?.metadata as Record<string, unknown>) || {};
+        await tx.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            metadata: {
+              ...freshMeta,
+              balanceDivinityCoinPaymentId: dcData.paymentId,
+            },
           },
-        },
+        });
       });
 
       return NextResponse.json({
