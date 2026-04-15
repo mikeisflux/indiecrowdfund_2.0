@@ -870,6 +870,16 @@ export async function maybeSweepOldSentEmails(): Promise<void> {
  */
 const RECONCILE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 const RECONCILE_MIN_AGE_MS = 5 * 60 * 1000; // 5 minutes
+// Cooldown after any manual/automated touch of a pledge row. If the
+// pledge's updatedAt is fresher than this, we assume a manual Resend is
+// in-flight (the resend endpoint resets confirmationEmailSent=false,
+// which bumps updatedAt) or just finished, and we skip the pledge for
+// now. This prevents a race where the creator clicks "Resend" in the
+// same minute that the reconcile cron tick fires, and both code paths
+// reach sendEmail before either has written a PLEDGE_CONFIRMATION
+// EmailLog — which would double-send. Two minutes is more than enough
+// for the manual resend's full send + EmailLog write to complete.
+const RECONCILE_RECENT_UPDATE_COOLDOWN_MS = 2 * 60 * 1000;
 const RECONCILE_BATCH_LIMIT = 100;
 
 export async function reconcileMissedPledgeConfirmationEmails(): Promise<{
@@ -885,17 +895,35 @@ export async function reconcileMissedPledgeConfirmationEmails(): Promise<{
     const now = Date.now();
     const windowStart = new Date(now - RECONCILE_WINDOW_MS);
     const latestAllowed = new Date(now - RECONCILE_MIN_AGE_MS);
+    const recentUpdateCutoff = new Date(
+      now - RECONCILE_RECENT_UPDATE_COOLDOWN_MS
+    );
 
     // Find COMPLETED pledges in the reconciliation window that have no
     // PLEDGE_CONFIRMATION EmailLog entry. Uses Prisma's `none` relation
     // filter which generates a NOT EXISTS subquery — efficient even
     // with thousands of pledges.
+    //
+    // Filters:
+    //   - createdAt within the last 14 days but at least 5 minutes old
+    //     (old enough that the normal confirm flow has had time to run,
+    //     young enough that retrying matters)
+    //   - updatedAt older than 2 minutes (cooldown — see comment on
+    //     RECONCILE_RECENT_UPDATE_COOLDOWN_MS above; prevents racing a
+    //     manual Resend click)
+    //   - No EmailLog of type PLEDGE_CONFIRMATION already exists
+    //
+    // We DON'T filter by `user.email != null` at the Prisma level
+    // because Prisma 7 rejects `{ not: null }` on nullable string
+    // filters at runtime with "Argument `not` must not be null."
+    // notifyBackerPledgeConfirmed() already short-circuits on pledges
+    // whose user has no email, so including those rows here is a no-op.
     const missedPledges = await db.pledge.findMany({
       where: {
         status: "COMPLETED",
         deletedAt: null,
         createdAt: { gte: windowStart, lte: latestAllowed },
-        user: { email: { not: null } },
+        updatedAt: { lt: recentUpdateCutoff },
         emailLogs: {
           none: { type: "PLEDGE_CONFIRMATION" },
         },

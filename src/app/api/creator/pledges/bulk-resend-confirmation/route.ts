@@ -72,13 +72,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Load all eligible pledges. Eligible = has an email AND either
-    // status is COMPLETED OR has a saved payment method (deferred charge).
+    // Load all eligible pledges. Eligible = status is COMPLETED OR has
+    // a saved payment method (deferred charge). We don't filter by
+    // `user.email != null` at the Prisma level because Prisma 7 rejects
+    // `{ not: null }` on nullable string filters at runtime with
+    // "Argument `not` must not be null." The downstream
+    // notifyBackerPledgeConfirmed() function already short-circuits on
+    // pledges whose user has no email, so fetching a few extra rows here
+    // is safe — they'll be no-ops rather than errors.
     const eligiblePledges = await db.pledge.findMany({
       where: {
         projectId,
         deletedAt: null,
-        user: { email: { not: null } },
         OR: [
           { status: "COMPLETED" },
           { stripePaymentMethodId: { not: null } },
