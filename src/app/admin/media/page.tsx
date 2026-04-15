@@ -40,7 +40,6 @@ import {
   Edit3,
   Move,
   Download,
-  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -90,9 +89,6 @@ export default function MediaPage() {
   const [scanning, setScanning] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [recovering, setRecovering] = useState(false);
-  const [generatingJpg, setGeneratingJpg] = useState(false);
-  const [strippingEmails, setStrippingEmails] = useState(false);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [stats, setStats] = useState<MediaStats | null>(null);
@@ -186,138 +182,6 @@ export default function MediaPage() {
       setShowUploadDialog(false);
       fetchMedia();
     }, 1000);
-  };
-
-  const handleRecoverBase64 = async () => {
-    if (recovering) return;
-    if (
-      !confirm(
-        "Recover corrupt project cover images?\n\nThis will scan every project for imageUrl values that contain base64 data URIs, decode them to real image files, and store them on disk. Safe to run multiple times."
-      )
-    ) {
-      return;
-    }
-    setRecovering(true);
-    const loadingToast = toast.loading("Recovering corrupt project images...");
-    try {
-      const res = await apiFetch("/api/admin/projects/recover-base64-images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      toast.dismiss(loadingToast);
-      if (!res.ok) {
-        toast.error(data.error || "Recovery failed");
-        return;
-      }
-      const { recovered, failed, skipped, total } = data;
-      if (total === 0) {
-        toast.info("No corrupt project images found — nothing to recover");
-      } else if (failed === 0 && skipped === 0) {
-        toast.success(`Recovered ${recovered} of ${total} projects`);
-      } else {
-        toast.warning(
-          `Recovered ${recovered}/${total} • ${failed} failed • ${skipped} skipped — check server logs for details`
-        );
-      }
-      // Refresh the media grid so the new files show up
-      fetchMedia();
-    } catch (err) {
-      toast.dismiss(loadingToast);
-      console.error("Recover error:", err);
-      toast.error(err instanceof Error ? err.message : "Recovery request failed");
-    } finally {
-      setRecovering(false);
-    }
-  };
-
-  const handleStripBase64Emails = async () => {
-    if (strippingEmails) return;
-    if (
-      !confirm(
-        "Strip base64 images out of ALL email bodies?\n\nThis scans AdminEmail, EmailLog, EmailQueue, and EmailCampaign for any row with an embedded data: URI, extracts each image to /uploads/email-extracted/ as a real file, and rewrites the <img src> to point at the file URL.\n\nSafe to run multiple times (idempotent — skips rows that are already clean). Processing ~170K rows may take several minutes.\n\nAfter this completes, run `VACUUM FULL` on the affected tables from psql to actually reclaim disk space. PostgreSQL doesn't return the space until VACUUM FULL."
-      )
-    ) {
-      return;
-    }
-    setStrippingEmails(true);
-    const loadingToast = toast.loading("Stripping base64 images from email bodies (this takes a while)...");
-    try {
-      const res = await apiFetch("/api/admin/projects/strip-base64-emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      toast.dismiss(loadingToast);
-      if (!res.ok) {
-        toast.error(data.error || "Strip base64 failed");
-        return;
-      }
-      const { totalUpdated, totalImages, bytesRemovedMB, estimatedReclaimedMB } = data;
-      if (totalUpdated === 0) {
-        toast.info("No email rows had base64 images to strip — nothing to clean");
-      } else {
-        toast.success(
-          `Updated ${totalUpdated} rows, extracted ${totalImages} images. Removed ~${bytesRemovedMB}MB from HTML bodies (~${estimatedReclaimedMB}MB reclaimed pending VACUUM).`,
-          { duration: 15000 }
-        );
-      }
-      fetchMedia();
-    } catch (err) {
-      toast.dismiss(loadingToast);
-      console.error("Strip base64 error:", err);
-      toast.error(err instanceof Error ? err.message : "Strip base64 request failed");
-    } finally {
-      setStrippingEmails(false);
-    }
-  };
-
-  const handleGenerateJpgCovers = async (force = false) => {
-    if (generatingJpg) return;
-    const message = force
-      ? "Re-generate JPG companions for ALL project covers?\n\nThis will overwrite every existing .jpg companion file with a freshly encoded one using maximum-compatibility settings (sRGB, no ICC profile, baseline, stripped metadata). Use when Facebook/X rejects the existing JPGs as corrupted."
-      : "Generate JPG companions for all project cover images?\n\nFor every .webp cover file in uploads/projects/<id>/project/, this writes a matching .jpg file at quality 85. Social media crawlers (Facebook, X, LinkedIn, Pinterest) don't accept WebP — pre-generating real JPGs on disk eliminates runtime conversion failures. Safe to run multiple times (skips files that already have a JPG companion). Hold Shift when clicking to FORCE re-encode existing ones.";
-    if (!confirm(message)) return;
-    setGeneratingJpg(true);
-    const loadingToast = toast.loading(
-      force ? "Force re-encoding JPG companions..." : "Generating JPG companions..."
-    );
-    try {
-      const url = force
-        ? "/api/admin/projects/generate-jpg-covers?force=true"
-        : "/api/admin/projects/generate-jpg-covers";
-      const res = await apiFetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      toast.dismiss(loadingToast);
-      if (!res.ok) {
-        toast.error(data.error || "JPG generation failed");
-        return;
-      }
-      const { generated, skipped, failed, total } = data;
-      if (total === 0) {
-        toast.info("No cover files found — nothing to generate");
-      } else if (failed === 0) {
-        toast.success(
-          force
-            ? `Re-encoded ${generated} JPGs`
-            : `Generated ${generated} new JPGs (${skipped} already existed)`
-        );
-      } else {
-        toast.warning(
-          `Generated ${generated} • ${skipped} skipped • ${failed} failed — check server logs`
-        );
-      }
-      fetchMedia();
-    } catch (err) {
-      toast.dismiss(loadingToast);
-      console.error("Generate JPG error:", err);
-      toast.error(err instanceof Error ? err.message : "JPG generation request failed");
-    } finally {
-      setGeneratingJpg(false);
-    }
   };
 
   const removeUploadFile = (index: number) => {
@@ -677,54 +541,6 @@ export default function MediaPage() {
             <Button variant="outline" onClick={() => fetchMedia()} className="flex-1 sm:flex-none">
               <RefreshCw className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Refresh</span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleRecoverBase64}
-              disabled={recovering}
-              className="flex-1 sm:flex-none border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
-              title="Decode base64 data URIs stored in Project.imageUrl and write them to disk as real image files"
-            >
-              {recovering ? (
-                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
-              ) : (
-                <Wrench className="h-4 w-4 sm:mr-2" />
-              )}
-              <span className="hidden sm:inline">
-                {recovering ? "Recovering..." : "Recover Base64 Covers"}
-              </span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleStripBase64Emails}
-              disabled={strippingEmails}
-              className="flex-1 sm:flex-none border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-950/40"
-              title="Scan AdminEmail/EmailLog/EmailQueue/EmailCampaign for embedded base64 images, extract to disk, rewrite HTML. Reclaims up to ~1.8GB of DB bloat."
-            >
-              {strippingEmails ? (
-                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4 sm:mr-2" />
-              )}
-              <span className="hidden sm:inline">
-                {strippingEmails ? "Stripping..." : "Strip Base64 from Emails"}
-              </span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={(e) => handleGenerateJpgCovers(e.shiftKey)}
-              disabled={generatingJpg}
-              className="flex-1 sm:flex-none border-sky-300 text-sky-700 hover:bg-sky-50 dark:border-sky-700 dark:text-sky-300 dark:hover:bg-sky-950/40"
-              title="Pre-generate .jpg companions for every .webp cover file. Hold Shift to force re-encode existing companions with stricter settings."
-            >
-              {generatingJpg ? (
-                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
-              ) : (
-                <FileImage className="h-4 w-4 sm:mr-2" />
-              )}
-              <span className="hidden sm:inline">
-                {generatingJpg ? "Generating..." : "Generate JPG Covers"}
-              </span>
             </Button>
             <Button variant="outline" onClick={openScanDialog} className="flex-1 sm:flex-none">
               <Download className="h-4 w-4 sm:mr-2" />
