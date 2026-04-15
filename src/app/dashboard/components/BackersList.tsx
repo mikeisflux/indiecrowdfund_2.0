@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Users, Download, XCircle, RefreshCw, Trash2, MessageSquare, MoreHorizontal } from "lucide-react";
+import { Users, Download, XCircle, RefreshCw, Trash2, MessageSquare, MoreHorizontal, Mail } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,8 @@ export function BackersList({
   const [cancellingPledge, setCancellingPledge] = useState<string | null>(null);
   const [refundingPledge, setRefundingPledge] = useState<string | null>(null);
   const [deletingPledge, setDeletingPledge] = useState<string | null>(null);
+  const [resendingPledge, setResendingPledge] = useState<string | null>(null);
+  const [bulkResending, setBulkResending] = useState(false);
 
   const [cancelConfirm, setCancelConfirm] = useState<{ open: boolean; pledgeId: string }>({
     open: false,
@@ -53,6 +55,11 @@ export function BackersList({
     open: false,
     pledgeId: "",
   });
+  const [resendConfirm, setResendConfirm] = useState<{ open: boolean; pledgeId: string }>({
+    open: false,
+    pledgeId: "",
+  });
+  const [bulkResendConfirm, setBulkResendConfirm] = useState(false);
 
   const [selectedPledges, setSelectedPledges] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<{ open: boolean; action: "cancel" | "delete" }>({
@@ -169,6 +176,65 @@ export function BackersList({
       toast.error("Failed to refund pledge");
     } finally {
       setRefundingPledge(null);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    const pledgeId = resendConfirm.pledgeId;
+    setResendingPledge(pledgeId);
+    setResendConfirm({ open: false, pledgeId: "" });
+    try {
+      const response = await apiFetch(
+        `/api/creator/pledges/${pledgeId}/resend-confirmation`,
+        { method: "POST" }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        toast.success("Confirmation email resent");
+      } else {
+        toast.error(data.error || "Failed to resend confirmation email");
+      }
+    } catch (err) {
+      console.error("Failed to resend confirmation email:", err);
+      toast.error("Failed to resend confirmation email");
+    } finally {
+      setResendingPledge(null);
+    }
+  };
+
+  const handleBulkResendConfirmations = async () => {
+    setBulkResending(true);
+    setBulkResendConfirm(false);
+    try {
+      const response = await apiFetch(
+        `/api/creator/pledges/bulk-resend-confirmation`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        if (data.total === 0) {
+          toast.info("No eligible backers to resend to");
+        } else if (data.failed > 0) {
+          toast.warning(
+            `Resent ${data.sent}/${data.total} confirmation emails (${data.failed} failed)`
+          );
+        } else {
+          toast.success(
+            `Resent ${data.sent} confirmation email${data.sent === 1 ? "" : "s"}`
+          );
+        }
+      } else {
+        toast.error(data.error || "Failed to resend confirmation emails");
+      }
+    } catch (err) {
+      console.error("Failed to bulk-resend confirmation emails:", err);
+      toast.error("Failed to resend confirmation emails");
+    } finally {
+      setBulkResending(false);
     }
   };
 
@@ -316,10 +382,22 @@ export function BackersList({
             </div>
             All Backers
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="hover:border-primary/50 bg-card/50 w-full sm:w-auto">
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkResendConfirm(true)}
+              disabled={bulkResending || backers.length === 0}
+              className="hover:border-primary/50 bg-card/50 w-full sm:w-auto"
+            >
+              <Mail className={`h-4 w-4 mr-2 ${bulkResending ? "animate-pulse" : ""}`} />
+              {bulkResending ? "Resending..." : "Resend Confirmation Emails"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportCSV} className="hover:border-primary/50 bg-card/50 w-full sm:w-auto">
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {pendingPledges.length > 0 && (
@@ -433,6 +511,23 @@ export function BackersList({
                             Message
                           </Link>
                         </DropdownMenuItem>
+                        {backer.status === "COMPLETED" && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setResendConfirm({ open: true, pledgeId: backer.id })
+                            }
+                            disabled={resendingPledge === backer.id}
+                          >
+                            <Mail
+                              className={`h-4 w-4 mr-2 ${
+                                resendingPledge === backer.id ? "animate-pulse" : ""
+                              }`}
+                            />
+                            {resendingPledge === backer.id
+                              ? "Resending..."
+                              : "Resend Confirmation Email"}
+                          </DropdownMenuItem>
+                        )}
                         {backer.status === "PENDING" && (
                           <DropdownMenuItem
                             onClick={() => setCancelConfirm({ open: true, pledgeId: backer.id })}
@@ -531,6 +626,26 @@ export function BackersList({
         variant="destructive"
         onConfirm={handleBulkDelete}
         loading={bulkProcessing}
+      />
+
+      <ConfirmDialog
+        open={resendConfirm.open}
+        onOpenChange={(open) => setResendConfirm({ ...resendConfirm, open })}
+        title="Resend Confirmation Email?"
+        description="This will re-send the pledge confirmation email to this backer. Use this if they reported not receiving the original."
+        confirmText="Resend Email"
+        onConfirm={handleResendConfirmation}
+        loading={resendingPledge === resendConfirm.pledgeId}
+      />
+
+      <ConfirmDialog
+        open={bulkResendConfirm}
+        onOpenChange={setBulkResendConfirm}
+        title="Resend Confirmation Emails to All Backers?"
+        description="This will re-send the pledge confirmation email to every eligible backer on this project (COMPLETED pledges and PENDING pledges with saved payment methods). Large projects may take a minute or two. Continue?"
+        confirmText="Resend to All"
+        onConfirm={handleBulkResendConfirmations}
+        loading={bulkResending}
       />
     </>
   );
