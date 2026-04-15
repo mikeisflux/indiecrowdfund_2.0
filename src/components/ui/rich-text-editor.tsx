@@ -191,6 +191,11 @@ export function RichTextEditor({
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
+    // Fix Next.js SSR hydration warning + prevents NoModificationAllowedError
+    // that fires when React tries to hydrate TipTap's DOM before the editor
+    // takes over. Mount the editor on the client only. Required in Next.js
+    // App Router per TipTap's official docs.
+    immediatelyRender: false,
   });
 
   // Update content if value changes externally
