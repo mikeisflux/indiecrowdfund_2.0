@@ -570,6 +570,69 @@ updateData.slug is set.
 **File:** `src/app/api/user/settings/email/route.ts`
 **Fix:** P2002 catch on user.update returns 409.
 
+### Finding #50 — marketplace redeem-code double-redemption (session 7)
+**File:** `src/app/api/marketplace/redeem-code/route.ts`
+**Impact:** Two concurrent redeem clicks would both pass the
+`existingPurchase` check, both pass the per-customer redemption
+limit check, and both create COMPLETED MarketplacePurchase rows
+for the same user+book. The book's purchaseCount and the company's
+totalSales would both get double-incremented.
+**Fix:** Wrapped the redeem flow in a `$transaction` guarded by
+`pg_advisory_xact_lock` keyed to userId+bookId. Inside the lock
+we re-check for an existing COMPLETED purchase and throw
+`ALREADY_REDEEMED` sentinel on duplicate.
+
+### Finding #51 — creator marketplace books PATCH re-review TOCTOU (session 7)
+**File:** `src/app/api/creator/marketplace/books/[id]/route.ts`
+**Impact:** Two concurrent edits to a LIVE book (both with file
+changes) would both flip LIVE → PENDING_REVIEW and both create
+`MarketplaceBookReview` rows for the same transition.
+**Fix:** CAS on status: LIVE → PENDING_REVIEW. On CAS loss, apply
+the non-status fields with a separate update (preserving the
+concurrent edit that won the race).
+
+### Finding #52 — admin ai-marketing campaign abort TOCTOU (session 7)
+**File:** `src/app/api/admin/ai-marketing/campaigns/manage/[id]/abort/route.ts`
+**Impact:** Two admins aborting the same SENDING campaign would
+both succeed and both kick off the PM2 restart — leaving the
+process in a weird state.
+**Fix:** CAS on status: SENDING → CANCELLED before the PM2 restart
+is queued.
+
+### Finding #53 — creator indiekit publish update TOCTOU (session 7)
+**File:** `src/app/api/creator/indiekit/updates/route.ts`
+**Impact:** Two concurrent publish clicks would both succeed and
+both fire `notifyProjectUpdate` → duplicate update notifications
+to every backer and follower.
+**Fix:** CAS on status: DRAFT → PUBLISHED. Only the call that
+flipped the status fires the notification.
+
+### Finding #54 — admin ai-marketing subscribers add TOCTOU (session 7)
+**File:** `src/app/api/admin/ai-marketing/subscribers/route.ts`
+**Fix:** Replaced findUnique+create with Prisma `upsert` on the
+email @unique. Handles both "new subscriber" and "reactivate
+deactivated" cases atomically.
+
+### Finding #55 — backer following (creators) add TOCTOU (session 7)
+**File:** `src/app/api/backer/following/route.ts`
+**Fix:** P2002 catch on `@@unique([followerId, creatorId])`. Returns
+an idempotent "already following" message instead of 500 on the
+race loser.
+
+### Finding #56 — collaborations self-remove idempotency (session 7)
+**File:** `src/app/api/collaborations/[id]/route.ts`
+**Impact:** A double-click on "Leave Project" would have the second
+delete hit P2025 → 500. Less severe, but fires the "collaborator
+left" notification twice.
+**Fix:** Switched to `deleteMany` + count check, and only fire
+the notification on the winning delete.
+
+### Finding #57 — project basics PATCH slug TOCTOU (session 7)
+**File:** `src/app/api/projects/[id]/basics/route.ts`
+**Fix:** P2002 catch on project.update returns 409 when
+updateData.slug is set. Mirrors Finding #47 for the projects/[id]
+route.
+
 ### Finding #35 — admin DC settlement create (session 5)
 **File:** `src/app/api/admin/payouts/divinitycoin/route.ts`
 **Impact:** Creates COMPLETED settlement immediately (not PENDING),

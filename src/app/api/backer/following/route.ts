@@ -204,26 +204,32 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "follow") {
-      // Check if already following
-      const existing = await db.creatorFollow.findFirst({
-        where: { followerId: session.user.id, creatorId },
-      });
-
-      if (existing) {
-        return NextResponse.json(
-          { error: "Already following this creator" },
-          { status: 400, headers: corsHeaders }
-        );
+      // Create with P2002 catch on @@unique([followerId, creatorId]).
+      // The findFirst check is TOCTOU under concurrent follow clicks.
+      let follow;
+      try {
+        follow = await db.creatorFollow.create({
+          data: {
+            followerId: session.user.id,
+            creatorId,
+            notifyNewProjects: notifyNewProjects ?? true,
+            notifyUpdates: notifyUpdates ?? true,
+          },
+        });
+      } catch (createErr) {
+        const isUniqueViolation =
+          createErr &&
+          typeof createErr === "object" &&
+          "code" in createErr &&
+          (createErr as { code?: string }).code === "P2002";
+        if (isUniqueViolation) {
+          return NextResponse.json(
+            { message: `Already following ${creator.name}`, alreadyFollowing: true },
+            { headers: corsHeaders }
+          );
+        }
+        throw createErr;
       }
-
-      const follow = await db.creatorFollow.create({
-        data: {
-          followerId: session.user.id,
-          creatorId,
-          notifyNewProjects: notifyNewProjects ?? true,
-          notifyUpdates: notifyUpdates ?? true,
-        },
-      });
 
       return NextResponse.json({
         follow,

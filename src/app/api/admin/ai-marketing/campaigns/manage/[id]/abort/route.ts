@@ -59,11 +59,21 @@ export async function POST(
       );
     }
 
-    // Mark as cancelled
-    await db.emailCampaign.update({
-      where: { id },
+    // CAS on status: SENDING → CANCELLED so two admins hitting Abort
+    // simultaneously don't both kick off the PM2 restart. The restart
+    // is the real danger here — triggering it twice in quick succession
+    // can leave the process in a weird state.
+    const cancelCas = await db.emailCampaign.updateMany({
+      where: { id, status: "SENDING" },
       data: { status: "CANCELLED" },
     });
+
+    if (cancelCas.count === 0) {
+      return NextResponse.json(
+        { error: "Campaign is not currently sending" },
+        { status: 400 }
+      );
+    }
 
     adminAiMarketingCampaignsManageAbortLogger.info(`Campaign "${campaign.name}" has been aborted - restarting server to stop send`);
 

@@ -40,25 +40,30 @@ export async function DELETE(
       );
     }
 
-    // Delete the collaboration record
-    await db.projectCollaborator.delete({
-      where: { id },
+    // Delete the collaboration record. Use deleteMany so a concurrent
+    // second DELETE request doesn't throw P2025 (record not found) —
+    // and only fire the "collaborator left" notification for the
+    // request that actually deleted the row.
+    const deletedCount = await db.projectCollaborator.deleteMany({
+      where: { id, userId: session.user.id },
     });
 
-    // Notify the project creator
-    try {
-      await db.notification.create({
-        data: {
-          userId: collaboration.project.creatorId,
-          type: "COLLABORATOR_DECLINED",
-          title: "Collaborator left",
-          message: `${session.user.name || session.user.email} removed themselves as a collaborator from "${collaboration.project.title}"`,
-          actionUrl: `/dashboard`,
-          senderId: session.user.id,
-        },
-      });
-    } catch (notifError) {
-      collaborationsLogger.error({ err: String(notifError) }, "Failed to create notification:");
+    if (deletedCount.count > 0) {
+      // Notify the project creator — only on the winning delete
+      try {
+        await db.notification.create({
+          data: {
+            userId: collaboration.project.creatorId,
+            type: "COLLABORATOR_DECLINED",
+            title: "Collaborator left",
+            message: `${session.user.name || session.user.email} removed themselves as a collaborator from "${collaboration.project.title}"`,
+            actionUrl: `/dashboard`,
+            senderId: session.user.id,
+          },
+        });
+      } catch (notifError) {
+        collaborationsLogger.error({ err: String(notifError) }, "Failed to create notification:");
+      }
     }
 
     return NextResponse.json({ success: true });

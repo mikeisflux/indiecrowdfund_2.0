@@ -392,31 +392,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
     }
 
-    // Check if subscriber already exists
+    // Upsert by email — handles both "new subscriber" and "reactivate
+    // previously deactivated" cases atomically, avoiding the
+    // findUnique+create TOCTOU race.
+    const emailLower = email.toLowerCase();
     const existing = await db.newsletterSubscriber.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: emailLower },
     });
-
-    if (existing) {
-      if (existing.isActive) {
-        return NextResponse.json({ error: "Subscriber already exists" }, { status: 409 });
-      }
-      // Reactivate if previously deactivated
-      const updated = await db.newsletterSubscriber.update({
-        where: { id: existing.id },
-        data: {
-          isActive: true,
-          name: name || existing.name,
-          source: source || existing.source || "manual",
-        },
-      });
-      return NextResponse.json({ success: true, subscriber: updated, reactivated: true });
+    if (existing?.isActive) {
+      return NextResponse.json({ error: "Subscriber already exists" }, { status: 409 });
     }
 
-    // Create new subscriber
-    const subscriber = await db.newsletterSubscriber.create({
-      data: {
-        email: email.toLowerCase(),
+    const subscriber = await db.newsletterSubscriber.upsert({
+      where: { email: emailLower },
+      update: {
+        isActive: true,
+        name: name || existing?.name,
+        source: source || existing?.source || "manual",
+      },
+      create: {
+        email: emailLower,
         name: name || null,
         source: source || "manual",
         isActive: true,
@@ -424,7 +419,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, subscriber });
+    return NextResponse.json({
+      success: true,
+      subscriber,
+      reactivated: !!existing,
+    });
   } catch (error) {
     adminAiMarketingSubscribersLogger.error({ err: String(error) }, "Error creating subscriber:");
     return NextResponse.json(

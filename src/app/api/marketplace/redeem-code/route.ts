@@ -126,8 +126,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "You already own this book" }, { status: 400 });
     }
 
-    // Create the purchase and redemption in a transaction
+    // Create the purchase and redemption in a transaction guarded by
+    // an advisory lock keyed to userId+bookId. Without the lock, two
+    // concurrent redeem clicks would both pass the existingPurchase
+    // check, both pass the per-customer redemption check, and both
+    // create COMPLETED MarketplacePurchase rows + double-increment
+    // purchaseCount and company totalSales.
     const result = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`redeem-${userId}-${bookId}`}))`;
+
+      // Re-check inside the lock — if another concurrent redeem
+      // already created a COMPLETED purchase for this user+book,
+      // bail out.
+      const existingInsideLock = await tx.marketplacePurchase.findFirst({
+        where: { buyerId: userId, bookId, status: "COMPLETED" },
+        select: { id: true },
+      });
+      if (existingInsideLock) {
+        throw new Error("ALREADY_REDEEMED");
+      }
+
       // Create the $0 purchase
       const purchase = await tx.marketplacePurchase.create({
         data: {
@@ -201,6 +219,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof Error && error.message === "This promo code has reached its usage limit") {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    if (error instanceof Error && error.message === "ALREADY_REDEEMED") {
+      return NextResponse.json({ error: "You already own this book" }, { status: 409 });
     }
     marketplaceRedeemCodeLogger.error({ err: String(error) }, "Error redeeming promo code:");
     return NextResponse.json(

@@ -120,28 +120,45 @@ export async function POST(
     if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate) : null;
     if (data.launchDate !== undefined) updateData.launchDate = data.launchDate ? new Date(data.launchDate) : null;
 
-    const updated = await db.project.update({
-      where: { id: projectId },
-      data: updateData,
-      select: {
-        id: true,
-        title: true,
-        subtitle: true,
-        slug: true,
-        category: true,
-        subcategory: true,
-        secondaryCategory: true,
-        secondarySubcategory: true,
-        location: true,
-        imageUrl: true,
-        videoUrl: true,
-        goalAmount: true,
-        durationType: true,
-        durationDays: true,
-        endDate: true,
-        launchDate: true,
-      },
-    });
+    let updated;
+    try {
+      updated = await db.project.update({
+        where: { id: projectId },
+        data: updateData,
+        select: {
+          id: true,
+          title: true,
+          subtitle: true,
+          slug: true,
+          category: true,
+          subcategory: true,
+          secondaryCategory: true,
+          secondarySubcategory: true,
+          location: true,
+          imageUrl: true,
+          videoUrl: true,
+          goalAmount: true,
+          durationType: true,
+          durationDays: true,
+          endDate: true,
+          launchDate: true,
+        },
+      });
+    } catch (updateErr) {
+      // P2002 on the slug @unique — the findFirst check above is TOCTOU.
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation && updateData.slug) {
+        return NextResponse.json(
+          { error: "This URL is already taken. Please choose a different one." },
+          { status: 409 }
+        );
+      }
+      throw updateErr;
+    }
 
     projectsBasicsLogger.info(`Project basics updated for ${projectId}`);
 

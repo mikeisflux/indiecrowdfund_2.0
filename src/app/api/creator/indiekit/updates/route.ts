@@ -130,8 +130,12 @@ export async function POST(req: NextRequest) {
 
     // Handle publish/unpublish actions
     if (action === "publish" && updateId) {
+      // CAS on status: DRAFT → PUBLISHED. Without the status predicate,
+      // two concurrent publish clicks would both succeed and both fire
+      // notifyProjectUpdate → duplicate update notifications to every
+      // backer and follower.
       const publishResult = await db.update.updateMany({
-        where: { id: updateId, projectId },
+        where: { id: updateId, projectId, status: "DRAFT" },
         data: {
           status: "PUBLISHED",
           publishedAt: new Date(),
@@ -139,12 +143,18 @@ export async function POST(req: NextRequest) {
       });
 
       if (publishResult.count === 0) {
-        return NextResponse.json({ error: "Update not found or access denied" }, { status: 403 });
+        // Either not found, or already published — return the current row
+        const existing = await db.update.findFirst({ where: { id: updateId, projectId } });
+        if (!existing) {
+          return NextResponse.json({ error: "Update not found or access denied" }, { status: 403 });
+        }
+        return NextResponse.json({ update: existing, alreadyPublished: true });
       }
 
       const update = await db.update.findFirst({ where: { id: updateId } });
 
-      // Send notifications to all backers and followers
+      // Send notifications to all backers and followers — only runs
+      // on the call that actually flipped DRAFT → PUBLISHED.
       try {
         await notifyProjectUpdate(projectId, update.title, update.content, update.id);
       } catch (notifyError) {

@@ -211,28 +211,47 @@ export async function PUT(
 
     updateData.updatedAt = new Date();
 
-    const book = await prisma.marketplaceBook.update({
-      where: { id },
-      data: updateData,
-    });
-
-    // Create review history entry if sent for re-review
+    // If this edit triggers re-review, use CAS from LIVE → PENDING_REVIEW
+    // so two concurrent edits can't create duplicate MarketplaceBookReview
+    // rows for the same transition.
+    let book;
     if (requiresReReview) {
-      const changedItems = [];
-      if (pdfChanged) changedItems.push("PDF file");
-      if (audioChanged) changedItems.push("audio file");
-      if (videoChanged) changedItems.push("video file");
-      if (coverImageChanged) changedItems.push("cover image");
+      const reReviewCas = await prisma.marketplaceBook.updateMany({
+        where: { id, status: "LIVE" },
+        data: updateData,
+      });
+      if (reReviewCas.count === 0) {
+        // Lost the race — another concurrent edit already flipped status.
+        // Just apply the non-status fields with a second update.
+        const { status: _status, submittedAt: _submittedAt, approvedAt: _approvedAt, publishedAt: _publishedAt, ...nonStatusUpdate } = updateData;
+        void _status; void _submittedAt; void _approvedAt; void _publishedAt;
+        book = await prisma.marketplaceBook.update({
+          where: { id },
+          data: nonStatusUpdate,
+        });
+      } else {
+        book = await prisma.marketplaceBook.findUnique({ where: { id } });
+        const changedItems = [];
+        if (pdfChanged) changedItems.push("PDF file");
+        if (audioChanged) changedItems.push("audio file");
+        if (videoChanged) changedItems.push("video file");
+        if (coverImageChanged) changedItems.push("cover image");
 
-      await prisma.marketplaceBookReview.create({
-        data: {
-          bookId: id,
-          reviewerId: session.user.id,
-          action: "SUBMITTED",
-          previousStatus: "LIVE",
-          newStatus: "PENDING_REVIEW",
-          notes: `${changedItems.join(" and ")} updated - sent for re-review`,
-        },
+        await prisma.marketplaceBookReview.create({
+          data: {
+            bookId: id,
+            reviewerId: session.user.id,
+            action: "SUBMITTED",
+            previousStatus: "LIVE",
+            newStatus: "PENDING_REVIEW",
+            notes: `${changedItems.join(" and ")} updated - sent for re-review`,
+          },
+        });
+      }
+    } else {
+      book = await prisma.marketplaceBook.update({
+        where: { id },
+        data: updateData,
       });
     }
 
