@@ -159,19 +159,55 @@ export async function POST(req: NextRequest) {
       projectName = project?.title || null;
     }
 
-    const settlement = await db.divinityCoinSettlement.create({
-      data: {
-        bankAccountId,
-        amount: parseFloat(amount),
-        projectId: projectId || null,
-        projectName,
-        adminNotes: adminNotes || null,
-        processedBy: session?.user?.id,
-      },
+    // Guard against double-click: a settlement for the same
+    // bankAccount+amount+project created within the last 60 seconds
+    // is treated as a duplicate. DC settlements can legitimately
+    // recur over time, but never at sub-minute cadence.
+    const amountFloat = parseFloat(amount);
+    const settlement = await db.$transaction(async (tx) => {
+      const lockKey = projectId
+        ? `dc-settle-admin-${bankAccountId}-${projectId}`
+        : `dc-settle-admin-${bankAccountId}`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+
+      const recent = await tx.divinityCoinSettlement.findFirst({
+        where: {
+          bankAccountId,
+          projectId: projectId || null,
+          createdAt: { gt: new Date(Date.now() - 60_000) },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, amount: true },
+      });
+      if (recent && Number(recent.amount) === amountFloat) {
+        throw new Error("DUPLICATE_SETTLEMENT");
+      }
+
+      return tx.divinityCoinSettlement.create({
+        data: {
+          bankAccountId,
+          amount: amountFloat,
+          projectId: projectId || null,
+          projectName,
+          adminNotes: adminNotes || null,
+          processedBy: session?.user?.id,
+        },
+      });
+    }).catch((err) => {
+      if (err instanceof Error && err.message === "DUPLICATE_SETTLEMENT") {
+        throw new Error("DUPLICATE_SETTLEMENT");
+      }
+      throw err;
     });
 
     return NextResponse.json({ success: true, settlement });
   } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_SETTLEMENT") {
+      return NextResponse.json(
+        { error: "A settlement with this amount was just created for this account. Please refresh before creating another." },
+        { status: 409 }
+      );
+    }
     adminDivinityPayoutsLogger.error({ err: String(error) }, "Error creating settlement:");
     return NextResponse.json(
       { error: "Failed to create settlement" },

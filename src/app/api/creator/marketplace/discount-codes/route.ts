@@ -158,24 +158,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if a code already exists for this book this month
-    const existingCode = await db.marketplaceDiscountCode.findFirst({
-      where: {
-        creatorId: userId,
-        bookId: bookId,
-        type: "FREE_BOOK",
-        validFrom: { gte: monthStart },
-        validUntil: { lte: monthEnd },
-      },
-    });
-
-    if (existingCode) {
-      return NextResponse.json(
-        { error: "You already have a promo code for this book this month" },
-        { status: 400 }
-      );
-    }
-
     // Get creator's name for code prefix
     const creator = await db.user.findFirst({
       where: { id: userId, deletedAt: null },
@@ -201,30 +183,63 @@ export async function POST(request: NextRequest) {
       attempts++;
     }
 
-    // Create the discount code
-    const discountCode = await db.marketplaceDiscountCode.create({
-      data: {
-        creatorId: userId,
-        bookId: bookId,
-        code,
-        type: "FREE_BOOK",
-        validFrom: monthStart,
-        validUntil: monthEnd,
-        maxRedemptions: 0, // Unlimited
-        maxPerCustomer: 1,
-        isActive: true,
-      },
-      include: {
-        book: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            coverImageUrl: true,
+    // Check-then-create wrapped in a $transaction guarded by an advisory
+    // lock keyed to creatorId+bookId+month. Without this, two concurrent
+    // POSTs for the same book in the same month would both pass the
+    // existsCheck and both create discount codes — violating the
+    // "one promo code per book per month" rule.
+    let discountCode;
+    try {
+      discountCode = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`discount-${userId}-${bookId}-${monthStart.toISOString()}`}))`;
+
+        const existingCode = await tx.marketplaceDiscountCode.findFirst({
+          where: {
+            creatorId: userId,
+            bookId: bookId,
+            type: "FREE_BOOK",
+            validFrom: { gte: monthStart },
+            validUntil: { lte: monthEnd },
           },
-        },
-      },
-    });
+        });
+
+        if (existingCode) {
+          throw new Error("DISCOUNT_CODE_EXISTS");
+        }
+
+        return tx.marketplaceDiscountCode.create({
+          data: {
+            creatorId: userId,
+            bookId: bookId,
+            code,
+            type: "FREE_BOOK",
+            validFrom: monthStart,
+            validUntil: monthEnd,
+            maxRedemptions: 0, // Unlimited
+            maxPerCustomer: 1,
+            isActive: true,
+          },
+          include: {
+            book: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                coverImageUrl: true,
+              },
+            },
+          },
+        });
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "DISCOUNT_CODE_EXISTS") {
+        return NextResponse.json(
+          { error: "You already have a promo code for this book this month" },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     return NextResponse.json({
       success: true,

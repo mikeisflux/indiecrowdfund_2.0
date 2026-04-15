@@ -113,31 +113,52 @@ export async function POST(request: Request) {
       select: { id: true },
     });
 
-    // Create the book
-    const book = await prisma.marketplaceBook.create({
-      data: {
-        creatorId: session.user.id,
-        companyId: company?.id,
-        title: title.trim(),
-        slug,
-        description: description.trim(),
-        mediaCategory: mediaCategory || "comics",
-        category: category || null,
-        price,
-        currency,
-        paymentProcessor: isNsfw ? "DIVINITYCOIN" : paymentProcessor,
-        coverImageUrl: promoImageUrl || null,
-        promoVideoUrl: promoVideoUrl || null,
-        pdfFileUrl,
-        pdfFileName: pdfFileName || null,
-        pdfFileSize: pdfFileSize ? parseInt(String(pdfFileSize)) : null,
-        hasAdultContent: isNsfw,
-        promoContentSfw: !isNsfw,
-        tags,
-        status: submitForReview ? "PENDING_REVIEW" : "DRAFT",
-        submittedAt: submitForReview ? new Date() : null,
-      },
-    });
+    // Create the book with a P2002 retry loop on slug collision.
+    // The `while findFirst` check above is TOCTOU — two concurrent
+    // creates with the same base title would both pick the same
+    // numbered slug and one would P2002 on the @@unique([creatorId, slug])
+    // constraint. Retry with a bumped counter on collision.
+    let book;
+    let retryAttempts = 0;
+    while (true) {
+      try {
+        book = await prisma.marketplaceBook.create({
+          data: {
+            creatorId: session.user.id,
+            companyId: company?.id,
+            title: title.trim(),
+            slug,
+            description: description.trim(),
+            mediaCategory: mediaCategory || "comics",
+            category: category || null,
+            price,
+            currency,
+            paymentProcessor: isNsfw ? "DIVINITYCOIN" : paymentProcessor,
+            coverImageUrl: promoImageUrl || null,
+            promoVideoUrl: promoVideoUrl || null,
+            pdfFileUrl,
+            pdfFileName: pdfFileName || null,
+            pdfFileSize: pdfFileSize ? parseInt(String(pdfFileSize)) : null,
+            hasAdultContent: isNsfw,
+            promoContentSfw: !isNsfw,
+            tags,
+            status: submitForReview ? "PENDING_REVIEW" : "DRAFT",
+            submittedAt: submitForReview ? new Date() : null,
+          },
+        });
+        break;
+      } catch (createErr) {
+        const isUniqueViolation =
+          createErr &&
+          typeof createErr === "object" &&
+          "code" in createErr &&
+          (createErr as { code?: string }).code === "P2002";
+        if (!isUniqueViolation || retryAttempts >= 5) throw createErr;
+        retryAttempts++;
+        counter++;
+        slug = `${baseSlug}-${counter}`;
+      }
+    }
 
     return NextResponse.json({
       success: true,

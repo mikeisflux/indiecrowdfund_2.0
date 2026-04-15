@@ -497,6 +497,79 @@ USER to CREATOR role.
 **Fix:** CAS on `prelaunchStatus` matching the value we read above,
 before the ProjectReview.create and user role promotion.
 
+### Finding #37 — pledge confirm-add-items double-charge (session 6)
+**File:** `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts`
+**Impact:** Highest-severity race in session 6. Two concurrent
+confirm-add-items calls (double-click, retry) with the same
+paymentIntentId both pass the Stripe/DC "succeeded" verify check,
+both create PledgeAddon rows, double-increment Reward.quantityClaimed
+(overselling limited addons), double-increment Pledge.amount, and
+double-increment Project.currentAmount.
+**Fix:** Wrapped in `$transaction` guarded by `pg_advisory_xact_lock`
+keyed to paymentIntentId. Inside the lock, re-read pledge metadata
+and bail out if pendingAdditionalItems has been popped OR if this
+paymentIntentId is already in completedAdditionalItems.
+
+### Finding #38 — creator marketplace books create slug TOCTOU (session 6)
+**File:** `src/app/api/creator/marketplace/books/route.ts`
+**Fix:** P2002 retry loop on slug @@unique([creatorId, slug]).
+
+### Finding #39 — creator discount-code create TOCTOU (session 6)
+**File:** `src/app/api/creator/marketplace/discount-codes/route.ts`
+**Impact:** Two POSTs for the same book in the same month would both
+create free-book codes, violating "one per book per month" rule.
+**Fix:** Advisory-lock-guarded $transaction keyed to userId+bookId+month.
+
+### Finding #40 — admin users create email TOCTOU (session 6)
+**File:** `src/app/api/admin/users/route.ts`
+**Fix:** P2002 catch on email @unique returns 409.
+
+### Finding #41 — admin retailers PATCH status TOCTOU (session 6)
+**File:** `src/app/api/admin/retailers/route.ts`
+**Impact:** Two admins approving the same retailer would both
+generate access codes, create duplicate User accounts, and fire
+duplicate approval emails.
+**Fix:** CAS on retailer.status matching value read above.
+
+### Finding #42 — admin email-blocklist TOCTOU (session 6)
+**File:** `src/app/api/admin/email-blocklist/route.ts`
+**Fix:** P2002 catch on @@unique([type, value]).
+
+### Finding #43 — admin divinity-payouts general settlement TOCTOU (session 6)
+**File:** `src/app/api/admin/divinity-payouts/route.ts`
+**Fix:** Advisory-lock with 60s same-amount dedup window.
+
+### Finding #44 — creator email marketing campaign send TOCTOU (session 6)
+**File:** `src/app/api/creator/email-marketing/campaigns/route.ts`
+**Impact:** Creator double-click sends every backer the campaign
+twice. For 500 backers that's 1000 emails.
+**Fix:** 60-second dedup check for recent project+subject+BACKERS_ONLY
+update.
+
+### Finding #45 — creator email-marketing subscribers add TOCTOU (session 6)
+**File:** `src/app/api/creator/email-marketing/subscribers/route.ts`
+**Fix:** P2002 catch on @@unique([creatorId, email]).
+
+### Finding #46 — project members add TOCTOU (session 6)
+**File:** `src/app/api/projects/[id]/members/route.ts`
+**Fix:** P2002 catch replacing findUnique+create.
+
+### Finding #47 — project PATCH slug TOCTOU (session 6)
+**File:** `src/app/api/projects/[id]/route.ts`
+**Fix:** P2002 catch around project.update returns 409 when
+updateData.slug is set.
+
+### Finding #48 — project survey create/auto-create TOCTOU (session 6)
+**Files:** `src/app/api/projects/[id]/survey/route.ts`,
+          `src/app/api/projects/[id]/survey/backer-questions/route.ts`,
+          `src/app/api/projects/[id]/survey/item-questions/route.ts`
+**Fix:** Replaced with `upsert` (auto-create paths) + P2002 catch
+(explicit POST path) on `projectId @unique`.
+
+### Finding #49 — user settings/email change TOCTOU (session 6)
+**File:** `src/app/api/user/settings/email/route.ts`
+**Fix:** P2002 catch on user.update returns 409.
+
 ### Finding #35 — admin DC settlement create (session 5)
 **File:** `src/app/api/admin/payouts/divinitycoin/route.ts`
 **Impact:** Creates COMPLETED settlement immediately (not PENDING),

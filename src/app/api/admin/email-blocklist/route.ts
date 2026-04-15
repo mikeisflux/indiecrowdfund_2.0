@@ -79,30 +79,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if entry already exists
-    const existing = await db.emailBlocklist.findUnique({
-      where: {
-        type_value: { type, value },
-      },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "This entry already exists in the blocklist" },
-        { status: 400 }
-      );
+    // Create with P2002 catch on @@unique([type, value]) — findUnique
+    // + create is TOCTOU under concurrent adds.
+    let entry;
+    try {
+      entry = await db.emailBlocklist.create({
+        data: {
+          type,
+          value: value.toLowerCase().trim(),
+          reason: reason || null,
+          source: source || "manual",
+          isActive: isActive !== undefined ? isActive : true,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+        },
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "This entry already exists in the blocklist" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
     }
-
-    const entry = await db.emailBlocklist.create({
-      data: {
-        type,
-        value: value.toLowerCase().trim(),
-        reason: reason || null,
-        source: source || "manual",
-        isActive: isActive !== undefined ? isActive : true,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-      },
-    });
 
     return NextResponse.json({ entry });
   } catch (error) {

@@ -97,21 +97,19 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Auto-create survey if it doesn't exist
-    let survey = await db.survey.findUnique({
+    // Auto-create survey if it doesn't exist. Use upsert instead of
+    // findUnique+create so two concurrent POSTs don't race and P2002
+    // on the `projectId @unique` constraint.
+    const survey = await db.survey.upsert({
       where: { projectId: id },
+      create: {
+        projectId: id,
+        introTitle: "Backer Survey",
+        introMessage: "Please complete this survey to help us fulfill your order.",
+        collectAddresses: true,
+      },
+      update: {},
     });
-
-    if (!survey) {
-      survey = await db.survey.create({
-        data: {
-          projectId: id,
-          introTitle: "Backer Survey",
-          introMessage: "Please complete this survey to help us fulfill your order.",
-          collectAddresses: true,
-        },
-      });
-    }
 
     if (survey.status === "LOCKED") {
       return NextResponse.json(

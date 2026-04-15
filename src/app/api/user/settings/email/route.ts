@@ -102,19 +102,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // Update the user's email and reset verification status
-    const updatedUser = await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        email: newEmail.toLowerCase(),
-        emailVerified: null, // Reset email verification
-      },
-      select: {
-        id: true,
-        email: true,
-        emailVerified: true,
-      },
-    });
+    // Update the user's email and reset verification status. Catch
+    // P2002 on the email @unique constraint — the case-insensitive
+    // existingUser check above is TOCTOU (case-sensitive constraint).
+    let updatedUser;
+    try {
+      updatedUser = await db.user.update({
+        where: { id: session.user.id },
+        data: {
+          email: newEmail.toLowerCase(),
+          emailVerified: null, // Reset email verification
+        },
+        select: {
+          id: true,
+          email: true,
+          emailVerified: true,
+        },
+      });
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "This email is already in use" },
+          { status: 409 }
+        );
+      }
+      throw updateErr;
+    }
 
     // Send verification email to the new address
     try {

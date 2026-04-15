@@ -132,6 +132,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Dedup: if an identical campaign (same project + subject) was just
+    // sent in the last 60 seconds, bail out. Prevents a double-click on
+    // "Send Campaign" from queuing every backer email twice (which is
+    // exactly the nightmare this whole audit is about).
+    const recentDuplicate = await db.update.findFirst({
+      where: {
+        projectId: project.id,
+        title: subject.trim(),
+        visibility: "BACKERS_ONLY",
+        createdAt: { gt: new Date(Date.now() - 60_000) },
+      },
+      select: { id: true },
+    });
+    if (recentDuplicate) {
+      return NextResponse.json(
+        { error: "An identical campaign was just sent. Please wait a minute before retrying." },
+        { status: 409 }
+      );
+    }
+
     // Create as a project update (BACKERS_ONLY = email campaign)
     const update = await db.update.create({
       data: {

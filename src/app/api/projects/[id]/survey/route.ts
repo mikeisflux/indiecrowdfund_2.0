@@ -151,28 +151,34 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Check if survey already exists
-    const existingSurvey = await db.survey.findUnique({
-      where: { projectId },
-    });
-
-    if (existingSurvey) {
-      return NextResponse.json(
-        { error: "Survey already exists for this project" },
-        { status: 400 }
-      );
-    }
-
     const data = surveySchema.parse(body);
 
-    const survey = await db.survey.create({
-      data: {
-        projectId,
-        introTitle: data.introTitle,
-        introMessage: data.introMessage,
-        collectAddresses: data.collectAddresses ?? true,
-      },
-    });
+    // Create with P2002 catch on projectId @unique — the findUnique
+    // check is TOCTOU under concurrent creates.
+    let survey;
+    try {
+      survey = await db.survey.create({
+        data: {
+          projectId,
+          introTitle: data.introTitle,
+          introMessage: data.introMessage,
+          collectAddresses: data.collectAddresses ?? true,
+        },
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "Survey already exists for this project" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
+    }
 
     return NextResponse.json({ survey });
   } catch (error) {

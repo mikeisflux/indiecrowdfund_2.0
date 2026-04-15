@@ -148,104 +148,166 @@ export async function POST(
     // Calculate total quantity for logging
     const totalQuantity = addonsWithQuantity.reduce((sum, a) => sum + a.quantity, 0);
 
-    // Perform all updates in a transaction
-    await db.$transaction(async (tx) => {
-      // Create PledgeAddon records for each addon with quantity
-      for (const addon of addons) {
-        const quantity = quantityMap.get(addon.id) || 1;
+    // Perform all updates inside a transaction guarded by an advisory
+    // lock keyed to the paymentIntentId. Without this lock, two concurrent
+    // confirm-add-items calls (double-click, retry) would both:
+    //   1. Pass the Stripe "succeeded" check
+    //   2. Create or double-up PledgeAddon rows
+    //   3. Double-increment Reward.quantityClaimed (overselling limited addons)
+    //   4. Double-increment Pledge.amount
+    //   5. Double-increment Project.currentAmount
+    // Inside the lock we also re-check that pendingAdditionalItems is
+    // still on the pledge, and that this paymentIntentId hasn't already
+    // been recorded in completedAdditionalItems — either bail-out turns
+    // the second confirm into a no-op success.
+    let alreadyProcessed = false;
+    try {
+      await db.$transaction(async (tx) => {
+        if (pendingItems.paymentIntentId) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`confirm-additems-${pendingItems.paymentIntentId}`}))`;
+        } else {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`confirm-additems-${pledgeId}`}))`;
+        }
 
-        // Check if this addon already exists for this pledge
-        const existingAddon = await tx.pledgeAddon.findFirst({
-          where: {
-            pledgeId: pledge.id,
-            addonId: addon.id,
+        // Re-read the pledge inside the lock to see the latest metadata.
+        // The first call to flip pendingAdditionalItems → completedAdditionalItems
+        // will cause all subsequent lock acquirers to see the updated
+        // state and bail out.
+        const freshPledge = await tx.pledge.findFirst({
+          where: { id: pledgeId, deletedAt: null },
+          select: { metadata: true, amount: true },
+        });
+        if (!freshPledge) {
+          throw new Error("PLEDGE_DISAPPEARED");
+        }
+        const freshMeta = freshPledge.metadata as {
+          pendingAdditionalItems?: unknown;
+          completedAdditionalItems?: Array<{ paymentIntentId?: string }>;
+        } | null;
+
+        const stillPending = !!freshMeta?.pendingAdditionalItems;
+        const alreadyCompleted = pendingItems.paymentIntentId
+          ? (freshMeta?.completedAdditionalItems || []).some(
+              (c) => c?.paymentIntentId === pendingItems.paymentIntentId
+            )
+          : false;
+
+        if (!stillPending || alreadyCompleted) {
+          alreadyProcessed = true;
+          return;
+        }
+
+        // Create PledgeAddon records for each addon with quantity
+        for (const addon of addons) {
+          const quantity = quantityMap.get(addon.id) || 1;
+
+          // Check if this addon already exists for this pledge
+          const existingAddon = await tx.pledgeAddon.findFirst({
+            where: {
+              pledgeId: pledge.id,
+              addonId: addon.id,
+            },
+          });
+
+          if (existingAddon) {
+            // Increment quantity
+            await tx.pledgeAddon.update({
+              where: { id: existingAddon.id },
+              data: {
+                quantity: existingAddon.quantity + quantity,
+                amount: (existingAddon.quantity + quantity) * Number(addon.amount),
+              },
+            });
+          } else {
+            // Create new
+            await tx.pledgeAddon.create({
+              data: {
+                pledgeId: pledge.id,
+                addonId: addon.id,
+                quantity,
+                amount: Number(addon.amount) * quantity,
+              },
+            });
+          }
+
+          // Atomically claim addon slots (prevents overselling)
+          // Lock the row and check availability within this transaction
+          const addonRows = await tx.$queryRaw<Array<{
+            id: string;
+            quantityAvailable: number | null;
+            quantityClaimed: number;
+          }>>`
+            SELECT id, "quantityAvailable", "quantityClaimed"
+            FROM "Reward"
+            WHERE id = ${addon.id}
+            FOR UPDATE
+          `;
+
+          const addonInfo = addonRows[0];
+          if (addonInfo) {
+            // Check if enough slots available (null means unlimited)
+            const availableSlots = addonInfo.quantityAvailable === null
+              ? Infinity
+              : addonInfo.quantityAvailable - addonInfo.quantityClaimed;
+
+            if (availableSlots >= quantity) {
+              await tx.reward.update({
+                where: { id: addon.id },
+                data: { quantityClaimed: { increment: quantity } },
+              });
+            } else {
+              pledgesConfirmAddItemsLogger.warn(`[ConfirmAddItems] Addon ${addon.id} has only ${availableSlots} available but ${quantity} requested`);
+              throw new Error(`Not enough ${addon.title || 'addon'} available`);
+            }
+          }
+        }
+
+        // Update pledge amount and flip pendingAdditionalItems →
+        // completedAdditionalItems. This is what blocks subsequent
+        // lock acquirers from re-processing (they see stillPending === false).
+        await tx.pledge.update({
+          where: { id: pledge.id },
+          data: {
+            amount: Number(freshPledge.amount) + pendingItems.amount,
+            metadata: {
+              ...(typeof freshMeta === "object" && freshMeta !== null
+                ? { ...freshMeta, pendingAdditionalItems: undefined }
+                : {}),
+              completedAdditionalItems: [
+                ...(freshMeta?.completedAdditionalItems || []),
+                {
+                  paymentIntentId: pendingItems.paymentIntentId,
+                  addons: addonsWithQuantity,
+                  amount: pendingItems.amount,
+                  completedAt: new Date().toISOString(),
+                },
+              ],
+            },
           },
         });
 
-        if (existingAddon) {
-          // Increment quantity
-          await tx.pledgeAddon.update({
-            where: { id: existingAddon.id },
-            data: {
-              quantity: existingAddon.quantity + quantity,
-              amount: (existingAddon.quantity + quantity) * Number(addon.amount),
-            },
-          });
-        } else {
-          // Create new
-          await tx.pledgeAddon.create({
-            data: {
-              pledgeId: pledge.id,
-              addonId: addon.id,
-              quantity,
-              amount: Number(addon.amount) * quantity,
-            },
-          });
-        }
-
-        // Atomically claim addon slots (prevents overselling)
-        // Lock the row and check availability within this transaction
-        const addonRows = await tx.$queryRaw<Array<{
-          id: string;
-          quantityAvailable: number | null;
-          quantityClaimed: number;
-        }>>`
-          SELECT id, "quantityAvailable", "quantityClaimed"
-          FROM "Reward"
-          WHERE id = ${addon.id}
-          FOR UPDATE
-        `;
-
-        const addonInfo = addonRows[0];
-        if (addonInfo) {
-          // Check if enough slots available (null means unlimited)
-          const availableSlots = addonInfo.quantityAvailable === null
-            ? Infinity
-            : addonInfo.quantityAvailable - addonInfo.quantityClaimed;
-
-          if (availableSlots >= quantity) {
-            await tx.reward.update({
-              where: { id: addon.id },
-              data: { quantityClaimed: { increment: quantity } },
-            });
-          } else {
-            pledgesConfirmAddItemsLogger.warn(`[ConfirmAddItems] Addon ${addon.id} has only ${availableSlots} available but ${quantity} requested`);
-            throw new Error(`Not enough ${addon.title || 'addon'} available`);
-          }
-        }
-      }
-
-      // Update pledge amount
-      await tx.pledge.update({
-        where: { id: pledge.id },
-        data: {
-          amount: Number(pledge.amount) + pendingItems.amount,
-          // Clear the pending items from metadata
-          metadata: {
-            ...(typeof pledge.metadata === "object" && pledge.metadata !== null
-              ? { ...pledge.metadata, pendingAdditionalItems: undefined }
-              : {}),
-            completedAdditionalItems: [
-              ...((metadata as Record<string, unknown>)?.completedAdditionalItems as unknown[] || []),
-              {
-                paymentIntentId: pendingItems.paymentIntentId,
-                addons: addonsWithQuantity,
-                amount: pendingItems.amount,
-                completedAt: new Date().toISOString(),
-              },
-            ],
+        // Update project currentAmount (but NOT backerCount!)
+        await tx.project.update({
+          where: { id: pledge.projectId },
+          data: {
+            currentAmount: { increment: pendingItems.amount },
           },
-        },
+        });
       });
+    } catch (txErr) {
+      if (txErr instanceof Error && txErr.message === "PLEDGE_DISAPPEARED") {
+        return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
+      }
+      throw txErr;
+    }
 
-      // Update project currentAmount (but NOT backerCount!)
-      await tx.project.update({
-        where: { id: pledge.projectId },
-        data: {
-          currentAmount: { increment: pendingItems.amount },
-        },
+    if (alreadyProcessed) {
+      return NextResponse.json({
+        success: true,
+        message: "Additional items already processed",
+        alreadyProcessed: true,
       });
-    });
+    }
 
     pledgesConfirmAddItemsLogger.info(`[ConfirmAddItems] Successfully added ${totalQuantity} items (${addons.length} unique) to pledge ${pledgeId}, amount: $${pendingItems.amount}`);
 

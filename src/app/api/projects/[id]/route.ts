@@ -806,11 +806,29 @@ export async function PATCH(
 
       return NextResponse.json({ project: updated });
     } else {
-      // No rewards to handle, just update project
-      const updated = await db.project.update({
-        where: { id: id },
-        data: updateData,
-      });
+      // No rewards to handle, just update project. Catch P2002 on the
+      // slug @unique constraint — the existingProject findFirst check
+      // earlier in the PATCH flow is TOCTOU.
+      let updated;
+      try {
+        updated = await db.project.update({
+          where: { id: id },
+          data: updateData,
+        });
+      } catch (updateErr) {
+        const isUniqueViolation =
+          updateErr &&
+          typeof updateErr === "object" &&
+          "code" in updateErr &&
+          (updateErr as { code?: string }).code === "P2002";
+        if (isUniqueViolation && updateData.slug) {
+          return NextResponse.json(
+            { error: "This URL is already taken. Please choose a different one." },
+            { status: 409 }
+          );
+        }
+        throw updateErr;
+      }
 
       // Handle collaborators if provided
       if (collaborators && collaborators.length > 0) {

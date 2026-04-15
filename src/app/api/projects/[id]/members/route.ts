@@ -155,31 +155,35 @@ export async function POST(
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if already exists in creator's email list
-    const existing = await db.emailListSubscriber.findUnique({
-      where: {
-        creatorId_email: {
+    // Add to creator's email list. Use a P2002 catch on the
+    // @@unique([creatorId, email]) constraint — the findUnique check
+    // above is TOCTOU under concurrent adds.
+    let member;
+    try {
+      member = await db.emailListSubscriber.create({
+        data: {
           creatorId: session.user.id,
           email: normalizedEmail,
+          name: name || null,
+          source: "manual",
+          sourceProjectId: projectId,
+          status: "subscribed",
         },
-      },
-    });
-
-    if (existing) {
-      return NextResponse.json({ error: "Email already exists in your email list" }, { status: 409 });
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "Email already exists in your email list" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
     }
-
-    // Add to creator's email list
-    const member = await db.emailListSubscriber.create({
-      data: {
-        creatorId: session.user.id,
-        email: normalizedEmail,
-        name: name || null,
-        source: "manual",
-        sourceProjectId: projectId,
-        status: "subscribed",
-      },
-    });
 
     return NextResponse.json({
       member: {

@@ -341,9 +341,24 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    const updatedRetailer = await db.retailer.update({
-      where: { id: retailerId },
+    // CAS on retailer.status matching the value we read above. Without
+    // this, two admins concurrently approving the same retailer would
+    // both generate access codes, create duplicate User accounts (one
+    // hitting P2002), and fire duplicate approval emails.
+    const casResult = await db.retailer.updateMany({
+      where: { id: retailerId, status: retailer.status },
       data: updateData,
+    });
+
+    if (casResult.count === 0) {
+      return NextResponse.json(
+        { error: "Retailer status has already changed — please refresh and try again." },
+        { status: 409 }
+      );
+    }
+
+    const updatedRetailer = await db.retailer.findUnique({
+      where: { id: retailerId },
     });
 
     // Invalidate the retailer stats cache so counts update immediately

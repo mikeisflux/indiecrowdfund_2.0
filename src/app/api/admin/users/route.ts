@@ -607,26 +607,45 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, BCRYPT_COST);
 
-    // Create user
-    const newUser = await db.user.create({
-      data: {
-        email,
-        name: name || null,
-        password: hashedPassword,
-        role: userRole,
-        retailerAccess: retailerAccess === true,
-        emailVerified: new Date(), // Admin-created users are pre-verified
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        retailerAccess: true,
-        createdAt: true,
-        emailVerified: true,
+    // Create user. Catch P2002 on the email @unique constraint — the
+    // findFirst existence check above is TOCTOU, and the case-insensitive
+    // match may collide with an exact-case row that the unique index
+    // sees as distinct (surfacing only at insert time).
+    let newUser;
+    try {
+      newUser = await db.user.create({
+        data: {
+          email,
+          name: name || null,
+          password: hashedPassword,
+          role: userRole,
+          retailerAccess: retailerAccess === true,
+          emailVerified: new Date(), // Admin-created users are pre-verified
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          retailerAccess: true,
+          createdAt: true,
+          emailVerified: true,
+        }
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "A user with this email already exists", correlationId },
+          { status: 409, headers: { [CORRELATION_HEADER]: correlationId } }
+        );
       }
-    });
+      throw createErr;
+    }
 
     return NextResponse.json({
       success: true,

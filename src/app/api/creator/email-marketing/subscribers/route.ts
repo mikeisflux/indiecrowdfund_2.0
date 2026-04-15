@@ -190,51 +190,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if already exists in creator's email list
-    const existing = await db.emailListSubscriber.findUnique({
-      where: {
-        creatorId_email: {
+    // Add to creator's email list. Use try/catch on P2002 instead of
+    // the findUnique check because the check is TOCTOU under concurrent
+    // adds — two simultaneous POSTs for the same email would both see
+    // `existing === null` and both call create.
+    let subscriber;
+    try {
+      subscriber = await db.emailListSubscriber.create({
+        data: {
           creatorId: session.user.id,
           email: emailLower,
+          name: name?.trim() || null,
+          source: "manual",
+          status: "subscribed",
         },
-      },
-    });
-
-    if (existing) {
-      return NextResponse.json({ error: "Subscriber already exists in your email list" }, { status: 400 });
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "Subscriber already exists in your email list" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
     }
 
-    // Add to creator's email list
-    const subscriber = await db.emailListSubscriber.create({
-      data: {
-        creatorId: session.user.id,
-        email: emailLower,
-        name: name?.trim() || null,
-        source: "manual",
-        status: "subscribed",
-      },
-    });
-
-    // Also sync to admin newsletter
+    // Also sync to admin newsletter. findUnique+create is TOCTOU —
+    // swallow P2002 as a benign "already exists".
     const creatorTag = await getCreatorTag(session.user.id);
     try {
-      const existingNewsletter = await db.newsletterSubscriber.findUnique({
-        where: { email: emailLower },
+      await db.newsletterSubscriber.create({
+        data: {
+          email: emailLower,
+          name: name?.trim() || null,
+          source: "creator_import",
+          tags: [`creator:${creatorTag}`],
+          isActive: true,
+        },
       });
-
-      if (!existingNewsletter) {
-        await db.newsletterSubscriber.create({
-          data: {
-            email: emailLower,
-            name: name?.trim() || null,
-            source: "creator_import",
-            tags: [`creator:${creatorTag}`],
-            isActive: true,
-          },
-        });
-      }
     } catch (err) {
-      creatorEmailMarketingSubscribersLogger.error({ err: String(err) }, "Failed to sync to admin newsletter:");
+      const isUniqueViolation =
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code?: string }).code === "P2002";
+      if (!isUniqueViolation) {
+        creatorEmailMarketingSubscribersLogger.error({ err: String(err) }, "Failed to sync to admin newsletter:");
+      }
     }
 
     return NextResponse.json({
