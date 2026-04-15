@@ -62,11 +62,46 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const creatorVanity = project.creator?.vanityUrl || vanityname;
   const projectUrl = `${baseUrl}/projects/${creatorVanity}/${slug}`;
 
-  // Use the project image or fall back to a default
-  // Append ?format=jpeg for webp images so social media crawlers can process them
-  const rawImageUrl = project.imageUrl
-    ? (project.imageUrl.startsWith("http") ? project.imageUrl : `${baseUrl}${project.imageUrl}`)
-    : `${baseUrl}/api/og`;
+  // Sanitize project.imageUrl before using it as og:image.
+  // Some DB rows have corrupt imageUrl values (data: URIs, concatenated junk,
+  // leading-slash-https garbage) that turn into Frankenstein URLs when the
+  // base is prepended, which breaks Facebook/Twitter/LinkedIn scraping.
+  //
+  // Valid values are either:
+  //   • An absolute https:// or http:// URL (no embedded `data:` or second scheme)
+  //   • A site-relative path that matches a real uploads/OG route
+  // Anything else falls back to the dynamic /api/og image generator.
+  function sanitizeImageUrl(raw: string | null | undefined): string {
+    if (!raw || typeof raw !== "string") return `${baseUrl}/api/og`;
+    const trimmed = raw.trim();
+
+    // Reject data URIs outright.
+    if (trimmed.startsWith("data:")) return `${baseUrl}/api/og`;
+
+    // Reject anything containing `data:` or a second `http` scheme further in
+    // the string — that's a concatenation bug (`/https:/foo.comdata:...`).
+    if (trimmed.slice(1).includes("data:")) return `${baseUrl}/api/og`;
+    if (trimmed.slice(8).includes("http")) return `${baseUrl}/api/og`;
+
+    // Absolute URL: require proper https://host/... or http://host/... form.
+    if (/^https?:\/\//i.test(trimmed)) {
+      // Must have at least one character after the scheme slashes.
+      if (trimmed.length < 10) return `${baseUrl}/api/og`;
+      return trimmed;
+    }
+
+    // Site-relative path: must start with a single `/` followed by a safe char.
+    // Reject `/https:`, `/data:`, `//`, etc.
+    if (/^\/[a-zA-Z0-9_\-]/.test(trimmed)) {
+      return `${baseUrl}${trimmed}`;
+    }
+
+    return `${baseUrl}/api/og`;
+  }
+
+  // Use the project image or fall back to a default. Append ?format=jpeg for
+  // webp images so social media crawlers (which don't accept webp) get JPEG.
+  const rawImageUrl = sanitizeImageUrl(project.imageUrl);
   const imageUrl = rawImageUrl.endsWith(".webp") ? `${rawImageUrl}?format=jpeg` : rawImageUrl;
 
   return {

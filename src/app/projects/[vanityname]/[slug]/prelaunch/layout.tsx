@@ -61,11 +61,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const creatorVanity = project.creator?.vanityUrl || vanityname;
   const projectUrl = `${baseUrl}/projects/${creatorVanity}/${slug}/prelaunch`;
 
-  // Use the project image or fall back to a default
-  // Append ?format=jpeg for webp images so social media crawlers can process them
-  const rawImageUrl = project.imageUrl
-    ? (project.imageUrl.startsWith("http") ? project.imageUrl : `${baseUrl}${project.imageUrl}`)
-    : `${baseUrl}/api/og`;
+  // Sanitize project.imageUrl — reject data URIs and concatenated junk that
+  // would otherwise produce a Frankenstein og:image URL and break FB/X/LinkedIn
+  // scraping. See src/app/projects/[vanityname]/[slug]/layout.tsx for details.
+  function sanitizeImageUrl(raw: string | null | undefined): string {
+    if (!raw || typeof raw !== "string") return `${baseUrl}/api/og`;
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("data:")) return `${baseUrl}/api/og`;
+    if (trimmed.slice(1).includes("data:")) return `${baseUrl}/api/og`;
+    if (trimmed.slice(8).includes("http")) return `${baseUrl}/api/og`;
+    if (/^https?:\/\//i.test(trimmed)) {
+      if (trimmed.length < 10) return `${baseUrl}/api/og`;
+      return trimmed;
+    }
+    if (/^\/[a-zA-Z0-9_\-]/.test(trimmed)) {
+      return `${baseUrl}${trimmed}`;
+    }
+    return `${baseUrl}/api/og`;
+  }
+
+  const rawImageUrl = sanitizeImageUrl(project.imageUrl);
   const imageUrl = rawImageUrl.endsWith(".webp") ? `${rawImageUrl}?format=jpeg` : rawImageUrl;
 
   return {
