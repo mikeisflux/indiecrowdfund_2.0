@@ -44,23 +44,27 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { notifications } = body;
 
-    // Get current preferences
-    const user = await db.user.findFirst({
-      where: { id: session.user.id, deletedAt: null },
-      select: { preferences: true },
-    });
-
-    const currentPrefs = (user?.preferences as Record<string, unknown>) || {};
-
-    // Update preferences
-    await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        preferences: {
-          ...currentPrefs,
-          notifications,
+    // Read-merge-write the preferences JSON inside a transaction
+    // guarded by a FOR UPDATE row lock on the user row. Prisma has no
+    // atomic JSON merge, so without the lock two concurrent preference
+    // edits would both read the same current prefs, both apply their
+    // own delta on top, and the second write would clobber the first.
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${session.user.id} FOR UPDATE`;
+      const user = await tx.user.findFirst({
+        where: { id: session.user.id, deletedAt: null },
+        select: { preferences: true },
+      });
+      const currentPrefs = (user?.preferences as Record<string, unknown>) || {};
+      await tx.user.update({
+        where: { id: session.user.id },
+        data: {
+          preferences: {
+            ...currentPrefs,
+            notifications,
+          },
         },
-      },
+      });
     });
 
     return NextResponse.json({ success: true });
