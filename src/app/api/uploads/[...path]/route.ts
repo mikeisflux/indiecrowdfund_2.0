@@ -99,7 +99,7 @@ export async function GET(
           "Content-Range": `bytes ${start}-${end}/${fileSize}`,
           "Accept-Ranges": "bytes",
           "Content-Length": String(chunkSize),
-          "Cache-Control": "public, max-age=31536000, immutable",
+          "Cache-Control": "public, max-age=31536000",
         },
       });
     }
@@ -136,7 +136,7 @@ export async function GET(
           headers: {
             "Content-Type": "image/jpeg",
             "Content-Length": String(jpegBuffer.length),
-            "Cache-Control": "public, max-age=31536000, immutable",
+            "Cache-Control": "public, max-age=31536000",
             // Vary on User-Agent so CDN caches don't serve the JPEG to browsers
             // or the WebP to crawlers.
             "Vary": "User-Agent",
@@ -148,12 +148,17 @@ export async function GET(
     }
 
     // Return the full file (for images or non-range video requests)
+    // Long max-age for speed, but NO `immutable` directive — the og:image
+    // layout appends a ?v=<mtime> cache-buster to differentiate versions,
+    // and `immutable` tells Facebook's image CDN to never refetch even
+    // when Scrape Again is clicked, which permanently stuck us on broken
+    // versions of covers during debugging.
     return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         "Content-Type": mimeType,
         "Content-Length": String(fileSize),
         "Accept-Ranges": isVideo ? "bytes" : "none",
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": "public, max-age=31536000",
       },
     });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { db } from "@/lib/db";
-import { getOgImageDimensions } from "@/lib/og-image-dimensions";
+import { getOgImageInfo } from "@/lib/og-image-dimensions";
 
 interface Props {
   params: Promise<{ vanityname: string; slug: string }>;
@@ -81,15 +81,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return `${baseUrl}/api/og`;
   }
 
-  // Swap .webp → .jpg in the og:image URL. JPG companions are pre-generated
-  // on disk by /api/admin/projects/generate-jpg-covers and by the upload
-  // route for new project covers. Social crawlers (FB/X/LinkedIn) reject
-  // WebP, so we always emit a .jpg URL for them.
+  // Swap .webp → .jpg in the og:image URL + append ?v=<mtime> cache-buster
+  // so Facebook treats each regeneration as a distinct URL and bypasses
+  // their image CDN cache.
   const rawImageUrl = sanitizeImageUrl(project.imageUrl);
-  const imageUrl = rawImageUrl.toLowerCase().endsWith(".webp")
+  const baseImageUrl = rawImageUrl.toLowerCase().endsWith(".webp")
     ? rawImageUrl.replace(/\.webp$/i, ".jpg")
     : rawImageUrl;
-  const imageDimensions = await getOgImageDimensions(imageUrl);
+  const imageInfo = await getOgImageInfo(baseImageUrl);
+  const imageUrl = imageInfo.version
+    ? `${baseImageUrl}?v=${imageInfo.version}`
+    : baseImageUrl;
+  const imageDimensions = { width: imageInfo.width, height: imageInfo.height };
 
   return {
     title: `${project.title} - Coming Soon | IndieCrowdfund`,

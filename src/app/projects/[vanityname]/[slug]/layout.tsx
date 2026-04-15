@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { db } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import { JsonLd } from "@/components/json-ld";
-import { getOgImageDimensions } from "@/lib/og-image-dimensions";
+import { getOgImageInfo } from "@/lib/og-image-dimensions";
 
 interface Props {
   params: Promise<{ vanityname: string; slug: string }>;
@@ -103,21 +103,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Use the project image or fall back to a default. For .webp covers,
   // swap the extension to .jpg directly — we pre-generate .jpg companions
   // on disk (via /api/admin/projects/generate-jpg-covers) so every project
-  // cover has a matching <hash>.jpg alongside <hash>.webp. This gives
-  // social crawlers a plain static JPEG with zero runtime conversion in
-  // the path and zero chance of content-type/CDN cache mismatches.
-  // The /api/uploads route also falls back to sharp-converting the webp
-  // at runtime if the .jpg file is ever missing, so this is safe even
-  // during the window before bulk regeneration is run.
+  // cover has a matching <hash>.jpg alongside <hash>.webp.
   const rawImageUrl = sanitizeImageUrl(project.imageUrl);
-  const imageUrl = rawImageUrl.toLowerCase().endsWith(".webp")
+  const baseImageUrl = rawImageUrl.toLowerCase().endsWith(".webp")
     ? rawImageUrl.replace(/\.webp$/i, ".jpg")
     : rawImageUrl;
 
-  // Read the actual file dimensions from disk so og:image:width/height
-  // matches the bytes Facebook will fetch. Hardcoding 1200x630 caused FB
-  // to reject images whose real dimensions didn't match.
-  const imageDimensions = await getOgImageDimensions(imageUrl);
+  // Read actual dimensions + mtime-based version string from disk. The
+  // version is appended as ?v=<mtime> so Facebook/Meta treats each
+  // regeneration as a distinct URL and bypasses their aggressive image
+  // CDN cache. Without this, FB serves its cached version of the old
+  // file forever (Cache-Control: immutable from our uploads route tells
+  // them to never refetch).
+  const imageInfo = await getOgImageInfo(baseImageUrl);
+  const imageUrl = imageInfo.version
+    ? `${baseImageUrl}?v=${imageInfo.version}`
+    : baseImageUrl;
+  const imageDimensions = { width: imageInfo.width, height: imageInfo.height };
 
   return {
     title: `${project.title} - Crowdfunding Campaign`,
