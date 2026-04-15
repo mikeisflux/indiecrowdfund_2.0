@@ -91,6 +91,7 @@ export default function MediaPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [recovering, setRecovering] = useState(false);
+  const [generatingJpg, setGeneratingJpg] = useState(false);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [stats, setStats] = useState<MediaStats | null>(null);
@@ -226,6 +227,48 @@ export default function MediaPage() {
       toast.error(err instanceof Error ? err.message : "Recovery request failed");
     } finally {
       setRecovering(false);
+    }
+  };
+
+  const handleGenerateJpgCovers = async () => {
+    if (generatingJpg) return;
+    if (
+      !confirm(
+        "Generate JPG companions for all project cover images?\n\nFor every .webp cover file in uploads/projects/<id>/project/, this writes a matching .jpg file at quality 85. Social media crawlers (Facebook, X, LinkedIn, Pinterest) don't accept WebP — pre-generating real JPGs on disk eliminates runtime conversion failures. Safe to run multiple times (skips files that already have a JPG companion)."
+      )
+    ) {
+      return;
+    }
+    setGeneratingJpg(true);
+    const loadingToast = toast.loading("Generating JPG companions...");
+    try {
+      const res = await apiFetch("/api/admin/projects/generate-jpg-covers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      toast.dismiss(loadingToast);
+      if (!res.ok) {
+        toast.error(data.error || "JPG generation failed");
+        return;
+      }
+      const { generated, skipped, failed, total } = data;
+      if (total === 0) {
+        toast.info("No cover files found — nothing to generate");
+      } else if (failed === 0) {
+        toast.success(`Generated ${generated} new JPGs (${skipped} already existed)`);
+      } else {
+        toast.warning(
+          `Generated ${generated} • ${skipped} skipped • ${failed} failed — check server logs`
+        );
+      }
+      fetchMedia();
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      console.error("Generate JPG error:", err);
+      toast.error(err instanceof Error ? err.message : "JPG generation request failed");
+    } finally {
+      setGeneratingJpg(false);
     }
   };
 
@@ -601,6 +644,22 @@ export default function MediaPage() {
               )}
               <span className="hidden sm:inline">
                 {recovering ? "Recovering..." : "Recover Base64 Covers"}
+              </span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleGenerateJpgCovers}
+              disabled={generatingJpg}
+              className="flex-1 sm:flex-none border-sky-300 text-sky-700 hover:bg-sky-50 dark:border-sky-700 dark:text-sky-300 dark:hover:bg-sky-950/40"
+              title="Pre-generate .jpg companions for every .webp cover file — Facebook/X/LinkedIn reject WebP images"
+            >
+              {generatingJpg ? (
+                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+              ) : (
+                <FileImage className="h-4 w-4 sm:mr-2" />
+              )}
+              <span className="hidden sm:inline">
+                {generatingJpg ? "Generating..." : "Generate JPG Covers"}
               </span>
             </Button>
             <Button variant="outline" onClick={openScanDialog} className="flex-1 sm:flex-none">

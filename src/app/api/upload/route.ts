@@ -177,6 +177,29 @@ export async function POST(req: NextRequest) {
 
     await writeFile(filePath, finalBuffer);
 
+    // For project cover images specifically, also write a .jpg companion.
+    // Social media crawlers (Facebook, X, LinkedIn, Pinterest) reject WebP,
+    // so we pre-generate a real JPEG on disk at the same path with a .jpg
+    // extension. The og:image URL in the project layout points at .jpg
+    // directly — no runtime conversion, no CDN cache surprises.
+    if (uploadType === "project" && finalMimeType === "image/webp") {
+      try {
+        const jpgBuffer = await sharp(finalBuffer)
+          .flatten({ background: { r: 255, g: 255, b: 255 } })
+          .jpeg({ quality: 85, mozjpeg: true })
+          .toBuffer();
+        const jpgPath = filePath.replace(/\.webp$/i, ".jpg");
+        await writeFile(jpgPath, jpgBuffer);
+      } catch (jpgErr) {
+        // Non-fatal — the webp upload still succeeded. The uploads route's
+        // runtime WebP→JPEG fallback will kick in if this companion is missing.
+        uploadLogger.warn(
+          { err: String(jpgErr) },
+          "[Upload] Failed to write JPG companion for project cover"
+        );
+      }
+    }
+
     // Return the API URL for serving the image
     const url = `/api/uploads/projects/${effectiveProjectId}/${uploadType}/${filename}`;
 

@@ -99,10 +99,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return `${baseUrl}/api/og`;
   }
 
-  // Use the project image or fall back to a default. Append ?format=jpeg for
-  // webp images so social media crawlers (which don't accept webp) get JPEG.
+  // Use the project image or fall back to a default. For .webp covers,
+  // swap the extension to .jpg directly — we pre-generate .jpg companions
+  // on disk (via /api/admin/projects/generate-jpg-covers) so every project
+  // cover has a matching <hash>.jpg alongside <hash>.webp. This gives
+  // social crawlers a plain static JPEG with zero runtime conversion in
+  // the path and zero chance of content-type/CDN cache mismatches.
+  // The /api/uploads route also falls back to sharp-converting the webp
+  // at runtime if the .jpg file is ever missing, so this is safe even
+  // during the window before bulk regeneration is run.
   const rawImageUrl = sanitizeImageUrl(project.imageUrl);
-  const imageUrl = rawImageUrl.endsWith(".webp") ? `${rawImageUrl}?format=jpeg` : rawImageUrl;
+  const imageUrl = rawImageUrl.toLowerCase().endsWith(".webp")
+    ? rawImageUrl.replace(/\.webp$/i, ".jpg")
+    : rawImageUrl;
 
   return {
     title: `${project.title} - Crowdfunding Campaign`,
