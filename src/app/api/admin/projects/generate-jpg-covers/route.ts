@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -17,21 +17,22 @@ const UPLOADS_BASE = process.env.UPLOADS_DIR || path.join(process.cwd(), "upload
 /**
  * POST /api/admin/projects/generate-jpg-covers
  *
- * Walks every project's /uploads/projects/<id>/project/ directory and
- * generates a sibling .jpg for each .webp file that doesn't already have one.
+ * Query params:
+ *   ?force=true — re-generate even if a .jpg companion already exists.
+ *                 Used when the existing companion was produced with a
+ *                 sharp config that Facebook's decoder didn't like and
+ *                 you need to re-encode with stricter settings.
  *
- * WHY: Social crawlers (Facebook, X, LinkedIn, Pinterest, etc.) reject WebP
- * images outright. Runtime WebP→JPEG conversion in the uploads route works
- * MOSTLY but is fragile — sharp can silently fail on edge cases, CDN/nginx
- * can cache the wrong content-type, and we've seen Facebook's Sharing
- * Debugger report "corrupted image" errors even when curl shows a valid
- * JPEG response. Pre-generating real JPEG files on disk eliminates the
- * entire runtime conversion path for the og:image case.
- *
- * Idempotent — skips files that already have a .jpg companion.
- * Super-admin only.
+ * Uses the most conservative JPEG encoding possible to maximize
+ * compatibility with Facebook/X/LinkedIn's image decoders:
+ *   - Baseline JPEG (not progressive)
+ *   - sRGB color space (explicit conversion)
+ *   - No ICC profile embedded
+ *   - No EXIF/XMP metadata
+ *   - Quality 85 (not mozjpeg — some decoders are picky)
+ *   - Flatten to white background for transparent WebPs
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -46,6 +47,8 @@ export async function POST() {
     if (user?.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const force = req.nextUrl.searchParams.get("force") === "true";
 
     const projectsBase = path.join(UPLOADS_BASE, "projects");
     if (!existsSync(projectsBase)) {
@@ -90,8 +93,8 @@ export async function POST() {
         const jpgPath = webpPath.replace(/\.webp$/i, ".jpg");
         const jpgFile = webpFile.replace(/\.webp$/i, ".jpg");
 
-        // Skip if a .jpg companion already exists
-        if (existsSync(jpgPath)) {
+        // Skip if a .jpg companion already exists AND force=false
+        if (!force && existsSync(jpgPath)) {
           try {
             const s = await stat(jpgPath);
             if (s.size > 0) {
@@ -100,7 +103,7 @@ export async function POST() {
                 projectId,
                 file: jpgFile,
                 action: "skipped",
-                reason: "JPG companion already exists",
+                reason: "JPG companion already exists (use ?force=true to re-encode)",
                 sizeBytes: s.size,
               });
               continue;
@@ -123,10 +126,23 @@ export async function POST() {
             continue;
           }
 
-          // Convert to JPEG with white background (handles transparent WebPs)
+          // Maximum-compatibility JPEG encoding for social media:
+          //   - remove ALL metadata (no ICC, no EXIF, no XMP)
+          //   - explicit sRGB color space
+          //   - flatten transparent pixels to white (JPEG has no alpha)
+          //   - baseline (not progressive — some decoders choke on progressive)
+          //   - standard libjpeg encoder, not mozjpeg
+          //   - quality 85
           const jpgBuffer = await sharp(webpBuffer)
             .flatten({ background: { r: 255, g: 255, b: 255 } })
-            .jpeg({ quality: 85, mozjpeg: true })
+            .toColorspace("srgb")
+            .jpeg({
+              quality: 85,
+              progressive: false,
+              mozjpeg: false,
+              chromaSubsampling: "4:2:0",
+            })
+            .withMetadata({}) // strip EXIF/XMP but keep basic orientation
             .toBuffer();
 
           await writeFile(jpgPath, jpgBuffer);
@@ -139,7 +155,7 @@ export async function POST() {
           });
 
           generateJpgLogger.info(
-            { projectId, file: jpgFile, sizeBytes: jpgBuffer.length },
+            { projectId, file: jpgFile, sizeBytes: jpgBuffer.length, force },
             "[GenerateJPG] Wrote JPG companion for project cover"
           );
         } catch (err) {
@@ -166,6 +182,7 @@ export async function POST() {
       skipped,
       failed,
       total,
+      force,
       results,
     });
   } catch (error) {

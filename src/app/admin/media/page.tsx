@@ -230,19 +230,21 @@ export default function MediaPage() {
     }
   };
 
-  const handleGenerateJpgCovers = async () => {
+  const handleGenerateJpgCovers = async (force = false) => {
     if (generatingJpg) return;
-    if (
-      !confirm(
-        "Generate JPG companions for all project cover images?\n\nFor every .webp cover file in uploads/projects/<id>/project/, this writes a matching .jpg file at quality 85. Social media crawlers (Facebook, X, LinkedIn, Pinterest) don't accept WebP — pre-generating real JPGs on disk eliminates runtime conversion failures. Safe to run multiple times (skips files that already have a JPG companion)."
-      )
-    ) {
-      return;
-    }
+    const message = force
+      ? "Re-generate JPG companions for ALL project covers?\n\nThis will overwrite every existing .jpg companion file with a freshly encoded one using maximum-compatibility settings (sRGB, no ICC profile, baseline, stripped metadata). Use when Facebook/X rejects the existing JPGs as corrupted."
+      : "Generate JPG companions for all project cover images?\n\nFor every .webp cover file in uploads/projects/<id>/project/, this writes a matching .jpg file at quality 85. Social media crawlers (Facebook, X, LinkedIn, Pinterest) don't accept WebP — pre-generating real JPGs on disk eliminates runtime conversion failures. Safe to run multiple times (skips files that already have a JPG companion). Hold Shift when clicking to FORCE re-encode existing ones.";
+    if (!confirm(message)) return;
     setGeneratingJpg(true);
-    const loadingToast = toast.loading("Generating JPG companions...");
+    const loadingToast = toast.loading(
+      force ? "Force re-encoding JPG companions..." : "Generating JPG companions..."
+    );
     try {
-      const res = await apiFetch("/api/admin/projects/generate-jpg-covers", {
+      const url = force
+        ? "/api/admin/projects/generate-jpg-covers?force=true"
+        : "/api/admin/projects/generate-jpg-covers";
+      const res = await apiFetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -256,7 +258,11 @@ export default function MediaPage() {
       if (total === 0) {
         toast.info("No cover files found — nothing to generate");
       } else if (failed === 0) {
-        toast.success(`Generated ${generated} new JPGs (${skipped} already existed)`);
+        toast.success(
+          force
+            ? `Re-encoded ${generated} JPGs`
+            : `Generated ${generated} new JPGs (${skipped} already existed)`
+        );
       } else {
         toast.warning(
           `Generated ${generated} • ${skipped} skipped • ${failed} failed — check server logs`
@@ -648,10 +654,10 @@ export default function MediaPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={handleGenerateJpgCovers}
+              onClick={(e) => handleGenerateJpgCovers(e.shiftKey)}
               disabled={generatingJpg}
               className="flex-1 sm:flex-none border-sky-300 text-sky-700 hover:bg-sky-50 dark:border-sky-700 dark:text-sky-300 dark:hover:bg-sky-950/40"
-              title="Pre-generate .jpg companions for every .webp cover file — Facebook/X/LinkedIn reject WebP images"
+              title="Pre-generate .jpg companions for every .webp cover file. Hold Shift to force re-encode existing companions with stricter settings."
             >
               {generatingJpg ? (
                 <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />

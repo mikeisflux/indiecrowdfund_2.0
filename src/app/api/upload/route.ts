@@ -182,11 +182,23 @@ export async function POST(req: NextRequest) {
     // so we pre-generate a real JPEG on disk at the same path with a .jpg
     // extension. The og:image URL in the project layout points at .jpg
     // directly — no runtime conversion, no CDN cache surprises.
+    //
+    // Uses maximum-compatibility encoding: baseline JPEG (not progressive),
+    // explicit sRGB color space, no ICC profile, no EXIF/XMP metadata,
+    // standard libjpeg (not mozjpeg), white-flatten for transparency.
+    // Keeps Facebook's picky image decoder happy.
     if (uploadType === "project" && finalMimeType === "image/webp") {
       try {
         const jpgBuffer = await sharp(finalBuffer)
           .flatten({ background: { r: 255, g: 255, b: 255 } })
-          .jpeg({ quality: 85, mozjpeg: true })
+          .toColorspace("srgb")
+          .jpeg({
+            quality: 85,
+            progressive: false,
+            mozjpeg: false,
+            chromaSubsampling: "4:2:0",
+          })
+          .withMetadata({})
           .toBuffer();
         const jpgPath = filePath.replace(/\.webp$/i, ".jpg");
         await writeFile(jpgPath, jpgBuffer);
