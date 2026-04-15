@@ -17,12 +17,14 @@ async function syncPaymentMethodsFromStripe(projectId: string) {
 
   // Find pending pledges with SetupIntent but no payment method
   // CRITICAL: Only sync for PENDING status - never for CANCELLED/FAILED/etc
+  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // runtime — use the `NOT: { field: null }` wrapper syntax instead.
   const pledgesNeedingSync = await db.pledge.findMany({
     where: {
       projectId,
       status: "PENDING", // SAFETY: Only PENDING pledges
       deletedAt: null,
-      stripeSetupIntentId: { not: null },
+      NOT: { stripeSetupIntentId: null },
       stripePaymentMethodId: null,
     },
     select: {
@@ -131,7 +133,7 @@ export async function GET(req: NextRequest) {
               where: {
                 status: "PENDING",
                 chargedImmediately: false,
-                stripePaymentMethodId: { not: null },
+                NOT: { stripePaymentMethodId: null },
               },
             },
           },
@@ -199,7 +201,7 @@ export async function GET(req: NextRequest) {
               where: {
                 status: "PENDING",
                 chargedImmediately: false,
-                stripePaymentMethodId: { not: null },
+                NOT: { stripePaymentMethodId: null },
               },
             },
           },

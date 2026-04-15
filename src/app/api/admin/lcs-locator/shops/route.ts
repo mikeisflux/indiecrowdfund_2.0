@@ -48,15 +48,17 @@ export async function GET(req: NextRequest) {
         take: limit,
       }),
       db.comicShop.count({ where }),
+      // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+      // at runtime — use `NOT: { field: null }` wrapper syntax instead.
       db.comicShop.findMany({
         distinct: ["state"],
-        where: { state: { not: null } },
+        where: { NOT: { state: null } },
         select: { state: true },
         orderBy: { state: "asc" },
       }),
       db.comicShop.findMany({
         distinct: ["region"],
-        where: { region: { not: null } },
+        where: { NOT: { region: null } },
         select: { region: true },
         orderBy: { region: "asc" },
       }),

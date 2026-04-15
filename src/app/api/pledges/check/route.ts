@@ -37,6 +37,9 @@ export async function GET(req: NextRequest) {
     // Includes COMPLETED pledges and PENDING pledges with Stripe payment method saved
     // Note: PayPal PENDING pledges are NOT included — paypalOrderId just means checkout
     // was initiated, not that the user approved payment. Only COMPLETED counts for PayPal.
+    //
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+    // runtime — use `NOT: { field: null }` wrapper syntax instead.
     const activePledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
@@ -46,7 +49,7 @@ export async function GET(req: NextRequest) {
           { status: "COMPLETED" },
           {
             status: "PENDING",
-            stripePaymentMethodId: { not: null },
+            NOT: { stripePaymentMethodId: null },
           },
         ],
       },
@@ -125,9 +128,9 @@ export async function GET(req: NextRequest) {
         stripePaymentMethodId: null,
         // Has an intent or PayPal order (checkout was started)
         OR: [
-          { stripeSetupIntentId: { not: null } },
-          { stripePaymentIntentId: { not: null } },
-          { paypalOrderId: { not: null } },
+          { NOT: { stripeSetupIntentId: null } },
+          { NOT: { stripePaymentIntentId: null } },
+          { NOT: { paypalOrderId: null } },
         ],
         // Created within last 30 minutes
         createdAt: {

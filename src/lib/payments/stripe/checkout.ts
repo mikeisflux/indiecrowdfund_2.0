@@ -126,14 +126,16 @@ export async function createStripePayment({
     throw new Error("You have already backed this project. Visit your backer dashboard to manage your pledge.");
   }
 
-  // Check for pending pledges with saved payment method - these also block new pledges
+  // Check for pending pledges with saved payment method - these also block new pledges.
+  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // runtime — use `NOT: { field: null }` wrapper syntax instead.
   const existingActivePendingPledge = await db.pledge.findFirst({
     where: {
       userId,
       deletedAt: null,
       projectId,
       status: "PENDING",
-      stripePaymentMethodId: { not: null },
+      NOT: { stripePaymentMethodId: null },
     },
   });
 
@@ -152,8 +154,8 @@ export async function createStripePayment({
       stripePaymentMethodId: null,
       // Has an intent (checkout was started)
       OR: [
-        { stripeSetupIntentId: { not: null } },
-        { stripePaymentIntentId: { not: null } },
+        { NOT: { stripeSetupIntentId: null } },
+        { NOT: { stripePaymentIntentId: null } },
       ],
       // Created within last 30 minutes (active checkout session)
       createdAt: {

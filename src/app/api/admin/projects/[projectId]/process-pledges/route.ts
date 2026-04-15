@@ -584,17 +584,23 @@ async function verifyDivinityCoinPledges(projectId: string) {
       verifiedCount++;
 
       if (pledge.status === "PENDING") {
-        // Upgrade: PENDING → COMPLETED (missed webhook)
-        await db.pledge.update({
-          where: { id: pledge.id },
+        // Upgrade: PENDING → COMPLETED (missed webhook). CAS on the read
+        // status so a concurrent webhook or admin run can't double-apply.
+        const upgradeCas = await db.pledge.updateMany({
+          where: { id: pledge.id, status: "PENDING" },
           data: {
             status: "COMPLETED",
             chargedImmediately: true,
             confirmationEmailSent: true,
           },
         });
-        results.upgraded++;
-        detail.action = "Upgraded PENDING → COMPLETED (verified DC transaction record)";
+        if (upgradeCas.count === 0) {
+          detail.action = "Skipped upgrade — concurrent run already applied";
+          results.alreadySucceeded++;
+        } else {
+          results.upgraded++;
+          detail.action = "Upgraded PENDING → COMPLETED (verified DC transaction record)";
+        }
       } else {
         // Already COMPLETED with verified transaction — correct state
         results.alreadySucceeded++;
@@ -602,14 +608,22 @@ async function verifyDivinityCoinPledges(projectId: string) {
       }
     } else if (pledge.status === "COMPLETED") {
       // COMPLETED in DB but NO verified transaction — incorrectly marked!
-      // divinityCoinPaymentId alone is NOT proof of payment
-      await db.pledge.update({
-        where: { id: pledge.id },
+      // divinityCoinPaymentId alone is NOT proof of payment. CAS on the read
+      // status so we don't downgrade a pledge that just legitimately
+      // transitioned into COMPLETED via a parallel webhook.
+      const downgradeCas = await db.pledge.updateMany({
+        where: { id: pledge.id, status: "COMPLETED" },
         data: {
           status: "PENDING",
           confirmationEmailSent: false,
         },
       });
+      if (downgradeCas.count === 0) {
+        detail.action = "Skipped downgrade — concurrent run already transitioned";
+        results.details.push(detail);
+        results.verified++;
+        continue;
+      }
       results.downgraded++;
       detail.action = pledge.divinityCoinPaymentId
         ? "Downgraded COMPLETED → PENDING (DC payment intent created but no transaction record — payment never completed)"
@@ -652,13 +666,15 @@ async function verifyDivinityCoinPledges(projectId: string) {
 async function verifyPaymentIntents(projectId: string) {
   const stripeClient = await getStripeInstance();
 
-  // Find all PENDING pledges that were charged immediately (have PaymentIntentId)
+  // Find all PENDING pledges that were charged immediately (have PaymentIntentId).
+  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // runtime — use the `NOT: { field: null }` wrapper syntax instead.
   const pendingPledges = await db.pledge.findMany({
     where: {
       projectId,
       status: "PENDING",
       chargedImmediately: true,
-      stripePaymentIntentId: { not: null },
+      NOT: { stripePaymentIntentId: null },
     },
     select: {
       id: true,
@@ -708,9 +724,11 @@ async function verifyPaymentIntents(projectId: string) {
       };
 
       if (paymentIntent.status === "succeeded") {
-        // Payment succeeded! Update pledge to COMPLETED
-        await db.pledge.update({
-          where: { id: pledge.id },
+        // Payment succeeded! Update pledge to COMPLETED with CAS on PENDING so
+        // we don't double-count stats if the Stripe webhook transitions this
+        // pledge concurrently. updateMany.count === 0 means someone else won.
+        const casResult = await db.pledge.updateMany({
+          where: { id: pledge.id, status: "PENDING" },
           data: {
             status: "COMPLETED",
             confirmationEmailSent: true,
@@ -719,6 +737,12 @@ async function verifyPaymentIntents(projectId: string) {
               : paymentIntent.payment_method?.id || pledge.stripePaymentMethodId,
           },
         });
+        if (casResult.count === 0) {
+          detail.action = "Skipped — already transitioned (concurrent webhook/admin)";
+          results.details.push(detail);
+          results.verified++;
+          continue;
+        }
         results.alreadySucceeded++;
         totalNewlyCompleted++;
         totalNewlyCompletedAmount += Number(pledge.amount);
@@ -727,14 +751,20 @@ async function verifyPaymentIntents(projectId: string) {
         results.stillProcessing++;
         detail.action = "Still processing - no action taken";
       } else if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "canceled") {
-        // Payment failed - update pledge to FAILED
-        await db.pledge.update({
-          where: { id: pledge.id },
+        // Payment failed - update pledge to FAILED with CAS on PENDING
+        const casResult = await db.pledge.updateMany({
+          where: { id: pledge.id, status: "PENDING" },
           data: {
             status: "FAILED",
             lastFailureReason: `PaymentIntent status: ${paymentIntent.status}`,
           },
         });
+        if (casResult.count === 0) {
+          detail.action = "Skipped — already transitioned (concurrent webhook/admin)";
+          results.details.push(detail);
+          results.verified++;
+          continue;
+        }
         results.failed++;
         detail.action = `Marked as FAILED (status: ${paymentIntent.status})`;
       } else {
@@ -874,9 +904,19 @@ async function deleteAbandonedCarts(projectId: string) {
       where: { pledgeId: { in: toDelete } },
     });
 
-    // Now delete the pledges themselves (PledgeAddon and PledgeModifierAssignment cascade)
+    // TOCTOU guard: re-apply the "still PENDING + no payment method + no
+    // confirmation email" filter so a pledge that completed checkout between
+    // the findMany and here (e.g. user returned seconds before admin clicked
+    // delete) is NOT wrongly deleted. Combining id IN (...) with the filter
+    // ensures only pledges still matching the abandoned criteria get removed.
     await db.pledge.deleteMany({
-      where: { id: { in: toDelete } },
+      where: {
+        id: { in: toDelete },
+        status: "PENDING",
+        deletedAt: null,
+        stripePaymentMethodId: null,
+        confirmationEmailSent: false,
+      },
     });
 
     adminProjectsProcessPledgesLogger.info(`[Admin] Permanently deleted ${toDelete.length} abandoned cart pledges for project ${projectId}`);

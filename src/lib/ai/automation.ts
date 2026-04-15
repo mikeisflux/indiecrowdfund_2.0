@@ -431,10 +431,12 @@ async function planCampaigns(
             paymentProcessor: "DIVINITYCOIN",
             divinityCoinPaymentId: null,
           },
-          // PayPal pledges where an order was created but never captured/approved
+          // PayPal pledges where an order was created but never captured/approved.
+          // Prisma 7 rejects `{ field: { not: null } }` on nullable string
+          // fields at runtime — use `NOT: { field: null }` wrapper syntax.
           {
             paymentProcessor: "PAYPAL",
-            paypalOrderId: { not: null },
+            NOT: { paypalOrderId: null },
           },
           // PayPal pledges where no order was even created (checkout was abandoned immediately)
           {

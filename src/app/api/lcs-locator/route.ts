@@ -74,17 +74,19 @@ export async function GET(request: NextRequest) {
       db.comicShop.count({ where }),
     ]);
 
-    // Get unique states and regions for filter options
+    // Get unique states and regions for filter options.
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const [states, regions] = await Promise.all([
       db.comicShop.findMany({
         distinct: ["state"],
-        where: { state: { not: null } },
+        where: { NOT: { state: null } },
         select: { state: true },
         orderBy: { state: "asc" },
       }),
       db.comicShop.findMany({
         distinct: ["region"],
-        where: { region: { not: null } },
+        where: { NOT: { region: null } },
         select: { region: true },
         orderBy: { region: "asc" },
       }),

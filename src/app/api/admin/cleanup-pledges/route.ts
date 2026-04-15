@@ -476,13 +476,15 @@ async function repairSinglePledge(pledgeId: string) {
 async function repairAllPledges(projectId: string) {
   const stripe = await getStripeInstance();
 
-  // Find all PENDING pledges with PaymentIntent IDs
+  // Find all PENDING pledges with PaymentIntent IDs.
+  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // runtime — use `NOT: { field: null }` wrapper syntax instead.
   const pledges = await db.pledge.findMany({
     where: {
       projectId,
       status: "PENDING",
       deletedAt: null,
-      stripePaymentIntentId: { not: null },
+      NOT: { stripePaymentIntentId: null },
     },
   });
 

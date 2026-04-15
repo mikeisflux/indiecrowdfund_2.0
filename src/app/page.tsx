@@ -38,12 +38,14 @@ export async function generateMetadata(): Promise<Metadata> {
   let ogImageAlt = "IndieCrowdfund - Crowdfunding for Independent Creators";
 
   try {
-    // Get the most recently launched LIVE project's image
+    // Get the most recently launched LIVE project's image.
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const latestLiveProject = await db.project.findFirst({
       where: {
         status: "LIVE",
         deletedAt: null,
-        imageUrl: { not: null },
+        NOT: { imageUrl: null },
       },
       orderBy: { launchedAt: "desc" },
       select: { imageUrl: true, title: true },

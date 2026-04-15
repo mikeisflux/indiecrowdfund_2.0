@@ -125,21 +125,23 @@ export async function GET(req: NextRequest) {
     });
     const existingUrls = new Set(existingMediaFiles.map((m: { url: string }) => m.url));
 
-    // Get image URLs from projects
+    // Get image URLs from projects/updates/rewards.
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+    // runtime — use `NOT: { field: null }` wrapper syntax instead.
     const projectImages = await db.project.findMany({
-      where: { imageUrl: { not: null } },
+      where: { NOT: { imageUrl: null } },
       select: { id: true, title: true, imageUrl: true, creatorId: true }
     });
 
     // Get image URLs from updates
     const updateImages = await db.update.findMany({
-      where: { imageUrl: { not: null } },
+      where: { NOT: { imageUrl: null } },
       select: { id: true, title: true, imageUrl: true, project: { select: { creatorId: true } } }
     });
 
     // Get image URLs from rewards
     const rewardImages = await db.reward.findMany({
-      where: { imageUrl: { not: null } },
+      where: { NOT: { imageUrl: null } },
       select: { id: true, title: true, imageUrl: true, project: { select: { creatorId: true } } }
     });
 
@@ -278,21 +280,21 @@ export async function POST(req: NextRequest) {
 
     // Import database image URLs
     if (importSource === "database" || importSource === "all") {
-      // Get image URLs from projects
+      // Same Prisma 7 nullable string filter fix as above.
       const projectImages = await db.project.findMany({
-        where: { imageUrl: { not: null } },
+        where: { NOT: { imageUrl: null } },
         select: { id: true, title: true, imageUrl: true, creatorId: true }
       });
 
       // Get image URLs from updates
       const updateImages = await db.update.findMany({
-        where: { imageUrl: { not: null } },
+        where: { NOT: { imageUrl: null } },
         select: { id: true, title: true, imageUrl: true, project: { select: { creatorId: true } } }
       });
 
       // Get image URLs from rewards
       const rewardImages = await db.reward.findMany({
-        where: { imageUrl: { not: null } },
+        where: { NOT: { imageUrl: null } },
         select: { id: true, title: true, imageUrl: true, project: { select: { creatorId: true } } }
       });
 

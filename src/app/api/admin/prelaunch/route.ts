@@ -45,13 +45,15 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
     const skip = (page - 1) * limit;
 
-    // Build where clause
+    // Build where clause.
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+    // runtime — use `NOT: { field: null }` wrapper syntax instead.
     const where: Record<string, unknown> = {
       deletedAt: null,
       OR: [
         { prelaunchActive: true },
         { prelaunchStatus: { in: ["SUBMITTED", "APPROVED", "REJECTED"] } },
-        { prelaunchDescription: { not: null } },
+        { NOT: { prelaunchDescription: null } },
       ],
     };
 

@@ -26,9 +26,11 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const skip = (page - 1) * limit;
 
-    // Build where clause
+    // Build where clause.
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const where: Record<string, unknown> = {
-      invoiceNumber: { not: null },
+      NOT: { invoiceNumber: null },
     };
 
     // Super admins see all invoices, regular retailers see only their own

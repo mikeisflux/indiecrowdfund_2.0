@@ -149,31 +149,49 @@ export async function PATCH(request: Request) {
       }
     }
 
-    // Update user profile
-    const updatedUser = await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        name,
-        image,
-        bio,
-        location,
-        timezone,
-        vanityUrl: vanityUrl || null,
-        websites: websites || [],
-        showNameOnly: showNameOnly ?? false,
-      },
-      select: {
-        id: true,
-        name: true,
-        image: true,
-        bio: true,
-        location: true,
-        timezone: true,
-        vanityUrl: true,
-        websites: true,
-        showNameOnly: true,
-      },
-    });
+    // Update user profile. The vanityUrl uniqueness pre-check above is TOCTOU
+    // — two users could both pass it concurrently — so catch P2002 from the
+    // update and return a proper 409.
+    let updatedUser;
+    try {
+      updatedUser = await db.user.update({
+        where: { id: session.user.id },
+        data: {
+          name,
+          image,
+          bio,
+          location,
+          timezone,
+          vanityUrl: vanityUrl || null,
+          websites: websites || [],
+          showNameOnly: showNameOnly ?? false,
+        },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          bio: true,
+          location: true,
+          timezone: true,
+          vanityUrl: true,
+          websites: true,
+          showNameOnly: true,
+        },
+      });
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "This URL is already taken" },
+          { status: 409 }
+        );
+      }
+      throw updateErr;
+    }
 
     // Update email preferences if provided
     if (emailPreferences) {

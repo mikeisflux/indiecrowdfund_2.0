@@ -17,12 +17,14 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
   successful: number;
   failed: number;
 }> {
+  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // runtime — use `NOT: { field: null }` wrapper syntax instead.
   const pledges = await db.pledge.findMany({
     where: {
       projectId,
       paymentProcessor: "PAYPAL",
       status: "PENDING",
-      paypalAuthorizationId: { not: null },
+      NOT: { paypalAuthorizationId: null },
       deletedAt: null,
     },
     include: {

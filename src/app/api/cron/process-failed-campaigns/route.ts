@@ -351,13 +351,15 @@ async function cancelStripePledges(projectId: string) {
 }
 
 async function cancelPaypalAuthorizedPledges(projectId: string) {
-  // Find PayPal pledges with an authorization hold (backer authorized, campaign didn't fund)
+  // Find PayPal pledges with an authorization hold (backer authorized, campaign didn't fund).
+  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // runtime — use `NOT: { field: null }` wrapper syntax instead.
   const pledges = await db.pledge.findMany({
     where: {
       projectId,
       paymentProcessor: "PAYPAL",
       status: "PENDING",
-      paypalAuthorizationId: { not: null },
+      NOT: { paypalAuthorizationId: null },
       deletedAt: null,
     },
     select: { id: true, rewardId: true, confirmationEmailSent: true, amount: true, paypalAuthorizationId: true },

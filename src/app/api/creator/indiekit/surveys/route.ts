@@ -267,6 +267,8 @@ export async function PATCH(req: NextRequest) {
         }
 
         // Get all valid backers for this project to send email notifications
+        // Prisma 7 rejects `{ field: { not: null } }` on nullable string
+        // fields at runtime — use `NOT: { field: null }` wrapper syntax.
         const backers = await db.pledge.findMany({
           where: {
             projectId,
@@ -279,19 +281,19 @@ export async function PATCH(req: NextRequest) {
               },
               {
                 status: "PENDING",
-                stripePaymentMethodId: { not: null },
+                NOT: { stripePaymentMethodId: null },
               },
               {
                 status: "PENDING",
-                stripeSetupIntentId: { not: null },
+                NOT: { stripeSetupIntentId: null },
               },
               {
                 status: "PENDING",
-                stripePaymentIntentId: { not: null },
+                NOT: { stripePaymentIntentId: null },
               },
               {
                 status: "PENDING",
-                divinityCoinPaymentId: { not: null },
+                NOT: { divinityCoinPaymentId: null },
               },
             ],
           },
@@ -396,10 +398,10 @@ export async function PATCH(req: NextRequest) {
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
-              { status: "PENDING", stripePaymentMethodId: { not: null } },
-              { status: "PENDING", stripeSetupIntentId: { not: null } },
-              { status: "PENDING", stripePaymentIntentId: { not: null } },
-              { status: "PENDING", divinityCoinPaymentId: { not: null } },
+              { status: "PENDING", NOT: { stripePaymentMethodId: null } },
+              { status: "PENDING", NOT: { stripeSetupIntentId: null } },
+              { status: "PENDING", NOT: { stripePaymentIntentId: null } },
+              { status: "PENDING", NOT: { divinityCoinPaymentId: null } },
             ],
           },
           include: {
@@ -470,10 +472,10 @@ export async function PATCH(req: NextRequest) {
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
-              { status: "PENDING", stripePaymentMethodId: { not: null } },
-              { status: "PENDING", stripeSetupIntentId: { not: null } },
-              { status: "PENDING", stripePaymentIntentId: { not: null } },
-              { status: "PENDING", divinityCoinPaymentId: { not: null } },
+              { status: "PENDING", NOT: { stripePaymentMethodId: null } },
+              { status: "PENDING", NOT: { stripeSetupIntentId: null } },
+              { status: "PENDING", NOT: { stripePaymentIntentId: null } },
+              { status: "PENDING", NOT: { divinityCoinPaymentId: null } },
             ],
           },
           include: {

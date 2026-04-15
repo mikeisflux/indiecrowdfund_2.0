@@ -127,13 +127,16 @@ export async function POST(req: NextRequest) {
 async function findMismatchedPledges(
   projectId: string | null
 ): Promise<PledgeFix[]> {
-  // Get all COMPLETED pledges that have a reward tier, with their addon data
-  // Skip no-reward pledges - they don't have a meaningful amount breakdown
-  // Skip PENDING pledges - those are likely abandoned carts
+  // Get all COMPLETED pledges that have a reward tier, with their addon data.
+  // Skip no-reward pledges - they don't have a meaningful amount breakdown.
+  // Skip PENDING pledges - those are likely abandoned carts.
+  //
+  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // runtime — use the `NOT: { field: null }` wrapper syntax instead.
   const pledges = await db.pledge.findMany({
     where: {
       status: "COMPLETED",
-      rewardId: { not: null },
+      NOT: { rewardId: null },
       deletedAt: null,
       ...(projectId ? { projectId } : {}),
     },

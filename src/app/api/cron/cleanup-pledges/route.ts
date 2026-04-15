@@ -61,36 +61,41 @@ export async function POST(req: NextRequest) {
     // 3. For Stripe: No payment method saved AND no confirmation sent AND no failure reason
     // 4. For DivinityCoin: No payment ID (never completed payment)
     // 5. For PayPal: No order ID captured (never completed payment; PayPal orders auto-expire ~3h)
+    //
+    // NOTE: Prisma 7 rejects `{ field: { not: null } }` on nullable string
+    // fields at runtime — use `NOT: { field: null }` wrapper syntax instead.
+    const staleWhere = {
+      status: "PENDING" as const,
+      deletedAt: null,
+      createdAt: { lt: cutoffTime },
+      OR: [
+        // Stripe pledges: no payment method, no confirmation, no failure
+        {
+          paymentProcessor: "STRIPE" as const,
+          stripePaymentMethodId: null,
+          confirmationEmailSent: false,
+          lastFailureReason: null,
+        },
+        // DivinityCoin pledges: never paid (no payment ID)
+        {
+          paymentProcessor: "DIVINITYCOIN" as const,
+          divinityCoinPaymentId: null,
+        },
+        // PayPal pledges: order was created but never captured after the cutoff window
+        {
+          paymentProcessor: "PAYPAL" as const,
+          NOT: { paypalOrderId: null },
+        },
+        // PayPal pledges: checkout abandoned before an order was even created
+        {
+          paymentProcessor: "PAYPAL" as const,
+          paypalOrderId: null,
+        },
+      ],
+    };
+
     const stalePledges = await db.pledge.findMany({
-      where: {
-        status: "PENDING",
-        deletedAt: null,
-        createdAt: { lt: cutoffTime },
-        OR: [
-          // Stripe pledges: no payment method, no confirmation, no failure
-          {
-            paymentProcessor: "STRIPE",
-            stripePaymentMethodId: null,
-            confirmationEmailSent: false,
-            lastFailureReason: null,
-          },
-          // DivinityCoin pledges: never paid (no payment ID)
-          {
-            paymentProcessor: "DIVINITYCOIN",
-            divinityCoinPaymentId: null,
-          },
-          // PayPal pledges: order was created but never captured after the cutoff window
-          {
-            paymentProcessor: "PAYPAL",
-            paypalOrderId: { not: null },
-          },
-          // PayPal pledges: checkout abandoned before an order was even created
-          {
-            paymentProcessor: "PAYPAL",
-            paypalOrderId: null,
-          },
-        ],
-      },
+      where: staleWhere,
       select: {
         id: true,
         amount: true,
@@ -138,9 +143,16 @@ export async function POST(req: NextRequest) {
       where: { pledgeId: { in: pledgeIds } },
     });
 
-    // Delete the pledges
+    // Delete the pledges — re-apply the stale filter in the WHERE so a
+    // pledge that completed checkout between the findMany and here (e.g.
+    // user finally returned and set a payment method seconds before cron
+    // ran) is NOT wrongly deleted. With `id IN (...)` + the filter, only
+    // pledges still matching the stale criteria get removed.
     const deleted = await db.pledge.deleteMany({
-      where: { id: { in: pledgeIds } },
+      where: {
+        ...staleWhere,
+        id: { in: pledgeIds },
+      },
     });
 
     cronCleanupPledgesLogger.info(`[Cron] Deleted ${deleted.count} stale pledges`);
@@ -186,7 +198,7 @@ export async function GET(req: NextRequest) {
         },
         {
           paymentProcessor: "PAYPAL",
-          paypalOrderId: { not: null },
+          NOT: { paypalOrderId: null },
         },
         {
           paymentProcessor: "PAYPAL",

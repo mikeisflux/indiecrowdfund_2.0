@@ -227,6 +227,57 @@ export async function POST(
 
     const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
 
+    // ── Claim the "adding items" slot under a row lock ──
+    // Two concurrent add-items POSTs for the same pledge (e.g. user double-
+    // clicks) would otherwise both create separate PaymentIntents and clobber
+    // each other's metadata, leaving the user with a stale PI the webhook can
+    // no longer reconcile. Use a FOR UPDATE lock + 60s freshness window so
+    // only one add-items flow is in flight at a time. This was flagged as the
+    // most critical add-items race in the audit.
+    let currentMetadata: Record<string, unknown>;
+    try {
+      currentMetadata = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${pledgeId} FOR UPDATE`;
+        const latest = await tx.pledge.findUnique({
+          where: { id: pledgeId },
+          select: { metadata: true },
+        });
+        const md = (typeof latest?.metadata === "object" && latest?.metadata !== null)
+          ? latest.metadata as Record<string, unknown>
+          : {};
+        const pending = md.pendingAdditionalItems as { createdAt?: string } | undefined;
+        if (pending?.createdAt) {
+          const ageMs = Date.now() - new Date(pending.createdAt).getTime();
+          if (ageMs < 60_000) {
+            throw new Error("ADD_ITEMS_IN_PROGRESS");
+          }
+        }
+        // Stamp a reserving marker while the lock is held so any concurrent
+        // request sees the fresh timestamp and bails out.
+        await tx.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            metadata: {
+              ...md,
+              pendingAdditionalItems: {
+                reserving: true,
+                createdAt: new Date().toISOString(),
+              },
+            },
+          },
+        });
+        return md;
+      });
+    } catch (lockErr) {
+      if (lockErr instanceof Error && lockErr.message === "ADD_ITEMS_IN_PROGRESS") {
+        return NextResponse.json(
+          { error: "Another add-items request is already in progress. Please wait a moment and try again." },
+          { status: 409 }
+        );
+      }
+      throw lockErr;
+    }
+
     // DivinityCoin: create payment intent via DC's API, then store pending items
     if (paymentProcessor === "DIVINITYCOIN") {
       try {
@@ -264,11 +315,9 @@ export async function POST(
           );
         }
 
-        // Store pending additional items in pledge metadata
-        const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-          ? pledge.metadata as Record<string, unknown>
-          : {};
-
+        // Store pending additional items in pledge metadata. Use the
+        // currentMetadata captured under the row lock above (reserving marker
+        // already stamped) so no concurrent request can race us here.
         await db.pledge.update({
           where: { id: pledgeId },
           data: {
@@ -368,11 +417,9 @@ export async function POST(
       );
     }
 
-    // Store pending items in metadata for Stripe too (webhook uses PaymentIntent metadata)
-    const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-      ? pledge.metadata as Record<string, unknown>
-      : {};
-
+    // Store pending items in metadata for Stripe too (webhook uses PaymentIntent metadata).
+    // Reuses the currentMetadata captured under the FOR UPDATE lock above so
+    // we don't re-race with concurrent add-items calls here.
     await db.pledge.update({
       where: { id: pledgeId },
       data: {

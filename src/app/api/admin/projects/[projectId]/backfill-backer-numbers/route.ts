@@ -42,6 +42,8 @@ export async function POST(
     const { updated, alreadyHad, totalPledges } = await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT id FROM "Project" WHERE id = ${projectId} FOR UPDATE`;
 
+      // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+      // at runtime — use `NOT: { field: null }` wrapper syntax instead.
       const pledges = await tx.pledge.findMany({
         where: {
           projectId,
@@ -49,7 +51,7 @@ export async function POST(
             { status: "COMPLETED" },
             {
               status: "PENDING",
-              stripePaymentMethodId: { not: null },
+              NOT: { stripePaymentMethodId: null },
             },
           ],
         },

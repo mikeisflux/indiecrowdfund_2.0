@@ -440,6 +440,11 @@ async function mergeUser(oldUserId: string, keeperUserId: string) {
     }
 
     // --- Merge DivinityCoin balance ---
+    // Lock the old user row FOR UPDATE so any in-flight DC webhook that
+    // would modify the old user's balance is serialized out — otherwise we
+    // might read a stale balance, increment the keeper by that stale value,
+    // and lose the webhook's delta when the old user gets soft-deleted.
+    await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${oldUserId} FOR UPDATE`;
     const oldUserData = await tx.user.findUnique({
       where: { id: oldUserId },
       select: { divinityCoinBalance: true },
@@ -452,6 +457,12 @@ async function mergeUser(oldUserId: string, keeperUserId: string) {
             increment: Number(oldUserData.divinityCoinBalance),
           },
         },
+      });
+      // Zero out the old user's balance atomically so a future read of the
+      // soft-deleted row can't double-count.
+      await tx.user.update({
+        where: { id: oldUserId },
+        data: { divinityCoinBalance: 0 },
       });
     }
 

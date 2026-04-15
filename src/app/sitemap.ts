@@ -231,12 +231,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("Sitemap: Error fetching marketplace books:", error);
   }
 
-  // Creator profile pages (users with a vanity URL)
+  // Creator profile pages (users with a vanity URL).
+  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // runtime — use `NOT: { field: null }` wrapper syntax instead.
   let creatorPages: MetadataRoute.Sitemap = [];
   try {
     const creators = await db.user.findMany({
       where: {
-        vanityUrl: { not: null },
+        NOT: { vanityUrl: null },
         role: { in: ["CREATOR", "ADMIN", "SUPER_ADMIN"] },
         deletedAt: null,
       },

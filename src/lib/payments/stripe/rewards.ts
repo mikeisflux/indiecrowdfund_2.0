@@ -195,7 +195,7 @@ export async function assignBackerNumber(projectId: string, pledgeId: string): P
     const existingBackerCount = await tx.pledge.count({
       where: {
         projectId,
-        backerNumber: { not: null },
+        NOT: { backerNumber: null },
       },
     });
 

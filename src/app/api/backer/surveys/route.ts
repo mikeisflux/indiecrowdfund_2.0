@@ -33,6 +33,8 @@ export async function GET(request: NextRequest) {
       where: {
         userId: session.user.id,
         deletedAt: null,
+        // Prisma 7 rejects `{ field: { not: null } }` on nullable string
+        // fields at runtime — use `NOT: { field: null }` wrapper syntax.
         OR: [
           { status: "COMPLETED" },
           {
@@ -41,19 +43,19 @@ export async function GET(request: NextRequest) {
           },
           {
             status: "PENDING",
-            stripePaymentMethodId: { not: null },
+            NOT: { stripePaymentMethodId: null },
           },
           {
             status: "PENDING",
-            stripeSetupIntentId: { not: null },
+            NOT: { stripeSetupIntentId: null },
           },
           {
             status: "PENDING",
-            stripePaymentIntentId: { not: null },
+            NOT: { stripePaymentIntentId: null },
           },
           {
             status: "PENDING",
-            divinityCoinPaymentId: { not: null },
+            NOT: { divinityCoinPaymentId: null },
           },
         ],
       },

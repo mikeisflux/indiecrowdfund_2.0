@@ -321,7 +321,7 @@ export async function POST(req: NextRequest) {
           if (!dcResponse.ok || !dcResult.success) {
             pledgeLogger.error({ correlationId, pledgeId: pledge.id, dcResult }, "Failed to create DivinityCoin payment intent");
             await db.pledgeAddon.deleteMany({ where: { pledgeId: pledge.id } });
-            await db.pledge.delete({ where: { id: pledge.id } });
+            await db.pledge.deleteMany({ where: { id: pledge.id } });
             return NextResponse.json(
               { error: dcResult.error || "Failed to initialize payment" },
               { status: 502 }
@@ -543,19 +543,21 @@ export async function GET(req: NextRequest) {
  * Only deletes PENDING pledges older than the cutoff that have no payment evidence.
  */
 async function cleanupAbandonedCarts(projectId: string, olderThan: Date) {
+  const staleWhere = {
+    projectId,
+    status: "PENDING" as const,
+    deletedAt: null,
+    createdAt: { lt: olderThan },
+    stripePaymentMethodId: null,
+    confirmationEmailSent: false,
+    // Exclude PayPal pledges that have been approved but not yet captured
+    paypalOrderId: null,
+    // Exclude DivinityCoin pledges that have a payment ID (payment was initiated, webhook may be in flight)
+    divinityCoinPaymentId: null,
+  };
+
   const stalePledges = await db.pledge.findMany({
-    where: {
-      projectId,
-      status: "PENDING",
-      deletedAt: null,
-      createdAt: { lt: olderThan },
-      stripePaymentMethodId: null,
-      confirmationEmailSent: false,
-      // Exclude PayPal pledges that have been approved but not yet captured
-      paypalOrderId: null,
-      // Exclude DivinityCoin pledges that have a payment ID (payment was initiated, webhook may be in flight)
-      divinityCoinPaymentId: null,
-    },
+    where: staleWhere,
     select: { id: true },
   });
 
@@ -574,7 +576,16 @@ async function cleanupAbandonedCarts(projectId: string, olderThan: Date) {
 
   await db.pledgeAddon.deleteMany({ where: { pledgeId: { in: toDelete } } });
   await db.emailLog.deleteMany({ where: { pledgeId: { in: toDelete } } });
-  await db.pledge.deleteMany({ where: { id: { in: toDelete } } });
+  // TOCTOU guard: re-apply the full stale filter so a pledge that completed
+  // checkout between the findMany and here (e.g. user returned seconds before
+  // this ran) is NOT wrongly deleted. Combining `id IN (...)` with the filter
+  // ensures only pledges still matching the stale criteria get removed.
+  await db.pledge.deleteMany({
+    where: {
+      ...staleWhere,
+      id: { in: toDelete },
+    },
+  });
 
   pledgeLogger.info({ projectId, count: toDelete.length }, "Auto-cleaned abandoned carts");
 }

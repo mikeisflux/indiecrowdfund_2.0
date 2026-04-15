@@ -22,7 +22,9 @@ export async function GET() {
     const userId = session.user.id;
 
     // Get all projects that have prelaunch content or are in prelaunch status
-    // This includes projects that haven't launched yet but have prelaunch data
+    // This includes projects that haven't launched yet but have prelaunch data.
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const projects = await db.project.findMany({
       where: {
         creatorId: userId,
@@ -30,7 +32,7 @@ export async function GET() {
         OR: [
           { prelaunchActive: true },
           { prelaunchStatus: { not: "DRAFT" } },
-          { prelaunchDescription: { not: null } },
+          { NOT: { prelaunchDescription: null } },
           // Also include projects that are in DRAFT status (not yet launched)
           { status: "DRAFT" },
         ],

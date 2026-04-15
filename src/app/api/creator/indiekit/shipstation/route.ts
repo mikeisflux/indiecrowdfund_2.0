@@ -220,11 +220,13 @@ export async function POST(req: NextRequest) {
       }
 
       case "sync_tracking": {
-        // Sync tracking information from ShipStation
+        // Sync tracking information from ShipStation.
+        // Prisma 7 rejects `{ field: { not: null } }` on nullable string
+        // fields at runtime — use `NOT: { field: null }` wrapper instead.
         const pledgesWithOrders = await db.pledge.findMany({
           where: {
             projectId,
-            externalOrderId: { not: null },
+            NOT: { externalOrderId: null },
             fulfillmentStatus: { in: ["IN_PROGRESS", "PROCESSING"] },
           },
         });

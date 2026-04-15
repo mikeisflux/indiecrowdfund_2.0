@@ -287,13 +287,15 @@ export async function GET(req: NextRequest) {
           orderBy: { _count: { path: "desc" } },
           take: 20
         }),
-        // Top referrers
+        // Top referrers.
+        // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+        // at runtime — use `NOT: { field: null }` wrapper syntax instead.
         db.userBehavior.groupBy({
           by: ["referrer"],
           where: {
             eventType: "PAGE_VIEW",
             timestamp: { gte: startDate },
-            referrer: { not: null }
+            NOT: { referrer: null }
           },
           _count: true,
           orderBy: { _count: { referrer: "desc" } },
@@ -419,7 +421,7 @@ export async function GET(req: NextRequest) {
           by: ["country"],
           where: {
             timestamp: { gte: startDate },
-            country: { not: null }
+            NOT: { country: null }
           },
           _count: true,
           orderBy: { _count: { country: "desc" } },
@@ -430,8 +432,7 @@ export async function GET(req: NextRequest) {
           by: ["location"],
           where: {
             deletedAt: null,
-            location: { not: null },
-            NOT: { location: "" }
+            NOT: [{ location: null }, { location: "" }],
           },
           _count: true,
           orderBy: { _count: { location: "desc" } },
@@ -442,8 +443,7 @@ export async function GET(req: NextRequest) {
           by: ["location"],
           where: {
             deletedAt: null,
-            location: { not: null },
-            NOT: { location: "" }
+            NOT: [{ location: null }, { location: "" }],
           },
           _count: true,
           orderBy: { _count: { location: "desc" } },
@@ -453,8 +453,7 @@ export async function GET(req: NextRequest) {
         db.user.findMany({
           where: {
             deletedAt: null,
-            location: { not: null },
-            NOT: { location: "" },
+            NOT: [{ location: null }, { location: "" }],
             pledges: {
               some: {
                 status: "COMPLETED",

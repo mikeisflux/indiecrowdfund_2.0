@@ -120,12 +120,14 @@ export async function GET(request: Request) {
         where: { timestamp: { gte: lastWeek } },
         orderBy: { _count: { id: "desc" } },
       }),
+      // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+      // at runtime — use `NOT: { field: null }` wrapper syntax instead.
       db.userBehavior.groupBy({
         by: ["projectId"],
         _count: { id: true },
         where: {
           timestamp: { gte: lastWeek },
-          projectId: { not: null },
+          NOT: { projectId: null },
           eventType: { in: ["PROJECT_VIEW", "PROJECT_CLICK", "PLEDGE_START"] }
         },
         orderBy: { _count: { id: "desc" } },
@@ -136,7 +138,7 @@ export async function GET(request: Request) {
         _count: { id: true },
         where: {
           timestamp: { gte: lastWeek },
-          searchQuery: { not: null },
+          NOT: { searchQuery: null },
         },
         orderBy: { _count: { id: "desc" } },
         take: 10,

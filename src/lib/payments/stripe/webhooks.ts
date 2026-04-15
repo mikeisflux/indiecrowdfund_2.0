@@ -250,12 +250,14 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     }
 
     if (projectIsFunded) {
+      // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+      // at runtime — use `NOT: { field: null }` wrapper syntax instead.
       const pendingPledgeCount = await db.pledge.count({
         where: {
           projectId: pledge.projectId,
           status: "PENDING",
           chargedImmediately: false,
-          stripePaymentMethodId: { not: null },
+          NOT: { stripePaymentMethodId: null },
         },
       });
 

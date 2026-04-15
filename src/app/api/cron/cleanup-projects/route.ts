@@ -50,10 +50,16 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Soft delete the projects
+    // Soft delete the projects. Re-apply the full filter in the WHERE so a
+    // project that got a backer or moved off DRAFT between the findMany and
+    // now does NOT get wrongly soft-deleted (TOCTOU guard).
     const result = await db.project.updateMany({
       where: {
         id: { in: projectsToCleanup.map(p => p.id) },
+        status: "DRAFT",
+        backerCount: 0,
+        updatedAt: { lt: ninetyDaysAgo },
+        deletedAt: null,
       },
       data: {
         deletedAt: new Date(),
@@ -125,9 +131,15 @@ export async function POST(_req: NextRequest) {
       });
     }
 
+    // TOCTOU guard: re-apply the full stale filter so concurrent updates
+    // (e.g. a creator returning to their draft mid-cleanup) aren't wiped.
     const result = await db.project.updateMany({
       where: {
         id: { in: projectsToCleanup.map(p => p.id) },
+        status: "DRAFT",
+        backerCount: 0,
+        updatedAt: { lt: ninetyDaysAgo },
+        deletedAt: null,
       },
       data: {
         deletedAt: new Date(),

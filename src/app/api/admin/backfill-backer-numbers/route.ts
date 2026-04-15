@@ -20,7 +20,9 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get all projects that have pledges without backer numbers
+    // Get all projects that have pledges without backer numbers.
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // at runtime — use `NOT: { field: null }` wrapper syntax instead.
     const projectsNeedingBackfill = await db.project.findMany({
       where: {
         pledges: {
@@ -30,7 +32,7 @@ export async function POST() {
               { status: "COMPLETED" },
               {
                 status: "PENDING",
-                stripePaymentMethodId: { not: null },
+                NOT: { stripePaymentMethodId: null },
               },
             ],
           },
@@ -59,7 +61,7 @@ export async function POST() {
               { status: "COMPLETED" },
               {
                 status: "PENDING",
-                stripePaymentMethodId: { not: null },
+                NOT: { stripePaymentMethodId: null },
               },
             ],
           },

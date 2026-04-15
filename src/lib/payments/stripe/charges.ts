@@ -421,6 +421,8 @@ export async function schedulePaymentRetry(pledgeId: string, failureReason: stri
 export async function processPendingPledgesForProject(projectId: string) {
   const stripeClient = await getStripeInstance();
 
+  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
+  // runtime — use `NOT: { field: null }` wrapper syntax instead.
   const pendingPledges = await db.pledge.findMany({
     where: {
       projectId,
@@ -428,8 +430,8 @@ export async function processPendingPledgesForProject(projectId: string) {
       chargedImmediately: false,
       deletedAt: null,
       OR: [
-        { stripePaymentMethodId: { not: null } },
-        { stripeSetupIntentId: { not: null } },
+        { NOT: { stripePaymentMethodId: null } },
+        { NOT: { stripeSetupIntentId: null } },
         { confirmationEmailSent: true },
       ],
     },
@@ -500,7 +502,7 @@ export async function processPaymentRetries() {
       status: "PENDING",
       retryCount: { gt: 0, lte: MAX_RETRY_ATTEMPTS },
       nextRetryAt: { lte: now },
-      stripePaymentMethodId: { not: null },
+      NOT: { stripePaymentMethodId: null },
       deletedAt: null,
     },
     take: 100,

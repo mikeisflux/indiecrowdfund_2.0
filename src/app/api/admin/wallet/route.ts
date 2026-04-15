@@ -32,14 +32,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    // Get the user
+    // Look up name/email outside the lock (these don't race with balance).
     const targetUser = await db.user.findFirst({
       where: { id: userId, deletedAt: null },
       select: {
         id: true,
         name: true,
         email: true,
-        divinityCoinBalance: true,
       },
     });
 
@@ -47,24 +46,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const currentBalance = Number(targetUser.divinityCoinBalance);
-
-    if (currentBalance === 0) {
-      return NextResponse.json({
-        success: true,
-        message: "Wallet balance is already zero",
-        previousBalance: 0,
-        newBalance: 0,
+    // Read-and-zero the balance under a row lock so concurrent DC webhooks
+    // (refund/payment/bonus) can't change the balance between our read and
+    // the zero-out — which would make both the audit transaction amount
+    // wrong and lose the webhook's delta.
+    let currentBalance = 0;
+    let alreadyZero = false;
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+      const locked = await tx.user.findUnique({
+        where: { id: userId },
+        select: { divinityCoinBalance: true },
       });
-    }
-
-    // Zero out the balance and create an audit transaction
-    await db.$transaction([
-      db.user.update({
+      currentBalance = Number(locked?.divinityCoinBalance || 0);
+      if (currentBalance === 0) {
+        alreadyZero = true;
+        return;
+      }
+      await tx.user.update({
         where: { id: userId },
         data: { divinityCoinBalance: 0 },
-      }),
-      db.divinityCoinTransaction.create({
+      });
+      await tx.divinityCoinTransaction.create({
         data: {
           userId,
           amount: -currentBalance,
@@ -78,8 +81,17 @@ export async function POST(req: NextRequest) {
             timestamp: new Date().toISOString(),
           }),
         },
-      }),
-    ]);
+      });
+    });
+
+    if (alreadyZero) {
+      return NextResponse.json({
+        success: true,
+        message: "Wallet balance is already zero",
+        previousBalance: 0,
+        newBalance: 0,
+      });
+    }
 
     return NextResponse.json({
       success: true,
