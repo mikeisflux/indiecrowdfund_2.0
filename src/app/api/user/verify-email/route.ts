@@ -235,13 +235,12 @@ export async function GET(req: NextRequest) {
 
     // Check if token has expired
     if (verificationToken.expires < new Date()) {
-      // Delete the expired token
-      await db.verificationToken.delete({
+      // Delete the expired token (deleteMany is idempotent if another
+      // concurrent call already removed it).
+      await db.verificationToken.deleteMany({
         where: {
-          identifier_token: {
-            identifier: email,
-            token,
-          },
+          identifier: email,
+          token,
         },
       });
       return NextResponse.json(
@@ -268,13 +267,12 @@ export async function GET(req: NextRequest) {
       data: { emailVerified: new Date() },
     });
 
-    // Delete the used token
-    await db.verificationToken.delete({
+    // Delete the used token — use deleteMany for idempotency if
+    // another concurrent verify request already consumed it.
+    await db.verificationToken.deleteMany({
       where: {
-        identifier_token: {
-          identifier: email,
-          token,
-        },
+        identifier: email,
+        token,
       },
     });
 

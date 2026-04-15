@@ -110,12 +110,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update user with new email handle
-    const updatedUser = await db.user.update({
-      where: { id: session.user.id },
-      data: { creatorEmailHandle: handleLower },
-      select: { creatorEmailHandle: true },
-    });
+    // Update user with new email handle. Catch P2002 on
+    // creatorEmailHandle @unique — the findUnique check above is
+    // TOCTOU under concurrent claims of the same handle.
+    let updatedUser;
+    try {
+      updatedUser = await db.user.update({
+        where: { id: session.user.id },
+        data: { creatorEmailHandle: handleLower },
+        select: { creatorEmailHandle: true },
+      });
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "This email handle is already taken. Please choose another." },
+          { status: 409 }
+        );
+      }
+      throw updateErr;
+    }
 
     return NextResponse.json({
       success: true,

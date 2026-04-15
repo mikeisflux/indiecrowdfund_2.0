@@ -152,17 +152,13 @@ async function unsubscribeEmail(email: string): Promise<{ success: boolean; erro
   try {
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Update User record if exists (site-wide unsubscribe)
-    const user = await db.user.findUnique({
+    // 1. Update User record if exists (site-wide unsubscribe).
+    // updateMany is idempotent and avoids the findUnique+update
+    // TOCTOU + P2025 on missing rows.
+    await db.user.updateMany({
       where: { email: normalizedEmail },
+      data: { emailUnsubscribedAt: new Date() },
     });
-
-    if (user) {
-      await db.user.update({
-        where: { email: normalizedEmail },
-        data: { emailUnsubscribedAt: new Date() },
-      });
-    }
 
     // 2. Update NewsletterSubscriber if exists (platform newsletter)
     try {

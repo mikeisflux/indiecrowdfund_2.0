@@ -106,33 +106,51 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Update user profile
-    const updatedUser = await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        name,
-        image,
-        heroImage,
-        bio,
-        location,
-        vanityUrl: vanityUrl || null,
-        websites: websites || [],
-        socialLinks: socialLinks || null,
-        showNameOnly: showNameOnly ?? false,
-      },
-      select: {
-        id: true,
-        name: true,
-        image: true,
-        heroImage: true,
-        bio: true,
-        location: true,
-        vanityUrl: true,
-        websites: true,
-        socialLinks: true,
-        showNameOnly: true,
-      },
-    });
+    // Update user profile. Catch P2002 on vanityUrl @unique — the
+    // findFirst check above is TOCTOU under concurrent vanity URL
+    // claims.
+    let updatedUser;
+    try {
+      updatedUser = await db.user.update({
+        where: { id: session.user.id },
+        data: {
+          name,
+          image,
+          heroImage,
+          bio,
+          location,
+          vanityUrl: vanityUrl || null,
+          websites: websites || [],
+          socialLinks: socialLinks || null,
+          showNameOnly: showNameOnly ?? false,
+        },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          heroImage: true,
+          bio: true,
+          location: true,
+          vanityUrl: true,
+          websites: true,
+          socialLinks: true,
+          showNameOnly: true,
+        },
+      });
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "This username is already taken" },
+          { status: 409 }
+        );
+      }
+      throw updateErr;
+    }
 
     return NextResponse.json(updatedUser);
   } catch (error) {

@@ -49,29 +49,34 @@ export async function PUT(
       );
     }
 
-    // Check if vanity URL is already taken
-    const existing = await db.user.findFirst({
-      where: { vanityUrl: vanityUrl.toLowerCase() },
-    });
-
-    if (existing && existing.id !== userId) {
-      return NextResponse.json(
-        { error: "This vanity URL is already taken" },
-        { status: 400 }
-      );
+    // Update the user's vanity URL with P2002 catch on @unique.
+    // The findFirst check is TOCTOU under concurrent admin edits.
+    let updatedUser;
+    try {
+      updatedUser = await db.user.update({
+        where: { id: userId },
+        data: { vanityUrl: vanityUrl.toLowerCase() },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          vanityUrl: true,
+        },
+      });
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "This vanity URL is already taken" },
+          { status: 409 }
+        );
+      }
+      throw updateErr;
     }
-
-    // Update the user's vanity URL
-    const updatedUser = await db.user.update({
-      where: { id: userId },
-      data: { vanityUrl: vanityUrl.toLowerCase() },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        vanityUrl: true,
-      },
-    });
 
     return NextResponse.json({
       success: true,

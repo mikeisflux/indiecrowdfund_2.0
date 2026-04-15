@@ -166,10 +166,23 @@ export async function POST(request: Request) {
       }
     }
 
-    const updatedProject = await db.project.update({
-      where: { id: projectId },
+    // CAS on the project's current status so two admins hitting the
+    // same button simultaneously can't both create ProjectReview rows
+    // and both send the status-change email to the creator.
+    const statusCas = await db.project.updateMany({
+      where: { id: projectId, status: project.status, deletedAt: null },
       data: updateData,
     });
+    if (statusCas.count === 0) {
+      return NextResponse.json(
+        { error: "Project status changed — another admin may have already acted. Please refresh." },
+        { status: 409 }
+      );
+    }
+    const updatedProject = await db.project.findUnique({ where: { id: projectId } });
+    if (!updatedProject) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
 
     // Map admin actions to valid ReviewAction enum values (MAKE_LIVE is not in the enum)
     const actionToReviewAction: Record<string, "DEACTIVATE" | "REACTIVATE" | "SEND_TO_REVIEW"> = {
