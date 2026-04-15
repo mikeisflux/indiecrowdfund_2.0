@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { getOgImageDimensions } from "@/lib/og-image-dimensions";
 
 interface Props {
   params: Promise<{ vanityname: string; slug: string }>;
@@ -88,6 +89,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const imageUrl = rawImageUrl.toLowerCase().endsWith(".webp")
     ? rawImageUrl.replace(/\.webp$/i, ".jpg")
     : rawImageUrl;
+  const imageDimensions = await getOgImageDimensions(imageUrl);
 
   return {
     title: `${project.title} - Coming Soon | IndieCrowdfund`,
@@ -100,8 +102,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [
         {
           url: imageUrl,
-          width: 1200,
-          height: 630,
+          width: imageDimensions.width,
+          height: imageDimensions.height,
           alt: project.title,
         },
       ],

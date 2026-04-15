@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { db } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import { JsonLd } from "@/components/json-ld";
+import { getOgImageDimensions } from "@/lib/og-image-dimensions";
 
 interface Props {
   params: Promise<{ vanityname: string; slug: string }>;
@@ -113,6 +114,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? rawImageUrl.replace(/\.webp$/i, ".jpg")
     : rawImageUrl;
 
+  // Read the actual file dimensions from disk so og:image:width/height
+  // matches the bytes Facebook will fetch. Hardcoding 1200x630 caused FB
+  // to reject images whose real dimensions didn't match.
+  const imageDimensions = await getOgImageDimensions(imageUrl);
+
   return {
     title: `${project.title} - Crowdfunding Campaign`,
     description: plainDescription,
@@ -135,8 +141,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [
         {
           url: imageUrl,
-          width: 1200,
-          height: 630,
+          width: imageDimensions.width,
+          height: imageDimensions.height,
           alt: project.title,
         },
       ],
