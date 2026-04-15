@@ -187,16 +187,33 @@ export async function PATCH(
         await safeCancelPaymentIntent(stripe, typedPledge.stripePaymentIntentId);
       }
 
-      // Update pledge status
-      // Note: We do NOT decrement project totals here because PENDING pledges
-      // haven't been counted yet - they only get added when they become COMPLETED
-      await db.pledge.update({
-        where: { id: pledgeId },
+      // Atomic CAS on status: PENDING → CANCELLED. The check at line
+      // 174 above reads a stale value (from the top-of-handler fetch).
+      // Between that check and this update, a webhook could have
+      // charged the pledge and moved it to COMPLETED, or another
+      // concurrent creator click could have already cancelled it. The
+      // CAS ensures we only cancel pledges that are still PENDING,
+      // and returns a helpful message if we lose the race.
+      //
+      // Note: We do NOT decrement project totals here because PENDING
+      // pledges haven't been counted yet — they only get added when
+      // they become COMPLETED.
+      const cancelCas = await db.pledge.updateMany({
+        where: { id: pledgeId, status: "PENDING", deletedAt: null },
         data: {
           status: "CANCELLED",
           lastFailureReason: reason || "Cancelled by creator",
         },
       });
+
+      if (cancelCas.count === 0) {
+        return NextResponse.json(
+          {
+            error: "Pledge is no longer in PENDING state (may have been charged or cancelled by another request). Refresh and try again.",
+          },
+          { status: 409 }
+        );
+      }
 
       return NextResponse.json({
         success: true,
@@ -297,14 +314,25 @@ export async function PATCH(
                 },
               });
             } else {
-              // Full refund: update pledge status and decrement project stats
-              await tx.pledge.update({
-                where: { id: pledgeId },
+              // Full refund: CAS on status COMPLETED → REFUNDED.
+              // Prevents double-decrement under concurrent refund clicks
+              // or races with a refund webhook.
+              const refundCas = await tx.pledge.updateMany({
+                where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
                 data: {
                   status: "REFUNDED",
                   lastFailureReason: reason || "Refunded by creator",
                 },
               });
+
+              if (refundCas.count === 0) {
+                // Lost the race — throw to roll back everything in this
+                // transaction (the DivinityCoinTransaction row and the
+                // FulfillmentActivity row). The DC API refund itself
+                // cannot be rolled back, but DC's own idempotency should
+                // have caught the duplicate refund request.
+                throw new Error("Pledge already refunded by concurrent request");
+              }
 
               if (typedPledge.confirmationEmailSent) {
                 await tx.project.update({
@@ -448,14 +476,25 @@ export async function PATCH(
               },
             });
           } else {
-            // Full refund: update pledge status and decrement project stats
-            await tx.pledge.update({
-              where: { id: pledgeId },
+            // Full refund: CAS on status COMPLETED → REFUNDED.
+            // Prevents double-decrement under concurrent refund clicks
+            // or races with charge.refunded webhook. The Stripe refund
+            // itself has already been issued at this point — if we lose
+            // the CAS we throw to roll back the FulfillmentActivity row
+            // (Stripe refund is not rolled back, but Stripe's own
+            // idempotency protects against double-refund at the
+            // provider level).
+            const refundCas = await tx.pledge.updateMany({
+              where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
               data: {
                 status: "REFUNDED",
                 lastFailureReason: reason || "Refunded by creator",
               },
             });
+
+            if (refundCas.count === 0) {
+              throw new Error("Pledge already refunded by concurrent request");
+            }
 
             if (typedPledge.confirmationEmailSent) {
               await tx.project.update({

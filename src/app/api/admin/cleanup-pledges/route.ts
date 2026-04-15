@@ -286,8 +286,16 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Update project stats only if pledge was counted (confirmationEmailSent)
+      // Delete the pledge inside a transaction. Using tx.pledge.delete
+      // as the "compare-and-swap" — if the pledge was already deleted
+      // by a concurrent cleanup call, delete throws P2025 (record not
+      // found), which rolls back the transaction and the stats
+      // decrement never fires. So the double-click is implicitly
+      // guarded by the delete itself.
       await db.$transaction(async (tx) => {
+        // Delete first inside the tx so that if it fails with P2025
+        // the project stats update is rolled back
+        await tx.pledge.delete({ where: { id: pledgeId } });
         if (pledge.confirmationEmailSent) {
           await tx.project.update({
             where: { id: pledge.projectId },
@@ -298,32 +306,47 @@ export async function POST(req: NextRequest) {
           });
           actions.push("Decremented project stats");
         }
-        await tx.pledge.delete({ where: { id: pledgeId } });
       });
       actions.push("Deleted pledge from database");
     } else {
-      // Cancel action - update status
+      // Cancel action - CAS on status to prevent double-decrement
+      // if an admin double-clicks or the request is retried. Only the
+      // first call flips the status; the second finds count === 0
+      // and skips the decrement.
+      let wonCancelCas = false;
       await db.$transaction(async (tx) => {
-        if (pledge.confirmationEmailSent) {
-          await tx.project.update({
-            where: { id: pledge.projectId },
-            data: {
-              backerCount: { decrement: 1 },
-              currentAmount: { decrement: Number(pledge.amount) },
-            },
-          });
-          actions.push("Decremented project stats");
-        }
-        await tx.pledge.update({
-          where: { id: pledgeId },
+        const cancelCas = await tx.pledge.updateMany({
+          where: {
+            id: pledgeId,
+            status: { notIn: ["CANCELLED", "REFUNDED"] },
+            deletedAt: null,
+          },
           data: {
             status: "CANCELLED",
             stripePaymentMethodId: null,
             lastFailureReason: "Cancelled via admin cleanup",
           },
         });
+        if (cancelCas.count === 0) return;
+        wonCancelCas = true;
+
+        if (pledge.confirmationEmailSent) {
+          await tx.project.update({
+            where: { id: pledge.projectId },
+            data: {
+              backerCount: { decrement: 1 },
+              currentAmount: { decrement: Number(pledge.amount) },
+            },
+          });
+          actions.push("Decremented project stats");
+        }
       });
-      actions.push("Updated pledge status to CANCELLED");
+
+      if (wonCancelCas) {
+        actions.push("Updated pledge status to CANCELLED");
+      } else {
+        actions.push("Pledge was already in a terminal state — no-op");
+      }
     }
 
     return NextResponse.json({

@@ -241,26 +241,36 @@ export async function PATCH(
       return NextResponse.json({ error: "Failed to process refund. Please try again." }, { status: 500 });
     }
 
-    // Update pledge and project stats in a transaction
-    await db.$transaction([
-      db.pledge.update({
-        where: { id: pledge.id },
+    // Update pledge and project stats inside a transaction with a
+    // CAS on status: COMPLETED → REFUNDED. Without this CAS, two
+    // concurrent approvals of the same refund request — or a race
+    // between this code path and a provider webhook that also
+    // processed the refund — would both reach this code block and
+    // both decrement project stats.
+    let wonCas = false;
+    await db.$transaction(async (tx) => {
+      const refundCas = await tx.pledge.updateMany({
+        where: { id: pledge.id, status: "COMPLETED", deletedAt: null },
         data: { status: "REFUNDED", lastFailureReason: `Refund approved by creator: ${refundRequest.reason}` },
-      }),
-      // Only decrement stats if they were previously incremented (confirmationEmailSent flag)
-      ...(pledge.confirmationEmailSent ? [
-        db.project.update({
+      });
+
+      if (refundCas.count === 0) return;
+      wonCas = true;
+
+      if (pledge.confirmationEmailSent) {
+        await tx.project.update({
           where: { id: refundRequest.projectId },
           data: {
             backerCount: { decrement: 1 },
             currentAmount: { decrement: Number(pledge.amount) },
           },
-        }),
-      ] : []),
-    ]);
+        });
+      }
+    });
 
-    // Restore reward slot if pledge claimed one (only if stats were incremented)
-    if (pledge.confirmationEmailSent && pledge.rewardId) {
+    // Restore reward slot only if we actually flipped the status
+    // (and pledge was counted in stats to begin with)
+    if (wonCas && pledge.confirmationEmailSent && pledge.rewardId) {
       await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
     }
 

@@ -590,7 +590,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
         - [ ] **cleanup-duplicate-rewards/**
           - [ ] route.ts
         - [ ] **cleanup-pledges/**
-          - [ ] route.ts
+          - [!] route.ts
         - [ ] **consent-banner/**
           - [ ] route.ts
         - [ ] **cron/**
@@ -617,7 +617,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
             - [ ] route.ts
           - [ ] **purge/**
             - [ ] route.ts
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **email-queue/**
           - [ ] route.ts
         - [ ] **emails/**
@@ -692,7 +692,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
           - [ ] route.ts
         - [ ] **pledges/**
           - [ ] **[pledgeId]/**
-            - [ ] route.ts
+            - [!] route.ts
           - [ ] **cleanup/**
             - [ ] route.ts
         - [ ] **prelaunch/**
@@ -726,7 +726,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
         - [ ] **recalculate-pledge-amounts/**
           - [ ] route.ts
         - [ ] **reconcile-pledges/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **reports/**
           - [ ] route.ts
         - [ ] **retailers/**
@@ -764,7 +764,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
           - [ ] route.ts
         - [ ] **transactions/**
           - [ ] **[id]/**
-            - [ ] route.ts
+            - [x] route.ts
           - [ ] **stripe-lookup/**
             - [ ] route.ts
           - [ ] route.ts
@@ -888,7 +888,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
         - [ ] **bank-account/**
           - [ ] route.ts
         - [ ] **dashboard/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **digital-files/**
           - [ ] route.ts
         - [ ] **email/**
@@ -994,7 +994,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
               - [ ] **callback/**
                 - [ ] route.ts
             - [ ] **sku-mapping/**
-              - [ ] route.ts
+              - [x] route.ts
             - [ ] route.ts
           - [ ] **stamps/**
             - [ ] route.ts
@@ -1008,7 +1008,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
             - [ ] route.ts
           - [ ] **updates/**
             - [ ] route.ts
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **marketplace/**
           - [ ] **audio/**
             - [ ] **upload/**
@@ -1048,7 +1048,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
           - [ ] **[pledgeId]/**
             - [ ] **resend-confirmation/**
               - [ ] route.ts
-            - [ ] route.ts
+            - [!] route.ts
           - [ ] **bulk-delete/**
             - [ ] route.ts
           - [ ] **bulk-resend-confirmation/**
@@ -1059,7 +1059,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
           - [ ] route.ts
         - [ ] **refund-requests/**
           - [ ] **[requestId]/**
-            - [ ] route.ts
+            - [!] route.ts
           - [ ] route.ts
         - [ ] **stripe/**
           - [ ] **portal/**
@@ -1119,7 +1119,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
           - [ ] route.ts
         - [ ] **checkout/**
           - [ ] **verify/**
-            - [ ] route.ts
+            - [!] route.ts
           - [ ] route.ts
         - [ ] **companies/**
           - [ ] **[slug]/**
@@ -1128,13 +1128,13 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
         - [ ] **paypal/**
           - [ ] **capture/**
             - [ ] **[orderId]/**
-              - [ ] route.ts
+              - [x] route.ts
         - [ ] **purchase/**
           - [ ] **confirm/**
-            - [ ] route.ts
+            - [x] route.ts
           - [ ] route.ts
         - [ ] **redeem-code/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **stream/**
           - [ ] **[slug]/**
             - [ ] route.ts
@@ -1159,7 +1159,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
       - [ ] **paypal/**
         - [ ] **capture/**
           - [ ] **[orderId]/**
-            - [ ] route.ts
+            - [x] route.ts
         - [ ] **client-token/**
           - [ ] route.ts
         - [ ] **config/**
@@ -1175,8 +1175,8 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
           - [ ] **confirm-add-items/**
             - [ ] route.ts
           - [ ] **confirm-modify/**
-            - [ ] route.ts
-          - [ ] route.ts
+            - [x] route.ts
+          - [!] route.ts
         - [ ] **check/**
           - [ ] route.ts
         - [ ] route.ts
@@ -1381,7 +1381,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
           - [ ] route.ts
         - [ ] **confirm/**
           - [ ] **[pledgeId]/**
-            - [ ] route.ts
+            - [x] route.ts
     - [ ] **backer-handbook/**
       - [ ] layout.tsx
       - [ ] page.tsx
@@ -1988,7 +1988,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
       - [ ] settings-integration.ts
       - [ ] user-interests.ts
     - [ ] **auth/**
-      - [ ] actions.ts
+      - [x] actions.ts
       - [ ] constants.ts
       - [ ] email-access.ts
       - [ ] index.ts
@@ -2029,7 +2029,7 @@ backer number logic was moved BEFORE the CAS and called unconditionally.
         - [ ] types.ts
         - [ ] webhooks.ts
       - [ ] **paypal/**
-        - [ ] capture-authorized.ts
+        - [!] capture-authorized.ts
         - [ ] checkout.ts
         - [ ] config.ts
         - [ ] index.ts

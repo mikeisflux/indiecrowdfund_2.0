@@ -69,12 +69,15 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
       if (!captureRes.ok) {
         const errBody = await captureRes.text();
         captureLogger.error({ pledgeId: pledge.id, err: errBody }, "Failed to capture PayPal authorization");
-        await db.pledge.update({
-          where: { id: pledge.id },
+        // CAS from PENDING → FAILED. Prevents double-decrement of
+        // project stats under concurrent captureAuthorizedPaypalPledges
+        // invocations (cron + funded-campaign trigger can race).
+        const failCas = await db.pledge.updateMany({
+          where: { id: pledge.id, status: "PENDING", deletedAt: null },
           data: { status: "FAILED", lastFailureReason: `PayPal capture failed: ${errBody.slice(0, 200)}` },
         });
-        // Stats were incremented when authorization was confirmed — reverse them on capture failure
-        if (pledge.confirmationEmailSent) {
+        if (failCas.count > 0 && pledge.confirmationEmailSent) {
+          // Stats were incremented when authorization was confirmed — reverse them on capture failure
           await db.project.update({
             where: { id: pledge.projectId },
             data: {
@@ -93,12 +96,13 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
       const captureData = await captureRes.json();
       if (captureData.status !== "COMPLETED") {
         captureLogger.warn({ pledgeId: pledge.id, status: captureData.status }, "PayPal capture not COMPLETED");
-        await db.pledge.update({
-          where: { id: pledge.id },
+        // Same CAS pattern as the above failure branch
+        const failCas = await db.pledge.updateMany({
+          where: { id: pledge.id, status: "PENDING", deletedAt: null },
           data: { status: "FAILED", lastFailureReason: `PayPal capture returned status: ${captureData.status}` },
         });
-        // Stats were incremented when authorization was confirmed — reverse them on capture failure
-        if (pledge.confirmationEmailSent) {
+        if (failCas.count > 0 && pledge.confirmationEmailSent) {
+          // Stats were incremented when authorization was confirmed — reverse them on capture failure
           await db.project.update({
             where: { id: pledge.projectId },
             data: {
@@ -114,11 +118,17 @@ export async function captureAuthorizedPaypalPledges(projectId: string): Promise
         continue;
       }
 
-      // Mark pledge as completed
-      await db.pledge.update({
-        where: { id: pledge.id },
+      // Mark pledge as completed. CAS on PENDING → COMPLETED so
+      // concurrent captures of the same pledge only increment the
+      // success counter once.
+      const completeCas = await db.pledge.updateMany({
+        where: { id: pledge.id, status: "PENDING", deletedAt: null },
         data: { status: "COMPLETED", chargedImmediately: true },
       });
+      if (completeCas.count === 0) {
+        captureLogger.info({ pledgeId: pledge.id }, "PayPal capture succeeded but pledge status already changed — skipping side effects");
+        continue;
+      }
 
       captureLogger.info({ pledgeId: pledge.id }, "PayPal authorization captured successfully");
       successful++;

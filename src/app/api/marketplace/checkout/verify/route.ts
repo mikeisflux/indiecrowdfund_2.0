@@ -86,7 +86,13 @@ export async function GET(request: Request) {
       },
     });
 
-    // Only increment counts if we actually flipped the status (prevents double-counting)
+    // Only increment counts and fire notifications if we actually
+    // flipped the status. Previously the notifications were OUTSIDE
+    // this guard, so a double-verification (user opening the return
+    // URL in two tabs, retry of a dropped connection, etc.) would
+    // fire the purchase/sale notifications twice — each creating
+    // duplicate in-app notifications + duplicate emails to the
+    // buyer and seller.
     if (updated.count > 0) {
       await prisma.$transaction(async (tx) => {
         // Update book purchase count
@@ -107,15 +113,15 @@ export async function GET(request: Request) {
           });
         }
       });
-    }
 
-    // Send notifications (don't await to avoid blocking the response)
-    notifyMarketplacePurchase(purchase.id, "STRIPE").catch((err) =>
-      marketplaceCheckoutVerifyLogger.error({ err: String(err) }, `[CheckoutVerify] Failed to notify purchase ${purchase.id}:`)
-    );
-    notifyMarketplaceSale(purchase.id, "STRIPE").catch((err) =>
-      marketplaceCheckoutVerifyLogger.error({ err: String(err) }, `[CheckoutVerify] Failed to notify sale ${purchase.id}:`)
-    );
+      // Send notifications (don't await to avoid blocking the response)
+      notifyMarketplacePurchase(purchase.id, "STRIPE").catch((err) =>
+        marketplaceCheckoutVerifyLogger.error({ err: String(err) }, `[CheckoutVerify] Failed to notify purchase ${purchase.id}:`)
+      );
+      notifyMarketplaceSale(purchase.id, "STRIPE").catch((err) =>
+        marketplaceCheckoutVerifyLogger.error({ err: String(err) }, `[CheckoutVerify] Failed to notify sale ${purchase.id}:`)
+      );
+    }
 
     return NextResponse.json({
       success: true,

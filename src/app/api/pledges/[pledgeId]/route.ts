@@ -424,14 +424,36 @@ export async function PATCH(
           }
         }
 
-        // Update pledge status to REFUNDED
-        await db.pledge.update({
-          where: { id: pledgeId },
+        // Atomic CAS from COMPLETED → REFUNDED. Without this, a
+        // double-click on the Cancel button (fast retries, flaky
+        // network replaying the POST, or a race with the Stripe
+        // charge.refunded webhook) would both pass the earlier
+        // `pledge.status === "COMPLETED"` check and both decrement
+        // project stats — a double-decrement of backerCount and
+        // currentAmount.
+        //
+        // The upstream provider refund (Stripe/PayPal/Whop/DC) has
+        // already been issued at this point. Providers have their own
+        // idempotency (we check Stripe for existing refunds; PayPal
+        // returns the existing refund on retry; DC's API dedups), so
+        // a lost CAS just means we skip the decrement — the provider
+        // refund itself isn't double-applied.
+        const refundCas = await db.pledge.updateMany({
+          where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
           data: {
             status: "REFUNDED",
             lastFailureReason: body.reason || "Cancelled by backer",
           },
         });
+
+        if (refundCas.count === 0) {
+          return NextResponse.json({
+            success: true,
+            refunded: true,
+            message: "Pledge was already refunded by a concurrent request",
+            alreadyRefunded: true,
+          });
+        }
 
         // Decrement project stats (only if pledge was counted)
         if (pledge.confirmationEmailSent) {
@@ -487,11 +509,24 @@ export async function PATCH(
         await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
       }
 
-      // Update pledge status
-      await db.pledge.update({
-        where: { id: pledgeId },
+      // Atomic CAS from PENDING → CANCELLED. Guards against
+      // double-clicks and concurrent calls from multiple tabs. If
+      // we lose the race the pledge was either already cancelled or
+      // became COMPLETED mid-flight — either way the subsequent
+      // decrement would be incorrect.
+      const cancelCas = await db.pledge.updateMany({
+        where: { id: pledgeId, status: "PENDING", deletedAt: null },
         data: { status: "CANCELLED" },
       });
+
+      if (cancelCas.count === 0) {
+        return NextResponse.json({
+          success: true,
+          refunded: false,
+          message: "Pledge was already cancelled or processed by a concurrent request",
+          alreadyCancelled: true,
+        });
+      }
 
       // Only decrement project stats if pledge was actually confirmed
       if (pledge.confirmationEmailSent) {
@@ -1049,11 +1084,21 @@ export async function DELETE(
       await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
     }
 
-    // Update pledge status
-    await db.pledge.update({
-      where: { id: pledgeId },
+    // Atomic CAS from PENDING → CANCELLED (same guard as the PATCH
+    // branch above at ~line 515). Prevents double-click / race
+    // double-decrements of project stats.
+    const cancelCas = await db.pledge.updateMany({
+      where: { id: pledgeId, status: "PENDING", deletedAt: null },
       data: { status: "CANCELLED" },
     });
+
+    if (cancelCas.count === 0) {
+      return NextResponse.json({
+        success: true,
+        message: "Pledge was already cancelled or processed by a concurrent request",
+        alreadyCancelled: true,
+      });
+    }
 
     // Only decrement project stats if pledge was actually confirmed
     // (stats are only incremented when confirmationEmailSent = true)

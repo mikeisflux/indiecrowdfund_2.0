@@ -259,15 +259,29 @@ export async function PATCH(
         }
       }
 
-      // Update pledge status and CLEAR the payment method ID to prevent any charging
-      await db.pledge.update({
-        where: { id: pledgeId },
+      // Atomic compare-and-swap from PENDING → CANCELLED. Without this,
+      // a double-click on the admin Cancel button (fast retries or a
+      // user double-tapping) would both pass the check at line 232,
+      // both run this update, and both decrement project stats at
+      // line 274 below — causing a double-decrement on backerCount
+      // and currentAmount.
+      const cancelCas = await db.pledge.updateMany({
+        where: { id: pledgeId, status: "PENDING", deletedAt: null },
         data: {
           status: "CANCELLED",
           lastFailureReason: reason || "Cancelled by admin",
           stripePaymentMethodId: null, // Clear to prevent cron from charging
         },
       });
+
+      if (cancelCas.count === 0) {
+        // Lost the race — already cancelled by another concurrent request
+        return NextResponse.json({
+          success: true,
+          message: "Pledge was already cancelled",
+          alreadyCancelled: true,
+        });
+      }
 
       // Only decrement project stats if pledge was counted (confirmationEmailSent is the atomic flag)
       if (pledge.confirmationEmailSent) {
@@ -316,7 +330,16 @@ export async function PATCH(
             );
           }
 
-          // Update pledge and project
+          // Update pledge and project inside a transaction. The
+          // pledge.updateMany here is the atomic CAS on
+          // status: COMPLETED → REFUNDED — if we lose the race (another
+          // concurrent admin refund click, or a webhook refund arriving
+          // mid-flight), the count will be 0 and we throw to roll back
+          // the DivinityCoinTransaction insert we just made. Without
+          // this CAS, two concurrent admin clicks would both see
+          // pledge.status === "COMPLETED" (from the stale `pledge` read
+          // at the top of the handler), both run the update, and both
+          // decrement project stats — a double-decrement.
           await db.$transaction(async (tx) => {
             await tx.divinityCoinTransaction.create({
               data: {
@@ -335,13 +358,19 @@ export async function PATCH(
               },
             });
 
-            await tx.pledge.update({
-              where: { id: pledgeId },
+            const refundCas = await tx.pledge.updateMany({
+              where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
               data: {
                 status: "REFUNDED",
                 lastFailureReason: reason || "Refunded by admin",
               },
             });
+
+            if (refundCas.count === 0) {
+              // Lost the race — throw to abort the transaction and
+              // roll back the DivinityCoinTransaction insert above
+              throw new Error("Pledge already refunded by concurrent request");
+            }
 
             if (pledge.confirmationEmailSent) {
               await tx.project.update({
@@ -420,15 +449,20 @@ export async function PATCH(
             throw new Error(`PayPal refund failed: ${errBody}`);
           }
 
-          // Update pledge status
+          // Update pledge status with CAS to prevent double-decrement
+          // under concurrent admin clicks / races with PayPal webhook.
+          let wonCas = false;
           await db.$transaction(async (tx) => {
-            await tx.pledge.update({
-              where: { id: pledgeId },
+            const refundCas = await tx.pledge.updateMany({
+              where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
               data: {
                 status: "REFUNDED",
                 lastFailureReason: reason || "Refunded by admin",
               },
             });
+
+            if (refundCas.count === 0) return; // CAS lost; fall through
+            wonCas = true;
 
             if (pledge.confirmationEmailSent) {
               await tx.project.update({
@@ -441,14 +475,16 @@ export async function PATCH(
             }
           });
 
-          // Restore reward slot if pledge claimed one
-          if (pledge.confirmationEmailSent && pledge.reward?.id) {
+          // Restore reward slot only if we actually flipped the status
+          if (wonCas && pledge.confirmationEmailSent && pledge.reward?.id) {
             await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
           }
 
           return NextResponse.json({
             success: true,
-            message: "PayPal refund processed successfully",
+            message: wonCas
+              ? "PayPal refund processed successfully"
+              : "PayPal refund was processed at the provider but the pledge was already marked refunded by a concurrent action",
           });
         } catch (paypalError) {
           adminPledgesLogger.error({ err: String(paypalError) }, "PayPal admin refund error:");
@@ -462,14 +498,19 @@ export async function PATCH(
       // Whop refund — mark as refunded in DB; actual payment reversal must be done via Whop dashboard
       if (pledge.paymentProcessor === "WHOP") {
         try {
+          // CAS to prevent double-decrement on concurrent admin clicks
+          let wonCas = false;
           await db.$transaction(async (tx) => {
-            await tx.pledge.update({
-              where: { id: pledgeId },
+            const refundCas = await tx.pledge.updateMany({
+              where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
               data: {
                 status: "REFUNDED",
                 lastFailureReason: reason || "Refunded by admin",
               },
             });
+
+            if (refundCas.count === 0) return;
+            wonCas = true;
 
             if (pledge.confirmationEmailSent) {
               await tx.project.update({
@@ -482,16 +523,18 @@ export async function PATCH(
             }
           });
 
-          adminPledgesLogger.info({ pledgeId, whopCheckoutId: pledge.whopCheckoutId }, "[Admin Whop Refund] Marked as refunded — process payment reversal in Whop dashboard");
+          adminPledgesLogger.info({ pledgeId, whopCheckoutId: pledge.whopCheckoutId, wonCas }, "[Admin Whop Refund] Marked as refunded — process payment reversal in Whop dashboard");
 
-          // Restore reward slot if pledge claimed one
-          if (pledge.confirmationEmailSent && pledge.reward?.id) {
+          // Restore reward slot only if we actually flipped the status
+          if (wonCas && pledge.confirmationEmailSent && pledge.reward?.id) {
             await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
           }
 
           return NextResponse.json({
             success: true,
-            message: "Whop pledge marked as refunded. Please also process the payment reversal in your Whop dashboard.",
+            message: wonCas
+              ? "Whop pledge marked as refunded. Please also process the payment reversal in your Whop dashboard."
+              : "Whop pledge was already marked as refunded by a concurrent action. Please verify the Whop payment reversal status in your Whop dashboard.",
           });
         } catch (whopError) {
           adminPledgesLogger.error({ err: String(whopError) }, "Whop admin refund error:");
@@ -548,35 +591,44 @@ export async function PATCH(
         );
       }
 
-      // Atomically update pledge status and project stats so they can't diverge
-      await db.$transaction([
-        db.pledge.update({
-          where: { id: pledgeId },
+      // Atomically update pledge status and project stats with CAS
+      // on status: COMPLETED → REFUNDED. Prevents double-decrement
+      // under concurrent admin clicks or races with the Stripe
+      // charge.refunded webhook.
+      let wonCas = false;
+      await db.$transaction(async (tx) => {
+        const refundCas = await tx.pledge.updateMany({
+          where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
           data: {
             status: "REFUNDED",
             lastFailureReason: reason || "Refunded by admin",
           },
-        }),
-        // Only decrement stats if they were previously incremented
-        ...(pledge.confirmationEmailSent ? [
-          db.project.update({
+        });
+
+        if (refundCas.count === 0) return;
+        wonCas = true;
+
+        if (pledge.confirmationEmailSent) {
+          await tx.project.update({
             where: { id: pledge.projectId },
             data: {
               backerCount: { decrement: 1 },
               currentAmount: { decrement: Number(pledge.amount) },
             },
-          }),
-        ] : []),
-      ]);
+          });
+        }
+      });
 
-      // Restore reward slot if pledge claimed one
-      if (pledge.confirmationEmailSent && pledge.reward?.id) {
+      // Restore reward slot only if we actually flipped the status
+      if (wonCas && pledge.confirmationEmailSent && pledge.reward?.id) {
         await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
       }
 
       return NextResponse.json({
         success: true,
-        message: "Pledge refunded successfully",
+        message: wonCas
+          ? "Pledge refunded successfully"
+          : "Pledge was already refunded by a concurrent action (Stripe refund was still processed; please verify via dashboard)",
       });
     }
 

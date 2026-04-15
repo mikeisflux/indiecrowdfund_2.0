@@ -90,8 +90,13 @@ export async function GET(req: NextRequest) {
     // --- Process FUNDED projects (met goal, campaign ended) ---
     for (const project of fundedProjects) {
       try {
-        await db.project.update({
-          where: { id: project.id },
+        // Atomic CAS on status: LIVE → FUNDED. Without this CAS, two
+        // concurrent cron runs (overlap + slow first run) would both
+        // findMany the same ended projects and both try to flip them —
+        // the second would succeed (plain update) and fire the same
+        // "FUNDED" notifications / clear prelaunch fields twice.
+        const fundCas = await db.project.updateMany({
+          where: { id: project.id, status: "LIVE", deletedAt: null },
           data: {
             status: "FUNDED",
             ...(project.fundedAt ? {} : { fundedAt: now }),
@@ -101,6 +106,11 @@ export async function GET(req: NextRequest) {
             prelaunchStatus: "DRAFT",
           },
         });
+
+        if (fundCas.count === 0) {
+          cronProcessFailedCampaignsLogger.info(`[Cron Ended Campaigns] "${project.title}" status already transitioned out of LIVE — skipping`);
+          continue;
+        }
 
         results.funded.count++;
         results.funded.projects.push({
@@ -118,6 +128,24 @@ export async function GET(req: NextRequest) {
     // --- Process FAILED projects (didn't meet goal, campaign ended) ---
     for (const project of failedProjects) {
       try {
+        // Atomic CAS on status: LIVE → FAILED before processing any
+        // pledges. If a concurrent cron tick already started processing
+        // this failed campaign, skip immediately — otherwise the
+        // downstream refund loops would attempt to refund the same
+        // pledges twice. (Each refund operation has its own guard via
+        // `where: { status: "COMPLETED" }` on the pledge, but the DC
+        // API call and notification fires at the project level aren't
+        // similarly guarded.)
+        const failCas = await db.project.updateMany({
+          where: { id: project.id, status: "LIVE", deletedAt: null },
+          data: { status: "FAILED" },
+        });
+
+        if (failCas.count === 0) {
+          cronProcessFailedCampaignsLogger.info(`[Cron Ended Campaigns] "${project.title}" status already transitioned out of LIVE — skipping failed-campaign processing`);
+          continue;
+        }
+
         const projectResult = {
           projectId: project.id,
           projectTitle: project.title,
@@ -147,13 +175,8 @@ export async function GET(req: NextRequest) {
         const whopCancelResult = await cancelWhopPledges(project.id);
         projectResult.whopPledgesCancelled = whopCancelResult.count;
 
-        // Update project status to FAILED
-        await db.project.update({
-          where: { id: project.id },
-          data: {
-            status: "FAILED",
-          },
-        });
+        // Note: project status was already flipped to FAILED via the
+        // CAS at the top of this loop iteration — no-op now.
 
         results.failed.count++;
         results.failed.projects.push(projectResult);
