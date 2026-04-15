@@ -127,7 +127,8 @@ export async function POST(req: NextRequest) {
           }
 
           // Maximum-compatibility JPEG encoding for social media:
-          //   - remove ALL metadata (no ICC, no EXIF, no XMP)
+          //   - remove ALL metadata (no ICC, no EXIF, no XMP) — sharp
+          //     strips by default, as long as we DON'T call .withMetadata()
           //   - explicit sRGB color space
           //   - flatten transparent pixels to white (JPEG has no alpha)
           //   - baseline (not progressive — some decoders choke on progressive)
@@ -142,7 +143,6 @@ export async function POST(req: NextRequest) {
               mozjpeg: false,
               chromaSubsampling: "4:2:0",
             })
-            .withMetadata({}) // strip EXIF/XMP but keep basic orientation
             .toBuffer();
 
           await writeFile(jpgPath, jpgBuffer);

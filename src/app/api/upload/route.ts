@@ -184,9 +184,9 @@ export async function POST(req: NextRequest) {
     // directly — no runtime conversion, no CDN cache surprises.
     //
     // Uses maximum-compatibility encoding: baseline JPEG (not progressive),
-    // explicit sRGB color space, no ICC profile, no EXIF/XMP metadata,
+    // explicit sRGB color space, no ICC profile, no EXIF/XMP metadata
+    // (sharp strips by default as long as we don't call .withMetadata),
     // standard libjpeg (not mozjpeg), white-flatten for transparency.
-    // Keeps Facebook's picky image decoder happy.
     if (uploadType === "project" && finalMimeType === "image/webp") {
       try {
         const jpgBuffer = await sharp(finalBuffer)
@@ -198,7 +198,6 @@ export async function POST(req: NextRequest) {
             mozjpeg: false,
             chromaSubsampling: "4:2:0",
           })
-          .withMetadata({})
           .toBuffer();
         const jpgPath = filePath.replace(/\.webp$/i, ".jpg");
         await writeFile(jpgPath, jpgBuffer);
