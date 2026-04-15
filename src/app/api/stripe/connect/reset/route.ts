@@ -13,21 +13,18 @@ export async function DELETE() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Delete user's Stripe config
-    const existingConfig = await db.stripeConfig.findUnique({
+    // Delete user's Stripe config via deleteMany — idempotent on
+    // concurrent DELETE so a double-click doesn't P2025.
+    const deleted = await db.stripeConfig.deleteMany({
       where: { userId: session.user.id },
     });
 
-    if (!existingConfig) {
+    if (deleted.count === 0) {
       return NextResponse.json({
         success: true,
         message: "No Stripe account was connected",
       });
     }
-
-    await db.stripeConfig.delete({
-      where: { userId: session.user.id },
-    });
 
     return NextResponse.json({
       success: true,
