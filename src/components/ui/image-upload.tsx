@@ -39,19 +39,16 @@ export function ImageUpload({
 
   const uploadToServer = useCallback(
     async (file: File): Promise<string | null> => {
-      if (!projectId) {
-        // If no projectId, fall back to base64 (for new projects not yet saved)
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = () => reject(new Error("Failed to read file"));
-          reader.readAsDataURL(file);
-        });
-      }
-
+      // ALWAYS upload to the server — never return a base64 data: URI.
+      // The /api/upload endpoint supports an unsaved project by using the
+      // "temp" projectId (stored in uploads/projects/temp/<type>/<file>).
+      // Returning a data: URI here and letting it flow into basics.imageUrl
+      // used to persist the raw base64 into the Project.imageUrl column,
+      // producing multi-megabyte rows that broke og:image URL generation
+      // and Facebook/X sharing for every project.
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("projectId", projectId);
+      formData.append("projectId", projectId || "temp");
       formData.append("type", uploadType);
 
       const response = await apiFetch("/api/upload", {

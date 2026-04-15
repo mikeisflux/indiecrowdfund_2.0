@@ -9,6 +9,20 @@ import { z } from "zod";
 import { generateProjectSlug } from "@/lib/utils";
 import { getBatchProjectStats } from "@/lib/stats";
 
+// Reject base64 data URIs and other inline content — imageUrl must be a
+// real URL/path, otherwise we get multi-MB rows that break og:image generation.
+const safeImageUrl = z
+  .string()
+  .max(8192)
+  .refine((v) => !v.startsWith("data:"), {
+    message: "imageUrl must be a URL or path, not an inline data URI",
+  })
+  .refine((v) => /^https?:\/\//i.test(v) || v.startsWith("/"), {
+    message: "imageUrl must start with http(s):// or /",
+  })
+  .optional()
+  .nullable();
+
 const createProjectSchema = z.object({
   title: z.string().min(1).max(200),
   subtitle: z.string().max(500).optional(),
@@ -18,7 +32,7 @@ const createProjectSchema = z.object({
   secondaryCategory: z.string().optional().nullable(),
   secondarySubcategory: z.string().optional().nullable(),
   location: z.string().optional(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: safeImageUrl,
   videoUrl: z.string().url().optional().nullable(),
   goalAmount: z.number().positive(),
   durationType: z.enum(["FIXED_DAYS", "END_DATE"]),
