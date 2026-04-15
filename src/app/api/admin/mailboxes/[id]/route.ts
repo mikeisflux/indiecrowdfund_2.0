@@ -107,46 +107,53 @@ export async function PUT(
     }
 
     // Check if email conflicts with another mailbox
-    if (email && email !== existing.email) {
-      const conflict = await db.mailbox.findUnique({
-        where: { email },
+    // Default-clearing + update in a single transaction so two
+    // concurrent "set as default" edits can't leave multiple rows
+    // with isDefault: true. Also catch P2002 on the email @unique
+    // constraint from the TOCTOU findUnique check.
+    let mailbox;
+    try {
+      mailbox = await db.$transaction(async (tx) => {
+        if (isDefault && !existing.isDefault) {
+          await tx.mailbox.updateMany({
+            where: { isDefault: true, id: { not: id } },
+            data: { isDefault: false },
+          });
+        }
+        return tx.mailbox.update({
+          where: { id },
+          data: {
+            ...(name !== undefined && { name }),
+            ...(email !== undefined && { email }),
+            ...(description !== undefined && { description }),
+            ...(color !== undefined && { color }),
+            ...(imapHost !== undefined && { imapHost }),
+            ...(imapPort !== undefined && { imapPort }),
+            ...(smtpHost !== undefined && { smtpHost }),
+            ...(smtpPort !== undefined && { smtpPort }),
+            ...(username !== undefined && { username }),
+            ...(password !== undefined && password !== "••••••••" && { password }),
+            ...(useSSL !== undefined && { useSSL }),
+            ...(isDefault !== undefined && { isDefault }),
+            ...(isActive !== undefined && { isActive }),
+            ...(isCreatorMailbox !== undefined && { isCreatorMailbox }),
+          },
+        });
       });
-      if (conflict) {
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
         return NextResponse.json(
           { error: "A mailbox with this email already exists" },
-          { status: 400 }
+          { status: 409 }
         );
       }
+      throw updateErr;
     }
-
-    // If this is set as default, unset other defaults
-    if (isDefault && !existing.isDefault) {
-      await db.mailbox.updateMany({
-        where: { isDefault: true, id: { not: id } },
-        data: { isDefault: false },
-      });
-    }
-
-    const mailbox = await db.mailbox.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(email !== undefined && { email }),
-        ...(description !== undefined && { description }),
-        ...(color !== undefined && { color }),
-        ...(imapHost !== undefined && { imapHost }),
-        ...(imapPort !== undefined && { imapPort }),
-        ...(smtpHost !== undefined && { smtpHost }),
-        ...(smtpPort !== undefined && { smtpPort }),
-        ...(username !== undefined && { username }),
-        // Only update password if provided and not masked
-        ...(password !== undefined && password !== "••••••••" && { password }),
-        ...(useSSL !== undefined && { useSSL }),
-        ...(isDefault !== undefined && { isDefault }),
-        ...(isActive !== undefined && { isActive }),
-        ...(isCreatorMailbox !== undefined && { isCreatorMailbox }),
-      },
-    });
 
     return NextResponse.json({
       mailbox: {
@@ -202,7 +209,8 @@ export async function DELETE(
       }
     }
 
-    await db.mailbox.delete({
+    // Use deleteMany for idempotency on concurrent DELETE requests
+    await db.mailbox.deleteMany({
       where: { id },
     });
 
