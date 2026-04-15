@@ -151,43 +151,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email already exists
-    const existing = await db.mailbox.findUnique({
-      where: { email },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "A mailbox with this email already exists" },
-        { status: 400 }
-      );
-    }
-
-    // If this is set as default, unset other defaults
-    if (isDefault) {
-      await db.mailbox.updateMany({
-        where: { isDefault: true },
-        data: { isDefault: false },
+    // Run default-clearing and create in a single transaction so two
+    // concurrent "set as default" creates can't leave multiple rows
+    // with isDefault: true. Catches P2002 on the email @unique
+    // constraint from the TOCTOU findUnique race.
+    let mailbox;
+    try {
+      mailbox = await db.$transaction(async (tx) => {
+        if (isDefault) {
+          await tx.mailbox.updateMany({
+            where: { isDefault: true },
+            data: { isDefault: false },
+          });
+        }
+        return tx.mailbox.create({
+          data: {
+            name,
+            email,
+            description: description || null,
+            color: color || "#3B82F6",
+            imapHost: imapHost || null,
+            imapPort: imapPort || null,
+            smtpHost: smtpHost || null,
+            smtpPort: smtpPort || null,
+            username: username || null,
+            password: password || null,
+            useSSL: useSSL !== undefined ? useSSL : true,
+            isDefault: isDefault || false,
+            isCreatorMailbox: isCreatorMailbox || false,
+          },
+        });
       });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "A mailbox with this email already exists" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
     }
-
-    const mailbox = await db.mailbox.create({
-      data: {
-        name,
-        email,
-        description: description || null,
-        color: color || "#3B82F6",
-        imapHost: imapHost || null,
-        imapPort: imapPort || null,
-        smtpHost: smtpHost || null,
-        smtpPort: smtpPort || null,
-        username: username || null,
-        password: password || null,
-        useSSL: useSSL !== undefined ? useSSL : true,
-        isDefault: isDefault || false,
-        isCreatorMailbox: isCreatorMailbox || false,
-      },
-    });
 
     return NextResponse.json({
       mailbox: {

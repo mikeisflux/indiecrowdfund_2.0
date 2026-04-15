@@ -103,30 +103,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check for duplicate keyword
-    const existing = await db.seoKeyword.findFirst({
-      where: { keyword: keyword.trim().toLowerCase() },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "Keyword already exists" },
-        { status: 409 }
-      );
+    // Create with P2002 catch on keyword @unique. The findFirst check
+    // is TOCTOU under concurrent creates.
+    let newKeyword;
+    try {
+      newKeyword = await db.seoKeyword.create({
+        data: {
+          keyword: keyword.trim().toLowerCase(),
+          category: category || null,
+          targetPages: targetPages || [],
+          currentRank: currentRank ?? null,
+          searchVolume: searchVolume ?? null,
+          difficulty: difficulty ?? null,
+          isTracked: isTracked ?? true,
+          notes: notes || null,
+        },
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "Keyword already exists" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
     }
-
-    const newKeyword = await db.seoKeyword.create({
-      data: {
-        keyword: keyword.trim().toLowerCase(),
-        category: category || null,
-        targetPages: targetPages || [],
-        currentRank: currentRank ?? null,
-        searchVolume: searchVolume ?? null,
-        difficulty: difficulty ?? null,
-        isTracked: isTracked ?? true,
-        notes: notes || null,
-      },
-    });
 
     return NextResponse.json({
       data: newKeyword,

@@ -102,14 +102,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const redirect = await db.seoRedirect.create({
-      data: {
-        fromPath: normalizedFrom,
-        toPath: normalizedTo,
-        statusCode: redirectStatusCode,
-        isActive: isActive ?? true,
-      },
-    });
+    let redirect;
+    try {
+      redirect = await db.seoRedirect.create({
+        data: {
+          fromPath: normalizedFrom,
+          toPath: normalizedTo,
+          statusCode: redirectStatusCode,
+          isActive: isActive ?? true,
+        },
+      });
+    } catch (createErr) {
+      // P2002 on fromPath @unique — the findFirst check above is TOCTOU.
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "A redirect from this path already exists" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
+    }
 
     return NextResponse.json({
       data: redirect,

@@ -143,32 +143,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if slug already exists
-    const existing = await db.customPage.findUnique({
-      where: { slug }
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "A page with this slug already exists" },
-        { status: 400 }
-      );
-    }
-
-    const page = await db.customPage.create({
-      data: {
-        slug,
-        title,
-        description,
-        content: content || { blocks: [] },
-        metaTitle,
-        metaDescription,
-        ogImage,
-        isPublished: isPublished || false,
-        publishedAt: isPublished ? new Date() : null,
-        createdBy: authResult.user.id
+    // Create with P2002 catch on slug @unique — the findUnique check
+    // is TOCTOU under concurrent creates.
+    let page;
+    try {
+      page = await db.customPage.create({
+        data: {
+          slug,
+          title,
+          description,
+          content: content || { blocks: [] },
+          metaTitle,
+          metaDescription,
+          ogImage,
+          isPublished: isPublished || false,
+          publishedAt: isPublished ? new Date() : null,
+          createdBy: authResult.user.id
+        }
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "A page with this slug already exists" },
+          { status: 409 }
+        );
       }
-    });
+      throw createErr;
+    }
 
     return NextResponse.json({ success: true, page });
   } catch (error) {
