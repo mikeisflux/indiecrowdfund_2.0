@@ -40,7 +40,9 @@ import {
   Edit3,
   Move,
   Download,
+  Wrench,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // Types
 import type {
@@ -88,6 +90,7 @@ export default function MediaPage() {
   const [scanning, setScanning] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [recovering, setRecovering] = useState(false);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [stats, setStats] = useState<MediaStats | null>(null);
@@ -181,6 +184,49 @@ export default function MediaPage() {
       setShowUploadDialog(false);
       fetchMedia();
     }, 1000);
+  };
+
+  const handleRecoverBase64 = async () => {
+    if (recovering) return;
+    if (
+      !confirm(
+        "Recover corrupt project cover images?\n\nThis will scan every project for imageUrl values that contain base64 data URIs, decode them to real image files, and store them on disk. Safe to run multiple times."
+      )
+    ) {
+      return;
+    }
+    setRecovering(true);
+    const loadingToast = toast.loading("Recovering corrupt project images...");
+    try {
+      const res = await apiFetch("/api/admin/projects/recover-base64-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      toast.dismiss(loadingToast);
+      if (!res.ok) {
+        toast.error(data.error || "Recovery failed");
+        return;
+      }
+      const { recovered, failed, skipped, total } = data;
+      if (total === 0) {
+        toast.info("No corrupt project images found — nothing to recover");
+      } else if (failed === 0 && skipped === 0) {
+        toast.success(`Recovered ${recovered} of ${total} projects`);
+      } else {
+        toast.warning(
+          `Recovered ${recovered}/${total} • ${failed} failed • ${skipped} skipped — check server logs for details`
+        );
+      }
+      // Refresh the media grid so the new files show up
+      fetchMedia();
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      console.error("Recover error:", err);
+      toast.error(err instanceof Error ? err.message : "Recovery request failed");
+    } finally {
+      setRecovering(false);
+    }
   };
 
   const removeUploadFile = (index: number) => {
@@ -540,6 +586,22 @@ export default function MediaPage() {
             <Button variant="outline" onClick={() => fetchMedia()} className="flex-1 sm:flex-none">
               <RefreshCw className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Refresh</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRecoverBase64}
+              disabled={recovering}
+              className="flex-1 sm:flex-none border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
+              title="Decode base64 data URIs stored in Project.imageUrl and write them to disk as real image files"
+            >
+              {recovering ? (
+                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+              ) : (
+                <Wrench className="h-4 w-4 sm:mr-2" />
+              )}
+              <span className="hidden sm:inline">
+                {recovering ? "Recovering..." : "Recover Base64 Covers"}
+              </span>
             </Button>
             <Button variant="outline" onClick={openScanDialog} className="flex-1 sm:flex-none">
               <Download className="h-4 w-4 sm:mr-2" />
