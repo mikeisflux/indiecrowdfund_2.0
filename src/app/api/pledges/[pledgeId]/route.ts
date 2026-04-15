@@ -148,9 +148,13 @@ export async function GET(
     }
 
     const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
-    const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status);
-    const campaignActive = pledge.project.status === "LIVE" &&
-      !(pledge.project.endDate && new Date(pledge.project.endDate) < new Date());
+    // A campaign is "closed" if its status has been flipped OR its endDate has
+    // passed (the hourly cron may not have run yet). Backers must not be able
+    // to process an immediate refund once the campaign has ended — they must
+    // go through the refund-request flow which requires creator approval.
+    const endDatePassed = !!(pledge.project.endDate && new Date(pledge.project.endDate) < new Date());
+    const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status) || endDatePassed;
+    const campaignActive = pledge.project.status === "LIVE" && !endDatePassed;
 
     // Build project URL with vanity URL if available
     const projectUrl = pledge.project.creator.vanityUrl
@@ -253,8 +257,12 @@ export async function PATCH(
     }
 
     const isFunded = Number(pledge.project.currentAmount) >= Number(pledge.project.goalAmount) || pledge.project.status === "FUNDED";
-    const campaignEnded = pledge.project.endDate && new Date(pledge.project.endDate) < new Date();
-    const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status);
+    const campaignEnded = !!(pledge.project.endDate && new Date(pledge.project.endDate) < new Date());
+    // A campaign is "closed" for refund-gating purposes if its status has been
+    // flipped OR its endDate has passed. Without the endDate check, backers can
+    // exploit the hourly window between campaign end and the cron running to
+    // process an immediate refund that should have required creator approval.
+    const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status) || campaignEnded;
     if (action === "cancel") {
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
 
