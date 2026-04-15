@@ -206,22 +206,19 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Check if key exists
-    const existingKey = await db.apiKey.findUnique({
+    // Delete the key via deleteMany so a concurrent second DELETE
+    // request doesn't throw P2025 (record not found) — treat the
+    // second delete as a success (idempotent).
+    const deleted = await db.apiKey.deleteMany({
       where: { id: keyId },
     });
 
-    if (!existingKey) {
+    if (deleted.count === 0) {
       return NextResponse.json(
         { error: "API key not found" },
         { status: 404 }
       );
     }
-
-    // Delete the key
-    await db.apiKey.delete({
-      where: { id: keyId },
-    });
 
     return NextResponse.json({
       success: true,

@@ -100,32 +100,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Name and city are required" }, { status: 400 });
     }
 
-    // Generate unique slug
+    // Generate unique slug with P2002 retry loop. The findUnique
+    // checks above are TOCTOU; under concurrent creates the retry
+    // loop appends a timestamp suffix until we succeed or exhaust
+    // attempts.
     let slug = slugify(name);
     const existing = await db.comicShop.findUnique({ where: { slug } });
     if (existing) {
       slug = `${slug}-${city.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-      const existing2 = await db.comicShop.findUnique({ where: { slug } });
-      if (existing2) {
+    }
+
+    let shop;
+    let attempts = 0;
+    while (true) {
+      try {
+        shop = await db.comicShop.create({
+          data: {
+            name,
+            slug,
+            city,
+            state: state || null,
+            zipCode: zipCode || null,
+            country: country || "USA",
+            region: region || null,
+            address: address || null,
+            phone: phone || null,
+            email: email || null,
+            website: website || null,
+          },
+        });
+        break;
+      } catch (createErr) {
+        const isUniqueViolation =
+          createErr &&
+          typeof createErr === "object" &&
+          "code" in createErr &&
+          (createErr as { code?: string }).code === "P2002";
+        if (!isUniqueViolation || attempts >= 5) throw createErr;
+        attempts++;
         slug = `${slug}-${Date.now()}`;
       }
     }
-
-    const shop = await db.comicShop.create({
-      data: {
-        name,
-        slug,
-        city,
-        state: state || null,
-        zipCode: zipCode || null,
-        country: country || "USA",
-        region: region || null,
-        address: address || null,
-        phone: phone || null,
-        email: email || null,
-        website: website || null,
-      },
-    });
 
     return NextResponse.json(shop);
   } catch (error) {
