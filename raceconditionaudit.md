@@ -487,6 +487,16 @@ see two rows and potentially transfer twice.
 **Fix:** Added advisory-lock-guarded `$transaction` with an
 existence check for PENDING/PROCESSING/COMPLETED PayPalPayouts.
 
+### Finding #36 — admin prelaunch review TOCTOU (session 5)
+**File:** `src/app/api/admin/prelaunch/route.ts`
+**Impact:** Same pattern as Finding #29 but for prelaunch pages. Two
+admins clicking Approve/Reject simultaneously on the same prelaunch
+would both pass the existence check, both flip status, create
+duplicate ProjectReview rows, and double-promote the creator from
+USER to CREATOR role.
+**Fix:** CAS on `prelaunchStatus` matching the value we read above,
+before the ProjectReview.create and user role promotion.
+
 ### Finding #35 — admin DC settlement create (session 5)
 **File:** `src/app/api/admin/payouts/divinitycoin/route.ts`
 **Impact:** Creates COMPLETED settlement immediately (not PENDING),

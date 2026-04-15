@@ -235,18 +235,34 @@ export async function PUT(req: NextRequest) {
     const willActivate = !!(updateData.prelaunchActive);
     const shouldPromoteCreator = willActivate && project.creator?.role === "USER" && project.creatorId;
 
-    // Atomically update project, create review record, and optionally promote creator role
+    // CAS on prelaunchStatus matching the value we read above, so two
+    // admins approving/rejecting the same prelaunch page can't both
+    // create duplicate ProjectReview rows and both promote the creator.
+    const casResult = await db.project.updateMany({
+      where: {
+        id: projectId,
+        prelaunchStatus: project.prelaunchStatus,
+        deletedAt: null,
+      },
+      data: updateData,
+    });
+
+    if (casResult.count === 0) {
+      return NextResponse.json(
+        { error: "Prelaunch status changed — another admin may have already acted. Please refresh." },
+        { status: 409 }
+      );
+    }
+
     const [updatedProject] = await db.$transaction([
-      db.project.update({
+      db.project.findUnique({
         where: { id: projectId },
-        data: updateData,
         select: {
           id: true,
           prelaunchStatus: true,
           prelaunchActive: true,
         },
       }),
-
       db.projectReview.create({
         data: {
           projectId,
@@ -257,7 +273,6 @@ export async function PUT(req: NextRequest) {
           flagsRaised: ["prelaunch_admin_action"],
         },
       }),
-
       ...(shouldPromoteCreator
         ? [db.user.update({ where: { id: project.creatorId! }, data: { role: "CREATOR" } })]
         : []),
