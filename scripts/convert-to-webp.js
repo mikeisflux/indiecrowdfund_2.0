@@ -52,6 +52,23 @@ function verbose(message) {
 }
 
 /**
+ * Check if a path is a "companion" JPG/PNG kept intentionally alongside
+ * a WebP of the same basename (used for social media share previews where
+ * Facebook/X/LinkedIn reject WebP). These files must NEVER be converted
+ * or deleted — doing so breaks Facebook share previews for every project.
+ */
+async function hasWebpCompanion(imagePath) {
+  const webpPath = imagePath.replace(/\.(png|jpe?g)$/i, '.webp');
+  if (webpPath === imagePath) return false;
+  try {
+    await fs.access(webpPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Recursively find all image files in a directory
  */
 async function findImages(dir) {
@@ -69,6 +86,15 @@ async function findImages(dir) {
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
         if (['.png', '.jpg', '.jpeg'].includes(ext)) {
+          // Skip files that have a .webp sibling — they're intentional
+          // companions for social media sharing (Facebook/X/LinkedIn reject
+          // WebP images, so we pre-generate .jpg copies alongside every
+          // project cover .webp file).
+          if (await hasWebpCompanion(fullPath)) {
+            verbose(`Skipping companion file: ${path.basename(fullPath)} (webp sibling exists)`);
+            stats.skipped++;
+            continue;
+          }
           images.push(fullPath);
         }
       }
