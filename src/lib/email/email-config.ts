@@ -592,6 +592,11 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
   let errors = 0;
   let claimedId: string | null = null;
 
+  // Periodically purge old SENT rows so the queue doesn't grow unboundedly.
+  // Throttled to once per hour — safe to call on every tick; returns early
+  // most of the time. Fire-and-forget to keep queue processing fast.
+  maybeSweepOldSentEmails().catch(() => {});
+
   try {
     // Atomically claim the next pending email to prevent race conditions
     // Uses UPDATE ... RETURNING to find and claim in a single query
@@ -653,6 +658,11 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
     const result = await Promise.race([sendPromise, timeoutPromise]);
 
     if (result.success) {
+      // Mark as SENT with a timestamp so the periodic sweep (below) can
+      // delete it after a short retention window. We keep SENT rows for
+      // a few days for debugging/audit ("did that receipt actually go out?")
+      // but never forever — otherwise the queue becomes a 200+ MB append-only
+      // log masquerading as a queue.
       await db.emailQueue.update({
         where: { id: queueEntry.id },
         data: {
@@ -768,6 +778,57 @@ export async function getEmailQueueStats(): Promise<{
     enabled: settings?.emailQueueEnabled ?? true,
     pausedAt: settings?.emailQueuePausedAt ?? null,
   };
+}
+
+/**
+ * Delete SENT rows older than the retention window to prevent the queue
+ * from growing unboundedly. EmailQueue is a QUEUE, not a log — sent rows
+ * should be purged. EmailLog is the proper place for long-term audit.
+ *
+ * Default: keep SENT rows for 3 days (enough to debug "did X actually send
+ * yesterday"), delete anything older. Uses a batch LIMIT so a runaway
+ * backlog never blocks the main queue tick for long.
+ *
+ * Called periodically by processEmailQueue (throttled to once per hour)
+ * and can be invoked manually by the admin "Prune Email Queue" action.
+ */
+export async function sweepOldSentEmails(
+  retentionDays: number = 3,
+  maxDeletePerCall: number = 5000
+): Promise<number> {
+  try {
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    // Raw SQL with LIMIT for a bounded batch delete — Prisma's deleteMany
+    // doesn't support LIMIT, and we don't want a single statement
+    // potentially deleting hundreds of thousands of rows at once.
+    const result = await db.$executeRaw`
+      DELETE FROM "EmailQueue"
+      WHERE "id" IN (
+        SELECT "id" FROM "EmailQueue"
+        WHERE "status" = 'SENT'
+          AND "sentAt" < ${cutoff}
+        LIMIT ${maxDeletePerCall}
+      )
+    `;
+    if (result > 0) {
+      emailLogger.info(`[Email Queue] Swept ${result} old SENT rows (older than ${retentionDays}d)`);
+    }
+    return result;
+  } catch (error) {
+    emailLogger.error({ err: error }, "[Email Queue] Error sweeping old SENT rows:");
+    return 0;
+  }
+}
+
+// Throttle the inline sweep so it only runs occasionally from the main tick
+let lastSweepAt = 0;
+const SWEEP_INTERVAL_MS = 60 * 60 * 1000; // once per hour
+
+export async function maybeSweepOldSentEmails(): Promise<void> {
+  const now = Date.now();
+  if (now - lastSweepAt < SWEEP_INTERVAL_MS) return;
+  lastSweepAt = now;
+  await sweepOldSentEmails();
 }
 
 // Auto-recover emails stuck in PROCESSING for more than 5 seconds
