@@ -684,19 +684,42 @@ return 400 instead of a generic 500.
 
 ## Audit totals
 
-Sessions 1-12 cumulative:
-- **70+ race conditions fixed** across ~100 files
+Sessions 1-18 cumulative:
+- **95+ race conditions fixed** across ~130 files
 - **13 distinct patterns** used: CAS via updateMany/deleteMany, P2002
-  catch, Prisma upsert, advisory locks, row locks via FOR UPDATE,
-  $transaction wrapping, dedup time-windows, idempotent deleteMany,
-  NOT-wrapper for Prisma 7 nullable strings, and more.
+  catch, Prisma upsert, advisory locks (pg_advisory_xact_lock), row
+  locks via SELECT FOR UPDATE, $transaction wrapping, dedup time-
+  windows (60s same-key), idempotent deleteMany, NOT-wrapper for
+  Prisma 7 nullable strings, Message-Id webhook dedup, and more.
 - **2 production 500s hotfixed** during the audit
 - **Finding categories covered:** webhook idempotency, state-machine
-  transitions (pledge/project/payout/review), reward slot claiming,
-  reward/addon cooperation under concurrent pledges, money flows
-  (Stripe/PayPal/DC/Whop), email delivery + tracking, survey
-  workflow, admin CRUD, creator CRUD, backer actions, marketplace
-  purchases, retailer application, GDPR flows.
+  transitions (pledge/project/payout/review/prelaunch), reward slot
+  claiming, reward/addon cooperation under concurrent pledges, money
+  flows (Stripe/PayPal/DC/Whop), email delivery + tracking + inbound,
+  survey workflow, admin CRUD, creator CRUD, backer actions,
+  marketplace purchases + redemption, retailer application + reset,
+  GDPR deletion + data export, auto-seed defaults, batch admin
+  operations (backfill, recalculate), CSV imports, JSON metadata
+  merge operations, session 6's critical confirm-add-items
+  double-charge.
+
+### Known deferred gaps (session 18)
+
+- **middleware.ts in-memory rate limiters** (4 Maps) — per-worker
+  state won't coordinate across 4 PM2 workers. Fix requires Redis
+  or similar shared store. Not fixable at the route-handler layer.
+- **trackCampaignConversion click-update** — two concurrent
+  conversions for the same user could both update the same click
+  row with the same `converted: true` payload. Idempotent, negligible.
+- **error-tracker eventCount** — uses findUnique+create+P2002 catch
+  already, clean.
+- **admin-only batch tools** (recalculate-pledge-amounts, reconcile-
+  pledges, ai-marketing/run/auto-tag) — low-concurrency, admin-only,
+  diagnostic tools. Last-write-wins is acceptable.
+- **src/components/** — React UI, client-side only. Zero server-side
+  race surface.
+- **src/app page-level files** — no server actions, just RSC data
+  fetching. Read-only, clean.
 
 ### Finding #35 — admin DC settlement create (session 5)
 **File:** `src/app/api/admin/payouts/divinitycoin/route.ts`
