@@ -155,14 +155,24 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Campaign has already been sent" }, { status: 400 });
       }
 
-      // Mark as sending (actual sending would be done via a background job)
-      await db.emailCampaign.update({
-        where: { id: campaignId },
+      // Mark as sending with a CAS guard — the status check above is
+      // TOCTOU. Two concurrent sends (double-click, retry) would both
+      // pass the check and both queue background send jobs.
+      const sendCas = await db.emailCampaign.updateMany({
+        where: {
+          id: campaignId,
+          createdBy: session.user.id,
+          status: { notIn: ["SENDING", "SENT"] },
+        },
         data: {
           status: "SENDING",
           sentAt: new Date(),
         },
       });
+
+      if (sendCas.count === 0) {
+        return NextResponse.json({ error: "Campaign has already been sent" }, { status: 400 });
+      }
 
       return NextResponse.json({ success: true, message: "Campaign queued for sending" });
     }

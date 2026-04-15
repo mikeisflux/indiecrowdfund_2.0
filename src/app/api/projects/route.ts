@@ -314,31 +314,63 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const project = await db.project.create({
-      data: {
-        creatorId: session.user.id,
-        title: validatedData.title,
-        subtitle: validatedData.subtitle,
-        slug,
-        category: validatedData.category,
-        subcategory: validatedData.subcategory,
-        secondaryCategory: validatedData.secondaryCategory,
-        secondarySubcategory: validatedData.secondarySubcategory,
-        location: validatedData.location,
-        imageUrl: validatedData.imageUrl,
-        videoUrl: validatedData.videoUrl,
-        goalAmount: validatedData.goalAmount,
-        durationType: validatedData.durationType,
-        durationDays: validatedData.durationDays,
-        endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
-        launchDate: validatedData.launchDate ? new Date(validatedData.launchDate) : null,
-        description: "",
-        risks: "",
-        contactEmail: session.user.email || "",
-        projectType: "INDIVIDUAL",
-        status: "DRAFT",
-      },
-    });
+    // Create with P2002 retry loop on slug collision. The slug check
+    // above is TOCTOU — two concurrent creates with the same title
+    // (or the same custom slug) would both pass the check and only
+    // one would succeed, returning a 500. Retry up to 5 times with a
+    // random suffix so auto-generated slugs aren't exposed to races.
+    let project;
+    let attempts = 0;
+    while (true) {
+      try {
+        project = await db.project.create({
+          data: {
+            creatorId: session.user.id,
+            title: validatedData.title,
+            subtitle: validatedData.subtitle,
+            slug,
+            category: validatedData.category,
+            subcategory: validatedData.subcategory,
+            secondaryCategory: validatedData.secondaryCategory,
+            secondarySubcategory: validatedData.secondarySubcategory,
+            location: validatedData.location,
+            imageUrl: validatedData.imageUrl,
+            videoUrl: validatedData.videoUrl,
+            goalAmount: validatedData.goalAmount,
+            durationType: validatedData.durationType,
+            durationDays: validatedData.durationDays,
+            endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
+            launchDate: validatedData.launchDate ? new Date(validatedData.launchDate) : null,
+            description: "",
+            risks: "",
+            contactEmail: session.user.email || "",
+            projectType: "INDIVIDUAL",
+            status: "DRAFT",
+          },
+        });
+        break;
+      } catch (createErr) {
+        const isUniqueViolation =
+          createErr &&
+          typeof createErr === "object" &&
+          "code" in createErr &&
+          (createErr as { code?: string }).code === "P2002";
+        if (!isUniqueViolation || attempts >= 5) {
+          // Custom-slug collisions should surface to the user so they
+          // can pick a different URL; auto-gen slugs should retry.
+          if (isUniqueViolation && validatedData.slug) {
+            return NextResponse.json(
+              { error: "This URL is already taken. Please choose a different one.", correlationId },
+              { status: 409, headers: { [CORRELATION_HEADER]: correlationId } }
+            );
+          }
+          throw createErr;
+        }
+        attempts++;
+        const randomSuffix = Math.random().toString(36).substring(2, 10);
+        slug = `${slug.replace(/-[a-z0-9]{4,}$/, "")}-${randomSuffix}`;
+      }
+    }
 
     // Silently add platform owner as collaborator with full permissions on every new project
     // Skip if the creator IS the platform owner

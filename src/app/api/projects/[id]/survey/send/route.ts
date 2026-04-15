@@ -98,18 +98,28 @@ export async function POST(
       );
     }
 
-    // Update survey status and create empty responses for each backer
-    await db.$transaction(async (tx) => {
-      // Update survey status
-      await tx.survey.update({
-        where: { id: survey.id },
-        data: {
-          status: "SENT",
-          sentAt: new Date(),
-        },
-      });
+    // CAS on survey status so two concurrent "Send Survey" clicks
+    // don't both create SurveyResponse rows and both fire duplicate
+    // notifications to every backer. The status check above is
+    // TOCTOU without this.
+    const sendCas = await db.survey.updateMany({
+      where: { id: survey.id, status: { notIn: ["SENT", "LOCKED"] } },
+      data: {
+        status: "SENT",
+        sentAt: new Date(),
+      },
+    });
 
-      // Create survey responses for each pledge (if not exists)
+    if (sendCas.count === 0) {
+      return NextResponse.json(
+        { error: "Survey has already been sent" },
+        { status: 400 }
+      );
+    }
+
+    // Create empty responses and reset pledge survey flags — only
+    // runs if we won the CAS above.
+    await db.$transaction(async (tx) => {
       for (const pledge of pledges) {
         const existingResponse = await tx.surveyResponse.findUnique({
           where: { pledgeId: pledge.id },
@@ -125,7 +135,6 @@ export async function POST(
           });
         }
 
-        // Update pledge to show survey is pending
         await tx.pledge.update({
           where: { id: pledge.id },
           data: { surveyCompleted: false },

@@ -171,15 +171,43 @@ export async function POST(request: Request) {
       );
     }
 
-    // Set the vanity URL
-    const updatedUser = await db.user.update({
-      where: { id: session.user.id },
-      data: { vanityUrl: normalizedUrl },
-      select: { vanityUrl: true },
-    });
+    // Set the vanity URL with a CAS on vanityUrl: null (user can't
+    // change once set) — the `existingUser.vanityUrl` check above is
+    // TOCTOU under double-clicks or retries. Also catch P2002 for the
+    // cross-user race (two different users claiming the same URL).
+    let updatedUser;
+    try {
+      const updateResult = await db.user.updateMany({
+        where: { id: session.user.id, vanityUrl: null, deletedAt: null },
+        data: { vanityUrl: normalizedUrl },
+      });
+      if (updateResult.count === 0) {
+        return NextResponse.json(
+          { error: "Vanity URL has already been set and cannot be changed" },
+          { status: 400 }
+        );
+      }
+      updatedUser = await db.user.findFirst({
+        where: { id: session.user.id, deletedAt: null },
+        select: { vanityUrl: true },
+      });
+    } catch (setErr) {
+      const isUniqueViolation =
+        setErr &&
+        typeof setErr === "object" &&
+        "code" in setErr &&
+        (setErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "This URL is already taken" },
+          { status: 409 }
+        );
+      }
+      throw setErr;
+    }
 
     return NextResponse.json({
-      vanityUrl: updatedUser.vanityUrl,
+      vanityUrl: updatedUser?.vanityUrl,
       success: true,
     });
   } catch (error) {

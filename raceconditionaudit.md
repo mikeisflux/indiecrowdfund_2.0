@@ -246,6 +246,186 @@ each of the three branches. Side effects only fire for the caller that wins
 the CAS. `assignBackerNumber` was already row-locked and idempotent, so the
 backer number logic was moved BEFORE the CAS and called unconditionally.
 
+### Finding #7 — admin/pledges cancel + 4 refund branches TOCTOU (session 2)
+**File:** `src/app/api/admin/pledges/[pledgeId]/route.ts`
+**Pattern:** (1) check-then-act + (6) state machine transitions
+**Impact:** Admin cancel path: two concurrent cancels of the same PENDING
+pledge would both decrement project counters and reward slots. Four refund
+branches (DC/PayPal/Whop/Stripe): concurrent admin refunds of the same
+COMPLETED pledge would both call the provider refund API (provider
+idempotency saves the refund itself, but backerCount/currentAmount/
+quantityClaimed would get decremented twice).
+
+**Fix:** CAS on `status: "PENDING" → "CANCELLED"` for cancel, CAS on
+`status: "COMPLETED" → "REFUNDED"` for refund. `wonCas` flag controls
+reward slot restoration so it only runs for the admin that wins.
+
+### Finding #8 — creator/pledges cancel + DC/Stripe refunds TOCTOU (session 2)
+**File:** `src/app/api/creator/pledges/[pledgeId]/route.ts`
+**Pattern:** same as #7
+**Fix:** CAS on status transitions. DC and Stripe refund branches throw
+from inside the transaction on CAS loss so DivinityCoinTransaction and
+FulfillmentActivity side-effect rows are rolled back with the main tx.
+
+### Finding #9 — backer-facing pledges cancel/refund/DELETE TOCTOU (session 2)
+**File:** `src/app/api/pledges/[pledgeId]/route.ts`
+**Pattern:** same as #7, backer-triggered
+**Fix:** 3 branches CAS-guarded. Returns `alreadyRefunded`/`alreadyCancelled`
+flags for idempotent client UX on double-clicks.
+
+### Finding #10 — creator refund-request approve TOCTOU (session 2)
+**File:** `src/app/api/creator/refund-requests/[requestId]/route.ts`
+**Pattern:** same as #7
+**Fix:** Approve flow CAS on `status: "COMPLETED" → "REFUNDED"`. Reward
+slot restoration gated on `wonCas` flag.
+
+### Finding #11 — cron process-failed-campaigns FUNDED/FAILED transitions (session 2)
+**File:** `src/app/api/cron/process-failed-campaigns/route.ts`
+**Pattern:** (1) TOCTOU + cron overlap
+**Impact:** FUNDED transition without CAS would double-fire `notifyProjectFunded`
+and clear prelaunch fields twice under cron overlap. FAILED transition would
+attempt to refund the same pledges twice since the downstream refund loops
+only had per-pledge guards, not project-level guards for the DC API call
+and notification fires.
+**Fix:** CAS on `status: "LIVE" → "FUNDED"` / `"LIVE" → "FAILED"` at the top
+of each loop iteration. Removed the duplicate `project.update` at the old
+bottom of the FAILED branch.
+
+### Finding #12 — PayPal captureAuthorizedPaypalPledges triple TOCTOU (session 2)
+**File:** `src/lib/payments/paypal/capture-authorized.ts`
+**Pattern:** (1) check-then-act in 3 branches
+**Impact:** Called from funded-campaign trigger AND cron — both can race
+when a project funds. All 3 branches (capture failed, capture not COMPLETED,
+success) would double-decrement or double-increment project stats.
+**Fix:** CAS on `status: "PENDING"` in each branch. Side effects gated
+on CAS win.
+
+### Finding #13 — admin/cleanup-pledges delete ordering + cancel branch (session 2)
+**File:** `src/app/api/admin/cleanup-pledges/route.ts`
+**Fix:** Delete branch reordered so `pledge.delete` runs BEFORE the counter
+decrement inside the transaction (P2025 rolls the whole tx back on a lost
+race). Cancel branch gated with `wonCancelCas` flag.
+
+### Finding #14 — marketplace checkout/verify notification double-fire (session 2)
+**File:** `src/app/api/marketplace/checkout/verify/route.ts`
+**Impact:** User opens return URL in two tabs, or network retries → two
+concurrent verify calls both pass the `status === "COMPLETED"` early return,
+then both fire `notifyMarketplacePurchase` + `notifyMarketplaceSale`,
+sending duplicate in-app notifications and duplicate emails to both the
+buyer and the seller.
+**Fix:** Moved both notification calls inside the `if (updated.count > 0)`
+guard so they only fire for the call that actually flipped status PENDING
+→ COMPLETED.
+
+### Finding #15 — project submit TOCTOU creating duplicate ProjectReview (session 3)
+**File:** `src/app/api/projects/[id]/submit/route.ts`
+**Impact:** Two concurrent submit calls (double-click, retry) would both
+pass the `status === "DRAFT" | "APPROVED"` check, both flip status to
+SUBMITTED, and both create `ProjectReview` rows — duplicate review records
+for the same transition, which pollutes the admin review queue.
+**Fix:** CAS on `status: { in: ["DRAFT", "APPROVED"] } → "SUBMITTED"` before
+the ProjectReview.create. Return 409 on CAS loss.
+
+### Finding #16 — project item end TOCTOU (session 3)
+**File:** `src/app/api/projects/[id]/items/[itemId]/end/route.ts`
+**Fix:** CAS on `endedAt: null` — prevents the second concurrent end-item
+request from overwriting the first one's `endedAt` timestamp.
+
+### Finding #17 — project survey lock TOCTOU (session 3)
+**File:** `src/app/api/projects/[id]/survey/lock/route.ts`
+**Fix:** CAS on survey `status: "SENT" → "LOCKED"` so concurrent lock
+requests can't overwrite `lockedAt` and double-run the bulk `addressLocked`
+update.
+
+### Finding #18 — project survey send TOCTOU creating duplicate responses/notifs (session 3)
+**File:** `src/app/api/projects/[id]/survey/send/route.ts`
+**Impact:** Two concurrent "Send Survey" clicks would both pass the status
+check, both enter the transaction, both create SurveyResponse rows (the
+`findUnique + create` inside the loop only catches duplicates within one
+invocation), and both fire `notifySurveySent` to every backer — duplicate
+in-app notifications + duplicate emails.
+**Fix:** CAS on `status: { notIn: ["SENT", "LOCKED"] } → "SENT"` *before*
+the response-creation transaction. Notifications gated on CAS win.
+
+### Finding #19 — project rewards delete TOCTOU allowing orphaned pledges (session 3)
+**File:** `src/app/api/projects/[id]/rewards/route.ts`
+**Impact:** Creator hits "Delete Reward" while the reward has
+quantityClaimed === 0. Between the check and the delete, a backer's
+pledge flow claims the reward slot. The delete would succeed and orphan
+the backer's PledgeAddon row (its Reward is gone).
+**Fix:** Moved the delete into a transaction that ends with a CAS
+`deleteMany` on `quantityClaimed: 0`. If the CAS fails (a backer claimed
+in the meantime), the whole transaction rolls back and we return 400.
+
+### Finding #20 — project collaborators invite case-insensitive TOCTOU (session 3)
+**File:** `src/app/api/projects/[id]/collaborators/route.ts`
+**Impact:** Two concurrent invite requests for the same email would both
+pass the case-insensitive findFirst check, one would succeed, the other
+would P2002 and return a generic 500.
+**Fix:** Normalized email to lowercase before insert (so case variants
+hit the same @@unique), and added a P2002 catch that returns a 409.
+
+### Finding #21 — project create slug TOCTOU (session 3)
+**File:** `src/app/api/projects/route.ts`
+**Impact:** Two projects with the same auto-generated slug (identical
+titles submitted concurrently) would race on the `slug` @unique. First
+succeeds, second returns 500 instead of retrying with a unique suffix.
+**Fix:** Create inside a P2002 retry loop (up to 5 attempts) that appends
+a random suffix on collision. Custom slugs still return 409 immediately
+so the user can pick a different URL.
+
+### Finding #22 — reward end TOCTOU (session 3)
+**File:** `src/app/api/rewards/[id]/end/route.ts`
+**Fix:** CAS on `isEnded: false → true` so concurrent "End Reward" clicks
+don't overwrite each other's `endedAt` timestamps.
+
+### Finding #23 — user vanity URL set TOCTOU (session 3)
+**File:** `src/app/api/user/vanity-url/route.ts`
+**Impact:** Two different users claiming the same vanity URL concurrently:
+first succeeds, second P2002 returns 500. Same user racing their own
+"set once" guard could theoretically overwrite.
+**Fix:** `updateMany` CAS on `vanityUrl: null` for the same-user guard,
+P2002 catch for the cross-user collision → returns 409.
+
+### Finding #24 — user follow-project TOCTOU double-increment (session 3)
+**File:** `src/app/api/user/following/route.ts`
+**Impact:** Two concurrent follow requests for the same project would
+both pass the existing-follow check, both call `projectFollower.create`
+(one fails with P2002), AND both call `followerCount: { increment: 1 }`
+— resulting in a follower count that's 1 higher than the actual count.
+**Fix:** Replaced the check-then-create with a try/catch on P2002. Only
+the request that actually inserted the row runs the `followerCount`
+increment.
+
+### Finding #25 — backer address isDefault race (session 3)
+**Files:** `src/app/api/backer/addresses/route.ts`,
+          `src/app/api/backer/addresses/[id]/route.ts`
+**Impact:** Two concurrent "set as default" requests would both clear
+existing defaults then both set the new ones as default — leaving the
+user with multiple `isDefault: true` rows.
+**Fix:** Wrapped the clear-then-create (or clear-then-update) in a single
+`$transaction` so the operations are atomic per row-lock scope.
+
+### Finding #26 — backer reviews TOCTOU upsert (session 3)
+**File:** `src/app/api/backer/reviews/route.ts`
+**Impact:** Backer rapidly submits review edits → findUnique + create
+would P2002 on concurrent calls (pledgeId is @unique).
+**Fix:** Replaced with a proper Prisma `upsert` on pledgeId.
+
+### Finding #27 — retailer apply email TOCTOU (session 3)
+**File:** `src/app/api/retailers/apply/route.ts`
+**Impact:** Double-submitted application form: first succeeds, second
+P2002 returns 500.
+**Fix:** P2002 catch returns 409 with "already exists" message.
+
+### Finding #28 — creator indiekit campaign send TOCTOU (session 3)
+**File:** `src/app/api/creator/indiekit/campaigns/route.ts`
+**Impact:** "Send Campaign" double-click would pass the status check
+twice and queue the background send job twice.
+**Fix:** CAS `updateMany` on `status: { notIn: ["SENDING", "SENT"] }`.
+
+---
+
 ### Not-yet-fixed / architectural notes
 
 - **Middleware in-memory rate limiters** — the 4 `Map` rate limiters in

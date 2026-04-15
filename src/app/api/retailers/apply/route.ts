@@ -102,31 +102,49 @@ export async function POST(req: NextRequest) {
       passwordHash = await hash(password, 12);
     }
 
-    // Create retailer application
-    const retailer = await db.retailer.create({
-      data: {
-        businessName,
-        businessType,
-        contactName,
-        email,
-        phone,
-        address,
-        city,
-        state,
-        zipCode,
-        country: country || "US",
-        taxId,
-        taxIdType,
-        resaleCertificate,
-        yearsInBusiness: yearsInBusiness ? parseInt(yearsInBusiness) : null,
-        numberOfLocations: numberOfLocations ? parseInt(numberOfLocations) : 1,
-        annualRevenue,
-        websiteUrl,
-        socialMedia: preferredContact ? ({ preferredContact } as object) : undefined,
-        status: "PENDING",
-        passwordHash,
-      },
-    });
+    // Create retailer application. Catch P2002 on the email @unique
+    // constraint so a double-submitted form returns a clean 409
+    // instead of a 500 — the findUnique check above is TOCTOU.
+    let retailer;
+    try {
+      retailer = await db.retailer.create({
+        data: {
+          businessName,
+          businessType,
+          contactName,
+          email,
+          phone,
+          address,
+          city,
+          state,
+          zipCode,
+          country: country || "US",
+          taxId,
+          taxIdType,
+          resaleCertificate,
+          yearsInBusiness: yearsInBusiness ? parseInt(yearsInBusiness) : null,
+          numberOfLocations: numberOfLocations ? parseInt(numberOfLocations) : 1,
+          annualRevenue,
+          websiteUrl,
+          socialMedia: preferredContact ? ({ preferredContact } as object) : undefined,
+          status: "PENDING",
+          passwordHash,
+        },
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "A retailer with this email already exists" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
+    }
 
     // In production: Send confirmation email
     // await sendRetailerApplicationEmail({

@@ -524,12 +524,31 @@ export async function DELETE(
       );
     }
 
-    // Delete pledge addons, reward items, then reward
-    await db.$transaction([
-      db.pledgeAddon.deleteMany({ where: { addonId: rewardId } }),
-      db.rewardItem.deleteMany({ where: { rewardId } }),
-      db.reward.delete({ where: { id: rewardId } }),
-    ]);
+    // Delete pledge addons, reward items, then reward. The final delete
+    // uses a CAS on quantityClaimed: 0 so that a backer pledging between
+    // the check above and this delete cannot leave their pledge pointing
+    // at a deleted reward. If the CAS fails, the whole transaction rolls
+    // back and we return an error to the creator.
+    try {
+      await db.$transaction(async (tx) => {
+        await tx.pledgeAddon.deleteMany({ where: { addonId: rewardId } });
+        await tx.rewardItem.deleteMany({ where: { rewardId } });
+        const del = await tx.reward.deleteMany({
+          where: { id: rewardId, projectId, quantityClaimed: 0 },
+        });
+        if (del.count === 0) {
+          throw new Error("REWARD_HAS_BACKERS");
+        }
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "REWARD_HAS_BACKERS") {
+        return NextResponse.json(
+          { error: "Cannot delete reward with backers" },
+          { status: 400 }
+        );
+      }
+      throw err;
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

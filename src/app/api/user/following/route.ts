@@ -192,36 +192,47 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check for existing follow
-    const existingFollow = await db.projectFollower.findFirst({
-      where: {
-        projectId,
-        userId,
-      },
-    });
-
-    if (existingFollow) {
-      return NextResponse.json(
-        { message: "Already following this project", alreadyFollowing: true },
-        { status: 200 }
-      );
-    }
-
     // Get user's email for notifications
     const user = await db.user.findFirst({
       where: { id: userId, deletedAt: null },
       select: { email: true },
     });
 
-    // Create the follower record
-    const follower = await db.projectFollower.create({
-      data: {
-        projectId,
-        userId,
-        email: user?.email || null,
-        isPrelaunch,
-      },
-    });
+    // Create the follower record. Use try/catch on P2002 so two
+    // concurrent follow requests (double-click, retry) can't both
+    // pass the existing-follow check and cause the followerCount
+    // to be incremented twice. Only increment the counter if we
+    // actually inserted a new row.
+    let follower;
+    let alreadyFollowing = false;
+    try {
+      follower = await db.projectFollower.create({
+        data: {
+          projectId,
+          userId,
+          email: user?.email || null,
+          isPrelaunch,
+        },
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        alreadyFollowing = true;
+      } else {
+        throw createErr;
+      }
+    }
+
+    if (alreadyFollowing) {
+      return NextResponse.json(
+        { message: "Already following this project", alreadyFollowing: true },
+        { status: 200 }
+      );
+    }
 
     // Get project creator ID to add follower to their email list
     const projectDetails = await db.project.findFirst({
@@ -248,7 +259,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Update follower count on the project
+    // Update follower count on the project — only runs if we actually
+    // created a new follower row above.
     await db.project.update({
       where: { id: projectId },
       data: {
@@ -270,7 +282,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      followerId: follower.id,
+      followerId: follower?.id,
       message: "Successfully followed project",
     });
   } catch (error) {

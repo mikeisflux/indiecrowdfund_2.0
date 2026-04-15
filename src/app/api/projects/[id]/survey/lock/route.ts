@@ -58,23 +58,29 @@ export async function POST(
       );
     }
 
-    // Lock survey and all responses
-    await db.$transaction(async (tx) => {
-      // Update survey status to LOCKED
-      await tx.survey.update({
-        where: { id: survey.id },
-        data: {
-          status: "LOCKED",
-          lockedAt: new Date(),
-          addressesLocked: true,
-        },
-      });
+    // Lock survey and all responses — CAS on status: SENT → LOCKED
+    // so a concurrent second lock request doesn't overwrite lockedAt
+    // and doesn't needlessly re-run the bulk address update.
+    const lockCas = await db.survey.updateMany({
+      where: { id: survey.id, status: "SENT" },
+      data: {
+        status: "LOCKED",
+        lockedAt: new Date(),
+        addressesLocked: true,
+      },
+    });
 
-      // Lock all response addresses
-      await tx.surveyResponse.updateMany({
-        where: { surveyId: survey.id },
-        data: { addressLocked: true },
-      });
+    if (lockCas.count === 0) {
+      return NextResponse.json(
+        { error: "Survey has already been locked" },
+        { status: 400 }
+      );
+    }
+
+    // Lock all response addresses (only runs if we won the CAS)
+    await db.surveyResponse.updateMany({
+      where: { surveyId: survey.id },
+      data: { addressLocked: true },
     });
 
     return NextResponse.json({

@@ -84,20 +84,42 @@ export async function POST(
       select: { id: true },
     });
 
-    // Create collaborator record
-    const collaboratorRecord = await db.projectCollaborator.create({
-      data: {
-        projectId,
-        userId: user?.id || null,
-        email: collab.email,
-        title: collab.title || null,
-        canEditProject: collab.canEditProject || false,
-        canManageCommunity: collab.canManageCommunity || false,
-        canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
-        canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
-        status: "PENDING",
-      },
-    });
+    // Create collaborator record. We store the email lowercased so the
+    // @@unique([projectId, email]) DB constraint acts as the atomic
+    // dedup guard — the check above is TOCTOU under concurrent invites.
+    // On a unique-constraint violation we return a 409 rather than
+    // bubbling up as a 500.
+    let collaboratorRecord;
+    try {
+      collaboratorRecord = await db.projectCollaborator.create({
+        data: {
+          projectId,
+          userId: user?.id || null,
+          email: emailLower,
+          title: collab.title || null,
+          canEditProject: collab.canEditProject || false,
+          canManageCommunity: collab.canManageCommunity || false,
+          canCoordinateFulfillment: collab.canCoordinateFulfillment || false,
+          canConfigurePledgeManager: collab.canConfigurePledgeManager || false,
+          status: "PENDING",
+        },
+      });
+    } catch (createErr) {
+      // P2002 = unique constraint violation — another concurrent
+      // invite for the same email won the race.
+      if (
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "This person is already a collaborator on this project" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
+    }
 
     // Create notification if user exists
     if (user) {

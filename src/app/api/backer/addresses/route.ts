@@ -56,28 +56,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If setting as default, unset other defaults
-    if (isDefault) {
-      await db.userAddress.updateMany({
-        where: { userId: session.user.id, isDefault: true },
-        data: { isDefault: false },
+    // If setting as default, unset other defaults and create the new
+    // row inside a single transaction so two concurrent default-set
+    // requests can't both leave the user with multiple isDefault rows.
+    const address = await db.$transaction(async (tx) => {
+      if (isDefault) {
+        await tx.userAddress.updateMany({
+          where: { userId: session.user.id, isDefault: true },
+          data: { isDefault: false },
+        });
+      }
+      return tx.userAddress.create({
+        data: {
+          userId: session.user.id,
+          label: label || "Home",
+          fullName,
+          line1,
+          line2: line2 || null,
+          city,
+          state,
+          postalCode,
+          country,
+          phone: phone || null,
+          isDefault: isDefault || false,
+        },
       });
-    }
-
-    const address = await db.userAddress.create({
-      data: {
-        userId: session.user.id,
-        label: label || "Home",
-        fullName,
-        line1,
-        line2: line2 || null,
-        city,
-        state,
-        postalCode,
-        country,
-        phone: phone || null,
-        isDefault: isDefault || false,
-      },
     });
 
     return NextResponse.json({ address }, { headers: corsHeaders });

@@ -315,12 +315,28 @@ export async function POST(
     // Ensure score is between 0 and 100
     aiConfidenceScore = Math.max(0, Math.min(100, aiConfidenceScore));
 
-    // Update project status and create review record
-    const [updatedProject] = await db.$transaction([
-      db.project.update({
-        where: { id: projectId },
-        data: { status: "SUBMITTED" },
-      }),
+    // CAS on status: DRAFT|APPROVED → SUBMITTED. Without this, two
+    // concurrent submit calls (double-click, retry) would both pass
+    // the TOCTOU status check above and create duplicate ProjectReview
+    // rows for the same transition.
+    const submitCas = await db.project.updateMany({
+      where: {
+        id: projectId,
+        status: { in: ["DRAFT", "APPROVED"] },
+        deletedAt: null,
+      },
+      data: { status: "SUBMITTED" },
+    });
+
+    if (submitCas.count === 0) {
+      return NextResponse.json(
+        { error: "Project status changed — please refresh and try again." },
+        { status: 409 }
+      );
+    }
+
+    const [updatedProject] = await Promise.all([
+      db.project.findUnique({ where: { id: projectId } }),
       db.projectReview.create({
         data: {
           projectId,

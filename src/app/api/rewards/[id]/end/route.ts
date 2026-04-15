@@ -54,13 +54,26 @@ export async function POST(
       );
     }
 
-    // End the reward
-    const updatedReward = await db.reward.update({
-      where: { id: rewardId },
+    // End the reward — CAS on isEnded: false so two concurrent
+    // "End Reward" clicks don't both write endedAt and overwrite
+    // each other's timestamps.
+    const endCas = await db.reward.updateMany({
+      where: { id: rewardId, isEnded: false },
       data: {
         isEnded: true,
         endedAt: new Date(),
       },
+    });
+
+    if (endCas.count === 0) {
+      return NextResponse.json(
+        { error: "Reward is already ended" },
+        { status: 400 }
+      );
+    }
+
+    const updatedReward = await db.reward.findUnique({
+      where: { id: rewardId },
       include: { items: true, _count: { select: { pledges: true } } },
     });
 

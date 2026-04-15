@@ -112,32 +112,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find existing review
+    // Upsert by pledgeId (@unique). Replaces a findUnique+create+update
+    // TOCTOU that would P2002 under concurrent reviews of the same pledge.
     const existing = await db.backerReview.findUnique({ where: { pledgeId } });
-
     const now = new Date();
     const becameReceived = markedReceived && !existing?.markedReceived;
 
-    if (existing) {
-      const updated = await db.backerReview.update({
-        where: { pledgeId },
-        data: {
-          ...(markedReceived !== undefined && { markedReceived }),
-          ...(becameReceived && { markedReceivedAt: now }),
-          ...(overallRating !== undefined && { overallRating }),
-          ...(deliveryRating !== undefined && { deliveryRating }),
-          ...(qualityRating !== undefined && { qualityRating }),
-          ...(communicationRating !== undefined && { communicationRating }),
-          ...(reviewTitle !== undefined && { reviewTitle }),
-          ...(reviewBody !== undefined && { reviewBody }),
-        },
-      });
-      return NextResponse.json({ review: updated });
-    }
-
-    // Create new review
-    const created = await db.backerReview.create({
-      data: {
+    const upserted = await db.backerReview.upsert({
+      where: { pledgeId },
+      update: {
+        ...(markedReceived !== undefined && { markedReceived }),
+        ...(becameReceived && { markedReceivedAt: now }),
+        ...(overallRating !== undefined && { overallRating }),
+        ...(deliveryRating !== undefined && { deliveryRating }),
+        ...(qualityRating !== undefined && { qualityRating }),
+        ...(communicationRating !== undefined && { communicationRating }),
+        ...(reviewTitle !== undefined && { reviewTitle }),
+        ...(reviewBody !== undefined && { reviewBody }),
+      },
+      create: {
         pledgeId,
         userId: session.user.id,
         projectId: pledge.project.id,
@@ -153,7 +146,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ review: created });
+    return NextResponse.json({ review: upserted });
   } catch (error) {
     console.error("Error saving review:", error);
     return NextResponse.json({ error: "Failed to save review" }, { status: 500 });

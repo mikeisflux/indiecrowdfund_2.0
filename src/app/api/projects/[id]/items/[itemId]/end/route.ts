@@ -70,18 +70,29 @@ export async function POST(
       );
     }
 
-    // End the item
-    const updatedItem = await db.projectItem.update({
-      where: { id: itemId },
+    // End the item — CAS on endedAt: null so concurrent calls don't
+    // both write endedAt (which would overwrite the first timestamp
+    // with a slightly later one).
+    const endCas = await db.projectItem.updateMany({
+      where: { id: itemId, endedAt: null },
       data: { endedAt: new Date() },
     });
+
+    if (endCas.count === 0) {
+      return NextResponse.json(
+        { error: "Item has already been ended" },
+        { status: 400 }
+      );
+    }
+
+    const updatedItem = await db.projectItem.findUnique({ where: { id: itemId } });
 
     return NextResponse.json({
       success: true,
       item: {
-        id: updatedItem.id,
-        title: updatedItem.title,
-        endedAt: updatedItem.endedAt,
+        id: updatedItem?.id,
+        title: updatedItem?.title,
+        endedAt: updatedItem?.endedAt,
       },
     });
   } catch (error) {

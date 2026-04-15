@@ -38,28 +38,31 @@ export async function PATCH(
       return NextResponse.json({ error: "Address not found" }, { status: 404, headers: corsHeaders });
     }
 
-    // If setting as default, unset other defaults
-    if (body.isDefault && !existing.isDefault) {
-      await db.userAddress.updateMany({
-        where: { userId: session.user.id, isDefault: true },
-        data: { isDefault: false },
+    // Unset other defaults and update this address inside a single
+    // transaction so two concurrent "set as default" requests can't
+    // leave the user with multiple isDefault rows.
+    const address = await db.$transaction(async (tx) => {
+      if (body.isDefault && !existing.isDefault) {
+        await tx.userAddress.updateMany({
+          where: { userId: session.user.id, isDefault: true },
+          data: { isDefault: false },
+        });
+      }
+      return tx.userAddress.update({
+        where: { id },
+        data: {
+          label: body.label,
+          fullName: body.fullName,
+          line1: body.line1,
+          line2: body.line2,
+          city: body.city,
+          state: body.state,
+          postalCode: body.postalCode,
+          country: body.country,
+          phone: body.phone,
+          isDefault: body.isDefault,
+        },
       });
-    }
-
-    const address = await db.userAddress.update({
-      where: { id },
-      data: {
-        label: body.label,
-        fullName: body.fullName,
-        line1: body.line1,
-        line2: body.line2,
-        city: body.city,
-        state: body.state,
-        postalCode: body.postalCode,
-        country: body.country,
-        phone: body.phone,
-        isDefault: body.isDefault,
-      },
     });
 
     return NextResponse.json({ address }, { headers: corsHeaders });
