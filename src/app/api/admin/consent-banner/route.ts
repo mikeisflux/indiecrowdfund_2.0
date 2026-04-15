@@ -42,13 +42,20 @@ export async function GET() {
   try {
     let banner = await db.consentBanner.findFirst();
 
+    // Auto-seed guarded by advisory lock so two concurrent admin
+    // dashboard loads don't both create duplicate default banners.
     if (!banner) {
-      banner = await db.consentBanner.create({
-        data: {
-          isActive: true,
-          showFrequency: "once_per_login",
-          content: defaultContent,
-        },
+      banner = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('seed-consent-banner'))`;
+        const existing = await tx.consentBanner.findFirst();
+        if (existing) return existing;
+        return tx.consentBanner.create({
+          data: {
+            isActive: true,
+            showFrequency: "once_per_login",
+            content: defaultContent,
+          },
+        });
       });
     }
 

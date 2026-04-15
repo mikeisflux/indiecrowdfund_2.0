@@ -60,6 +60,31 @@ export async function POST(request: Request) {
       select: { id: true },
     });
 
+    // Guard against double-click: if we already created an identical
+    // music release (same creator + title + track count) in the last
+    // 60 seconds, return the existing album/tracks instead of creating
+    // a duplicate. Otherwise a creator double-clicking "Release" would
+    // get two copies on every music release.
+    const firstTrackAudio = tracks[0]?.audioFileUrl;
+    const recentDuplicate = firstTrackAudio ? await prisma.marketplaceBook.findFirst({
+      where: {
+        creatorId: session.user.id,
+        mediaCategory: "music",
+        title: (tracks.length === 1 ? title.trim() : tracks[0]?.title?.trim()) || undefined,
+        audioFileUrl: firstTrackAudio,
+        createdAt: { gt: new Date(Date.now() - 60_000) },
+      },
+      select: { id: true, albumId: true },
+    }) : null;
+    if (recentDuplicate) {
+      return NextResponse.json({
+        success: true,
+        albumId: recentDuplicate.albumId,
+        trackCount: tracks.length,
+        duplicate: true,
+      });
+    }
+
     // Create album if multi-track
     let albumId: string | null = null;
     if (tracks.length > 1 || releaseType !== "single") {

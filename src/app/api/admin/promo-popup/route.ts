@@ -134,13 +134,20 @@ export async function GET() {
   try {
     let popup = await db.promoPopup.findFirst();
 
+    // Auto-seed guarded by advisory lock so two concurrent admin
+    // dashboard loads don't seed duplicate default popups.
     if (!popup) {
-      popup = await db.promoPopup.create({
-        data: {
-          isActive: true,
-          showFrequency: "once_per_session",
-          slides: defaultSlides,
-        },
+      popup = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('seed-promo-popup'))`;
+        const existing = await tx.promoPopup.findFirst();
+        if (existing) return existing;
+        return tx.promoPopup.create({
+          data: {
+            isActive: true,
+            showFrequency: "once_per_session",
+            slides: defaultSlides,
+          },
+        });
       });
     }
 

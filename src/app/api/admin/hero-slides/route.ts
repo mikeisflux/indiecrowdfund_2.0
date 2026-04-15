@@ -69,12 +69,18 @@ export async function GET() {
       orderBy: { sortOrder: "asc" },
     });
 
-    // If no slides exist, create the default slide
+    // If no slides exist, create the default slide. Guard with an
+    // advisory lock so two concurrent admin dashboard loads don't
+    // seed duplicate defaults.
     if (slides.length === 0) {
-      const newSlide = await db.heroSlide.create({
-        data: defaultSlideData,
+      const seeded = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('seed-hero-slides'))`;
+        const existing = await tx.heroSlide.findMany({ orderBy: { sortOrder: "asc" } });
+        if (existing.length > 0) return existing;
+        const created = await tx.heroSlide.create({ data: defaultSlideData });
+        return [created];
       });
-      slides = [newSlide];
+      slides = seeded;
     }
 
     const activeCount = slides.filter((s: { isActive: boolean }) => s.isActive).length;

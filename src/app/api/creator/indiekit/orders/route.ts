@@ -186,20 +186,38 @@ export async function PATCH(req: NextRequest) {
     // Calculate the financial diff based on ITEMS total change (not pledge.amount which may include overpayment/tips)
     const chargedAmount = Number(pledge.amount);
     const rewardAmount = Number(pledge.rewardAmount);
-    const previousAddonsAmount = Number(pledge.addonsAmount);
-    const previousShipping = Number(pledge.shippingAmount);
-    const newShipping = shippingAmount !== undefined ? shippingAmount : previousShipping;
-    const previousItemsTotal = rewardAmount + previousAddonsAmount + previousShipping;
-    const newTotal = rewardAmount + newAddonsAmount + newShipping;
-    // Balance change based on items difference, not payment amount
-    const balanceChange = newTotal - previousItemsTotal;
-    // Accumulate balance due: existing balance + new change
-    const existingMetadata = (pledge.metadata as Record<string, unknown>) || {};
-    const previousBalanceDue = Number(existingMetadata.balanceDue || 0);
-    const newBalanceDue = Math.max(0, previousBalanceDue + balanceChange);
+    const newShipping = shippingAmount !== undefined ? shippingAmount : Number(pledge.shippingAmount);
 
-    // Perform all changes in a transaction
+    // Perform all changes in a transaction that re-reads the pledge
+    // metadata INSIDE the transaction (using a FOR UPDATE row lock via
+    // $queryRaw) so two concurrent edits to the same order can't both
+    // read the same stale balanceDue and lose one edit's delta.
+    let newBalanceDue = 0;
+    let balanceChange = 0;
+    let previousItemsTotal = 0;
+    let newTotal = 0;
     await db.$transaction(async (tx) => {
+      // Lock the pledge row and re-read the current balanceDue/shipping/
+      // addonsAmount state inside the transaction.
+      await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${pledgeId} FOR UPDATE`;
+      const freshPledge = await tx.pledge.findUnique({
+        where: { id: pledgeId },
+        select: { metadata: true, addonsAmount: true, shippingAmount: true },
+      });
+      if (!freshPledge) {
+        throw new Error("PLEDGE_DISAPPEARED");
+      }
+
+      const freshAddons = Number(freshPledge.addonsAmount);
+      const freshShipping = Number(freshPledge.shippingAmount);
+      previousItemsTotal = rewardAmount + freshAddons + freshShipping;
+      newTotal = rewardAmount + newAddonsAmount + newShipping;
+      balanceChange = newTotal - previousItemsTotal;
+
+      const freshMetadata = (freshPledge.metadata as Record<string, unknown>) || {};
+      const previousBalanceDue = Number(freshMetadata.balanceDue || 0);
+      newBalanceDue = Math.max(0, previousBalanceDue + balanceChange);
+
       // Remove addons that have quantity 0 or aren't in the new list
       const addonsToRemove = addons.filter(a => a.quantity === 0).map(a => a.addonId);
       const addonsInNewList = new Set(addons.map(a => a.addonId));
@@ -207,7 +225,7 @@ export async function PATCH(req: NextRequest) {
       // Delete addons that are removed (quantity 0 or not in new list)
       for (const existing of pledge.addons) {
         if (addonsToRemove.includes(existing.addonId) || !addonsInNewList.has(existing.addonId)) {
-          await tx.pledgeAddon.delete({
+          await tx.pledgeAddon.deleteMany({
             where: { id: existing.id },
           });
         }
@@ -246,7 +264,7 @@ export async function PATCH(req: NextRequest) {
           addonsAmount: newAddonsAmount,
           ...(shippingAmount !== undefined ? { shippingAmount } : {}),
           metadata: {
-            ...existingMetadata,
+            ...freshMetadata,
             balanceDue: newBalanceDue,
           },
         },
@@ -270,9 +288,9 @@ export async function PATCH(req: NextRequest) {
             previousItemsTotal,
             newTotal,
             balanceChange,
-            previousAddonsAmount,
+            previousAddonsAmount: freshAddons,
             newAddonsAmount,
-            previousShipping,
+            previousShipping: freshShipping,
             newShipping,
             balanceDue: newBalanceDue,
           },

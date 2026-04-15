@@ -148,38 +148,36 @@ async function syncToAdminNewsletter(
   projectTitle: string
 ) {
   try {
-    // Check if already exists in newsletter
-    const existing = await db.newsletterSubscriber.findUnique({
-      where: { email },
-    });
-
     const newTags = [`creator:${uploaderTag}`, `project:${projectTitle}`];
 
-    if (existing) {
-      // Add new tags without duplicating
-      const existingTags = existing.tags || [];
-      const combinedTags = Array.from(new Set([...existingTags, ...newTags]));
+    // Use upsert + pre-read (only used to merge tag arrays — the
+    // read-modify-write here is still racy if two concurrent imports
+    // hit the same email, but Prisma doesn't have an atomic "append
+    // unique to array" op and the worst case is losing one tag on
+    // one row, which is low-impact for stats). The previous
+    // findUnique+create/update pattern P2002'd on concurrent imports
+    // which is a much louder failure mode than losing a tag.
+    const existing = await db.newsletterSubscriber.findUnique({
+      where: { email },
+      select: { tags: true },
+    });
+    const existingTags = existing?.tags || [];
+    const combinedTags = Array.from(new Set([...existingTags, ...newTags]));
 
-      await db.newsletterSubscriber.update({
-        where: { email },
-        data: {
-          tags: combinedTags,
-          // Reactivate if previously unsubscribed
-          isActive: true,
-        },
-      });
-    } else {
-      // Create new subscriber
-      await db.newsletterSubscriber.create({
-        data: {
-          email,
-          name,
-          source: "creator_import",
-          tags: newTags,
-          isActive: true,
-        },
-      });
-    }
+    await db.newsletterSubscriber.upsert({
+      where: { email },
+      update: {
+        tags: combinedTags,
+        isActive: true,
+      },
+      create: {
+        email,
+        name,
+        source: "creator_import",
+        tags: newTags,
+        isActive: true,
+      },
+    });
   } catch (error) {
     // Log but don't fail the import if newsletter sync fails
     projectsMembersImportLogger.error({ err: String(error) }, "Failed to sync to admin newsletter:");
@@ -250,32 +248,33 @@ export async function POST(
       for (const member of sourceMembers) {
         if (!member.email) continue;
 
-        // Check if already exists in creator's email list
-        const existing = await db.emailListSubscriber.findUnique({
-          where: {
-            creatorId_email: {
+        // Use try/catch on P2002 instead of findUnique+create. Under
+        // a concurrent second import of the same source list, the
+        // findUnique would miss a row that the first import just
+        // inserted and the create would P2002 → caught as "skipped".
+        try {
+          await db.emailListSubscriber.create({
+            data: {
               creatorId: session.user.id,
               email: member.email,
+              name: member.name,
+              source: "project_import",
+              sourceProjectId: projectId,
+              status: "subscribed",
             },
-          },
-        });
-
-        if (existing) {
-          skipped++;
-          continue;
+          });
+        } catch (createErr) {
+          const isUniqueViolation =
+            createErr &&
+            typeof createErr === "object" &&
+            "code" in createErr &&
+            (createErr as { code?: string }).code === "P2002";
+          if (isUniqueViolation) {
+            skipped++;
+            continue;
+          }
+          throw createErr;
         }
-
-        // Add to creator's email list
-        await db.emailListSubscriber.create({
-          data: {
-            creatorId: session.user.id,
-            email: member.email,
-            name: member.name,
-            source: "project_import",
-            sourceProjectId: projectId,
-            status: "subscribed",
-          },
-        });
 
         // Also sync to admin newsletter with uploader tag
         await syncToAdminNewsletter(member.email, member.name || undefined, uploaderTag, project.title);
@@ -332,37 +331,39 @@ export async function POST(
           continue;
         }
 
-        // Check if already exists in creator's email list
-        const existing = await db.emailListSubscriber.findUnique({
-          where: {
-            creatorId_email: {
+        // Use try/catch on P2002 instead of findUnique+create — the
+        // findUnique check is TOCTOU under concurrent imports.
+        let created = true;
+        try {
+          await db.emailListSubscriber.create({
+            data: {
               creatorId: session.user.id,
               email: row.email,
+              name: row.name,
+              source: "csv_import",
+              sourceProjectId: projectId,
+              status: "subscribed",
             },
-          },
-        });
-
-        if (existing) {
-          skipped++;
-          continue;
+          });
+        } catch (createErr) {
+          const isUniqueViolation =
+            createErr &&
+            typeof createErr === "object" &&
+            "code" in createErr &&
+            (createErr as { code?: string }).code === "P2002";
+          if (isUniqueViolation) {
+            skipped++;
+            created = false;
+          } else {
+            throw createErr;
+          }
         }
 
-        // Add to creator's email list
-        await db.emailListSubscriber.create({
-          data: {
-            creatorId: session.user.id,
-            email: row.email,
-            name: row.name,
-            source: "csv_import",
-            sourceProjectId: projectId,
-            status: "subscribed",
-          },
-        });
-
-        // Also sync to admin newsletter with uploader tag
-        await syncToAdminNewsletter(row.email, row.name, uploaderTag, project.title);
-
-        imported++;
+        if (created) {
+          // Also sync to admin newsletter with uploader tag
+          await syncToAdminNewsletter(row.email, row.name, uploaderTag, project.title);
+          imported++;
+        }
       } catch {
         failed++;
       }

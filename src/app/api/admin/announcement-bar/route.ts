@@ -62,12 +62,24 @@ export async function GET() {
       orderBy: { sortOrder: "asc" },
     });
 
-    // If no announcements exist, create the default one
+    // If no announcements exist, create the default one. Guard with an
+    // advisory lock so two admins hitting the page at the same time
+    // don't both create duplicate default announcements.
     if (announcements.length === 0) {
-      const newAnnouncement = await db.announcementBar.create({
-        data: defaultAnnouncementData,
+      const seeded = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('seed-announcement-bar'))`;
+
+        const existing = await tx.announcementBar.findMany({
+          orderBy: { sortOrder: "asc" },
+        });
+        if (existing.length > 0) return existing;
+
+        const created = await tx.announcementBar.create({
+          data: defaultAnnouncementData,
+        });
+        return [created];
       });
-      announcements = [newAnnouncement];
+      announcements = seeded;
     }
 
     const activeCount = announcements.filter((a: { isActive: boolean }) => a.isActive).length;

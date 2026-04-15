@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
     const timestamp = Date.now().toString(36);
-    const slug = `${baseSlug}-${timestamp}`;
+    let slug = `${baseSlug}-${timestamp}`;
 
     // Get company profile
     const company = await prisma.companyProfile.findFirst({
@@ -62,33 +62,72 @@ export async function POST(request: Request) {
       select: { id: true },
     });
 
-    const item = await prisma.marketplaceBook.create({
-      data: {
+    // Guard against double-click: if we already created an identical
+    // movie (same creator + title + videoFileUrl) in the last 60s,
+    // return the existing row instead of creating a duplicate DRAFT
+    // that the creator has to manually clean up.
+    const recentDuplicate = await prisma.marketplaceBook.findFirst({
+      where: {
         creatorId: session.user.id,
-        companyId: company?.id || null,
-        title: title.trim(),
-        slug,
-        description: description?.trim() || "",
         mediaCategory: "movies",
-        category: genre || null,
-        price,
-        currency,
-        paymentProcessor: isNsfw ? "DIVINITYCOIN" : paymentProcessor,
-        coverImageUrl: coverImageUrl || null,
-        hasAdultContent: isNsfw,
-        promoContentSfw: !isNsfw,
-        tags,
-        // Video fields
+        title: title.trim(),
         videoFileUrl,
-        videoFileName: videoFileName || null,
-        videoFileSize: videoFileSize ? BigInt(videoFileSize) : null,
-        videoDuration: videoDuration ? parseInt(String(videoDuration)) : null,
-        videoResolution: videoResolution || null,
-        // Status
-        status: submitForReview ? "PENDING_REVIEW" : "DRAFT",
-        submittedAt: submitForReview ? new Date() : null,
+        createdAt: { gt: new Date(Date.now() - 60_000) },
       },
+      select: { id: true, title: true, slug: true },
     });
+    if (recentDuplicate) {
+      return NextResponse.json({
+        success: true,
+        movie: recentDuplicate,
+        duplicate: true,
+      });
+    }
+
+    // Create with a P2002 retry loop — two concurrent creates in the
+    // same millisecond produce the same slug and P2002 on the
+    // [creatorId, slug] unique constraint.
+    let item;
+    let attempts = 0;
+    while (true) {
+      try {
+        item = await prisma.marketplaceBook.create({
+          data: {
+            creatorId: session.user.id,
+            companyId: company?.id || null,
+            title: title.trim(),
+            slug,
+            description: description?.trim() || "",
+            mediaCategory: "movies",
+            category: genre || null,
+            price,
+            currency,
+            paymentProcessor: isNsfw ? "DIVINITYCOIN" : paymentProcessor,
+            coverImageUrl: coverImageUrl || null,
+            hasAdultContent: isNsfw,
+            promoContentSfw: !isNsfw,
+            tags,
+            videoFileUrl,
+            videoFileName: videoFileName || null,
+            videoFileSize: videoFileSize ? BigInt(videoFileSize) : null,
+            videoDuration: videoDuration ? parseInt(String(videoDuration)) : null,
+            videoResolution: videoResolution || null,
+            status: submitForReview ? "PENDING_REVIEW" : "DRAFT",
+            submittedAt: submitForReview ? new Date() : null,
+          },
+        });
+        break;
+      } catch (createErr) {
+        const isUniqueViolation =
+          createErr &&
+          typeof createErr === "object" &&
+          "code" in createErr &&
+          (createErr as { code?: string }).code === "P2002";
+        if (!isUniqueViolation || attempts >= 5) throw createErr;
+        attempts++;
+        slug = `${baseSlug}-${timestamp}-${Math.random().toString(36).slice(2, 8)}`;
+      }
+    }
 
     // Auto-promote user to CREATOR if needed
     const user = await prisma.user.findUnique({

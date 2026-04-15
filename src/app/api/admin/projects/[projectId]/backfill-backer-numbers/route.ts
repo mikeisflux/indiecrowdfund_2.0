@@ -35,46 +35,63 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Get all confirmed pledges for this project, ordered by createdAt
-    // This includes COMPLETED pledges and PENDING pledges with saved payment method
-    const pledges = await db.pledge.findMany({
-      where: {
-        projectId,
-        OR: [
-          { status: "COMPLETED" },
-          {
-            status: "PENDING",
-            stripePaymentMethodId: { not: null },
-          },
-        ],
-      },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, backerNumber: true },
-    });
+    // Run the backfill inside a transaction that acquires the same
+    // SELECT FOR UPDATE lock on the Project row that assignBackerNumber()
+    // uses. Without the shared lock a new pledge being confirmed mid-
+    // backfill would race us and potentially pick an overlapping number.
+    const { updated, alreadyHad, totalPledges } = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT id FROM "Project" WHERE id = ${projectId} FOR UPDATE`;
 
-    // Assign backer numbers in order
-    let backerNum = 1;
-    let updated = 0;
-    let alreadyHad = 0;
+      const pledges = await tx.pledge.findMany({
+        where: {
+          projectId,
+          OR: [
+            { status: "COMPLETED" },
+            {
+              status: "PENDING",
+              stripePaymentMethodId: { not: null },
+            },
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, backerNumber: true },
+      });
 
-    for (const pledge of pledges) {
-      if (pledge.backerNumber === null) {
-        await db.pledge.update({
-          where: { id: pledge.id },
-          data: { backerNumber: backerNum },
-        });
-        updated++;
-      } else {
-        alreadyHad++;
+      // Start past the current max backer number so we don't collide
+      // with pledges that already have numbers assigned.
+      const maxExisting = pledges.reduce(
+        (max, p) => (p.backerNumber !== null ? Math.max(max, p.backerNumber) : max),
+        0
+      );
+      let backerNum = maxExisting + 1;
+      let updatedCount = 0;
+      let alreadyHadCount = 0;
+
+      for (const pledge of pledges) {
+        if (pledge.backerNumber === null) {
+          await tx.pledge.update({
+            where: { id: pledge.id },
+            data: { backerNumber: backerNum },
+          });
+          updatedCount++;
+          backerNum++;
+        } else {
+          alreadyHadCount++;
+        }
       }
-      backerNum++;
-    }
+
+      return {
+        updated: updatedCount,
+        alreadyHad: alreadyHadCount,
+        totalPledges: pledges.length,
+      };
+    });
 
     return NextResponse.json({
       success: true,
       projectId,
       projectTitle: project.title,
-      totalPledges: pledges.length,
+      totalPledges,
       updated,
       alreadyHad,
       message: updated > 0
