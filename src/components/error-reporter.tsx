@@ -11,6 +11,32 @@ import { useEffect } from "react";
  */
 export function ErrorReporter() {
   useEffect(() => {
+    // Suppress ALL error reporting from automated monitoring bots.
+    // These agents probe dozens of optional paths per run (ads.txt,
+    // sellers.json, /.well-known/*, llms.txt, dsrdelete.json, etc.)
+    // and generate massive noise in Sentinel that drowns out real
+    // user errors. Nothing a monitoring bot reports is actionable.
+    const ua = navigator.userAgent || "";
+    const MONITORING_BOT_UA_PATTERNS = [
+      /PTST\//i,              // WebPageTest
+      /WebPageTest/i,
+      /Pingdom/i,
+      /StatusCake/i,
+      /UptimeRobot/i,
+      /GTmetrix/i,
+      /Site24x7/i,
+      /AhrefsBot/i,
+      /SemrushBot/i,
+      /Dotcom-Monitor/i,
+      /New ?Relic/i,
+      /DataDog/i,
+      /Datadog/i,
+      /Sucuri/i,
+    ];
+    if (MONITORING_BOT_UA_PATTERNS.some((p) => p.test(ua))) {
+      return; // No listeners mounted at all
+    }
+
     const reportError = (message: string, stack?: string, metadata?: Record<string, unknown>) => {
       fetch("/api/error-report", {
         method: "POST",
@@ -72,6 +98,12 @@ export function ErrorReporter() {
     // routinely probe that we don't serve. Bot-probe 404s on these paths
     // are expected and should never be logged as errors.
     const IGNORED_404_PATH_PATTERNS = [
+      // Catch-all for /.well-known/* — RFC 8615 reserved path that is
+      // ONLY hit by automation (FedCM, Privacy Sandbox, Apple App Site
+      // Association, Android Asset Links, Fediverse WebFinger, ACME,
+      // security.txt, GPC, change-password, etc.). Real users never
+      // navigate to /.well-known/anything. 404s here are always bot probes.
+      /\/\.well-known\//,
       // IAB / programmatic ads (WebPageTest, Pingdom, ad network probes)
       /\/ads\.txt$/,
       /\/sellers\.json$/,
@@ -80,26 +112,15 @@ export function ErrorReporter() {
       /\/llms\.txt$/,
       /\/llms-full\.txt$/,
       // Apple / Android app deep-link / wallet probes
-      /\/apple-app-site-association/,
-      /\/\.well-known\/assetlinks\.json/,
-      /\/\.well-known\/apple-app-site-association/,
-      // Browser feature detection (FedCM, Privacy Sandbox, Topics API, etc.)
-      /\/\.well-known\/web-identity/,
-      /\/\.well-known\/privacy-sandbox/,
-      /\/\.well-known\/traffic-advice/,
-      /\/\.well-known\/change-password/,
-      /\/\.well-known\/security\.txt/,
-      // Random bot-scan targets
+      /\/apple-app-site-association$/,
+      // Random bot-scan targets at the site root
       /\/humans\.txt$/,
       /\/crossdomain\.xml$/,
       /\/clientaccesspolicy\.xml$/,
       /\/browserconfig\.xml$/,
       /\/manifest\.json$/,
       /\/site\.webmanifest$/,
-      // Fediverse / webfinger probes
-      /\/\.well-known\/webfinger/,
-      /\/\.well-known\/host-meta/,
-      /\/\.well-known\/nodeinfo/,
+      /\/gpc\.json$/,
     ];
 
     const isBrowserNoise = (message?: string, stack?: string): boolean => {
