@@ -142,7 +142,11 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // Update project and create review record in a transaction
+    // Update project and create review record. The transaction uses
+    // a CAS via updateMany on the original status field so two admins
+    // approving the same project simultaneously can't both flip the
+    // status, create duplicate ProjectReview rows, and double-fire
+    // the approval email + role-promotion side effects.
     const updateData = isPrelaunch
       ? { prelaunchStatus: newStatus, ...(newStatus === "APPROVED" && { prelaunchActive: true }) }
       : { status: newStatus };
@@ -151,14 +155,26 @@ export async function POST(req: NextRequest) {
 
     const shouldPromoteCreator = isPrelaunch && action === "APPROVED" && project.creator?.role === "USER";
 
-    const [updatedProject, review] = await db.$transaction([
-      // Update project status
-      db.project.update({
-        where: { id: projectId },
-        data: updateData,
-      }),
+    // CAS: only flip status if it still matches the value we read above.
+    const casResult = isPrelaunch
+      ? await db.project.updateMany({
+          where: { id: projectId, prelaunchStatus: project.prelaunchStatus, deletedAt: null },
+          data: updateData,
+        })
+      : await db.project.updateMany({
+          where: { id: projectId, status: "SUBMITTED", deletedAt: null },
+          data: updateData,
+        });
 
-      // Create review record
+    if (casResult.count === 0) {
+      return NextResponse.json(
+        { error: "Project status changed — another admin may have already reviewed it. Please refresh." },
+        { status: 409, headers: { [CORRELATION_HEADER]: correlationId } }
+      );
+    }
+
+    const [updatedProject, review] = await db.$transaction([
+      db.project.findUnique({ where: { id: projectId } }),
       db.projectReview.create({
         data: {
           projectId,
@@ -173,8 +189,7 @@ export async function POST(req: NextRequest) {
           flagsRaised: isPrelaunch ? ["prelaunch_review"] : [],
         },
       }),
-
-      // Auto-promote user to CREATOR role when prelaunch is approved (inside transaction for consistency)
+      // Auto-promote user to CREATOR role when prelaunch is approved
       ...(shouldPromoteCreator
         ? [db.user.update({ where: { id: project.creator!.id }, data: { role: "CREATOR" } })]
         : []),

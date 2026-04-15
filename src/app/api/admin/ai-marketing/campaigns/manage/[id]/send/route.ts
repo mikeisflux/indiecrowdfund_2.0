@@ -155,11 +155,26 @@ export async function POST(
       adminAiMarketingCampaignsManageSendLogger.info(`Resending campaign "${campaign.name}" (previously sent at ${campaign.status === "SENT" ? "earlier" : "never"})`);
     }
 
-    // Update status to SENDING
-    await db.emailCampaign.update({
-      where: { id },
+    // CAS on status: not-SENDING → SENDING. Without this, two admins
+    // hitting "Send" simultaneously (or double-click) would both pass
+    // the status check above and both queue every email on the list,
+    // doubling the send.
+    const sendingCas = await db.emailCampaign.updateMany({
+      where: {
+        id,
+        status: isResend
+          ? { notIn: ["SENDING"] }
+          : { notIn: ["SENDING", "SENT"] },
+      },
       data: { status: "SENDING" },
     });
+
+    if (sendingCas.count === 0) {
+      return NextResponse.json(
+        { error: "Campaign is already being sent or has just been sent." },
+        { status: 409 }
+      );
+    }
 
     // Get recipients based on target audience (with names)
     const recipientMap = new Map<string, Recipient>();

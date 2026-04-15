@@ -424,6 +424,48 @@ P2002 returns 500.
 twice and queue the background send job twice.
 **Fix:** CAS `updateMany` on `status: { notIn: ["SENDING", "SENT"] }`.
 
+### Finding #29 — admin project review TOCTOU creating duplicate reviews (session 4)
+**File:** `src/app/api/admin/projects/review/route.ts`
+**Impact:** Two admins clicking Approve/Reject on the same project at
+the same time would both pass the `status !== "SUBMITTED"` check, both
+flip status, both create duplicate `ProjectReview` rows, both fire the
+approval email, both notify search engines, and if it's a prelaunch
+approval, both promote the creator's role.
+**Fix:** CAS on `status: "SUBMITTED"` (or `prelaunchStatus: <current>`)
+before the ProjectReview.create and side effects. Return 409 on CAS loss.
+
+### Finding #30 — admin marketplace book review TOCTOU (session 4)
+**File:** `src/app/api/admin/marketplace/books/[id]/review/route.ts`
+**Impact:** Two admins reviewing a marketplace book simultaneously
+would both flip status, create duplicate `MarketplaceBookReview` rows,
+double-notify search engines, double-promote creator to CREATOR role,
+and fire `notifyMarketplaceBookReview` twice (duplicate emails to
+creator).
+**Fix:** CAS on `status: "PENDING_REVIEW" → "LIVE"/"REJECTED"`.
+
+### Finding #31 — admin ai-marketing campaign send TOCTOU (session 4)
+**File:** `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts`
+**Impact:** Two admins (or double-click) clicking "Send" on the same
+campaign would both pass the `SENDING`/`SENT` check and both queue
+every recipient email — doubling the send to every subscriber/user
+on the target audience. This would be 2000+ duplicate emails for a
+platform-wide send.
+**Fix:** CAS `updateMany` on `status: { notIn: ["SENDING", "SENT"] } →
+"SENDING"` before the recipient loop. Resend mode relaxes the guard
+to allow SENT but still blocks concurrent SENDING.
+
+### Finding #32 — email open tracking double-count via pixel prefetch (session 4)
+**File:** `src/app/api/email/track/open/route.ts`
+**Impact:** Not a data-corruption race but a stats-inflation race.
+Every pixel fetch incremented `EmailCampaign.openCount` unconditionally.
+Mail clients (Gmail, Outlook, Apple Mail) proxy-prefetch images when
+the user first sees the email in the inbox list, then prefetch again
+when opening — often inflating openCount by 2-10x the real number of
+opens. The EmailLog had a `openedAt: null` guard but openCount didn't.
+**Fix:** Reordered so `emailLog.updateMany` with the `openedAt: null`
+CAS runs first. Only increment `openCount` if we actually recorded
+a first-open (`logResult.count > 0`).
+
 ---
 
 ### Not-yet-fixed / architectural notes

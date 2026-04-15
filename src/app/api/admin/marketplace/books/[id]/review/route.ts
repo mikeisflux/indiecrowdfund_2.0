@@ -69,11 +69,15 @@ export async function POST(
       );
     }
 
-    // Update book status
+    // CAS on status: PENDING_REVIEW → {LIVE,REJECTED}. Without this,
+    // two admins reviewing concurrently would both pass the check,
+    // both flip the status, both create MarketplaceBookReview rows,
+    // and both fire the search-engine indexing + creator notification
+    // + creator role promotion side effects.
     const newStatus = action === "approve" ? "LIVE" : "REJECTED";
 
-    await prisma.marketplaceBook.update({
-      where: { id },
+    const reviewCas = await prisma.marketplaceBook.updateMany({
+      where: { id, status: "PENDING_REVIEW", deletedAt: null },
       data: {
         status: newStatus,
         rejectionReason: action === "reject" ? reason : null,
@@ -82,6 +86,13 @@ export async function POST(
         publishedAt: action === "approve" ? new Date() : null,
       },
     });
+
+    if (reviewCas.count === 0) {
+      return NextResponse.json(
+        { error: "Book status changed — another admin may have already reviewed it." },
+        { status: 409 }
+      );
+    }
 
     // Create review history entry
     await prisma.marketplaceBookReview.create({
