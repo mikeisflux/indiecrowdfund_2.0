@@ -39,8 +39,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { projectId } = body;
+    // Guard against empty/malformed JSON bodies — req.json() throws
+    // on these, which used to surface as a generic 500 without any
+    // hint of what the actual problem was.
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid or empty request body" },
+        { status: 400 }
+      );
+    }
+
+    const projectId = body?.projectId;
 
     if (!projectId || typeof projectId !== "string") {
       return NextResponse.json(
@@ -73,20 +85,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Load all eligible pledges. Eligible = status is COMPLETED OR has
-    // a saved payment method (deferred charge). We don't filter by
-    // `user.email != null` at the Prisma level because Prisma 7 rejects
-    // `{ not: null }` on nullable string filters at runtime with
-    // "Argument `not` must not be null." The downstream
-    // notifyBackerPledgeConfirmed() function already short-circuits on
-    // pledges whose user has no email, so fetching a few extra rows here
-    // is safe — they'll be no-ops rather than errors.
+    // a saved payment method (deferred charge). We use the `NOT: { field: null }`
+    // syntax instead of `{ field: { not: null } }` because Prisma 7's
+    // runtime validator rejects the latter at runtime (despite TS types
+    // saying it's legal) with: "Argument `not` must not be null". Same
+    // issue we fixed for user.email in commit 56280fcc — the pattern
+    // recurs on any nullable string filter.
     const eligiblePledges = await db.pledge.findMany({
       where: {
         projectId,
         deletedAt: null,
         OR: [
           { status: "COMPLETED" },
-          { stripePaymentMethodId: { not: null } },
+          { NOT: { stripePaymentMethodId: null } },
         ],
       },
       select: {

@@ -178,9 +178,14 @@ export async function GET(
     // Batch fetch superbacker status (single query instead of N+1)
     const superbackerMap = await getSuperbakerStatus(allUserIds);
 
-    // Fetch accepted collaborator user IDs for this project
+    // Fetch accepted collaborator user IDs for this project.
+    // Prisma 7 runtime rejects `{ not: null }` on nullable string
+    // filters (same issue as commit 56280fcc) — use the NOT wrapper
+    // syntax instead. The downstream .filter() strips any null userIds
+    // that leak through, so even without the DB-level filter we'd be
+    // safe, but we keep the filter here to avoid unnecessary row fetches.
     const collaborators = await db.projectCollaborator.findMany({
-      where: { projectId, status: "ACCEPTED", userId: { not: null } },
+      where: { projectId, status: "ACCEPTED", NOT: { userId: null } },
       select: { userId: true },
     });
     const collaboratorIds = new Set<string>(
