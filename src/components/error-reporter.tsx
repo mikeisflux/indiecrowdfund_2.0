@@ -47,6 +47,9 @@ export function ErrorReporter() {
       // Facebook in-app browser WebView lifecycle errors
       /Java object is gone/,
       /Error invoking postMessage/,
+      // Facebook in-app browser stripping iOS WebKit bridge from injected scripts
+      /window\.webkit\.messageHandlers/,
+      /webkit\.messageHandlers/,
       // Browser feature detection noise
       /Permission denied to access property/,
       /cross-origin object/,
@@ -57,6 +60,46 @@ export function ErrorReporter() {
       /AbortError/,
       // iOS Safari privacy-mode quota errors
       /QuotaExceededError/,
+      // Google reCAPTCHA widget timeouts — their service, not ours
+      /reCAPTCHA Timeout/,
+      /grecaptcha.*timeout/i,
+      // TipTap/ProseMirror NoModificationAllowedError — contentEditable
+      // interference from browser extensions (Grammarly, LanguageTool, etc.)
+      /NoModificationAllowedError/,
+    ];
+
+    // Paths that automated scanners / ad networks / browser feature-detection
+    // routinely probe that we don't serve. Bot-probe 404s on these paths
+    // are expected and should never be logged as errors.
+    const IGNORED_404_PATH_PATTERNS = [
+      // IAB / programmatic ads (WebPageTest, Pingdom, ad network probes)
+      /\/ads\.txt$/,
+      /\/sellers\.json$/,
+      /\/app-ads\.txt$/,
+      // LLM / AI crawler directives
+      /\/llms\.txt$/,
+      /\/llms-full\.txt$/,
+      // Apple / Android app deep-link / wallet probes
+      /\/apple-app-site-association/,
+      /\/\.well-known\/assetlinks\.json/,
+      /\/\.well-known\/apple-app-site-association/,
+      // Browser feature detection (FedCM, Privacy Sandbox, Topics API, etc.)
+      /\/\.well-known\/web-identity/,
+      /\/\.well-known\/privacy-sandbox/,
+      /\/\.well-known\/traffic-advice/,
+      /\/\.well-known\/change-password/,
+      /\/\.well-known\/security\.txt/,
+      // Random bot-scan targets
+      /\/humans\.txt$/,
+      /\/crossdomain\.xml$/,
+      /\/clientaccesspolicy\.xml$/,
+      /\/browserconfig\.xml$/,
+      /\/manifest\.json$/,
+      /\/site\.webmanifest$/,
+      // Fediverse / webfinger probes
+      /\/\.well-known\/webfinger/,
+      /\/\.well-known\/host-meta/,
+      /\/\.well-known\/nodeinfo/,
     ];
 
     const isBrowserNoise = (message?: string, stack?: string): boolean => {
@@ -109,7 +152,15 @@ export function ErrorReporter() {
       // expected 400s from token-based flows (verify-email), 404s from surveys without a survey record,
       // and 401s from user-specific endpoints hit by unauthenticated visitors
       const isExpected400 = response.status === 400 && requestUrl.includes("/api/user/verify-email");
-      const isExpected404 = response.status === 404 && requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond");
+      // Bot-probe 404s on well-known paths that we don't serve (ads.txt,
+      // llms.txt, /.well-known/*, etc.) — WebPageTest, Pingdom, ad network
+      // scanners, and FedCM/Privacy Sandbox feature detection all probe
+      // these routinely.
+      const isBotProbe404 = response.status === 404 &&
+        IGNORED_404_PATH_PATTERNS.some((p) => p.test(requestUrl));
+      const isExpected404 =
+        (response.status === 404 && requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond")) ||
+        isBotProbe404;
       const isExpected401 = response.status === 401 && requestUrl.includes("/api/user/following");
       // These endpoints never return 403 themselves — a 403 means the bot blocker blocked the IP
       // digital-files/stream 403 = access denied for thumbnail (shows fallback icon, not a crash)
