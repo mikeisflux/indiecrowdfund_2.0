@@ -1,4 +1,5 @@
 import { sendEmail } from "./email-config";
+import { safeEmailImageUrl } from "./safe-image-url";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -45,10 +46,11 @@ export async function sendPledgeConfirmationEmail(
   const projectUrl = projectUrlPath ? `${APP_URL}${projectUrlPath}` : `${APP_URL}/projects/${projectSlug}`;
   const dashboardUrl = `${APP_URL}/dashboard`;
 
-  // Ensure image URL is absolute
-  const absoluteImageUrl = imageUrl
-    ? (imageUrl.startsWith("http") ? imageUrl : `${APP_URL}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`)
-    : null;
+  // Sanitize the image URL before embedding in the email (shared helper).
+  // Rejects base64 data URIs and concatenated junk — these would previously
+  // embed multi-megabyte blobs directly into the <img src> attribute and
+  // bloat AdminEmail/EmailLog/EmailQueue by ~12 MB per sent email.
+  const absoluteImageUrl = safeEmailImageUrl(imageUrl, APP_URL);
 
   // Format amount with the project's currency
   const formatCurrency = (value: number) => new Intl.NumberFormat("en-US", {

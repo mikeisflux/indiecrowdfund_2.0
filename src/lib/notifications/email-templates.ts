@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/email";
+import { safeEmailImageUrl } from "@/lib/email/safe-image-url";
 import { APP_NAME, APP_URL } from "./types";
 
 function escapeHtml(str: string): string {
@@ -37,7 +38,7 @@ export async function sendProjectFundedEmail(
         <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
           <h2 style="margin-top: 0; color: white; text-align: center;">Project Funded!</h2>
 
-          ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(projectTitle)}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
+          ${(() => { const safe = safeEmailImageUrl(imageUrl, APP_URL); return safe ? `<img src="${safe}" alt="${escapeHtml(projectTitle)}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""; })()}
 
           <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center;">
             <h3 style="margin: 0 0 10px 0; color: white;">${escapeHtml(projectTitle)}</h3>
@@ -101,7 +102,7 @@ export async function sendProjectLaunchEmail(
         <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
           <h2 style="margin-top: 0; color: #333;">A Project You Follow Is Now Live!</h2>
 
-          ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(projectTitle)}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin-bottom: 20px;">` : ""}
+          ${(() => { const safe = safeEmailImageUrl(imageUrl, APP_URL); return safe ? `<img src="${safe}" alt="${escapeHtml(projectTitle)}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin-bottom: 20px;">` : ""; })()}
 
           <div style="background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 20px; margin: 20px 0;">
             <h3 style="margin: 0 0 10px 0; color: #333;">${escapeHtml(projectTitle)}</h3>

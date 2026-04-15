@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkEmailAccess } from "@/lib/auth/email-access";
 import { logger } from "@/lib/logger";
+import { stripBase64FromHtml } from "@/lib/email/strip-base64-html";
 
 const campaignLogger = logger.child({ module: "campaigns" });
 
@@ -59,7 +60,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { projectId, action, campaignId, name, title, subject, content, stageId } = body;
     // Support both 'body' and 'content' for template content
-    const htmlContent = body.body || content || "";
+    const rawHtmlContent = body.body || content || "";
+    // Strip base64 images from the HTML before persisting — TipTap's
+    // allowBase64:true in the email editor lets users drag-drop images
+    // that get embedded as data: URIs. Extracting to disk files keeps
+    // EmailCampaign.htmlContent rows from bloating by MBs per image.
+    const { html: htmlContent } = await stripBase64FromHtml(rawHtmlContent);
 
     if (action === "create" || action === "create_draft") {
       const campaignName = name || title || "New Campaign";

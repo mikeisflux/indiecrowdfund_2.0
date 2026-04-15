@@ -5,6 +5,7 @@ const adminEmailLogger = logger.child({ module: "admin-email" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail, escapeHtmlForEmail } from "@/lib/email";
+import { stripBase64FromHtml } from "@/lib/email/strip-base64-html";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -189,14 +190,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (type === "template") {
-      const { name, subject, htmlContent, textContent, variables } = body;
+      const { name, subject, htmlContent: rawHtml, textContent, variables } = body;
 
-      if (!name || !subject || !htmlContent) {
+      if (!name || !subject || !rawHtml) {
         return NextResponse.json(
           { error: "Name, subject, and HTML content are required" },
           { status: 400 }
         );
       }
+
+      // Strip base64 images before persisting (prevents DB bloat)
+      const { html: htmlContent } = await stripBase64FromHtml(rawHtml);
 
       const template = await db.emailTemplate.create({
         data: {
@@ -212,14 +216,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Create campaign
-    const { name, subject, htmlContent, targetAudience, filters, scheduledFor } = body;
+    const { name, subject, htmlContent: rawCampaignHtml, targetAudience, filters, scheduledFor } = body;
 
-    if (!name || !subject || !htmlContent) {
+    if (!name || !subject || !rawCampaignHtml) {
       return NextResponse.json(
         { error: "Name, subject, and HTML content are required" },
         { status: 400 }
       );
     }
+
+    // Strip base64 images before persisting (prevents DB bloat)
+    const { html: htmlContent } = await stripBase64FromHtml(rawCampaignHtml);
 
     // Calculate recipient count based on target audience
     let recipientCount = 0;

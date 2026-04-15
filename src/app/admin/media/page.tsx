@@ -92,6 +92,7 @@ export default function MediaPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [recovering, setRecovering] = useState(false);
   const [generatingJpg, setGeneratingJpg] = useState(false);
+  const [strippingEmails, setStrippingEmails] = useState(false);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [stats, setStats] = useState<MediaStats | null>(null);
@@ -227,6 +228,47 @@ export default function MediaPage() {
       toast.error(err instanceof Error ? err.message : "Recovery request failed");
     } finally {
       setRecovering(false);
+    }
+  };
+
+  const handleStripBase64Emails = async () => {
+    if (strippingEmails) return;
+    if (
+      !confirm(
+        "Strip base64 images out of ALL email bodies?\n\nThis scans AdminEmail, EmailLog, EmailQueue, and EmailCampaign for any row with an embedded data: URI, extracts each image to /uploads/email-extracted/ as a real file, and rewrites the <img src> to point at the file URL.\n\nSafe to run multiple times (idempotent — skips rows that are already clean). Processing ~170K rows may take several minutes.\n\nAfter this completes, run `VACUUM FULL` on the affected tables from psql to actually reclaim disk space. PostgreSQL doesn't return the space until VACUUM FULL."
+      )
+    ) {
+      return;
+    }
+    setStrippingEmails(true);
+    const loadingToast = toast.loading("Stripping base64 images from email bodies (this takes a while)...");
+    try {
+      const res = await apiFetch("/api/admin/projects/strip-base64-emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      toast.dismiss(loadingToast);
+      if (!res.ok) {
+        toast.error(data.error || "Strip base64 failed");
+        return;
+      }
+      const { totalUpdated, totalImages, bytesRemovedMB, estimatedReclaimedMB } = data;
+      if (totalUpdated === 0) {
+        toast.info("No email rows had base64 images to strip — nothing to clean");
+      } else {
+        toast.success(
+          `Updated ${totalUpdated} rows, extracted ${totalImages} images. Removed ~${bytesRemovedMB}MB from HTML bodies (~${estimatedReclaimedMB}MB reclaimed pending VACUUM).`,
+          { duration: 15000 }
+        );
+      }
+      fetchMedia();
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      console.error("Strip base64 error:", err);
+      toast.error(err instanceof Error ? err.message : "Strip base64 request failed");
+    } finally {
+      setStrippingEmails(false);
     }
   };
 
@@ -650,6 +692,22 @@ export default function MediaPage() {
               )}
               <span className="hidden sm:inline">
                 {recovering ? "Recovering..." : "Recover Base64 Covers"}
+              </span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleStripBase64Emails}
+              disabled={strippingEmails}
+              className="flex-1 sm:flex-none border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-950/40"
+              title="Scan AdminEmail/EmailLog/EmailQueue/EmailCampaign for embedded base64 images, extract to disk, rewrite HTML. Reclaims up to ~1.8GB of DB bloat."
+            >
+              {strippingEmails ? (
+                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 sm:mr-2" />
+              )}
+              <span className="hidden sm:inline">
+                {strippingEmails ? "Stripping..." : "Strip Base64 from Emails"}
               </span>
             </Button>
             <Button
