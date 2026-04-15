@@ -183,14 +183,25 @@ export async function POST(req: NextRequest) {
     // extension. The og:image URL in the project layout points at .jpg
     // directly — no runtime conversion, no CDN cache surprises.
     //
-    // Uses maximum-compatibility encoding: baseline JPEG (not progressive),
-    // explicit sRGB color space, no ICC profile, no EXIF/XMP metadata
-    // (sharp strips by default as long as we don't call .withMetadata),
-    // standard libjpeg (not mozjpeg), white-flatten for transparency.
+    // Encoding settings optimized for Facebook's picky decoder:
+    //   - Resize to exactly 1200x630 (FB's recommended dimensions; below
+    //     this threshold FB 2025/2026 rejects the image outright). Use
+    //     contain-fit with white letterbox padding so the creator's cover
+    //     art is never cropped.
+    //   - Baseline JPEG (not progressive)
+    //   - sRGB color space, no ICC profile, no EXIF/XMP (default sharp
+    //     strip behavior — do NOT call .withMetadata which preserves it)
+    //   - Standard libjpeg (not mozjpeg)
+    //   - White flatten for transparent source WebPs
     if (uploadType === "project" && finalMimeType === "image/webp") {
       try {
         const jpgBuffer = await sharp(finalBuffer)
           .flatten({ background: { r: 255, g: 255, b: 255 } })
+          .resize(1200, 630, {
+            fit: "contain",
+            background: { r: 255, g: 255, b: 255 },
+            withoutEnlargement: false,
+          })
           .toColorspace("srgb")
           .jpeg({
             quality: 85,

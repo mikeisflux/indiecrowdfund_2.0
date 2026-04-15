@@ -134,8 +134,18 @@ export async function POST(req: NextRequest) {
           //   - baseline (not progressive — some decoders choke on progressive)
           //   - standard libjpeg encoder, not mozjpeg
           //   - quality 85
+          //   - RESIZE TO EXACTLY 1200x630 — Facebook's 2025/2026 sharer
+          //     rejects images below the recommended 1200x630 threshold
+          //     entirely, even if they're above the documented 200x200
+          //     minimum. Use contain-fit with white letterbox padding so
+          //     we never crop the creator's cover art.
           const jpgBuffer = await sharp(webpBuffer)
             .flatten({ background: { r: 255, g: 255, b: 255 } })
+            .resize(1200, 630, {
+              fit: "contain",
+              background: { r: 255, g: 255, b: 255 },
+              withoutEnlargement: false,
+            })
             .toColorspace("srgb")
             .jpeg({
               quality: 85,
