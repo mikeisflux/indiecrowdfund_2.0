@@ -633,6 +633,71 @@ the notification on the winning delete.
 updateData.slug is set. Mirrors Finding #47 for the projects/[id]
 route.
 
+### Session 8+ — additional P2002/idempotency fixes
+
+Session 8-12 continued the audit through the remaining admin, creator,
+and webhook routes. The critical findings were already reported in
+#1-#57; the remaining fixes are lower-impact P2002 catches and
+deleteMany switches for idempotent retries:
+
+- admin/pages (slug @unique P2002)
+- admin/seo/redirects (fromPath @unique P2002)
+- admin/seo/keywords (keyword @unique P2002)
+- admin/mailboxes (email @unique P2002 + default-clearing $transaction)
+- admin/mailboxes/[id] (same + deleteMany)
+- admin/api-keys (deleteMany for idempotent delete)
+- admin/lcs-locator/shops (slug P2002 retry loop)
+- admin/ai-marketing/subscribers (findUnique+create → upsert)
+- admin/ai-marketing/campaigns/manage/[id]/abort (CAS on status: SENDING → CANCELLED)
+- creator/indiekit/surveys (CAS on survey status for send/lock)
+- creator/indiekit/updates (CAS on update status: DRAFT → PUBLISHED)
+- creator/marketplace/company (CompanyProfile userId + slug P2002 with targeted error)
+- user/data-deletion (GDPR: advisory-lock-guarded $transaction)
+- user/settings/email (email @unique P2002)
+- retailers/reset-password (deleteMany for expired/used tokens)
+- stripe/connect/reset (deleteMany for idempotent disconnect)
+- webhooks/email/track/open (stats dedup via EmailLog CAS)
+
+### Production hotfix — Prisma 7 nullable string filter
+
+Two production 500s were reported during the audit:
+- `/api/creator/pledges/bulk-resend-confirmation` (POST)
+- `/api/projects/[id]/comments` (GET)
+
+Both caused by the same Prisma 7 runtime bug that commit 56280fcc
+originally fixed for `user.email`: the runtime validator rejects
+`{ field: { not: null } }` on nullable string fields with
+"Argument `not` must not be null", even though the TypeScript types
+allow it.
+
+The original hotfix only fixed the specific instance in bulk-resend's
+`user: { email: { not: null } }` (nested through a relation). The
+current regression was on a DIRECT field filter:
+`stripePaymentMethodId: { not: null }` on the pledge itself.
+
+**Fix:** Use `NOT: { field: null }` wrapper syntax instead. Applied
+to both bulk-resend and the comments collaborator lookup. Also added
+explicit empty-body guard to bulk-resend so malformed requests
+return 400 instead of a generic 500.
+
+---
+
+## Audit totals
+
+Sessions 1-12 cumulative:
+- **70+ race conditions fixed** across ~100 files
+- **13 distinct patterns** used: CAS via updateMany/deleteMany, P2002
+  catch, Prisma upsert, advisory locks, row locks via FOR UPDATE,
+  $transaction wrapping, dedup time-windows, idempotent deleteMany,
+  NOT-wrapper for Prisma 7 nullable strings, and more.
+- **2 production 500s hotfixed** during the audit
+- **Finding categories covered:** webhook idempotency, state-machine
+  transitions (pledge/project/payout/review), reward slot claiming,
+  reward/addon cooperation under concurrent pledges, money flows
+  (Stripe/PayPal/DC/Whop), email delivery + tracking, survey
+  workflow, admin CRUD, creator CRUD, backer actions, marketplace
+  purchases, retailer application, GDPR flows.
+
 ### Finding #35 — admin DC settlement create (session 5)
 **File:** `src/app/api/admin/payouts/divinitycoin/route.ts`
 **Impact:** Creates COMPLETED settlement immediately (not PENDING),
