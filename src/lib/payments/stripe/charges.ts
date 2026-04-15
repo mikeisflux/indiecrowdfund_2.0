@@ -73,8 +73,16 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
 
       if (existingIntent.status === "succeeded") {
         stripeLogger.info({ pledgeId, paymentIntentId: pledge.stripePaymentIntentId }, "PaymentIntent already succeeded - updating pledge");
-        await db.pledge.update({
-          where: { id: pledgeId },
+        // Atomic CAS on status to prevent double-firing side effects
+        // (trackCampaignConversion increments EmailCampaign.conversionCount
+        // on every invocation). Two concurrent callers — e.g. the funded-
+        // campaigns cron + a Stripe webhook racing each other — could
+        // both reach this branch with the same pledge and both bump the
+        // conversion counter. The CAS ensures only one caller wins the
+        // PENDING → COMPLETED transition and only that caller fires the
+        // tracking + metrics side effects below.
+        const completionCas = await db.pledge.updateMany({
+          where: { id: pledgeId, status: "PENDING", deletedAt: null },
           data: {
             status: "COMPLETED",
             retryCount: 0,
@@ -82,6 +90,10 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
             lastFailureReason: null,
           },
         });
+        if (completionCas.count === 0) {
+          stripeLogger.info({ pledgeId }, "PaymentIntent already succeeded but pledge status was already !== PENDING - skipping side effects (lost CAS)");
+          return false;
+        }
         if (pledge.sourceCampaignId) {
           await trackCampaignConversion(pledgeId, pledge.sourceCampaignId);
         }
@@ -105,8 +117,12 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
             stripeClient.paymentIntents.confirm(pledge.stripePaymentIntentId!)
           );
           if (confirmedIntent.status === "succeeded") {
-            await db.pledge.update({
-              where: { id: pledgeId },
+            // Atomic CAS on status — same rationale as the succeeded
+            // branch above: prevent double-firing trackCampaignConversion
+            // and metrics when two concurrent callers both reach this
+            // branch for the same pledge.
+            const completionCas = await db.pledge.updateMany({
+              where: { id: pledgeId, status: "PENDING", deletedAt: null },
               data: {
                 status: "COMPLETED",
                 retryCount: 0,
@@ -114,6 +130,10 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
                 lastFailureReason: null,
               },
             });
+            if (completionCas.count === 0) {
+              stripeLogger.info({ pledgeId }, "PaymentIntent confirmed but pledge status was already !== PENDING - skipping side effects (lost CAS)");
+              return false;
+            }
             if (pledge.sourceCampaignId) {
               await trackCampaignConversion(pledgeId, pledge.sourceCampaignId);
             }
@@ -246,31 +266,31 @@ export async function chargeSavedPledge(pledgeId: string): Promise<boolean> {
     metrics.externalApiDuration.observe({ service: "stripe", method: "paymentIntents.create" }, durationSec);
 
     if (paymentIntent.status === "succeeded") {
-      let finalBackerNumber: number;
-      if (pledge.backerNumber) {
-        finalBackerNumber = pledge.backerNumber;
-        await db.pledge.update({
-          where: { id: pledgeId },
-          data: {
-            stripePaymentIntentId: paymentIntent.id,
-            status: "COMPLETED",
-            retryCount: 0,
-            nextRetryAt: null,
-            lastFailureReason: null,
-          },
-        });
-      } else {
-        finalBackerNumber = await assignBackerNumber(pledge.projectId, pledgeId);
-        await db.pledge.update({
-          where: { id: pledgeId },
-          data: {
-            stripePaymentIntentId: paymentIntent.id,
-            status: "COMPLETED",
-            retryCount: 0,
-            nextRetryAt: null,
-            lastFailureReason: null,
-          },
-        });
+      // Atomic CAS from PENDING to COMPLETED. Side effects below
+      // (trackCampaignConversion, notifyBackerPledgeConfirmed, metrics)
+      // must only fire once per pledge. Two concurrent runs hitting
+      // this same code path would otherwise double-count.
+      //
+      // assignBackerNumber is itself idempotent (row-locked, checks
+      // existing.backerNumber first), so we can safely call it BEFORE
+      // the CAS — a double-call just returns the same number.
+      const finalBackerNumber = pledge.backerNumber
+        ?? (await assignBackerNumber(pledge.projectId, pledgeId));
+
+      const completionCas = await db.pledge.updateMany({
+        where: { id: pledgeId, status: "PENDING", deletedAt: null },
+        data: {
+          stripePaymentIntentId: paymentIntent.id,
+          status: "COMPLETED",
+          retryCount: 0,
+          nextRetryAt: null,
+          lastFailureReason: null,
+        },
+      });
+
+      if (completionCas.count === 0) {
+        stripeLogger.info({ pledgeId }, "Payment succeeded but lost status CAS — another caller already completed this pledge, skipping side effects");
+        return true;
       }
 
       if (pledge.sourceCampaignId) {

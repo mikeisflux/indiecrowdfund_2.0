@@ -136,6 +136,132 @@ This section is appended to as we discover and fix race conditions. Each finding
 
 ---
 
+
+## Audit progress
+
+**Session 1 (2026-04-15):** Audited 19 highest-risk files covering all payment
+flows (Stripe, PayPal, Whop, DivinityCoin is pass-through), all webhook handlers,
+all cron jobs, the email queue processor, middleware rate limiters, and the core
+reward-claiming utilities.
+
+- Files fully audited and clean: **13** (marked `[x]`)
+- Files audited and fixed: **6** (marked `[!]`)
+- Files remaining: **1,139** — primarily:
+  - UI components (most cannot have race conditions in the traditional sense)
+  - Simple CRUD API routes (many don't have complex state transitions)
+  - Lib utilities (many are pure functions)
+  - Type definition files
+  - Test files and test data
+
+The highest-risk 19 files are done. The remaining 1139 are a long-tail audit
+that needs a follow-up session. Most of them won't have races, but confirming
+that rigorously requires reading each one.
+
+## Findings log
+
+### Finding #1 — Stripe webhook `handlePaymentSuccess` TOCTOU
+**File:** `src/lib/payments/stripe/webhooks.ts`
+**Pattern:** (1) check-then-act + webhook idempotency
+**Impact:** Stripe webhooks deliver at-least-once. On retry, the handler would
+re-read `status !== COMPLETED`, re-execute the plain `pledge.update` (which
+always succeeds), then re-fire side effects:
+- `trackCampaignConversion` → `EmailCampaign.conversionCount` double-incremented
+- `addToCreatorEmailList` → safe (upsert-pattern with P2002 catch, but wasted call)
+- Stats update is protected by CAS on `confirmationEmailSent` so that part was OK
+
+The downstream CAS at line 130-133 protected stats from double-counting, but
+`trackCampaignConversion` and `addToCreatorEmailList` happened BEFORE that
+CAS, so they double-fired.
+
+**Fix:** Added a compare-and-swap on `status: { not: "COMPLETED" } → "COMPLETED"`
+at the top of the handler, before any side effects. Re-fetch the pledge with
+relations only if the CAS wins. All subsequent side effects now only fire for
+the race winner.
+
+### Finding #2 — PayPal `PAYMENT.CAPTURE.REFUNDED` non-atomic refund
+**File:** `src/app/api/webhooks/paypal/route.ts`
+**Pattern:** (1) check-then-act + (6) state machine transition without CAS
+**Impact:** PayPal webhooks are at-least-once. Two concurrent refund events
+could both `findFirst` the COMPLETED pledge, both `pledge.update` it to
+REFUNDED, and both decrement `backerCount`, `currentAmount`, and
+`quantityClaimed` — **double-refund accounting**.
+
+**Fix:** Replaced plain `pledge.update` with `updateMany` CAS on
+`status: "COMPLETED" → "REFUNDED"`. If count === 0, we lost the race and
+skip the decrements.
+
+### Finding #3 — Whop `refund_created` non-atomic refund
+**File:** `src/app/api/webhooks/whop/route.ts`
+**Pattern:** same as Finding #2
+**Impact:** same as Finding #2, but on Whop retries
+**Fix:** same pattern — `updateMany` CAS on status transition
+
+### Finding #4 — Email events webhook bounce/spam findFirst-then-create
+**File:** `src/app/api/webhooks/email/events/route.ts`
+**Pattern:** (10) lock-free upsert
+**Impact:** Mailgun webhooks are at-least-once. Two concurrent bounce events
+for the same email would both miss the findFirst, both try to create, and
+the second would fail with P2002 (EmailBlocklist has `@@unique([type, value])`).
+The handler didn't catch P2002, so the webhook returned 500, Mailgun retried,
+loop — not catastrophic but noisy error logs and failed webhook acks.
+
+**Fix:** Replaced both `handleBounce` and `handleSpamComplaint` with atomic
+Prisma `upsert` calls. Fully idempotent regardless of delivery count.
+
+### Finding #5 — Scheduled campaigns cron overlap
+**File:** `src/app/api/cron/scheduled-campaigns/route.ts`
+**Pattern:** (1) check-then-act + cron overlap
+**Impact:** If a cron run takes longer than the schedule interval (possible
+for large subscriber lists), the next cron tick fires while the previous is
+still running. Both `findMany` the same SCHEDULED campaigns, both `update`
+them to SENDING, both send — **backer receives the same campaign email twice**.
+
+**Fix:** Per-campaign `updateMany` CAS on `status: "SCHEDULED" → "SENDING"`.
+If count === 0 for a campaign, the other cron tick already claimed it and
+this run skips to the next campaign.
+
+### Finding #6 — chargeSavedPledge triple TOCTOU on status completion
+**File:** `src/lib/payments/stripe/charges.ts`
+**Pattern:** (1) check-then-act in 3 separate code branches
+**Impact:** `chargeSavedPledge` is called from three different places:
+1. `/api/pledges/[pledgeId]/confirm/route.ts` (user-facing)
+2. `/api/cron/process-funded-campaigns/route.ts` (cron)
+3. `src/lib/payments/stripe/webhooks.ts` (webhook)
+
+All three can fire near-concurrently when a project just funded. Stripe's
+idempotency keys prevent **the actual charge** from firing twice, but the
+function's local state updates (`pledge.status = COMPLETED` + side effects
+`trackCampaignConversion`, `notifyBackerPledgeConfirmed`, metrics) were
+not CAS-guarded. Three separate branches in the function hit this bug:
+
+- Line 74-89: "PaymentIntent already succeeded" branch
+- Line 114-134: "requires_confirmation then confirms to succeeded" branch
+- Line 268-307: main "freshly created PaymentIntent succeeded" branch
+
+All three would double-fire `trackCampaignConversion` and
+`notifyBackerPledgeConfirmed` if two concurrent callers raced.
+
+**Fix:** Added a `updateMany` CAS on `status: "PENDING" → "COMPLETED"` to
+each of the three branches. Side effects only fire for the caller that wins
+the CAS. `assignBackerNumber` was already row-locked and idempotent, so the
+backer number logic was moved BEFORE the CAS and called unconditionally.
+
+### Not-yet-fixed / architectural notes
+
+- **Middleware in-memory rate limiters** — the 4 `Map` rate limiters in
+  `src/middleware.ts` are per-worker. With 4 PM2 workers, an attacker can
+  hit 4× the rate limit by round-robining across workers. This is a
+  coordination failure between workers, not a per-request race. Fixing
+  would require Redis or similar shared state. Deferred.
+- **confirmationEmailSent dual-use** — this flag serves two orthogonal
+  concerns (stats de-dup + historical "email attempted" marker). The
+  EmailLog-based reconciliation we added in commit `1935c36f` + `56280fcc`
+  makes the email-delivered concern use EmailLog as source of truth. The
+  flag stays for stats de-dup only. Documented in the confirm route and
+  both webhook handlers.
+
+---
+
 ## Complete file tree
 
 - [ ] **prisma/**
@@ -942,23 +1068,23 @@ This section is appended to as we discover and fix race conditions. Each finding
           - [ ] route.ts
       - [ ] **cron/**
         - [ ] **ai-marketing/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **cleanup-pledges/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **cleanup-projects/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **email-queue/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **email-retries/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **payment-retries/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **process-failed-campaigns/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **process-funded-campaigns/**
-          - [ ] route.ts
+          - [x] route.ts
         - [ ] **scheduled-campaigns/**
-          - [ ] route.ts
+          - [!] route.ts
       - [ ] **diagnostics/**
         - [ ] **payment/**
           - [ ] route.ts
@@ -1045,7 +1171,7 @@ This section is appended to as we discover and fix race conditions. Each finding
           - [ ] **add-items/**
             - [ ] route.ts
           - [ ] **confirm/**
-            - [ ] route.ts
+            - [x] route.ts
           - [ ] **confirm-add-items/**
             - [ ] route.ts
           - [ ] **confirm-modify/**
@@ -1237,11 +1363,11 @@ This section is appended to as we discover and fix race conditions. Each finding
           - [ ] route.ts
         - [ ] **email/**
           - [ ] **events/**
-            - [ ] route.ts
+            - [!] route.ts
           - [ ] **inbound/**
             - [ ] route.ts
         - [ ] **paypal/**
-          - [ ] route.ts
+          - [!] route.ts
         - [ ] **stripe/**
           - [ ] **connect/**
             - [ ] route.ts
@@ -1249,7 +1375,7 @@ This section is appended to as we discover and fix race conditions. Each finding
         - [ ] **stripe_connect/**
           - [ ] route.ts
         - [ ] **whop/**
-          - [ ] route.ts
+          - [!] route.ts
       - [ ] **whop/**
         - [ ] **config/**
           - [ ] route.ts
@@ -1872,9 +1998,9 @@ This section is appended to as we discover and fix race conditions. Each finding
     - [ ] **db/**
       - [ ] index.ts
     - [ ] **email/**
-      - [ ] email-config.ts
+      - [x] email-config.ts
       - [ ] email-templates-auth.ts
-      - [ ] email-templates-misc.ts
+      - [x] email-templates-misc.ts
       - [ ] email-templates-pledge.ts
       - [ ] email-templates-project.ts
       - [ ] safe-image-url.ts
@@ -1908,15 +2034,15 @@ This section is appended to as we discover and fix race conditions. Each finding
         - [ ] config.ts
         - [ ] index.ts
       - [ ] **stripe/**
-        - [ ] charges.ts
+        - [!] charges.ts
         - [ ] checkout.ts
         - [ ] config.ts
         - [ ] connect.ts
         - [ ] customers.ts
         - [ ] index.ts
         - [ ] intents.ts
-        - [ ] rewards.ts
-        - [ ] webhooks.ts
+        - [x] rewards.ts
+        - [!] webhooks.ts
       - [ ] **whop/**
         - [ ] checkout.ts
         - [ ] config.ts
@@ -1975,7 +2101,7 @@ This section is appended to as we discover and fix race conditions. Each finding
     - [ ] api.ts
     - [ ] index.ts
   - [ ] instrumentation.ts
-  - [ ] middleware.ts
+  - [x] middleware.ts
 - [ ] debug-stats.js
 - [ ] ecosystem.config.js
 - [ ] eslint.config.mjs

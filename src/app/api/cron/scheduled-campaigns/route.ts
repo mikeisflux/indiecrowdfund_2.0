@@ -68,11 +68,22 @@ export async function GET(req: NextRequest) {
 
     for (const campaign of dueCampaigns) {
       try {
-        // Mark as SENDING to prevent double-processing
-        await db.emailCampaign.update({
-          where: { id: campaign.id },
+        // Atomic compare-and-swap on status to prevent double-processing.
+        // Without this, if two cron ticks overlap (a previous run is still
+        // processing when the next one fires), both runs would findMany
+        // the same SCHEDULED campaigns, both mark them as SENDING, and
+        // both send the same campaign. updateMany with a status=SCHEDULED
+        // WHERE clause ensures only one caller wins the race.
+        const claim = await db.emailCampaign.updateMany({
+          where: { id: campaign.id, status: "SCHEDULED" },
           data: { status: "SENDING" },
         });
+
+        if (claim.count === 0) {
+          // Another cron tick already claimed this campaign.
+          results.push({ id: campaign.id, status: "skipped", reason: "Already being sent by another cron tick" });
+          continue;
+        }
 
         // Get creator info
         const creator = await db.user.findFirst({

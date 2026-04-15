@@ -172,36 +172,36 @@ async function handleBounce(email: string, reason?: string, source?: string) {
 
   webhooksEmailEventsLogger.info(`[Bounce] Processing bounce for: ${normalizedEmail}, reason: ${reason}`);
 
-  // 1. Add to EmailBlocklist if not already there
-  const existingBlock = await db.emailBlocklist.findFirst({
+  // 1. Upsert EmailBlocklist entry. Using upsert instead of
+  // findFirst + conditional create because Mailgun webhooks deliver
+  // at-least-once — a retried bounce event would race the old
+  // findFirst-then-create pattern and throw P2002 unique constraint
+  // violations (the @@unique([type, value]) constraint on
+  // EmailBlocklist catches the race, but the old code didn't handle
+  // P2002, causing the handler to 500 and Mailgun to retry again).
+  // Upsert is atomic at the DB level.
+  //
+  // `reason: reason || undefined` leaves the field unchanged on update
+  // if the incoming reason is falsy (Prisma treats `undefined` as
+  // "don't update this field").
+  await db.emailBlocklist.upsert({
     where: {
+      type_value: { type: "EMAIL", value: normalizedEmail },
+    },
+    create: {
       type: "EMAIL",
       value: normalizedEmail,
+      reason: reason || "Email bounced",
+      source: source || "webhook-bounce",
+      isActive: true,
+    },
+    update: {
+      blockedCount: { increment: 1 },
+      lastBlockedAt: new Date(),
+      reason: reason || undefined,
     },
   });
-
-  if (!existingBlock) {
-    await db.emailBlocklist.create({
-      data: {
-        type: "EMAIL",
-        value: normalizedEmail,
-        reason: reason || "Email bounced",
-        source: source || "webhook-bounce",
-        isActive: true,
-      },
-    });
-    webhooksEmailEventsLogger.info(`[Bounce] Added ${normalizedEmail} to blocklist`);
-  } else {
-    // Update existing blocklist entry
-    await db.emailBlocklist.update({
-      where: { id: existingBlock.id },
-      data: {
-        blockedCount: { increment: 1 },
-        lastBlockedAt: new Date(),
-        reason: reason || existingBlock.reason,
-      },
-    });
-  }
+  webhooksEmailEventsLogger.info(`[Bounce] Upserted ${normalizedEmail} into blocklist`);
 
   // 2. Full removal from all lists + cancel pending queue emails
   await removeFromAllLists(normalizedEmail, "bounce", "bounced");
@@ -215,34 +215,26 @@ async function handleSpamComplaint(email: string) {
 
   webhooksEmailEventsLogger.info(`[Spam] Processing spam complaint for: ${normalizedEmail}`);
 
-  // Add to blocklist with spam reason
-  const existingBlock = await db.emailBlocklist.findFirst({
+  // Atomic upsert — same rationale as handleBounce above. Mailgun
+  // retries would otherwise race the findFirst + create pattern and
+  // trip the @@unique([type, value]) constraint.
+  await db.emailBlocklist.upsert({
     where: {
+      type_value: { type: "EMAIL", value: normalizedEmail },
+    },
+    create: {
       type: "EMAIL",
       value: normalizedEmail,
+      reason: "Spam complaint",
+      source: "webhook-spam",
+      isActive: true,
+    },
+    update: {
+      reason: "Spam complaint",
+      blockedCount: { increment: 1 },
+      lastBlockedAt: new Date(),
     },
   });
-
-  if (!existingBlock) {
-    await db.emailBlocklist.create({
-      data: {
-        type: "EMAIL",
-        value: normalizedEmail,
-        reason: "Spam complaint",
-        source: "webhook-spam",
-        isActive: true,
-      },
-    });
-  } else {
-    await db.emailBlocklist.update({
-      where: { id: existingBlock.id },
-      data: {
-        reason: "Spam complaint",
-        blockedCount: { increment: 1 },
-        lastBlockedAt: new Date(),
-      },
-    });
-  }
 
   // Full removal from all lists + cancel pending queue emails
   await removeFromAllLists(normalizedEmail, "spam complaint");

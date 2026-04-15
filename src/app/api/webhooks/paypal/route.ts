@@ -205,6 +205,9 @@ export async function POST(req: NextRequest) {
         const customId = resource.custom_id as string | undefined;
         if (!customId) break;
 
+        // Load pledge details we need for the decrement amounts BEFORE
+        // attempting the status CAS. This is purely informational — the
+        // CAS below is what actually guards against double-processing.
         const refundedPledge = await db.pledge.findFirst({
           where: { id: customId, status: "COMPLETED", deletedAt: null },
           select: { id: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
@@ -215,10 +218,25 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        await db.pledge.update({
-          where: { id: refundedPledge.id },
+        // Atomic compare-and-swap on status. PayPal webhooks can be
+        // retried on any 5xx response (and replayed from the dashboard),
+        // so without this CAS two concurrent REFUNDED webhooks could
+        // both pass the findFirst above, both update pledge status, and
+        // both decrement project stats + reward quantityClaimed —
+        // resulting in double-decremented backerCount and a refund
+        // counted twice in the project's currentAmount.
+        const refundCas = await db.pledge.updateMany({
+          where: { id: refundedPledge.id, status: "COMPLETED", deletedAt: null },
           data: { status: "REFUNDED" },
         });
+
+        if (refundCas.count === 0) {
+          paypalWebhookLogger.info(
+            { pledgeId: customId },
+            "PayPal refund: lost CAS (already REFUNDED by concurrent webhook), skipping side effects"
+          );
+          break;
+        }
 
         if (refundedPledge.confirmationEmailSent) {
           await db.project.update({

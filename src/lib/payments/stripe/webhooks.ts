@@ -54,9 +54,12 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   }
   webhookLogger.info(`[Webhook] Processing payment success for pledge ${pledgeId}`);
 
-  // Check if pledge is already completed (idempotency - webhook may fire after direct update)
+  // Early lookup for routing decisions (we need projectId and backerNumber
+  // below to decide whether to assign a backer number). This read isn't the
+  // idempotency guard — it's just informational. The real guard is the
+  // updateMany compare-and-swap below.
   const existingPledge = await db.pledge.findFirst({
-    where: { id: pledgeId , deletedAt: null },
+    where: { id: pledgeId, deletedAt: null },
     select: { status: true, projectId: true, backerNumber: true, sourceCampaignId: true },
   });
 
@@ -65,23 +68,35 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     return;
   }
 
-  if (existingPledge.status === "COMPLETED") {
-    webhookLogger.info(`[Webhook] Pledge ${pledgeId} already COMPLETED, skipping`);
-    return;
-  }
-
   // Save the payment method for potential future use
   const paymentMethodId = typeof paymentIntent.payment_method === "string"
     ? paymentIntent.payment_method
     : paymentIntent.payment_method?.id;
 
-  // Assign backer number atomically if not already assigned
+  // Assign backer number atomically if not already assigned.
+  // assignBackerNumber() is internally idempotent (checks
+  // existing.backerNumber inside a row-locked transaction), so calling
+  // it twice is safe even if two webhooks race here.
   if (!existingPledge.backerNumber && existingPledge.projectId) {
     await assignBackerNumber(existingPledge.projectId, pledgeId);
   }
 
-  const pledge = await db.pledge.update({
-    where: { id: pledgeId },
+  // Atomic compare-and-swap: only the first webhook (or the first race
+  // winner between webhook and /confirm) flips status PENDING → COMPLETED
+  // here. Subsequent retries of the same Stripe webhook will see
+  // count === 0 and bail out before firing any side effects
+  // (trackCampaignConversion, addToCreatorEmailList, stats update,
+  // notifications, etc.), which is what we want — those side effects
+  // must not fire twice on webhook retries.
+  //
+  // Stripe's at-least-once delivery guarantee means a single PaymentIntent
+  // can legitimately trigger this handler multiple times (retries on any
+  // 5xx response, manual replays from the dashboard, race with the
+  // /confirm endpoint). Without this CAS, trackCampaignConversion would
+  // double-increment EmailCampaign.conversionCount and project stats
+  // could get double-counted.
+  const completionCas = await db.pledge.updateMany({
+    where: { id: pledgeId, status: { not: "COMPLETED" }, deletedAt: null },
     data: {
       status: "COMPLETED",
       stripePaymentIntentId: paymentIntent.id,
@@ -90,6 +105,18 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       nextRetryAt: null,
       lastFailureReason: null,
     },
+  });
+
+  if (completionCas.count === 0) {
+    webhookLogger.info(
+      `[Webhook] Pledge ${pledgeId} already COMPLETED (lost CAS), skipping side effects`
+    );
+    return;
+  }
+
+  // Re-fetch with relations now that we know WE are the winner.
+  const pledge = await db.pledge.findUniqueOrThrow({
+    where: { id: pledgeId },
     include: {
       project: {
         include: {
@@ -100,7 +127,9 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     },
   });
 
-  // Track conversion if this pledge came from an email campaign
+  // Track conversion if this pledge came from an email campaign.
+  // Safe to call here now that the CAS above guarantees only one
+  // webhook invocation reaches this point per pledge.
   if (existingPledge?.sourceCampaignId) {
     await trackCampaignConversion(pledgeId, existingPledge.sourceCampaignId);
   }

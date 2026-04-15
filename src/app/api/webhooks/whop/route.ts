@@ -189,16 +189,35 @@ export async function POST(req: NextRequest) {
         if (!pledgeId) break;
 
         if (eventType === "refund_created") {
+          // Load pledge details BEFORE the CAS — this is informational.
+          // The CAS below is what actually guards against double-processing.
           const refundedPledge = await db.pledge.findFirst({
             where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
             select: { id: true, projectId: true, amount: true, rewardId: true, confirmationEmailSent: true },
           });
 
           if (refundedPledge) {
-            await db.pledge.update({
-              where: { id: refundedPledge.id },
+            // Atomic compare-and-swap on status. Whop webhooks can be
+            // retried on any 5xx response, so two concurrent refund_created
+            // events for the same pledge could both pass the findFirst,
+            // both update status to REFUNDED, and both decrement stats +
+            // reward quantityClaimed — double-counting the refund.
+            const refundCas = await db.pledge.updateMany({
+              where: {
+                id: refundedPledge.id,
+                status: "COMPLETED",
+                deletedAt: null,
+              },
               data: { status: "REFUNDED" },
             });
+
+            if (refundCas.count === 0) {
+              whopWebhookLogger.info(
+                { pledgeId },
+                "Whop refund: lost CAS (already REFUNDED by concurrent webhook), skipping side effects"
+              );
+              break;
+            }
 
             if (refundedPledge.confirmationEmailSent) {
               await db.project.update({
