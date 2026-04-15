@@ -71,6 +71,7 @@ interface ParsedEmail {
   attachmentCount?: number;
   attachmentFiles?: AttachmentFile[];
   envelope?: EmailEnvelope;
+  messageIdHeader?: string;
 }
 
 // Extract name and email from "Name <email@example.com>" format
@@ -245,6 +246,15 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Extract RFC-5322 Message-Id header from the parsed email. Mailgun
+      // exposes it in the "Message-Id" field (no angle brackets), SendGrid
+      // in "headers" as raw text. We use this as the idempotency key so
+      // webhook retries don't create duplicate Message / AdminEmail rows.
+      const messageIdHeader =
+        (formData.get("Message-Id") as string) ||
+        (formData.get("message-id") as string) ||
+        undefined;
+
       emailData = {
         to: toRaw,
         from: fromRaw,
@@ -255,6 +265,7 @@ export async function POST(request: NextRequest) {
         attachmentCount: attachmentCountNum,
         attachmentFiles: attachmentFiles.length > 0 ? attachmentFiles : undefined,
         envelope,
+        messageIdHeader,
       };
     } else if (contentType.includes("application/json")) {
       // Parse JSON
@@ -273,6 +284,43 @@ export async function POST(request: NextRequest) {
 
     // Get the actual recipient email (prefer envelope for accuracy)
     const recipientEmail = emailData.envelope?.to?.[0] || toParsed.email;
+
+    // Message-Id based idempotency: Mailgun retries inbound webhooks on
+    // 5xx responses, so without this dedup we'd create duplicate Message
+    // / AdminEmail rows in the inbox on every retry. Use the raw
+    // Message-Id header as the unique key, prefixed so it doesn't
+    // collide with other webhook sources.
+    if (emailData.messageIdHeader) {
+      const eventId = `inbound:${emailData.messageIdHeader.trim().replace(/^<|>$/g, "").slice(0, 200)}`;
+      try {
+        await db.processedWebhookEvent.create({
+          data: {
+            eventId,
+            eventType: "inbound_email",
+            source: "email_inbound",
+          },
+        });
+      } catch (dedupErr) {
+        const isUniqueViolation =
+          dedupErr &&
+          typeof dedupErr === "object" &&
+          "code" in dedupErr &&
+          (dedupErr as { code?: string }).code === "P2002";
+        if (isUniqueViolation) {
+          webhooksEmailInboundLogger.info(
+            { messageId: emailData.messageIdHeader },
+            "[Inbound Email] Duplicate Message-Id — skipping retry"
+          );
+          return NextResponse.json({ received: true, duplicate: true });
+        }
+        // Unexpected DB error on dedup — log and continue (better to
+        // possibly dup than to lose the email entirely).
+        webhooksEmailInboundLogger.warn(
+          { err: String(dedupErr) },
+          "[Inbound Email] Dedup record failed, continuing anyway"
+        );
+      }
+    }
 
     // Prepare body content - ensure we have content
     const finalBodyHtml = emailData.html || (emailData.text ? emailData.text.replace(/\n/g, "<br>") : "");

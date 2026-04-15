@@ -167,10 +167,21 @@ export async function PATCH(
       }
     }
 
-    const campaign = await db.emailCampaign.update({
-      where: { id },
+    // CAS on status NOT in [SENT, SENDING] — without this, a status
+    // transition to SENDING that happens between the findUnique above
+    // and this update would allow an edit to land mid-send and
+    // corrupt the campaign contents for pending deliveries.
+    const updateCas = await db.emailCampaign.updateMany({
+      where: { id, status: { notIn: ["SENT", "SENDING"] } },
       data: updateData,
     });
+    if (updateCas.count === 0) {
+      return NextResponse.json(
+        { error: "Campaign status changed — cannot edit while sending or after sent" },
+        { status: 409 }
+      );
+    }
+    const campaign = await db.emailCampaign.findUnique({ where: { id } });
 
     return NextResponse.json({ success: true, campaign });
   } catch (error) {
