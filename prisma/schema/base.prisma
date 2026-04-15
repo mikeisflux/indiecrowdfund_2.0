@@ -1,6 +1,13 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["prismaSchemaFolder"]
+  // Explicit output path required by Prisma 7. Pointing at
+  // node_modules/.prisma/client (the internal target Prisma uses).
+  // Imports from "@prisma/client" are automatically forwarded to
+  // ".prisma/client" by the wrapper package, so existing imports
+  // `import { PrismaClient } from "@prisma/client"` keep working with
+  // zero code changes. Path is relative to this schema file.
+  output          = "../../node_modules/.prisma/client"
 }
 
 datasource db {
