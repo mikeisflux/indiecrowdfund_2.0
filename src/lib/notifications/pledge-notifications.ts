@@ -167,9 +167,30 @@ export async function notifyBackerPledgeConfirmed(
 
   if (!pledge || !pledge.user?.email) return;
 
-  // Check if confirmation email was already sent (prevent duplicates)
-  if (pledge.confirmationEmailSent) {
-    notificationsPledgeNotificationsLogger.info(`Confirmation email already sent for pledge ${pledgeId}`);
+  // Check if confirmation email was ACTUALLY delivered (prevent duplicates).
+  //
+  // We use EmailLog as the source of truth for delivery — NOT the
+  // `confirmationEmailSent` flag on Pledge. Reason: the confirm route
+  // atomically sets `confirmationEmailSent: true` BEFORE attempting the
+  // email send, to de-dup concurrent confirm calls against double-
+  // counting project stats. If the actual email provider call then
+  // fails for any reason (transient network error, provider 5xx,
+  // getEmailSettings returning null, etc.), the flag is already true
+  // but no email was ever delivered. Checking the flag as the "already
+  // sent" guard would cause those pledges to be permanently silent.
+  //
+  // EmailLog entries, on the other hand, are only created in the
+  // success branch (this function below, plus the confirm route), so
+  // an EmailLog of type PLEDGE_CONFIRMATION for this pledge
+  // ACTUALLY means the email went out. The auto-reconcile job in
+  // email-config.ts relies on the same source of truth to find and
+  // retry missed confirmations.
+  const existingConfirmationLog = await db.emailLog.findFirst({
+    where: { pledgeId, type: "PLEDGE_CONFIRMATION" },
+    select: { id: true },
+  });
+  if (existingConfirmationLog) {
+    notificationsPledgeNotificationsLogger.info(`Confirmation email already delivered (EmailLog ${existingConfirmationLog.id}) for pledge ${pledgeId}`);
     return;
   }
 

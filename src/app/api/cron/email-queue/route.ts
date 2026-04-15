@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 
 const cronEmailQueueLogger = logger.child({ module: "cron-email-queue" });
-import { processEmailQueue, getEmailQueueStats, isEmailQueueEnabled, recoverStuckProcessingEmails } from "@/lib/email";
+import { processEmailQueue, getEmailQueueStats, isEmailQueueEnabled, recoverStuckProcessingEmails, maybeReconcileMissedPledgeConfirmationEmails, maybeSweepOldSentEmails } from "@/lib/email";
 
 // Cron job endpoint for processing the email queue
 //
@@ -56,6 +56,15 @@ export async function GET(req: NextRequest) {
     // Auto-recover any emails stuck in PROCESSING for over 5 seconds
     // (sending takes <1s; anything beyond 5s means the process crashed or timed out)
     await recoverStuckProcessingEmails();
+
+    // Hourly-throttled background maintenance jobs. These MUST run above
+    // the "pending === 0 → early return" check below, otherwise on quiet
+    // days (empty queue) the hourly throttle would never fire and the
+    // pledge-email reconciliation would never catch up missed backers.
+    // Both are fire-and-forget — they log their own errors and must not
+    // block the tick.
+    maybeSweepOldSentEmails().catch(() => {});
+    maybeReconcileMissedPledgeConfirmationEmails().catch(() => {});
 
     // Get initial queue stats
     const initialStats = await getEmailQueueStats();

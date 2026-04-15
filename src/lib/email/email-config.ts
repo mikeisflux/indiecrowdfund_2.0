@@ -592,10 +592,13 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
   let errors = 0;
   let claimedId: string | null = null;
 
-  // Periodically purge old SENT rows so the queue doesn't grow unboundedly.
-  // Throttled to once per hour — safe to call on every tick; returns early
-  // most of the time. Fire-and-forget to keep queue processing fast.
-  maybeSweepOldSentEmails().catch(() => {});
+  // Note: the hourly-throttled background jobs (SENT-row sweep and
+  // pledge-confirmation reconciliation) are called from
+  // /api/cron/email-queue instead of here. They need to run even on
+  // quiet days when the queue is empty, and this function's caller in
+  // that cron route returns early before reaching here on pending=0
+  // ticks. Keeping the throttle-calls in the cron route ensures the
+  // hourly cadence holds regardless of queue state.
 
   try {
     // Atomically claim the next pending email to prevent race conditions
@@ -829,6 +832,149 @@ export async function maybeSweepOldSentEmails(): Promise<void> {
   if (now - lastSweepAt < SWEEP_INTERVAL_MS) return;
   lastSweepAt = now;
   await sweepOldSentEmails();
+}
+
+/**
+ * Find COMPLETED pledges whose pledge confirmation email never actually
+ * got delivered and re-send them.
+ *
+ * Why this exists: the confirm route sets `confirmationEmailSent: true`
+ * atomically BEFORE calling sendPledgeConfirmationEmail, to de-dup
+ * concurrent confirm requests and prevent double-counting project stats.
+ * If the email provider call itself then fails (transient network
+ * error, Mailgun/SendGrid 5xx, etc.), the flag is already true but the
+ * backer never receives their email. The direct-send failure path in
+ * sendEmail auto-queues for retry via EmailQueue, but that path can
+ * also be missed if the failure happens outside sendEmail (e.g. a
+ * thrown error caught by a higher-level try/catch).
+ *
+ * EmailLog of type PLEDGE_CONFIRMATION is our source of truth for
+ * "email actually delivered" — it's only created in the success branch
+ * of the send path. So any COMPLETED pledge that lacks a matching
+ * PLEDGE_CONFIRMATION EmailLog is a candidate for re-sending.
+ *
+ * notifyBackerPledgeConfirmed() has its own EmailLog-based guard, so
+ * calling it here is idempotent — pledges that DID get their email
+ * sent (just with the old flag-check guard that we've now replaced)
+ * are safely skipped.
+ *
+ * Window: only retry pledges created in the last 14 days (anything
+ * older is likely either already sent or intentionally skipped) and
+ * at least 5 minutes old (give the normal confirm flow time to
+ * complete so we don't race with in-flight requests).
+ *
+ * Batch limit: process up to 100 pledges per run so we don't block
+ * the email queue tick for too long. The throttle runs hourly, so
+ * worst case we'd catch up on 100/hour * 24 hours = 2,400 missed
+ * pledges per day — more than enough headroom for an app our size.
+ */
+const RECONCILE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+const RECONCILE_MIN_AGE_MS = 5 * 60 * 1000; // 5 minutes
+const RECONCILE_BATCH_LIMIT = 100;
+
+export async function reconcileMissedPledgeConfirmationEmails(): Promise<{
+  checked: number;
+  resent: number;
+  errors: number;
+}> {
+  let checked = 0;
+  let resent = 0;
+  let errors = 0;
+
+  try {
+    const now = Date.now();
+    const windowStart = new Date(now - RECONCILE_WINDOW_MS);
+    const latestAllowed = new Date(now - RECONCILE_MIN_AGE_MS);
+
+    // Find COMPLETED pledges in the reconciliation window that have no
+    // PLEDGE_CONFIRMATION EmailLog entry. Uses Prisma's `none` relation
+    // filter which generates a NOT EXISTS subquery — efficient even
+    // with thousands of pledges.
+    const missedPledges = await db.pledge.findMany({
+      where: {
+        status: "COMPLETED",
+        deletedAt: null,
+        createdAt: { gte: windowStart, lte: latestAllowed },
+        user: { email: { not: null } },
+        emailLogs: {
+          none: { type: "PLEDGE_CONFIRMATION" },
+        },
+      },
+      select: {
+        id: true,
+        chargedImmediately: true,
+      },
+      take: RECONCILE_BATCH_LIMIT,
+      orderBy: { createdAt: "asc" },
+    });
+
+    checked = missedPledges.length;
+    if (checked === 0) {
+      return { checked: 0, resent: 0, errors: 0 };
+    }
+
+    emailLogger.info(
+      { count: checked },
+      "[Reconcile] Found COMPLETED pledges missing PLEDGE_CONFIRMATION EmailLog — re-sending"
+    );
+
+    // Lazy dynamic import to avoid a static circular dependency between
+    // src/lib/email/email-config.ts ↔ src/lib/notifications/pledge-notifications.ts
+    // (notifications imports @/lib/email which re-exports email-config).
+    // Dynamic import defers resolution until this function actually runs,
+    // at which point all modules are fully initialized.
+    const { notifyBackerPledgeConfirmed } = await import(
+      "@/lib/notifications/pledge-notifications"
+    );
+
+    // Reset the flag on each missed pledge first so any stale
+    // confirmationEmailSent=true from the old atomic-before-send flow
+    // doesn't need to be the source of truth. notifyBackerPledgeConfirmed
+    // now uses EmailLog as the guard, so this flag reset is mostly for
+    // belt-and-suspenders and for visibility in the admin UI.
+    //
+    // Rate-limit the actual sends (150ms delay between each, ≈ 6/sec)
+    // so we don't burst the email provider on a big reconciliation run.
+    const RECONCILE_DELAY_MS = 150;
+
+    for (const pledge of missedPledges) {
+      try {
+        await notifyBackerPledgeConfirmed(pledge.id, pledge.chargedImmediately);
+        resent++;
+      } catch (err) {
+        errors++;
+        emailLogger.error(
+          { err: String(err), pledgeId: pledge.id },
+          "[Reconcile] Failed to resend confirmation email for pledge"
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, RECONCILE_DELAY_MS));
+    }
+
+    emailLogger.info(
+      { checked, resent, errors },
+      "[Reconcile] Pledge confirmation email reconciliation done"
+    );
+  } catch (err) {
+    emailLogger.error(
+      { err: String(err) },
+      "[Reconcile] Unexpected error during pledge confirmation reconciliation"
+    );
+  }
+
+  return { checked, resent, errors };
+}
+
+// Throttle the reconciliation so it only runs occasionally from the main
+// queue tick. Same cadence as the SENT-row sweep — once per hour.
+let lastReconcileAt = 0;
+const RECONCILE_INTERVAL_MS = 60 * 60 * 1000;
+
+export async function maybeReconcileMissedPledgeConfirmationEmails(): Promise<void> {
+  const now = Date.now();
+  if (now - lastReconcileAt < RECONCILE_INTERVAL_MS) return;
+  lastReconcileAt = now;
+  await reconcileMissedPledgeConfirmationEmails();
 }
 
 // Auto-recover emails stuck in PROCESSING for more than 5 seconds
