@@ -122,23 +122,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Net payout amount is zero or negative" }, { status: 400 });
     }
 
-    // Create a payout record linked to the creator's bank account
+    // Create a payout record linked to the creator's bank account.
+    // Guarded by a Postgres advisory lock keyed by project id so a
+    // double-click doesn't create two separate PayPalPayout rows for
+    // the same campaign (real money, hard to reverse). Inside the
+    // lock we also check for an existing non-failed payout and return
+    // 409 instead of creating a second one.
     const feeNote = `PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}`;
-    const payout = await db.payPalPayout.create({
-      data: {
-        paypalBankAccountId: bankAccount.id,
-        ...(payoutConfig ? { payoutConfigId: payoutConfig.id } : {}),
-        projectId: project.id,
-        projectName: project.title,
-        grossAmount,
-        platformFee: platformFee + paypalFee,
-        netAmount,
-        status: "PENDING",
-        initiatedAt: new Date(),
-        processedBy: session.user.id,
-        adminNotes: data.note ? `${data.note} | ${feeNote}` : feeNote,
-      },
-    });
+    let payout;
+    try {
+      payout = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`paypal-payout-${project.id}`}))`;
+
+        const existing = await tx.payPalPayout.findFirst({
+          where: {
+            projectId: project.id,
+            status: { in: ["PENDING", "PROCESSING", "COMPLETED"] },
+          },
+        });
+        if (existing) {
+          throw new Error("PAYOUT_ALREADY_EXISTS");
+        }
+
+        return tx.payPalPayout.create({
+          data: {
+            paypalBankAccountId: bankAccount.id,
+            ...(payoutConfig ? { payoutConfigId: payoutConfig.id } : {}),
+            projectId: project.id,
+            projectName: project.title,
+            grossAmount,
+            platformFee: platformFee + paypalFee,
+            netAmount,
+            status: "PENDING",
+            initiatedAt: new Date(),
+            processedBy: session.user.id,
+            adminNotes: data.note ? `${data.note} | ${feeNote}` : feeNote,
+          },
+        });
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "PAYOUT_ALREADY_EXISTS") {
+        return NextResponse.json(
+          { error: "A PayPal payout for this project already exists or is in flight" },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     paypalPayoutsLogger.info(
       {

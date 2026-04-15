@@ -195,22 +195,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if payout already exists for this project
-    const existingPayout = await db.payout.findFirst({
-      where: {
-        projectId,
-        type: type as PayoutType,
-        status: { in: ["PENDING", "PROCESSING", "COMPLETED"] },
-      },
-    });
-
-    if (existingPayout) {
-      return NextResponse.json(
-        { error: "Payout already exists for this project" },
-        { status: 400 }
-      );
-    }
-
     // Calculate amounts
     const grossAmount = project.pledges.reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
     const pledgeCount = project.pledges.length;
@@ -229,28 +213,65 @@ export async function POST(request: NextRequest) {
     // Derive net as exact remainder so fees + net always equal gross (no accumulated rounding)
     const netAmount = Math.round((grossAmount - platformFees - processorFees) * 100) / 100;
 
-    // Create the payout record
-    const payout = await db.payout.create({
-      data: {
-        projectId,
-        grossAmount,
-        amount: netAmount,
-        platformFees,
-        processorFees,
-        type: type as PayoutType,
-        status: "PENDING",
-      },
-      include: {
-        project: {
-          select: {
-            title: true,
-            creator: {
-              select: { name: true, email: true },
+    // Existence check + create guarded by a Postgres transaction-scoped
+    // advisory lock keyed by projectId+type. Without this, two admins
+    // hitting "Create Payout" at the same second would both pass the
+    // findFirst check and both create duplicate Payout rows for the
+    // same campaign — real money implications because each row would
+    // independently be marked PROCESSING and the payment processor
+    // would be called twice.
+    let payout;
+    try {
+      payout = await db.$transaction(async (tx) => {
+        // pg_advisory_xact_lock serializes concurrent transactions that
+        // hash to the same bigint. Released automatically at tx commit/
+        // rollback. Key space is 32-bit classid + 32-bit objid via
+        // hashtext() — plenty of room for projectId×type combinations.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`payout-${projectId}-${type}`}))`;
+
+        const existingPayout = await tx.payout.findFirst({
+          where: {
+            projectId,
+            type: type as PayoutType,
+            status: { in: ["PENDING", "PROCESSING", "COMPLETED"] },
+          },
+        });
+
+        if (existingPayout) {
+          throw new Error("PAYOUT_ALREADY_EXISTS");
+        }
+
+        return tx.payout.create({
+          data: {
+            projectId,
+            grossAmount,
+            amount: netAmount,
+            platformFees,
+            processorFees,
+            type: type as PayoutType,
+            status: "PENDING",
+          },
+          include: {
+            project: {
+              select: {
+                title: true,
+                creator: {
+                  select: { name: true, email: true },
+                },
+              },
             },
           },
-        },
-      },
-    });
+        });
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "PAYOUT_ALREADY_EXISTS") {
+        return NextResponse.json(
+          { error: "Payout already exists for this project" },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     auditLog({
       action: "PAYOUT_CREATE",

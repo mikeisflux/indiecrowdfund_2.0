@@ -608,19 +608,52 @@ export async function POST(request: NextRequest) {
     const partnerFee = Math.round(grossAmount * 0.03 * 100) / 100; // DC partner fee is fixed at 3%
     const platformFee = Math.round(grossAmount * payoutPlatformFeeRate * 100) / 100;
 
-    // Create the DivinityCoin settlement record as COMPLETED
-    const settlement = await db.divinityCoinSettlement.create({
-      data: {
-        bankAccountId: bankAccount.id,
-        projectId,
-        projectName: project.title,
-        amount,
-        status: "COMPLETED",
-        completedAt: new Date(),
-        adminNotes: adminNotes || null,
-        processedBy: authResult.user.id,
-      },
-    });
+    // Create the DivinityCoin settlement record as COMPLETED.
+    // Guarded by a transaction-scoped advisory lock keyed to the
+    // projectId so a double-click can't create two concurrent
+    // COMPLETED settlement rows + two creator payout emails for
+    // the same payout. We reject within the lock if there's already
+    // a fresh (<60s old) settlement — that would only happen on a
+    // retry within a second, which is always a duplicate attempt.
+    let settlement;
+    try {
+      settlement = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`dc-settle-${projectId}`}))`;
+
+        const recent = await tx.divinityCoinSettlement.findFirst({
+          where: {
+            projectId,
+            createdAt: { gt: new Date(Date.now() - 60_000) },
+          },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, amount: true },
+        });
+        if (recent && Number(recent.amount) === Number(amount)) {
+          throw new Error("DUPLICATE_SETTLEMENT");
+        }
+
+        return tx.divinityCoinSettlement.create({
+          data: {
+            bankAccountId: bankAccount.id,
+            projectId,
+            projectName: project.title,
+            amount,
+            status: "COMPLETED",
+            completedAt: new Date(),
+            adminNotes: adminNotes || null,
+            processedBy: authResult.user.id,
+          },
+        });
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "DUPLICATE_SETTLEMENT") {
+        return NextResponse.json(
+          { error: "A settlement for this project and amount was just created. Please refresh before creating another." },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     // Send email notification to creator (fire-and-forget, don't block response)
     if (project.creator.email) sendPayoutCreatedEmail(

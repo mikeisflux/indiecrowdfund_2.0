@@ -466,6 +466,38 @@ opens. The EmailLog had a `openedAt: null` guard but openCount didn't.
 CAS runs first. Only increment `openCount` if we actually recorded
 a first-open (`logResult.count > 0`).
 
+### Finding #33 — admin payouts create (Stripe) TOCTOU (session 5)
+**File:** `src/app/api/admin/payouts/route.ts`
+**Impact:** Two admins clicking "Create Payout" simultaneously would
+both pass the `findFirst` existence check and both create Payout rows
+for the same projectId+type. Each row is then independently flipped
+to PROCESSING and the payment processor call fires — real money
+double-processed.
+**Fix:** Wrapped the check+create in a `$transaction` guarded by a
+Postgres `pg_advisory_xact_lock` keyed to `payout-${projectId}-${type}`.
+The advisory lock is automatically released at commit/rollback. Inside
+the lock, re-check and throw a sentinel error if a duplicate is found.
+
+### Finding #34 — admin payouts create (PayPal) no existence check at all (session 5)
+**File:** `src/app/api/admin/payouts/paypal/route.ts`
+**Impact:** Worse than #33 — this endpoint had NO existence check
+whatsoever. A double-click created two PayPalPayout rows with the
+same gross amount, both pending manual ACH transfer. The admin would
+see two rows and potentially transfer twice.
+**Fix:** Added advisory-lock-guarded `$transaction` with an
+existence check for PENDING/PROCESSING/COMPLETED PayPalPayouts.
+
+### Finding #35 — admin DC settlement create (session 5)
+**File:** `src/app/api/admin/payouts/divinitycoin/route.ts`
+**Impact:** Creates COMPLETED settlement immediately (not PENDING),
+and fires the payout-created creator email. Double-click would fire
+two creator emails and create two COMPLETED settlement rows inflating
+the "totalAmountSettled" stat. DC settlements can legitimately be
+multiple per project (partial payouts), so the guard uses a 60-second
+window: same amount + same project within 60s is treated as a dupe.
+**Fix:** Advisory-lock-guarded `$transaction` with a "recent same-amount
+settlement" check returning 409 if found.
+
 ---
 
 ### Not-yet-fixed / architectural notes
