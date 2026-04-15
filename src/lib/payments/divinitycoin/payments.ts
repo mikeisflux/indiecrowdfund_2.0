@@ -302,24 +302,42 @@ export async function handleRefundRequest(
     };
   }
 
-  // Process the refund - deduct coins from user's balance
-  const newBalance = previousBalance - amount;
+  // Process the refund inside a transaction that (1) locks the user
+  // row with FOR UPDATE, (2) re-reads the current balance, (3) uses
+  // an atomic decrement on divinityCoinBalance. Without this lock
+  // two concurrent refunds would both read the same stale balance
+  // and both write the same newBalance — losing one deduction.
+  let newBalance = previousBalance;
 
   try {
     await db.$transaction(async (tx) => {
-      // Update user's balance
-      await tx.user.update({
+      // Lock the user row and re-read the balance inside the lock
+      await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${userId!} FOR UPDATE`;
+      const fresh = await tx.user.findUnique({
         where: { id: userId! },
-        data: {
-          divinityCoinBalance: newBalance,
-        },
+        select: { divinityCoinBalance: true },
       });
+      const freshBalance = Number(fresh?.divinityCoinBalance || 0);
+
+      // Re-verify sufficient balance inside the lock
+      if (freshBalance < amount) {
+        throw new Error(`INSUFFICIENT_BALANCE_AT_REFUND:${freshBalance}`);
+      }
+
+      // Atomic decrement via Prisma's decrement operator (translates
+      // to SQL `UPDATE ... SET balance = balance - $1`)
+      const updated = await tx.user.update({
+        where: { id: userId! },
+        data: { divinityCoinBalance: { decrement: amount } },
+        select: { divinityCoinBalance: true },
+      });
+      newBalance = Number(updated.divinityCoinBalance);
 
       // Create transaction record for audit
       await tx.divinityCoinTransaction.create({
         data: {
           userId: userId!,
-          amount: -amount, // Negative because it's a deduction
+          amount: -amount,
           type: "REFUND_DEDUCTION",
           description: reason || `DivinityCoin refund processed (Ref: ${refundId})`,
           metadata: JSON.stringify({
@@ -328,7 +346,7 @@ export async function handleRefundRequest(
             originalTransactionId,
             originalRedemption: redemptionInfo,
             reason,
-            previousBalance,
+            previousBalance: freshBalance,
             newBalance,
             processedAt: new Date().toISOString(),
             source: "divinitycoin_webhook",
@@ -349,6 +367,23 @@ export async function handleRefundRequest(
       userId,
     };
   } catch (error) {
+    // Surface insufficient-balance-at-refund as a clean response
+    // instead of a thrown exception.
+    if (error instanceof Error && error.message.startsWith("INSUFFICIENT_BALANCE_AT_REFUND:")) {
+      const freshBalance = Number(error.message.split(":")[1] || 0);
+      paymentsDivinitycoinLogger.warn(`[DivinityCoin] Refund ${refundId} blocked by concurrent deduction — fresh balance ${freshBalance} < required ${amount}`);
+      await notifyDivinityCoinRefundFailed(refundId, userId, amount, freshBalance, originalCardCode, originalTransactionId);
+      return {
+        success: false,
+        refundId,
+        amountDeducted: 0,
+        previousBalance: freshBalance,
+        newBalance: freshBalance,
+        userId,
+        error: `Insufficient balance. User has ${freshBalance} DivinityCoin, refund requires ${amount}`,
+        errorCode: "INSUFFICIENT_BALANCE",
+      };
+    }
     paymentsDivinitycoinLogger.error({ err: error }, `[DivinityCoin] Error processing refund ${refundId}:`);
     throw error;
   }
@@ -389,19 +424,28 @@ async function handleMarketplacePaymentSucceeded(
       return { success: true, message: `Purchase already ${purchase.status}` };
     }
 
-    await db.$transaction(async (tx) => {
-      // Mark purchase as completed
-      await tx.marketplacePurchase.update({
-        where: { id: purchaseId },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
-          deliveredAt: new Date(),
-          divinityCoinPaymentId: paymentId || stripePI || holdId || null,
-        },
-      });
+    // CAS on status PENDING → COMPLETED before any side effects.
+    // Without this, two concurrent DC webhook deliveries (at-least-once
+    // semantics) would both pass the findUnique "PENDING" check, both
+    // flip status, both increment book.purchaseCount, and both create
+    // DivinityCoinTransaction rows for the same purchase.
+    const completeCas = await db.marketplacePurchase.updateMany({
+      where: { id: purchaseId, status: "PENDING" },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        deliveredAt: new Date(),
+        divinityCoinPaymentId: paymentId || stripePI || holdId || null,
+      },
+    });
+    if (completeCas.count === 0) {
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Purchase ${purchaseId} already processed by concurrent webhook, skipping side effects`);
+      return { success: true, message: "Purchase already completed" };
+    }
 
-      // Increment purchase count on the book
+    await db.$transaction(async (tx) => {
+      // Increment purchase count on the book (side effect only fires
+      // for the webhook delivery that won the CAS above).
       await tx.marketplaceBook.update({
         where: { id: purchase.bookId },
         data: {
@@ -541,37 +585,45 @@ export async function handlePaymentSucceeded(
       return { success: true, message: `Pledge already ${pledge.status}` };
     }
 
-    // Mark pledge as completed and record transaction
-    await db.$transaction(async (tx) => {
-      await tx.pledge.update({
-        where: { id: pledgeId },
-        data: {
-          status: "COMPLETED",
-          divinityCoinPaymentId: paymentId || stripePI || holdId || null,
-          chargedImmediately: true,
-        },
-      });
+    // CAS on status PENDING → COMPLETED before creating the
+    // DivinityCoinTransaction record. Without this, DC's at-least-once
+    // webhook delivery could fire this handler twice for the same
+    // payment and create duplicate transaction records + double-charge
+    // the chargedImmediately flag (the stats increment is already
+    // separately CAS-guarded via confirmationEmailSent below).
+    const pledgeCompleteCas = await db.pledge.updateMany({
+      where: { id: pledgeId, status: "PENDING", deletedAt: null },
+      data: {
+        status: "COMPLETED",
+        divinityCoinPaymentId: paymentId || stripePI || holdId || null,
+        chargedImmediately: true,
+      },
+    });
+    if (pledgeCompleteCas.count === 0) {
+      paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} already processed by concurrent webhook, skipping transaction record`);
+      return { success: true, message: "Pledge already completed" };
+    }
 
-      // Record the transaction
-      await tx.divinityCoinTransaction.create({
-        data: {
-          userId: pledge.userId,
-          pledgeId: pledge.id,
-          amount: Number(pledge.amount),
-          type: "PAYMENT",
-          description: `Payment for pledge via DivinityCoin`,
-          metadata: JSON.stringify({
-            paymentId: paymentId || null,
-            holdId: holdId || null,
-            giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
-            stripePaymentIntentId: stripePI || null,
-            paymentMethod: paymentMethodStr || null,
-            holdRaw: serializeField(data.hold),
-            processedAt: new Date().toISOString(),
-            source: "divinitycoin_webhook",
-          }),
-        },
-      });
+    // Record the transaction — only fires for the webhook delivery
+    // that actually flipped the pledge status above.
+    await db.divinityCoinTransaction.create({
+      data: {
+        userId: pledge.userId,
+        pledgeId: pledge.id,
+        amount: Number(pledge.amount),
+        type: "PAYMENT",
+        description: `Payment for pledge via DivinityCoin`,
+        metadata: JSON.stringify({
+          paymentId: paymentId || null,
+          holdId: holdId || null,
+          giftCardCode: giftCardCode ? `${String(giftCardCode).substring(0, 4)}****` : null,
+          stripePaymentIntentId: stripePI || null,
+          paymentMethod: paymentMethodStr || null,
+          holdRaw: serializeField(data.hold),
+          processedAt: new Date().toISOString(),
+          source: "divinitycoin_webhook",
+        }),
+      },
     });
 
     paymentsDivinitycoinLogger.info(`[DivinityCoin] Pledge ${pledgeId} marked as COMPLETED via payment webhook`);
@@ -692,8 +744,9 @@ export async function handlePaymentFailed(
         return { success: true, message: `Purchase already ${purchase.status}` };
       }
 
-      await db.marketplacePurchase.update({
-        where: { id: purchaseId },
+      // CAS for idempotent webhook retries
+      await db.marketplacePurchase.updateMany({
+        where: { id: purchaseId, status: "PENDING" },
         data: { status: "FAILED" },
       });
 
@@ -725,8 +778,9 @@ export async function handlePaymentFailed(
       return { success: true, message: `Pledge already ${pledge.status}` };
     }
 
-    await db.pledge.update({
-      where: { id: pledgeId },
+    // CAS for idempotent webhook retries
+    await db.pledge.updateMany({
+      where: { id: pledgeId, status: "PENDING", deletedAt: null },
       data: {
         status: "FAILED",
         lastFailureReason: reason || "Payment failed via DivinityCoin",
@@ -770,18 +824,26 @@ export async function handleRefundCompleted(
         return { success: true, message: "Purchase already refunded" };
       }
 
-      await db.$transaction(async (tx) => {
-        await tx.marketplacePurchase.update({
-          where: { id: purchaseId },
-          data: {
-            status: "REFUNDED",
-            refundedAt: new Date(),
-            refundReason: "Refund completed via DivinityCoin",
-          },
-        });
+      // CAS on status COMPLETED → REFUNDED so webhook retries don't
+      // double-decrement purchaseCount and create duplicate REFUND
+      // transaction records.
+      const wasCompleted = purchase.status === "COMPLETED";
+      const refundCas = await db.marketplacePurchase.updateMany({
+        where: { id: purchaseId, status: { not: "REFUNDED" } },
+        data: {
+          status: "REFUNDED",
+          refundedAt: new Date(),
+          refundReason: "Refund completed via DivinityCoin",
+        },
+      });
+      if (refundCas.count === 0) {
+        return { success: true, message: "Purchase already refunded by concurrent webhook" };
+      }
 
-        // Decrement purchase count if was completed
-        if (purchase.status === "COMPLETED") {
+      await db.$transaction(async (tx) => {
+        // Decrement purchase count if was completed (only runs for
+        // the webhook delivery that actually flipped the status).
+        if (wasCompleted) {
           await tx.marketplaceBook.update({
             where: { id: purchase.bookId },
             data: {
@@ -837,16 +899,20 @@ export async function handleRefundCompleted(
       return { success: true, message: "Pledge already refunded" };
     }
 
-    await db.$transaction(async (tx) => {
-      // Mark pledge as refunded
-      await tx.pledge.update({
-        where: { id: pledgeId },
-        data: {
-          status: "REFUNDED",
-          lastFailureReason: "Refund completed via DivinityCoin",
-        },
-      });
+    // CAS on status → REFUNDED so webhook retries don't double-
+    // decrement project stats and double-decrement reward slots.
+    const pledgeRefundCas = await db.pledge.updateMany({
+      where: { id: pledgeId, status: { not: "REFUNDED" }, deletedAt: null },
+      data: {
+        status: "REFUNDED",
+        lastFailureReason: "Refund completed via DivinityCoin",
+      },
+    });
+    if (pledgeRefundCas.count === 0) {
+      return { success: true, message: "Pledge already refunded by concurrent webhook" };
+    }
 
+    await db.$transaction(async (tx) => {
       // Record the refund transaction
       await tx.divinityCoinTransaction.create({
         data: {

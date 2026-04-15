@@ -169,9 +169,10 @@ export async function createPayPalPayment({
   if (!orderRes.ok) {
     const errBody = await orderRes.text();
     paypalCheckoutLogger.error({ pledgeId: pledge.id, err: errBody }, "PayPal order creation failed");
-    // Clean up the pledge we just created
+    // Clean up the pledge we just created (deleteMany for idempotency
+    // in case a parallel cleanup pass already removed it)
     await db.pledgeAddon.deleteMany({ where: { pledgeId: pledge.id } });
-    await db.pledge.delete({ where: { id: pledge.id } });
+    await db.pledge.deleteMany({ where: { id: pledge.id } });
     throw new Error("Failed to create PayPal order");
   }
 
