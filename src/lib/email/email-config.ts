@@ -699,7 +699,27 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
         }
       }
 
-      emailLogger.error({ err: result.error }, `[Email Queue] Failed to send queued email: ${queueEntry.id}`);
+      // Expected operational outcomes — user unsubscribed, spam complaint,
+      // bounced/blocked address — are not errors. Log at info level so
+      // they don't pollute the error dashboard.
+      const errMsg = String(result.error || "");
+      const isExpectedOutcome =
+        errMsg.includes("unsubscribed") ||
+        errMsg.includes("Spam complaint") ||
+        errMsg.includes("bounced") ||
+        errMsg.includes("suppressed") ||
+        errMsg.includes("blocked");
+      if (isExpectedOutcome) {
+        emailLogger.info(
+          { reason: errMsg },
+          `[Email Queue] Skipped queued email: ${queueEntry.id}`
+        );
+      } else {
+        emailLogger.error(
+          { err: result.error },
+          `[Email Queue] Failed to send queued email: ${queueEntry.id}`
+        );
+      }
       errors = 1;
     }
   } catch (error) {

@@ -61,9 +61,9 @@ export async function POST() {
     const summary: TableStats[] = [];
 
     // Generic batched processor: reads + writes chunked through Prisma
-    async function processTable<TRow extends { id: string }>(
+    async function processTable(
       tableName: string,
-      selectHtml: (id: string) => Promise<{ id: string; html: string | null }[]>,
+      selectHtml: () => Promise<{ id: string; html: string | null }[]>,
       updateRow: (id: string, newHtml: string) => Promise<void>
     ): Promise<TableStats> {
       const stats: TableStats = {
@@ -86,7 +86,7 @@ export async function POST() {
         batchNum++;
         let rows: { id: string; html: string | null }[];
         try {
-          rows = await selectHtml("");
+          rows = await selectHtml();
         } catch (err) {
           stripLogger.error(
             { err: String(err), table: tableName, batchNum },
@@ -149,11 +149,16 @@ export async function POST() {
       await processTable(
         "AdminEmail",
         async () =>
-          (await db.adminEmail.findMany({
-            where: { bodyHtml: { contains: "data:image/" } },
-            select: { id: true, bodyHtml: true },
-            take: BATCH_SIZE,
-          })).map((r) => ({ id: r.id, html: r.bodyHtml })),
+          (
+            await db.adminEmail.findMany({
+              where: { bodyHtml: { contains: "data:image/" } },
+              select: { id: true, bodyHtml: true },
+              take: BATCH_SIZE,
+            })
+          ).map((r: { id: string; bodyHtml: string | null }) => ({
+            id: r.id,
+            html: r.bodyHtml,
+          })),
         async (id, newHtml) => {
           await db.adminEmail.update({
             where: { id },
@@ -168,11 +173,16 @@ export async function POST() {
       await processTable(
         "EmailLog",
         async () =>
-          (await db.emailLog.findMany({
-            where: { htmlContent: { contains: "data:image/" } },
-            select: { id: true, htmlContent: true },
-            take: BATCH_SIZE,
-          })).map((r) => ({ id: r.id, html: r.htmlContent })),
+          (
+            await db.emailLog.findMany({
+              where: { htmlContent: { contains: "data:image/" } },
+              select: { id: true, htmlContent: true },
+              take: BATCH_SIZE,
+            })
+          ).map((r: { id: string; htmlContent: string | null }) => ({
+            id: r.id,
+            html: r.htmlContent,
+          })),
         async (id, newHtml) => {
           await db.emailLog.update({
             where: { id },
@@ -187,11 +197,16 @@ export async function POST() {
       await processTable(
         "EmailQueue",
         async () =>
-          (await db.emailQueue.findMany({
-            where: { bodyHtml: { contains: "data:image/" } },
-            select: { id: true, bodyHtml: true },
-            take: BATCH_SIZE,
-          })).map((r) => ({ id: r.id, html: r.bodyHtml })),
+          (
+            await db.emailQueue.findMany({
+              where: { bodyHtml: { contains: "data:image/" } },
+              select: { id: true, bodyHtml: true },
+              take: BATCH_SIZE,
+            })
+          ).map((r: { id: string; bodyHtml: string | null }) => ({
+            id: r.id,
+            html: r.bodyHtml,
+          })),
         async (id, newHtml) => {
           await db.emailQueue.update({
             where: { id },
@@ -206,11 +221,16 @@ export async function POST() {
       await processTable(
         "EmailCampaign",
         async () =>
-          (await db.emailCampaign.findMany({
-            where: { htmlContent: { contains: "data:image/" } },
-            select: { id: true, htmlContent: true },
-            take: BATCH_SIZE,
-          })).map((r) => ({ id: r.id, html: r.htmlContent })),
+          (
+            await db.emailCampaign.findMany({
+              where: { htmlContent: { contains: "data:image/" } },
+              select: { id: true, htmlContent: true },
+              take: BATCH_SIZE,
+            })
+          ).map((r: { id: string; htmlContent: string | null }) => ({
+            id: r.id,
+            html: r.htmlContent,
+          })),
         async (id, newHtml) => {
           await db.emailCampaign.update({
             where: { id },
