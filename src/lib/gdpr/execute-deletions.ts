@@ -19,10 +19,19 @@ export async function executePendingDeletions(): Promise<number> {
 
   for (const request of pendingDeletions) {
     try {
-      await db.dataDeletionRequest.update({
-        where: { id: request.id },
+      // CAS on status: SCHEDULED → EXECUTING so two concurrent cron
+      // runs don't both claim the same request and both execute
+      // hardDeleteUserData(). While the delete operations are largely
+      // idempotent (deleteMany), the user anonymization update would
+      // run twice and the final status flip to COMPLETED would race.
+      const claimCas = await db.dataDeletionRequest.updateMany({
+        where: { id: request.id, status: "SCHEDULED" },
         data: { status: "EXECUTING" },
       });
+      if (claimCas.count === 0) {
+        // Another cron run already claimed this request
+        continue;
+      }
 
       // Hard delete all user data
       const auditLog = await hardDeleteUserData(request.userId);
@@ -60,9 +69,13 @@ async function hardDeleteUserData(userId: string): Promise<Record<string, unknow
   const behaviors = await db.userBehavior.deleteMany({ where: { userId } });
   auditLog.behaviorRecords = behaviors.count;
 
-  // 2. User preferences & interest profiles
-  try { await db.userPreference.delete({ where: { userId } }); auditLog.preferences = 1; } catch { auditLog.preferences = 0; }
-  try { await db.userInterestProfile.delete({ where: { userId } }); auditLog.interestProfile = 1; } catch { auditLog.interestProfile = 0; }
+  // 2. User preferences & interest profiles. Use deleteMany so a
+  // missing row doesn't throw P2025 (which used to be swallowed by
+  // the broader try/catch anyway, but this is cleaner).
+  const prefs = await db.userPreference.deleteMany({ where: { userId } });
+  auditLog.preferences = prefs.count;
+  const profile = await db.userInterestProfile.deleteMany({ where: { userId } });
+  auditLog.interestProfile = profile.count;
 
   // 3. Notifications
   const notifications = await db.notification.deleteMany({ where: { userId } });

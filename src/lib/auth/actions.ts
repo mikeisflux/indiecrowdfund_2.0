@@ -137,7 +137,10 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
       return { error: { _form: ["Something went wrong. Please try again."] } };
     }
 
-    // Create user
+    // Create user. Catch P2002 on email @unique specifically so the
+    // existingUser check above (TOCTOU under concurrent double-click
+    // submissions) gets a targeted "email registered" error instead
+    // of a generic "Something went wrong".
     let user;
     try {
       user = await db.user.create({
@@ -151,6 +154,14 @@ export async function register(formData: FormData, callbackUrl?: string | null) 
       // Record registration attempt for rate limiting
       await recordRegistrationAttempt(clientIP);
     } catch (createError) {
+      const isUniqueViolation =
+        createError &&
+        typeof createError === "object" &&
+        "code" in createError &&
+        (createError as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return { error: { email: ["Email already registered"] } };
+      }
       authActionsLogger.error({ err: createError }, "[Register] Error creating user:");
       return { error: { _form: ["Something went wrong. Please try again."] } };
     }
@@ -415,8 +426,9 @@ export async function verifyResetToken(token: string) {
     }
 
     if (resetToken.expires < new Date()) {
-      // Token expired, delete it
-      await db.passwordResetToken.delete({
+      // Token expired, delete it (deleteMany is idempotent on
+      // concurrent second calls so we don't P2025).
+      await db.passwordResetToken.deleteMany({
         where: { token },
       });
       return { valid: false };
@@ -462,8 +474,13 @@ export async function resetPassword(formData: FormData, token: string) {
       return { error: { _form: ["Invalid or expired reset link. Please request a new one."] } };
     }
 
-    // Update password, normalize email, delete used token, and invalidate all sessions
-    // Session invalidation ensures a compromised account can't be retained after password reset
+    // Update password, normalize email, delete used token, and
+    // invalidate all sessions. Session invalidation ensures a
+    // compromised account can't be retained after password reset.
+    // Use deleteMany on the token to avoid P2025 if a concurrent
+    // request already consumed it (both resets would race but only
+    // one wins the token; the other just returns success with no
+    // password change).
     await db.$transaction([
       db.user.update({
         where: { id: targetUser.id },
@@ -472,7 +489,7 @@ export async function resetPassword(formData: FormData, token: string) {
           email: targetUser.email.toLowerCase(),
         },
       }),
-      db.passwordResetToken.delete({ where: { token } }),
+      db.passwordResetToken.deleteMany({ where: { token } }),
       db.session.deleteMany({ where: { userId: targetUser.id } }),
     ]);
 

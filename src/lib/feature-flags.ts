@@ -101,10 +101,12 @@ export async function setFeatureFlag(
 }
 
 /**
- * Delete a feature flag.
+ * Delete a feature flag. Uses deleteMany for idempotency on
+ * concurrent delete requests — the second call hits count=0 instead
+ * of P2025 → 500.
  */
 export async function deleteFeatureFlag(name: string): Promise<void> {
-  await db.featureFlag.delete({ where: { name } });
+  await db.featureFlag.deleteMany({ where: { name } });
   flagsCache.delete(name);
   logger.info({ flag: name }, "Feature flag deleted");
 }
