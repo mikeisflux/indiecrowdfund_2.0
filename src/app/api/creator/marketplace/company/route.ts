@@ -65,20 +65,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user already has a company
-    const existingCompany = await prisma.companyProfile.findUnique({
-      where: {
-        userId: session.user.id,
-      },
-    });
-
-    if (existingCompany) {
-      return NextResponse.json(
-        { error: "You already have a company profile" },
-        { status: 400 }
-      );
-    }
-
     const body = await request.json();
     const { name, slug, tagline, about, logo, banner, website, socialLinks, physicalMediaUrl } = body;
 
@@ -97,35 +83,48 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check slug uniqueness
-    const slugExists = await prisma.companyProfile.findUnique({
-      where: {
-        slug: slug.toLowerCase(),
-      },
-    });
-
-    if (slugExists) {
-      return NextResponse.json(
-        { error: "This URL slug is already taken" },
-        { status: 400 }
-      );
+    // Create company. The userId @unique and slug @unique checks above
+    // are both TOCTOU — catch P2002 at create time for proper 409s.
+    let company;
+    try {
+      company = await prisma.companyProfile.create({
+        data: {
+          userId: session.user.id,
+          name: name.trim(),
+          slug: slug.toLowerCase(),
+          tagline: tagline?.trim() || null,
+          about: about ? String(about).substring(0, 5000) : null,
+          logoUrl: logo || null,
+          bannerImageUrl: banner || null,
+          website: website?.trim() || null,
+          socialLinks: socialLinks || {},
+          physicalMediaUrl: physicalMediaUrl?.trim() || null,
+        },
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        // Either the userId or the slug collided; check which.
+        const existingByUser = await prisma.companyProfile.findUnique({
+          where: { userId: session.user.id },
+        });
+        if (existingByUser) {
+          return NextResponse.json(
+            { error: "You already have a company profile" },
+            { status: 409 }
+          );
+        }
+        return NextResponse.json(
+          { error: "This URL slug is already taken" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
     }
-
-    // Create company
-    const company = await prisma.companyProfile.create({
-      data: {
-        userId: session.user.id,
-        name: name.trim(),
-        slug: slug.toLowerCase(),
-        tagline: tagline?.trim() || null,
-        about: about ? String(about).substring(0, 5000) : null,
-        logoUrl: logo || null,
-        bannerImageUrl: banner || null,
-        website: website?.trim() || null,
-        socialLinks: socialLinks || {},
-        physicalMediaUrl: physicalMediaUrl?.trim() || null,
-      },
-    });
 
     // Update user's existing marketplace books to use this company
     await prisma.marketplaceBook.updateMany({
