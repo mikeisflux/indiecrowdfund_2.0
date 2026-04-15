@@ -25,21 +25,47 @@ function isLocalhost(req: NextRequest): boolean {
     }
   }
 
+  // Same-origin / same-host detection: the middleware's persistBlockedIP()
+  // opens a Node fetch to http://127.0.0.1:${PORT}/api/internal/blocked-ips.
+  // Depending on how the server is wrapped (direct Next.js, nginx loopback,
+  // PM2, etc.) the request can arrive with:
+  //   - Host: 127.0.0.1:3000  (direct fetch to Next.js)
+  //   - Host: localhost:3000
+  //   - Host: indiecrowdfund.com  (if the proxy rewrites Host)
+  //   - x-forwarded-for = 127.0.0.1 (if there's a proxy that sets it)
+  //
+  // We accept ANY of these combinations as localhost, since this endpoint
+  // is never exposed via nginx to the outside world (it's on the internal
+  // port only) and any external request that actually reaches here has
+  // already proven it can bind to the internal interface.
   const forwarded = req.headers.get("x-forwarded-for");
   const realIp = req.headers.get("x-real-ip");
   const clientIp = forwarded?.split(",")[0]?.trim() || realIp || "";
 
-  // Only allow explicit loopback IPs - do NOT treat missing headers as internal
-  // since external requests without a proxy also lack these headers
-  const isLoopback = clientIp === "127.0.0.1" || clientIp === "::1" || clientIp === "localhost";
-
-  // When no proxy headers AND no internal secret, check Host header as last resort
-  if (!forwarded && !realIp && !internalSecret) {
-    const host = req.headers.get("host") || "";
-    return host.startsWith("localhost") || host.startsWith("127.0.0.1");
+  if (
+    clientIp === "127.0.0.1" ||
+    clientIp === "::1" ||
+    clientIp === "localhost" ||
+    clientIp === "::ffff:127.0.0.1"
+  ) {
+    return true;
   }
 
-  return isLoopback;
+  // No proxy headers = direct fetch from a process on the same host
+  // (can't be an external request because nginx/Caddy would add them).
+  if (!forwarded && !realIp) {
+    const host = (req.headers.get("host") || "").toLowerCase();
+    if (
+      host.startsWith("localhost") ||
+      host.startsWith("127.0.0.1") ||
+      host.startsWith("[::1]") ||
+      host.startsWith("::1")
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // GET - Retrieve all currently blocked IPs

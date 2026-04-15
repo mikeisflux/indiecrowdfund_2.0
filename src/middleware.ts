@@ -258,9 +258,13 @@ async function syncBlockedIPsFromDb(): Promise<void> {
 
   try {
     const internalUrl = getInternalApiUrl();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (process.env.INTERNAL_API_SECRET) {
+      headers["x-internal-secret"] = process.env.INTERNAL_API_SECRET;
+    }
     const response = await fetch(`${internalUrl}/api/internal/blocked-ips`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers,
     });
 
     if (response.ok) {
@@ -293,9 +297,13 @@ function persistBlockedIP(
   metadata?: { actionId?: string; path?: string; userAgent?: string }
 ): void {
   const internalUrl = getInternalApiUrl();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.INTERNAL_API_SECRET) {
+    headers["x-internal-secret"] = process.env.INTERNAL_API_SECRET;
+  }
   fetch(`${internalUrl}/api/internal/blocked-ips`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
       ip,
       reason,
