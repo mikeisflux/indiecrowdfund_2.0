@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
 
     // Check if token has expired
     if (resetToken.expires < new Date()) {
-      // Delete the expired token
-      await db.passwordResetToken.delete({
+      // Delete the expired token (idempotent via deleteMany)
+      await db.passwordResetToken.deleteMany({
         where: { token },
       });
       return NextResponse.json(
@@ -79,8 +79,9 @@ export async function POST(req: NextRequest) {
       data: { passwordHash },
     });
 
-    // Delete the used token
-    await db.passwordResetToken.delete({
+    // Delete the used token — deleteMany is idempotent so a concurrent
+    // second submission of the same token doesn't P2025 here.
+    await db.passwordResetToken.deleteMany({
       where: { token },
     });
 

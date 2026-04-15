@@ -251,11 +251,20 @@ export async function PATCH(req: NextRequest) {
     let emailsSent = 0;
 
     switch (action) {
-      case "send":
-        await db.survey.update({
-          where: { id: survey.id },
+      case "send": {
+        // CAS on survey status: not-SENT/LOCKED → SENT. Without this,
+        // two concurrent "Send Survey" clicks would both flip status
+        // and both fire survey-available emails to every backer.
+        const sendCas = await db.survey.updateMany({
+          where: { id: survey.id, status: { notIn: ["SENT", "LOCKED"] } },
           data: { status: "SENT", sentAt: new Date() },
         });
+        if (sendCas.count === 0) {
+          return NextResponse.json(
+            { error: "Survey has already been sent" },
+            { status: 400 }
+          );
+        }
 
         // Get all valid backers for this project to send email notifications
         const backers = await db.pledge.findMany({
@@ -323,12 +332,21 @@ export async function PATCH(req: NextRequest) {
           },
         });
         break;
+      }
 
-      case "lock":
-        await db.survey.update({
-          where: { id: survey.id },
+      case "lock": {
+        // CAS on status → LOCKED so two concurrent lock calls don't
+        // both fire the "orders locked" activity entry.
+        const lockCas = await db.survey.updateMany({
+          where: { id: survey.id, status: { not: "LOCKED" } },
           data: { status: "LOCKED", lockedAt: new Date() },
         });
+        if (lockCas.count === 0) {
+          return NextResponse.json(
+            { error: "Survey has already been locked" },
+            { status: 400 }
+          );
+        }
 
         await db.fulfillmentActivity.create({
           data: {
@@ -338,6 +356,7 @@ export async function PATCH(req: NextRequest) {
           },
         });
         break;
+      }
 
       case "lockAddresses":
         await db.survey.update({

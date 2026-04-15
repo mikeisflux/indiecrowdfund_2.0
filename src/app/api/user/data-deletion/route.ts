@@ -20,33 +20,49 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const reason = body.reason || null;
 
-  // Check for existing pending request
-  const existingRequest = await db.dataDeletionRequest.findFirst({
-    where: {
-      userId,
-      status: { in: ["PENDING", "SCHEDULED"] },
-    },
-  });
-
-  if (existingRequest) {
-    return NextResponse.json({
-      error: "You already have a pending deletion request",
-      requestId: existingRequest.id,
-      scheduledFor: existingRequest.scheduledFor,
-    }, { status: 409 });
-  }
-
   const scheduledFor = new Date(Date.now() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
 
-  const request = await db.dataDeletionRequest.create({
-    data: {
-      userId,
-      userEmail: session.user.email,
-      status: "SCHEDULED",
-      reason,
-      scheduledFor,
-    },
-  });
+  // Guarded existence-check + create via advisory lock keyed to userId.
+  // Without the lock, two concurrent POSTs could both pass the "existing
+  // pending" check and both create DataDeletionRequest rows — resulting
+  // in two schedule entries for the same user.
+  let request;
+  try {
+    request = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`data-deletion-${userId}`}))`;
+
+      const existingRequest = await tx.dataDeletionRequest.findFirst({
+        where: {
+          userId,
+          status: { in: ["PENDING", "SCHEDULED"] },
+        },
+      });
+
+      if (existingRequest) {
+        throw new Error(`DELETION_ALREADY_SCHEDULED:${existingRequest.id}:${existingRequest.scheduledFor?.toISOString() ?? ""}`);
+      }
+
+      return tx.dataDeletionRequest.create({
+        data: {
+          userId,
+          userEmail: session.user.email,
+          status: "SCHEDULED",
+          reason,
+          scheduledFor,
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("DELETION_ALREADY_SCHEDULED:")) {
+      const [, requestId, scheduledForStr] = err.message.split(":");
+      return NextResponse.json({
+        error: "You already have a pending deletion request",
+        requestId,
+        scheduledFor: scheduledForStr || null,
+      }, { status: 409 });
+    }
+    throw err;
+  }
 
   logger.info({ userId, requestId: request.id, scheduledFor: scheduledFor.toISOString() },
     "GDPR deletion request created");
