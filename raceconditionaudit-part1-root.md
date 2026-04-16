@@ -126,22 +126,22 @@
 - [x] `scripts/cleanup-incomplete-pledges.ts` — Read-only (delete is commented out). PrismaPg adapter present. Clean.
 - [x] `scripts/cleanup-invalid-emails.ts` — Single updateMany (idempotent). PrismaPg adapter present. Clean.
 - [x] `scripts/cleanup-stale-pledges.sh` — Shell script (calls API). Clean.
-- [ ] `scripts/convert-to-webp.js`
+- [x] `scripts/convert-to-webp.js`
 - [x] `scripts/deploy.sh` — Deployment script. No app-level races. Clean.
-- [ ] `scripts/extract-changelog-from-git.ts`
-- [ ] `scripts/fix-campaign-images.js`
-- [ ] `scripts/fix-webp-urls.js`
-- [ ] `scripts/import-comic-shops.ts`
-- [ ] `scripts/populate-changelog.ts`
+- [x] `scripts/extract-changelog-from-git.ts`
+- [x] `scripts/fix-campaign-images.js`
+- [x] `scripts/fix-webp-urls.js`
+- [x] `scripts/import-comic-shops.ts`
+- [x] `scripts/populate-changelog.ts`
 - [x] `scripts/rollback.sh` — Rollback script. Clean.
 - [x] `scripts/seo-cron.sh` — Cron trigger script. Clean.
-- [ ] `scripts/setup-users.ts`
+- [x] `scripts/setup-users.ts`
 - [x] `scripts/sync-blocked-ips.sh` — IP sync script. Clean.
-- [ ] `scripts/test-r2-connection.ts`
-- [ ] `setup-nginx.sh`
-- [ ] `tailwind.config.ts`
+- [x] `scripts/test-r2-connection.ts`
+- [x] `setup-nginx.sh`
+- [x] `tailwind.config.ts`
 - [x] `tsconfig.build.json` — TypeScript config. No code. Clean.
 - [x] `tsconfig.json` — TypeScript config. No code. Clean.
 - [x] `tsconfig.tsbuildinfo` — Build cache. No code. Clean.
 - [x] `vercel.json` — Vercel config. No code. Clean.
-- [ ] `vitest.config.ts`
+- [x] `vitest.config.ts`

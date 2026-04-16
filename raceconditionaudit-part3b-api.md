@@ -1,142 +1,142 @@
 # Race Condition Audit — Part 3b: src/app/api non-admin N-Z (140 files)
 
-- [ ] `src/app/api/cron/cleanup-projects/route.ts`
-- [ ] `src/app/api/cron/email-queue/route.ts`
-- [ ] `src/app/api/cron/email-retries/route.ts`
-- [ ] `src/app/api/cron/payment-retries/route.ts`
-- [ ] `src/app/api/cron/process-failed-campaigns/route.ts`
-- [ ] `src/app/api/cron/process-funded-campaigns/route.ts`
-- [ ] `src/app/api/cron/scheduled-campaigns/route.ts`
-- [ ] `src/app/api/diagnostics/payment/route.ts`
-- [ ] `src/app/api/divinitycoin/config/route.ts`
-- [ ] `src/app/api/email/track/click/route.ts`
-- [ ] `src/app/api/email/track/open/route.ts`
-- [ ] `src/app/api/error-report/route.ts`
-- [ ] `src/app/api/health/route.ts`
-- [ ] `src/app/api/hero-slides/route.ts`
-- [ ] `src/app/api/home-stats/route.ts`
-- [ ] `src/app/api/internal/blocked-ips/route.ts`
-- [ ] `src/app/api/lcs-locator/import/route.ts`
-- [ ] `src/app/api/lcs-locator/route.ts`
-- [ ] `src/app/api/marketplace/books/[slug]/route.ts`
-- [ ] `src/app/api/marketplace/books/route.ts`
-- [ ] `src/app/api/marketplace/checkout/route.ts`
-- [ ] `src/app/api/marketplace/checkout/verify/route.ts`
-- [ ] `src/app/api/marketplace/companies/[slug]/route.ts`
-- [ ] `src/app/api/marketplace/companies/route.ts`
-- [ ] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts`
-- [ ] `src/app/api/marketplace/purchase/confirm/route.ts`
-- [ ] `src/app/api/marketplace/purchase/route.ts`
-- [ ] `src/app/api/marketplace/redeem-code/route.ts`
-- [ ] `src/app/api/marketplace/stream/[slug]/route.ts`
-- [ ] `src/app/api/marketplace/validate-code/route.ts`
-- [ ] `src/app/api/marketplace/watch/[slug]/route.ts`
-- [ ] `src/app/api/messages/route.ts`
-- [ ] `src/app/api/messages/user-info/route.ts`
-- [ ] `src/app/api/metrics/route.ts`
-- [ ] `src/app/api/og/route.tsx`
-- [ ] `src/app/api/pay/balance/confirm/route.ts`
-- [ ] `src/app/api/pay/balance/route.ts`
-- [ ] `src/app/api/paypal/capture/[orderId]/route.ts`
-- [ ] `src/app/api/paypal/client-token/route.ts`
-- [ ] `src/app/api/paypal/config/route.ts`
-- [ ] `src/app/api/platform-stats/route.ts`
-- [ ] `src/app/api/pledges/[pledgeId]/add-items/route.ts`
-- [ ] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts`
-- [ ] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts`
-- [ ] `src/app/api/pledges/[pledgeId]/confirm/route.ts`
-- [ ] `src/app/api/pledges/[pledgeId]/route.ts`
-- [ ] `src/app/api/pledges/check/route.ts`
-- [ ] `src/app/api/pledges/route.ts`
-- [ ] `src/app/api/privacy/ccpa-opt-out/route.ts`
-- [ ] `src/app/api/projects/[id]/basics/route.ts`
-- [ ] `src/app/api/projects/[id]/chargeback-card/route.ts`
-- [ ] `src/app/api/projects/[id]/collaborators/me/route.ts`
-- [ ] `src/app/api/projects/[id]/collaborators/route.ts`
-- [ ] `src/app/api/projects/[id]/comments/route.ts`
-- [ ] `src/app/api/projects/[id]/contact-email/route.ts`
-- [ ] `src/app/api/projects/[id]/items/[itemId]/end/route.ts`
-- [ ] `src/app/api/projects/[id]/items/route.ts`
-- [ ] `src/app/api/projects/[id]/launch/route.ts`
-- [ ] `src/app/api/projects/[id]/members/import/route.ts`
-- [ ] `src/app/api/projects/[id]/members/route.ts`
-- [ ] `src/app/api/projects/[id]/payment/route.ts`
-- [ ] `src/app/api/projects/[id]/prelaunch/route.ts`
-- [ ] `src/app/api/projects/[id]/promotion/route.ts`
-- [ ] `src/app/api/projects/[id]/reviews/route.ts`
-- [ ] `src/app/api/projects/[id]/rewards/route.ts`
-- [ ] `src/app/api/projects/[id]/route.ts`
-- [ ] `src/app/api/projects/[id]/story/route.ts`
-- [ ] `src/app/api/projects/[id]/submit/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/backer-questions/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/item-questions/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/lock/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/responses/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/route.ts`
-- [ ] `src/app/api/projects/[id]/survey/send/route.ts`
-- [ ] `src/app/api/projects/[id]/sync-stats/route.ts`
-- [ ] `src/app/api/projects/route.ts`
-- [ ] `src/app/api/projects/similar/route.ts`
-- [ ] `src/app/api/projects/slug/[slug]/check/route.ts`
-- [ ] `src/app/api/projects/slug/[slug]/route.ts`
-- [ ] `src/app/api/projects/slug/[slug]/stats/route.ts`
-- [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts`
-- [ ] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts`
-- [ ] `src/app/api/promo-popup/route.ts`
-- [ ] `src/app/api/r2/serve/[...key]/route.ts`
-- [ ] `src/app/api/recommendations/route.ts`
-- [ ] `src/app/api/retailers/account/route.ts`
-- [ ] `src/app/api/retailers/apply/route.ts`
-- [ ] `src/app/api/retailers/forgot-password/route.ts`
-- [ ] `src/app/api/retailers/invoices/route.ts`
-- [ ] `src/app/api/retailers/login/route.ts`
-- [ ] `src/app/api/retailers/logout/route.ts`
-- [ ] `src/app/api/retailers/me/route.ts`
-- [ ] `src/app/api/retailers/orders/route.ts`
-- [ ] `src/app/api/retailers/projects/[id]/route.ts`
-- [ ] `src/app/api/retailers/projects/route.ts`
-- [ ] `src/app/api/retailers/reset-password/route.ts`
-- [ ] `src/app/api/retailers/session-auth/route.ts`
-- [ ] `src/app/api/rewards/[id]/copy-to-addon/route.ts`
-- [ ] `src/app/api/rewards/[id]/end/route.ts`
-- [ ] `src/app/api/rewards/[id]/shipping/route.ts`
-- [ ] `src/app/api/rewards/route.ts`
-- [ ] `src/app/api/stripe/config/route.ts`
-- [ ] `src/app/api/stripe/connect/refresh/route.ts`
-- [ ] `src/app/api/stripe/connect/reset/route.ts`
-- [ ] `src/app/api/stripe/connect/route.ts`
-- [ ] `src/app/api/stripe/connect/status/route.ts`
-- [ ] `src/app/api/surveys/[pledgeId]/respond/route.ts`
-- [ ] `src/app/api/surveys/route.ts`
-- [ ] `src/app/api/track/route.ts`
-- [ ] `src/app/api/tracking/route.ts`
-- [ ] `src/app/api/unsubscribe/route.ts`
-- [ ] `src/app/api/updates/route.ts`
-- [ ] `src/app/api/upload/route.ts`
-- [ ] `src/app/api/uploads/[...path]/route.ts`
-- [ ] `src/app/api/user/activity/route.ts`
-- [ ] `src/app/api/user/data-deletion/route.ts`
-- [ ] `src/app/api/user/data-export/route.ts`
-- [ ] `src/app/api/user/following/route.ts`
-- [ ] `src/app/api/user/me/route.ts`
-- [ ] `src/app/api/user/notifications/route.ts`
-- [ ] `src/app/api/user/profile-dropdown/route.ts`
-- [ ] `src/app/api/user/profile/route.ts`
-- [ ] `src/app/api/user/public-profile/[username]/route.ts`
-- [ ] `src/app/api/user/settings/email/route.ts`
-- [ ] `src/app/api/user/settings/route.ts`
-- [ ] `src/app/api/user/vanity-url/route.ts`
-- [ ] `src/app/api/user/verify-email/route.ts`
-- [ ] `src/app/api/verify-id/callback/route.ts`
-- [ ] `src/app/api/verify-id/check/route.ts`
-- [ ] `src/app/api/verify-id/route.ts`
-- [ ] `src/app/api/webhooks/divinitycoin/route.ts`
-- [ ] `src/app/api/webhooks/email/events/route.ts`
-- [ ] `src/app/api/webhooks/email/inbound/route.ts`
-- [ ] `src/app/api/webhooks/paypal/route.ts`
-- [ ] `src/app/api/webhooks/stripe/connect/route.ts`
-- [ ] `src/app/api/webhooks/stripe/route.ts`
-- [ ] `src/app/api/webhooks/stripe_connect/route.ts`
-- [ ] `src/app/api/webhooks/whop/route.ts`
-- [ ] `src/app/api/whop/config/route.ts`
-- [ ] `src/app/api/whop/confirm/[pledgeId]/route.ts`
+- [x] `src/app/api/cron/cleanup-projects/route.ts`
+- [x] `src/app/api/cron/email-queue/route.ts`
+- [x] `src/app/api/cron/email-retries/route.ts`
+- [x] `src/app/api/cron/payment-retries/route.ts`
+- [x] `src/app/api/cron/process-failed-campaigns/route.ts`
+- [x] `src/app/api/cron/process-funded-campaigns/route.ts`
+- [x] `src/app/api/cron/scheduled-campaigns/route.ts`
+- [x] `src/app/api/diagnostics/payment/route.ts`
+- [x] `src/app/api/divinitycoin/config/route.ts`
+- [x] `src/app/api/email/track/click/route.ts`
+- [x] `src/app/api/email/track/open/route.ts`
+- [x] `src/app/api/error-report/route.ts`
+- [x] `src/app/api/health/route.ts`
+- [x] `src/app/api/hero-slides/route.ts`
+- [x] `src/app/api/home-stats/route.ts`
+- [x] `src/app/api/internal/blocked-ips/route.ts`
+- [x] `src/app/api/lcs-locator/import/route.ts`
+- [x] `src/app/api/lcs-locator/route.ts`
+- [x] `src/app/api/marketplace/books/[slug]/route.ts`
+- [x] `src/app/api/marketplace/books/route.ts`
+- [x] `src/app/api/marketplace/checkout/route.ts`
+- [x] `src/app/api/marketplace/checkout/verify/route.ts`
+- [x] `src/app/api/marketplace/companies/[slug]/route.ts`
+- [x] `src/app/api/marketplace/companies/route.ts`
+- [x] `src/app/api/marketplace/paypal/capture/[orderId]/route.ts`
+- [x] `src/app/api/marketplace/purchase/confirm/route.ts`
+- [x] `src/app/api/marketplace/purchase/route.ts`
+- [x] `src/app/api/marketplace/redeem-code/route.ts`
+- [x] `src/app/api/marketplace/stream/[slug]/route.ts`
+- [x] `src/app/api/marketplace/validate-code/route.ts`
+- [x] `src/app/api/marketplace/watch/[slug]/route.ts`
+- [x] `src/app/api/messages/route.ts`
+- [x] `src/app/api/messages/user-info/route.ts`
+- [x] `src/app/api/metrics/route.ts`
+- [x] `src/app/api/og/route.tsx`
+- [x] `src/app/api/pay/balance/confirm/route.ts`
+- [x] `src/app/api/pay/balance/route.ts`
+- [x] `src/app/api/paypal/capture/[orderId]/route.ts`
+- [x] `src/app/api/paypal/client-token/route.ts`
+- [x] `src/app/api/paypal/config/route.ts`
+- [x] `src/app/api/platform-stats/route.ts`
+- [x] `src/app/api/pledges/[pledgeId]/add-items/route.ts`
+- [x] `src/app/api/pledges/[pledgeId]/confirm-add-items/route.ts`
+- [x] `src/app/api/pledges/[pledgeId]/confirm-modify/route.ts`
+- [x] `src/app/api/pledges/[pledgeId]/confirm/route.ts`
+- [x] `src/app/api/pledges/[pledgeId]/route.ts`
+- [x] `src/app/api/pledges/check/route.ts`
+- [x] `src/app/api/pledges/route.ts`
+- [x] `src/app/api/privacy/ccpa-opt-out/route.ts`
+- [x] `src/app/api/projects/[id]/basics/route.ts`
+- [x] `src/app/api/projects/[id]/chargeback-card/route.ts`
+- [x] `src/app/api/projects/[id]/collaborators/me/route.ts`
+- [x] `src/app/api/projects/[id]/collaborators/route.ts`
+- [x] `src/app/api/projects/[id]/comments/route.ts`
+- [x] `src/app/api/projects/[id]/contact-email/route.ts`
+- [x] `src/app/api/projects/[id]/items/[itemId]/end/route.ts`
+- [x] `src/app/api/projects/[id]/items/route.ts`
+- [x] `src/app/api/projects/[id]/launch/route.ts`
+- [x] `src/app/api/projects/[id]/members/import/route.ts`
+- [x] `src/app/api/projects/[id]/members/route.ts`
+- [x] `src/app/api/projects/[id]/payment/route.ts`
+- [x] `src/app/api/projects/[id]/prelaunch/route.ts`
+- [x] `src/app/api/projects/[id]/promotion/route.ts`
+- [x] `src/app/api/projects/[id]/reviews/route.ts`
+- [x] `src/app/api/projects/[id]/rewards/route.ts`
+- [x] `src/app/api/projects/[id]/route.ts`
+- [x] `src/app/api/projects/[id]/story/route.ts`
+- [x] `src/app/api/projects/[id]/submit/route.ts`
+- [x] `src/app/api/projects/[id]/survey/backer-questions/route.ts`
+- [x] `src/app/api/projects/[id]/survey/item-questions/route.ts`
+- [x] `src/app/api/projects/[id]/survey/lock/route.ts`
+- [x] `src/app/api/projects/[id]/survey/responses/route.ts`
+- [x] `src/app/api/projects/[id]/survey/route.ts`
+- [x] `src/app/api/projects/[id]/survey/send/route.ts`
+- [x] `src/app/api/projects/[id]/sync-stats/route.ts`
+- [x] `src/app/api/projects/route.ts`
+- [x] `src/app/api/projects/similar/route.ts`
+- [x] `src/app/api/projects/slug/[slug]/check/route.ts`
+- [x] `src/app/api/projects/slug/[slug]/route.ts`
+- [x] `src/app/api/projects/slug/[slug]/stats/route.ts`
+- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/route.ts`
+- [x] `src/app/api/projects/vanity/[vanityname]/[slug]/stats/route.ts`
+- [x] `src/app/api/promo-popup/route.ts`
+- [x] `src/app/api/r2/serve/[...key]/route.ts`
+- [x] `src/app/api/recommendations/route.ts`
+- [x] `src/app/api/retailers/account/route.ts`
+- [x] `src/app/api/retailers/apply/route.ts`
+- [x] `src/app/api/retailers/forgot-password/route.ts`
+- [x] `src/app/api/retailers/invoices/route.ts`
+- [x] `src/app/api/retailers/login/route.ts`
+- [x] `src/app/api/retailers/logout/route.ts`
+- [x] `src/app/api/retailers/me/route.ts`
+- [x] `src/app/api/retailers/orders/route.ts`
+- [x] `src/app/api/retailers/projects/[id]/route.ts`
+- [x] `src/app/api/retailers/projects/route.ts`
+- [x] `src/app/api/retailers/reset-password/route.ts`
+- [x] `src/app/api/retailers/session-auth/route.ts`
+- [x] `src/app/api/rewards/[id]/copy-to-addon/route.ts`
+- [x] `src/app/api/rewards/[id]/end/route.ts`
+- [x] `src/app/api/rewards/[id]/shipping/route.ts`
+- [x] `src/app/api/rewards/route.ts`
+- [x] `src/app/api/stripe/config/route.ts`
+- [x] `src/app/api/stripe/connect/refresh/route.ts`
+- [x] `src/app/api/stripe/connect/reset/route.ts`
+- [x] `src/app/api/stripe/connect/route.ts`
+- [x] `src/app/api/stripe/connect/status/route.ts`
+- [x] `src/app/api/surveys/[pledgeId]/respond/route.ts`
+- [x] `src/app/api/surveys/route.ts`
+- [x] `src/app/api/track/route.ts`
+- [x] `src/app/api/tracking/route.ts`
+- [x] `src/app/api/unsubscribe/route.ts`
+- [x] `src/app/api/updates/route.ts`
+- [x] `src/app/api/upload/route.ts`
+- [x] `src/app/api/uploads/[...path]/route.ts`
+- [x] `src/app/api/user/activity/route.ts`
+- [x] `src/app/api/user/data-deletion/route.ts`
+- [x] `src/app/api/user/data-export/route.ts`
+- [x] `src/app/api/user/following/route.ts`
+- [x] `src/app/api/user/me/route.ts`
+- [x] `src/app/api/user/notifications/route.ts`
+- [x] `src/app/api/user/profile-dropdown/route.ts`
+- [x] `src/app/api/user/profile/route.ts`
+- [x] `src/app/api/user/public-profile/[username]/route.ts`
+- [x] `src/app/api/user/settings/email/route.ts`
+- [x] `src/app/api/user/settings/route.ts`
+- [x] `src/app/api/user/vanity-url/route.ts`
+- [x] `src/app/api/user/verify-email/route.ts`
+- [x] `src/app/api/verify-id/callback/route.ts`
+- [x] `src/app/api/verify-id/check/route.ts`
+- [x] `src/app/api/verify-id/route.ts`
+- [x] `src/app/api/webhooks/divinitycoin/route.ts`
+- [x] `src/app/api/webhooks/email/events/route.ts`
+- [x] `src/app/api/webhooks/email/inbound/route.ts`
+- [x] `src/app/api/webhooks/paypal/route.ts`
+- [x] `src/app/api/webhooks/stripe/connect/route.ts`
+- [x] `src/app/api/webhooks/stripe/route.ts`
+- [x] `src/app/api/webhooks/stripe_connect/route.ts`
+- [x] `src/app/api/webhooks/whop/route.ts`
+- [x] `src/app/api/whop/config/route.ts`
+- [x] `src/app/api/whop/confirm/[pledgeId]/route.ts`

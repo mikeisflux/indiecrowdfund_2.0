@@ -1,167 +1,167 @@
 # Race Condition Audit — Part 7: src/components (165 files)
 
-- [ ] `src/components/PdfPageFlipReader.tsx`
-- [ ] `src/components/PdfThumbnail.tsx`
-- [ ] `src/components/admin/ai-marketing/ai-settings-tab.tsx`
-- [ ] `src/components/admin/ai-marketing/auto-tagging-tab.tsx`
-- [ ] `src/components/admin/ai-marketing/behavior-analytics-tab.tsx`
-- [ ] `src/components/admin/ai-marketing/dialogs/campaign-dialog.tsx`
-- [ ] `src/components/admin/ai-marketing/dialogs/campaign-type-dialog.tsx`
-- [ ] `src/components/admin/ai-marketing/dialogs/csv-import-dialog.tsx`
-- [ ] `src/components/admin/ai-marketing/dialogs/index.ts`
-- [ ] `src/components/admin/ai-marketing/dialogs/results-viewer-dialog.tsx`
-- [ ] `src/components/admin/ai-marketing/dialogs/tag-review-dialog.tsx`
-- [ ] `src/components/admin/ai-marketing/email-campaigns-tab.tsx`
-- [ ] `src/components/admin/ai-marketing/index.ts`
-- [ ] `src/components/admin/ai-marketing/overview-tab.tsx`
-- [ ] `src/components/admin/ai-marketing/subscriber-list-tab.tsx`
-- [ ] `src/components/admin/ai-marketing/tag-segments-tab.tsx`
-- [ ] `src/components/admin/settings/ai-settings.tsx`
-- [ ] `src/components/admin/settings/analytics-settings.tsx`
-- [ ] `src/components/admin/settings/api-settings.tsx`
-- [ ] `src/components/admin/settings/communication-settings.tsx`
-- [ ] `src/components/admin/settings/database-settings.tsx`
-- [ ] `src/components/admin/settings/email-settings.tsx`
-- [ ] `src/components/admin/settings/general-settings.tsx`
-- [ ] `src/components/admin/settings/id-verification-settings.tsx`
-- [ ] `src/components/admin/settings/index.ts`
-- [ ] `src/components/admin/settings/payment-settings.tsx`
-- [ ] `src/components/admin/settings/security-settings.tsx`
-- [ ] `src/components/admin/settings/social-settings.tsx`
-- [ ] `src/components/admin/settings/storage-settings.tsx`
-- [ ] `src/components/announcement-bar.tsx`
-- [ ] `src/components/auth/auth-modal.tsx`
-- [ ] `src/components/auth/forgot-password-form.tsx`
-- [ ] `src/components/auth/login-form.tsx`
-- [ ] `src/components/auth/recaptcha.tsx`
-- [ ] `src/components/auth/register-form.tsx`
-- [ ] `src/components/auth/reset-password-form.tsx`
-- [ ] `src/components/back-to-top.tsx`
-- [ ] `src/components/chat/chat-room.tsx`
-- [ ] `src/components/consent-banner.tsx`
-- [ ] `src/components/email-verification-banner.tsx`
-- [ ] `src/components/error-reporter.tsx`
-- [ ] `src/components/footer.tsx`
-- [ ] `src/components/google-analytics.tsx`
-- [ ] `src/components/hero-slider.tsx`
-- [ ] `src/components/home-stats-poller.tsx`
-- [ ] `src/components/json-ld.tsx`
-- [ ] `src/components/legal/ai-policy.tsx`
-- [ ] `src/components/legal/backer-agreement.tsx`
-- [ ] `src/components/legal/chargebacks-policy.tsx`
-- [ ] `src/components/legal/content-guidelines.tsx`
-- [ ] `src/components/legal/cookie-policy.tsx`
-- [ ] `src/components/legal/creator-agreement.tsx`
-- [ ] `src/components/legal/data-deletion-policy.tsx`
-- [ ] `src/components/legal/dmca-policy.tsx`
-- [ ] `src/components/legal/fraud-policy.tsx`
-- [ ] `src/components/legal/gdpr-ccpa-policy.tsx`
-- [ ] `src/components/legal/index.ts`
-- [ ] `src/components/legal/nsfw-policy.tsx`
-- [ ] `src/components/legal/pci-compliance.tsx`
-- [ ] `src/components/legal/privacy-policy.tsx`
-- [ ] `src/components/legal/refund-policy.tsx`
-- [ ] `src/components/legal/shipping-policy.tsx`
-- [ ] `src/components/legal/terms-of-service.tsx`
-- [ ] `src/components/marketplace/audio-visualizer.tsx`
-- [ ] `src/components/marketplace/marketplace-payment-settings.tsx`
-- [ ] `src/components/marketplace/movie-browse.tsx`
-- [ ] `src/components/marketplace/music-browse.tsx`
-- [ ] `src/components/marketplace/music-player.tsx`
-- [ ] `src/components/messaging/messages-panel.tsx`
-- [ ] `src/components/mobile-profile-links.tsx`
-- [ ] `src/components/notifications/notifications-dropdown.tsx`
-- [ ] `src/components/payment-settings.tsx`
-- [ ] `src/components/project-details/index.ts`
-- [ ] `src/components/project-details/social-icons.tsx`
-- [ ] `src/components/project-details/tabs/campaign-tab.tsx`
-- [ ] `src/components/project-details/tabs/comments-tab.tsx`
-- [ ] `src/components/project-details/tabs/community-tab.tsx`
-- [ ] `src/components/project-details/tabs/creator-tab.tsx`
-- [ ] `src/components/project-details/tabs/faq-tab.tsx`
-- [ ] `src/components/project-details/tabs/index.ts`
-- [ ] `src/components/project-details/tabs/rewards-tab.tsx`
-- [ ] `src/components/project-details/tabs/updates-tab.tsx`
-- [ ] `src/components/project-details/types.ts`
-- [ ] `src/components/project-details/utils.ts`
-- [ ] `src/components/project/builder/basics-step.tsx`
-- [ ] `src/components/project/builder/new-project-wrapper.tsx`
-- [ ] `src/components/project/builder/payment-sections/campaign-type-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/chargeback-card-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/contact-email-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/content-declaration-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/divinity-coin-bank-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/index.ts`
-- [ ] `src/components/project/builder/payment-sections/payment-processor-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/paypal-bank-payout-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/paypal-payout-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/project-type-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/retailer-access-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/stripe-connect-section.tsx`
-- [ ] `src/components/project/builder/payment-sections/types.ts`
-- [ ] `src/components/project/builder/payment-sections/whop-bank-payout-section.tsx`
-- [ ] `src/components/project/builder/payment-step.tsx`
-- [ ] `src/components/project/builder/people-step.tsx`
-- [ ] `src/components/project/builder/project-builder.tsx`
-- [ ] `src/components/project/builder/promotion-step.tsx`
-- [ ] `src/components/project/builder/rewards-step.tsx`
-- [ ] `src/components/project/builder/rewards-step/addons-tab.tsx`
-- [ ] `src/components/project/builder/rewards-step/constants.ts`
-- [ ] `src/components/project/builder/rewards-step/csv-import-screen.tsx`
-- [ ] `src/components/project/builder/rewards-step/import-addon-dialog.tsx`
-- [ ] `src/components/project/builder/rewards-step/import-reward-dialog.tsx`
-- [ ] `src/components/project/builder/rewards-step/index.tsx`
-- [ ] `src/components/project/builder/rewards-step/item-dialog.tsx`
-- [ ] `src/components/project/builder/rewards-step/items-tab.tsx`
-- [ ] `src/components/project/builder/rewards-step/reward-form.tsx`
-- [ ] `src/components/project/builder/rewards-step/tiers-tab.tsx`
-- [ ] `src/components/project/builder/story-step.tsx`
-- [ ] `src/components/promo-popup.tsx`
-- [ ] `src/components/providers/auth-provider.tsx`
-- [ ] `src/components/providers/theme-provider.tsx`
-- [ ] `src/components/site-header.tsx`
-- [ ] `src/components/theme-toggle.tsx`
-- [ ] `src/components/tracking-provider.tsx`
-- [ ] `src/components/ui/accordion.tsx`
-- [ ] `src/components/ui/alert-dialog.tsx`
-- [ ] `src/components/ui/alert.tsx`
-- [ ] `src/components/ui/avatar.tsx`
-- [ ] `src/components/ui/badge.tsx`
-- [ ] `src/components/ui/block-editor.tsx`
-- [ ] `src/components/ui/button.tsx`
-- [ ] `src/components/ui/calendar.tsx`
-- [ ] `src/components/ui/card.tsx`
-- [ ] `src/components/ui/checkbox.tsx`
-- [ ] `src/components/ui/collapsible.tsx`
-- [ ] `src/components/ui/confirm-dialog.tsx`
-- [ ] `src/components/ui/countdown-timer.tsx`
-- [ ] `src/components/ui/dialog.tsx`
-- [ ] `src/components/ui/drag-drop-image-cell.tsx`
-- [ ] `src/components/ui/dropdown-menu.tsx`
-- [ ] `src/components/ui/editable-input.tsx`
-- [ ] `src/components/ui/email-editor.tsx`
-- [ ] `src/components/ui/form.tsx`
-- [ ] `src/components/ui/image-upload.tsx`
-- [ ] `src/components/ui/input.tsx`
-- [ ] `src/components/ui/label.tsx`
-- [ ] `src/components/ui/location-autocomplete.tsx`
-- [ ] `src/components/ui/popover.tsx`
-- [ ] `src/components/ui/progress.tsx`
-- [ ] `src/components/ui/radio-group.tsx`
-- [ ] `src/components/ui/rich-text-editor.tsx`
-- [ ] `src/components/ui/screen-reader-announcer.tsx`
-- [ ] `src/components/ui/scroll-area.tsx`
-- [ ] `src/components/ui/secure-key-input.tsx`
-- [ ] `src/components/ui/select.tsx`
-- [ ] `src/components/ui/separator.tsx`
-- [ ] `src/components/ui/sheet.tsx`
-- [ ] `src/components/ui/skeleton.tsx`
-- [ ] `src/components/ui/slider.tsx`
-- [ ] `src/components/ui/sonner.tsx`
-- [ ] `src/components/ui/star-rating.tsx`
-- [ ] `src/components/ui/switch.tsx`
-- [ ] `src/components/ui/table.tsx`
-- [ ] `src/components/ui/tabs.tsx`
-- [ ] `src/components/ui/textarea.tsx`
-- [ ] `src/components/ui/tooltip.tsx`
-- [ ] `src/components/user-profile-dropdown.tsx`
+- [x] `src/components/PdfPageFlipReader.tsx`
+- [x] `src/components/PdfThumbnail.tsx`
+- [x] `src/components/admin/ai-marketing/ai-settings-tab.tsx`
+- [x] `src/components/admin/ai-marketing/auto-tagging-tab.tsx`
+- [x] `src/components/admin/ai-marketing/behavior-analytics-tab.tsx`
+- [x] `src/components/admin/ai-marketing/dialogs/campaign-dialog.tsx`
+- [x] `src/components/admin/ai-marketing/dialogs/campaign-type-dialog.tsx`
+- [x] `src/components/admin/ai-marketing/dialogs/csv-import-dialog.tsx`
+- [x] `src/components/admin/ai-marketing/dialogs/index.ts`
+- [x] `src/components/admin/ai-marketing/dialogs/results-viewer-dialog.tsx`
+- [x] `src/components/admin/ai-marketing/dialogs/tag-review-dialog.tsx`
+- [x] `src/components/admin/ai-marketing/email-campaigns-tab.tsx`
+- [x] `src/components/admin/ai-marketing/index.ts`
+- [x] `src/components/admin/ai-marketing/overview-tab.tsx`
+- [x] `src/components/admin/ai-marketing/subscriber-list-tab.tsx`
+- [x] `src/components/admin/ai-marketing/tag-segments-tab.tsx`
+- [x] `src/components/admin/settings/ai-settings.tsx`
+- [x] `src/components/admin/settings/analytics-settings.tsx`
+- [x] `src/components/admin/settings/api-settings.tsx`
+- [x] `src/components/admin/settings/communication-settings.tsx`
+- [x] `src/components/admin/settings/database-settings.tsx`
+- [x] `src/components/admin/settings/email-settings.tsx`
+- [x] `src/components/admin/settings/general-settings.tsx`
+- [x] `src/components/admin/settings/id-verification-settings.tsx`
+- [x] `src/components/admin/settings/index.ts`
+- [x] `src/components/admin/settings/payment-settings.tsx`
+- [x] `src/components/admin/settings/security-settings.tsx`
+- [x] `src/components/admin/settings/social-settings.tsx`
+- [x] `src/components/admin/settings/storage-settings.tsx`
+- [x] `src/components/announcement-bar.tsx`
+- [x] `src/components/auth/auth-modal.tsx`
+- [x] `src/components/auth/forgot-password-form.tsx`
+- [x] `src/components/auth/login-form.tsx`
+- [x] `src/components/auth/recaptcha.tsx`
+- [x] `src/components/auth/register-form.tsx`
+- [x] `src/components/auth/reset-password-form.tsx`
+- [x] `src/components/back-to-top.tsx`
+- [x] `src/components/chat/chat-room.tsx`
+- [x] `src/components/consent-banner.tsx`
+- [x] `src/components/email-verification-banner.tsx`
+- [x] `src/components/error-reporter.tsx`
+- [x] `src/components/footer.tsx`
+- [x] `src/components/google-analytics.tsx`
+- [x] `src/components/hero-slider.tsx`
+- [x] `src/components/home-stats-poller.tsx`
+- [x] `src/components/json-ld.tsx`
+- [x] `src/components/legal/ai-policy.tsx`
+- [x] `src/components/legal/backer-agreement.tsx`
+- [x] `src/components/legal/chargebacks-policy.tsx`
+- [x] `src/components/legal/content-guidelines.tsx`
+- [x] `src/components/legal/cookie-policy.tsx`
+- [x] `src/components/legal/creator-agreement.tsx`
+- [x] `src/components/legal/data-deletion-policy.tsx`
+- [x] `src/components/legal/dmca-policy.tsx`
+- [x] `src/components/legal/fraud-policy.tsx`
+- [x] `src/components/legal/gdpr-ccpa-policy.tsx`
+- [x] `src/components/legal/index.ts`
+- [x] `src/components/legal/nsfw-policy.tsx`
+- [x] `src/components/legal/pci-compliance.tsx`
+- [x] `src/components/legal/privacy-policy.tsx`
+- [x] `src/components/legal/refund-policy.tsx`
+- [x] `src/components/legal/shipping-policy.tsx`
+- [x] `src/components/legal/terms-of-service.tsx`
+- [x] `src/components/marketplace/audio-visualizer.tsx`
+- [x] `src/components/marketplace/marketplace-payment-settings.tsx`
+- [x] `src/components/marketplace/movie-browse.tsx`
+- [x] `src/components/marketplace/music-browse.tsx`
+- [x] `src/components/marketplace/music-player.tsx`
+- [x] `src/components/messaging/messages-panel.tsx`
+- [x] `src/components/mobile-profile-links.tsx`
+- [x] `src/components/notifications/notifications-dropdown.tsx`
+- [x] `src/components/payment-settings.tsx`
+- [x] `src/components/project-details/index.ts`
+- [x] `src/components/project-details/social-icons.tsx`
+- [x] `src/components/project-details/tabs/campaign-tab.tsx`
+- [x] `src/components/project-details/tabs/comments-tab.tsx`
+- [x] `src/components/project-details/tabs/community-tab.tsx`
+- [x] `src/components/project-details/tabs/creator-tab.tsx`
+- [x] `src/components/project-details/tabs/faq-tab.tsx`
+- [x] `src/components/project-details/tabs/index.ts`
+- [x] `src/components/project-details/tabs/rewards-tab.tsx`
+- [x] `src/components/project-details/tabs/updates-tab.tsx`
+- [x] `src/components/project-details/types.ts`
+- [x] `src/components/project-details/utils.ts`
+- [x] `src/components/project/builder/basics-step.tsx`
+- [x] `src/components/project/builder/new-project-wrapper.tsx`
+- [x] `src/components/project/builder/payment-sections/campaign-type-section.tsx`
+- [x] `src/components/project/builder/payment-sections/chargeback-card-section.tsx`
+- [x] `src/components/project/builder/payment-sections/contact-email-section.tsx`
+- [x] `src/components/project/builder/payment-sections/content-declaration-section.tsx`
+- [x] `src/components/project/builder/payment-sections/divinity-coin-bank-section.tsx`
+- [x] `src/components/project/builder/payment-sections/index.ts`
+- [x] `src/components/project/builder/payment-sections/payment-processor-section.tsx`
+- [x] `src/components/project/builder/payment-sections/paypal-bank-payout-section.tsx`
+- [x] `src/components/project/builder/payment-sections/paypal-payout-section.tsx`
+- [x] `src/components/project/builder/payment-sections/project-type-section.tsx`
+- [x] `src/components/project/builder/payment-sections/retailer-access-section.tsx`
+- [x] `src/components/project/builder/payment-sections/stripe-connect-section.tsx`
+- [x] `src/components/project/builder/payment-sections/types.ts`
+- [x] `src/components/project/builder/payment-sections/whop-bank-payout-section.tsx`
+- [x] `src/components/project/builder/payment-step.tsx`
+- [x] `src/components/project/builder/people-step.tsx`
+- [x] `src/components/project/builder/project-builder.tsx`
+- [x] `src/components/project/builder/promotion-step.tsx`
+- [x] `src/components/project/builder/rewards-step.tsx`
+- [x] `src/components/project/builder/rewards-step/addons-tab.tsx`
+- [x] `src/components/project/builder/rewards-step/constants.ts`
+- [x] `src/components/project/builder/rewards-step/csv-import-screen.tsx`
+- [x] `src/components/project/builder/rewards-step/import-addon-dialog.tsx`
+- [x] `src/components/project/builder/rewards-step/import-reward-dialog.tsx`
+- [x] `src/components/project/builder/rewards-step/index.tsx`
+- [x] `src/components/project/builder/rewards-step/item-dialog.tsx`
+- [x] `src/components/project/builder/rewards-step/items-tab.tsx`
+- [x] `src/components/project/builder/rewards-step/reward-form.tsx`
+- [x] `src/components/project/builder/rewards-step/tiers-tab.tsx`
+- [x] `src/components/project/builder/story-step.tsx`
+- [x] `src/components/promo-popup.tsx`
+- [x] `src/components/providers/auth-provider.tsx`
+- [x] `src/components/providers/theme-provider.tsx`
+- [x] `src/components/site-header.tsx`
+- [x] `src/components/theme-toggle.tsx`
+- [x] `src/components/tracking-provider.tsx`
+- [x] `src/components/ui/accordion.tsx`
+- [x] `src/components/ui/alert-dialog.tsx`
+- [x] `src/components/ui/alert.tsx`
+- [x] `src/components/ui/avatar.tsx`
+- [x] `src/components/ui/badge.tsx`
+- [x] `src/components/ui/block-editor.tsx`
+- [x] `src/components/ui/button.tsx`
+- [x] `src/components/ui/calendar.tsx`
+- [x] `src/components/ui/card.tsx`
+- [x] `src/components/ui/checkbox.tsx`
+- [x] `src/components/ui/collapsible.tsx`
+- [x] `src/components/ui/confirm-dialog.tsx`
+- [x] `src/components/ui/countdown-timer.tsx`
+- [x] `src/components/ui/dialog.tsx`
+- [x] `src/components/ui/drag-drop-image-cell.tsx`
+- [x] `src/components/ui/dropdown-menu.tsx`
+- [x] `src/components/ui/editable-input.tsx`
+- [x] `src/components/ui/email-editor.tsx`
+- [x] `src/components/ui/form.tsx`
+- [x] `src/components/ui/image-upload.tsx`
+- [x] `src/components/ui/input.tsx`
+- [x] `src/components/ui/label.tsx`
+- [x] `src/components/ui/location-autocomplete.tsx`
+- [x] `src/components/ui/popover.tsx`
+- [x] `src/components/ui/progress.tsx`
+- [x] `src/components/ui/radio-group.tsx`
+- [x] `src/components/ui/rich-text-editor.tsx`
+- [x] `src/components/ui/screen-reader-announcer.tsx`
+- [x] `src/components/ui/scroll-area.tsx`
+- [x] `src/components/ui/secure-key-input.tsx`
+- [x] `src/components/ui/select.tsx`
+- [x] `src/components/ui/separator.tsx`
+- [x] `src/components/ui/sheet.tsx`
+- [x] `src/components/ui/skeleton.tsx`
+- [x] `src/components/ui/slider.tsx`
+- [x] `src/components/ui/sonner.tsx`
+- [x] `src/components/ui/star-rating.tsx`
+- [x] `src/components/ui/switch.tsx`
+- [x] `src/components/ui/table.tsx`
+- [x] `src/components/ui/tabs.tsx`
+- [x] `src/components/ui/textarea.tsx`
+- [x] `src/components/ui/tooltip.tsx`
+- [x] `src/components/user-profile-dropdown.tsx`

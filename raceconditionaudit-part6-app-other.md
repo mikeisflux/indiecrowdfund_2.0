@@ -1,139 +1,139 @@
 # Race Condition Audit — Part 6: src/app other pages (137 files)
 
-- [ ] `src/app/(auth)/choose-role/choose-role-client.tsx`
-- [ ] `src/app/(auth)/choose-role/page.tsx`
-- [ ] `src/app/(auth)/forgot-password/page.tsx`
-- [ ] `src/app/(auth)/layout.tsx`
-- [ ] `src/app/(auth)/login/loading.tsx`
-- [ ] `src/app/(auth)/login/page.tsx`
-- [ ] `src/app/(auth)/register/loading.tsx`
-- [ ] `src/app/(auth)/register/page.tsx`
-- [ ] `src/app/(auth)/reset-password/page.tsx`
-- [ ] `src/app/@modal/(.)login/page.tsx`
-- [ ] `src/app/@modal/(.)register/page.tsx`
-- [ ] `src/app/@modal/default.tsx`
-- [ ] `src/app/[vanityname]/[slug]/page.tsx`
-- [ ] `src/app/about-us/layout.tsx`
-- [ ] `src/app/about-us/page.tsx`
-- [ ] `src/app/access-denied/page.tsx`
-- [ ] `src/app/backer-handbook/layout.tsx`
-- [ ] `src/app/backer-handbook/page.tsx`
-- [ ] `src/app/bug-report/layout.tsx`
-- [ ] `src/app/bug-report/page.tsx`
-- [ ] `src/app/cart/page.tsx`
-- [ ] `src/app/changelog/page.tsx`
-- [ ] `src/app/chat/page.tsx`
-- [ ] `src/app/collaborate/[id]/page.tsx`
-- [ ] `src/app/collaborate/layout.tsx`
-- [ ] `src/app/contact/layout.tsx`
-- [ ] `src/app/contact/page.tsx`
-- [ ] `src/app/creator-handbook/layout.tsx`
-- [ ] `src/app/creator-handbook/page.tsx`
-- [ ] `src/app/discover/layout.tsx`
-- [ ] `src/app/discover/loading.tsx`
-- [ ] `src/app/discover/page.tsx`
-- [ ] `src/app/error.tsx`
-- [ ] `src/app/explore/page.tsx`
-- [ ] `src/app/faq/layout.tsx`
-- [ ] `src/app/faq/page.tsx`
-- [ ] `src/app/favicon.ico`
-- [ ] `src/app/fees/calculations.ts`
-- [ ] `src/app/fees/data.ts`
-- [ ] `src/app/fees/layout.tsx`
-- [ ] `src/app/fees/page.tsx`
-- [ ] `src/app/fonts/GeistMonoVF.woff`
-- [ ] `src/app/fonts/GeistVF.woff`
-- [ ] `src/app/fulfillment/page.tsx`
-- [ ] `src/app/global-error.tsx`
-- [ ] `src/app/globals.css`
-- [ ] `src/app/help/page.tsx`
-- [ ] `src/app/help/whitelist/page.tsx`
-- [ ] `src/app/indiekit-handbook/layout.tsx`
-- [ ] `src/app/indiekit-handbook/page.tsx`
-- [ ] `src/app/layout.tsx`
-- [ ] `src/app/lcs-locator/layout.tsx`
-- [ ] `src/app/lcs-locator/page.tsx`
-- [ ] `src/app/marketplace-handbook/backers/page.tsx`
-- [ ] `src/app/marketplace-handbook/creators/page.tsx`
-- [ ] `src/app/marketplace-handbook/layout.tsx`
-- [ ] `src/app/marketplace/books/[slug]/layout.tsx`
-- [ ] `src/app/marketplace/books/[slug]/page.tsx`
-- [ ] `src/app/marketplace/books/featured/page.tsx`
-- [ ] `src/app/marketplace/books/layout.tsx`
-- [ ] `src/app/marketplace/books/page.tsx`
-- [ ] `src/app/marketplace/books/staff-picks/page.tsx`
-- [ ] `src/app/marketplace/checkout/success/page.tsx`
-- [ ] `src/app/marketplace/companies/[slug]/layout.tsx`
-- [ ] `src/app/marketplace/companies/[slug]/page.tsx`
-- [ ] `src/app/marketplace/components/MarketplacePayPalForm.tsx`
-- [ ] `src/app/marketplace/layout.tsx`
-- [ ] `src/app/marketplace/page.tsx`
-- [ ] `src/app/marketplace/physical-media/layout.tsx`
-- [ ] `src/app/marketplace/physical-media/page.tsx`
-- [ ] `src/app/not-found.tsx`
-- [ ] `src/app/page.tsx`
-- [ ] `src/app/pay/balance/[token]/page.tsx`
-- [ ] `src/app/privacy/layout.tsx`
-- [ ] `src/app/privacy/page.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/edit/page.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/layout.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/loading.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/page.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/AddonSelector.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/AddressWarning.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/Breadcrumb.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/DCPaymentWrapper.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/ErrorState.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/FAQSection.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/LoadingState.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/OrderSummary.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/PayPalPaymentForm.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/PaymentStep.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/RewardSelector.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/SuccessPage.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/constants.ts`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/hooks/usePledge.ts`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/page.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/types.ts`
-- [ ] `src/app/projects/[vanityname]/[slug]/pledge/utils.ts`
-- [ ] `src/app/projects/[vanityname]/[slug]/prelaunch/layout.tsx`
-- [ ] `src/app/projects/[vanityname]/[slug]/prelaunch/page.tsx`
-- [ ] `src/app/projects/[vanityname]/page.tsx`
-- [ ] `src/app/projects/new/page.tsx`
-- [ ] `src/app/projects/page.tsx`
-- [ ] `src/app/retailers/account/page.tsx`
-- [ ] `src/app/retailers/apply/page.tsx`
-- [ ] `src/app/retailers/dashboard/components/RetailerAccountTab.tsx`
-- [ ] `src/app/retailers/dashboard/components/RetailerInvoicesTab.tsx`
-- [ ] `src/app/retailers/dashboard/components/RetailerOrdersTab.tsx`
-- [ ] `src/app/retailers/dashboard/components/RetailerProjectsTab.tsx`
-- [ ] `src/app/retailers/dashboard/page.tsx`
-- [ ] `src/app/retailers/forgot-password/page.tsx`
-- [ ] `src/app/retailers/invoices/page.tsx`
-- [ ] `src/app/retailers/layout.tsx`
-- [ ] `src/app/retailers/login/page.tsx`
-- [ ] `src/app/retailers/orders/page.tsx`
-- [ ] `src/app/retailers/page.tsx`
-- [ ] `src/app/retailers/projects/[id]/page.tsx`
-- [ ] `src/app/retailers/projects/page.tsx`
-- [ ] `src/app/retailers/reset-password/page.tsx`
-- [ ] `src/app/robots.ts`
-- [ ] `src/app/settings/payment/page.tsx`
-- [ ] `src/app/settings/payment/stripe/complete/page.tsx`
-- [ ] `src/app/settings/payment/stripe/refresh/page.tsx`
-- [ ] `src/app/sitemap.ts`
-- [ ] `src/app/success-stories/page.tsx`
-- [ ] `src/app/survey/preview/page.tsx`
-- [ ] `src/app/term/page.tsx`
-- [ ] `src/app/terms/layout.tsx`
-- [ ] `src/app/terms/page.tsx`
-- [ ] `src/app/trust-safety/layout.tsx`
-- [ ] `src/app/trust-safety/page.tsx`
-- [ ] `src/app/u/[username]/layout.tsx`
-- [ ] `src/app/u/[username]/page.tsx`
-- [ ] `src/app/verification-complete/page.tsx`
-- [ ] `src/app/verify-email/page.tsx`
-- [ ] `src/app/what-is-divinitycoin/layout.tsx`
-- [ ] `src/app/what-is-divinitycoin/page.tsx`
+- [x] `src/app/(auth)/choose-role/choose-role-client.tsx`
+- [x] `src/app/(auth)/choose-role/page.tsx`
+- [x] `src/app/(auth)/forgot-password/page.tsx`
+- [x] `src/app/(auth)/layout.tsx`
+- [x] `src/app/(auth)/login/loading.tsx`
+- [x] `src/app/(auth)/login/page.tsx`
+- [x] `src/app/(auth)/register/loading.tsx`
+- [x] `src/app/(auth)/register/page.tsx`
+- [x] `src/app/(auth)/reset-password/page.tsx`
+- [x] `src/app/@modal/(.)login/page.tsx`
+- [x] `src/app/@modal/(.)register/page.tsx`
+- [x] `src/app/@modal/default.tsx`
+- [x] `src/app/[vanityname]/[slug]/page.tsx`
+- [x] `src/app/about-us/layout.tsx`
+- [x] `src/app/about-us/page.tsx`
+- [x] `src/app/access-denied/page.tsx`
+- [x] `src/app/backer-handbook/layout.tsx`
+- [x] `src/app/backer-handbook/page.tsx`
+- [x] `src/app/bug-report/layout.tsx`
+- [x] `src/app/bug-report/page.tsx`
+- [x] `src/app/cart/page.tsx`
+- [x] `src/app/changelog/page.tsx`
+- [x] `src/app/chat/page.tsx`
+- [x] `src/app/collaborate/[id]/page.tsx`
+- [x] `src/app/collaborate/layout.tsx`
+- [x] `src/app/contact/layout.tsx`
+- [x] `src/app/contact/page.tsx`
+- [x] `src/app/creator-handbook/layout.tsx`
+- [x] `src/app/creator-handbook/page.tsx`
+- [x] `src/app/discover/layout.tsx`
+- [x] `src/app/discover/loading.tsx`
+- [x] `src/app/discover/page.tsx`
+- [x] `src/app/error.tsx`
+- [x] `src/app/explore/page.tsx`
+- [x] `src/app/faq/layout.tsx`
+- [x] `src/app/faq/page.tsx`
+- [x] `src/app/favicon.ico`
+- [x] `src/app/fees/calculations.ts`
+- [x] `src/app/fees/data.ts`
+- [x] `src/app/fees/layout.tsx`
+- [x] `src/app/fees/page.tsx`
+- [x] `src/app/fonts/GeistMonoVF.woff`
+- [x] `src/app/fonts/GeistVF.woff`
+- [x] `src/app/fulfillment/page.tsx`
+- [x] `src/app/global-error.tsx`
+- [x] `src/app/globals.css`
+- [x] `src/app/help/page.tsx`
+- [x] `src/app/help/whitelist/page.tsx`
+- [x] `src/app/indiekit-handbook/layout.tsx`
+- [x] `src/app/indiekit-handbook/page.tsx`
+- [x] `src/app/layout.tsx`
+- [x] `src/app/lcs-locator/layout.tsx`
+- [x] `src/app/lcs-locator/page.tsx`
+- [x] `src/app/marketplace-handbook/backers/page.tsx`
+- [x] `src/app/marketplace-handbook/creators/page.tsx`
+- [x] `src/app/marketplace-handbook/layout.tsx`
+- [x] `src/app/marketplace/books/[slug]/layout.tsx`
+- [x] `src/app/marketplace/books/[slug]/page.tsx`
+- [x] `src/app/marketplace/books/featured/page.tsx`
+- [x] `src/app/marketplace/books/layout.tsx`
+- [x] `src/app/marketplace/books/page.tsx`
+- [x] `src/app/marketplace/books/staff-picks/page.tsx`
+- [x] `src/app/marketplace/checkout/success/page.tsx`
+- [x] `src/app/marketplace/companies/[slug]/layout.tsx`
+- [x] `src/app/marketplace/companies/[slug]/page.tsx`
+- [x] `src/app/marketplace/components/MarketplacePayPalForm.tsx`
+- [x] `src/app/marketplace/layout.tsx`
+- [x] `src/app/marketplace/page.tsx`
+- [x] `src/app/marketplace/physical-media/layout.tsx`
+- [x] `src/app/marketplace/physical-media/page.tsx`
+- [x] `src/app/not-found.tsx`
+- [x] `src/app/page.tsx`
+- [x] `src/app/pay/balance/[token]/page.tsx`
+- [x] `src/app/privacy/layout.tsx`
+- [x] `src/app/privacy/page.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/edit/page.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/layout.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/loading.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/page.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/AddonSelector.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/AddressWarning.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/Breadcrumb.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/DCPaymentWrapper.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/ErrorState.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/FAQSection.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/LoadingState.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/OrderSummary.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/PayPalPaymentForm.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/PaymentStep.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/RewardSelector.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/SuccessPage.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/constants.ts`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/hooks/usePledge.ts`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/page.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/types.ts`
+- [x] `src/app/projects/[vanityname]/[slug]/pledge/utils.ts`
+- [x] `src/app/projects/[vanityname]/[slug]/prelaunch/layout.tsx`
+- [x] `src/app/projects/[vanityname]/[slug]/prelaunch/page.tsx`
+- [x] `src/app/projects/[vanityname]/page.tsx`
+- [x] `src/app/projects/new/page.tsx`
+- [x] `src/app/projects/page.tsx`
+- [x] `src/app/retailers/account/page.tsx`
+- [x] `src/app/retailers/apply/page.tsx`
+- [x] `src/app/retailers/dashboard/components/RetailerAccountTab.tsx`
+- [x] `src/app/retailers/dashboard/components/RetailerInvoicesTab.tsx`
+- [x] `src/app/retailers/dashboard/components/RetailerOrdersTab.tsx`
+- [x] `src/app/retailers/dashboard/components/RetailerProjectsTab.tsx`
+- [x] `src/app/retailers/dashboard/page.tsx`
+- [x] `src/app/retailers/forgot-password/page.tsx`
+- [x] `src/app/retailers/invoices/page.tsx`
+- [x] `src/app/retailers/layout.tsx`
+- [x] `src/app/retailers/login/page.tsx`
+- [x] `src/app/retailers/orders/page.tsx`
+- [x] `src/app/retailers/page.tsx`
+- [x] `src/app/retailers/projects/[id]/page.tsx`
+- [x] `src/app/retailers/projects/page.tsx`
+- [x] `src/app/retailers/reset-password/page.tsx`
+- [x] `src/app/robots.ts`
+- [x] `src/app/settings/payment/page.tsx`
+- [x] `src/app/settings/payment/stripe/complete/page.tsx`
+- [x] `src/app/settings/payment/stripe/refresh/page.tsx`
+- [x] `src/app/sitemap.ts`
+- [x] `src/app/success-stories/page.tsx`
+- [x] `src/app/survey/preview/page.tsx`
+- [x] `src/app/term/page.tsx`
+- [x] `src/app/terms/layout.tsx`
+- [x] `src/app/terms/page.tsx`
+- [x] `src/app/trust-safety/layout.tsx`
+- [x] `src/app/trust-safety/page.tsx`
+- [x] `src/app/u/[username]/layout.tsx`
+- [x] `src/app/u/[username]/page.tsx`
+- [x] `src/app/verification-complete/page.tsx`
+- [x] `src/app/verify-email/page.tsx`
+- [x] `src/app/what-is-divinitycoin/layout.tsx`
+- [x] `src/app/what-is-divinitycoin/page.tsx`

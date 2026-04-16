@@ -1,159 +1,159 @@
 # Race Condition Audit — Part 4: src/app/admin pages (157 files)
 
-- [ ] `src/app/admin/ai-marketing/page.tsx`
-- [ ] `src/app/admin/ai/components/ResultsViewerDialog.tsx`
-- [ ] `src/app/admin/ai/components/StatusBadges.tsx`
-- [ ] `src/app/admin/ai/components/index.ts`
-- [ ] `src/app/admin/ai/page.tsx`
-- [ ] `src/app/admin/ai/types.ts`
-- [ ] `src/app/admin/analytics/components/GeographyTab.tsx`
-- [ ] `src/app/admin/analytics/components/OverviewTab.tsx`
-- [ ] `src/app/admin/analytics/components/ProjectsAnalyticsTab.tsx`
-- [ ] `src/app/admin/analytics/components/RevenueTab.tsx`
-- [ ] `src/app/admin/analytics/components/TrafficTab.tsx`
-- [ ] `src/app/admin/analytics/page.tsx`
-- [ ] `src/app/admin/announcement-bar/page.tsx`
-- [ ] `src/app/admin/bug-reports/page.tsx`
-- [ ] `src/app/admin/changelog/page.tsx`
-- [ ] `src/app/admin/consent-banner/page.tsx`
-- [ ] `src/app/admin/cron/page.tsx`
-- [ ] `src/app/admin/divinitycoin-redemptions/page.tsx`
-- [ ] `src/app/admin/email-queue/page.tsx`
-- [ ] `src/app/admin/email/components/ComposeEmailDialog.tsx`
-- [ ] `src/app/admin/email/components/MailboxDialog.tsx`
-- [ ] `src/app/admin/email/components/index.ts`
-- [ ] `src/app/admin/email/components/types.ts`
-- [ ] `src/app/admin/email/page.tsx`
-- [ ] `src/app/admin/error-logs/components/ErrorDetailDialog.tsx`
-- [ ] `src/app/admin/error-logs/components/ErrorFilters.tsx`
-- [ ] `src/app/admin/error-logs/components/ErrorTable.tsx`
-- [ ] `src/app/admin/error-logs/components/helpers.tsx`
-- [ ] `src/app/admin/error-logs/components/types.ts`
-- [ ] `src/app/admin/error-logs/page.tsx`
-- [ ] `src/app/admin/error.tsx`
-- [ ] `src/app/admin/hero-slider/page.tsx`
-- [ ] `src/app/admin/layout.tsx`
-- [ ] `src/app/admin/lcs-locator/page.tsx`
-- [ ] `src/app/admin/link-sanitizer/page.tsx`
-- [ ] `src/app/admin/loading.tsx`
-- [ ] `src/app/admin/marketplace/components/AddToCategoryDialog.tsx`
-- [ ] `src/app/admin/marketplace/components/AllBooksTab.tsx`
-- [ ] `src/app/admin/marketplace/components/BookDetailPanel.tsx`
-- [ ] `src/app/admin/marketplace/components/BookListItem.tsx`
-- [ ] `src/app/admin/marketplace/components/BookListPanel.tsx`
-- [ ] `src/app/admin/marketplace/components/CategoryBookItem.tsx`
-- [ ] `src/app/admin/marketplace/components/CategoryManagementTab.tsx`
-- [ ] `src/app/admin/marketplace/components/HistoryTab.tsx`
-- [ ] `src/app/admin/marketplace/components/PdfManagementTab.tsx`
-- [ ] `src/app/admin/marketplace/components/RejectDialog.tsx`
-- [ ] `src/app/admin/marketplace/components/StatsCards.tsx`
-- [ ] `src/app/admin/marketplace/components/StatusBadges.tsx`
-- [ ] `src/app/admin/marketplace/components/TransactionsTab.tsx`
-- [ ] `src/app/admin/marketplace/page.tsx`
-- [ ] `src/app/admin/marketplace/types.ts`
-- [ ] `src/app/admin/media/components/EditFileDialog.tsx`
-- [ ] `src/app/admin/media/components/MoveFilesDialog.tsx`
-- [ ] `src/app/admin/media/components/NewFolderDialog.tsx`
-- [ ] `src/app/admin/media/components/ScanImportDialog.tsx`
-- [ ] `src/app/admin/media/components/UploadDialog.tsx`
-- [ ] `src/app/admin/media/components/index.ts`
-- [ ] `src/app/admin/media/page.tsx`
-- [ ] `src/app/admin/media/types.ts`
-- [ ] `src/app/admin/moderation/page.tsx`
-- [ ] `src/app/admin/notifications/page.tsx`
-- [ ] `src/app/admin/page-builder/page.tsx`
-- [ ] `src/app/admin/page.tsx`
-- [ ] `src/app/admin/payouts/components/BankDetailsDialog.tsx`
-- [ ] `src/app/admin/payouts/components/CreateSettlementDialog.tsx`
-- [ ] `src/app/admin/payouts/components/CreatorBalancePayoutDialog.tsx`
-- [ ] `src/app/admin/payouts/components/CreatorBalancesTable.tsx`
-- [ ] `src/app/admin/payouts/components/PayoutStatsCards.tsx`
-- [ ] `src/app/admin/payouts/components/ProjectDetailDialog.tsx`
-- [ ] `src/app/admin/payouts/components/ProjectsTable.tsx`
-- [ ] `src/app/admin/payouts/components/SettlementBadge.tsx`
-- [ ] `src/app/admin/payouts/components/types.ts`
-- [ ] `src/app/admin/payouts/page.tsx`
-- [ ] `src/app/admin/prelaunch/page.tsx`
-- [ ] `src/app/admin/projects/components/active-project-panel.tsx`
-- [ ] `src/app/admin/projects/components/dialogs/adjust-end-date-dialog.tsx`
-- [ ] `src/app/admin/projects/components/dialogs/deactivate-dialog.tsx`
-- [ ] `src/app/admin/projects/components/dialogs/index.ts`
-- [ ] `src/app/admin/projects/components/dialogs/make-live-dialog.tsx`
-- [ ] `src/app/admin/projects/components/dialogs/reject-dialog.tsx`
-- [ ] `src/app/admin/projects/components/dialogs/review-dialog.tsx`
-- [ ] `src/app/admin/projects/components/dialogs/set-vanity-url-dialog.tsx`
-- [ ] `src/app/admin/projects/components/flagged-tab.tsx`
-- [ ] `src/app/admin/projects/components/index.ts`
-- [ ] `src/app/admin/projects/components/prelaunch-tab.tsx`
-- [ ] `src/app/admin/projects/components/project-detail-panel.tsx`
-- [ ] `src/app/admin/projects/components/project-list-item.tsx`
-- [ ] `src/app/admin/projects/components/projects-filter-bar.tsx`
-- [ ] `src/app/admin/projects/components/review-history-tab.tsx`
-- [ ] `src/app/admin/projects/components/review-stats-cards.tsx`
-- [ ] `src/app/admin/projects/components/types.ts`
-- [ ] `src/app/admin/projects/components/unsubmitted-tab.tsx`
-- [ ] `src/app/admin/projects/components/utils.tsx`
-- [ ] `src/app/admin/projects/hooks/useProjectsData.ts`
-- [ ] `src/app/admin/projects/page.tsx`
-- [ ] `src/app/admin/promo-popup/page.tsx`
-- [ ] `src/app/admin/reconcile/page.tsx`
-- [ ] `src/app/admin/retailers/components/ActionConfirmDialog.tsx`
-- [ ] `src/app/admin/retailers/components/RetailerDetailDialog.tsx`
-- [ ] `src/app/admin/retailers/components/StarRating.tsx`
-- [ ] `src/app/admin/retailers/components/StatusBadges.tsx`
-- [ ] `src/app/admin/retailers/components/SurveyDetailDialog.tsx`
-- [ ] `src/app/admin/retailers/components/index.ts`
-- [ ] `src/app/admin/retailers/page.tsx`
-- [ ] `src/app/admin/retailers/types.ts`
-- [ ] `src/app/admin/security/page.tsx`
-- [ ] `src/app/admin/seo/components/AiSuggestionsTab.tsx`
-- [ ] `src/app/admin/seo/components/CronTab.tsx`
-- [ ] `src/app/admin/seo/components/DashboardTab.tsx`
-- [ ] `src/app/admin/seo/components/KeywordsTab.tsx`
-- [ ] `src/app/admin/seo/components/MetaTagsTab.tsx`
-- [ ] `src/app/admin/seo/components/PageAuditTab.tsx`
-- [ ] `src/app/admin/seo/components/RedirectsTab.tsx`
-- [ ] `src/app/admin/seo/components/helpers.tsx`
-- [ ] `src/app/admin/seo/components/index.ts`
-- [ ] `src/app/admin/seo/components/types.ts`
-- [ ] `src/app/admin/seo/page.tsx`
-- [ ] `src/app/admin/settings/page.tsx`
-- [ ] `src/app/admin/themes/page.tsx`
-- [ ] `src/app/admin/transactions/components/BreakdownCards.tsx`
-- [ ] `src/app/admin/transactions/components/StatsCards.tsx`
-- [ ] `src/app/admin/transactions/components/StripeLookupDialog.tsx`
-- [ ] `src/app/admin/transactions/components/TransactionBadges.tsx`
-- [ ] `src/app/admin/transactions/components/TransactionDetailDialog.tsx`
-- [ ] `src/app/admin/transactions/components/TransactionFilters.tsx`
-- [ ] `src/app/admin/transactions/components/TransactionTable.tsx`
-- [ ] `src/app/admin/transactions/components/index.ts`
-- [ ] `src/app/admin/transactions/components/types.ts`
-- [ ] `src/app/admin/transactions/components/utils.ts`
-- [ ] `src/app/admin/transactions/page.tsx`
-- [ ] `src/app/admin/users/components/dialogs/add-user-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/approval-action-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/delete-user-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/edit-retailer-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/edit-user-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/email-preview-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/index.ts`
-- [ ] `src/app/admin/users/components/dialogs/password-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/retailer-details-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/role-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/send-email-dialog.tsx`
-- [ ] `src/app/admin/users/components/dialogs/user-details-dialog.tsx`
-- [ ] `src/app/admin/users/components/index.ts`
-- [ ] `src/app/admin/users/components/retailer-stats-cards.tsx`
-- [ ] `src/app/admin/users/components/retailer-table.tsx`
-- [ ] `src/app/admin/users/components/types.ts`
-- [ ] `src/app/admin/users/components/user-filters.tsx`
-- [ ] `src/app/admin/users/components/user-stats-cards.tsx`
-- [ ] `src/app/admin/users/components/user-table.tsx`
-- [ ] `src/app/admin/users/components/utils.tsx`
-- [ ] `src/app/admin/users/hooks.ts`
-- [ ] `src/app/admin/users/hooks/dialogs.ts`
-- [ ] `src/app/admin/users/hooks/index.ts`
-- [ ] `src/app/admin/users/hooks/usePledgeActions.ts`
-- [ ] `src/app/admin/users/hooks/useRetailerActions.ts`
-- [ ] `src/app/admin/users/hooks/useUserData.ts`
-- [ ] `src/app/admin/users/page.tsx`
+- [x] `src/app/admin/ai-marketing/page.tsx`
+- [x] `src/app/admin/ai/components/ResultsViewerDialog.tsx`
+- [x] `src/app/admin/ai/components/StatusBadges.tsx`
+- [x] `src/app/admin/ai/components/index.ts`
+- [x] `src/app/admin/ai/page.tsx`
+- [x] `src/app/admin/ai/types.ts`
+- [x] `src/app/admin/analytics/components/GeographyTab.tsx`
+- [x] `src/app/admin/analytics/components/OverviewTab.tsx`
+- [x] `src/app/admin/analytics/components/ProjectsAnalyticsTab.tsx`
+- [x] `src/app/admin/analytics/components/RevenueTab.tsx`
+- [x] `src/app/admin/analytics/components/TrafficTab.tsx`
+- [x] `src/app/admin/analytics/page.tsx`
+- [x] `src/app/admin/announcement-bar/page.tsx`
+- [x] `src/app/admin/bug-reports/page.tsx`
+- [x] `src/app/admin/changelog/page.tsx`
+- [x] `src/app/admin/consent-banner/page.tsx`
+- [x] `src/app/admin/cron/page.tsx`
+- [x] `src/app/admin/divinitycoin-redemptions/page.tsx`
+- [x] `src/app/admin/email-queue/page.tsx`
+- [x] `src/app/admin/email/components/ComposeEmailDialog.tsx`
+- [x] `src/app/admin/email/components/MailboxDialog.tsx`
+- [x] `src/app/admin/email/components/index.ts`
+- [x] `src/app/admin/email/components/types.ts`
+- [x] `src/app/admin/email/page.tsx`
+- [x] `src/app/admin/error-logs/components/ErrorDetailDialog.tsx`
+- [x] `src/app/admin/error-logs/components/ErrorFilters.tsx`
+- [x] `src/app/admin/error-logs/components/ErrorTable.tsx`
+- [x] `src/app/admin/error-logs/components/helpers.tsx`
+- [x] `src/app/admin/error-logs/components/types.ts`
+- [x] `src/app/admin/error-logs/page.tsx`
+- [x] `src/app/admin/error.tsx`
+- [x] `src/app/admin/hero-slider/page.tsx`
+- [x] `src/app/admin/layout.tsx`
+- [x] `src/app/admin/lcs-locator/page.tsx`
+- [x] `src/app/admin/link-sanitizer/page.tsx`
+- [x] `src/app/admin/loading.tsx`
+- [x] `src/app/admin/marketplace/components/AddToCategoryDialog.tsx`
+- [x] `src/app/admin/marketplace/components/AllBooksTab.tsx`
+- [x] `src/app/admin/marketplace/components/BookDetailPanel.tsx`
+- [x] `src/app/admin/marketplace/components/BookListItem.tsx`
+- [x] `src/app/admin/marketplace/components/BookListPanel.tsx`
+- [x] `src/app/admin/marketplace/components/CategoryBookItem.tsx`
+- [x] `src/app/admin/marketplace/components/CategoryManagementTab.tsx`
+- [x] `src/app/admin/marketplace/components/HistoryTab.tsx`
+- [x] `src/app/admin/marketplace/components/PdfManagementTab.tsx`
+- [x] `src/app/admin/marketplace/components/RejectDialog.tsx`
+- [x] `src/app/admin/marketplace/components/StatsCards.tsx`
+- [x] `src/app/admin/marketplace/components/StatusBadges.tsx`
+- [x] `src/app/admin/marketplace/components/TransactionsTab.tsx`
+- [x] `src/app/admin/marketplace/page.tsx`
+- [x] `src/app/admin/marketplace/types.ts`
+- [x] `src/app/admin/media/components/EditFileDialog.tsx`
+- [x] `src/app/admin/media/components/MoveFilesDialog.tsx`
+- [x] `src/app/admin/media/components/NewFolderDialog.tsx`
+- [x] `src/app/admin/media/components/ScanImportDialog.tsx`
+- [x] `src/app/admin/media/components/UploadDialog.tsx`
+- [x] `src/app/admin/media/components/index.ts`
+- [x] `src/app/admin/media/page.tsx`
+- [x] `src/app/admin/media/types.ts`
+- [x] `src/app/admin/moderation/page.tsx`
+- [x] `src/app/admin/notifications/page.tsx`
+- [x] `src/app/admin/page-builder/page.tsx`
+- [x] `src/app/admin/page.tsx`
+- [x] `src/app/admin/payouts/components/BankDetailsDialog.tsx`
+- [x] `src/app/admin/payouts/components/CreateSettlementDialog.tsx`
+- [x] `src/app/admin/payouts/components/CreatorBalancePayoutDialog.tsx`
+- [x] `src/app/admin/payouts/components/CreatorBalancesTable.tsx`
+- [x] `src/app/admin/payouts/components/PayoutStatsCards.tsx`
+- [x] `src/app/admin/payouts/components/ProjectDetailDialog.tsx`
+- [x] `src/app/admin/payouts/components/ProjectsTable.tsx`
+- [x] `src/app/admin/payouts/components/SettlementBadge.tsx`
+- [x] `src/app/admin/payouts/components/types.ts`
+- [x] `src/app/admin/payouts/page.tsx`
+- [x] `src/app/admin/prelaunch/page.tsx`
+- [x] `src/app/admin/projects/components/active-project-panel.tsx`
+- [x] `src/app/admin/projects/components/dialogs/adjust-end-date-dialog.tsx`
+- [x] `src/app/admin/projects/components/dialogs/deactivate-dialog.tsx`
+- [x] `src/app/admin/projects/components/dialogs/index.ts`
+- [x] `src/app/admin/projects/components/dialogs/make-live-dialog.tsx`
+- [x] `src/app/admin/projects/components/dialogs/reject-dialog.tsx`
+- [x] `src/app/admin/projects/components/dialogs/review-dialog.tsx`
+- [x] `src/app/admin/projects/components/dialogs/set-vanity-url-dialog.tsx`
+- [x] `src/app/admin/projects/components/flagged-tab.tsx`
+- [x] `src/app/admin/projects/components/index.ts`
+- [x] `src/app/admin/projects/components/prelaunch-tab.tsx`
+- [x] `src/app/admin/projects/components/project-detail-panel.tsx`
+- [x] `src/app/admin/projects/components/project-list-item.tsx`
+- [x] `src/app/admin/projects/components/projects-filter-bar.tsx`
+- [x] `src/app/admin/projects/components/review-history-tab.tsx`
+- [x] `src/app/admin/projects/components/review-stats-cards.tsx`
+- [x] `src/app/admin/projects/components/types.ts`
+- [x] `src/app/admin/projects/components/unsubmitted-tab.tsx`
+- [x] `src/app/admin/projects/components/utils.tsx`
+- [x] `src/app/admin/projects/hooks/useProjectsData.ts`
+- [x] `src/app/admin/projects/page.tsx`
+- [x] `src/app/admin/promo-popup/page.tsx`
+- [x] `src/app/admin/reconcile/page.tsx`
+- [x] `src/app/admin/retailers/components/ActionConfirmDialog.tsx`
+- [x] `src/app/admin/retailers/components/RetailerDetailDialog.tsx`
+- [x] `src/app/admin/retailers/components/StarRating.tsx`
+- [x] `src/app/admin/retailers/components/StatusBadges.tsx`
+- [x] `src/app/admin/retailers/components/SurveyDetailDialog.tsx`
+- [x] `src/app/admin/retailers/components/index.ts`
+- [x] `src/app/admin/retailers/page.tsx`
+- [x] `src/app/admin/retailers/types.ts`
+- [x] `src/app/admin/security/page.tsx`
+- [x] `src/app/admin/seo/components/AiSuggestionsTab.tsx`
+- [x] `src/app/admin/seo/components/CronTab.tsx`
+- [x] `src/app/admin/seo/components/DashboardTab.tsx`
+- [x] `src/app/admin/seo/components/KeywordsTab.tsx`
+- [x] `src/app/admin/seo/components/MetaTagsTab.tsx`
+- [x] `src/app/admin/seo/components/PageAuditTab.tsx`
+- [x] `src/app/admin/seo/components/RedirectsTab.tsx`
+- [x] `src/app/admin/seo/components/helpers.tsx`
+- [x] `src/app/admin/seo/components/index.ts`
+- [x] `src/app/admin/seo/components/types.ts`
+- [x] `src/app/admin/seo/page.tsx`
+- [x] `src/app/admin/settings/page.tsx`
+- [x] `src/app/admin/themes/page.tsx`
+- [x] `src/app/admin/transactions/components/BreakdownCards.tsx`
+- [x] `src/app/admin/transactions/components/StatsCards.tsx`
+- [x] `src/app/admin/transactions/components/StripeLookupDialog.tsx`
+- [x] `src/app/admin/transactions/components/TransactionBadges.tsx`
+- [x] `src/app/admin/transactions/components/TransactionDetailDialog.tsx`
+- [x] `src/app/admin/transactions/components/TransactionFilters.tsx`
+- [x] `src/app/admin/transactions/components/TransactionTable.tsx`
+- [x] `src/app/admin/transactions/components/index.ts`
+- [x] `src/app/admin/transactions/components/types.ts`
+- [x] `src/app/admin/transactions/components/utils.ts`
+- [x] `src/app/admin/transactions/page.tsx`
+- [x] `src/app/admin/users/components/dialogs/add-user-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/approval-action-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/delete-user-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/edit-retailer-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/edit-user-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/email-preview-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/index.ts`
+- [x] `src/app/admin/users/components/dialogs/password-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/retailer-details-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/role-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/send-email-dialog.tsx`
+- [x] `src/app/admin/users/components/dialogs/user-details-dialog.tsx`
+- [x] `src/app/admin/users/components/index.ts`
+- [x] `src/app/admin/users/components/retailer-stats-cards.tsx`
+- [x] `src/app/admin/users/components/retailer-table.tsx`
+- [x] `src/app/admin/users/components/types.ts`
+- [x] `src/app/admin/users/components/user-filters.tsx`
+- [x] `src/app/admin/users/components/user-stats-cards.tsx`
+- [x] `src/app/admin/users/components/user-table.tsx`
+- [x] `src/app/admin/users/components/utils.tsx`
+- [x] `src/app/admin/users/hooks.ts`
+- [x] `src/app/admin/users/hooks/dialogs.ts`
+- [x] `src/app/admin/users/hooks/index.ts`
+- [x] `src/app/admin/users/hooks/usePledgeActions.ts`
+- [x] `src/app/admin/users/hooks/useRetailerActions.ts`
+- [x] `src/app/admin/users/hooks/useUserData.ts`
+- [x] `src/app/admin/users/page.tsx`
