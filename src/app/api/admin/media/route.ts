@@ -247,8 +247,9 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // In production, also delete the actual file from storage
-    await db.mediaFile.delete({
+    // In production, also delete the actual file from storage.
+    // deleteMany for idempotency on concurrent double-clicks.
+    await db.mediaFile.deleteMany({
       where: { id: fileId }
     });
 

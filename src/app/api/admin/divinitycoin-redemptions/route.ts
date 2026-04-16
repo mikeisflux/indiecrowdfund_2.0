@@ -372,17 +372,15 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Transaction id is required" }, { status: 400 });
     }
 
-    // Verify it exists
-    const existing = await db.divinityCoinTransaction.findUnique({
+    // deleteMany resolves concurrent double-clicks as { count: 0 }
+    // instead of throwing P2025.
+    const deleted = await db.divinityCoinTransaction.deleteMany({
       where: { id },
-      select: { id: true },
     });
 
-    if (!existing) {
+    if (deleted.count === 0) {
       return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
     }
-
-    await db.divinityCoinTransaction.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

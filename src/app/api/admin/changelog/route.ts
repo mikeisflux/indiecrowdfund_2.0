@@ -205,7 +205,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Entry ID is required" }, { status: 400 });
     }
 
-    await db.changelogEntry.delete({
+    // deleteMany for idempotency on concurrent double-clicks.
+    await db.changelogEntry.deleteMany({
       where: { id },
     });
 

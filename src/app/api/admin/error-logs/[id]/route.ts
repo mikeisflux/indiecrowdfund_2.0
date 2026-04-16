@@ -110,7 +110,9 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    await db.errorGroup.delete({ where: { id } });
+    // deleteMany so a concurrent double-click returns { count: 0 } instead
+    // of throwing P2025.
+    await db.errorGroup.deleteMany({ where: { id } });
 
     return NextResponse.json({ deleted: true });
   } catch (error) {

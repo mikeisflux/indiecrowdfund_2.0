@@ -30,17 +30,16 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Find all comic shops with emails that don't contain "@" (invalid emails)
+    // Find all comic shops with emails that don't contain "@" (invalid emails).
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields
+    // at runtime — use `AND` with a null inequality via `NOT: { field: null }`
+    // wrapper, combined with a separate NOT on the missing "@".
     const invalidEmailShops = await db.comicShop.findMany({
       where: {
-        email: {
-          not: null,
-        },
-        NOT: {
-          email: {
-            contains: "@",
-          },
-        },
+        AND: [
+          { NOT: { email: null } },
+          { NOT: { email: { contains: "@" } } },
+        ],
       },
       select: {
         id: true,
@@ -78,17 +77,14 @@ export async function POST() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Update all invalid emails to null
+    // Update all invalid emails to null. Same Prisma 7 nullable-string
+    // filter pattern as in GET above.
     const result = await db.comicShop.updateMany({
       where: {
-        email: {
-          not: null,
-        },
-        NOT: {
-          email: {
-            contains: "@",
-          },
-        },
+        AND: [
+          { NOT: { email: null } },
+          { NOT: { email: { contains: "@" } } },
+        ],
       },
       data: {
         email: null,

@@ -300,17 +300,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Creator has no Whop bank account on file" }, { status: 400 });
     }
 
-    const settlement = await db.whopSettlement.create({
-      data: {
-        bankAccountId: project.creator.whopBankAccount.id,
-        projectId,
-        projectName: project.title,
-        amount,
-        status: "PENDING",
-        adminNotes: adminNotes || null,
-        processedBy: authResult.user.id,
-      },
-    });
+    // Create settlement inside a transaction with a pg advisory lock keyed
+    // by project id. Without the lock, two concurrent "Create Settlement"
+    // clicks (double-click, two admins, retry) would both create separate
+    // WhopSettlement rows for the same project — real money, hard to
+    // reverse. Inside the lock we also check for an existing non-failed
+    // settlement and return 409 instead of creating a second one. Same
+    // pattern as admin/payouts/paypal.
+    let settlement;
+    try {
+      settlement = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`whop-settlement-${projectId}`}))`;
+
+        const existing = await tx.whopSettlement.findFirst({
+          where: {
+            projectId,
+            status: { in: ["PENDING", "INITIATED", "PROCESSING", "COMPLETED"] },
+          },
+        });
+        if (existing) {
+          throw new Error("SETTLEMENT_ALREADY_EXISTS");
+        }
+
+        return tx.whopSettlement.create({
+          data: {
+            bankAccountId: project.creator.whopBankAccount!.id,
+            projectId,
+            projectName: project.title,
+            amount,
+            status: "PENDING",
+            adminNotes: adminNotes || null,
+            processedBy: authResult.user.id,
+          },
+        });
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "SETTLEMENT_ALREADY_EXISTS") {
+        return NextResponse.json(
+          { error: "A Whop settlement for this project already exists or is in flight" },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     adminPayoutsWhopLogger.info({ settlementId: settlement.id, projectId, amount }, "Whop settlement created");
 

@@ -165,15 +165,21 @@ export async function DELETE(
     }
 
     if (permanent || existing.folder === "TRASH") {
-      // Permanently delete
-      await db.adminEmail.delete({
-        where: { id: emailId },
+      // Permanently delete. deleteMany scoped to mailboxId so a concurrent
+      // double-click returns { count: 0 } instead of throwing P2025, and
+      // cross-mailbox abuse is blocked.
+      const deleted = await db.adminEmail.deleteMany({
+        where: { id: emailId, mailboxId: id },
       });
+      if (deleted.count === 0) {
+        return NextResponse.json({ error: "Email not found" }, { status: 404 });
+      }
       return NextResponse.json({ success: true, action: "deleted" });
     } else {
-      // Move to trash
-      await db.adminEmail.update({
-        where: { id: emailId },
+      // Move to trash — updateMany scoped to mailboxId for the same
+      // cross-mailbox protection.
+      await db.adminEmail.updateMany({
+        where: { id: emailId, mailboxId: id },
         data: { folder: "TRASH" },
       });
       return NextResponse.json({ success: true, action: "trashed" });

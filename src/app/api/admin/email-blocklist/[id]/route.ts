@@ -86,7 +86,9 @@ export async function PATCH(
       );
     }
 
-    // If changing type or value, check for duplicates
+    // If changing type or value, check for duplicates. The findUnique
+    // below is TOCTOU — two admins could both pass the check — so we
+    // also catch P2002 on the update.
     if ((type && type !== existing.type) || (value && value !== existing.value)) {
       const duplicate = await db.emailBlocklist.findUnique({
         where: {
@@ -105,18 +107,34 @@ export async function PATCH(
       }
     }
 
-    const entry = await db.emailBlocklist.update({
-      where: { id },
-      data: {
-        ...(type !== undefined && { type }),
-        ...(value !== undefined && { value: value.toLowerCase().trim() }),
-        ...(reason !== undefined && { reason }),
-        ...(isActive !== undefined && { isActive }),
-        ...(expiresAt !== undefined && {
-          expiresAt: expiresAt ? new Date(expiresAt) : null,
-        }),
-      },
-    });
+    let entry;
+    try {
+      entry = await db.emailBlocklist.update({
+        where: { id },
+        data: {
+          ...(type !== undefined && { type }),
+          ...(value !== undefined && { value: value.toLowerCase().trim() }),
+          ...(reason !== undefined && { reason }),
+          ...(isActive !== undefined && { isActive }),
+          ...(expiresAt !== undefined && {
+            expiresAt: expiresAt ? new Date(expiresAt) : null,
+          }),
+        },
+      });
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "An entry with this type and value already exists" },
+          { status: 409 }
+        );
+      }
+      throw updateErr;
+    }
 
     return NextResponse.json({ entry });
   } catch (error) {

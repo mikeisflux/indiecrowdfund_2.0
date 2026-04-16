@@ -45,7 +45,10 @@ export async function POST(req: NextRequest) {
     // Ensure the retailer has a linked user account
     let linkedUserId = retailer.userId;
     if (!linkedUserId) {
-      // Check if a User account exists with this email
+      // Check if a User account exists with this email. If not, try to
+      // create one — but catch P2002 since two concurrent "Resend
+      // Approval" clicks could both pass the findFirst and the second
+      // create would collide on the email @unique constraint.
       const existingUser = await db.user.findFirst({
         where: { email: retailer.email, deletedAt: null },
       });
@@ -53,17 +56,37 @@ export async function POST(req: NextRequest) {
       if (existingUser) {
         linkedUserId = existingUser.id;
       } else {
-        // Create a new User account
-        const newUser = await db.user.create({
-          data: {
-            email: retailer.email,
-            name: retailer.contactName,
-            emailVerified: new Date(),
-            retailerAccess: true,
-          },
-        });
-        linkedUserId = newUser.id;
-        resendApprovalLogger.info(`[Admin] Created new user account ${newUser.id} for retailer ${retailerId} during resend`);
+        try {
+          const newUser = await db.user.create({
+            data: {
+              email: retailer.email,
+              name: retailer.contactName,
+              emailVerified: new Date(),
+              retailerAccess: true,
+            },
+          });
+          linkedUserId = newUser.id;
+          resendApprovalLogger.info(`[Admin] Created new user account ${newUser.id} for retailer ${retailerId} during resend`);
+        } catch (createErr) {
+          const isUniqueViolation =
+            createErr &&
+            typeof createErr === "object" &&
+            "code" in createErr &&
+            (createErr as { code?: string }).code === "P2002";
+          if (!isUniqueViolation) {
+            throw createErr;
+          }
+          // Concurrent create beat us — re-fetch and use that user.
+          const racedUser = await db.user.findFirst({
+            where: { email: retailer.email, deletedAt: null },
+            select: { id: true },
+          });
+          if (!racedUser) {
+            throw createErr;
+          }
+          linkedUserId = racedUser.id;
+          resendApprovalLogger.info(`[Admin] Reused concurrent user account ${racedUser.id} for retailer ${retailerId} after P2002`);
+        }
       }
 
       // Link the retailer to the user

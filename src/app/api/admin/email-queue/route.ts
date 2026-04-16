@@ -191,14 +191,18 @@ export async function POST(request: NextRequest) {
         count: result.count,
       });
     } else if (action === "retry-one") {
-      // Retry a single email
+      // Retry a single email — updateMany so a concurrent delete/process
+      // doesn't cause P2025.
       if (!emailId) {
         return NextResponse.json({ error: "emailId required" }, { status: 400 });
       }
-      await db.emailQueue.update({
+      const updated = await db.emailQueue.updateMany({
         where: { id: emailId },
         data: { status: "PENDING", attempts: 0, error: null },
       });
+      if (updated.count === 0) {
+        return NextResponse.json({ success: true, message: "Email no longer in queue" });
+      }
       return NextResponse.json({ success: true, message: "Email queued for retry" });
     } else if (action === "delete-one") {
       // Delete a single email from queue

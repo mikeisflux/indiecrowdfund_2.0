@@ -124,9 +124,11 @@ export async function POST(req: NextRequest) {
           // Delete reward items
           await tx.rewardItem.deleteMany({ where: { rewardId: dup.id } });
 
-          // Delete the duplicate reward
-          await tx.reward.delete({ where: { id: dup.id } });
-          totalDeleted++;
+          // Delete the duplicate reward — deleteMany for idempotency so
+          // two concurrent admin runs don't both hit P2025 on the same
+          // row (the second one sees count: 0).
+          const deleted = await tx.reward.deleteMany({ where: { id: dup.id } });
+          totalDeleted += deleted.count;
         }
       });
     }
