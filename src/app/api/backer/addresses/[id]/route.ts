@@ -88,18 +88,15 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Verify ownership
-    const existing = await db.userAddress.findFirst({
+    // Scoped delete via deleteMany — enforces ownership in the WHERE and
+    // resolves concurrent double-clicks as { count: 0 } instead of P2025.
+    const deleted = await db.userAddress.deleteMany({
       where: { id, userId: session.user.id },
     });
 
-    if (!existing) {
+    if (deleted.count === 0) {
       return NextResponse.json({ error: "Address not found" }, { status: 404, headers: corsHeaders });
     }
-
-    await db.userAddress.delete({
-      where: { id },
-    });
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {

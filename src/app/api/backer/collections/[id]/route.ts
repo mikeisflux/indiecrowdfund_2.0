@@ -203,22 +203,19 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Verify ownership
-    const collection = await db.projectCollection.findFirst({
+    // Scoped delete via deleteMany — enforces ownership AND resolves
+    // concurrent double-clicks as { count: 0 } instead of P2025.
+    // Cascade-deletes items via the FK relation.
+    const deleted = await db.projectCollection.deleteMany({
       where: { id, userId: session.user.id },
     });
 
-    if (!collection) {
+    if (deleted.count === 0) {
       return NextResponse.json(
         { error: "Collection not found" },
         { status: 404, headers: corsHeaders }
       );
     }
-
-    // Delete collection (cascade deletes items)
-    await db.projectCollection.delete({
-      where: { id },
-    });
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {

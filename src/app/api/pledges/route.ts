@@ -346,7 +346,7 @@ export async function POST(req: NextRequest) {
           const isTimeout = dcError instanceof Error && dcError.name === "AbortError";
           pledgeLogger.error({ correlationId, pledgeId: pledge.id, err: dcError instanceof Error ? dcError.message : String(dcError), isTimeout }, "DivinityCoin API error");
           await db.pledgeAddon.deleteMany({ where: { pledgeId: pledge.id } });
-          await db.pledge.delete({ where: { id: pledge.id } });
+          await db.pledge.deleteMany({ where: { id: pledge.id } });
           const errMsg = isTimeout
             ? "Payment processor timed out. Please try again."
             : dcError instanceof Error && dcError.message.includes("not configured")

@@ -200,22 +200,18 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Note ID required" }, { status: 400 });
     }
 
-    const note = await db.backerNote.findFirst({
-      where: { id: noteId },
+    // Scoped delete via deleteMany — enforces ownership in the WHERE and
+    // resolves concurrent double-clicks as { count: 0 } instead of P2025.
+    const deleted = await db.backerNote.deleteMany({
+      where: { id: noteId, createdById: session.user.id },
     });
 
-    if (!note) {
+    if (deleted.count === 0) {
+      // Either the note doesn't exist, is not owned by this user, or was
+      // already deleted by a concurrent request — all three collapse to
+      // the same "nothing to delete" response.
       return NextResponse.json({ error: "Note not found" }, { status: 404 });
     }
-
-    // Only the creator can delete their own note
-    if (note.createdById !== session.user.id) {
-      return NextResponse.json({ error: "Can only delete your own notes" }, { status: 403 });
-    }
-
-    await db.backerNote.delete({
-      where: { id: noteId },
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

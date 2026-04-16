@@ -339,8 +339,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    await db.fulfillmentProduct.delete({
-      where: { id: productId },
+    // Scoped delete via deleteMany so cross-project abuse is blocked AND
+    // a concurrent double-click (second delete on an already-gone row)
+    // returns { count: 0 } instead of throwing P2025.
+    await db.fulfillmentProduct.deleteMany({
+      where: { id: productId, projectId },
     });
 
     return NextResponse.json({ success: true });

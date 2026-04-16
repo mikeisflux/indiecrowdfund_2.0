@@ -397,10 +397,21 @@ export async function DELETE(request: NextRequest) {
       });
     }
 
-    // Delete the code if no redemptions
-    await db.marketplaceDiscountCode.delete({
-      where: { id: codeId },
+    // Delete the code if no redemptions. Use deleteMany scoped to creatorId
+    // so cross-creator abuse is blocked AND a concurrent double-click
+    // (second delete on an already-gone row) returns { count: 0 } instead
+    // of throwing P2025.
+    const deleted = await db.marketplaceDiscountCode.deleteMany({
+      where: { id: codeId, creatorId: userId },
     });
+
+    if (deleted.count === 0) {
+      return NextResponse.json({
+        success: true,
+        message: "Discount code already deleted",
+        deleted: true,
+      });
+    }
 
     return NextResponse.json({
       success: true,
