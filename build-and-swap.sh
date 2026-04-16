@@ -1,8 +1,12 @@
 #!/bin/bash
 
-# Quick build and swap script
-# Backs up current build, builds new one, restarts PM2 on success
-# If build fails, reports errors and keeps the old build running
+# Quick build and swap script (Turbopack edition)
+# Backs up current build, builds in-place with Turbopack cache, restarts PM2
+# If build fails, rolls back from backup automatically
+#
+# Turbopack's filesystem cache lives inside .next/ — building in-place
+# lets subsequent builds reuse the cache (~2s compile vs ~43s cold).
+# The backup is taken BEFORE building so rollback is always available.
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
@@ -73,55 +77,56 @@ else
     exit 1
 fi
 
-# Step 5: Clean up any previous failed build attempts
+# Step 5: Backup current build BEFORE building in-place
+# This is the key change: we build directly into .next so Turbopack's
+# filesystem cache is reused (~2s compile instead of ~43s). The backup
+# ensures we can always roll back.
 echo ""
-echo "🧹 Step 5: Cleaning up previous build attempts..."
+echo "🧹 Step 5: Backing up current build..."
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Clean up any previous failed build attempts
 if [ -d ".next-new" ]; then
     rm -rf .next-new
-    echo -e "${GREEN}   Cleaned up .next-new${NC}"
-else
-    echo -e "${GREEN}   No cleanup needed${NC}"
+    echo -e "${GREEN}   Cleaned up stale .next-new${NC}"
 fi
 
-# Also clean stale .next/types (only used for TS checking, not runtime)
+# Backup current live build
+if [ -d ".next" ]; then
+    cp -al .next ".next-backup-${TIMESTAMP}"
+    echo -e "${GREEN}   Backed up to .next-backup-${TIMESTAMP} (hardlink copy, instant)${NC}"
+else
+    echo -e "${YELLOW}   No existing build to backup${NC}"
+fi
+
+# Clean stale .next/types (only used for TS checking, not runtime)
 if [ -d ".next/types" ]; then
     rm -rf .next/types
     echo -e "${GREEN}   Cleaned stale .next/types${NC}"
 fi
 
-# Step 6: Build new version to separate directory (zero-downtime)
-# NOTE: We call next build directly instead of npm run build because
-# npm run build includes "rm -rf .next" which would break the live site
+# Keep only the 2 most recent backups
+BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
+if [ "$BACKUP_COUNT" -gt 3 ]; then
+    echo "   Cleaning old backups (keeping last 3)..."
+    ls -dt .next-backup-* | tail -n +4 | xargs rm -rf
+    echo -e "${GREEN}   Old backups removed${NC}"
+fi
+
+# Step 6: Build in-place with Turbopack cache
+# Building directly into .next means Turbopack reuses its filesystem
+# cache from the previous build. Only changed modules recompile.
 echo ""
-echo "🔨 Step 6: Building new version to .next-new (site stays live)..."
-BUILD_OUTPUT=$(NEXT_BUILD_OUTPUT=.next-new npx next build 2>&1)
+echo "⚡ Step 6: Building with Turbopack (in-place, cached)..."
+BUILD_OUTPUT=$(npx next build 2>&1)
 BUILD_EXIT_CODE=$?
 
 if [ $BUILD_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}✅ Build successful!${NC}"
 
-    # Step 6b: Atomic swap - backup old, swap in new
-    echo ""
-    echo "🔄 Step 6b: Swapping build directories..."
-    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-
-    if [ -d ".next" ]; then
-        # Move old build to backup
-        mv .next ".next-backup-${TIMESTAMP}"
-        echo "   Backed up old build to .next-backup-${TIMESTAMP}"
-    fi
-
-    # Move new build into place
-    mv .next-new .next
-    echo -e "${GREEN}   New build is now live!${NC}"
-
-    # Keep only the 2 most recent backups, delete older ones
-    BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
-    if [ "$BACKUP_COUNT" -gt 2 ]; then
-        echo "   Cleaning old backups (keeping last 2)..."
-        ls -dt .next-backup-* | tail -n +3 | xargs rm -rf
-        echo -e "${GREEN}   Old backups removed${NC}"
-    fi
+    # Show compile time from build output
+    COMPILE_TIME=$(echo "$BUILD_OUTPUT" | grep -oP 'Compiled successfully in \K[0-9.]+s' || echo "unknown")
+    echo "   Compile time: ${COMPILE_TIME}"
 else
     echo -e "${RED}❌ BUILD FAILED!${NC}"
     echo ""
@@ -129,10 +134,17 @@ else
     echo "$BUILD_OUTPUT" | tail -50
     echo "=================================="
     echo ""
-    echo -e "${GREEN}   Site is still running with old build.${NC}"
 
-    # Clean up failed build attempt
-    rm -rf .next-new
+    # Roll back from backup
+    LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
+    if [ -n "$LATEST_BACKUP" ]; then
+        echo "   Rolling back to ${LATEST_BACKUP}..."
+        rm -rf .next
+        mv "$LATEST_BACKUP" .next
+        echo -e "${GREEN}   Rolled back. Site is still running with previous build.${NC}"
+    else
+        echo -e "${RED}   No backup available for rollback!${NC}"
+    fi
     exit 1
 fi
 
@@ -171,18 +183,19 @@ END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 
 # List available backups
-BACKUP_LIST=$(ls -dt .next-backup-* 2>/dev/null | head -2)
+BACKUP_LIST=$(ls -dt .next-backup-* 2>/dev/null | head -3)
 
 echo ""
 echo "=================================="
 echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo "   Duration: ${DURATION}s"
+echo "   Compile:  ${COMPILE_TIME}"
 echo ""
-echo "Available backups:"
+echo "Available backups (rollback targets):"
 for backup in $BACKUP_LIST; do
     echo "   - $backup"
 done
 echo ""
 echo "Commands:"
 echo "   View logs:  pm2 logs"
-echo "   Rollback:   cp -r .next-backup-TIMESTAMP .next && pm2 restart all"
+echo "   Rollback:   rm -rf .next && mv .next-backup-TIMESTAMP .next && pm2 restart all"
