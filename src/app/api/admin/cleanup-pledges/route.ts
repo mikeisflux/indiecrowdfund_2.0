@@ -394,9 +394,11 @@ async function repairSinglePledge(pledgeId: string) {
       const paymentIntent = await stripe.paymentIntents.retrieve(pledge.stripePaymentIntentId);
 
       if (paymentIntent.status === "succeeded") {
-        // Payment actually succeeded - update pledge to COMPLETED
-        await db.pledge.update({
-          where: { id: pledgeId },
+        // Payment actually succeeded - CAS on status: PENDING so a
+        // concurrent webhook that already transitioned to COMPLETED
+        // doesn't get overwritten or double-counted.
+        const repairCas = await db.pledge.updateMany({
+          where: { id: pledgeId, status: "PENDING" },
           data: {
             status: "COMPLETED",
             retryCount: 0,
@@ -414,8 +416,8 @@ async function repairSinglePledge(pledgeId: string) {
           message: "Pledge status updated to COMPLETED based on Stripe PaymentIntent status",
         });
       } else if (paymentIntent.status === "canceled") {
-        await db.pledge.update({
-          where: { id: pledgeId },
+        await db.pledge.updateMany({
+          where: { id: pledgeId, status: "PENDING" },
           data: {
             status: "CANCELLED",
             lastFailureReason: "PaymentIntent was cancelled in Stripe",
@@ -431,9 +433,9 @@ async function repairSinglePledge(pledgeId: string) {
           message: "Pledge status updated to CANCELLED based on Stripe PaymentIntent status",
         });
       } else if (paymentIntent.status === "requires_payment_method" && paymentIntent.last_payment_error) {
-        // Payment failed
-        await db.pledge.update({
-          where: { id: pledgeId },
+        // Payment failed — CAS on status: PENDING
+        await db.pledge.updateMany({
+          where: { id: pledgeId, status: "PENDING" },
           data: {
             status: "FAILED",
             lastFailureReason: paymentIntent.last_payment_error.message || "Payment failed",

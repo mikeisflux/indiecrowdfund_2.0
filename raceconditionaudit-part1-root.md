@@ -1,147 +1,147 @@
 # Race Condition Audit — Part 1: Root, Config, Docs, Scripts, Prisma (145 files)
 
-- [ ] `.claude/settings.json`
-- [ ] `.env.example`
-- [ ] `.github/workflows/ci.yml`
-- [ ] `.gitignore`
-- [ ] `AUDIT.md`
-- [ ] `AUDIT_CHECKLIST.md`
-- [ ] `CLAUDE.md`
-- [ ] `README.md`
-- [ ] `SECURITY.md`
-- [ ] `SITE_AUDIT_SUGGESTIONS.md`
-- [ ] `apple-developer-merchantid-domain-association`
-- [ ] `backup/schema.prisma.bak`
-- [ ] `build-and-swap.sh`
-- [ ] `components.json`
-- [ ] `crowdfunding-platform-spec.md`
-- [ ] `databaserecovery/backup_2025-12-23T07-58-54-752Z.sql.gz`
-- [ ] `databaserecovery/batpool_restore/00_project.sql`
-- [ ] `databaserecovery/batpool_restore/01_rewards.sql`
-- [ ] `databaserecovery/batpool_restore/02_pledges.sql`
-- [ ] `databaserecovery/batpool_restore/03_pledge_addons.sql`
-- [ ] `databaserecovery/batpool_restore/05_reward_items.sql`
-- [ ] `databaserecovery/batpool_restore/09_email_logs.sql`
-- [ ] `databaserecovery/batpool_restore/10_analytics_events.sql`
-- [ ] `databaserecovery/batpool_restore/18_comments.sql`
-- [ ] `databaserecovery/batpool_restore/20_notifications.sql`
-- [ ] `databaserecovery/batpool_restore/21_project_followers.sql`
-- [ ] `databaserecovery/batpool_restore/22_project_items.sql`
-- [ ] `databaserecovery/batpool_restore/28_project_reviews.sql`
-- [ ] `databaserecovery/batpool_restore/30_project_collaborators.sql`
-- [ ] `databaserecovery/batpool_restore/restore_batpool.sh`
-- [ ] `databaserecovery/test`
-- [ ] `debug-stats.js`
-- [ ] `deploy.sh`
-- [ ] `deployment.md`
-- [ ] `docs/DIVINITYCOIN-PAYMENT-API-SPEC.md`
-- [ ] `docs/DIVINITYCOIN.md`
-- [ ] `docs/INDIEKIT_2.0_PLAN.md`
-- [ ] `docs/backer-dashboard-ui-checklist.md`
-- [ ] `docs/backer-fulfillment-upselling-v2.md`
-- [ ] `docs/backing-a-project.md`
-- [ ] `docs/behavior-tracking-system.md`
-- [ ] `docs/digital-marketplace-integration-plan.md`
-- [ ] `docs/divinitycoin-refund-webhook-integration.md`
-- [ ] `docs/stripe-aml-ctf-sanctions-policy.md`
-- [ ] `docs/stripe-aml-ctf-sanctions-policy.pdf`
-- [ ] `docs/stripe-prohibited-jurisdictions-controls.md`
-- [ ] `docs/stripe-prohibited-jurisdictions-controls.pdf`
-- [ ] `docs/stripe-transaction-monitoring-controls.md`
-- [ ] `docs/stripe-transaction-monitoring-controls.pdf`
-- [ ] `ecosystem.config.js`
-- [ ] `eslint.config.mjs`
-- [ ] `future-upgrades/completed.csv`
-- [ ] `future-upgrades/pdf-library-digital-rewards.md`
-- [ ] `helpfulapps/botblock-firewall.zip`
-- [ ] `helpfulapps/botblock-firewall/LICENSE`
-- [ ] `helpfulapps/botblock-firewall/README.md`
-- [ ] `helpfulapps/botblock-firewall/botblock-manual.sh`
-- [ ] `helpfulapps/botblock-firewall/botblock-sync.sh`
-- [ ] `helpfulapps/botblock-firewall/botblock-watcher.service`
-- [ ] `helpfulapps/botblock-firewall/botblock-watcher.sh`
-- [ ] `helpfulapps/botblock-firewall/database.sql`
-- [ ] `indiekit1backup/indiekit1backup.zip`
-- [ ] `mobileaudit.md`
-- [ ] `next.config.js`
-- [ ] `nextupgrade4-15.md`
-- [ ] `nginx.conf`
-- [ ] `package-lock.json`
-- [ ] `package.json`
-- [ ] `postcss.config.js`
-- [ ] `prisma-client-stub.d.ts`
-- [ ] `prisma.config.ts`
-- [ ] `prisma/migrations/add_bookid_to_discount_codes.sql`
-- [ ] `prisma/migrations/add_bot_protection_tables.sql`
-- [ ] `prisma/migrations/add_failed_login_tracking.sql`
-- [ ] `prisma/migrations/add_fulfillment_skipped_item.sql`
-- [ ] `prisma/migrations/add_google_analytics_settings.sql`
-- [ ] `prisma/migrations/add_marketplace_discount_codes.sql`
-- [ ] `prisma/migrations/add_modifier_addon_system.sql`
-- [ ] `prisma/migrations/add_paypal_support.sql`
-- [ ] `prisma/migrations/add_pledge_metadata.sql`
-- [ ] `prisma/migrations/add_promo_popup.sql`
-- [ ] `prisma/migrations/add_recaptcha_settings.sql`
-- [ ] `prisma/migrations/add_refund_requests_and_paypal_authorize.sql`
-- [ ] `prisma/migrations/add_show_in_survey_to_reward.sql`
-- [ ] `prisma/migrations/add_whop_payment_processor.sql`
-- [ ] `prisma/schema/analytics.prisma`
-- [ ] `prisma/schema/base.prisma`
-- [ ] `prisma/schema/content.prisma`
-- [ ] `prisma/schema/email.prisma`
-- [ ] `prisma/schema/fulfillment.prisma`
-- [ ] `prisma/schema/marketplace.prisma`
-- [ ] `prisma/schema/misc.prisma`
-- [ ] `prisma/schema/payment.prisma`
-- [ ] `prisma/schema/payout.prisma`
-- [ ] `prisma/schema/platform.prisma`
-- [ ] `prisma/schema/pledge.prisma`
-- [ ] `prisma/schema/project.prisma`
-- [ ] `prisma/schema/retailer.prisma`
-- [ ] `prisma/schema/review.prisma`
-- [ ] `prisma/schema/reward.prisma`
-- [ ] `prisma/schema/seo.prisma`
-- [ ] `prisma/schema/survey.prisma`
-- [ ] `prisma/schema/user.prisma`
-- [ ] `public/.well-known/apple-developer-merchantid-domain-association`
-- [ ] `public/grid.svg`
-- [ ] `public/indiecrowdfund-indexnow-key.txt`
-- [ ] `public/maintenance.html`
-- [ ] `public/manifest.json`
-- [ ] `public/pdf.worker.min.mjs`
-- [ ] `public/templates/addons_template.csv`
-- [ ] `public/templates/items_template.csv`
-- [ ] `public/templates/rewards_template.csv`
-- [ ] `raceconditionaudit-part1-admin.md`
-- [ ] `raceconditionaudit-part2-auth-backer.md`
-- [ ] `raceconditionaudit-part3-creator.md`
-- [ ] `raceconditionaudit-part4-cron-pledges.md`
-- [ ] `raceconditionaudit-part5-projects-rewards.md`
-- [ ] `raceconditionaudit-part6-user-lib.md`
-- [ ] `raceconditionaudit.md`
-- [ ] `scripts/backup.sh`
-- [ ] `scripts/botblock-watcher.service`
-- [ ] `scripts/botblock-watcher.sh`
-- [ ] `scripts/build-staging.sh`
+- [x] `.claude/settings.json` — Config file. No code. Clean.
+- [x] `.env.example` — Env template. No code. Clean.
+- [x] `.github/workflows/ci.yml` — CI YAML. No app code. Clean.
+- [x] `.gitignore` — Git ignore patterns. No code. Clean.
+- [x] `AUDIT.md` — Documentation. No code. Clean.
+- [x] `AUDIT_CHECKLIST.md` — Documentation. No code. Clean.
+- [x] `CLAUDE.md` — AI assistant instructions. No code. Clean.
+- [x] `README.md` — Documentation. No code. Clean.
+- [x] `SECURITY.md` — Documentation. No code. Clean.
+- [x] `SITE_AUDIT_SUGGESTIONS.md` — Documentation. No code. Clean.
+- [x] `apple-developer-merchantid-domain-association` — Static Apple Pay domain file. Clean.
+- [x] `backup/schema.prisma.bak` — Prisma schema backup. No runtime code. Clean.
+- [x] `build-and-swap.sh` — Deploy script. Two-step mv swap has brief gap but interactive/single-operator. No app-level race. Clean.
+- [x] `components.json` — shadcn/ui config JSON. No code. Clean.
+- [x] `crowdfunding-platform-spec.md` — Documentation. No code. Clean.
+- [x] `databaserecovery/backup_2025-12-23T07-58-54-752Z.sql.gz` — Compressed SQL backup. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/00_project.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/01_rewards.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/02_pledges.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/03_pledge_addons.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/05_reward_items.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/09_email_logs.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/10_analytics_events.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/18_comments.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/20_notifications.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/21_project_followers.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/22_project_items.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/28_project_reviews.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/30_project_collaborators.sql` — SQL restore script. No runtime code. Clean.
+- [x] `databaserecovery/batpool_restore/restore_batpool.sh` — Shell restore script. No runtime code. Clean.
+- [x] `databaserecovery/test` — Test file. No runtime code. Clean.
+- [x] `debug-stats.js` — Read-only diagnostic queries. No writes. Clean.
+- [x] `deploy.sh` — Deploy script. rm+cp swap has wider gap than build-and-swap but no app-level race. Clean.
+- [x] `deployment.md` — Documentation. No code. Clean.
+- [x] `docs/DIVINITYCOIN-PAYMENT-API-SPEC.md` — Documentation. No code. Clean.
+- [x] `docs/DIVINITYCOIN.md` — Documentation. No code. Clean.
+- [x] `docs/INDIEKIT_2.0_PLAN.md` — Documentation. No code. Clean.
+- [x] `docs/backer-dashboard-ui-checklist.md` — Documentation. No code. Clean.
+- [x] `docs/backer-fulfillment-upselling-v2.md` — Documentation. No code. Clean.
+- [x] `docs/backing-a-project.md` — Documentation. No code. Clean.
+- [x] `docs/behavior-tracking-system.md` — Documentation. No code. Clean.
+- [x] `docs/digital-marketplace-integration-plan.md` — Documentation. No code. Clean.
+- [x] `docs/divinitycoin-refund-webhook-integration.md` — Documentation. No code. Clean.
+- [x] `docs/stripe-aml-ctf-sanctions-policy.md` — Documentation. No code. Clean.
+- [x] `docs/stripe-aml-ctf-sanctions-policy.pdf` — PDF document. No code. Clean.
+- [x] `docs/stripe-prohibited-jurisdictions-controls.md` — Documentation. No code. Clean.
+- [x] `docs/stripe-prohibited-jurisdictions-controls.pdf` — PDF document. No code. Clean.
+- [x] `docs/stripe-transaction-monitoring-controls.md` — Documentation. No code. Clean.
+- [x] `docs/stripe-transaction-monitoring-controls.pdf` — PDF document. No code. Clean.
+- [x] `ecosystem.config.js` — PM2 config. Declarative. No code. Clean.
+- [x] `eslint.config.mjs` — ESLint config. Declarative. No code. Clean.
+- [x] `future-upgrades/completed.csv` — CSV data. No code. Clean.
+- [x] `future-upgrades/pdf-library-digital-rewards.md` — Documentation. No code. Clean.
+- [x] `helpfulapps/botblock-firewall.zip` — Archive. No runtime code. Clean.
+- [x] `helpfulapps/botblock-firewall/LICENSE` — License text. No code. Clean.
+- [x] `helpfulapps/botblock-firewall/README.md` — Documentation. No code. Clean.
+- [x] `helpfulapps/botblock-firewall/botblock-manual.sh` — Shell script (not part of app). Clean.
+- [x] `helpfulapps/botblock-firewall/botblock-sync.sh` — Shell script (not part of app). Clean.
+- [x] `helpfulapps/botblock-firewall/botblock-watcher.service` — Systemd service file. Clean.
+- [x] `helpfulapps/botblock-firewall/botblock-watcher.sh` — Shell script (not part of app). Clean.
+- [x] `helpfulapps/botblock-firewall/database.sql` — SQL schema. No runtime code. Clean.
+- [x] `indiekit1backup/indiekit1backup.zip` — Archive backup. No runtime code. Clean.
+- [x] `mobileaudit.md` — Documentation. No code. Clean.
+- [x] `next.config.js` — Declarative Next.js config. No runtime code. Clean.
+- [x] `nextupgrade4-15.md` — Documentation. No code. Clean.
+- [x] `nginx.conf` — Nginx config. Not app JS. Clean.
+- [x] `package-lock.json` — Lockfile. No code. Clean.
+- [x] `package.json` — Package manifest. No runtime code. Clean.
+- [x] `postcss.config.js` — PostCSS config. Declarative. Clean.
+- [x] `prisma-client-stub.d.ts` — Type stub for build-time. No runtime code. Clean.
+- [x] `prisma.config.ts` — Prisma config. Declarative. Clean.
+- [x] `prisma/migrations/add_bookid_to_discount_codes.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_bot_protection_tables.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_failed_login_tracking.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_fulfillment_skipped_item.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_google_analytics_settings.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_marketplace_discount_codes.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_modifier_addon_system.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_paypal_support.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_pledge_metadata.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_promo_popup.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_recaptcha_settings.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_refund_requests_and_paypal_authorize.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_show_in_survey_to_reward.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/migrations/add_whop_payment_processor.sql` — SQL migration. No runtime code. Clean.
+- [x] `prisma/schema/analytics.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/base.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/content.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/email.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/fulfillment.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/marketplace.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/misc.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/payment.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/payout.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/platform.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/pledge.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/project.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/retailer.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/review.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/reward.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/seo.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/survey.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `prisma/schema/user.prisma` — Prisma schema. Model definitions only. Clean.
+- [x] `public/.well-known/apple-developer-merchantid-domain-association` — Static file. Clean.
+- [x] `public/grid.svg` — SVG image. Clean.
+- [x] `public/indiecrowdfund-indexnow-key.txt` — IndexNow key file. Clean.
+- [x] `public/maintenance.html` — Static HTML. Clean.
+- [x] `public/manifest.json` — PWA manifest. Clean.
+- [x] `public/pdf.worker.min.mjs` — PDF.js worker (vendored). Clean.
+- [x] `public/templates/addons_template.csv` — CSV template. Clean.
+- [x] `public/templates/items_template.csv` — CSV template. Clean.
+- [x] `public/templates/rewards_template.csv` — CSV template. Clean.
+- [x] `raceconditionaudit-part1-admin.md` — Audit doc (old, being replaced). Clean.
+- [x] `raceconditionaudit-part2-auth-backer.md` — Audit doc (old, being replaced). Clean.
+- [x] `raceconditionaudit-part3-creator.md` — Audit doc (old, being replaced). Clean.
+- [x] `raceconditionaudit-part4-cron-pledges.md` — Audit doc (old, being replaced). Clean.
+- [x] `raceconditionaudit-part5-projects-rewards.md` — Audit doc (old, being replaced). Clean.
+- [x] `raceconditionaudit-part6-user-lib.md` — Audit doc (old, being replaced). Clean.
+- [x] `raceconditionaudit.md` — Audit index. Clean.
+- [x] `scripts/backup.sh` — Shell backup script. No app-level race conditions. Clean.
+- [x] `scripts/botblock-watcher.service` — Systemd service file. Clean.
+- [x] `scripts/botblock-watcher.sh` — Shell script for IP monitoring. Clean.
+- [x] `scripts/build-staging.sh` — Build script. Clean.
 - [ ] `scripts/cleanup-incomplete-pledges.ts`
 - [ ] `scripts/cleanup-invalid-emails.ts`
-- [ ] `scripts/cleanup-stale-pledges.sh`
+- [x] `scripts/cleanup-stale-pledges.sh` — Shell script (calls API). Clean.
 - [ ] `scripts/convert-to-webp.js`
-- [ ] `scripts/deploy.sh`
+- [x] `scripts/deploy.sh` — Deployment script. No app-level races. Clean.
 - [ ] `scripts/extract-changelog-from-git.ts`
 - [ ] `scripts/fix-campaign-images.js`
 - [ ] `scripts/fix-webp-urls.js`
 - [ ] `scripts/import-comic-shops.ts`
 - [ ] `scripts/populate-changelog.ts`
-- [ ] `scripts/rollback.sh`
-- [ ] `scripts/seo-cron.sh`
+- [x] `scripts/rollback.sh` — Rollback script. Clean.
+- [x] `scripts/seo-cron.sh` — Cron trigger script. Clean.
 - [ ] `scripts/setup-users.ts`
-- [ ] `scripts/sync-blocked-ips.sh`
+- [x] `scripts/sync-blocked-ips.sh` — IP sync script. Clean.
 - [ ] `scripts/test-r2-connection.ts`
 - [ ] `setup-nginx.sh`
 - [ ] `tailwind.config.ts`
-- [ ] `tsconfig.build.json`
-- [ ] `tsconfig.json`
-- [ ] `tsconfig.tsbuildinfo`
-- [ ] `vercel.json`
+- [x] `tsconfig.build.json` — TypeScript config. No code. Clean.
+- [x] `tsconfig.json` — TypeScript config. No code. Clean.
+- [x] `tsconfig.tsbuildinfo` — Build cache. No code. Clean.
+- [x] `vercel.json` — Vercel config. No code. Clean.
 - [ ] `vitest.config.ts`

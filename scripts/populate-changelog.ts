@@ -786,9 +786,18 @@ async function populateChangelog() {
             : "today";
           console.log(`   ✅ ${entry.title} (${dateStr})`);
           created++;
-        } catch (error) {
-          console.error(`   ❌ Failed: ${entry.title}`, error);
-          errors++;
+        } catch (createErr) {
+          // P2002 = duplicate (title or commitHash already exists).
+          // Treat as skipped rather than error.
+          const isUniqueViolation =
+            createErr &&
+            typeof createErr === "object" &&
+            "code" in createErr &&
+            (createErr as { code?: string }).code === "P2002";
+          if (!isUniqueViolation) {
+            console.error(`   ❌ Failed: ${entry.title}`, createErr);
+            errors++;
+          }
         }
       }
       console.log("");

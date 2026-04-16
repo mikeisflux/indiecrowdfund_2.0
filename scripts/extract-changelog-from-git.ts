@@ -361,8 +361,21 @@ async function main() {
         if (created % 50 === 0) {
           console.log(`   ... ${created} created`);
         }
-      } catch (error) {
-        errors++;
+      } catch (createErr) {
+        // P2002 = duplicate (commitHash or title already exists from
+        // a concurrent run or the in-memory dedup missed it). Count
+        // as skipped rather than error so the admin sees an accurate
+        // count.
+        const isUniqueViolation =
+          createErr &&
+          typeof createErr === "object" &&
+          "code" in createErr &&
+          (createErr as { code?: string }).code === "P2002";
+        if (isUniqueViolation) {
+          // Already exists — not an error, just a duplicate
+        } else {
+          errors++;
+        }
       }
     }
 

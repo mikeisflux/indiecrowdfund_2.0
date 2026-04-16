@@ -71,32 +71,26 @@ async function setupUsers() {
         where: { email: userData.email },
       });
 
-      if (existingUser) {
-        // Update existing user
-        const hashedPassword = await bcrypt.hash(userData.password, 12);
-        await prisma.user.update({
-          where: { email: userData.email },
-          data: {
-            name: userData.name,
-            password: hashedPassword,
-            role: userData.role,
-          },
-        });
-        console.log(`Updated existing user: ${userData.name} (${userData.email}) - Role: ${userData.role}`);
-      } else {
-        // Create new user
-        const hashedPassword = await bcrypt.hash(userData.password, 12);
-        await prisma.user.create({
-          data: {
-            email: userData.email,
-            name: userData.name,
-            password: hashedPassword,
-            role: userData.role,
-            emailVerified: new Date(),
-          },
-        });
-        console.log(`Created new user: ${userData.name} (${userData.email}) - Role: ${userData.role}`);
-      }
+      // Atomic upsert — avoids the findUnique→create TOCTOU race
+      // where a concurrent run could both see "not exists" and both
+      // try to create, with the second hitting P2002.
+      const hashedPassword = await bcrypt.hash(userData.password, 12);
+      await prisma.user.upsert({
+        where: { email: userData.email },
+        update: {
+          name: userData.name,
+          password: hashedPassword,
+          role: userData.role,
+        },
+        create: {
+          email: userData.email,
+          name: userData.name,
+          password: hashedPassword,
+          role: userData.role,
+          emailVerified: new Date(),
+        },
+      });
+      console.log(`${existingUser ? 'Updated' : 'Created'} user: ${userData.name} (${userData.email}) - Role: ${userData.role}`);
     } catch (error) {
       console.error(`Error setting up user ${userData.name}:`, error);
     }
