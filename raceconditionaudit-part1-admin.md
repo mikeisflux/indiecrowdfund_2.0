@@ -8,10 +8,10 @@
 - [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/duplicate/route.ts` — Single create, no uniqueness constraint. Two duplicates is harmless. Clean.
 - [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/route.ts` — GET clean, PATCH has CAS, DELETE fixed: .delete→deleteMany with status guard.
 - [x] `src/app/api/admin/ai-marketing/campaigns/manage/[id]/send/route.ts` — CAS on status→SENDING prevents double-send. Error reset to DRAFT is acceptable. Clean.
-- [ ] `src/app/api/admin/ai-marketing/campaigns/route.ts`
-- [ ] `src/app/api/admin/ai-marketing/run/route.ts`
-- [ ] `src/app/api/admin/ai-marketing/subscribers/import/route.ts`
-- [ ] `src/app/api/admin/ai-marketing/subscribers/route.ts`
+- [x] `src/app/api/admin/ai-marketing/campaigns/route.ts` — GET read-only, POST single create (no uniqueness pre-check). Clean.
+- [x] `src/app/api/admin/ai-marketing/run/route.ts` — Multi-action POST. Mostly read-only. Writes are idempotent tag-setting or delegated to lib functions with their own guards. Clean.
+- [x] `src/app/api/admin/ai-marketing/subscribers/import/route.ts` — createMany with skipDuplicates:true handles TOCTOU on email uniqueness. Clean.
+- [x] `src/app/api/admin/ai-marketing/subscribers/route.ts` — POST uses upsert, PATCH has P2002 catch, DELETE uses updateMany. All handlers clean.
 
 ## Admin — Content & CMS (7 files)
 - [ ] `src/app/api/admin/announcement-bar/route.ts`
