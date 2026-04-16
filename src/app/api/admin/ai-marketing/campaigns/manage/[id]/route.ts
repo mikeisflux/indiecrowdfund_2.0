@@ -224,9 +224,19 @@ export async function DELETE(
       );
     }
 
-    await db.emailCampaign.delete({
-      where: { id },
+    // CAS-style deleteMany: only delete if still NOT SENDING (the read
+    // check above is TOCTOU — status could flip to SENDING between the
+    // findUnique and here). Also idempotent on concurrent double-clicks.
+    const deleted = await db.emailCampaign.deleteMany({
+      where: { id, status: { not: "SENDING" } },
     });
+
+    if (deleted.count === 0) {
+      return NextResponse.json(
+        { error: "Campaign status changed — cannot delete while sending" },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json({ success: true, message: `Campaign "${existing.name}" deleted` });
   } catch (error) {
