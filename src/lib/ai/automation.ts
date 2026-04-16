@@ -53,6 +53,11 @@ export async function runAutomatedMarketing(): Promise<AutomationResult> {
   let totalEmailsQueued = 0;
 
   try {
+    // Acquire advisory lock so two overlapping cron invocations can't
+    // both pass the shouldSendCampaignToday check and both create
+    // campaigns. The second caller blocks until the first finishes.
+    await db.$executeRaw`SELECT pg_advisory_lock(hashtext('run-automated-marketing'))`;
+
     const settings = await getAISettings();
 
     // =============================================
@@ -168,6 +173,9 @@ export async function runAutomatedMarketing(): Promise<AutomationResult> {
       errors: [...errors, err instanceof Error ? err.message : String(err)],
       duration: Date.now() - startTime,
     };
+  } finally {
+    // Release advisory lock so the next cron invocation can proceed.
+    await db.$executeRaw`SELECT pg_advisory_unlock(hashtext('run-automated-marketing'))`.catch(() => {});
   }
 }
 

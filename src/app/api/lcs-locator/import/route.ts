@@ -127,24 +127,37 @@ export async function POST() {
           website = `https://${website}`;
         }
 
-        // Create shop
-        await db.comicShop.create({
-          data: {
-            name: row.name,
-            slug,
-            address: row.address || null,
-            city: row.city,
-            state: row.state || null,
-            zipCode: row.zip_code || null,
-            country: row.country || "USA",
-            region: row.region || null,
-            phone: row.phone || null,
-            email: row.email || null,
-            website: website || null,
-          },
-        });
-
-        imported++;
+        // Create shop — catch P2002 on slug @unique so a concurrent
+        // import or pre-existing row counts as "skipped" not "error".
+        try {
+          await db.comicShop.create({
+            data: {
+              name: row.name,
+              slug,
+              address: row.address || null,
+              city: row.city,
+              state: row.state || null,
+              zipCode: row.zip_code || null,
+              country: row.country || "USA",
+              region: row.region || null,
+              phone: row.phone || null,
+              email: row.email || null,
+              website: website || null,
+            },
+          });
+          imported++;
+        } catch (createErr) {
+          const isUniqueViolation =
+            createErr &&
+            typeof createErr === "object" &&
+            "code" in createErr &&
+            (createErr as { code?: string }).code === "P2002";
+          if (isUniqueViolation) {
+            skipped++;
+            continue;
+          }
+          throw createErr;
+        }
       } catch (err) {
         errors++;
         lcsLocatorImportLogger.error({ err: String(err) }, `Error importing "${row.name}":`);

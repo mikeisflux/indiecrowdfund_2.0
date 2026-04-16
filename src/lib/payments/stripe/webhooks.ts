@@ -593,15 +593,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return;
   }
 
-  // Skip if already completed
-  if (purchase.status === "COMPLETED") {
-    webhookLogger.info(`[Webhook] Purchase ${purchaseId} already completed`);
-    return;
-  }
-
-  // Complete the purchase
-  await db.marketplacePurchase.update({
-    where: { id: purchaseId },
+  // CAS: atomically flip PENDING → COMPLETED so a Stripe webhook retry
+  // can't double-increment purchaseCount and totalSales. The read-based
+  // status check above is TOCTOU — two concurrent webhook deliveries
+  // could both pass it.
+  const completeCas = await db.marketplacePurchase.updateMany({
+    where: { id: purchaseId, status: { not: "COMPLETED" } },
     data: {
       status: "COMPLETED",
       completedAt: new Date(),
@@ -612,7 +609,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     },
   });
 
-  // Update book purchase count
+  if (completeCas.count === 0) {
+    webhookLogger.info(`[Webhook] Purchase ${purchaseId} already completed (CAS lost)`);
+    return;
+  }
+
+  // Only increment counts if we won the CAS (prevents double-counting)
   await db.marketplaceBook.update({
     where: { id: purchase.bookId },
     data: {
@@ -620,7 +622,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     },
   });
 
-  // Update company total sales if applicable
   if (purchase.book.companyId) {
     await db.companyProfile.update({
       where: { id: purchase.book.companyId },
