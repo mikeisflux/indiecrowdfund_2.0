@@ -122,7 +122,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.4.22",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^15.3.3",
+    "eslint-config-next": "^15.5.15",
     "jsdom": "^28.1.0",
     "postcss": "^8.5.6",
     "prisma": "7.7.0",
