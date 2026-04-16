@@ -429,17 +429,14 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    // Ensure settings record exists
-    const existing = await db.platformSettings.findUnique({
+    // Ensure settings record exists. Use upsert with an empty update so
+    // two concurrent admin saves can't both race past a findUnique → create
+    // branch and have the second create hit P2002 on the id PK.
+    await db.platformSettings.upsert({
       where: { id: "default" },
-      select: { id: true },
+      create: { id: "default" },
+      update: {},
     });
-
-    if (!existing) {
-      await db.platformSettings.create({
-        data: { id: "default" }
-      });
-    }
 
     // Capture old values for audit logging - build select from updateData keys
     const auditSelectFields: Record<string, true> = { id: true };

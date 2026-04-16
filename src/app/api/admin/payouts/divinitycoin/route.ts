@@ -714,7 +714,12 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Each state transition uses a CAS filter on the current status so
+    // two concurrent admin clicks (e.g. double-click, or two admins
+    // acting simultaneously) can't both fall through the read-based
+    // check above and both apply the transition.
     let updateData: Record<string, unknown> = {};
+    let allowedFromStatuses: string[] = [];
 
     switch (action) {
       case "INITIATE":
@@ -724,6 +729,7 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
+        allowedFromStatuses = ["PENDING"];
         updateData = {
           status: "INITIATED",
           initiatedAt: new Date(),
@@ -739,6 +745,7 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
+        allowedFromStatuses = ["PENDING", "INITIATED"];
         updateData = {
           status: "PROCESSING",
           processedAt: new Date(),
@@ -754,6 +761,7 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
+        allowedFromStatuses = ["PROCESSING"];
         updateData = {
           status: "COMPLETED",
           completedAt: new Date(),
@@ -768,6 +776,7 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
+        allowedFromStatuses = ["PENDING", "INITIATED", "PROCESSING", "FAILED"];
         updateData = {
           status: "FAILED",
           failedAt: new Date(),
@@ -783,6 +792,7 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
+        allowedFromStatuses = ["PENDING", "INITIATED", "PROCESSING", "FAILED", "CANCELLED"];
         updateData = {
           status: "CANCELLED",
           adminNotes: adminNotes || settlement.adminNotes,
@@ -796,9 +806,18 @@ export async function PATCH(request: NextRequest) {
         );
     }
 
-    const updatedSettlement = await db.divinityCoinSettlement.update({
-      where: { id: settlementId },
+    const cas = await db.divinityCoinSettlement.updateMany({
+      where: { id: settlementId, status: { in: allowedFromStatuses } },
       data: updateData,
+    });
+    if (cas.count === 0) {
+      return NextResponse.json(
+        { error: "Settlement status changed concurrently. Please refresh and retry." },
+        { status: 409 }
+      );
+    }
+    const updatedSettlement = await db.divinityCoinSettlement.findUnique({
+      where: { id: settlementId },
     });
 
     return NextResponse.json({

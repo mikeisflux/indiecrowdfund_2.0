@@ -132,7 +132,7 @@ export async function POST(request: Request) {
         if (!orderRes.ok) {
           const errBody = await orderRes.text();
           marketplacePurchaseLogger.error({ err: errBody }, "[Marketplace PayPal] Failed to create order");
-          await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
+          await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
           return NextResponse.json({ error: "Failed to create PayPal order" }, { status: 502 });
         }
 
@@ -160,7 +160,7 @@ export async function POST(request: Request) {
         });
       } catch (paypalError) {
         marketplacePurchaseLogger.error({ err: String(paypalError) }, "[Marketplace PayPal] Error:");
-        await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
+        await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
         return NextResponse.json({ error: "Failed to initialize PayPal payment" }, { status: 502 });
       }
     }
@@ -199,7 +199,7 @@ export async function POST(request: Request) {
         const dcResult = await dcResponse.json();
         if (!dcResponse.ok || !dcResult.success) {
           marketplacePurchaseLogger.error({ err: String(dcResult) }, "[Marketplace DC] Failed to create payment intent:");
-          await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
+          await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
           return NextResponse.json(
             { error: dcResult.error || "Failed to initialize payment" },
             { status: 502 }
@@ -224,7 +224,7 @@ export async function POST(request: Request) {
         });
       } catch (dcError) {
         marketplacePurchaseLogger.error({ err: String(dcError) }, "[Marketplace DC] API error:");
-        await prisma.marketplacePurchase.delete({ where: { id: purchase.id } });
+        await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
         return NextResponse.json(
           { error: "Failed to connect to payment processor" },
           { status: 502 }

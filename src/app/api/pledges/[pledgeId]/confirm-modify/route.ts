@@ -117,84 +117,150 @@ export async function POST(
     const addonIdList = addonsWithQuantity.map(a => a.id);
     const rewardId = pending.rewardId;
 
-    // Apply changes in a transaction
-    await db.$transaction(async (tx) => {
-      // If changing reward, update claimed counts
-      if (pledge.rewardId && pledge.rewardId !== rewardId) {
-        await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.rewardId}`;
-      }
+    // Apply changes in a transaction guarded by an advisory lock keyed to
+    // the paymentIntentId. Without this lock two concurrent confirm-modify
+    // calls (double-click / retry) would both:
+    //   1. Pass the Stripe "succeeded" check above
+    //   2. Decrement the old reward's quantityClaimed twice
+    //   3. Increment the new reward's quantityClaimed twice (oversell)
+    //   4. Delete + re-create addon rows twice (doubled addons survive)
+    //   5. Double-increment project.currentAmount by amountDiff
+    //
+    // Inside the lock we re-read the pledge's metadata and check that
+    // pendingModification is still present AND that this paymentIntentId
+    // isn't already in completedModifications — either bail-out turns the
+    // second confirm into an idempotent no-op. Same pattern as
+    // confirm-add-items, which was flagged as the critical add-items race
+    // in session 6 of the audit.
+    let alreadyProcessed = false;
+    try {
+      await db.$transaction(async (tx) => {
+        if (pending.paymentIntentId) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`confirm-modify-${pending.paymentIntentId}`}))`;
+        } else {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`confirm-modify-${pledgeId}`}))`;
+        }
 
-      if (rewardId && rewardId !== "no-reward" && pledge.rewardId !== rewardId) {
-        await tx.reward.update({
-          where: { id: rewardId },
-          data: { quantityClaimed: { increment: 1 } },
+        // Re-read the pledge inside the lock to see the latest metadata.
+        // The first caller to flip pendingModification → completedModifications
+        // will cause all subsequent lock acquirers to see the updated
+        // state and bail out.
+        const freshPledge = await tx.pledge.findFirst({
+          where: { id: pledgeId, deletedAt: null },
+          select: { metadata: true, rewardId: true },
         });
-      }
+        if (!freshPledge) {
+          throw new Error("PLEDGE_DISAPPEARED");
+        }
+        const freshMeta = freshPledge.metadata as {
+          pendingModification?: unknown;
+          completedModifications?: Array<{ paymentIntentId?: string }>;
+        } | null;
 
-      // Delete old addon associations
-      await tx.pledgeAddon.deleteMany({
-        where: { pledgeId },
-      });
+        const stillPending = !!freshMeta?.pendingModification;
+        const alreadyCompleted = pending.paymentIntentId
+          ? (freshMeta?.completedModifications || []).some(
+              (c) => c?.paymentIntentId === pending.paymentIntentId
+            )
+          : false;
 
-      // Create new addon associations
-      if (addonsWithQuantity.length > 0) {
-        const addonRecords = await tx.reward.findMany({
-          where: { id: { in: addonIdList }, type: "ADDON" },
-          select: { id: true, amount: true },
+        if (!stillPending || alreadyCompleted) {
+          alreadyProcessed = true;
+          return;
+        }
+
+        // If changing reward, update claimed counts
+        if (freshPledge.rewardId && freshPledge.rewardId !== rewardId) {
+          await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${freshPledge.rewardId}`;
+        }
+
+        if (rewardId && rewardId !== "no-reward" && freshPledge.rewardId !== rewardId) {
+          await tx.reward.update({
+            where: { id: rewardId },
+            data: { quantityClaimed: { increment: 1 } },
+          });
+        }
+
+        // Delete old addon associations
+        await tx.pledgeAddon.deleteMany({
+          where: { pledgeId },
         });
-        const addonPriceMap = new Map<string, number>(
-          addonRecords.map((a: { id: string; amount: number }) => [a.id, Number(a.amount)])
-        );
 
-        await tx.pledgeAddon.createMany({
-          data: addonsWithQuantity.map((addon) => ({
-            pledgeId,
-            addonId: addon.id,
-            quantity: addon.quantity,
-            amount: (addonPriceMap.get(addon.id) ?? 0) * addon.quantity,
-          })),
-        });
-      }
+        // Create new addon associations
+        if (addonsWithQuantity.length > 0) {
+          const addonRecords = await tx.reward.findMany({
+            where: { id: { in: addonIdList }, type: "ADDON" },
+            select: { id: true, amount: true },
+          });
+          const addonPriceMap = new Map<string, number>(
+            addonRecords.map((a: { id: string; amount: number }) => [a.id, Number(a.amount)])
+          );
 
-      // Update the pledge amount and clear pending modification
-      const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-        ? { ...pledge.metadata as Record<string, unknown> }
-        : {};
-      delete currentMetadata.pendingModification;
+          await tx.pledgeAddon.createMany({
+            data: addonsWithQuantity.map((addon) => ({
+              pledgeId,
+              addonId: addon.id,
+              quantity: addon.quantity,
+              amount: (addonPriceMap.get(addon.id) ?? 0) * addon.quantity,
+            })),
+          });
+        }
 
-      await tx.pledge.update({
-        where: { id: pledgeId },
-        data: {
-          rewardId: rewardId === "no-reward" ? null : rewardId || null,
-          amount: pending.newAmount,
-          metadata: {
-            ...currentMetadata,
-            completedModifications: [
-              ...((currentMetadata.completedModifications as unknown[]) || []),
-              {
-                paymentIntentId: pending.paymentIntentId,
-                rewardId,
-                addons: addonsWithQuantity,
-                oldAmount: pending.oldAmount,
-                newAmount: pending.newAmount,
-                amountDiff: pending.amountDiff,
-                completedAt: new Date().toISOString(),
-              },
-            ],
-          },
-        },
-      });
+        // Update the pledge amount and flip pendingModification →
+        // completedModifications. This is what blocks subsequent lock
+        // acquirers from re-processing.
+        const currentMetadata = (typeof freshMeta === "object" && freshMeta !== null)
+          ? { ...freshMeta as Record<string, unknown> }
+          : {};
+        delete currentMetadata.pendingModification;
 
-      // Update project current amount
-      if (pending.amountDiff !== 0) {
-        await tx.project.update({
-          where: { id: pledge.projectId },
+        await tx.pledge.update({
+          where: { id: pledgeId },
           data: {
-            currentAmount: { increment: pending.amountDiff },
+            rewardId: rewardId === "no-reward" ? null : rewardId || null,
+            amount: pending.newAmount,
+            metadata: {
+              ...currentMetadata,
+              completedModifications: [
+                ...((currentMetadata.completedModifications as unknown[]) || []),
+                {
+                  paymentIntentId: pending.paymentIntentId,
+                  rewardId,
+                  addons: addonsWithQuantity,
+                  oldAmount: pending.oldAmount,
+                  newAmount: pending.newAmount,
+                  amountDiff: pending.amountDiff,
+                  completedAt: new Date().toISOString(),
+                },
+              ],
+            },
           },
         });
+
+        // Update project current amount
+        if (pending.amountDiff !== 0) {
+          await tx.project.update({
+            where: { id: pledge.projectId },
+            data: {
+              currentAmount: { increment: pending.amountDiff },
+            },
+          });
+        }
+      });
+    } catch (txErr) {
+      if (txErr instanceof Error && txErr.message === "PLEDGE_DISAPPEARED") {
+        return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
       }
-    });
+      throw txErr;
+    }
+
+    if (alreadyProcessed) {
+      return NextResponse.json({
+        success: true,
+        message: "Modification already processed",
+        alreadyProcessed: true,
+      });
+    }
 
     pledgesConfirmModifyLogger.info(`[ConfirmModify] Successfully modified pledge ${pledgeId}, amount changed by $${pending.amountDiff}`);
 

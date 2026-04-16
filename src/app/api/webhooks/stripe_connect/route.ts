@@ -157,27 +157,20 @@ async function handleAccountUpdate(account: Stripe.Account) {
   if (project) {
     webhooksStripe_connectLogger.info(`[Connect Webhook] Account ${account.id} found on project "${project.title}" (${project.id})`);
 
-    // Try to create/update StripeConfig for the project's creator
-    const existingConfig = await db.stripeConfig.findUnique({
+    // Atomic upsert keyed on the userId @unique constraint. Previously a
+    // findUnique → create branch would race two concurrent account.updated
+    // events for the same creator and the second create would fail with
+    // P2002 on the unique userId.
+    await db.stripeConfig.upsert({
       where: { userId: project.creatorId },
+      update: { stripeAccountId: account.id, isOnboarded },
+      create: {
+        userId: project.creatorId,
+        stripeAccountId: account.id,
+        isOnboarded,
+      },
     });
-
-    if (existingConfig) {
-      await db.stripeConfig.update({
-        where: { id: existingConfig.id },
-        data: { stripeAccountId: account.id, isOnboarded },
-      });
-      webhooksStripe_connectLogger.info(`[Connect Webhook] Updated existing StripeConfig for creator ${project.creatorId}`);
-    } else {
-      await db.stripeConfig.create({
-        data: {
-          userId: project.creatorId,
-          stripeAccountId: account.id,
-          isOnboarded,
-        },
-      });
-      webhooksStripe_connectLogger.info(`[Connect Webhook] Created StripeConfig for creator ${project.creatorId}`);
-    }
+    webhooksStripe_connectLogger.info(`[Connect Webhook] Upserted StripeConfig for creator ${project.creatorId}`);
     return;
   }
 

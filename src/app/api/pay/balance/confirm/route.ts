@@ -107,9 +107,16 @@ export async function POST(req: NextRequest) {
       ? Math.max(0, Math.round(storedBalanceDue * 100) / 100)
       : Math.max(0, Math.round((expectedTotal - pledgeTotal) * 100) / 100);
 
-    // Use a transaction to atomically mark as confirmed and prevent double-processing
+    // Use a transaction + SELECT FOR UPDATE row lock to atomically mark
+    // as confirmed. Without the row lock, two concurrent confirm calls
+    // (double-click, retry, or split tab) would both pass the
+    // balancePaymentCompletedAt check inside the transaction because
+    // READ COMMITTED isolation lets them both see the same pre-write
+    // snapshot — resulting in a double credit to pledge.amount AND
+    // project.currentAmount. FOR UPDATE serializes them so the second
+    // acquirer sees the completed marker and bails.
     const confirmed = await db.$transaction(async (tx) => {
-      // Re-fetch the pledge with a lock to guard against concurrent requests
+      await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${pledge.id} FOR UPDATE`;
       const current = await tx.pledge.findFirst({ where: { id: pledge.id, deletedAt: null } });
       if (!current) return false;
       const currentMeta = (current.metadata as Record<string, unknown>) || {};

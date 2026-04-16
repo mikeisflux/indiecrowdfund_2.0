@@ -490,9 +490,19 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await db.payout.delete({
-      where: { id: payoutId },
+    // CAS on status so two concurrent cancels (double-click, two admins)
+    // can't both pass the read check above and both issue deletes — the
+    // second would throw P2025. deleteMany returns { count: 0 } if the
+    // payout transitioned between the read and the delete.
+    const deleted = await db.payout.deleteMany({
+      where: { id: payoutId, status: "PENDING" },
     });
+    if (deleted.count === 0) {
+      return NextResponse.json(
+        { error: "Payout status has changed — please refresh and try again" },
+        { status: 409 }
+      );
+    }
 
     auditLog({
       action: "PAYOUT_CANCEL",

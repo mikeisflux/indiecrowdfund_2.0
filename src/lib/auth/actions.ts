@@ -474,24 +474,36 @@ export async function resetPassword(formData: FormData, token: string) {
       return { error: { _form: ["Invalid or expired reset link. Please request a new one."] } };
     }
 
-    // Update password, normalize email, delete used token, and
-    // invalidate all sessions. Session invalidation ensures a
-    // compromised account can't be retained after password reset.
-    // Use deleteMany on the token to avoid P2025 if a concurrent
-    // request already consumed it (both resets would race but only
-    // one wins the token; the other just returns success with no
-    // password change).
-    await db.$transaction([
-      db.user.update({
+    // Atomically consume the token, update the password, and invalidate
+    // all sessions. We delete the token FIRST inside an interactive
+    // transaction and check the count — only the caller whose deleteMany
+    // returns 1 actually wins the race. Without this, two concurrent
+    // resetPassword calls with the same token (double-click or refresh)
+    // would both pass the findUnique above and both write a password,
+    // with last-write-wins nondeterministically picking which one sticks.
+    // Session invalidation ensures any compromised session can't be
+    // retained after a password reset.
+    const consumed = await db.$transaction(async (tx) => {
+      const deleted = await tx.passwordResetToken.deleteMany({
+        where: { token },
+      });
+      if (deleted.count === 0) {
+        return false;
+      }
+      await tx.user.update({
         where: { id: targetUser.id },
         data: {
           password: hashedPassword,
           email: targetUser.email.toLowerCase(),
         },
-      }),
-      db.passwordResetToken.deleteMany({ where: { token } }),
-      db.session.deleteMany({ where: { userId: targetUser.id } }),
-    ]);
+      });
+      await tx.session.deleteMany({ where: { userId: targetUser.id } });
+      return true;
+    });
+
+    if (!consumed) {
+      return { error: { _form: ["Invalid or expired reset link. Please request a new one."] } };
+    }
 
     return { success: true };
   } catch (error) {
