@@ -24,6 +24,11 @@ const nextConfig = {
   // the .next build directory causing ENOENT on default-stylesheet.css
   serverExternalPackages: ['jsdom', 'isomorphic-dompurify'],
   experimental: {
+    // Turbopack persistent filesystem cache — dramatically speeds up
+    // subsequent builds by caching compiled modules to disk. First build
+    // is the same speed, but second+ builds only recompile changed files.
+    turbopackFileSystemCacheForBuild: true,
+    turbopackFileSystemCacheForDev: true,
     // Increase body size limit for server actions (default is 1MB)
     serverActions: {
       bodySizeLimit: '2gb',
