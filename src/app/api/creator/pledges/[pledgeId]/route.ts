@@ -656,8 +656,14 @@ export async function DELETE(
       });
 
       creatorPledgesLogger.info(`[DELETE] Step 9: Deleting the Pledge itself`);
-      await tx.pledge.delete({
-        where: { id: pledgeId },
+      // deleteMany scoped to the same status we read above so two
+      // concurrent creator deletes don't both run all the related-row
+      // deleteMany's above and then one hits P2025 on the final delete.
+      // The related-row deleteMany's are all naturally idempotent, so
+      // the only thing the CAS protects against is the final .delete
+      // throwing P2025 and aborting the transaction.
+      await tx.pledge.deleteMany({
+        where: { id: pledgeId, status: typedPledge.status },
       });
 
       creatorPledgesLogger.info(`[DELETE] Step 10: Transaction complete`);

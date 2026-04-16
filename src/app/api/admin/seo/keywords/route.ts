@@ -256,26 +256,29 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // Look up the keyword name first so we can return it in the stats.
     const existing = await db.seoKeyword.findUnique({
+      where: { id },
+      select: { keyword: true },
+    });
+
+    // deleteMany for idempotency on concurrent double-clicks.
+    const deleted = await db.seoKeyword.deleteMany({
       where: { id },
     });
 
-    if (!existing) {
+    if (deleted.count === 0) {
       return NextResponse.json(
         { error: "Keyword not found" },
         { status: 404 }
       );
     }
 
-    await db.seoKeyword.delete({
-      where: { id },
-    });
-
     return NextResponse.json({
       data: { success: true },
       stats: {
         action: "deleted",
-        keyword: existing.keyword,
+        keyword: existing?.keyword ?? "",
       },
     });
   } catch (error) {

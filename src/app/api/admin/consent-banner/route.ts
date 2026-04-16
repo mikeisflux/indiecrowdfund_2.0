@@ -110,22 +110,25 @@ export async function POST() {
   }
 
   try {
-    let banner = await db.consentBanner.findFirst();
-
-    if (banner) {
-      banner = await db.consentBanner.update({
-        where: { id: banner.id },
-        data: { content: defaultContent },
-      });
-    } else {
-      banner = await db.consentBanner.create({
+    // Guarded by the same advisory lock as GET so two concurrent
+    // resets can't both find banner=null and create duplicate rows.
+    const banner = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('seed-consent-banner'))`;
+      const existing = await tx.consentBanner.findFirst();
+      if (existing) {
+        return tx.consentBanner.update({
+          where: { id: existing.id },
+          data: { content: defaultContent },
+        });
+      }
+      return tx.consentBanner.create({
         data: {
           isActive: true,
           showFrequency: "once_per_login",
           content: defaultContent,
         },
       });
-    }
+    });
 
     return NextResponse.json({ banner });
   } catch (error) {

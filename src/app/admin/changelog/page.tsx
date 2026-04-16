@@ -89,13 +89,15 @@ interface ChangelogStats {
   published: number;
   drafts: number;
   bugfixes: number;
+  features: number;
+  upgrades: number;
 }
 
 const PAGE_SIZE = 50;
 
 export default function AdminChangelogPage() {
   const [entries, setEntries] = useState<ChangelogEntry[]>([]);
-  const [stats, setStats] = useState<ChangelogStats>({ total: 0, published: 0, drafts: 0, bugfixes: 0 });
+  const [stats, setStats] = useState<ChangelogStats>({ total: 0, published: 0, drafts: 0, bugfixes: 0, features: 0, upgrades: 0 });
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<ChangelogEntry | null>(null);
@@ -373,7 +375,7 @@ export default function AdminChangelogPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -394,6 +396,22 @@ export default function AdminChangelogPage() {
               {stats.drafts}
             </div>
             <p className="text-xs text-muted-foreground">Drafts</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold text-emerald-600">
+              {stats.features}
+            </div>
+            <p className="text-xs text-muted-foreground">New Features</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold text-blue-500">
+              {stats.upgrades}
+            </div>
+            <p className="text-xs text-muted-foreground">Upgrades</p>
           </CardContent>
         </Card>
         <Card>

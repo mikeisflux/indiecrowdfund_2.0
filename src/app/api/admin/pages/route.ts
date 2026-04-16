@@ -297,7 +297,8 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await db.customPage.delete({
+    // deleteMany for idempotency on concurrent double-clicks.
+    await db.customPage.deleteMany({
       where: { id }
     });
 

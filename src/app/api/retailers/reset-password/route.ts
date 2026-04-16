@@ -73,17 +73,31 @@ export async function POST(req: NextRequest) {
     // Hash the new password
     const passwordHash = await hash(password, 12);
 
-    // Update the retailer's password
-    await db.retailer.update({
-      where: { id: retailer.id },
-      data: { passwordHash },
+    // Atomically consume the token, then update the password. We delete
+    // the token FIRST inside an interactive transaction and check the
+    // count — only the caller whose deleteMany returns 1 actually wins
+    // the race. Without this, two concurrent reset submissions with the
+    // same token would both write a password (last-write-wins).
+    const consumed = await db.$transaction(async (tx) => {
+      const deleted = await tx.passwordResetToken.deleteMany({
+        where: { token },
+      });
+      if (deleted.count === 0) {
+        return false;
+      }
+      await tx.retailer.update({
+        where: { id: retailer.id },
+        data: { passwordHash },
+      });
+      return true;
     });
 
-    // Delete the used token — deleteMany is idempotent so a concurrent
-    // second submission of the same token doesn't P2025 here.
-    await db.passwordResetToken.deleteMany({
-      where: { token },
-    });
+    if (!consumed) {
+      return NextResponse.json(
+        { error: "Invalid or expired reset link" },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

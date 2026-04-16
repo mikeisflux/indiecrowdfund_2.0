@@ -431,9 +431,20 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await db.divinityCoinSettlement.delete({
-      where: { id },
+    // CAS-style deleteMany: only delete if still PENDING. Two concurrent
+    // delete clicks (or a delete racing with a PATCH that flips status to
+    // INITIATED/PROCESSING/COMPLETED) must NOT delete a settlement that's
+    // already in flight — this is real money.
+    const deleted = await db.divinityCoinSettlement.deleteMany({
+      where: { id, status: "PENDING" },
     });
+
+    if (deleted.count === 0) {
+      return NextResponse.json(
+        { error: "Settlement status changed — please refresh and try again." },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

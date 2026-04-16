@@ -277,6 +277,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // Look up first so we can include fromPath in the response stats.
     const existing = await db.seoRedirect.findUnique({
       where: { id },
     });
@@ -288,7 +289,8 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await db.seoRedirect.delete({
+    // deleteMany for idempotency on concurrent double-clicks.
+    await db.seoRedirect.deleteMany({
       where: { id },
     });
 

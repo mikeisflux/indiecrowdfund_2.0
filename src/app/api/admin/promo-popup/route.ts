@@ -202,22 +202,25 @@ export async function POST() {
   }
 
   try {
-    let popup = await db.promoPopup.findFirst();
-
-    if (popup) {
-      popup = await db.promoPopup.update({
-        where: { id: popup.id },
-        data: { slides: defaultSlides },
-      });
-    } else {
-      popup = await db.promoPopup.create({
+    // Advisory lock so two concurrent resets don't both find popup=null
+    // and create duplicate rows.
+    const popup = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('seed-promo-popup'))`;
+      const existing = await tx.promoPopup.findFirst();
+      if (existing) {
+        return tx.promoPopup.update({
+          where: { id: existing.id },
+          data: { slides: defaultSlides },
+        });
+      }
+      return tx.promoPopup.create({
         data: {
           isActive: true,
           showFrequency: "once_per_session",
           slides: defaultSlides,
         },
       });
-    }
+    });
 
     return NextResponse.json({ popup }, { headers: corsHeaders });
   } catch (error) {

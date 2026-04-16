@@ -711,6 +711,30 @@ export async function DELETE(
       );
     }
 
+    // CAS-style delete: try to delete ONLY if status matches what we
+    // read above. Without this, two admins hitting delete simultaneously
+    // would both decrement project stats + reward quantityClaimed and
+    // then one would hit P2025 on .delete — double-decrementing the
+    // stats and reward slot irreversibly. Moving the delete FIRST with
+    // CAS and gating the side effects on count > 0 means only one
+    // caller proceeds with the decrements.
+    const deletedPledge = await db.pledge.deleteMany({
+      where: {
+        id: pledgeId,
+        status: pledge.status,
+        deletedAt: null,
+      },
+    });
+
+    if (deletedPledge.count === 0) {
+      // Another admin concurrently transitioned or deleted this pledge.
+      return NextResponse.json({
+        success: true,
+        message: "Pledge already deleted",
+        alreadyDeleted: true,
+      });
+    }
+
     // Update project stats only if they were previously counted (confirmationEmailSent = true)
     if (pledge.confirmationEmailSent) {
       await db.project.update({
@@ -726,11 +750,6 @@ export async function DELETE(
     if (pledge.reward?.id) {
       await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
     }
-
-    // Delete the pledge (PledgeAddon cascade-deletes automatically)
-    await db.pledge.delete({
-      where: { id: pledgeId },
-    });
 
     return NextResponse.json({
       success: true,

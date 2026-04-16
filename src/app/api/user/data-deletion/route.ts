@@ -121,25 +121,26 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "requestId is required" }, { status: 400 });
   }
 
-  const request = await db.dataDeletionRequest.findFirst({
+  // CAS-style cancel: enforce userId + status in the WHERE clause so a
+  // concurrent cron run that flipped the request to EXECUTING or
+  // COMPLETED doesn't race with this cancellation (and so cross-user
+  // requestId guessing is blocked). If the updateMany count is 0, the
+  // request is already out of our reach.
+  const cancelled = await db.dataDeletionRequest.updateMany({
     where: {
       id: requestId,
       userId: session.user.id,
       status: { in: ["PENDING", "SCHEDULED"] },
     },
-  });
-
-  if (!request) {
-    return NextResponse.json({ error: "Deletion request not found or already processed" }, { status: 404 });
-  }
-
-  await db.dataDeletionRequest.update({
-    where: { id: requestId },
     data: {
       status: "CANCELLED",
       cancelledAt: new Date(),
     },
   });
+
+  if (cancelled.count === 0) {
+    return NextResponse.json({ error: "Deletion request not found or already processed" }, { status: 404 });
+  }
 
   logger.info({ userId: session.user.id, requestId }, "GDPR deletion request cancelled");
 

@@ -65,7 +65,29 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [entries, total, publishedCount, draftCount, bugfixCount] = await Promise.all([
+    // "Upgrades" is the union of non-bugfix, non-OTHER categories —
+    // improvements, security, performance, UI/UX, API, and docs — so the
+    // admin dashboard can show a single "software upgrades" count next to
+    // "new features" and "bug fixes" (which is what the page used to show
+    // before the stats were trimmed).
+    const UPGRADE_CATEGORIES = [
+      "IMPROVEMENT",
+      "SECURITY",
+      "PERFORMANCE",
+      "UI_UX",
+      "API",
+      "DOCUMENTATION",
+    ] as const;
+
+    const [
+      entries,
+      total,
+      publishedCount,
+      draftCount,
+      bugfixCount,
+      featureCount,
+      upgradeCount,
+    ] = await Promise.all([
       db.changelogEntry.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -81,6 +103,8 @@ export async function GET(request: NextRequest) {
       db.changelogEntry.count({ where: { isPublished: true } }),
       db.changelogEntry.count({ where: { isPublished: false } }),
       db.changelogEntry.count({ where: { category: "BUGFIX" } }),
+      db.changelogEntry.count({ where: { category: "FEATURE" } }),
+      db.changelogEntry.count({ where: { category: { in: [...UPGRADE_CATEGORIES] } } }),
     ]);
 
     return NextResponse.json({
@@ -96,6 +120,8 @@ export async function GET(request: NextRequest) {
         published: publishedCount,
         drafts: draftCount,
         bugfixes: bugfixCount,
+        features: featureCount,
+        upgrades: upgradeCount,
       },
     });
   } catch (error) {
