@@ -230,7 +230,7 @@ export function SiteHeader() {
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors relative group flex items-center gap-1 outline-none">
-                Feedback
+                Bug Report/Changelog
                 <ChevronDown className="h-3 w-3" />
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
               </DropdownMenuTrigger>
@@ -325,7 +325,7 @@ export function SiteHeader() {
                   <MessageCircle className="h-4 w-4" />
                   Chat
                 </Link>
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-4 pb-2">Feedback</div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-4 pb-2">Bug Report/Changelog</div>
                 <Link href="/bug-report" className="text-sm font-medium hover:text-primary py-2 flex items-center gap-2">
                   <Bug className="h-4 w-4" />
                   Bug Submission
