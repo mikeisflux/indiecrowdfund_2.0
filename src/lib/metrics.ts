@@ -194,16 +194,27 @@ export const metrics = {
  * Serialize all metrics to Prometheus text format.
  */
 export function serializeMetrics(): string {
-  const processMetrics = [
-    `# HELP process_uptime_seconds Process uptime in seconds`,
-    `# TYPE process_uptime_seconds gauge`,
-    `process_uptime_seconds ${process.uptime()}`,
-    `# HELP nodejs_heap_size_bytes Node.js heap size`,
-    `# TYPE nodejs_heap_size_bytes gauge`,
-    `nodejs_heap_size_bytes{type="used"} ${process.memoryUsage().heapUsed}`,
-    `nodejs_heap_size_bytes{type="total"} ${process.memoryUsage().heapTotal}`,
-    `nodejs_heap_size_bytes{type="rss"} ${process.memoryUsage().rss}`,
-  ];
+  // process.uptime() and process.memoryUsage() are Node.js-only APIs
+  // that are not available in the Edge Runtime (middleware). Guard them
+  // so the module can be imported from both runtimes.
+  const processMetrics: string[] = [];
+  if (typeof process.uptime === "function") {
+    processMetrics.push(
+      `# HELP process_uptime_seconds Process uptime in seconds`,
+      `# TYPE process_uptime_seconds gauge`,
+      `process_uptime_seconds ${process.uptime()}`,
+    );
+  }
+  if (typeof process.memoryUsage === "function") {
+    const mem = process.memoryUsage();
+    processMetrics.push(
+      `# HELP nodejs_heap_size_bytes Node.js heap size`,
+      `# TYPE nodejs_heap_size_bytes gauge`,
+      `nodejs_heap_size_bytes{type="used"} ${mem.heapUsed}`,
+      `nodejs_heap_size_bytes{type="total"} ${mem.heapTotal}`,
+      `nodejs_heap_size_bytes{type="rss"} ${mem.rss}`,
+    );
+  }
 
   const appMetrics = Object.values(metrics).map((m) => m.serialize()).filter(Boolean);
 

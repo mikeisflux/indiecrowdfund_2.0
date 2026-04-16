@@ -193,7 +193,7 @@ export async function PUT(req: NextRequest) {
 
     adminRetailersLogger.info(`[Admin] Retailer ${retailerId} updated by ${session.user.id}: ${Object.keys(updateData).join(", ")}`);
 
-    revalidateTag("retailer-stats");
+    revalidateTag("retailer-stats", "max");
 
     return NextResponse.json({
       success: true,
@@ -383,7 +383,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     // Invalidate the retailer stats cache so counts update immediately
-    revalidateTag("retailer-stats");
+    revalidateTag("retailer-stats", "max");
 
     // Update linked user's retailerAccess if applicable
     if (updateUserRetailerAccess !== null && linkedUserId) {
