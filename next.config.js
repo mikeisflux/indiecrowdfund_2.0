@@ -18,7 +18,7 @@ const nextConfig = {
       { source: '/cookies', destination: '/privacy#cookies', permanent: true },
     ];
   },
-  // Note: Shopify iframe headers are handled by middleware.ts for proper CSP frame-ancestors support
+  // Note: Shopify iframe headers are handled by proxy.ts for proper CSP frame-ancestors support
   // Externalize jsdom and isomorphic-dompurify so they're resolved from
   // node_modules at runtime. Without this, jsdom's __dirname resolves to
   // the .next build directory causing ENOENT on default-stylesheet.css
@@ -28,10 +28,10 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '2gb',
     },
-    // Increase body size limit for requests going through middleware (default is 10MB)
+    // Increase body size limit for requests going through proxy (default is 10MB)
     // Without this, large file uploads (PDFs) get truncated and fail with
     // "Failed to parse body as FormData" because the multipart boundary is lost
-    middlewareClientMaxBodySize: 2 * 1024 * 1024 * 1024, // 2GB
+    proxyClientMaxBodySize: 2 * 1024 * 1024 * 1024, // 2GB
     // Tree-shake large icon/component libraries for smaller bundles
     optimizePackageImports: [
       'lucide-react',
