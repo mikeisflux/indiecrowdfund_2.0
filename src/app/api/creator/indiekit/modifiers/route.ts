@@ -387,21 +387,19 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "assignmentId required" }, { status: 400 });
       }
 
-      // Verify the assignment belongs to a pledge in this project before deleting
-      const assignment = await db.pledgeModifierAssignment.findFirst({
+      // Scoped delete via deleteMany so cross-project abuse is blocked AND
+      // a concurrent double-click (second delete on an already-gone row)
+      // returns { count: 0 } instead of throwing P2025.
+      const deleted = await db.pledgeModifierAssignment.deleteMany({
         where: {
           id: assignmentId,
           pledge: { projectId },
         },
       });
 
-      if (!assignment) {
+      if (deleted.count === 0) {
         return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
       }
-
-      await db.pledgeModifierAssignment.delete({
-        where: { id: assignmentId },
-      });
 
       return NextResponse.json({
         success: true,
@@ -456,35 +454,29 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Check if mapping exists
-      const existing = await db.modifierSkuMapping.findFirst({
+      // Atomic upsert against the @@unique([projectId, baseRewardId,
+      // modifierAddonId]) constraint — a findFirst+create race would hit
+      // P2002 on the second concurrent save.
+      const mapping = await db.modifierSkuMapping.upsert({
         where: {
-          projectId,
-          baseRewardId,
-          modifierAddonId,
-        },
-      });
-
-      let mapping;
-      if (existing) {
-        mapping = await db.modifierSkuMapping.update({
-          where: { id: existing.id },
-          data: {
-            shopifySku,
-            shopifyProductName,
-          },
-        });
-      } else {
-        mapping = await db.modifierSkuMapping.create({
-          data: {
+          projectId_baseRewardId_modifierAddonId: {
             projectId,
             baseRewardId,
             modifierAddonId,
-            shopifySku,
-            shopifyProductName,
           },
-        });
-      }
+        },
+        create: {
+          projectId,
+          baseRewardId,
+          modifierAddonId,
+          shopifySku,
+          shopifyProductName,
+        },
+        update: {
+          shopifySku,
+          shopifyProductName,
+        },
+      });
 
       return NextResponse.json({
         success: true,
@@ -501,18 +493,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "mappingId required" }, { status: 400 });
       }
 
-      // Verify the mapping belongs to this project before deleting
-      const existingMapping = await db.modifierSkuMapping.findFirst({
+      // Scope the delete to the project so cross-project abuse is blocked,
+      // and use deleteMany so a concurrent double-click (second delete on
+      // an already-gone row) returns { count: 0 } instead of P2025.
+      const deleted = await db.modifierSkuMapping.deleteMany({
         where: { id: mappingId, projectId },
       });
 
-      if (!existingMapping) {
+      if (deleted.count === 0) {
         return NextResponse.json({ error: "Modifier SKU mapping not found" }, { status: 404 });
       }
-
-      await db.modifierSkuMapping.delete({
-        where: { id: mappingId },
-      });
 
       return NextResponse.json({
         success: true,

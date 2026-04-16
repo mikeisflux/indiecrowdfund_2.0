@@ -312,9 +312,17 @@ export class ShuftiService {
       detectedAge = Math.floor((today.getTime() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
     }
 
-    // Update verification record
-    await db.iDVerification.update({
-      where: { id: verification.id },
+    // CAS on verification status: Shufti callbacks are at-least-once, so
+    // two concurrent webhooks for the same verification could race and
+    // both fall through to update the user record. Guard the update by
+    // requiring the row to NOT already be in a terminal state — if
+    // another webhook already handled this transition, bail out early.
+    const terminalStates = ["VERIFIED", "DECLINED", "CANCELLED"] as const;
+    const isNewTerminal = terminalStates.includes(status as typeof terminalStates[number]);
+    const updateResult = await db.iDVerification.updateMany({
+      where: isNewTerminal
+        ? { id: verification.id, status: { notIn: ["VERIFIED", "DECLINED", "CANCELLED"] } }
+        : { id: verification.id },
       data: {
         status,
         isDocumentValid: data.verification_result?.document?.document_number === 1,
@@ -329,6 +337,19 @@ export class ShuftiService {
         completedAt: isVerified || status === "DECLINED" ? new Date() : undefined,
       },
     });
+
+    if (updateResult.count === 0 && isNewTerminal) {
+      // Already in terminal state — duplicate/retried webhook, idempotent success.
+      shuftiLogger.info(
+        { reference, attemptedStatus: status },
+        "Shufti callback replay ignored — verification already in terminal state"
+      );
+      return {
+        success: true,
+        userId: verification.userId,
+        verified: verification.status === "VERIFIED",
+      };
+    }
 
     // If verified, update user record
     if (isVerified) {
