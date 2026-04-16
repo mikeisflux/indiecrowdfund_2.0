@@ -18,9 +18,16 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { execSync } from "child_process";
 
-const prisma = new PrismaClient();
+// Prisma 7 requires a driver adapter. Match src/lib/db/index.ts.
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  }),
+});
 
 // Parse CLI arguments
 const args = process.argv.slice(2);

@@ -10,7 +10,15 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { PrismaPg } = require('@prisma/adapter-pg');
+
+// Prisma 7 requires a driver adapter. Match src/lib/db/index.ts.
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  }),
+});
 
 async function main() {
   console.log('Fixing WebP URLs in database...\n');

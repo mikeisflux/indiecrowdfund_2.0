@@ -1,6 +1,13 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const db = new PrismaClient();
+// Prisma 7 requires a driver adapter. Match src/lib/db/index.ts.
+const db = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  }),
+});
 
 async function main() {
   console.log("\n=== Invalid Email Cleanup for Comic Shops ===\n");

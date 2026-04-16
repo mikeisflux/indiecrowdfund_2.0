@@ -14,6 +14,7 @@
 
 import { S3Client, ListObjectsV2Command, HeadBucketCommand } from "@aws-sdk/client-s3";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 async function testR2Connection() {
   console.log("🔧 R2 Connection Test Script\n");
@@ -31,7 +32,13 @@ async function testR2Connection() {
 
   // Load credentials from database
   console.log("2. Loading credentials from database...");
-  const prisma = new PrismaClient();
+  // Prisma 7 requires a driver adapter. Match src/lib/db/index.ts.
+  const prisma = new PrismaClient({
+    adapter: new PrismaPg({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    }),
+  });
 
   try {
     const settings = await prisma.platformSettings.findUnique({

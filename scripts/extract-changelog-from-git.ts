@@ -11,9 +11,17 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { execSync } from "child_process";
 
-const prisma = new PrismaClient();
+// Prisma 7 requires a driver adapter. Match src/lib/db/index.ts so this
+// script can connect against the same DB with the same SSL settings.
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  }),
+});
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");

@@ -1,5 +1,13 @@
 const { PrismaClient } = require("@prisma/client");
-const db = new PrismaClient();
+const { PrismaPg } = require("@prisma/adapter-pg");
+
+// Prisma 7 requires a driver adapter. Match src/lib/db/index.ts.
+const db = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  }),
+});
 
 async function main() {
   // 1. What homepage shows

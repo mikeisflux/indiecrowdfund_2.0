@@ -6,11 +6,18 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
 const fs = require('fs').promises;
 const path = require('path');
 const { randomUUID } = require('crypto');
 
-const prisma = new PrismaClient();
+// Prisma 7 requires a driver adapter. Match src/lib/db/index.ts.
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  }),
+});
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://indiecrowdfund.com';
 

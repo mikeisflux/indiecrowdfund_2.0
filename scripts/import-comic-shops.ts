@@ -4,6 +4,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -11,7 +12,13 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const prisma = new PrismaClient();
+// Prisma 7 requires a driver adapter. Match src/lib/db/index.ts.
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  }),
+});
 
 interface ShopRow {
   name: string;

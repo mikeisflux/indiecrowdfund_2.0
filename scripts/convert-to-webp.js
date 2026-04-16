@@ -15,11 +15,18 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
 const fs = require('fs').promises;
 const path = require('path');
 const sharp = require('sharp');
 
-const prisma = new PrismaClient();
+// Prisma 7 requires a driver adapter. Match src/lib/db/index.ts.
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  }),
+});
 
 // Configuration
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
