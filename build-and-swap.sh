@@ -1,8 +1,12 @@
 #!/bin/bash
 
-# Quick build and swap script
-# Builds to .next-new while site stays live, then swaps + restarts PM2
-# Scales down PM2 during build to free RAM for Turbopack
+# Quick build and swap script (Turbopack in-place cached build)
+# Backs up current .next via hardlinks, builds in-place for Turbopack cache,
+# then reloads PM2. If build fails, rolls back instantly from backup.
+#
+# Site stays up throughout because PM2 serves from memory while the
+# build replaces files on disk — the reload at the end picks up the
+# new build. With 15GB RAM + 4GB swap, OOM is no longer a concern.
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
@@ -72,88 +76,79 @@ else
     exit 1
 fi
 
-# Step 5: Clean up any previous failed build attempts
+# Step 5: Backup current build (instant hardlink copy)
 echo ""
-echo "🧹 Step 5: Cleaning up previous build attempts..."
+echo "🧹 Step 5: Backing up current build..."
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Clean up any previous failed .next-new attempts
 if [ -d ".next-new" ]; then
     rm -rf .next-new
-    echo -e "${GREEN}   Cleaned up .next-new${NC}"
-else
-    echo -e "${GREEN}   No cleanup needed${NC}"
+    echo -e "${GREEN}   Cleaned up stale .next-new${NC}"
 fi
 
-# Also clean stale .next/types (only used for TS checking, not runtime)
+# Hardlink backup — instant, uses zero extra disk until files diverge
+if [ -d ".next" ]; then
+    cp -al .next ".next-backup-${TIMESTAMP}"
+    echo -e "${GREEN}   Backed up to .next-backup-${TIMESTAMP} (instant hardlink copy)${NC}"
+else
+    echo -e "${YELLOW}   No existing build to backup${NC}"
+fi
+
+# Clean stale .next/types
 if [ -d ".next/types" ]; then
     rm -rf .next/types
-    echo -e "${GREEN}   Cleaned stale .next/types${NC}"
 fi
 
-# Step 6: Scale down PM2 to free RAM for the build
-# Turbopack needs ~2-3GB during compilation. With 4 PM2 instances each
-# using ~500MB, the server can OOM. Scale to 1 instance during build
-# so there's enough headroom, then scale back up after.
-echo ""
-echo "⚡ Step 6: Scaling down PM2 for build (1 instance keeps site live)..."
-pm2 scale indiecrowdfund 1 2>/dev/null || true
-echo -e "${GREEN}   PM2 scaled to 1 instance${NC}"
+# Keep only 3 most recent backups
+BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
+if [ "$BACKUP_COUNT" -gt 3 ]; then
+    ls -dt .next-backup-* | tail -n +4 | xargs rm -rf
+    echo -e "${GREEN}   Cleaned old backups (keeping 3)${NC}"
+fi
 
-# Step 7: Build new version to separate directory (site stays live on 1 instance)
+# Step 6: Build in-place with Turbopack cache
+# PM2 continues serving from memory while files are replaced on disk.
+# The Turbopack cache in .next/cache/ is reused, so only changed
+# modules recompile (~2-7s instead of ~43s cold).
 echo ""
-echo "🔨 Step 7: Building new version to .next-new..."
-BUILD_OUTPUT=$(NEXT_BUILD_OUTPUT=.next-new npx next build 2>&1)
+echo "⚡ Step 6: Building with Turbopack (in-place, cached)..."
+BUILD_OUTPUT=$(npx next build 2>&1)
 BUILD_EXIT_CODE=$?
 
-# Extract compile time from build output
 COMPILE_TIME=$(echo "$BUILD_OUTPUT" | grep -oP 'Compiled successfully in \K[0-9.]+s' || echo "unknown")
 
 if [ $BUILD_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}✅ Build successful! (compiled in ${COMPILE_TIME})${NC}"
-
-    # Step 8: Atomic swap - backup old, swap in new
-    echo ""
-    echo "🔄 Step 8: Swapping build directories..."
-    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-
-    if [ -d ".next" ]; then
-        # Move old build to backup
-        mv .next ".next-backup-${TIMESTAMP}"
-        echo "   Backed up old build to .next-backup-${TIMESTAMP}"
-    fi
-
-    # Move new build into place
-    mv .next-new .next
-    echo -e "${GREEN}   New build is now live!${NC}"
-
-    # Keep only the 3 most recent backups, delete older ones
-    BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
-    if [ "$BACKUP_COUNT" -gt 3 ]; then
-        echo "   Cleaning old backups (keeping last 3)..."
-        ls -dt .next-backup-* | tail -n +4 | xargs rm -rf
-        echo -e "${GREEN}   Old backups removed${NC}"
-    fi
 else
     echo -e "${RED}❌ BUILD FAILED!${NC}"
     echo ""
     echo "========== BUILD ERRORS =========="
     echo "$BUILD_OUTPUT" | tail -50
     echo "=================================="
-    echo ""
-    echo -e "${GREEN}   Site is still running with old build.${NC}"
 
-    # Clean up failed build attempt
-    rm -rf .next-new
-
-    # Scale PM2 back up before exiting
-    echo "   Scaling PM2 back to 4 instances..."
-    pm2 scale indiecrowdfund 4 2>/dev/null || true
+    # Roll back from backup
+    LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
+    if [ -n "$LATEST_BACKUP" ]; then
+        echo ""
+        echo "   Rolling back to ${LATEST_BACKUP}..."
+        rm -rf .next
+        mv "$LATEST_BACKUP" .next
+        echo -e "${GREEN}   Rolled back successfully.${NC}"
+        # Make sure PM2 is serving with the restored build
+        pm2 reload all --update-env 2>/dev/null
+        echo -e "${GREEN}   PM2 reloaded with restored build. Site is live.${NC}"
+    else
+        echo -e "${RED}   No backup available! Run: pm2 restart all${NC}"
+    fi
     exit 1
 fi
 
-# Step 9: Scale PM2 back up and reload with new build
+# Step 7: Reload PM2 (rolling restart picks up new build)
 echo ""
-echo "🔄 Step 9: Reloading PM2 (scaling back to 4 instances)..."
-if pm2 scale indiecrowdfund 4 --update-env 2>&1 && pm2 reload all --update-env 2>&1; then
-    echo -e "${GREEN}   PM2 reloaded with 4 instances${NC}"
+echo "🔄 Step 7: Reloading PM2 (zero-downtime rolling restart)..."
+if pm2 reload all --update-env 2>&1; then
+    echo -e "${GREEN}   PM2 reloaded${NC}"
 else
     echo -e "${RED}❌ ERROR: PM2 reload failed!${NC}"
     echo "   Attempting rollback..."
@@ -161,16 +156,15 @@ else
     if [ -n "$LATEST_BACKUP" ]; then
         rm -rf .next
         mv "$LATEST_BACKUP" .next
-        pm2 scale indiecrowdfund 4 2>/dev/null || true
         pm2 reload all --update-env
         echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
     fi
     exit 1
 fi
 
-# Step 10: Verify app is running
+# Step 8: Verify app is running
 echo ""
-echo "🔍 Step 10: Verifying deployment..."
+echo "🔍 Step 8: Verifying deployment..."
 sleep 3
 if pm2 status | grep -q "online"; then
     echo -e "${GREEN}   App is running!${NC}"
@@ -184,7 +178,6 @@ fi
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 
-# List available backups
 BACKUP_LIST=$(ls -dt .next-backup-* 2>/dev/null | head -3)
 
 echo ""
