@@ -114,13 +114,33 @@ export async function POST(req: NextRequest) {
         });
         results.push({ path, action: "updated", fieldsFixed });
       } else {
-        await db.seoPageMeta.create({
-          data: {
-            path,
-            ...data,
-          },
-        });
-        results.push({ path, action: "created", fieldsFixed });
+        // Catch P2002 unique violation on path — another concurrent fix-all
+        // request may have created this record between our findMany and now.
+        try {
+          await db.seoPageMeta.create({
+            data: {
+              path,
+              ...data,
+            },
+          });
+          results.push({ path, action: "created", fieldsFixed });
+        } catch (createErr) {
+          const isUniqueViolation =
+            createErr &&
+            typeof createErr === "object" &&
+            "code" in createErr &&
+            (createErr as { code?: string }).code === "P2002";
+          if (isUniqueViolation) {
+            // Row was created concurrently — update it instead.
+            const concurrentMeta = await db.seoPageMeta.findFirst({ where: { path } });
+            if (concurrentMeta) {
+              await db.seoPageMeta.update({ where: { id: concurrentMeta.id }, data });
+            }
+            results.push({ path, action: "updated", fieldsFixed });
+          } else {
+            throw createErr;
+          }
+        }
       }
 
       totalFieldsFixed += fieldsFixed.length;

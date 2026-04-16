@@ -264,10 +264,27 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    const page = await db.customPage.update({
-      where: { id },
-      data: updateData
-    });
+    let page;
+    try {
+      page = await db.customPage.update({
+        where: { id },
+        data: updateData
+      });
+    } catch (updateErr) {
+      // Catch P2002 unique violation on slug — the findUnique check above is TOCTOU.
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "A page with this slug already exists" },
+          { status: 409 }
+        );
+      }
+      throw updateErr;
+    }
 
     return NextResponse.json({ success: true, page });
   } catch (error) {

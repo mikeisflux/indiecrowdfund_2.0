@@ -174,13 +174,18 @@ export async function PATCH(req: NextRequest) {
     }
 
     const updateData: Record<string, unknown> = {};
+    // statusFilter is used in the atomic updateMany to guard against
+    // concurrent status changes (CAS pattern).
+    let statusFilter: string | undefined;
 
     switch (action) {
       case "REVIEW":
+        statusFilter = report.status;
         updateData.status = "UNDER_REVIEW";
         break;
 
       case "RESOLVE":
+        statusFilter = report.status;
         updateData.status = "RESOLVED";
         updateData.resolvedBy = authResult.user.id;
         updateData.resolvedAt = new Date();
@@ -189,6 +194,7 @@ export async function PATCH(req: NextRequest) {
         break;
 
       case "DISMISS":
+        statusFilter = report.status;
         updateData.status = "DISMISSED";
         updateData.resolvedBy = authResult.user.id;
         updateData.resolvedAt = new Date();
@@ -197,6 +203,7 @@ export async function PATCH(req: NextRequest) {
         break;
 
       case "ESCALATE":
+        statusFilter = report.status;
         updateData.status = "ESCALATED";
         updateData.priority = "URGENT";
         break;
@@ -212,6 +219,22 @@ export async function PATCH(req: NextRequest) {
           { error: "Invalid action" },
           { status: 400 }
         );
+    }
+
+    // Use updateMany with status filter for CAS when a status transition is involved.
+    if (statusFilter) {
+      const result = await db.report.updateMany({
+        where: { id: reportId, status: statusFilter },
+        data: updateData,
+      });
+      if (result.count === 0) {
+        return NextResponse.json(
+          { error: "Report status has changed — please refresh and try again" },
+          { status: 409 }
+        );
+      }
+      const updatedReport = await db.report.findUnique({ where: { id: reportId } });
+      return NextResponse.json({ success: true, report: updatedReport });
     }
 
     const updatedReport = await db.report.update({

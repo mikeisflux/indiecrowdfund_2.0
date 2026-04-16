@@ -123,8 +123,8 @@
 - [x] `scripts/botblock-watcher.service` — Systemd service file. Clean.
 - [x] `scripts/botblock-watcher.sh` — Shell script for IP monitoring. Clean.
 - [x] `scripts/build-staging.sh` — Build script. Clean.
-- [ ] `scripts/cleanup-incomplete-pledges.ts`
-- [ ] `scripts/cleanup-invalid-emails.ts`
+- [x] `scripts/cleanup-incomplete-pledges.ts` — Read-only (delete is commented out). PrismaPg adapter present. Clean.
+- [x] `scripts/cleanup-invalid-emails.ts` — Single updateMany (idempotent). PrismaPg adapter present. Clean.
 - [x] `scripts/cleanup-stale-pledges.sh` — Shell script (calls API). Clean.
 - [ ] `scripts/convert-to-webp.js`
 - [x] `scripts/deploy.sh` — Deployment script. No app-level races. Clean.

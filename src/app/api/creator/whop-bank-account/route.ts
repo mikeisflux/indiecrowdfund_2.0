@@ -85,40 +85,31 @@ export async function POST(req: NextRequest) {
     const encryptedRoutingNumber = encrypt(routingNumber);
     const lastFour = getLastDigits(accountNumber, 4);
 
-    const existing = await db.whopBankAccount.findUnique({
+    // Atomic upsert on userId @unique — avoids findUnique→create TOCTOU.
+    const bankAccount = await db.whopBankAccount.upsert({
       where: { userId: session.user.id },
+      update: {
+        bankNameEncrypted: encryptedBankName,
+        accountHolderEncrypted: encryptedAccountHolder,
+        accountNumberEncrypted: encryptedAccountNumber,
+        routingNumberEncrypted: encryptedRoutingNumber,
+        bankNameDisplay: bankName,
+        accountLastFour: lastFour,
+        accountType: accountType || "checking",
+        isVerified: false,
+        verifiedAt: null,
+      },
+      create: {
+        userId: session.user.id,
+        bankNameEncrypted: encryptedBankName,
+        accountHolderEncrypted: encryptedAccountHolder,
+        accountNumberEncrypted: encryptedAccountNumber,
+        routingNumberEncrypted: encryptedRoutingNumber,
+        bankNameDisplay: bankName,
+        accountLastFour: lastFour,
+        accountType: accountType || "checking",
+      },
     });
-
-    let bankAccount;
-    if (existing) {
-      bankAccount = await db.whopBankAccount.update({
-        where: { userId: session.user.id },
-        data: {
-          bankNameEncrypted: encryptedBankName,
-          accountHolderEncrypted: encryptedAccountHolder,
-          accountNumberEncrypted: encryptedAccountNumber,
-          routingNumberEncrypted: encryptedRoutingNumber,
-          bankNameDisplay: bankName,
-          accountLastFour: lastFour,
-          accountType: accountType || "checking",
-          isVerified: false,
-          verifiedAt: null,
-        },
-      });
-    } else {
-      bankAccount = await db.whopBankAccount.create({
-        data: {
-          userId: session.user.id,
-          bankNameEncrypted: encryptedBankName,
-          accountHolderEncrypted: encryptedAccountHolder,
-          accountNumberEncrypted: encryptedAccountNumber,
-          routingNumberEncrypted: encryptedRoutingNumber,
-          bankNameDisplay: bankName,
-          accountLastFour: lastFour,
-          accountType: accountType || "checking",
-        },
-      });
-    }
 
     return NextResponse.json({
       success: true,
@@ -148,7 +139,8 @@ export async function DELETE() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await db.whopBankAccount.delete({
+    // deleteMany for idempotency on concurrent double-clicks.
+    await db.whopBankAccount.deleteMany({
       where: { userId: session.user.id },
     });
 

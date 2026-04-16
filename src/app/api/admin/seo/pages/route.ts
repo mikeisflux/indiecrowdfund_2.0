@@ -117,12 +117,33 @@ export async function POST(req: NextRequest) {
         data,
       });
     } else {
-      pageMeta = await db.seoPageMeta.create({
-        data: {
-          path: normalizedPath,
-          ...data,
-        },
-      });
+      // Catch P2002 unique violation on path — another concurrent request
+      // may have created this record between our findFirst and now.
+      try {
+        pageMeta = await db.seoPageMeta.create({
+          data: {
+            path: normalizedPath,
+            ...data,
+          },
+        });
+      } catch (createErr) {
+        const isUniqueViolation =
+          createErr &&
+          typeof createErr === "object" &&
+          "code" in createErr &&
+          (createErr as { code?: string }).code === "P2002";
+        if (isUniqueViolation) {
+          // Row was created concurrently — update it instead.
+          const concurrentMeta = await db.seoPageMeta.findFirst({ where: { path: normalizedPath } });
+          if (concurrentMeta) {
+            pageMeta = await db.seoPageMeta.update({ where: { id: concurrentMeta.id }, data });
+          } else {
+            throw createErr;
+          }
+        } else {
+          throw createErr;
+        }
+      }
     }
 
     return NextResponse.json({

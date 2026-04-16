@@ -85,40 +85,33 @@ export async function POST(req: NextRequest) {
     const encryptedRoutingNumber = encrypt(routingNumber);
     const lastFour = getLastDigits(accountNumber, 4);
 
-    const existing = await db.payPalBankAccount.findUnique({
+    // Atomic upsert on userId @unique — avoids findUnique→create TOCTOU
+    // where two concurrent saves both see "not exists" and the second
+    // create hits P2002.
+    const bankAccount = await db.payPalBankAccount.upsert({
       where: { userId: session.user.id },
+      update: {
+        bankNameEncrypted: encryptedBankName,
+        accountHolderEncrypted: encryptedAccountHolder,
+        accountNumberEncrypted: encryptedAccountNumber,
+        routingNumberEncrypted: encryptedRoutingNumber,
+        bankNameDisplay: bankName,
+        accountLastFour: lastFour,
+        accountType: accountType || "checking",
+        isVerified: false,
+        verifiedAt: null,
+      },
+      create: {
+        userId: session.user.id,
+        bankNameEncrypted: encryptedBankName,
+        accountHolderEncrypted: encryptedAccountHolder,
+        accountNumberEncrypted: encryptedAccountNumber,
+        routingNumberEncrypted: encryptedRoutingNumber,
+        bankNameDisplay: bankName,
+        accountLastFour: lastFour,
+        accountType: accountType || "checking",
+      },
     });
-
-    let bankAccount;
-    if (existing) {
-      bankAccount = await db.payPalBankAccount.update({
-        where: { userId: session.user.id },
-        data: {
-          bankNameEncrypted: encryptedBankName,
-          accountHolderEncrypted: encryptedAccountHolder,
-          accountNumberEncrypted: encryptedAccountNumber,
-          routingNumberEncrypted: encryptedRoutingNumber,
-          bankNameDisplay: bankName,
-          accountLastFour: lastFour,
-          accountType: accountType || "checking",
-          isVerified: false,
-          verifiedAt: null,
-        },
-      });
-    } else {
-      bankAccount = await db.payPalBankAccount.create({
-        data: {
-          userId: session.user.id,
-          bankNameEncrypted: encryptedBankName,
-          accountHolderEncrypted: encryptedAccountHolder,
-          accountNumberEncrypted: encryptedAccountNumber,
-          routingNumberEncrypted: encryptedRoutingNumber,
-          bankNameDisplay: bankName,
-          accountLastFour: lastFour,
-          accountType: accountType || "checking",
-        },
-      });
-    }
 
     return NextResponse.json({
       success: true,
@@ -148,7 +141,8 @@ export async function DELETE() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await db.payPalBankAccount.delete({
+    // deleteMany for idempotency on concurrent double-clicks.
+    await db.payPalBankAccount.deleteMany({
       where: { userId: session.user.id },
     });
 

@@ -415,7 +415,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
       }
 
-      const existingMeta = (pledge.metadata as Record<string, unknown>) || {};
       const tracking = {
         carrier: data.carrier,
         trackingNumber: data.trackingNumber,
@@ -423,12 +422,23 @@ export async function POST(req: NextRequest) {
         addedBy: session.user.id,
       };
 
-      await db.pledge.update({
-        where: { id: data.pledgeId },
-        data: {
-          metadata: { ...existingMeta, tracking },
-          ...(data.markAsShipped ? { fulfillmentStatus: "SHIPPED" } : {}),
-        },
+      // Wrap metadata read-modify-write in a transaction with FOR UPDATE
+      // to prevent concurrent tracking updates from losing each other's writes.
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${data.pledgeId} FOR UPDATE`;
+        const freshPledge = await tx.pledge.findUnique({
+          where: { id: data.pledgeId },
+          select: { metadata: true },
+        });
+        const freshMeta = (freshPledge?.metadata as Record<string, unknown>) || {};
+
+        await tx.pledge.update({
+          where: { id: data.pledgeId },
+          data: {
+            metadata: { ...freshMeta, tracking },
+            ...(data.markAsShipped ? { fulfillmentStatus: "SHIPPED" } : {}),
+          },
+        });
       });
 
       // Send backer notification email
@@ -477,42 +487,60 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
       }
 
-      const pledge = await db.pledge.findFirst({
+      // Verify pledge exists before entering transaction
+      const pledgeCheck = await db.pledge.findFirst({
         where: { id: data.pledgeId, projectId: data.projectId, deletedAt: null, status: "COMPLETED" },
+        select: { id: true },
       });
-      if (!pledge) {
+      if (!pledgeCheck) {
         return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
       }
 
-      const existingMeta = (pledge.metadata as Record<string, unknown>) || {};
+      // MONEY OPERATION: wrap in $transaction with FOR UPDATE to prevent
+      // concurrent balance adjustments from reading stale metadata and
+      // overwriting each other's changes.
+      const newBalanceDue = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${data.pledgeId} FOR UPDATE`;
+        const freshPledge = await tx.pledge.findUnique({
+          where: { id: data.pledgeId },
+          select: { metadata: true, amount: true, rewardAmount: true, addonsAmount: true, shippingAmount: true },
+        });
+        if (!freshPledge) {
+          throw new Error("PLEDGE_DISAPPEARED");
+        }
 
-      // Compute current balanceDue (same logic as compute-stats.ts)
-      const storedBalanceDue = existingMeta.balanceDue != null ? Number(existingMeta.balanceDue) : null;
-      const pledgeTotal = Number(pledge.amount);
-      const expectedTotal = Number(pledge.rewardAmount) + Number(pledge.addonsAmount) + Number(pledge.shippingAmount);
-      const computedBalanceDue = storedBalanceDue !== null ? storedBalanceDue : Math.max(0, expectedTotal - pledgeTotal);
+        const freshMeta = (freshPledge.metadata as Record<string, unknown>) || {};
 
-      // Apply adjustment: credit reduces balance, charge increases it
-      const delta = data.adjustmentType === "credit" ? -data.amount : data.amount;
-      const newBalanceDue = Math.round((computedBalanceDue + delta) * 100) / 100;
+        // Compute current balanceDue (same logic as compute-stats.ts)
+        const storedBalanceDue = freshMeta.balanceDue != null ? Number(freshMeta.balanceDue) : null;
+        const pledgeTotal = Number(freshPledge.amount);
+        const expectedTotal = Number(freshPledge.rewardAmount) + Number(freshPledge.addonsAmount) + Number(freshPledge.shippingAmount);
+        const computedBalanceDue = storedBalanceDue !== null ? storedBalanceDue : Math.max(0, expectedTotal - pledgeTotal);
 
-      // Record adjustment history
-      const adjustments = Array.isArray(existingMeta.adjustments) ? existingMeta.adjustments : [];
-      adjustments.push({
-        type: data.adjustmentType,
-        amount: data.amount,
-        reason: data.reason || "",
-        previousBalance: computedBalanceDue,
-        newBalance: newBalanceDue,
-        adjustedAt: new Date().toISOString(),
-        adjustedBy: session.user.id,
-      });
+        // Apply adjustment: credit reduces balance, charge increases it
+        const delta = data.adjustmentType === "credit" ? -data.amount : data.amount;
+        const resultBalanceDue = Math.round((computedBalanceDue + delta) * 100) / 100;
 
-      await db.pledge.update({
-        where: { id: data.pledgeId },
-        data: {
-          metadata: { ...existingMeta, balanceDue: newBalanceDue, adjustments },
-        },
+        // Record adjustment history
+        const adjustments = Array.isArray(freshMeta.adjustments) ? [...freshMeta.adjustments] : [];
+        adjustments.push({
+          type: data.adjustmentType,
+          amount: data.amount,
+          reason: data.reason || "",
+          previousBalance: computedBalanceDue,
+          newBalance: resultBalanceDue,
+          adjustedAt: new Date().toISOString(),
+          adjustedBy: session.user.id,
+        });
+
+        await tx.pledge.update({
+          where: { id: data.pledgeId },
+          data: {
+            metadata: { ...freshMeta, balanceDue: resultBalanceDue, adjustments },
+          },
+        });
+
+        return resultBalanceDue;
       });
 
       return NextResponse.json({ success: true, newBalanceDue });

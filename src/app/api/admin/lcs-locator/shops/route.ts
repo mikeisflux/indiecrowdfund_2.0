@@ -195,7 +195,23 @@ export async function PATCH(req: NextRequest) {
       data.slug = slug;
     }
 
-    const shop = await db.comicShop.update({ where: { id }, data });
+    let shop;
+    try {
+      shop = await db.comicShop.update({ where: { id }, data });
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "A shop with this slug already exists" },
+          { status: 409 }
+        );
+      }
+      throw updateErr;
+    }
 
     return NextResponse.json(shop);
   } catch (error) {
@@ -218,12 +234,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Shop id is required" }, { status: 400 });
     }
 
-    const existing = await db.comicShop.findUnique({ where: { id } });
-    if (!existing) {
+    // deleteMany for idempotency on concurrent double-clicks
+    // (avoids P2025 if the row was already deleted).
+    const deleted = await db.comicShop.deleteMany({ where: { id } });
+
+    if (deleted.count === 0) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
-
-    await db.comicShop.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

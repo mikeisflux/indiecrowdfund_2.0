@@ -171,7 +171,7 @@ export async function DELETE() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await db.divinityCoinBankAccount.delete({
+    await db.divinityCoinBankAccount.deleteMany({
       where: { userId: session.user.id },
     });
 

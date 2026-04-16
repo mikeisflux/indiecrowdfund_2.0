@@ -205,23 +205,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const transaction = await db.divinityCoinTransaction.create({
-      data: {
-        userId,
-        amount: parsedAmount,
-        type,
-        description: description || null,
-        metadata: JSON.stringify({
-          createdBy: adminId,
-          source: "admin_manual",
-          createdAt: new Date().toISOString(),
-        }),
-      },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true, image: true },
+    // Use an advisory lock to prevent duplicate-submission from double-clicks.
+    // Two concurrent POSTs with the same userId+type+amount within 60 seconds
+    // are treated as duplicates.
+    const transaction = await db.$transaction(async (tx) => {
+      const lockKey = `dc-txn-${userId}-${type}`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+
+      const recent = await tx.divinityCoinTransaction.findFirst({
+        where: {
+          userId,
+          type,
+          createdAt: { gt: new Date(Date.now() - 60_000) },
         },
-      },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, amount: true },
+      });
+      if (recent && Number(recent.amount) === parsedAmount) {
+        throw new Error("DUPLICATE_TRANSACTION");
+      }
+
+      return tx.divinityCoinTransaction.create({
+        data: {
+          userId,
+          amount: parsedAmount,
+          type,
+          description: description || null,
+          metadata: JSON.stringify({
+            createdBy: adminId,
+            source: "admin_manual",
+            createdAt: new Date().toISOString(),
+          }),
+        },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true, image: true },
+          },
+        },
+      });
     });
 
     return NextResponse.json({
@@ -237,6 +258,12 @@ export async function POST(req: NextRequest) {
       pledge: null,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_TRANSACTION") {
+      return NextResponse.json(
+        { error: "A transaction with this amount was just created for this user. Please refresh before creating another." },
+        { status: 409 }
+      );
+    }
     adminDivinitycoinRedemptionsLogger.error({ err: String(error) }, "Error creating DivinityCoin transaction:");
     return NextResponse.json(
       { error: "Failed to create transaction" },

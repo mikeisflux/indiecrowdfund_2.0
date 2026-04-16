@@ -294,6 +294,13 @@ export async function PATCH(req: NextRequest) {
         break;
 
       case "MARK_FAILED":
+        if (settlement.status === "COMPLETED" || settlement.status === "CANCELLED") {
+          return NextResponse.json(
+            { error: "Cannot mark a completed or cancelled settlement as failed" },
+            { status: 400 }
+          );
+        }
+        statusFilter = { status: settlement.status };
         updateData = {
           status: "FAILED",
           failedAt: new Date(),

@@ -25,7 +25,7 @@ export async function POST(
 
     const { id } = await params;
 
-    // Check ownership
+    // Check ownership and fetch for validation
     const book = await prisma.marketplaceBook.findFirst({
       where: {
         id,
@@ -90,9 +90,15 @@ export async function POST(
       }
     }
 
-    // Update status to pending review
-    const updatedBook = await prisma.marketplaceBook.update({
-      where: { id },
+    // Use updateMany with status guard to prevent TOCTOU — if another
+    // request already moved the book out of DRAFT/REJECTED, count === 0.
+    const { count } = await prisma.marketplaceBook.updateMany({
+      where: {
+        id,
+        creatorId: session.user.id,
+        deletedAt: null,
+        status: { in: ["DRAFT", "REJECTED"] },
+      },
       data: {
         status: "PENDING_REVIEW",
         submittedAt: new Date(),
@@ -101,12 +107,19 @@ export async function POST(
       },
     });
 
+    if (count === 0) {
+      return NextResponse.json(
+        { error: "Book status has already changed, cannot submit" },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       book: {
-        id: updatedBook.id,
-        title: updatedBook.title,
-        status: updatedBook.status,
+        id: book.id,
+        title: book.title,
+        status: "PENDING_REVIEW",
       },
       message: "Book submitted for review",
     });

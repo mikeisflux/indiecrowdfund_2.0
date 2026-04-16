@@ -253,10 +253,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "announcementIds must be an array" }, { status: 400, headers: corsHeaders });
     }
 
-    // Update sort order for each announcement
-    await Promise.all(
+    // Wrap all reorder updates in a transaction with updateMany
+    // to prevent partial reorder from concurrent requests.
+    await db.$transaction(
       announcementIds.map((id: string, index: number) =>
-        db.announcementBar.update({
+        db.announcementBar.updateMany({
           where: { id },
           data: { sortOrder: index },
         })

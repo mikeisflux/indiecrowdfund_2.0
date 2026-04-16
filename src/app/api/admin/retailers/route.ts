@@ -308,15 +308,36 @@ export async function PATCH(req: NextRequest) {
         linkedUserId = existingUser.id;
         adminRetailersLogger.info(`[Admin] Linked retailer ${retailerId} to existing user ${existingUser.id}`);
       } else {
-        // Create a new User account for the retailer
-        const newUser = await db.user.create({
-          data: {
-            email: retailer.email,
-            name: retailer.contactName,
-            emailVerified: new Date(),
-            retailerAccess: true,
-          },
-        });
+        // Create a new User account for the retailer.
+        // Catch P2002 unique violation in case a concurrent approval
+        // request already created the user with this email.
+        let newUser;
+        try {
+          newUser = await db.user.create({
+            data: {
+              email: retailer.email,
+              name: retailer.contactName,
+              emailVerified: new Date(),
+              retailerAccess: true,
+            },
+          });
+        } catch (createErr) {
+          const isUniqueViolation =
+            createErr &&
+            typeof createErr === "object" &&
+            "code" in createErr &&
+            (createErr as { code?: string }).code === "P2002";
+          if (isUniqueViolation) {
+            // Another request created the user first — look it up instead.
+            const raceUser = await db.user.findFirst({
+              where: { email: retailer.email, deletedAt: null },
+            });
+            if (!raceUser) throw createErr;
+            newUser = raceUser;
+          } else {
+            throw createErr;
+          }
+        }
         linkedUserId = newUser.id;
         adminRetailersLogger.info(`[Admin] Created new user account ${newUser.id} for retailer ${retailerId}`);
       }

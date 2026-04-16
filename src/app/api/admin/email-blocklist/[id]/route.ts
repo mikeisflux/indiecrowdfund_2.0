@@ -159,21 +159,18 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Check if entry exists
-    const existing = await db.emailBlocklist.findUnique({
+    // deleteMany for idempotency on concurrent double-clicks
+    // (avoids P2025 if the row was already deleted).
+    const deleted = await db.emailBlocklist.deleteMany({
       where: { id },
     });
 
-    if (!existing) {
+    if (deleted.count === 0) {
       return NextResponse.json(
         { error: "Entry not found" },
         { status: 404 }
       );
     }
-
-    await db.emailBlocklist.delete({
-      where: { id },
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -43,34 +43,27 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = schema.parse(body);
 
-    const existing = await db.payPalPayoutConfig.findUnique({
+    const normalizedEmail = data.paypalEmail.toLowerCase().trim();
+
+    // Atomic upsert on userId @unique — avoids findUnique→create TOCTOU.
+    // Always set the email; reset verification unconditionally on update
+    // (a no-op if email hasn't changed since isVerified was already false
+    // from the prior reset, and the cost of the extra write is negligible).
+    const config = await db.payPalPayoutConfig.upsert({
       where: { userId: session.user.id },
-    });
-
-    if (existing) {
-      const updated = await db.payPalPayoutConfig.update({
-        where: { userId: session.user.id },
-        data: {
-          paypalEmail: data.paypalEmail.toLowerCase().trim(),
-          // Reset verification if email changed
-          ...(existing.paypalEmail !== data.paypalEmail.toLowerCase().trim()
-            ? { isVerified: false, verifiedAt: null }
-            : {}),
-        },
-        select: { paypalEmail: true, isVerified: true },
-      });
-      return NextResponse.json({ config: updated, message: "PayPal email updated" });
-    }
-
-    const created = await db.payPalPayoutConfig.create({
-      data: {
+      update: {
+        paypalEmail: normalizedEmail,
+        isVerified: false,
+        verifiedAt: null,
+      },
+      create: {
         userId: session.user.id,
-        paypalEmail: data.paypalEmail.toLowerCase().trim(),
+        paypalEmail: normalizedEmail,
       },
       select: { paypalEmail: true, isVerified: true },
     });
 
-    return NextResponse.json({ config: created, message: "PayPal email saved" });
+    return NextResponse.json({ config, message: "PayPal email saved" });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid data" }, { status: 400 });

@@ -165,35 +165,39 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Check if project already in collection
-      const existing = await db.projectCollectionItem.findFirst({
-        where: { collectionId, projectId },
-      });
-
-      if (existing) {
-        return NextResponse.json(
-          { error: "Project already in collection" },
-          { status: 400, headers: corsHeaders }
-        );
-      }
-
-      const item = await db.projectCollectionItem.create({
-        data: {
-          collectionId,
-          projectId,
-          notes: notes?.trim() || null,
-        },
-        include: {
-          project: {
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              imageUrl: true,
+      // Attempt to create the collection item directly and catch P2002
+      // on the @@unique([collectionId, projectId]) constraint instead of
+      // a findFirst→create TOCTOU pattern.
+      let item;
+      try {
+        item = await db.projectCollectionItem.create({
+          data: {
+            collectionId,
+            projectId,
+            notes: notes?.trim() || null,
+          },
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                imageUrl: true,
+              },
             },
           },
-        },
-      });
+        });
+      } catch (createErr) {
+        const isP2002 =
+          (createErr as { code?: string }).code === "P2002";
+        if (isP2002) {
+          return NextResponse.json(
+            { error: "Project already in collection" },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+        throw createErr;
+      }
 
       // Update collection timestamp
       await db.projectCollection.update({

@@ -403,11 +403,13 @@ export async function POST(
   } catch (error) {
     adminAiMarketingCampaignsManageSendLogger.error({ err: String(error) }, "Error queueing campaign:");
 
-    // Try to reset status if failed
+    // Try to reset status if failed — only reset if still SENDING.
+    // Using updateMany with a status filter prevents overwriting a
+    // concurrent CANCELLED (or any other) status transition.
     try {
       const { id } = await params;
-      await db.emailCampaign.update({
-        where: { id },
+      await db.emailCampaign.updateMany({
+        where: { id, status: "SENDING" },
         data: { status: "DRAFT" },
       });
     } catch {

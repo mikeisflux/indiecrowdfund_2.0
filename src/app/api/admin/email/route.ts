@@ -305,15 +305,24 @@ export async function PATCH(req: NextRequest) {
 
     // Update campaign
     if (action === "SEND") {
-      // In production, this would trigger the email sending job
-      const campaign = await db.emailCampaign.update({
-        where: { id },
+      // CAS: only transition to SENDING if the campaign is currently DRAFT or SCHEDULED.
+      // This prevents double-sends from concurrent requests.
+      const result = await db.emailCampaign.updateMany({
+        where: { id, status: { in: ["DRAFT", "SCHEDULED"] } },
         data: {
           status: "SENDING",
           sentAt: new Date()
         }
       });
 
+      if (result.count === 0) {
+        return NextResponse.json(
+          { error: "Campaign has already been sent or is no longer in a sendable state — please refresh." },
+          { status: 409 }
+        );
+      }
+
+      const campaign = await db.emailCampaign.findUnique({ where: { id } });
       return NextResponse.json({ success: true, campaign, message: "Campaign sending started" });
     }
 
