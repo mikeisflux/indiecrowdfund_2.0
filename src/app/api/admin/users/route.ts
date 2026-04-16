@@ -1028,8 +1028,10 @@ export async function DELETE(req: NextRequest) {
           where: { retailerId: userRetailer.id }
         });
 
-        // Delete retailer
-        await tx.retailer.delete({
+        // Delete retailer. deleteMany so two concurrent admin-delete
+        // runs for the same user don't both reach this point and then
+        // one hits P2025 mid-transaction.
+        await tx.retailer.deleteMany({
           where: { id: userRetailer.id }
         });
       }
@@ -1051,7 +1053,10 @@ export async function DELETE(req: NextRequest) {
       // - RedemptionBonusApplication, UserAddress, ProjectCollection,
       // - ProjectNotificationPreference
       // =====================================================
-      await tx.user.delete({
+      // deleteMany for the same race-safety reason — second concurrent
+      // admin delete just sees count: 0 instead of aborting the whole
+      // transaction with P2025.
+      await tx.user.deleteMany({
         where: { id: userId }
       });
     });

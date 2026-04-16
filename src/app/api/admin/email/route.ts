@@ -373,10 +373,11 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // deleteMany for idempotency on concurrent double-clicks.
     if (type === "template") {
-      await db.emailTemplate.delete({ where: { id } });
+      await db.emailTemplate.deleteMany({ where: { id } });
     } else {
-      await db.emailCampaign.delete({ where: { id } });
+      await db.emailCampaign.deleteMany({ where: { id } });
     }
 
     return NextResponse.json({ success: true });

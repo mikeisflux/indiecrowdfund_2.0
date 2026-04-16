@@ -57,8 +57,9 @@ export async function isIPBlocked(ip: string): Promise<boolean> {
 
     // Not blocked or expired - clean up if needed
     if (blocked) {
-      // Delete expired block asynchronously
-      db.blockedIP.delete({ where: { ipAddress: ip } }).catch(() => {});
+      // Delete expired block asynchronously (deleteMany for idempotency
+      // in case two concurrent checks both try to clean up the same row).
+      db.blockedIP.deleteMany({ where: { ipAddress: ip } }).catch(() => {});
     }
 
     return false;
@@ -181,7 +182,9 @@ export async function blockIP(
  */
 export async function unblockIP(ip: string): Promise<boolean> {
   try {
-    await db.blockedIP.delete({ where: { ipAddress: ip } });
+    // deleteMany for idempotency — two concurrent unblock calls collapse
+    // to { count: 0 } instead of P2025.
+    await db.blockedIP.deleteMany({ where: { ipAddress: ip } });
     blockedIPCache.delete(ip);
     botBlockerLogger.info(`[Bot Blocker] IP UNBLOCKED: ${ip}`);
     return true;

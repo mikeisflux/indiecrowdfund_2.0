@@ -100,17 +100,31 @@ export async function PATCH(
       }
     }
 
-    const updated = await db.newsletterSubscriber.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(email && { email: email.toLowerCase() }),
-        ...(isActive !== undefined && {
-          isActive,
-          unsubscribedAt: isActive ? null : new Date(),
-        }),
-      },
-    });
+    // P2002 catch on email @unique — the findUnique check above is TOCTOU.
+    let updated;
+    try {
+      updated = await db.newsletterSubscriber.update({
+        where: { id },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(email && { email: email.toLowerCase() }),
+          ...(isActive !== undefined && {
+            isActive,
+            unsubscribedAt: isActive ? null : new Date(),
+          }),
+        },
+      });
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json({ error: "Email already exists" }, { status: 409 });
+      }
+      throw updateErr;
+    }
 
     return NextResponse.json({ subscriber: updated });
   } catch (error) {
@@ -140,7 +154,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Subscriber not found" }, { status: 404 });
     }
 
-    await db.newsletterSubscriber.delete({
+    // deleteMany for idempotency on concurrent double-clicks.
+    await db.newsletterSubscriber.deleteMany({
       where: { id },
     });
 

@@ -256,27 +256,20 @@ export async function runSeoAudit(
       },
     });
 
-    // Upsert SeoPageMeta for each page with lastAuditScore
+    // Atomic upsert on the @unique path constraint. findFirst+create
+    // was racy under two concurrent audits hitting the same new page —
+    // the second create would throw P2002.
     await Promise.all(
-      results.map(async (r) => {
-        const existing = await db.seoPageMeta.findFirst({
+      results.map((r) =>
+        db.seoPageMeta.upsert({
           where: { path: r.path },
-        });
-
-        if (existing) {
-          await db.seoPageMeta.update({
-            where: { id: existing.id },
-            data: { lastAuditScore: r.score },
-          });
-        } else {
-          await db.seoPageMeta.create({
-            data: {
-              path: r.path,
-              lastAuditScore: r.score,
-            },
-          });
-        }
-      })
+          update: { lastAuditScore: r.score },
+          create: {
+            path: r.path,
+            lastAuditScore: r.score,
+          },
+        })
+      )
     );
 
     return { auditId: audit.id, overallScore, results };

@@ -77,36 +77,49 @@ export async function GET() {
       },
     });
 
-    // If no slides exist, create the default slide
+    // If no slides exist, create the default slide. Guard this seed with
+    // an advisory lock keyed to the fixed string 'seed-hero-slides' so
+    // two concurrent homepage loads can't both find 0 slides and both
+    // insert a default row — leaving duplicate default slides that the
+    // admin would then have to manually clean up.
     if (slides.length === 0) {
-      const totalCount = await db.heroSlide.count();
-      if (totalCount === 0) {
-        const newSlide = await db.heroSlide.create({
+      const seeded = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('seed-hero-slides'))`;
+        const totalCount = await tx.heroSlide.count();
+        if (totalCount > 0) {
+          // Another request seeded while we were waiting — fall through
+          // and let the caller re-read from the now-populated table.
+          return null;
+        }
+        return tx.heroSlide.create({
           data: defaultSlideData,
         });
+      });
+
+      if (seeded) {
         slides = [{
-          id: newSlide.id,
-          title: newSlide.title,
-          subtitle: newSlide.subtitle,
-          description: newSlide.description,
-          buttonText: newSlide.buttonText,
-          buttonLink: newSlide.buttonLink,
-          showPrimaryButton: newSlide.showPrimaryButton,
-          secondaryButtonText: newSlide.secondaryButtonText,
-          secondaryButtonLink: newSlide.secondaryButtonLink,
-          showSecondaryButton: newSlide.showSecondaryButton,
-          mediaType: newSlide.mediaType,
-          imageUrl: newSlide.imageUrl,
-          videoUrl: newSlide.videoUrl,
-          videoThumbnail: newSlide.videoThumbnail,
-          videoAutoplay: newSlide.videoAutoplay,
-          videoMuted: newSlide.videoMuted,
-          videoLoop: newSlide.videoLoop,
-          textAlignment: newSlide.textAlignment,
-          overlayOpacity: newSlide.overlayOpacity,
-          textColor: newSlide.textColor,
-          showSubtitle: newSlide.showSubtitle,
-          showDescription: newSlide.showDescription,
+          id: seeded.id,
+          title: seeded.title,
+          subtitle: seeded.subtitle,
+          description: seeded.description,
+          buttonText: seeded.buttonText,
+          buttonLink: seeded.buttonLink,
+          showPrimaryButton: seeded.showPrimaryButton,
+          secondaryButtonText: seeded.secondaryButtonText,
+          secondaryButtonLink: seeded.secondaryButtonLink,
+          showSecondaryButton: seeded.showSecondaryButton,
+          mediaType: seeded.mediaType,
+          imageUrl: seeded.imageUrl,
+          videoUrl: seeded.videoUrl,
+          videoThumbnail: seeded.videoThumbnail,
+          videoAutoplay: seeded.videoAutoplay,
+          videoMuted: seeded.videoMuted,
+          videoLoop: seeded.videoLoop,
+          textAlignment: seeded.textAlignment,
+          overlayOpacity: seeded.overlayOpacity,
+          textColor: seeded.textColor,
+          showSubtitle: seeded.showSubtitle,
+          showDescription: seeded.showDescription,
         }];
       }
     }

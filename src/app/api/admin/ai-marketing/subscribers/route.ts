@@ -460,7 +460,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Subscriber not found" }, { status: 404 });
     }
 
-    // If email is changing, check it's not already taken
+    // If email is changing, check it's not already taken. The findUnique
+    // check is TOCTOU, so also catch P2002 on the update.
     if (email && email.toLowerCase() !== existing.email) {
       const emailExists = await db.newsletterSubscriber.findUnique({
         where: { email: email.toLowerCase() },
@@ -470,16 +471,29 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    // Update subscriber
-    const subscriber = await db.newsletterSubscriber.update({
-      where: { id },
-      data: {
-        ...(email && { email: email.toLowerCase() }),
-        ...(name !== undefined && { name }),
-        ...(source && { source }),
-        ...(isActive !== undefined && { isActive }),
-      },
-    });
+    // Update subscriber with P2002 catch on the email @unique constraint.
+    let subscriber;
+    try {
+      subscriber = await db.newsletterSubscriber.update({
+        where: { id },
+        data: {
+          ...(email && { email: email.toLowerCase() }),
+          ...(name !== undefined && { name }),
+          ...(source && { source }),
+          ...(isActive !== undefined && { isActive }),
+        },
+      });
+    } catch (updateErr) {
+      const isUniqueViolation =
+        updateErr &&
+        typeof updateErr === "object" &&
+        "code" in updateErr &&
+        (updateErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+      }
+      throw updateErr;
+    }
 
     return NextResponse.json({ success: true, subscriber });
   } catch (error) {
@@ -565,7 +579,8 @@ export async function DELETE(req: NextRequest) {
     }
 
     if (category === "newsletter" || category === "retailers") {
-      await db.newsletterSubscriber.update({
+      // updateMany so a concurrent delete/row-disappearance doesn't P2025.
+      await db.newsletterSubscriber.updateMany({
         where: { id },
         data: { isActive: false },
       });

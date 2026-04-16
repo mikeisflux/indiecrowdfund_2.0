@@ -194,36 +194,40 @@ export async function POST() {
   }
 
   try {
-    // Get the current highest sort order
-    const lastSlide = await db.heroSlide.findFirst({
-      orderBy: { sortOrder: "desc" },
-      select: { sortOrder: true },
-    });
-
-    let nextOrder = (lastSlide?.sortOrder ?? -1) + 1;
-
+    // Wrap the entire seed in an advisory-locked transaction so two
+    // concurrent admin clicks of "Seed Feature Slides" can't both race
+    // past the per-title findFirst and create duplicate slide rows.
     const created: string[] = [];
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('seed-feature-hero-slides'))`;
 
-    for (const slideData of featureSlides) {
-      // Check if a slide with this exact title already exists to avoid duplicates
-      const existing = await db.heroSlide.findFirst({
-        where: { title: slideData.title },
+      const lastSlide = await tx.heroSlide.findFirst({
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
       });
+      let nextOrder = (lastSlide?.sortOrder ?? -1) + 1;
 
-      if (existing) {
-        continue;
+      for (const slideData of featureSlides) {
+        // Check if a slide with this exact title already exists to avoid duplicates
+        const existing = await tx.heroSlide.findFirst({
+          where: { title: slideData.title },
+        });
+
+        if (existing) {
+          continue;
+        }
+
+        const slide = await tx.heroSlide.create({
+          data: {
+            ...slideData,
+            sortOrder: nextOrder,
+          },
+        });
+
+        created.push(slide.title);
+        nextOrder++;
       }
-
-      const slide = await db.heroSlide.create({
-        data: {
-          ...slideData,
-          sortOrder: nextOrder,
-        },
-      });
-
-      created.push(slide.title);
-      nextOrder++;
-    }
+    });
 
     if (created.length === 0) {
       return NextResponse.json(

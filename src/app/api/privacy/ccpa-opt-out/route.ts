@@ -113,18 +113,17 @@ export async function DELETE() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const optOut = await db.ccpaOptOut.findFirst({
+  // CAS-style reinstate via updateMany — scoped to userId + still-active
+  // so two concurrent DELETE clicks don't both write reinstatedAt, and a
+  // cross-user session guessing another user's optOut.id is blocked.
+  const reinstated = await db.ccpaOptOut.updateMany({
     where: { userId: session.user.id, reinstatedAt: null },
-  });
-
-  if (!optOut) {
-    return NextResponse.json({ error: "No active opt-out found" }, { status: 404 });
-  }
-
-  await db.ccpaOptOut.update({
-    where: { id: optOut.id },
     data: { reinstatedAt: new Date() },
   });
+
+  if (reinstated.count === 0) {
+    return NextResponse.json({ error: "No active opt-out found" }, { status: 404 });
+  }
 
   logger.info({ userId: session.user.id }, "CCPA opt-out reinstated");
 

@@ -286,16 +286,18 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Delete the pledge inside a transaction. Using tx.pledge.delete
-      // as the "compare-and-swap" — if the pledge was already deleted
-      // by a concurrent cleanup call, delete throws P2025 (record not
-      // found), which rolls back the transaction and the stats
-      // decrement never fires. So the double-click is implicitly
-      // guarded by the delete itself.
+      // Delete the pledge inside a transaction. deleteMany returns
+      // { count } so we can gate the stats decrement on count > 0 —
+      // two concurrent cleanup clicks collapse to a single stats
+      // decrement instead of the second admin seeing a generic 500 from
+      // the P2025 that tx.pledge.delete would have thrown.
       await db.$transaction(async (tx) => {
-        // Delete first inside the tx so that if it fails with P2025
-        // the project stats update is rolled back
-        await tx.pledge.delete({ where: { id: pledgeId } });
+        const deleted = await tx.pledge.deleteMany({ where: { id: pledgeId } });
+        if (deleted.count === 0) {
+          // Another admin already deleted this pledge — skip the stats
+          // decrement so we don't double-decrement.
+          return;
+        }
         if (pledge.confirmationEmailSent) {
           await tx.project.update({
             where: { id: pledge.projectId },

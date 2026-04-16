@@ -729,11 +729,14 @@ export async function PATCH(
             r => !newRewardIds.includes(r.id) && r._count.pledges === 0
           );
 
-          // Delete rewards that are no longer in the list (only if no pledges)
+          // Delete rewards that are no longer in the list (only if no pledges).
+          // Use deleteMany so a concurrent save from another creator session
+          // that already removed the reward doesn't abort the whole transaction
+          // with P2025.
           for (const reward of rewardsToDelete) {
             await tx.pledgeAddon.deleteMany({ where: { addonId: reward.id } });
             await tx.rewardItem.deleteMany({ where: { rewardId: reward.id } });
-            await tx.reward.delete({ where: { id: reward.id } });
+            await tx.reward.deleteMany({ where: { id: reward.id } });
           }
 
           // Upsert rewards
@@ -1089,8 +1092,12 @@ export async function DELETE(
         where: { projectId },
       });
 
-      // Finally delete the project
-      await tx.project.delete({
+      // Finally delete the project. Use deleteMany so two concurrent
+      // admin/creator deletes don't both run through all the related-row
+      // cleanup and then one hits P2025 on the final tx.project.delete —
+      // which would abort the whole transaction and leave inconsistent
+      // state.
+      await tx.project.deleteMany({
         where: { id: projectId },
       });
     });
