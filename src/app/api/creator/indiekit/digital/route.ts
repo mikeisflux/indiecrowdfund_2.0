@@ -789,9 +789,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Delete the rule
-    await db.distributionRule.delete({
-      where: { id: ruleId },
+    // Scoped delete via deleteMany — resolves concurrent double-clicks
+    // as { count: 0 } instead of P2025. Scoped to projectId so we also
+    // block cross-project abuse if ruleId is ever guessed.
+    await db.distributionRule.deleteMany({
+      where: { id: ruleId, projectId },
     });
 
     return NextResponse.json({ success: true });

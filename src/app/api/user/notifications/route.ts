@@ -142,24 +142,21 @@ export async function DELETE(req: NextRequest) {
     }
 
     if (notificationId) {
-      // Verify the notification belongs to this user
-      const notification = await db.notification.findFirst({
+      // Scoped delete via deleteMany — enforces user ownership and
+      // resolves concurrent double-clicks as { count: 0 } instead of P2025.
+      const deleted = await db.notification.deleteMany({
         where: {
           id: notificationId,
           userId: session.user.id,
         },
       });
 
-      if (!notification) {
+      if (deleted.count === 0) {
         return NextResponse.json(
           { error: "Notification not found" },
           { status: 404 }
         );
       }
-
-      await db.notification.delete({
-        where: { id: notificationId },
-      });
 
       return NextResponse.json({ success: true });
     }

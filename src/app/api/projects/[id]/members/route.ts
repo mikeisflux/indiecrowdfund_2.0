@@ -243,22 +243,18 @@ export async function DELETE(
       return NextResponse.json({ error: "Member ID is required" }, { status: 400 });
     }
 
-    // Verify the member belongs to this creator before deleting
-    const member = await db.emailListSubscriber.findFirst({
+    // Scoped delete via deleteMany — enforces creator ownership and
+    // resolves concurrent double-clicks as { count: 0 } instead of P2025.
+    const deleted = await db.emailListSubscriber.deleteMany({
       where: {
         id: memberId,
         creatorId: session.user.id,
       },
     });
 
-    if (!member) {
+    if (deleted.count === 0) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
-
-    // Delete the member from creator's email list
-    await db.emailListSubscriber.delete({
-      where: { id: memberId },
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

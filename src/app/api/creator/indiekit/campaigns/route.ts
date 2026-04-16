@@ -212,7 +212,10 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Verify ownership
-    const campaign = await db.emailCampaign.findFirst({
+    // Scoped delete via deleteMany — enforces ownership in the WHERE
+    // and resolves concurrent double-clicks as { count: 0 } instead of
+    // P2025.
+    const deleted = await db.emailCampaign.deleteMany({
       where: {
         id: campaignId,
         createdBy: session.user.id,
@@ -225,13 +228,9 @@ export async function DELETE(req: NextRequest) {
       },
     });
 
-    if (!campaign) {
+    if (deleted.count === 0) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
-
-    await db.emailCampaign.delete({
-      where: { id: campaignId },
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

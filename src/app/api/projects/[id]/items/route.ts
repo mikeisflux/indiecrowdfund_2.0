@@ -192,9 +192,11 @@ export async function DELETE(
       );
     }
 
-    // Delete the item (this will also remove from rewards via projectItemId)
-    await db.projectItem.delete({
-      where: { id: itemId },
+    // Scoped delete via deleteMany — blocks cross-project abuse AND
+    // resolves concurrent double-clicks as { count: 0 } instead of P2025.
+    // (This also removes from rewards via projectItemId cascade.)
+    await db.projectItem.deleteMany({
+      where: { id: itemId, projectId },
     });
 
     return NextResponse.json({ success: true });

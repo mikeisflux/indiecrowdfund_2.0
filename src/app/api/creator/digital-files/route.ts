@@ -457,8 +457,10 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    // Delete from database (cascades to distributions)
-    await db.digitalFile.delete({
+    // Delete from database (cascades to distributions).
+    // deleteMany scoped to { id } — second caller on a concurrent delete
+    // sees { count: 0 } instead of throwing P2025.
+    await db.digitalFile.deleteMany({
       where: { id: fileId },
     });
 

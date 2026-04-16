@@ -311,21 +311,19 @@ export async function DELETE(
       );
     }
 
-    // Verify the question belongs to this survey
-    const existingQuestion = await db.surveyBackerQuestion.findFirst({
+    // Scoped delete via deleteMany — enforces the question belongs to
+    // this survey AND resolves concurrent double-clicks as { count: 0 }
+    // instead of P2025.
+    const deleted = await db.surveyBackerQuestion.deleteMany({
       where: { id: questionId, surveyId: survey.id },
     });
 
-    if (!existingQuestion) {
+    if (deleted.count === 0) {
       return NextResponse.json(
         { error: "Backer question not found" },
         { status: 404 }
       );
     }
-
-    await db.surveyBackerQuestion.delete({
-      where: { id: questionId },
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
