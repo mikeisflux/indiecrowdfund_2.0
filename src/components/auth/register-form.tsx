@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { Loader2, Check, X as XIcon } from "lucide-react";
 import { Recaptcha } from "./recaptcha";
+import { fetchRecaptchaConfig } from "@/lib/recaptcha-client";
 
 interface PasswordRequirement {
   label: string;
@@ -95,19 +96,10 @@ export function RegisterForm() {
 
   // Fetch reCAPTCHA settings from API (supports both DB and env config)
   useEffect(() => {
-    async function fetchRecaptchaSettings() {
-      try {
-        const res = await fetch("/api/auth/recaptcha");
-        if (res.ok) {
-          const data = await res.json();
-          setIsRecaptchaEnabled(data.enabled);
-          setRecaptchaSiteKey(data.siteKey);
-        }
-      } catch (err) {
-        console.error("Failed to fetch reCAPTCHA settings:", err);
-      }
-    }
-    fetchRecaptchaSettings();
+    fetchRecaptchaConfig().then(({ enabled, siteKey }) => {
+      setIsRecaptchaEnabled(enabled);
+      setRecaptchaSiteKey(siteKey);
+    });
   }, []);
 
   // Timeout for reCAPTCHA loading - if it doesn't load in 10s, allow fallback

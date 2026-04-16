@@ -18,6 +18,7 @@ import {
   Key,
 } from "lucide-react";
 import { Recaptcha } from "@/components/auth/recaptcha";
+import { fetchRecaptchaConfig } from "@/lib/recaptcha-client";
 
 export default function RetailerLoginPage() {
   const router = useRouter();
@@ -40,19 +41,10 @@ export default function RetailerLoginPage() {
 
   // Fetch reCAPTCHA settings from API (supports both DB and env config)
   useEffect(() => {
-    async function fetchRecaptchaSettings() {
-      try {
-        const res = await fetch("/api/auth/recaptcha");
-        if (res.ok) {
-          const data = await res.json();
-          setRecaptchaEnabled(data.enabled);
-          setRecaptchaSiteKey(data.siteKey);
-        }
-      } catch (err) {
-        console.error("Failed to fetch reCAPTCHA settings:", err);
-      }
-    }
-    fetchRecaptchaSettings();
+    fetchRecaptchaConfig().then(({ enabled, siteKey }) => {
+      setRecaptchaEnabled(enabled);
+      setRecaptchaSiteKey(siteKey);
+    });
   }, []);
 
   // Check if user is already logged in via NextAuth with retailerAccess

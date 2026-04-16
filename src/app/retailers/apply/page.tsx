@@ -31,6 +31,7 @@ import {
   Info,
 } from "lucide-react";
 import { Recaptcha } from "@/components/auth/recaptcha";
+import { fetchRecaptchaConfig } from "@/lib/recaptcha-client";
 
 const steps = [
   { id: 1, title: "Business Info", icon: Building2 },
@@ -76,19 +77,10 @@ export default function RetailerApplyPage() {
 
   // Fetch reCAPTCHA settings from API (supports both DB and env config)
   useEffect(() => {
-    async function fetchRecaptchaSettings() {
-      try {
-        const res = await fetch("/api/auth/recaptcha");
-        if (res.ok) {
-          const data = await res.json();
-          setRecaptchaEnabled(data.enabled);
-          setRecaptchaSiteKey(data.siteKey);
-        }
-      } catch (err) {
-        console.error("Failed to fetch reCAPTCHA settings:", err);
-      }
-    }
-    fetchRecaptchaSettings();
+    fetchRecaptchaConfig().then(({ enabled, siteKey }) => {
+      setRecaptchaEnabled(enabled);
+      setRecaptchaSiteKey(siteKey);
+    });
   }, []);
 
   const handleRecaptchaVerify = useCallback((token: string) => {

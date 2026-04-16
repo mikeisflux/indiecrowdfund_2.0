@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Recaptcha } from "@/components/auth/recaptcha";
+import { fetchRecaptchaConfig } from "@/lib/recaptcha-client";
 
 export default function RetailerForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -21,19 +22,10 @@ export default function RetailerForgotPasswordPage() {
 
   // Fetch reCAPTCHA settings from API (supports both DB and env config)
   useEffect(() => {
-    async function fetchRecaptchaSettings() {
-      try {
-        const res = await fetch("/api/auth/recaptcha");
-        if (res.ok) {
-          const data = await res.json();
-          setRecaptchaEnabled(data.enabled);
-          setRecaptchaSiteKey(data.siteKey);
-        }
-      } catch (err) {
-        console.error("Failed to fetch reCAPTCHA settings:", err);
-      }
-    }
-    fetchRecaptchaSettings();
+    fetchRecaptchaConfig().then(({ enabled, siteKey }) => {
+      setRecaptchaEnabled(enabled);
+      setRecaptchaSiteKey(siteKey);
+    });
   }, []);
 
   const handleRecaptchaVerify = useCallback((token: string) => {

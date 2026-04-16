@@ -192,7 +192,12 @@ export function ErrorReporter() {
         requestUrl.includes("/api/auth/session") ||
         (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/comments"))
       );
-      const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403;
+      // /api/auth/recaptcha 5xx is transient (nginx upstream briefly down during pm2 reload);
+      // the client retries with backoff and falls back to disabled, so failures here are
+      // deploy-window noise rather than actionable errors.
+      const isExpected5xx = response.status >= 500 && response.status < 600 &&
+        requestUrl.includes("/api/auth/recaptcha");
+      const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403 || isExpected5xx;
       if (response.status >= 400 && !isInternal) {
         reportError(
           `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,
