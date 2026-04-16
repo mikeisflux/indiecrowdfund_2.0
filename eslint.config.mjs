@@ -1,13 +1,4 @@
-import { FlatCompat } from "@eslint/eslintrc";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+import nextConfig from "eslint-config-next";
 
 const config = [
   {
@@ -24,7 +15,20 @@ const config = [
       "debug-stats.js",
     ],
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...nextConfig,
+  // Disable new React Hooks strict rules from eslint-config-next@16
+  // until we adopt React 19 + the React Compiler. These are optimization
+  // hints for the compiler, not correctness issues — the flagged patterns
+  // all work correctly on React 18.
+  {
+    rules: {
+      "react-compiler/react-compiler": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/static-components": "off",
+      "react-hooks/immutability": "off",
+    },
+  },
 ];
 
 export default config;
