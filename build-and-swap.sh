@@ -112,8 +112,8 @@ fi
 # The Turbopack cache in .next/cache/ is reused, so only changed
 # modules recompile (~2-7s instead of ~43s cold).
 echo ""
-echo "⚡ Step 6: Building with Turbopack (in-place, cached)..."
-BUILD_OUTPUT=$(NODE_OPTIONS='--max-old-space-size=8192' npx next build 2>&1)
+echo "⚡ Step 6: Building with Webpack (Turbopack has 23GB+ memory bug)..."
+BUILD_OUTPUT=$(NODE_OPTIONS='--max-old-space-size=8192' npx next build --webpack 2>&1)
 BUILD_EXIT_CODE=$?
 
 COMPILE_TIME=$(echo "$BUILD_OUTPUT" | grep -oP 'Compiled successfully in \K[0-9.]+s' || echo "unknown")
