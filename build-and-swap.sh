@@ -1,12 +1,8 @@
 #!/bin/bash
 
-# Quick build and swap script (Turbopack in-place cached build)
-# Backs up current .next via hardlinks, builds in-place for Turbopack cache,
-# then reloads PM2. If build fails, rolls back instantly from backup.
-#
-# Site stays up throughout because PM2 serves from memory while the
-# build replaces files on disk — the reload at the end picks up the
-# new build. With 15GB RAM + 4GB swap, OOM is no longer a concern.
+# Quick build and swap script
+# Backs up current build, builds new one, restarts PM2 on success
+# If build fails, reports errors and keeps the old build running
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
@@ -67,6 +63,7 @@ fi
 # Step 4: Run type check
 echo ""
 echo "🔍 Step 4: Running type check..."
+# Use tsconfig.build.json which excludes .next to avoid stale type references
 if npx tsc --noEmit --project tsconfig.build.json 2>&1; then
     echo -e "${GREEN}   Type check passed${NC}"
 else
@@ -76,75 +73,70 @@ else
     exit 1
 fi
 
-# Step 5: Backup current build (instant hardlink copy)
+# Step 5: Clean up any previous failed build attempts
 echo ""
-echo "🧹 Step 5: Backing up current build..."
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-
-# Clean up any previous failed .next-new attempts
+echo "🧹 Step 5: Cleaning up previous build attempts..."
 if [ -d ".next-new" ]; then
     rm -rf .next-new
-    echo -e "${GREEN}   Cleaned up stale .next-new${NC}"
-fi
-
-# Hardlink backup — instant, uses zero extra disk until files diverge
-if [ -d ".next" ]; then
-    cp -al .next ".next-backup-${TIMESTAMP}"
-    echo -e "${GREEN}   Backed up to .next-backup-${TIMESTAMP} (instant hardlink copy)${NC}"
+    echo -e "${GREEN}   Cleaned up .next-new${NC}"
 else
-    echo -e "${YELLOW}   No existing build to backup${NC}"
+    echo -e "${GREEN}   No cleanup needed${NC}"
 fi
 
-# Clean stale .next/types
+# Also clean stale .next/types (only used for TS checking, not runtime)
 if [ -d ".next/types" ]; then
     rm -rf .next/types
+    echo -e "${GREEN}   Cleaned stale .next/types${NC}"
 fi
 
-# Keep only 3 most recent backups
-BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
-if [ "$BACKUP_COUNT" -gt 3 ]; then
-    ls -dt .next-backup-* | tail -n +4 | xargs rm -rf
-    echo -e "${GREEN}   Cleaned old backups (keeping 3)${NC}"
-fi
-
-# Step 6: Build in-place with Turbopack cache
-# PM2 continues serving from memory while files are replaced on disk.
-# The Turbopack cache in .next/cache/ is reused, so only changed
-# modules recompile (~2-7s instead of ~43s cold).
+# Step 6: Build new version to separate directory (zero-downtime)
+# NOTE: We call next build directly instead of npm run build because
+# npm run build includes "rm -rf .next" which would break the live site
 echo ""
-echo "⚡ Step 6: Building with Webpack (Turbopack has 23GB+ memory bug)..."
-BUILD_OUTPUT=$(NODE_OPTIONS='--max-old-space-size=8192' npx next build --webpack 2>&1)
+echo "🔨 Step 6: Building new version to .next-new (site stays live)..."
+BUILD_OUTPUT=$(NEXT_BUILD_OUTPUT=.next-new npx next build --webpack 2>&1)
 BUILD_EXIT_CODE=$?
 
-COMPILE_TIME=$(echo "$BUILD_OUTPUT" | grep -oP 'Compiled successfully in \K[0-9.]+s' || echo "unknown")
-
 if [ $BUILD_EXIT_CODE -eq 0 ]; then
-    echo -e "${GREEN}✅ Build successful! (compiled in ${COMPILE_TIME})${NC}"
+    echo -e "${GREEN}✅ Build successful!${NC}"
+
+    # Step 6b: Atomic swap - backup old, swap in new
+    echo ""
+    echo "🔄 Step 6b: Swapping build directories..."
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+    if [ -d ".next" ]; then
+        # Move old build to backup
+        mv .next ".next-backup-${TIMESTAMP}"
+        echo "   Backed up old build to .next-backup-${TIMESTAMP}"
+    fi
+
+    # Move new build into place
+    mv .next-new .next
+    echo -e "${GREEN}   New build is now live!${NC}"
+
+    # Keep only the 2 most recent backups, delete older ones
+    BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
+    if [ "$BACKUP_COUNT" -gt 2 ]; then
+        echo "   Cleaning old backups (keeping last 2)..."
+        ls -dt .next-backup-* | tail -n +3 | xargs rm -rf
+        echo -e "${GREEN}   Old backups removed${NC}"
+    fi
 else
     echo -e "${RED}❌ BUILD FAILED!${NC}"
     echo ""
     echo "========== BUILD ERRORS =========="
     echo "$BUILD_OUTPUT" | tail -50
     echo "=================================="
+    echo ""
+    echo -e "${GREEN}   Site is still running with old build.${NC}"
 
-    # Roll back from backup
-    LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
-    if [ -n "$LATEST_BACKUP" ]; then
-        echo ""
-        echo "   Rolling back to ${LATEST_BACKUP}..."
-        rm -rf .next
-        mv "$LATEST_BACKUP" .next
-        echo -e "${GREEN}   Rolled back successfully.${NC}"
-        # Make sure PM2 is serving with the restored build
-        pm2 reload all --update-env 2>/dev/null
-        echo -e "${GREEN}   PM2 reloaded with restored build. Site is live.${NC}"
-    else
-        echo -e "${RED}   No backup available! Run: pm2 restart all${NC}"
-    fi
+    # Clean up failed build attempt
+    rm -rf .next-new
     exit 1
 fi
 
-# Step 7: Reload PM2 (rolling restart picks up new build)
+# Step 7: Reload PM2 (rolling restart for zero-downtime in cluster mode)
 echo ""
 echo "🔄 Step 7: Reloading PM2 (zero-downtime rolling restart)..."
 if pm2 reload all --update-env 2>&1; then
@@ -178,19 +170,19 @@ fi
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 
-BACKUP_LIST=$(ls -dt .next-backup-* 2>/dev/null | head -3)
+# List available backups
+BACKUP_LIST=$(ls -dt .next-backup-* 2>/dev/null | head -2)
 
 echo ""
 echo "=================================="
 echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo "   Duration: ${DURATION}s"
-echo "   Compile:  ${COMPILE_TIME}"
 echo ""
-echo "Available backups (rollback targets):"
+echo "Available backups:"
 for backup in $BACKUP_LIST; do
     echo "   - $backup"
 done
 echo ""
 echo "Commands:"
 echo "   View logs:  pm2 logs"
-echo "   Rollback:   rm -rf .next && mv .next-backup-TIMESTAMP .next && pm2 restart all"
+echo "   Rollback:   cp -r .next-backup-TIMESTAMP .next && pm2 restart all"
