@@ -495,6 +495,28 @@ export async function proxy(req: NextRequest) {
   const clientIP = getClientIP(req);
   const userAgent = req.headers.get("user-agent") || "none";
 
+  // ============ Sanitize malformed Next-Router-State-Tree ============
+  // Scanners/bots sometimes send garbage values for this header, which
+  // crashes Next's RSC runtime with "The router state header was sent but
+  // could not be parsed." before any app code runs. When the header is
+  // present but not valid URL-encoded JSON, strip it so Next falls back to
+  // a normal full-page render instead of throwing.
+  const routerStateHeader = req.headers.get("next-router-state-tree");
+  if (routerStateHeader) {
+    let valid = false;
+    try {
+      JSON.parse(decodeURIComponent(routerStateHeader));
+      valid = true;
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      const sanitized = new Headers(req.headers);
+      sanitized.delete("next-router-state-tree");
+      return NextResponse.next({ request: { headers: sanitized } });
+    }
+  }
+
   // ============ Emergency Kill Switch ============
   // Set DISABLE_BOT_BLOCKER=true in the environment (and restart PM2) to
   // bypass all bot protection — IP blocking, scanner detection, rate
