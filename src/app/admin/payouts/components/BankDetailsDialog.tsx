@@ -1,8 +1,18 @@
 "use client";
 
-import { Building, AlertCircle, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Building, AlertCircle, Loader2, Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +29,8 @@ interface BankDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   bankDetails: BankAccountDetails | null;
   loadingBankDetails: boolean;
+  bankAccountType?: "divinitycoin" | "paypal" | "whop";
+  onSaved?: () => void;
 }
 
 export function BankDetailsDialog({
@@ -26,7 +38,70 @@ export function BankDetailsDialog({
   onOpenChange,
   bankDetails,
   loadingBankDetails,
+  bankAccountType = "divinitycoin",
+  onSaved,
 }: BankDetailsDialogProps) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    accountHolder: "",
+    bankName: "",
+    routingNumber: "",
+    accountNumber: "",
+    accountType: "checking",
+  });
+
+  useEffect(() => {
+    if (bankDetails) {
+      setForm({
+        accountHolder: bankDetails.accountHolder || "",
+        bankName: bankDetails.bankName || "",
+        routingNumber: bankDetails.routingNumber || "",
+        accountNumber: bankDetails.accountNumber || "",
+        accountType: bankDetails.accountType || "checking",
+      });
+    }
+    if (!open) setEditing(false);
+  }, [bankDetails, open]);
+
+  const handleSave = async () => {
+    if (!bankDetails) return;
+    setSaving(true);
+    try {
+      const changed: Record<string, string> = {};
+      if (form.accountHolder !== bankDetails.accountHolder) changed.accountHolder = form.accountHolder;
+      if (form.bankName !== bankDetails.bankName) changed.bankName = form.bankName;
+      if (form.routingNumber !== bankDetails.routingNumber) changed.routingNumber = form.routingNumber;
+      if (form.accountNumber !== bankDetails.accountNumber) changed.accountNumber = form.accountNumber;
+      if (form.accountType !== bankDetails.accountType) changed.accountType = form.accountType;
+
+      if (Object.keys(changed).length === 0) {
+        setEditing(false);
+        setSaving(false);
+        return;
+      }
+
+      const res = await fetch(
+        `/api/admin/bank-accounts/${bankDetails.id}?type=${bankAccountType}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(changed),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update bank account");
+
+      toast.success("Bank account updated. Verification cleared — creator must re-verify.");
+      setEditing(false);
+      onSaved?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update bank account");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -50,30 +125,81 @@ export function BankDetailsDialog({
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Sensitive Information</AlertTitle>
               <AlertDescription>
-                This information is encrypted and should only be used for processing payouts.
+                {editing
+                  ? "Editing will re-encrypt the record and clear verification. Use only to correct creator-entered errors."
+                  : "This information is encrypted and should only be used for processing payouts."}
               </AlertDescription>
             </Alert>
 
             <div className="space-y-3 bg-muted/50 dark:bg-zinc-800 rounded-lg p-4">
               <div>
                 <Label className="text-xs text-muted-foreground">Account Holder</Label>
-                <p className="font-medium">{bankDetails.accountHolder}</p>
+                {editing ? (
+                  <Input
+                    value={form.accountHolder}
+                    onChange={(e) => setForm((f) => ({ ...f, accountHolder: e.target.value }))}
+                  />
+                ) : (
+                  <p className="font-medium">{bankDetails.accountHolder}</p>
+                )}
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Bank Name</Label>
-                <p className="font-medium">{bankDetails.bankName}</p>
+                {editing ? (
+                  <Input
+                    value={form.bankName}
+                    onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))}
+                  />
+                ) : (
+                  <p className="font-medium">{bankDetails.bankName}</p>
+                )}
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Routing Number</Label>
-                <p className="font-mono font-medium">{bankDetails.routingNumber}</p>
+                {editing ? (
+                  <Input
+                    value={form.routingNumber}
+                    onChange={(e) => setForm((f) => ({ ...f, routingNumber: e.target.value.replace(/\D/g, "") }))}
+                    maxLength={9}
+                    inputMode="numeric"
+                    className="font-mono"
+                  />
+                ) : (
+                  <p className="font-mono font-medium">{bankDetails.routingNumber}</p>
+                )}
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Account Number</Label>
-                <p className="font-mono font-medium">{bankDetails.accountNumber}</p>
+                {editing ? (
+                  <Input
+                    value={form.accountNumber}
+                    onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value.replace(/\D/g, "") }))}
+                    maxLength={17}
+                    inputMode="numeric"
+                    className="font-mono"
+                  />
+                ) : (
+                  <p className="font-mono font-medium">{bankDetails.accountNumber}</p>
+                )}
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Account Type</Label>
-                <p className="font-medium capitalize">{bankDetails.accountType}</p>
+                {editing ? (
+                  <Select
+                    value={form.accountType}
+                    onValueChange={(v) => setForm((f) => ({ ...f, accountType: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="checking">Checking</SelectItem>
+                      <SelectItem value="savings">Savings</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="font-medium capitalize">{bankDetails.accountType}</p>
+                )}
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Verification Status</Label>
@@ -94,9 +220,28 @@ export function BankDetailsDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
+          {bankDetails && !editing && (
+            <Button variant="outline" onClick={() => setEditing(true)}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+          )}
+          {editing && (
+            <>
+              <Button variant="outline" onClick={() => setEditing(false)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Save changes
+              </Button>
+            </>
+          )}
+          {!editing && (
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 const adminBankAccountsLogger = logger.child({ module: "admin-bank-accounts" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { decrypt } from "@/lib/encryption";
+import { decrypt, encrypt } from "@/lib/encryption";
 import { auditLog } from "@/lib/audit";
 
 // Force dynamic - this route uses auth/headers
@@ -227,6 +227,116 @@ export async function GET(
     adminBankAccountsLogger.error({ err: String(error) }, "Error fetching bank account:");
     return NextResponse.json(
       { error: "Failed to fetch bank account" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Admin correction of a creator's bank account (DC / PayPal / Whop)
+// Accepts any subset of { accountHolder, bankName, routingNumber, accountNumber, accountType }.
+// Re-encrypts updated fields and refreshes accountLastFour/bankNameDisplay.
+// Clears isVerified on any change so the creator re-verifies against the corrected details.
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authResult = await requireAdmin();
+    if ("error" in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type") || "divinitycoin";
+
+    const body = await request.json();
+    const {
+      accountHolder,
+      bankName,
+      routingNumber,
+      accountNumber,
+      accountType,
+    } = body as Record<string, string | undefined>;
+
+    if (accountType && !["checking", "savings"].includes(accountType)) {
+      return NextResponse.json({ error: "accountType must be 'checking' or 'savings'" }, { status: 400 });
+    }
+    if (routingNumber && !/^\d{9}$/.test(routingNumber)) {
+      return NextResponse.json({ error: "routingNumber must be 9 digits" }, { status: 400 });
+    }
+    if (accountNumber && !/^\d{4,17}$/.test(accountNumber)) {
+      return NextResponse.json({ error: "accountNumber must be 4–17 digits" }, { status: 400 });
+    }
+
+    const updateData: Record<string, string | boolean | null> = {};
+    if (bankName !== undefined) {
+      updateData.bankNameEncrypted = encrypt(bankName);
+      updateData.bankNameDisplay = bankName;
+    }
+    if (accountHolder !== undefined) {
+      updateData.accountHolderEncrypted = encrypt(accountHolder);
+    }
+    if (routingNumber !== undefined) {
+      updateData.routingNumberEncrypted = encrypt(routingNumber);
+    }
+    if (accountNumber !== undefined) {
+      updateData.accountNumberEncrypted = encrypt(accountNumber);
+      updateData.accountLastFour = accountNumber.slice(-4);
+    }
+    if (accountType !== undefined) {
+      updateData.accountType = accountType;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    }
+
+    // Any correction means the previous verification no longer applies
+    updateData.isVerified = false;
+    updateData.verifiedAt = null;
+
+    let updatedUserId: string;
+    let processor: "DIVINITYCOIN" | "PAYPAL" | "WHOP";
+
+    if (type === "whop") {
+      const existing = await db.whopBankAccount.findUnique({ where: { id }, select: { userId: true } });
+      if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
+      await db.whopBankAccount.update({ where: { id }, data: updateData });
+      updatedUserId = existing.userId;
+      processor = "WHOP";
+    } else if (type === "paypal") {
+      const existing = await db.payPalBankAccount.findUnique({ where: { id }, select: { userId: true } });
+      if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
+      await db.payPalBankAccount.update({ where: { id }, data: updateData });
+      updatedUserId = existing.userId;
+      processor = "PAYPAL";
+    } else {
+      const existing = await db.divinityCoinBankAccount.findUnique({ where: { id }, select: { userId: true } });
+      if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
+      await db.divinityCoinBankAccount.update({ where: { id }, data: updateData });
+      updatedUserId = existing.userId;
+      processor = "DIVINITYCOIN";
+    }
+
+    auditLog({
+      action: "BANK_ACCOUNT_ADMIN_EDIT",
+      actorId: authResult.user.id,
+      actorEmail: authResult.user.email || undefined,
+      targetId: id,
+      targetType: "USER",
+      details: {
+        bankAccountUserId: updatedUserId,
+        processor,
+        fieldsChanged: Object.keys(body).filter((k) => body[k] !== undefined),
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    adminBankAccountsLogger.error({ err: String(error) }, "Error updating bank account:");
+    return NextResponse.json(
+      { error: "Failed to update bank account" },
       { status: 500 }
     );
   }

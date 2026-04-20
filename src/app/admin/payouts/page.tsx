@@ -51,6 +51,8 @@ export default function PayoutsPage() {
   const [showBankDetails, setShowBankDetails] = useState(false);
   const [bankDetails, setBankDetails] = useState<BankAccountDetails | null>(null);
   const [loadingBankDetails, setLoadingBankDetails] = useState(false);
+  const [bankDetailsType, setBankDetailsType] = useState<"divinitycoin" | "paypal" | "whop">("divinitycoin");
+  const [bankDetailsId, setBankDetailsId] = useState<string | null>(null);
   const [showCreateSettlement, setShowCreateSettlement] = useState(false);
   const [settlementAmount, setSettlementAmount] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
@@ -155,14 +157,14 @@ export default function PayoutsPage() {
   };
 
   // View bank account details
-  const viewBankDetails = async (bankAccountId: string, type?: string) => {
+  const viewBankDetails = async (bankAccountId: string, type?: "divinitycoin" | "paypal" | "whop") => {
+    const resolvedType = type || "divinitycoin";
+    setBankDetailsId(bankAccountId);
+    setBankDetailsType(resolvedType);
     setLoadingBankDetails(true);
     setShowBankDetails(true);
     try {
-      const url = type
-        ? `/api/admin/bank-accounts/${bankAccountId}?type=${type}`
-        : `/api/admin/bank-accounts/${bankAccountId}`;
-      const response = await fetch(url);
+      const response = await fetch(`/api/admin/bank-accounts/${bankAccountId}?type=${resolvedType}`);
       if (!response.ok) {
         throw new Error("Failed to fetch bank account details");
       }
@@ -174,6 +176,12 @@ export default function PayoutsPage() {
       setShowBankDetails(false);
     } finally {
       setLoadingBankDetails(false);
+    }
+  };
+
+  const refreshBankDetails = async () => {
+    if (bankDetailsId) {
+      await viewBankDetails(bankDetailsId, bankDetailsType);
     }
   };
 
@@ -493,6 +501,8 @@ export default function PayoutsPage() {
         onOpenChange={setShowBankDetails}
         bankDetails={bankDetails}
         loadingBankDetails={loadingBankDetails}
+        bankAccountType={bankDetailsType}
+        onSaved={refreshBankDetails}
       />
 
       {/* Create Settlement Dialog */}
