@@ -636,8 +636,32 @@ export async function PATCH(
 
       // Calculate price difference
       const oldAmount = Number(pledge.amount);
-      // Default to current amount if client didn't send newAmount (no price change intended)
-      const effectiveNewAmount: number = (newAmount !== undefined && newAmount !== null) ? newAmount : oldAmount;
+
+      // Server-recompute the expected new total from reward + addons + EXISTING shipping.
+      // Shipping is preserved across modifications — backers can't unintentionally refund
+      // shipping by switching to a no-shipping reward, and the client's newAmount is
+      // informational only. Without this guard, a modify that sends newAmount=reward+addons
+      // (omitting shipping) causes the refund branch below to claw back the shipping portion
+      // that the creator needs for fulfillment.
+      const newRewardAmount = newReward ? Number(newReward.amount) : 0;
+      let newAddonsAmount = 0;
+      if (addonIdList.length > 0) {
+        const addonRecords = await db.reward.findMany({
+          where: { id: { in: addonIdList }, type: "ADDON" },
+          select: { id: true, amount: true },
+        });
+        const priceMap = new Map<string, number>(
+          addonRecords.map((a: { id: string; amount: unknown }) => [a.id, Number(a.amount)])
+        );
+        newAddonsAmount = addonsWithQuantity.reduce(
+          (sum, a) => sum + (priceMap.get(a.id) ?? 0) * a.quantity,
+          0
+        );
+      }
+      const preservedShipping = Number(pledge.shippingAmount || 0);
+      const computedNewAmount = newRewardAmount + newAddonsAmount + preservedShipping;
+
+      const effectiveNewAmount: number = computedNewAmount;
       const amountDiff = effectiveNewAmount - oldAmount;
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
       const isAlreadyCharged = pledge.status === "COMPLETED";
@@ -815,6 +839,31 @@ export async function PATCH(
                 { status: 400 }
               );
             }
+
+            // Log the refund to DivinityCoinTransaction so it's auditable in-platform.
+            // Without this row, the only record of the refund is on Stripe and admins
+            // can't see it in the backer/pledge views.
+            await db.divinityCoinTransaction.create({
+              data: {
+                userId: pledge.userId,
+                pledgeId: pledge.id,
+                amount: -refundAmount,
+                type: "REFUND",
+                description: `Partial refund ($${refundAmount.toFixed(2)}) from pledge modification on "${pledge.project.title}"`,
+                metadata: JSON.stringify({
+                  requestedBy: "user",
+                  userId: session.user.id,
+                  projectId: pledge.projectId,
+                  divinityCoinPaymentId: pledge.divinityCoinPaymentId,
+                  dcRefundResult: dcResult.data ?? null,
+                  refundAmount,
+                  oldAmount,
+                  newAmount: effectiveNewAmount,
+                  source: "pledge_modification",
+                  processedAt: new Date().toISOString(),
+                }),
+              },
+            });
           } catch (dcError) {
             pledgesLogger.error({ err: String(dcError) }, "DivinityCoin partial refund error:");
             return NextResponse.json(
