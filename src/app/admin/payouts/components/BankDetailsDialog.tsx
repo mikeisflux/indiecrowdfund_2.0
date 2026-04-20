@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Building, AlertCircle, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,10 @@ export function BankDetailsDialog({
         return;
       }
 
-      const res = await fetch(
+      // apiFetch attaches the x-csrf-token header from the csrf_token cookie.
+      // Plain fetch() skips CSRF protection and the proxy rejects the PATCH
+      // with 403 "CSRF validation failed".
+      const res = await apiFetch(
         `/api/admin/bank-accounts/${bankDetails.id}?type=${bankAccountType}`,
         {
           method: "PATCH",
