@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
             creatorId: true,
           },
         },
-        user: { select: { id: true, email: true } },
+        user: { select: { id: true, email: true, name: true } },
       },
     });
 
@@ -245,6 +245,12 @@ export async function POST(req: NextRequest) {
 
       const amountInCents = Math.round(balanceDue * 100);
 
+      // DC's create-payment-intent expects amount/platformUserId/email/pledgeId/
+      // projectId at the TOP level (not nested in metadata). The marketplace
+      // flow has the correct shape — balance payment was previously nesting
+      // projectId inside metadata, which caused DC to reject with "Missing
+      // required fields." Include name + type + statement_descriptor to match
+      // the marketplace payload.
       const dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
         method: "POST",
         headers: {
@@ -256,11 +262,13 @@ export async function POST(req: NextRequest) {
           currency: "usd",
           platformUserId: pledge.user.id,
           email: pledge.user.email || "",
+          name: pledge.user.name || "",
           pledgeId: pledge.id,
+          projectId: pledge.project.id,
+          type: "balance_payment",
+          statement_descriptor: "INDIECROWDFUND",
           metadata: {
-            type: "balance_payment",
             balancePaymentToken: token,
-            projectId: pledge.project.id,
           },
         }),
       });
