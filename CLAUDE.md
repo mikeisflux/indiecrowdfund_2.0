@@ -62,6 +62,11 @@
 - Error responses: `NextResponse.json({ error: "message" }, { status: code })`
 - Use `getCSRFHeaders()` for mutating requests from client
 
+### CSRF — ALWAYS CHECK BEFORE PUSHING
+- Every mutating client call (POST/PUT/PATCH/DELETE) to `/api/*` **must** use `apiFetch` from `@/lib/fetch-utils` — raw `fetch()` skips the CSRF header and the proxy rejects with 403 "CSRF validation failed"
+- Before committing any new/edited client fetch to `/api/*`, scan the diff: if the method is POST/PUT/PATCH/DELETE and it's not in the `csrfExemptRoutes` list in `src/proxy.ts`, it must go through `apiFetch`
+- Exempt routes (webhooks, `/api/track`, `/api/error-report`, etc.) live in `csrfExemptRoutes` — check that list before assuming plain `fetch()` is OK
+
 ### Admin Pages
 - Import icons only as needed from `lucide-react`
 - Use `fetchWithRetry` for API calls
