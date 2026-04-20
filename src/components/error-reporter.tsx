@@ -182,7 +182,20 @@ export function ErrorReporter() {
       const isExpected404 =
         (response.status === 404 && requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond")) ||
         isBotProbe404;
-      const isExpected401 = response.status === 401 && requestUrl.includes("/api/user/following");
+      // 401s from authed-only endpoints fired by client-side useEffects before the
+      // session handshake completes (or after a silent session expiry on long-lived
+      // tabs) are expected and self-healing — the page retries once hydrated or
+      // bounces to login. Not actionable, just admin-log noise.
+      // The edit page fans out multiple sub-resource fetches in parallel; suppress
+      // any 401 on /api/projects/{id}/<sub-resource> since they all share the same
+      // pre-hydration timing issue.
+      const isEditPageSubResource401 =
+        response.status === 401 && /\/api\/projects\/[^/]+\/[^/?]+/.test(requestUrl);
+      const isExpected401 = response.status === 401 && (
+        requestUrl.includes("/api/user/following") ||
+        requestUrl.includes("/api/user/vanity-url") ||
+        isEditPageSubResource401
+      );
       // These endpoints never return 403 themselves — a 403 means the bot blocker blocked the IP
       // digital-files/stream 403 = access denied for thumbnail (shows fallback icon, not a crash)
       const isExpected403 = response.status === 403 && (
