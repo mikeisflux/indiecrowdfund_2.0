@@ -56,9 +56,14 @@ async function getChangelogEntries() {
       where: {
         isPublished: true,
       },
-      orderBy: {
-        publishedAt: "desc",
-      },
+      // Sort by commit time (publishedAt is set to the git author-date by the
+      // sync script). Secondary sort on createdAt catches ties when publishedAt
+      // shares the same millisecond — keeps ordering deterministic rather than
+      // falling back to whatever insertion order the DB happens to return.
+      orderBy: [
+        { publishedAt: "desc" },
+        { createdAt: "desc" },
+      ],
       select: {
         id: true,
         title: true,
@@ -210,11 +215,13 @@ export default async function ChangelogPage() {
                                 {entry.description}
                               </p>
                               <p className="text-xs text-muted-foreground mt-3">
-                                {new Date(entry.publishedAt || entry.createdAt).toLocaleDateString("en-US", {
+                                {new Date(entry.publishedAt || entry.createdAt).toLocaleString("en-US", {
                                   weekday: "long",
                                   year: "numeric",
                                   month: "long",
                                   day: "numeric",
+                                  hour: "numeric",
+                                  minute: "2-digit",
                                 })}
                               </p>
                             </div>
