@@ -245,12 +245,18 @@ export async function POST(req: NextRequest) {
 
       const amountInCents = Math.round(balanceDue * 100);
 
+      // DC's create-payment-intent requires a unique purchaseId per intent (it
+      // uses it as the idempotency key). Reusing the pledgeId fails because
+      // DC already has an intent for the original pledge charge. Derive a
+      // per-balance purchaseId from the token so repeated clicks on the same
+      // payment link are idempotent, but separate from the original pledge.
+      const balancePurchaseId = `balance_${token.substring(0, 24)}`;
+
       // DC's create-payment-intent expects amount/platformUserId/email/pledgeId/
-      // projectId at the TOP level (not nested in metadata). The marketplace
-      // flow has the correct shape — balance payment was previously nesting
-      // projectId inside metadata, which caused DC to reject with "Missing
-      // required fields." Include name + type + statement_descriptor to match
-      // the marketplace payload.
+      // projectId at the TOP level (not nested in metadata). Match the
+      // marketplace payload shape — projectId/purchaseId/type/statement_descriptor
+      // all top-level. Use type "pledge" since DC recognizes that (vs the
+      // custom "balance_payment" it didn't accept).
       const dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
         method: "POST",
         headers: {
@@ -265,17 +271,33 @@ export async function POST(req: NextRequest) {
           name: pledge.user.name || "",
           pledgeId: pledge.id,
           projectId: pledge.project.id,
-          type: "balance_payment",
+          purchaseId: balancePurchaseId,
+          type: "pledge",
           statement_descriptor: "INDIECROWDFUND",
           metadata: {
             balancePaymentToken: token,
+            balancePayment: true,
+            originalPledgeId: pledge.id,
           },
         }),
       });
 
       if (!dcResponse.ok) {
         const errorText = await dcResponse.text();
-        payBalanceLogger.error({ err: String(errorText) }, "[Balance DC] API error:");
+        payBalanceLogger.error(
+          {
+            err: errorText,
+            status: dcResponse.status,
+            requestBody: {
+              amount: amountInCents,
+              pledgeId: pledge.id,
+              projectId: pledge.project.id,
+              purchaseId: balancePurchaseId,
+              type: "pledge",
+            },
+          },
+          "[Balance DC] API error:"
+        );
         return NextResponse.json({ error: "Payment processing failed" }, { status: 500 });
       }
 
