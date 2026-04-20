@@ -165,10 +165,10 @@ const updateProjectSchema = z.object({
 
   // Promotion
   prelaunchActive: z.boolean().optional(),
-  prelaunchDescription: z.string().max(5000).optional().nullable(),
+  prelaunchDescription: z.string().max(100000).optional().nullable(),
   customReferralTags: z.array(z.string().max(100)).max(20).optional(),
   googleAnalyticsId: z.string().max(50).optional().nullable(),
-  metaPixelId: z.string().max(20).optional().nullable(),
+  metaPixelId: z.string().max(50).optional().nullable(),
 
   // Rewards (array to replace all rewards)
   rewards: z.array(rewardSchema).optional(),

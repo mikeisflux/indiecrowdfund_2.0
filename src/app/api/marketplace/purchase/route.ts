@@ -198,7 +198,7 @@ export async function POST(request: Request) {
 
         const dcResult = await dcResponse.json();
         if (!dcResponse.ok || !dcResult.success) {
-          marketplacePurchaseLogger.error({ err: String(dcResult) }, "[Marketplace DC] Failed to create payment intent:");
+          marketplacePurchaseLogger.error({ err: dcResult, status: dcResponse.status }, "[Marketplace DC] Failed to create payment intent:");
           await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
           return NextResponse.json(
             { error: dcResult.error || "Failed to initialize payment" },

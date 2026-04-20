@@ -96,9 +96,13 @@ function getPrismaClient(): PrismaClient {
 
       // Filter out noisy connection termination errors from Prisma engine logs.
       // These flood the logs during normal PostgreSQL restarts (57P01).
+      // Also filter the errorGroup fingerprint P2002 race — captureError
+      // recovers from it via findUnique + update fallback, so the engine
+      // log is pure noise.
       const IGNORED_PRISMA_PATTERNS = [
         "terminating connection due to administrator command",
         "server closed the connection unexpectedly",
+        "Unique constraint failed on the fields: (`fingerprint`)",
       ];
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
