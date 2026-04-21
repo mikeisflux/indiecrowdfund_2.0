@@ -190,9 +190,14 @@ async function getPrelaunchProjects() {
       where: {
         prelaunchActive: true,
         deletedAt: null,
-        status: {
-          notIn: ["LIVE", "FUNDED"], // Exclude projects that are already live or funded
-        },
+        // Only APPROVED projects are safe to surface publicly. DRAFT and
+        // SUBMITTED projects aren't content-frozen yet, and the vanity API
+        // route (src/app/api/projects/vanity/[vanityname]/[slug]/route.ts:116)
+        // 404s both statuses for anonymous visitors — so clicking a prelaunch
+        // card for a DRAFT/SUBMITTED project gives "Project not found."
+        // FAILED/CANCELLED projects with a stale prelaunchActive flag are
+        // also excluded for the same no-surface-stale-content reason.
+        status: "APPROVED",
         // Hide test projects from home page
         NOT: {
           title: { contains: "test", mode: "insensitive" },

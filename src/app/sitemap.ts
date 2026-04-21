@@ -180,7 +180,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       where: {
         prelaunchActive: true,
         deletedAt: null,
-        status: { notIn: ["LIVE", "FUNDED"] },
+        // Only expose APPROVED prelaunch pages in the sitemap — DRAFT/SUBMITTED
+        // 404 for anonymous visitors so including them generates indexing
+        // errors in Search Console.
+        status: "APPROVED",
       },
       select: {
         slug: true,
