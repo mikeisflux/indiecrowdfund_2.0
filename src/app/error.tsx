@@ -14,15 +14,22 @@ export default function Error({
   useEffect(() => {
     console.error("Page error:", error);
     // Don't report transient network/connectivity errors — they're user-side issues
-    // and generate noise without being actionable (e.g. Firefox TypeError: network error)
+    // and generate noise without being actionable (e.g. Firefox TypeError: network error).
+    // Also drop ChunkLoadError — those fire when a user has an old bundle cached and we
+    // ship a deploy that renames the chunk file. The reset button reloads the page and
+    // everything recovers; nothing for us to debug.
     const msg = error?.message?.toLowerCase() ?? "";
     const isNetworkError =
       msg.includes("network error") ||
       msg.includes("failed to fetch") ||
       msg.includes("load failed") ||
       msg.includes("networkerror");
+    const isChunkLoadError =
+      error?.name === "ChunkLoadError" ||
+      msg.includes("loading chunk") ||
+      msg.includes("chunkloaderror");
     // Report to self-hosted error tracker
-    if (error && !isNetworkError) {
+    if (error && !isNetworkError && !isChunkLoadError) {
       fetch("/api/error-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
