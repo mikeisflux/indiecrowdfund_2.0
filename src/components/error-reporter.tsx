@@ -172,7 +172,12 @@ export function ErrorReporter() {
       // Skip: error-report endpoint (avoid loops), Next.js internal requests, empty/unresolvable URLs,
       // expected 400s from token-based flows (verify-email), 404s from surveys without a survey record,
       // and 401s from user-specific endpoints hit by unauthenticated visitors
-      const isExpected400 = response.status === 400 && requestUrl.includes("/api/user/verify-email");
+      // 400s from user-input validation endpoints — the UI already surfaces
+      // the error as a toast, so admin-logging them is pure duplication.
+      const isExpected400 = response.status === 400 && (
+        requestUrl.includes("/api/user/verify-email") ||
+        requestUrl.includes("/api/user/profile")
+      );
       // Bot-probe 404s on well-known paths that we don't serve (ads.txt,
       // llms.txt, /.well-known/*, etc.) — WebPageTest, Pingdom, ad network
       // scanners, and FedCM/Privacy Sandbox feature detection all probe
