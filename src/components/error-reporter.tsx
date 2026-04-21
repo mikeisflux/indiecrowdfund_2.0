@@ -176,7 +176,8 @@ export function ErrorReporter() {
       // the error as a toast, so admin-logging them is pure duplication.
       const isExpected400 = response.status === 400 && (
         requestUrl.includes("/api/user/verify-email") ||
-        requestUrl.includes("/api/user/profile")
+        requestUrl.includes("/api/user/profile") ||
+        requestUrl.includes("/api/user/settings")
       );
       // Bot-probe 404s on well-known paths that we don't serve (ads.txt,
       // llms.txt, /.well-known/*, etc.) — WebPageTest, Pingdom, ad network
