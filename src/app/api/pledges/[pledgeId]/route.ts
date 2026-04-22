@@ -558,14 +558,50 @@ export async function PATCH(
     }
 
     if (action === "modify") {
-      // Prevent overwriting a pending modification awaiting payment
+      // Auto-supersede any abandoned prior modification. The previous behavior
+      // was to 409 if pendingModification existed, forcing the user to wait for
+      // a manual cleanup. In practice users abandon the Stripe form (close tab,
+      // bail on card entry, network glitch) and there's no path that clears
+      // the flag — so every retry hit the 409 wall. Now: if the prior PI is
+      // still open we cancel it (Stripe) or let it expire on DC's side, drop
+      // pendingModification, and proceed with the new attempt.
       const existingMeta = (typeof pledge.metadata === "object" && pledge.metadata !== null)
         ? pledge.metadata as Record<string, unknown>
         : {};
       if (existingMeta.pendingModification) {
-        return NextResponse.json(
-          { error: "This pledge already has a pending modification awaiting payment. Please complete or cancel it first." },
-          { status: 409 }
+        const prior = existingMeta.pendingModification as {
+          paymentMethod?: string;
+          paymentIntentId?: string;
+        };
+        try {
+          if (prior.paymentMethod === "STRIPE" && prior.paymentIntentId) {
+            const stripe = await getStripeInstance();
+            if (stripe) {
+              await safeCancelPaymentIntent(stripe, prior.paymentIntentId);
+            }
+          }
+          // DC payment intents have no platform-level cancel action — the
+          // underlying Stripe PI auto-expires after ~24h if it stays in
+          // requires_payment_method. Creating a fresh DC intent below
+          // supersedes it; the orphan one never charges anything.
+        } catch (cancelErr) {
+          // Don't let a cancel failure block the new modify — just log it.
+          pledgesLogger.warn(
+            { err: String(cancelErr), pledgeId, priorIntentId: prior.paymentIntentId },
+            "[Modify] Failed to cancel superseded payment intent; proceeding with new attempt"
+          );
+        }
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            metadata: Object.fromEntries(
+              Object.entries(existingMeta).filter(([k]) => k !== "pendingModification")
+            ),
+          },
+        });
+        pledgesLogger.info(
+          { pledgeId, supersededIntentId: prior.paymentIntentId, paymentMethod: prior.paymentMethod },
+          "[Modify] Superseded abandoned pendingModification"
         );
       }
 
