@@ -107,13 +107,20 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Restrict access to DRAFT/SUBMITTED projects — only creator or admin may preview
+    // Restrict access to DRAFT/SUBMITTED projects — only creator or admin may preview,
+    // UNLESS the creator has explicitly flipped prelaunchActive=true. In that case the
+    // project opts into public visibility for its /prelaunch page even before launch,
+    // which is how the home page's "Projects in Prelaunch" section links work.
     const isCreatorOrAdmin =
       userId === project.creatorId ||
       userRole === "ADMIN" ||
       userRole === "SUPER_ADMIN";
 
-    if ((project.status === "DRAFT" || project.status === "SUBMITTED") && !isCreatorOrAdmin) {
+    if (
+      (project.status === "DRAFT" || project.status === "SUBMITTED") &&
+      !isCreatorOrAdmin &&
+      !project.prelaunchActive
+    ) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
