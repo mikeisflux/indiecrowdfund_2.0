@@ -200,6 +200,7 @@ export function ErrorReporter() {
       const isExpected401 = response.status === 401 && (
         requestUrl.includes("/api/user/following") ||
         requestUrl.includes("/api/user/vanity-url") ||
+        requestUrl.includes("/api/messages") ||
         isEditPageSubResource401
       );
       // These endpoints never return 403 themselves — a 403 means the bot blocker blocked the IP
