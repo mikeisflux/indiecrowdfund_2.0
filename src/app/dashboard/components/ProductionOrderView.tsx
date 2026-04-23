@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Truck, CheckCircle, Package, Sparkles, Download, Check, X } from "lucide-react";
+import { Truck, CheckCircle, Package, Sparkles, Download, Check, X, Pencil } from "lucide-react";
 import { CircularProgress } from "./CircularProgress";
 import { toast } from "sonner";
 import type { ProductionOrderStats } from "../types";
@@ -25,18 +25,22 @@ function escapeCSV(value: string): string {
 }
 
 export function ProductionOrderView({ productionOrderStats, projectId }: ProductionOrderViewProps) {
-  const [skuEdits, setSkuEdits] = useState<Record<string, string>>({});
+  // Committed SKU values after successful save, keyed by projectItemId. Used so
+  // the UI doesn't snap back to stale props after a save round-trip.
+  const [savedSkus, setSavedSkus] = useState<Record<string, string>>({});
+  // In-flight edit buffer for rows currently being edited. Row is only in
+  // edit mode when its projectItemId is a key here.
+  const [skuDrafts, setSkuDrafts] = useState<Record<string, string>>({});
   const [savingSkus, setSavingSkus] = useState<Record<string, boolean>>({});
   // Local inStock state to allow optimistic toggling
   const [stockOverrides, setStockOverrides] = useState<Record<string, boolean>>({});
   const [savingStock, setSavingStock] = useState<Record<string, boolean>>({});
 
   const getDisplaySku = useCallback((item: { name: string; sku: string | null; projectItemId: string | null }) => {
-    if (item.projectItemId && skuEdits[item.projectItemId] !== undefined) {
-      return skuEdits[item.projectItemId];
-    }
+    if (!item.projectItemId) return item.sku || item.name;
+    if (savedSkus[item.projectItemId] !== undefined) return savedSkus[item.projectItemId] || item.name;
     return item.sku || item.name;
-  }, [skuEdits]);
+  }, [savedSkus]);
 
   const getInStock = useCallback((item: { projectItemId: string | null; inStock: boolean }) => {
     if (item.projectItemId && stockOverrides[item.projectItemId] !== undefined) {
@@ -54,31 +58,52 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
     return { percentage: Math.round((inStockCount / total) * 100), inStockCount, total };
   }, [productionOrderStats, getInStock]);
 
-  const handleSkuChange = (projectItemId: string, value: string) => {
-    setSkuEdits((prev) => ({ ...prev, [projectItemId]: value }));
+  const startSkuEdit = (item: { name: string; sku: string | null; projectItemId: string | null }) => {
+    if (!item.projectItemId) return;
+    const current = savedSkus[item.projectItemId] !== undefined
+      ? savedSkus[item.projectItemId]
+      : (item.sku || "");
+    setSkuDrafts((prev) => ({ ...prev, [item.projectItemId!]: current }));
+  };
+
+  const cancelSkuEdit = (projectItemId: string) => {
+    setSkuDrafts((prev) => {
+      const next = { ...prev };
+      delete next[projectItemId];
+      return next;
+    });
+  };
+
+  const handleSkuDraftChange = (projectItemId: string, value: string) => {
+    setSkuDrafts((prev) => ({ ...prev, [projectItemId]: value }));
   };
 
   const handleSkuSave = async (item: { name: string; projectItemId: string | null }) => {
     if (!item.projectItemId || !projectId) return;
-    const newSku = skuEdits[item.projectItemId];
-    if (newSku === undefined) return;
+    const draft = skuDrafts[item.projectItemId];
+    if (draft === undefined) return;
+    const trimmed = draft.trim();
 
     setSavingSkus((prev) => ({ ...prev, [item.projectItemId!]: true }));
     try {
       const response = await apiFetch(`/api/projects/${projectId}/items`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: item.projectItemId,
           title: item.name,
-          sku: newSku === item.name ? null : newSku || null,
+          sku: trimmed ? trimmed : null,
         }),
       });
       if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || "Failed to save SKU");
       }
-      setSkuEdits((prev) => {
+      // Commit the saved value locally so the UI doesn't snap back to stale
+      // props after the write. Empty string here means "no SKU set" — the
+      // display layer falls back to the item name in that case.
+      setSavedSkus((prev) => ({ ...prev, [item.projectItemId!]: trimmed }));
+      setSkuDrafts((prev) => {
         const next = { ...prev };
         delete next[item.projectItemId!];
         return next;
@@ -313,16 +338,17 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
               <div className="overflow-x-auto">
               <div className="min-w-[440px]">
               {/* Header */}
-              <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+              <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_80px] gap-2 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
                 <div>Item Name</div>
                 <div>SKU</div>
-                <div className="w-20 text-center">Qty</div>
-                <div className="w-24 text-center">In Stock</div>
+                <div className="text-center">Qty</div>
+                <div className="text-center">In Stock</div>
               </div>
               {/* Rows */}
               {productionOrderStats.items.map((item, index) => {
                 const displaySku = getDisplaySku(item);
-                const hasUnsavedEdit = item.projectItemId && skuEdits[item.projectItemId] !== undefined;
+                const isEditing = item.projectItemId ? skuDrafts[item.projectItemId] !== undefined : false;
+                const draftValue = item.projectItemId && isEditing ? skuDrafts[item.projectItemId] : "";
                 const isSavingSku = item.projectItemId ? savingSkus[item.projectItemId] : false;
                 const isInStock = getInStock(item);
                 const isSavingStockItem = item.projectItemId ? savingStock[item.projectItemId] : false;
@@ -330,57 +356,93 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                 return (
                   <div
                     key={item.projectItemId || index}
-                    className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 px-3 py-2 text-sm border-t border-border/50 items-center hover:bg-muted/10 transition-colors"
+                    className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_80px] gap-2 px-3 py-2 text-sm border-t border-border/50 items-center hover:bg-muted/10 transition-colors"
                   >
                     <div className="font-medium truncate">{item.name}</div>
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1 min-w-0">
                       {item.projectItemId ? (
-                        <>
-                          <Input
-                            value={displaySku}
-                            onChange={(e) => handleSkuChange(item.projectItemId!, e.target.value)}
-                            onBlur={() => { if (hasUnsavedEdit) handleSkuSave(item); }}
-                            onKeyDown={(e) => { if (e.key === "Enter" && hasUnsavedEdit) handleSkuSave(item); }}
-                            className="h-7 text-xs"
-                            disabled={isSavingSku}
-                          />
-                          {isSavingSku && <span className="text-[10px] text-muted-foreground whitespace-nowrap">...</span>}
-                        </>
+                        isEditing ? (
+                          <>
+                            <Input
+                              value={draftValue}
+                              onChange={(e) => handleSkuDraftChange(item.projectItemId!, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSkuSave(item);
+                                if (e.key === "Escape") cancelSkuEdit(item.projectItemId!);
+                              }}
+                              placeholder={item.name}
+                              autoFocus
+                              autoComplete="off"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              name={`sku-${item.projectItemId}`}
+                              className="h-7 text-xs px-2"
+                              disabled={isSavingSku}
+                            />
+                            <button
+                              onClick={() => handleSkuSave(item)}
+                              disabled={isSavingSku}
+                              title="Save SKU"
+                              className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-emerald-500 hover:bg-emerald-500/15 disabled:opacity-50"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => cancelSkuEdit(item.projectItemId!)}
+                              disabled={isSavingSku}
+                              title="Cancel"
+                              className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted/40 disabled:opacity-50"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-mono text-xs truncate flex-1 min-w-0">{displaySku}</span>
+                            <button
+                              onClick={() => startSkuEdit(item)}
+                              title="Edit SKU"
+                              className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                          </>
+                        )
                       ) : (
                         <span className="text-muted-foreground text-xs truncate">{item.name}</span>
                       )}
                     </div>
-                    <div className="w-20 text-center">
+                    <div className="text-center">
                       <span className="font-bold">{item.count.toLocaleString()}</span>
                     </div>
-                    <div className="w-24 flex items-center justify-center gap-1.5">
+                    <div className="flex items-center justify-center gap-1.5">
                       {item.projectItemId ? (
                         <>
                           {/* Green check = In Stock */}
                           <button
                             onClick={() => handleStockToggle(item, true)}
                             disabled={isSavingStockItem}
-                            className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+                            className={`relative w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
                               isInStock
                                 ? "bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.6)]"
                                 : "bg-muted/40 text-muted-foreground/40 hover:bg-muted/60"
                             }`}
                             title="Mark as in stock"
                           >
-                            <Check className="h-4 w-4" />
+                            <Check className="h-3.5 w-3.5" />
                           </button>
                           {/* Red X = Not In Stock */}
                           <button
                             onClick={() => handleStockToggle(item, false)}
                             disabled={isSavingStockItem}
-                            className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+                            className={`relative w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
                               !isInStock
                                 ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)]"
                                 : "bg-muted/40 text-muted-foreground/40 hover:bg-muted/60"
                             }`}
                             title="Mark as not in stock"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3.5 w-3.5" />
                           </button>
                         </>
                       ) : (
