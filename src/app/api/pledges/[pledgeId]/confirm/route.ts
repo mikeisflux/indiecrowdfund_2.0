@@ -10,7 +10,7 @@ import {
   notifyPledgeReceived,
   notifyProjectFunded,
 } from "@/lib/notifications";
-import { processPendingPledgesForProject, getStripeInstance, claimRewardSlot, assignBackerNumber } from "@/lib/payments/stripe";
+import { processPendingPledgesForProject, getStripeInstance, claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/stripe";
 import { captureAuthorizedPaypalPledgesAsync } from "@/lib/payments/paypal/capture-authorized";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal/config";
 
@@ -76,6 +76,7 @@ export async function POST(
         },
         addons: {
           select: {
+            addonId: true,
             quantity: true,
             addon: { select: { title: true, amount: true } },
           },
@@ -276,6 +277,14 @@ export async function POST(
         }
       }
 
+      if (pledge.addons?.length) {
+        await claimAddonSlots(
+          pledge.addons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity }))
+        ).catch(err =>
+          pledgesConfirmLogger.error({ err: String(err) }, "claimAddonSlots failed (SetupIntent)")
+        );
+      }
+
       // Notify creator of new pledge
       await notifyPledgeReceived(
         pledge.projectId,
@@ -343,6 +352,14 @@ export async function POST(
         if (!claimed) {
           pledgesConfirmLogger.warn(`[Confirm] Reward ${pledge.reward.id} sold out for pledge ${pledgeId}`);
         }
+      }
+
+      if (pledge.addons?.length) {
+        await claimAddonSlots(
+          pledge.addons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity }))
+        ).catch(err =>
+          pledgesConfirmLogger.error({ err: String(err) }, "claimAddonSlots failed (PaymentIntent/DC)")
+        );
       }
 
       // Notify creator of new pledge

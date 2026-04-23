@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getWhopConfig, verifyWhopWebhookSignature } from "@/lib/payments/whop";
-import { claimRewardSlot, assignBackerNumber } from "@/lib/payments/stripe";
+import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/stripe";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
 import { logger } from "@/lib/logger";
 
@@ -88,6 +88,9 @@ export async function POST(req: NextRequest) {
                 currentAmount: true,
               },
             },
+            addons: {
+              select: { addonId: true, quantity: true },
+            },
           },
         });
 
@@ -121,6 +124,14 @@ export async function POST(req: NextRequest) {
         if (pledge.rewardId) {
           await claimRewardSlot(pledge.rewardId).catch(err =>
             whopWebhookLogger.error({ err: String(err) }, "claimRewardSlot failed")
+          );
+        }
+
+        if (pledge.addons?.length) {
+          await claimAddonSlots(
+            pledge.addons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity }))
+          ).catch(err =>
+            whopWebhookLogger.error({ err: String(err) }, "claimAddonSlots failed")
           );
         }
 

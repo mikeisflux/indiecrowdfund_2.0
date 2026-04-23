@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { captureAuthorizedPaypalPledgesAsync } from "@/lib/payments/paypal/capture-authorized";
-import { claimRewardSlot, assignBackerNumber } from "@/lib/payments/stripe";
+import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/stripe";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
 import { sendPledgeConfirmationEmail, isEmailTypeEnabled } from "@/lib/email";
 import { logger } from "@/lib/logger";
@@ -49,6 +49,7 @@ export async function POST(
         reward: { select: { id: true, title: true, amount: true } },
         addons: {
           select: {
+            addonId: true,
             quantity: true,
             addon: { select: { title: true, amount: true } },
           },
@@ -141,6 +142,14 @@ export async function POST(
       if (pledge.reward?.id) {
         await claimRewardSlot(pledge.reward.id).catch(err =>
           paypalCaptureLogger.error({ err: String(err) }, "claimRewardSlot failed")
+        );
+      }
+
+      if (pledge.addons?.length) {
+        await claimAddonSlots(
+          pledge.addons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity }))
+        ).catch(err =>
+          paypalCaptureLogger.error({ err: String(err) }, "claimAddonSlots failed")
         );
       }
 
@@ -255,6 +264,14 @@ export async function POST(
       if (!claimed) {
         paypalCaptureLogger.warn({ pledgeId: pledge.id }, "Reward sold out during PayPal capture");
       }
+    }
+
+    if (pledge.addons?.length) {
+      await claimAddonSlots(
+        pledge.addons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity }))
+      ).catch(err =>
+        paypalCaptureLogger.error({ err: String(err) }, "claimAddonSlots failed")
+      );
     }
 
     // Assign backer number
