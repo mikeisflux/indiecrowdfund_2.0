@@ -98,6 +98,24 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Non-COMPLETED pledges (PENDING/FAILED/REFUNDED/CANCELLED/CHARGEBACK) are not backers.
+    // Deny them access to the survey form so they can't submit responses either.
+    if (pledge.status !== "COMPLETED") {
+      surveysRespondLogger.warn(
+        {
+          pledgeId,
+          pledgeStatus: pledge.status,
+          userId: pledge.userId,
+          projectId: pledge.projectId,
+        },
+        "Survey GET forbidden: pledge is not COMPLETED"
+      );
+      return NextResponse.json(
+        { error: "This survey is only available to backers with a completed pledge." },
+        { status: 403 }
+      );
+    }
+
     // Get survey for this project
     const survey = await db.survey.findUnique({
       where: { projectId: pledge.projectId },
@@ -300,6 +318,25 @@ export async function POST(
         "Survey POST forbidden: session user does not own pledge"
       );
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Only backers with a fully COMPLETED pledge may submit survey responses.
+    // PENDING/FAILED/REFUNDED/CANCELLED/CHARGEBACK pledges are not real backers
+    // and must be blocked at the response endpoint.
+    if (pledge.status !== "COMPLETED") {
+      surveysRespondLogger.warn(
+        {
+          pledgeId,
+          pledgeStatus: pledge.status,
+          userId: pledge.userId,
+          projectId: pledge.projectId,
+        },
+        "Survey POST forbidden: pledge is not COMPLETED"
+      );
+      return NextResponse.json(
+        { error: "Survey submissions require a completed pledge." },
+        { status: 403 }
+      );
     }
 
     // Get survey

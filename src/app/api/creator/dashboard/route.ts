@@ -117,6 +117,8 @@ export async function GET(req: NextRequest) {
         fundingData: [],
         recentBackers: [],
         rewardStats: [],
+        addonStats: [],
+        skuStats: [],
         referrers: [],
       });
     }
@@ -355,7 +357,7 @@ export async function GET(req: NextRequest) {
                   title: true,
                   projectItemId: true,
                   projectItem: {
-                    select: { id: true, title: true },
+                    select: { id: true, title: true, sku: true },
                   },
                 },
               },
@@ -374,7 +376,7 @@ export async function GET(req: NextRequest) {
                       title: true,
                       projectItemId: true,
                       projectItem: {
-                        select: { title: true },
+                        select: { id: true, title: true, sku: true },
                       },
                     },
                   },
@@ -512,11 +514,14 @@ export async function GET(req: NextRequest) {
     // Count items needed for fulfillment (from rewards and addons)
     // Key by projectItemId or item title to deduplicate items that appear in multiple reward tiers
     const itemCounts = new Map<string, { name: string; count: number; projectItemId: string | null; sku: string | null; inStock: boolean }>();
+    // SKU-level aggregation: sums item qty across rewards + addons for every backer
+    // (aftersales add-ons create new PledgeAddon rows, so they're included automatically)
+    const skuCounts = new Map<string, { sku: string | null; name: string; quantity: number; backerIds: Set<string>; projectItemId: string | null }>();
 
     fulfillmentData.forEach((pledge) => {
       // Count items from reward tiers
       if (pledge.reward?.items) {
-        pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string } | null }) => {
+        pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }) => {
           const itemName = item.projectItem?.title || item.title;
           const itemKey = item.projectItemId
             ? `projectItem_${item.projectItemId}`
@@ -527,11 +532,26 @@ export async function GET(req: NextRequest) {
           } else {
             itemCounts.set(itemKey, { name: itemName, count: 1, projectItemId: item.projectItemId, sku: null, inStock: false });
           }
+
+          const skuValue = item.projectItem?.sku?.trim() || null;
+          const existingSku = skuCounts.get(itemKey);
+          if (existingSku) {
+            existingSku.quantity += 1;
+            existingSku.backerIds.add(pledge.id);
+          } else {
+            skuCounts.set(itemKey, {
+              sku: skuValue,
+              name: itemName,
+              quantity: 1,
+              backerIds: new Set([pledge.id]),
+              projectItemId: item.projectItemId,
+            });
+          }
         });
       }
 
       // Count items from addons (with quantity multiplier)
-      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string } | null }[] } }) => {
+      pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }[] } }) => {
         pledgeAddon.addon.items?.forEach((item) => {
           const itemName = item.projectItem?.title || item.title;
           const itemKey = item.projectItemId
@@ -543,9 +563,36 @@ export async function GET(req: NextRequest) {
           } else {
             itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, projectItemId: item.projectItemId, sku: null, inStock: false });
           }
+
+          const skuValue = item.projectItem?.sku?.trim() || null;
+          const existingSku = skuCounts.get(itemKey);
+          if (existingSku) {
+            existingSku.quantity += pledgeAddon.quantity;
+            existingSku.backerIds.add(pledge.id);
+          } else {
+            skuCounts.set(itemKey, {
+              sku: skuValue,
+              name: itemName,
+              quantity: pledgeAddon.quantity,
+              backerIds: new Set([pledge.id]),
+              projectItemId: item.projectItemId,
+            });
+          }
         });
       });
     });
+
+    // Build SKU stats sorted by quantity sold desc
+    const skuStats = Array.from(skuCounts.entries())
+      .map(([key, s]) => ({
+        id: key,
+        projectItemId: s.projectItemId,
+        sku: s.sku,
+        name: s.name,
+        quantity: s.quantity,
+        backers: s.backerIds.size,
+      }))
+      .sort((a, b) => b.quantity - a.quantity);
 
     // Convert to array and sort by count descending
     const fulfillmentItems = Array.from(itemCounts.values())
@@ -694,6 +741,7 @@ export async function GET(req: NextRequest) {
       }),
       referrers: processedReferrers,
       productionOrderStats: fulfillmentStats,
+      skuStats,
       userRole,
     });
   } catch (error) {

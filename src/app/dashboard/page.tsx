@@ -415,6 +415,7 @@ export default function CreatorDashboard() {
                 <RewardStats
                   rewardStats={data.rewardStats}
                   addonStats={data.addonStats}
+                  skuStats={data.skuStats ?? []}
                   projectUrl={project.projectUrl}
                 />
               </TabsContent>
