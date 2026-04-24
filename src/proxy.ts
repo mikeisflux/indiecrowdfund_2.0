@@ -283,8 +283,23 @@ async function syncBlockedIPsFromDb(): Promise<void> {
       }
     }
   } catch (error) {
-    // Silently fail - will retry on next request
-    console.error("[Bot Blocker] Sync error:", error);
+    // Sync is best-effort — if the self-fetch to localhost:3000 times
+    // out (startup race, PM2 restart in flight, or the server is busy
+    // enough that an internal request can't get in), we'll retry on
+    // the next request. Don't log ConnectTimeoutError / ECONNREFUSED
+    // noise for those expected transient failures. Real unexpected
+    // errors still log.
+    const err = error as { cause?: { code?: string }; code?: string; name?: string; message?: string } | undefined;
+    const code = err?.cause?.code || err?.code;
+    const isTransientNetwork =
+      code === "UND_ERR_CONNECT_TIMEOUT" ||
+      code === "ECONNREFUSED" ||
+      code === "ECONNRESET" ||
+      err?.name === "AbortError" ||
+      (err?.message || "").includes("aborted");
+    if (!isTransientNetwork) {
+      console.error("[Bot Blocker] Sync error:", error);
+    }
   }
 }
 
