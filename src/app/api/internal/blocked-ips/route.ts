@@ -122,14 +122,30 @@ export async function POST(req: NextRequest) {
     // If block flag is set, add to blocked IPs
     if (block) {
       // Scale block duration based on repeat offenses:
-      // 1st block = 24h, 2nd = 3 days, 3rd = 7 days, 4th+ = 30 days
+      //   1st block = 24h
+      //   2nd      = 3 days
+      //   3rd      = 7 days
+      //   4th      = 30 days
+      //   5th+     = PERMANENT
+      // By violation #5 this IP has repeatedly come back after 30 days
+      // in the penalty box — it's a confirmed attacker (scraper, scanner,
+      // rate-limit abuser). Stop catch-and-releasing. Sentinel 504/400
+      // fallout already spikes when these IPs come back, so keeping them
+      // gone saves real worker capacity for legit traffic.
+      // Uses year 9999 as a "never expires" sentinel; the existing
+      // isIPBlocked cleanup skips rows whose expiresAt is in the future
+      // (which this always is) without any schema change.
+      const PERMANENT_EXPIRES_AT = new Date("9999-12-31T00:00:00.000Z");
       const existing = await db.blockedIP.findUnique({
         where: { ipAddress: ip },
         select: { violationCount: true },
       });
       const violations = (existing?.violationCount || 0) + 1;
+      const isPermanent = violations >= 5;
       const durationHours = violations <= 1 ? 24 : violations === 2 ? 72 : violations === 3 ? 168 : 720;
-      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+      const expiresAt = isPermanent
+        ? PERMANENT_EXPIRES_AT
+        : new Date(Date.now() + durationHours * 60 * 60 * 1000);
 
       await db.blockedIP.upsert({
         where: { ipAddress: ip },
@@ -158,7 +174,7 @@ export async function POST(req: NextRequest) {
         // Non-fatal
       }
 
-      internalBlockedIpsLogger.info(`[Bot Blocker API] IP blocked: ${ip} - ${reason} (${durationHours}h, violation #${violations})`);
+      internalBlockedIpsLogger.info(`[Bot Blocker API] IP blocked: ${ip} - ${reason} (${isPermanent ? "PERMANENT" : durationHours + "h"}, violation #${violations})`);
     }
 
     return NextResponse.json({ success: true });

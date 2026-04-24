@@ -174,10 +174,18 @@ export function ErrorReporter() {
       // and 401s from user-specific endpoints hit by unauthenticated visitors
       // 400s from user-input validation endpoints — the UI already surfaces
       // the error as a toast, so admin-logging them is pure duplication.
+      // Stats poller is read-only, polled every few seconds from project
+      // detail / prelaunch / dashboard. Transient 4xx/5xx (bot probes
+      // malforming the URL, upstream saturation during attack bursts,
+      // pm2 reload timing) is not actionable — the UI just shows stale
+      // numbers for one poll cycle and self-heals.
+      const isStatsPollerPath =
+        /\/api\/projects\/(vanity\/[^/]+\/[^/]+|[^/]+)\/stats$/.test(requestUrl);
       const isExpected400 = response.status === 400 && (
         requestUrl.includes("/api/user/verify-email") ||
         requestUrl.includes("/api/user/profile") ||
-        requestUrl.includes("/api/user/settings")
+        requestUrl.includes("/api/user/settings") ||
+        isStatsPollerPath
       );
       // Bot-probe 404s on well-known paths that we don't serve (ads.txt,
       // llms.txt, /.well-known/*, etc.) — WebPageTest, Pingdom, ad network
@@ -225,7 +233,7 @@ export function ErrorReporter() {
       // one poll cycle and self-heals. Observed 120 events in 40 minutes
       // from a single attack burst — pure log noise.
       const isStatsPoller5xx = response.status >= 500 && response.status < 600 &&
-        /\/api\/projects\/(vanity\/[^/]+\/[^/]+|[^/]+)\/stats$/.test(requestUrl);
+        isStatsPollerPath;
       const isExpected5xx = response.status >= 500 && response.status < 600 &&
         (requestUrl.includes("/api/auth/recaptcha") || isStatsPoller5xx);
       const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403 || isExpected5xx;
