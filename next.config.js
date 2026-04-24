@@ -30,6 +30,19 @@ const nextConfig = {
     // Increase body size limit for server actions (default is 1MB)
     serverActions: {
       bodySizeLimit: '2gb',
+      // Accept Server Action POSTs whose `origin` header is the www.
+      // variant even though `x-forwarded-host` is the apex. Next.js 15+
+      // rejects the action otherwise with "`x-forwarded-host` header
+      // with value `indiecrowdfund.com` does not match `origin` header
+      // with value `www.indiecrowdfund.com` from a forwarded Server
+      // Actions request. Aborting the action." — seen on the pm2 log.
+      // The www -> apex 301 redirect above handles HTML navigation but
+      // a client that already has the action-bundle loaded will fire
+      // the POST against the origin it was served under.
+      allowedOrigins: [
+        'indiecrowdfund.com',
+        'www.indiecrowdfund.com',
+      ],
     },
     // Increase body size limit for requests going through proxy (default is 10MB)
     // Without this, large file uploads (PDFs) get truncated and fail with

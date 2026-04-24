@@ -103,6 +103,12 @@ function getPrismaClient(): PrismaClient {
         "terminating connection due to administrator command",
         "server closed the connection unexpectedly",
         "Unique constraint failed on the fields: (`fingerprint`)",
+        // Session cleanup races: session.delete() after validation finds
+        // the row was already reaped (expiry, logout, signout-everywhere).
+        // Our callers already .catch(() => {}) these at the app level,
+        // but the engine-level log still emits through the $on("error")
+        // hook. Suppress — benign.
+        "An operation failed because it depends on one or more records that were required but not found. No record was found for a delete.",
       ];
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

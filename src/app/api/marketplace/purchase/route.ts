@@ -198,7 +198,19 @@ export async function POST(request: Request) {
 
         const dcResult = await dcResponse.json();
         if (!dcResponse.ok || !dcResult.success) {
-          marketplacePurchaseLogger.error({ err: dcResult, status: dcResponse.status }, "[Marketplace DC] Failed to create payment intent:");
+          // pino's String(err) coerces object values to "[object Object]"
+          // when they land on the err key. Serialize the upstream response
+          // and split out the fields we actually care about so the log
+          // line is useful.
+          marketplacePurchaseLogger.error(
+            {
+              status: dcResponse.status,
+              dcError: typeof dcResult?.error === "string" ? dcResult.error : JSON.stringify(dcResult?.error ?? null),
+              dcCode: dcResult?.code ?? null,
+              dcBody: JSON.stringify(dcResult),
+            },
+            "[Marketplace DC] Failed to create payment intent",
+          );
           await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
           return NextResponse.json(
             { error: dcResult.error || "Failed to initialize payment" },
