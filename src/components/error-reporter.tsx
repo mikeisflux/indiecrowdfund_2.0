@@ -211,6 +211,7 @@ export function ErrorReporter() {
         requestUrl.includes("/api/user/notifications") ||
         requestUrl.includes("/api/messages") ||
         requestUrl.includes("/api/creator/dashboard") ||
+        requestUrl.includes("/api/creator/email/threads") ||
         isEditPageSubResource401
       );
       // These endpoints never return 403 themselves — a 403 means the bot blocker blocked the IP
@@ -234,8 +235,24 @@ export function ErrorReporter() {
       // from a single attack burst — pure log noise.
       const isStatsPoller5xx = response.status >= 500 && response.status < 600 &&
         isStatsPollerPath;
+      // Dashboard-mount background pollers (notification bell, email
+      // thread counter). These fire on every dashboard load and every
+      // few seconds while the page is open. A 5xx during an attack
+      // saturation burst or a pm2 reload is transient — the next poll
+      // self-heals the UI. The attack window on 2026-04-24 spammed 50+
+      // of these in a few seconds before the bot blocker's rate-limit
+      // ban caught up; filtering them out keeps Sentinel focused on
+      // real regressions.
+      const isDashboardPoller5xx = response.status >= 500 && response.status < 600 &&
+        (
+          requestUrl.includes("/api/user/notifications") ||
+          requestUrl.includes("/api/creator/email/threads") ||
+          requestUrl.includes("/api/creator/dashboard") ||
+          requestUrl.includes("/api/user/following") ||
+          requestUrl.includes("/api/messages")
+        );
       const isExpected5xx = response.status >= 500 && response.status < 600 &&
-        (requestUrl.includes("/api/auth/recaptcha") || isStatsPoller5xx);
+        (requestUrl.includes("/api/auth/recaptcha") || isStatsPoller5xx || isDashboardPoller5xx);
       const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403 || isExpected5xx;
       if (response.status >= 400 && !isInternal) {
         reportError(
