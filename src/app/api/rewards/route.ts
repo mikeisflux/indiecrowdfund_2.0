@@ -13,7 +13,7 @@ const createRewardSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().min(1).max(5000),
   amount: z.number().positive().max(999999.99),
-  imageUrl: z.string().max(2048).optional(),
+  imageUrl: z.string().max(8192).optional(),
   estimatedDelivery: z.string().max(100).optional(),
   shippingType: z.enum(["WORLDWIDE", "SELECTED_COUNTRIES", "NO_SHIPPING"]),
   shippingCountries: z.array(z.string().max(10)).max(250).default([]),
@@ -23,7 +23,7 @@ const createRewardSchema = z.object({
   items: z.array(z.object({
     title: z.string().min(1).max(200),
     description: z.string().max(1000).optional(),
-    imageUrl: z.string().max(2048).optional(),
+    imageUrl: z.string().max(8192).optional(),
   })).max(100).default([]),
 });
 
@@ -32,7 +32,7 @@ const updateRewardSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().min(1).max(5000).optional(),
   amount: z.number().positive().max(999999.99).optional(),
-  imageUrl: z.string().max(2048).optional(),
+  imageUrl: z.string().max(8192).optional(),
   estimatedDelivery: z.string().max(100).optional(),
   shippingType: z.enum(["WORLDWIDE", "SELECTED_COUNTRIES", "NO_SHIPPING"]).optional(),
   shippingCountries: z.array(z.string().max(10)).max(250).optional(),

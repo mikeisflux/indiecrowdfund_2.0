@@ -9,6 +9,23 @@ import { markAsRead, markAllAsRead } from "@/lib/notifications";
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
 
+// Client disconnects (tab close, timeout, navigation mid-request) surface
+// as AbortError / DOMException / "Error: aborted" from req.json() or Prisma.
+// They're not server bugs — just stop logging them as errors so the PM2
+// logs aren't buried in noise every time someone closes a tab.
+function isClientAbort(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const name = (error as { name?: string }).name;
+  const message = (error as { message?: string }).message || "";
+  return (
+    name === "AbortError" ||
+    name === "DOMException" ||
+    message === "aborted" ||
+    message.includes("aborted") ||
+    message.includes("request aborted")
+  );
+}
+
 // GET - Fetch user notifications
 export async function GET(req: NextRequest) {
   try {
@@ -68,7 +85,9 @@ export async function GET(req: NextRequest) {
       unreadCount,
     });
   } catch (error) {
-    userNotificationsLogger.error({ err: String(error) }, "Error fetching notifications:");
+    if (!isClientAbort(error)) {
+      userNotificationsLogger.error({ err: String(error) }, "Error fetching notifications:");
+    }
     return NextResponse.json(
       { error: "Failed to fetch notifications" },
       { status: 500 }
@@ -113,7 +132,9 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    userNotificationsLogger.error({ err: String(error) }, "Error updating notifications:");
+    if (!isClientAbort(error)) {
+      userNotificationsLogger.error({ err: String(error) }, "Error updating notifications:");
+    }
     return NextResponse.json(
       { error: "Failed to update notifications" },
       { status: 500 }
@@ -166,7 +187,9 @@ export async function DELETE(req: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    userNotificationsLogger.error({ err: String(error) }, "Error deleting notification:");
+    if (!isClientAbort(error)) {
+      userNotificationsLogger.error({ err: String(error) }, "Error deleting notification:");
+    }
     return NextResponse.json(
       { error: "Failed to delete notification" },
       { status: 500 }
