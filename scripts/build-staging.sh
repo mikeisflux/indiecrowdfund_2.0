@@ -61,9 +61,26 @@ if npm run build; then
   echo "📋 Copying build output to staging..."
   cp -r "$BUILD_DIR/.next" "$PROJECT_DIR/.next-staging"
 
+  # Prisma 7 stamps a unique hash into the generated client on every
+  # `prisma generate`, and Next.js bakes that hash into the compiled
+  # chunks as `require("@prisma/client-<hash>")`. The hash in the temp
+  # BUILD_DIR will not match the hash in the live PROJECT_DIR/node_modules
+  # (postinstall also ran prisma generate), so if we ship only .next
+  # the site crashes at runtime with `Cannot find module
+  # @prisma/client-<hash>`. Stage the generated client alongside .next
+  # so deploy.sh can atomically swap both together.
+  echo "📋 Copying generated Prisma client to staging..."
+  rm -rf "$PROJECT_DIR/.prisma-staging"
+  if [ -d "$BUILD_DIR/node_modules/.prisma" ]; then
+    cp -r "$BUILD_DIR/node_modules/.prisma" "$PROJECT_DIR/.prisma-staging"
+  else
+    echo "⚠️  No generated Prisma client found in BUILD_DIR — deploy will fail"
+    exit 1
+  fi
+
   cd "$PROJECT_DIR"
   echo ""
-  echo "✅ Build successful! Staged in .next-staging"
+  echo "✅ Build successful! Staged in .next-staging + .prisma-staging"
   echo ""
   echo "To deploy, run: npm run deploy"
   echo "Or manually: ./scripts/deploy.sh"
