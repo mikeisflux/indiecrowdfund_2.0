@@ -200,6 +200,7 @@ export function ErrorReporter() {
       const isExpected401 = response.status === 401 && (
         requestUrl.includes("/api/user/following") ||
         requestUrl.includes("/api/user/vanity-url") ||
+        requestUrl.includes("/api/user/notifications") ||
         requestUrl.includes("/api/messages") ||
         isEditPageSubResource401
       );
