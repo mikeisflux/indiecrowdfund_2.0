@@ -202,6 +202,7 @@ export function ErrorReporter() {
         requestUrl.includes("/api/user/vanity-url") ||
         requestUrl.includes("/api/user/notifications") ||
         requestUrl.includes("/api/messages") ||
+        requestUrl.includes("/api/creator/dashboard") ||
         isEditPageSubResource401
       );
       // These endpoints never return 403 themselves — a 403 means the bot blocker blocked the IP
