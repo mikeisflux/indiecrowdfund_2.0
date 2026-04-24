@@ -104,8 +104,10 @@ export interface AddonData {
 export interface SimilarProject {
   id: string;
   title: string;
+  slug: string;
+  vanityUrl: string | null;
   creator: string;
-  imageUrl: string;
+  imageUrl: string | null;
   daysLeft: number;
   endDate: string | null;
   fundedPercent: number;

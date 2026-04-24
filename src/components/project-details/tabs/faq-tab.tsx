@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -106,10 +107,24 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {similarProjects.map((project) => (
-              <Link key={project.id} href="#" className="group">
-                <div className="aspect-[4/3] bg-muted rounded-lg overflow-hidden mb-3">
-                  <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800" />
+            {similarProjects.map((project) => {
+              const projectHref = project.vanityUrl
+                ? `/projects/${project.vanityUrl}/${project.slug}`
+                : `/projects/${project.slug}`;
+              return (
+              <Link key={project.id} href={projectHref} className="group">
+                <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden mb-3">
+                  {project.imageUrl ? (
+                    <Image
+                      src={project.imageUrl}
+                      alt={project.title}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800" />
+                  )}
                 </div>
                 <div className="flex items-start gap-2">
                   <Avatar className="h-8 w-8 flex-shrink-0">
@@ -139,7 +154,8 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
                   </Button>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
