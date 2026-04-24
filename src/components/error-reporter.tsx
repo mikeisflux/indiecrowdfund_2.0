@@ -217,8 +217,17 @@ export function ErrorReporter() {
       // /api/auth/recaptcha 5xx is transient (nginx upstream briefly down during pm2 reload);
       // the client retries with backoff and falls back to disabled, so failures here are
       // deploy-window noise rather than actionable errors.
+      //
+      // Project stats endpoint is a client-side poller for live funding
+      // numbers. Under a scraper attack (see Bot Blocker rate-limit bans
+      // for >120 req/min on this path) or a pm2 reload, nginx 504s before
+      // the worker answers. The UI just shows slightly stale numbers for
+      // one poll cycle and self-heals. Observed 120 events in 40 minutes
+      // from a single attack burst — pure log noise.
+      const isStatsPoller5xx = response.status >= 500 && response.status < 600 &&
+        /\/api\/projects\/(vanity\/[^/]+\/[^/]+|[^/]+)\/stats$/.test(requestUrl);
       const isExpected5xx = response.status >= 500 && response.status < 600 &&
-        requestUrl.includes("/api/auth/recaptcha");
+        (requestUrl.includes("/api/auth/recaptcha") || isStatsPoller5xx);
       const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403 || isExpected5xx;
       if (response.status >= 400 && !isInternal) {
         reportError(
