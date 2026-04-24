@@ -277,11 +277,13 @@ export async function POST(
 
     // If this is a reply (has parentId)
     if (parentId) {
-      // Verify parent comment exists and belongs to this project
+      // Verify parent comment exists and belongs to this project.
+      // Comment model has no deletedAt column — Prisma rejects the
+      // filter with `Unknown argument deletedAt` and the whole reply
+      // round-trips as "Failed to create comment" in the UI.
       parentComment = await db.comment.findFirst({
         where: {
           id: parentId,
-          deletedAt: null,
           projectId,
         },
         select: {
@@ -301,11 +303,11 @@ export async function POST(
       // Determine the root comment (top-level comment in the thread)
       let rootComment = parentComment;
       if (parentComment.parentId) {
-        // This is a reply to a reply - find the root comment
+        // This is a reply to a reply - find the root comment.
+        // No deletedAt on Comment (see note above).
         const root = await db.comment.findFirst({
           where: {
             id: parentComment.parentId,
-            deletedAt: null,
             projectId,
           },
           select: {
