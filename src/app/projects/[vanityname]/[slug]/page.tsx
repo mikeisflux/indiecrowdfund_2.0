@@ -885,7 +885,7 @@ export default function ProjectPage() {
         )}
 
         {activeTab === "updates" && (
-          <UpdatesTab updates={project.updates} />
+          <UpdatesTab updates={project.updates} similarProjects={similarProjects} />
         )}
 
         {activeTab === "comments" && (

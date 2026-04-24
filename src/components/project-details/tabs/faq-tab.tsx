@@ -1,14 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronRight, ChevronDown, Heart, Clock, Bookmark, Search } from "lucide-react";
+import { ChevronRight, ChevronDown, Search } from "lucide-react";
 import { SimilarProject } from "../types";
-import { formatTimeRemaining } from "@/lib/utils";
+import { SimilarProjectsGrid } from "../similar-projects-grid";
 
 interface FaqTabProps {
   faqs: { question: string; answer: string }[];
@@ -97,68 +94,7 @@ export function FaqTab({ faqs, similarProjects }: FaqTabProps) {
         </div>
       </div>
 
-      {/* Similar Projects Section */}
-      {similarProjects.length > 0 && (
-        <div>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <h3 className="text-lg font-semibold">Similar projects to check out</h3>
-            <Button variant="outline" size="sm">
-              See more
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {similarProjects.map((project) => {
-              const projectHref = project.vanityUrl
-                ? `/projects/${project.vanityUrl}/${project.slug}`
-                : `/projects/${project.slug}`;
-              return (
-              <Link key={project.id} href={projectHref} className="group">
-                <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden mb-3">
-                  {project.imageUrl ? (
-                    <Image
-                      src={project.imageUrl}
-                      alt={project.title}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800" />
-                  )}
-                </div>
-                <div className="flex items-start gap-2">
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarFallback className="text-xs bg-muted">
-                      {project.creator?.[0] || "C"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 mb-1">
-                      {project.isProjectWeLove && (
-                        <Heart className="h-3 w-3 fill-[#05ce78] text-[#05ce78]" />
-                      )}
-                      <h4 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
-                        {project.title}
-                      </h4>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{project.creator}</p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{project.endDate ? formatTimeRemaining(new Date(project.endDate)) : `${project.daysLeft} days left`}</span>
-                      <span>•</span>
-                      <span>{project.fundedPercent}% funded</span>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Bookmark">
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <SimilarProjectsGrid projects={similarProjects} />
     </div>
   );
 }

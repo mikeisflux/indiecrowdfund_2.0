@@ -2,16 +2,14 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Heart, Clock, Pin, Bookmark, Loader2, MessageSquare, X } from "lucide-react";
+import { Pin, Loader2, MessageSquare, X } from "lucide-react";
 import { CommentData, CommentReply, SimilarProject, TabValue } from "../types";
 import { formatRelativeTime } from "../utils";
-import { formatTimeRemaining } from "@/lib/utils";
+import { SimilarProjectsGrid } from "../similar-projects-grid";
 
 interface CommentsTabProps {
   projectId: string;
@@ -411,68 +409,7 @@ export function CommentsTab({
         </div>
       </div>
 
-      {/* Similar Projects Section */}
-      {similarProjects.length > 0 && (
-        <div>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <h3 className="text-lg font-semibold">Similar projects to check out</h3>
-            <Button variant="outline" size="sm">
-              See more
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {similarProjects.map((proj) => {
-              const projectHref = proj.vanityUrl
-                ? `/projects/${proj.vanityUrl}/${proj.slug}`
-                : `/projects/${proj.slug}`;
-              return (
-              <Link key={proj.id} href={projectHref} className="group">
-                <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden mb-3">
-                  {proj.imageUrl ? (
-                    <Image
-                      src={proj.imageUrl}
-                      alt={proj.title}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800" />
-                  )}
-                </div>
-                <div className="flex items-start gap-2">
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarFallback className="text-xs bg-muted">
-                      {proj.creator?.[0] || "C"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 mb-1">
-                      {proj.isProjectWeLove && (
-                        <Heart className="h-3 w-3 fill-[#05ce78] text-[#05ce78]" />
-                      )}
-                      <h4 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
-                        {proj.title}
-                      </h4>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{proj.creator}</p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{proj.endDate ? formatTimeRemaining(new Date(proj.endDate)) : `${proj.daysLeft} days left`}</span>
-                      <span>•</span>
-                      <span>{proj.fundedPercent}% funded</span>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Bookmark">
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <SimilarProjectsGrid projects={similarProjects} />
     </div>
   );
 }
