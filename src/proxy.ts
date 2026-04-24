@@ -340,10 +340,26 @@ function getClientIP(req: NextRequest): string {
   );
 }
 
+// Never-block allowlist: loopback addresses for the server's own
+// self-fetches (bot-blocker sync, health checks, internal cron). If
+// any of these ever ended up in the blocklist — observed in pm2 logs
+// as "IP blocked: 127.0.0.1" when something on the box probed
+// /_next/data — every subsequent internal request would 403 and
+// cascade-break the app.
+function isLocalhostIP(ip: string): boolean {
+  return (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "::ffff:127.0.0.1" ||
+    ip === "localhost"
+  );
+}
+
 /**
  * Check if an IP is blocked (fast in-memory check)
  */
 function isIPBlockedFast(ip: string): boolean {
+  if (isLocalhostIP(ip)) return false;
   const cached = blockedIPCache.get(ip);
   if (!cached) return false;
 
@@ -600,8 +616,14 @@ export async function proxy(req: NextRequest) {
     return rewriteToBlocked("Forbidden", 403);
   }
 
-  // Instant-block scanners probing internal/sensitive paths
+  // Instant-block scanners probing internal/sensitive paths. Never
+  // block localhost — internal self-fetches (bot-blocker sync, health
+  // checks, crons) hit these same paths and would otherwise poison the
+  // blocklist with 127.0.0.1.
   if (SCANNER_PATHS.some((p) => pathname.startsWith(p))) {
+    if (isLocalhostIP(clientIP)) {
+      return rewriteToBlocked("Forbidden", 403);
+    }
     console.log(`[Bot Blocker] Scanner detected: ${clientIP} probing ${pathname}`);
     blockedIPCache.set(clientIP, { expiresAt: Date.now() + SCANNER_BLOCK_DURATION_MS });
     persistBlockedIP(clientIP, `Scanner probe: ${pathname}`, { path: pathname, userAgent });

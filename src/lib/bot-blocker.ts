@@ -133,6 +133,17 @@ export async function blockIP(
   }
 ): Promise<boolean> {
   if (!ip || ip === "unknown") return false;
+  // Never persist a block for loopback — internal self-fetches use
+  // these addresses and a rogue entry would 403 the app's own
+  // bot-blocker sync, health checks, and crons.
+  if (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "::ffff:127.0.0.1" ||
+    ip === "localhost"
+  ) {
+    return false;
+  }
 
   const expiresAt = new Date(Date.now() + BLOCK_DURATION_MS);
 
