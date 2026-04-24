@@ -289,14 +289,26 @@ async function syncBlockedIPsFromDb(): Promise<void> {
     // the next request. Don't log ConnectTimeoutError / ECONNREFUSED
     // noise for those expected transient failures. Real unexpected
     // errors still log.
+    //
+    // Also catches the bare `TypeError: fetch failed` that undici
+    // throws when the socket dies mid-request without setting a cause
+    // code — observed once on 2026-04-24T05:00:11 as "[Bot Blocker]
+    // Sync error: fetch failed" with no cause.code reported to
+    // Sentinel. Every failure to reach 127.0.0.1:${PORT} from inside
+    // the process is transient by definition (the process itself is
+    // the upstream); swallow it.
     const err = error as { cause?: { code?: string }; code?: string; name?: string; message?: string } | undefined;
     const code = err?.cause?.code || err?.code;
+    const msg = err?.message || "";
     const isTransientNetwork =
       code === "UND_ERR_CONNECT_TIMEOUT" ||
       code === "ECONNREFUSED" ||
       code === "ECONNRESET" ||
+      code === "UND_ERR_SOCKET" ||
       err?.name === "AbortError" ||
-      (err?.message || "").includes("aborted");
+      msg.includes("aborted") ||
+      msg === "fetch failed" ||
+      msg.includes("other side closed");
     if (!isTransientNetwork) {
       console.error("[Bot Blocker] Sync error:", error);
     }
@@ -325,7 +337,28 @@ function persistBlockedIP(
       block: true,
       ...metadata,
     }),
-  }).catch((err) => console.error("[Bot Blocker] Persist error:", err));
+  }).catch((err) => {
+    // Same transient-network swallow as the sync above. The persist
+    // call is best-effort; if the self-fetch can't reach
+    // localhost:${PORT} right now, the ip is still in the in-memory
+    // blockedIPCache, so the immediate request is still being blocked.
+    // The next runBotBlocker invocation or the periodic syncBlocked-
+    // IPsFromDb will reconcile.
+    const code = err?.cause?.code || err?.code;
+    const msg = err?.message || "";
+    const isTransientNetwork =
+      code === "UND_ERR_CONNECT_TIMEOUT" ||
+      code === "ECONNREFUSED" ||
+      code === "ECONNRESET" ||
+      code === "UND_ERR_SOCKET" ||
+      err?.name === "AbortError" ||
+      msg.includes("aborted") ||
+      msg === "fetch failed" ||
+      msg.includes("other side closed");
+    if (!isTransientNetwork) {
+      console.error("[Bot Blocker] Persist error:", err);
+    }
+  });
 }
 
 /**
