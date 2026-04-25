@@ -20,7 +20,7 @@ function escapeHtml(str: string): string {
 }
 
 const createMessageSchema = z.object({
-  projectId: z.string(),
+  projectId: z.string().optional(),
   recipientId: z.string(),
   subject: z.string().max(500).optional(),
   content: z.string().min(1).max(50000),
@@ -36,14 +36,23 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createMessageSchema.parse(body);
 
-    // Verify project exists
-    const project = await db.project.findFirst({
-      where: { id: data.projectId , deletedAt: null },
-      select: { id: true, creatorId: true },
-    });
+    // Verify project exists (only when one was provided — project-less DMs
+    // are allowed for direct messages started from a user profile)
+    let projectForEmail: { title: string; slug: string } | null = null;
+    if (data.projectId) {
+      const project = await db.project.findFirst({
+        where: { id: data.projectId, deletedAt: null },
+        select: { id: true, creatorId: true },
+      });
 
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      if (!project) {
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      }
+
+      projectForEmail = await db.project.findFirst({
+        where: { id: data.projectId, deletedAt: null },
+        select: { title: true, slug: true },
+      });
     }
 
     // Verify recipient exists and is not deleted
@@ -62,15 +71,9 @@ export async function POST(req: NextRequest) {
       select: { name: true },
     });
 
-    // Get project title for context
-    const projectForEmail = await db.project.findFirst({
-      where: { id: data.projectId , deletedAt: null },
-      select: { title: true, slug: true },
-    });
-
     const message = await db.message.create({
       data: {
-        projectId: data.projectId,
+        projectId: data.projectId ?? null,
         senderId: session.user.id,
         recipientId: data.recipientId,
         subject: data.subject,
@@ -87,25 +90,30 @@ export async function POST(req: NextRequest) {
     if (recipient.email) {
       try {
         const senderName = sender?.name || "Someone";
-        const projectTitle = projectForEmail?.title || "a project";
+        const projectTitle = projectForEmail?.title || null;
         const contentPreview = data.content.length > 200
           ? data.content.substring(0, 200) + "..."
           : data.content;
 
+        const replyParams = new URLSearchParams({ recipientId: session.user.id });
+        if (data.projectId) replyParams.set("projectId", data.projectId);
+
         await sendEmail({
           to: recipient.email,
-          subject: `New message from ${senderName} about "${projectTitle}"`,
+          subject: projectTitle
+            ? `New message from ${senderName} about "${projectTitle}"`
+            : `New message from ${senderName}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #6366f1;">You have a new message</h2>
               <p>Hi ${escapeHtml(recipient.name || "there")},</p>
-              <p><strong>${escapeHtml(senderName)}</strong> sent you a message about <strong>${escapeHtml(projectTitle)}</strong>:</p>
+              <p><strong>${escapeHtml(senderName)}</strong> sent you ${projectTitle ? `a message about <strong>${escapeHtml(projectTitle)}</strong>` : "a direct message"}:</p>
               <div style="background: #f3f4f6; border-left: 4px solid #6366f1; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
                 ${data.subject ? `<p style="margin: 0 0 8px 0; font-weight: bold;">${escapeHtml(data.subject)}</p>` : ""}
                 <p style="margin: 0; color: #374151; white-space: pre-wrap;">${escapeHtml(contentPreview)}</p>
               </div>
               <p style="margin-top: 20px;">
-                <a href="${APP_URL}/dashboard/messages?projectId=${data.projectId}&recipientId=${session.user.id}" style="background: linear-gradient(to right, #6366f1, #a855f7); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View & Reply</a>
+                <a href="${APP_URL}/dashboard/messages?${replyParams.toString()}" style="background: linear-gradient(to right, #6366f1, #a855f7); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View & Reply</a>
               </p>
               <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
                 You received this email because someone sent you a message on ${APP_NAME}.
@@ -304,13 +312,15 @@ export async function PATCH(req: NextRequest) {
           readAt: new Date(),
         },
       });
-    } else if (conversationWith && projectId) {
-      // Mark all messages in conversation as read
+    } else if (conversationWith) {
+      // Mark all messages in this conversation as read. projectId is
+      // optional — when omitted (e.g. project-less DMs from a profile),
+      // we mark every message between the two users as read.
       await db.message.updateMany({
         where: {
           senderId: conversationWith,
           recipientId: userId,
-          projectId,
+          ...(projectId ? { projectId } : {}),
         },
         data: {
           read: true,

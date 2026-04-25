@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
@@ -253,8 +254,19 @@ function BookSection({
 
 
 
+// Map sub-route paths to the matching marketplace tab id. Lets users
+// deep-link directly into Comics / Music / Movies without changing the
+// page's look or behaviour.
+function tabFromPathname(pathname: string | null): string {
+  if (!pathname) return "comics";
+  if (pathname.endsWith("/music")) return "music";
+  if (pathname.endsWith("/movies")) return "movies";
+  return "comics";
+}
+
 export default function MarketplacePage() {
-  const [activeTab, setActiveTab] = useState("comics");
+  const pathname = usePathname();
+  const [activeTab, setActiveTab] = useState(() => tabFromPathname(pathname));
   const [searchQuery, setSearchQuery] = useState("");
   const [featuredBooks, setFeaturedBooks] = useState<Book[]>([]);
   const [staffPicks, setStaffPicks] = useState<Book[]>([]);

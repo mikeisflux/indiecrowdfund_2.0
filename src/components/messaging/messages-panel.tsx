@@ -68,8 +68,8 @@ interface NewConversationInfo {
   recipientId: string;
   recipientName: string | null;
   recipientImage: string | null;
-  projectId: string;
-  projectTitle: string;
+  projectId: string | null;
+  projectTitle: string | null;
 }
 
 interface MessagesPanelProps {
@@ -216,27 +216,29 @@ export function MessagesPanel({
       return;
     }
 
-    // No existing conversation — only auto-prepare a "new conversation" form
-    // when we have a project context. Project-less DMs aren't supported by
-    // the API yet, so without a projectId we just leave the inbox open.
-    if (!projectId) return;
-
+    // No existing conversation — prepare a "new conversation" form so the
+    // user lands directly on the compose view. Works with or without a
+    // projectId (project-less DMs are supported by the API now).
     const fetchNewConversationInfo = async () => {
       try {
-        const [userRes, projectRes] = await Promise.all([
+        const requests: Promise<Response>[] = [
           fetch(`/api/messages/user-info?userId=${recipientId}`),
-          fetch(`/api/projects/${projectId}`),
-        ]);
+        ];
+        if (projectId) {
+          requests.push(fetch(`/api/projects/${projectId}`));
+        }
+        const [userRes, projectRes] = await Promise.all(requests);
 
-        const userData = userRes.ok ? await userRes.json() : null;
-        const projectData = projectRes.ok ? await projectRes.json() : null;
+        const userData = userRes && userRes.ok ? await userRes.json() : null;
+        const projectData =
+          projectRes && projectRes.ok ? await projectRes.json() : null;
 
         setNewConversation({
           recipientId,
           recipientName: userData?.user?.name || "User",
           recipientImage: userData?.user?.image || null,
-          projectId,
-          projectTitle: projectData?.project?.title || "Project",
+          projectId: projectId ?? null,
+          projectTitle: projectData?.project?.title || null,
         });
         setSelectedConversation(null);
       } catch (error) {
@@ -249,20 +251,24 @@ export function MessagesPanel({
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
 
-    // Handle sending to existing conversation or new conversation
-    const targetRecipientId = selectedConversation?.otherUser.id || newConversation?.recipientId;
-    const targetProjectId = selectedConversation?.project?.id || newConversation?.projectId;
+    // Handle sending to existing conversation or new conversation. projectId
+    // is optional — direct messages started from a user profile have no
+    // project context.
+    const targetRecipientId =
+      selectedConversation?.otherUser.id || newConversation?.recipientId;
+    const targetProjectId =
+      selectedConversation?.project?.id || newConversation?.projectId || null;
 
-    if (!targetRecipientId || !targetProjectId) return;
+    if (!targetRecipientId) return;
 
     setSending(true);
     try {
       const res = await apiFetch("/api/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipientId: targetRecipientId,
-          projectId: targetProjectId,
+          ...(targetProjectId ? { projectId: targetProjectId } : {}),
           content: newMessage.trim(),
         }),
       });
@@ -275,18 +281,20 @@ export function MessagesPanel({
         if (newConversation) {
           // Convert new conversation to a proper conversation and select it
           const newConv: Conversation = {
-            id: `${newConversation.recipientId}-${newConversation.projectId}`,
+            id: `${newConversation.recipientId}-${newConversation.projectId ?? "inbox"}`,
             otherUser: {
               id: newConversation.recipientId,
               name: newConversation.recipientName,
               image: newConversation.recipientImage,
             },
-            project: {
-              id: newConversation.projectId,
-              title: newConversation.projectTitle,
-              slug: "",
-              imageUrl: null,
-            },
+            project: newConversation.projectId
+              ? {
+                  id: newConversation.projectId,
+                  title: newConversation.projectTitle ?? "Project",
+                  slug: "",
+                  imageUrl: null,
+                }
+              : null,
             lastMessage: {
               id: data.message.id,
               content: data.message.content,
@@ -500,7 +508,9 @@ export function MessagesPanel({
                   {newConversation.recipientName || "User"}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  Re: {newConversation.projectTitle}
+                  {newConversation.projectTitle
+                    ? `Re: ${newConversation.projectTitle}`
+                    : "Direct message"}
                 </p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setNewConversation(null)}>
@@ -516,7 +526,9 @@ export function MessagesPanel({
               </div>
               <h3 className="text-lg font-semibold mb-2">Start a Conversation</h3>
               <p className="text-sm text-muted-foreground max-w-xs mb-4">
-                Send a message to {newConversation.recipientName || "this user"} about &quot;{newConversation.projectTitle}&quot;
+                {newConversation.projectTitle
+                  ? `Send a message to ${newConversation.recipientName || "this user"} about "${newConversation.projectTitle}"`
+                  : `Send a direct message to ${newConversation.recipientName || "this user"}`}
               </p>
             </div>
 
