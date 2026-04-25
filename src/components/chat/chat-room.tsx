@@ -53,7 +53,6 @@ import {
   ShieldAlert,
   ChevronUp,
   Circle,
-  Image as ImageIcon,
   Search as SearchIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -900,11 +899,11 @@ export function ChatRoom() {
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
-                      className="shrink-0 text-muted-foreground hover:text-primary"
+                      size="sm"
+                      className="shrink-0 h-9 px-2 text-[11px] font-bold tracking-wider text-muted-foreground hover:text-primary border border-border/50 rounded-md"
                       aria-label="GIF picker"
                     >
-                      <ImageIcon className="h-5 w-5" />
+                      GIF
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent
