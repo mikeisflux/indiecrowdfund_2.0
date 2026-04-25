@@ -12,6 +12,39 @@ export async function register() {
     const { captureError } = await import("@/lib/error-tracker");
     const originalConsoleError = console.error;
 
+    // Patterns that should NEVER reach PM2 stderr / Sentinel — they are
+    // either bot probes (Next-Action header set to "x", "run", "hi", etc.)
+    // or real clients running a stale build whose action IDs no longer
+    // match the server. Both classes are operational noise, not bugs.
+    const SUPPRESSED_STDERR_PATTERNS = [
+      "Failed to find Server Action",
+      "The requested resource isn't a valid image",
+      "Input Buffer is empty",
+      "did not initialize yet",
+      "Failed to parse body as FormData",
+      "account_invalid",
+      "transformAlgorithm is not a function",
+    ];
+
+    // Some Next.js production code paths write directly to process.stderr
+    // and bypass console.error. Wrap stderr.write so the same suppression
+    // list applies regardless of which logger emitted the message.
+    const originalStderrWrite = process.stderr.write.bind(process.stderr);
+    type StderrWrite = typeof process.stderr.write;
+    process.stderr.write = ((
+      chunk: Parameters<StderrWrite>[0],
+      encodingOrCb?: Parameters<StderrWrite>[1],
+      cb?: Parameters<StderrWrite>[2]
+    ) => {
+      const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+      if (SUPPRESSED_STDERR_PATTERNS.some((p) => text.includes(p))) {
+        if (typeof encodingOrCb === "function") encodingOrCb();
+        else if (typeof cb === "function") cb();
+        return true;
+      }
+      return originalStderrWrite(chunk, encodingOrCb, cb);
+    }) as StderrWrite;
+
     console.error = (...args: unknown[]) => {
       const message = args
         .map((a) => (typeof a === "string" ? a : a instanceof Error ? a.message : String(a)))

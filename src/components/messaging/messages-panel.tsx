@@ -194,41 +194,56 @@ export function MessagesPanel({
 
   // If recipientId is provided, open that conversation or prepare new conversation
   useEffect(() => {
-    if (recipientId && projectId && !loading) {
-      const conv = conversations.find(
-        (c) => c.otherUser.id === recipientId && c.project?.id === projectId
-      );
-      if (conv) {
-        setSelectedConversation(conv);
-        setNewConversation(null);
-      } else {
-        // No existing conversation, fetch recipient user info and project info
-        const fetchNewConversationInfo = async () => {
-          try {
-            // Fetch both the recipient's user info and project info in parallel
-            const [userRes, projectRes] = await Promise.all([
-              fetch(`/api/messages/user-info?userId=${recipientId}`),
-              fetch(`/api/projects/${projectId}`),
-            ]);
+    if (!recipientId || loading) return;
 
-            const userData = userRes.ok ? await userRes.json() : null;
-            const projectData = projectRes.ok ? await projectRes.json() : null;
+    // With both recipient + project: try exact match, then fall back to any
+    // conversation with that recipient. With recipient only (e.g. coming
+    // from a user profile, no project context): match the most recent
+    // conversation we have with that user.
+    const exact = projectId
+      ? conversations.find(
+          (c) => c.otherUser.id === recipientId && c.project?.id === projectId
+        )
+      : null;
+    const anyWithRecipient = conversations.find(
+      (c) => c.otherUser.id === recipientId
+    );
+    const conv = exact || anyWithRecipient;
 
-            setNewConversation({
-              recipientId,
-              recipientName: userData?.user?.name || "User",
-              recipientImage: userData?.user?.image || null,
-              projectId,
-              projectTitle: projectData?.project?.title || "Project",
-            });
-            setSelectedConversation(null);
-          } catch (error) {
-            console.error("Failed to fetch new conversation info:", error);
-          }
-        };
-        fetchNewConversationInfo();
-      }
+    if (conv) {
+      setSelectedConversation(conv);
+      setNewConversation(null);
+      return;
     }
+
+    // No existing conversation — only auto-prepare a "new conversation" form
+    // when we have a project context. Project-less DMs aren't supported by
+    // the API yet, so without a projectId we just leave the inbox open.
+    if (!projectId) return;
+
+    const fetchNewConversationInfo = async () => {
+      try {
+        const [userRes, projectRes] = await Promise.all([
+          fetch(`/api/messages/user-info?userId=${recipientId}`),
+          fetch(`/api/projects/${projectId}`),
+        ]);
+
+        const userData = userRes.ok ? await userRes.json() : null;
+        const projectData = projectRes.ok ? await projectRes.json() : null;
+
+        setNewConversation({
+          recipientId,
+          recipientName: userData?.user?.name || "User",
+          recipientImage: userData?.user?.image || null,
+          projectId,
+          projectTitle: projectData?.project?.title || "Project",
+        });
+        setSelectedConversation(null);
+      } catch (error) {
+        console.error("Failed to fetch new conversation info:", error);
+      }
+    };
+    fetchNewConversationInfo();
   }, [recipientId, projectId, conversations, loading]);
 
   const handleSendMessage = async () => {

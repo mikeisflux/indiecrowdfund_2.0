@@ -334,7 +334,7 @@ export default function PublicProfilePage() {
                       </>
                     )}
                   </Button>
-                  <Link href={`/messages/new?to=${profile.id}`}>
+                  <Link href={`/dashboard/messages?recipientId=${profile.id}`}>
                     <Button variant="outline" size="icon">
                       <MessageSquare className="h-4 w-4" />
                     </Button>
