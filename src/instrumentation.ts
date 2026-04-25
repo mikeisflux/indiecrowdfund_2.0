@@ -30,20 +30,30 @@ export async function register() {
     // and bypass console.error. Wrap stderr.write so the same suppression
     // list applies regardless of which logger emitted the message.
     const originalStderrWrite = process.stderr.write.bind(process.stderr);
-    type StderrWrite = typeof process.stderr.write;
-    process.stderr.write = ((
-      chunk: Parameters<StderrWrite>[0],
-      encodingOrCb?: Parameters<StderrWrite>[1],
-      cb?: Parameters<StderrWrite>[2]
-    ) => {
-      const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-      if (SUPPRESSED_STDERR_PATTERNS.some((p) => text.includes(p))) {
-        if (typeof encodingOrCb === "function") encodingOrCb();
-        else if (typeof cb === "function") cb();
+    process.stderr.write = function patchedWrite(
+      this: NodeJS.WritableStream,
+      ...args: unknown[]
+    ): boolean {
+      const chunk = args[0];
+      const text =
+        typeof chunk === "string"
+          ? chunk
+          : Buffer.isBuffer(chunk)
+            ? chunk.toString("utf8")
+            : chunk instanceof Uint8Array
+              ? Buffer.from(chunk).toString("utf8")
+              : "";
+      if (text && SUPPRESSED_STDERR_PATTERNS.some((p) => text.includes(p))) {
+        const cb = args.find((a) => typeof a === "function") as
+          | ((err?: Error | null) => void)
+          | undefined;
+        cb?.();
         return true;
       }
-      return originalStderrWrite(chunk, encodingOrCb, cb);
-    }) as StderrWrite;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (originalStderrWrite as any)(...args);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any;
 
     console.error = (...args: unknown[]) => {
       const message = args

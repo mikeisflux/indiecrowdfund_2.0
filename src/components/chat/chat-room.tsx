@@ -909,13 +909,15 @@ export function ChatRoom() {
                   <PopoverContent
                     side="top"
                     align="start"
+                    sideOffset={6}
                     className="w-[340px] p-0 shadow-2xl"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    onCloseAutoFocus={(e) => e.preventDefault()}
                   >
                     <div className="p-3 border-b">
                       <div className="relative">
                         <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          autoFocus
                           value={gifQuery}
                           onChange={(e) => setGifQuery(e.target.value)}
                           placeholder="Search GIFs..."
