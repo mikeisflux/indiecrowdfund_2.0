@@ -185,6 +185,7 @@ export function ErrorReporter() {
         requestUrl.includes("/api/user/verify-email") ||
         requestUrl.includes("/api/user/profile") ||
         requestUrl.includes("/api/user/settings") ||
+        (requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond")) ||
         isStatsPollerPath
       );
       // Bot-probe 404s on well-known paths that we don't serve (ads.txt,
