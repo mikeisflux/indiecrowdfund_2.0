@@ -222,6 +222,7 @@ export function ErrorReporter() {
         requestUrl.includes("/api/backer/digital-files/stream") ||
         (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/stats")) ||
         requestUrl.includes("/api/auth/session") ||
+        requestUrl.includes("/api/auth/recaptcha") ||
         (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/comments"))
       );
       // /api/auth/recaptcha 5xx is transient (nginx upstream briefly down during pm2 reload);
