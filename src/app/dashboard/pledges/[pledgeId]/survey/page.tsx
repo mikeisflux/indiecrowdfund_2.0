@@ -211,8 +211,94 @@ export default function BackerSurveyPage() {
     }
   };
 
+  // Mirror the server-side validation in /api/surveys/[pledgeId]/respond
+  // so the user sees a single inline error and we never POST a request
+  // the server will only reject. Returns null when valid, or an error
+  // string otherwise. Keep these checks in lockstep with the route's
+  // 400 returns — adding a new server check requires a matching client
+  // check here.
+  const validateBeforeSubmit = (): string | null => {
+    if (!data) return "Survey is still loading. Please wait.";
+
+    if (data.survey.status === "DRAFT") {
+      return "This survey hasn't been sent yet. Please wait for the creator to send it.";
+    }
+    if (data.survey.status === "LOCKED") {
+      return "This survey has been locked by the creator and can no longer be edited.";
+    }
+
+    // Backer-level required questions
+    for (const q of data.backerQuestions || []) {
+      if (!q.isRequired) continue;
+      const answer = backerResponses[q.id];
+      const empty =
+        answer === undefined ||
+        answer === null ||
+        (typeof answer === "string" && answer.trim() === "") ||
+        (Array.isArray(answer) && answer.length === 0);
+      if (empty) {
+        return `Please answer: "${q.question}"`;
+      }
+    }
+
+    // Per-item variants and required custom questions
+    for (const itemQ of data.itemQuestions || []) {
+      const itemResponse = itemResponses[itemQ.id] || {};
+      // Every variant is required server-side ("Please select a <type> for <item>")
+      for (const variant of itemQ.variants) {
+        const selected = itemResponse.variants?.[variant.variantType];
+        if (!selected || selected.trim() === "") {
+          return `Please select a ${variant.variantType} for ${itemQ.itemName}.`;
+        }
+      }
+      // Required custom questions per item
+      for (const customQ of itemQ.customQuestions) {
+        if (!customQ.isRequired) continue;
+        const answer = itemResponse.customAnswers?.[customQ.id];
+        const empty =
+          answer === undefined ||
+          answer === null ||
+          (typeof answer === "string" && answer.trim() === "") ||
+          (Array.isArray(answer) && answer.length === 0);
+        if (empty) {
+          return `Please answer "${customQ.question}" for ${itemQ.itemName}.`;
+        }
+      }
+    }
+
+    // Shipping address — required when survey collects addresses AND the
+    // pledge requires shipping. Mirror the strict zod schema on the server.
+    if (showAddressStep) {
+      const required: { key: keyof typeof shippingAddress; label: string }[] = [
+        { key: "name", label: "Name" },
+        { key: "line1", label: "Address line 1" },
+        { key: "city", label: "City" },
+        { key: "state", label: "State / Region" },
+        { key: "postalCode", label: "Postal code" },
+        { key: "country", label: "Country" },
+      ];
+      for (const f of required) {
+        if (!shippingAddress[f.key] || shippingAddress[f.key].trim() === "") {
+          return `Shipping address is incomplete: ${f.label} is required.`;
+        }
+      }
+    }
+
+    return null;
+  };
+
   // Submit survey: if addons selected, submit then go to payment; otherwise submit and redirect
   const handleSubmit = async () => {
+    const validationError = validateBeforeSubmit();
+    if (validationError) {
+      setError(validationError);
+      // Scroll the inline error banner into view so the user actually sees it.
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      return;
+    }
+
     const saved = await saveProgress(true);
     if (!saved) return;
 
