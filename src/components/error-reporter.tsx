@@ -92,6 +92,13 @@ export function ErrorReporter() {
       // TipTap/ProseMirror NoModificationAllowedError — contentEditable
       // interference from browser extensions (Grammarly, LanguageTool, etc.)
       /NoModificationAllowedError/,
+      // Generic NetworkError fetch rejections — usually a user with flaky
+      // wifi or a VPN drop in the middle of a CDN/poll request. Not our
+      // bug, and we already retry where it matters.
+      /NetworkError when attempting to fetch resource/,
+      /TypeError: Failed to fetch/,
+      /TypeError: NetworkError/,
+      /Load failed/,
     ];
 
     // Paths that automated scanners / ad networks / browser feature-detection

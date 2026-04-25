@@ -816,10 +816,22 @@ export function ChatRoom() {
                   >
                     <Picker
                       data={async () => {
-                        const response = await fetch(
-                          "https://cdn.jsdelivr.net/npm/@emoji-mart/data"
-                        );
-                        return response.json();
+                        // The emoji-mart custom element calls this from its
+                        // connectedCallback, but if the user closes the
+                        // popover or the network blips before it resolves
+                        // the rejection bubbles to window.onunhandledrejection
+                        // and lights up Sentinel as a NetworkError. Catch
+                        // it and return an empty dataset — picker shows a
+                        // loading state, no global crash.
+                        try {
+                          const response = await fetch(
+                            "https://cdn.jsdelivr.net/npm/@emoji-mart/data"
+                          );
+                          if (!response.ok) return {};
+                          return await response.json();
+                        } catch {
+                          return {};
+                        }
                       }}
                       onEmojiSelect={handleEmojiSelect}
                       theme="auto"
