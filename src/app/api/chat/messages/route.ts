@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
       deletedAt: null,
     };
 
-    // Enforce 1-week history retention window for initial/scroll-back loads
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Enforce 6-month (180-day) history retention window for initial/scroll-back loads
+    const retentionCutoff = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
 
     // If polling for new messages
     if (after) {
@@ -57,11 +57,11 @@ export async function GET(req: NextRequest) {
       });
 
       if (beforeMessage) {
-        whereClause.createdAt = { lt: beforeMessage.createdAt, gte: oneWeekAgo };
+        whereClause.createdAt = { lt: beforeMessage.createdAt, gte: retentionCutoff };
       }
     } else {
       // Initial load - only show messages from the last week
-      whereClause.createdAt = { gte: oneWeekAgo };
+      whereClause.createdAt = { gte: retentionCutoff };
     }
 
     const messages = await db.chatMessage.findMany({
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
           deletedAt: null,
           createdAt: {
             lt: oldestFetched.createdAt,
-            gte: oneWeekAgo,
+            gte: retentionCutoff,
           },
         },
       });
@@ -175,6 +175,15 @@ export async function POST(req: NextRequest) {
       if (!stickerData || !stickerData.stickerId) {
         return NextResponse.json(
           { error: "Sticker data is required" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (type === "GIF") {
+      if (!stickerData || typeof stickerData.url !== "string" || !/^https?:\/\//.test(stickerData.url)) {
+        return NextResponse.json(
+          { error: "GIF url is required" },
           { status: 400 }
         );
       }

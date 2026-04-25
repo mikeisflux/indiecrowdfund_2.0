@@ -95,6 +95,8 @@ export function MessagesPanel({
   const [sending, setSending] = useState(false);
   const [view, setView] = useState<"inbox" | "sent">("inbox");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLengthRef = useRef(0);
+  const prevConversationKeyRef = useRef<string | null>(null);
 
   // Fetch conversations
   useEffect(() => {
@@ -161,10 +163,34 @@ export function MessagesPanel({
     }
   }, [selectedConversation]);
 
-  // Auto scroll to bottom on new messages
+  // Auto scroll to bottom only when the user is already near the bottom or the
+  // conversation just changed. Avoids yanking the page back when a backer
+  // scrolls up to read older messages and a poll/state update lands.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const anchor = messagesEndRef.current;
+    if (!anchor) return;
+    const viewport = anchor.closest<HTMLElement>(
+      "[data-radix-scroll-area-viewport]"
+    );
+    if (!viewport) return;
+
+    const conversationKey = selectedConversation
+      ? `${selectedConversation.otherUser.id}:${selectedConversation.project?.id ?? ""}`
+      : null;
+    const conversationChanged =
+      conversationKey !== prevConversationKeyRef.current;
+    const messagesGrew = messages.length > prevMessagesLengthRef.current;
+    const distanceFromBottom =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    const wasNearBottom = distanceFromBottom < 80;
+
+    if (conversationChanged || (messagesGrew && wasNearBottom)) {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+
+    prevMessagesLengthRef.current = messages.length;
+    prevConversationKeyRef.current = conversationKey;
+  }, [messages, selectedConversation]);
 
   // If recipientId is provided, open that conversation or prepare new conversation
   useEffect(() => {

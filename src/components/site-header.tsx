@@ -26,7 +26,6 @@ import {
   ChevronDown,
   Bug,
   FileText,
-  MessageCircle,
   Loader2,
   ArrowRight,
   X,
@@ -220,14 +219,6 @@ export function SiteHeader() {
             <NavLink href="/marketplace">Marketplace</NavLink>
             <NavLink href="/lcs-locator">LCS Locator</NavLink>
             <NavLink href="/retailers">Retailers</NavLink>
-            <Link
-              href="/chat"
-              className="text-sm font-medium hover:text-primary transition-colors relative group flex items-center gap-1.5"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Chat
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500 group-hover:w-full transition-all" />
-            </Link>
             <DropdownMenu>
               <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors relative group flex items-center gap-1 outline-none">
                 Bug Report/Changelog
@@ -320,10 +311,6 @@ export function SiteHeader() {
                 </Link>
                 <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
                   Retailers
-                </Link>
-                <Link href="/chat" className="text-sm font-medium hover:text-primary py-2 flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Chat
                 </Link>
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-4 pb-2">Bug Report/Changelog</div>
                 <Link href="/bug-report" className="text-sm font-medium hover:text-primary py-2 flex items-center gap-2">

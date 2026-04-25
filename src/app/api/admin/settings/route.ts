@@ -102,6 +102,7 @@ export async function GET() {
           maxProjectStorageMB: true, signedUrlExpirationMinutes: true,
           maxFileSizeMB: true, allowedFileTypes: true, digitalDownloadsEnabled: true,
           gaEnabled: true, googleAnalyticsId: true, gtmEnabled: true, googleTagManagerId: true,
+          klipyEnabled: true, klipyApiKey: true,
           createdAt: true, updatedAt: true,
         },
       });
@@ -168,6 +169,7 @@ export async function GET() {
             maxProjectStorageMB: true, signedUrlExpirationMinutes: true,
             maxFileSizeMB: true, allowedFileTypes: true, digitalDownloadsEnabled: true,
             gaEnabled: true, googleAnalyticsId: true, gtmEnabled: true, googleTagManagerId: true,
+            klipyEnabled: true, klipyApiKey: true,
             createdAt: true, updatedAt: true,
           },
         });
@@ -214,6 +216,7 @@ export async function GET() {
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
+      klipyApiKey: settings.klipyApiKey ? "••••••••" : null,
     };
 
     return NextResponse.json({ settings: maskedSettings });
@@ -279,7 +282,8 @@ export async function PATCH(req: NextRequest) {
       'twitterAccessToken', 'twitterAccessSecret',
       'stabilityApiKey', 'shuftiSecretKey',
       'r2AccessKeyId', 'r2SecretAccessKey',
-      'recaptchaSiteKey', 'recaptchaSecretKey'
+      'recaptchaSiteKey', 'recaptchaSecretKey',
+      'klipyApiKey'
     ];
 
     const filteredData = Object.fromEntries(
@@ -365,6 +369,9 @@ export async function PATCH(req: NextRequest) {
       ],
       analytics: [
         "gaEnabled", "googleAnalyticsId", "gtmEnabled", "googleTagManagerId"
+      ],
+      communication: [
+        "klipyEnabled", "klipyApiKey"
       ]
     };
 
@@ -511,6 +518,7 @@ export async function PATCH(req: NextRequest) {
       r2AccessKeyId: settings.r2AccessKeyId ? "••••••••" : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
+      klipyApiKey: settings.klipyApiKey ? "••••••••" : null,
     };
 
     return NextResponse.json({

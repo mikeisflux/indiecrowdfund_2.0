@@ -53,6 +53,8 @@ import {
   ShieldAlert,
   ChevronUp,
   Circle,
+  Image as ImageIcon,
+  Search as SearchIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -76,14 +78,25 @@ interface ChatUser {
 interface ChatMessage {
   id: string;
   content: string;
-  type: "TEXT" | "EMOJI" | "STICKER";
+  type: "TEXT" | "EMOJI" | "STICKER" | "GIF";
   stickerData?: {
-    stickerId: string;
-    packId: string;
-    emoji: string;
+    stickerId?: string;
+    packId?: string;
+    emoji?: string;
+    // GIF payloads piggyback on stickerData (the JSON column accepts both shapes)
+    url?: string;
+    previewUrl?: string;
+    title?: string;
   };
   user: ChatUser;
   createdAt: string;
+}
+
+interface KlipyGif {
+  id: string;
+  url: string;
+  previewUrl: string;
+  title: string;
 }
 
 interface StickerPack {
@@ -114,6 +127,11 @@ export function ChatRoom() {
   const [stickerPacks, setStickerPacks] = useState<StickerPack[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [gifQuery, setGifQuery] = useState("");
+  const [gifResults, setGifResults] = useState<KlipyGif[]>([]);
+  const [gifsLoading, setGifsLoading] = useState(false);
+  const [gifsEnabled, setGifsEnabled] = useState(false);
   const [, setOnlineCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [canModerate, setCanModerate] = useState(false);
@@ -289,7 +307,7 @@ export function ChatRoom() {
   // Send message
   const sendMessage = async (
     content: string,
-    type: "TEXT" | "EMOJI" | "STICKER" = "TEXT",
+    type: "TEXT" | "EMOJI" | "STICKER" | "GIF" = "TEXT",
     stickerData?: ChatMessage["stickerData"]
   ) => {
     if (type === "TEXT" && !content.trim()) return;
@@ -404,6 +422,48 @@ export function ChatRoom() {
       emoji: sticker.emoji,
     });
     setShowStickerPicker(false);
+  };
+
+  // Fetch GIFs from Klipy proxy
+  const fetchGifs = useCallback(async (query: string) => {
+    setGifsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("q", query.trim());
+      const res = await fetch(`/api/chat/gifs?${params.toString()}`);
+      if (!res.ok) {
+        setGifsEnabled(false);
+        setGifResults([]);
+        return;
+      }
+      const data = await res.json();
+      setGifsEnabled(!!data.enabled);
+      setGifResults(Array.isArray(data.gifs) ? data.gifs : []);
+    } catch (err) {
+      console.error("Error fetching GIFs:", err);
+      setGifResults([]);
+    } finally {
+      setGifsLoading(false);
+    }
+  }, []);
+
+  // Load trending GIFs whenever the picker opens or the query changes (debounced).
+  useEffect(() => {
+    if (!showGifPicker) return;
+    const handle = setTimeout(() => {
+      fetchGifs(gifQuery);
+    }, gifQuery ? 300 : 0);
+    return () => clearTimeout(handle);
+  }, [showGifPicker, gifQuery, fetchGifs]);
+
+  const handleGifSelect = (gif: KlipyGif) => {
+    sendMessage("", "GIF", {
+      url: gif.url,
+      previewUrl: gif.previewUrl,
+      title: gif.title,
+    });
+    setShowGifPicker(false);
+    setGifQuery("");
   };
 
   // Handle form submit
@@ -695,6 +755,20 @@ export function ChatRoom() {
                           <div className="text-5xl hover:scale-110 transition-transform cursor-default select-none">
                             {message.stickerData.emoji}
                           </div>
+                        ) : message.type === "GIF" && message.stickerData?.url ? (
+                          <div className="rounded-2xl overflow-hidden border bg-muted/30 max-w-[260px]">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={message.stickerData.url}
+                              alt={message.stickerData.title || "GIF"}
+                              loading="lazy"
+                              className="w-full h-auto block"
+                            />
+                            <div className="px-2 py-1 text-[10px] text-muted-foreground bg-background/50 flex items-center justify-between">
+                              <span className="truncate">{message.stickerData.title || "GIF"}</span>
+                              <span>via Klipy</span>
+                            </div>
+                          </div>
                         ) : (
                           <div
                             className={cn(
@@ -817,6 +891,77 @@ export function ChatRoom() {
                         </TabsContent>
                       ))}
                     </Tabs>
+                  </PopoverContent>
+                </Popover>
+
+                {/* GIF Picker (Klipy) */}
+                <Popover open={showGifPicker} onOpenChange={setShowGifPicker}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-muted-foreground hover:text-primary"
+                      aria-label="GIF picker"
+                    >
+                      <ImageIcon className="h-5 w-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    side="top"
+                    align="start"
+                    className="w-[340px] p-0 shadow-2xl"
+                  >
+                    <div className="p-3 border-b">
+                      <div className="relative">
+                        <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          autoFocus
+                          value={gifQuery}
+                          onChange={(e) => setGifQuery(e.target.value)}
+                          placeholder="Search GIFs..."
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-[320px] overflow-y-auto p-2">
+                      {!gifsEnabled && !gifsLoading && gifResults.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-8 px-3">
+                          GIFs are not enabled. An admin can connect a Klipy API
+                          key in Admin → Settings → Communication.
+                        </p>
+                      ) : gifsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : gifResults.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-8">
+                          No GIFs found.
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          {gifResults.map((gif) => (
+                            <button
+                              key={gif.id}
+                              type="button"
+                              onClick={() => handleGifSelect(gif)}
+                              className="rounded-md overflow-hidden border hover:ring-2 hover:ring-primary/50 transition-shadow"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={gif.previewUrl}
+                                alt={gif.title || "GIF"}
+                                loading="lazy"
+                                className="w-full h-auto block"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-3 py-2 border-t text-[10px] text-muted-foreground text-right">
+                      Powered by Klipy
+                    </div>
                   </PopoverContent>
                 </Popover>
 

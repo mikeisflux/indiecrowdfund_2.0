@@ -13,6 +13,8 @@ import {
   Shield,
   BookOpen,
   HelpCircle,
+  LayoutDashboard,
+  ShoppingBag,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from "@/components/footer";
@@ -22,8 +24,10 @@ const tabs = [
   { id: 'backing', label: 'Making a Pledge', icon: Heart },
   { id: 'paypal', label: 'Paying with PayPal', icon: CreditCard },
   { id: 'divinitycoin', label: 'DivinityCoin', icon: Coins },
+  { id: 'whop', label: 'Paying with Whop', icon: ShoppingBag },
   { id: 'rewards', label: 'Rewards & Add-ons', icon: Gift },
   { id: 'after', label: 'After You Pledge', icon: Package },
+  { id: 'dashboard', label: 'Your Backer Dashboard', icon: LayoutDashboard },
   { id: 'marketplace', label: 'Marketplace', icon: BookOpen },
   { id: 'faq', label: 'FAQ', icon: HelpCircle },
 ];
@@ -34,7 +38,21 @@ interface Step {
   tip?: string;
 }
 
-const tabContent: Record<string, { title: string; description: string; alert?: { icon: typeof Shield; title: string; text: string; color: string }; steps: Step[] }> = {
+interface Section {
+  heading: string;
+  description?: string;
+  steps: Step[];
+}
+
+interface TabContent {
+  title: string;
+  description: string;
+  alert?: { icon: typeof Shield; title: string; text: string; color: string };
+  steps?: Step[];
+  sections?: Section[];
+}
+
+const tabContent: Record<string, TabContent> = {
   'discover': {
     title: 'Finding the Perfect Project',
     description: 'Learn how to discover campaigns that match your interests.',
@@ -84,6 +102,20 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
       { title: 'Refunds', description: 'If a campaign fails or your pledge is refunded, the refund is processed back to your original payment method. For closed campaigns, backers can submit a refund request which the creator must approve.', tip: 'Refund processing times depend on your card issuer, typically 5-10 business days.' },
     ]
   },
+  'whop': {
+    title: 'Paying with Whop',
+    description: 'Whop is a third payment processor option some creators use on IndieCrowdfund. Pay by credit/debit card — Whop handles the processing.',
+    alert: { icon: ShoppingBag, title: 'Card Payments via Whop', text: 'Whop is a regulated payment platform that accepts Visa, Mastercard, Amex, and Discover. Like PayPal and DivinityCoin, the creator chooses Whop as their processor and you check out with your card. IndieCrowdfund never sees or stores your card details.', color: 'emerald' },
+    steps: [
+      { title: 'What is Whop?', description: 'Whop is one of three payment processors a creator can pick on IndieCrowdfund (PayPal, DivinityCoin, Whop). For you as a backer, the experience is the same: enter your card at a secure checkout. There is no Whop account requirement.', tip: 'Look for the "Powered by Whop" indicator on the project page or at checkout to see which processor a creator is using.' },
+      { title: 'How to Tell Which Processor a Project Uses', description: 'Each project page and checkout displays the processor it uses. Some content categories (e.g., adult/NSFW or certain digital goods) require Whop or DivinityCoin instead of PayPal.', tip: 'If the processor matters to you (e.g., refund policy, accepted regions), check before pledging.' },
+      { title: 'Checkout Flow', description: 'At pledge time, click "Back this project" → choose your reward → continue to checkout → the Whop card form appears. Enter card number, expiration, CVC, and your billing postal code. Click Pledge.', tip: 'Whop\'s form supports Apple Pay and Google Pay where available — look for the wallet buttons above the card form.' },
+      { title: 'When You\'re Charged (All-or-Nothing vs Keep-It-All)', description: 'Same rules as the other processors. All-or-Nothing: card authorized at pledge, captured only if the goal is reached. Keep-It-All: charged immediately at pledge time. Already-funded campaigns charge immediately too.', tip: 'The campaign type and timing are shown clearly on the project page before you confirm.' },
+      { title: 'Security', description: 'Whop is PCI-DSS compliant. Card data is tokenized at the browser, sent directly to Whop, and never touches IndieCrowdfund servers. The lock icon and "Secure Payment" header on the form confirm this.', tip: 'Never enter card details on a page that doesn\'t show the processor name and a lock icon in the URL bar.' },
+      { title: 'Refunds via Whop', description: 'Refunds for failed All-or-Nothing campaigns are automatic — the authorization is released. For other refund cases (creator-approved post-campaign refunds), Whop returns the money to your original card. Bank processing typically takes 5–10 business days.', tip: 'If a refund hasn\'t arrived after 10 business days, contact support with your pledge ID and the date you were notified of the refund.' },
+      { title: 'Where Whop Pledges Show Up in Your Dashboard', description: 'Whop pledges appear in My Projects → Backed exactly like PayPal or DivinityCoin pledges. The processor is visible in the pledge details. Receipts are emailed and also accessible from the pledge card.', tip: 'Filter your Analytics tab by source if you want to see how much you\'ve spent through each processor over time.' },
+    ]
+  },
   'rewards': {
     title: 'Understanding Rewards & Add-ons',
     description: 'How reward tiers and add-ons work.',
@@ -107,6 +139,64 @@ const tabContent: Record<string, { title: string; description: string; alert?: {
       { title: 'Tracking Fulfillment', description: 'See status in your dashboard: Not Started, In Progress, Shipped, Delivered.', tip: 'If "Shipped" but no tracking, check updates or contact creator.' },
       { title: 'Receiving Rewards', description: 'When rewards arrive, celebrate! Consider sharing photos or reviews.', tip: 'Having issues? Contact creator before leaving negative feedback.' },
     ]
+  },
+  'dashboard': {
+    title: 'Your Backer Dashboard — Complete Walkthrough',
+    description: 'Every menu in the dashboard, what it does, and step-by-step how to use it. Open your dashboard at /dashboard/backer and follow along.',
+    alert: { icon: LayoutDashboard, title: 'Four Sections, One Hub', text: 'The dashboard sidebar is split into four groups: My Projects (what you\'ve backed, saved, organized, or followed), Communication (messages and notifications), Fulfillment (surveys, addresses, downloads, digital library), and Insights (spending analytics). Use the tab buttons at the top of the dashboard to switch between them, or jump in via direct URLs like /dashboard/backer?tab=surveys.', color: 'emerald' },
+    sections: [
+      {
+        heading: 'Top of the Dashboard — Stats & Reminders',
+        description: 'Before you dive into a tab, the top of /dashboard/backer shows a snapshot. Read this first.',
+        steps: [
+          { title: 'Stats Overview Cards', description: 'Four glowing cards: Projects Backed (with success rate), Total Invested (with average per project), Successfully Funded (with delivered count), and Rewards Pending (pulses if you have unfulfilled items). They update live whenever a project status changes.', tip: 'A pulsing "Rewards Pending" card usually means you have a survey to complete — jump straight to the Surveys tab.' },
+          { title: 'Shipping Address Reminder Banner', description: 'If you have no shipping address saved and at least one physical reward is in flight, an amber banner appears at the top with an "Add Shipping Address" button that takes you straight to the Addresses tab.', tip: 'Add an address before your first physical pledge — creators can\'t ship without one.' },
+          { title: 'Sidebar: Backing Activity, Upcoming Deliveries, Recommended', description: 'On the right side: an animated bar chart of your last 6 months of spending, up to 5 Upcoming Deliveries sorted by estimated date, and Recommended For You suggestions based on the categories you\'ve backed.', tip: 'Click any Upcoming Delivery card to jump to that pledge in the Backed tab.' },
+        ],
+      },
+      {
+        heading: 'Section 1 — My Projects',
+        description: 'The first section in the sidebar. Everything tied to projects you have a relationship with.',
+        steps: [
+          { title: 'Backed (My Projects → Backed)', description: 'Lists every project you\'ve pledged to. Each card shows the project image, title, creator name, funding progress bar, your pledge amount, the reward tier you chose, estimated delivery, and the current fulfillment status (Not Started → In Progress → Shipped → Delivered). Use the action buttons: View Project, Manage Pledge, Message Creator, and Complete Survey (when one is open). Tick "Mark as Received" when your reward arrives, then leave a review with 1–5 stars across Overall, Delivery, Quality, and Communication, plus an optional title and review body (5000 char max).', tip: 'How-to: After your reward arrives, open Backed → find the project → tick "Mark as Received" → the review dialog opens automatically → rate each axis → click Save. Reviews help future backers and creators love the feedback.' },
+          { title: 'Saved (My Projects → Saved)', description: 'A grid of every project you\'ve hearted/saved. Each card shows the project image, funding percentage, and time remaining. Click "Back this project" to convert a Saved item into a pledge, or "Unsave" to remove it.', tip: 'How-to: Browsing Discover, click the heart icon on any project card → it lands here. Use this as a wishlist before payday.' },
+          { title: 'Collections (My Projects → Collections)', description: 'Group projects into named buckets — like Steam wishlists. Click "+ Create Collection" → name it ("Tabletop 2026"), pick a color, choose Public or Private, optionally add a note. Then on any project, use "Add to Collection". Edit, delete, or share a collection from the per-card menu.', tip: 'How-to: Make a Public collection like "Best Solo RPGs of 2026", add 5–10 projects, then share the URL on social. Public collections drive real pledges to creators you love.' },
+          { title: 'Following (My Projects → Following)', description: 'Lists every creator you follow. Each row shows their bio, project count, total backers, and recent projects. Per-creator toggles let you turn notifications on/off for new project launches and updates. One-click Unfollow. The activity feed below shows recent creator events (new projects, updates, funded campaigns).', tip: 'How-to: Visit a creator page → click "Follow" → return here → toggle "New project notifications" ON. You\'ll get an email the moment they launch — early-bird tiers go fastest.' },
+        ],
+      },
+      {
+        heading: 'Section 2 — Communication',
+        description: 'How you talk to creators and how the platform talks to you.',
+        steps: [
+          { title: 'Messages (Communication → Messages)', description: 'A full inbox-style interface. Conversations on the left, message thread on the right. The Messages tab shows a red unread-count badge in the sidebar. Click a conversation to read, type in the composer, hit Send. Backers usually get priority responses from creators.', tip: 'How-to: Need to fix a shipping address after a survey closed? Open Messages → find the creator → start your message with "Re: Pledge ID #12345". Always include your backer email or pledge ID for fulfillment questions.' },
+          { title: 'Notifications (Communication → Notifications)', description: 'Two layers of control. Global preferences: email updates on/off, digest frequency (daily / weekly / monthly), push notifications, marketing emails. Per-project toggles for: updates, comments, surveys, shipping, messages.', tip: 'How-to: Turn shipping notifications ON for every project so you know when to be home for a package. Turn marketing emails OFF and switch global digest to Weekly if your inbox is overflowing.' },
+        ],
+      },
+      {
+        heading: 'Section 3 — Fulfillment',
+        description: 'Everything between "campaign funded" and "package on your doorstep / file on your hard drive".',
+        steps: [
+          { title: 'Surveys (Fulfillment → Surveys)', description: 'A hub for every creator survey. The header shows your completion percentage and counts (total / completed / pending). Pending surveys are listed first, then completed. Each survey card shows project image, title, creator, your reward, your pledge amount, and how many questions remain. After a survey deadline, addresses lock and creators may not accept changes — the card surfaces the deadline clearly.', tip: 'How-to: New pledge funded? Check Surveys within 7 days. Click "Complete Survey" → answer size/colour/address questions → submit. Fulfillment waves often happen weeks before the public update — late surveys miss the wave.' },
+          { title: 'Addresses (Fulfillment → Addresses)', description: 'Manage every shipping address on your account. Click "+ Add Address" → fill full name, line 1, line 2 (optional), city, state, postal code, country, phone, and a label (Home / Work / Other) → Save. Click the star icon to set a default — it auto-fills on new pledges. Edit or Delete via each card\'s menu. A green tick indicates the address has been validated.', tip: 'How-to: Set your default address BEFORE your next pledge. Saves time at checkout and prevents typos. Moving house? Add the new address, set it as default, then delete the old one only after every active pledge has shipped.' },
+          { title: 'Downloads (Fulfillment → Downloads)', description: 'Every file a creator has shared with you, organised by project (each project is an expandable section). File cards show filename, file size, description, download count, and last downloaded date. New files have a "New" badge. Click "Download" to save locally.', tip: 'How-to: Download new files immediately — some creators rotate or expire links for paid digital releases. Keep a local backup folder per project.' },
+          { title: 'Digital Library (Fulfillment → Digital Library)', description: 'A built-in PDF/eBook reader for backed projects. Toggle between Grid and List view. Search the library, sort (Date / Name / Reading Progress), and filter (All projects / Source / Status). Click a book to open the reader: zoom controls, page navigation, bookmarks, fullscreen, auto-saved reading progress. If your browser supports IndexedDB, you can also Upload your own PDFs to read alongside backed content.', tip: 'How-to: Open a long PDF → use bookmarks to mark cliffhanger pages or art you want to revisit. Reading progress saves automatically, so you can pick up on another browser tab where you left off.' },
+        ],
+      },
+      {
+        heading: 'Section 4 — Insights',
+        description: 'Step back and see your backing patterns over time.',
+        steps: [
+          { title: 'Analytics (Insights → Analytics)', description: 'A dashboard of your spending. Total Spending broken into Physical / Digital / Add-ons / Shipping. Monthly chart for the last 6 months. Category breakdown (Comics, Tabletop, Film, Tech, etc.). Yearly comparison chart. Success rate (backed / funded / failed). Average delivery time. Time-range filter at the top (All time / 1 year / 6 months / etc.). Click "Export CSV" to download the raw data.', tip: 'How-to: Before the holidays, switch the time range to "6 months" and check your Category Breakdown — you\'ll spot trends you didn\'t know about (e.g., 60% of your spending went to one category) and can budget the next quarter accordingly.' },
+        ],
+      },
+      {
+        heading: 'Direct Links — Bookmark These',
+        description: 'Every dashboard tab has a clean URL. Bookmark the ones you visit most.',
+        steps: [
+          { title: 'Quick URL Reference', description: 'Append ?tab=<id> to /dashboard/backer to land on a tab directly. Valid IDs: backed, saved, collections, following, messages, notifications, surveys, addresses, downloads, digital-library, analytics. Example: /dashboard/backer?tab=surveys jumps straight to your survey hub.', tip: 'Bookmark /dashboard/backer?tab=surveys and /dashboard/backer?tab=addresses — those are the two tabs you\'ll use most during fulfillment.' },
+        ],
+      },
+    ],
   },
   'marketplace': {
     title: 'Digital Marketplace',
@@ -224,11 +314,31 @@ export default function BackerHandbookPage() {
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  {currentTab.steps.map((step, index) => (
-                    <StepCard key={step.title} step={step} number={index + 1} />
-                  ))}
-                </div>
+                {currentTab.sections ? (
+                  <div className="space-y-8">
+                    {currentTab.sections.map((section) => (
+                      <section key={section.heading}>
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 border-b border-border pb-2 mb-3">
+                          {section.heading}
+                        </h3>
+                        {section.description && (
+                          <p className="mb-3 text-sm text-zinc-600 dark:text-muted-foreground">{section.description}</p>
+                        )}
+                        <div className="space-y-3">
+                          {section.steps.map((step, index) => (
+                            <StepCard key={step.title} step={step} number={index + 1} />
+                          ))}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                ) : currentTab.steps ? (
+                  <div className="space-y-3">
+                    {currentTab.steps.map((step, index) => (
+                      <StepCard key={step.title} step={step} number={index + 1} />
+                    ))}
+                  </div>
+                ) : null}
               </>
             )}
 

@@ -197,6 +197,10 @@ model PlatformSettings {
   fontFamily            String   @default("Inter")
   borderRadius          String   @default("8")
 
+  // Klipy GIF Settings (powers GIF picker in chat)
+  klipyEnabled          Boolean  @default(false)
+  klipyApiKey           String?
+
   // Cloudflare R2 Storage Settings
   r2Enabled             Boolean  @default(false)
   r2AccountId           String?

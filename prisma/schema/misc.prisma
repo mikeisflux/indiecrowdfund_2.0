@@ -467,6 +467,7 @@ enum ChatMessageType {
   TEXT
   EMOJI
   STICKER
+  GIF
 }
 
 model ChatPresence {

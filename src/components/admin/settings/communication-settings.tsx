@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
+import { SecureKeyInput } from "@/components/ui/secure-key-input";
 import {
   Mail,
   Plus,
@@ -61,6 +62,7 @@ import {
   AtSign,
   Hash,
   Inbox,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -585,6 +587,61 @@ export function CommunicationSettings() {
   const [removeAllConfirmOpen, setRemoveAllConfirmOpen] = useState(false);
   const [removingAll, setRemovingAll] = useState(false);
 
+  // Klipy GIF settings
+  const [klipyEnabled, setKlipyEnabled] = useState(false);
+  const [klipyApiKey, setKlipyApiKey] = useState("");
+  const [klipyApiKeyHasValue, setKlipyApiKeyHasValue] = useState(false);
+  const [savingKlipy, setSavingKlipy] = useState(false);
+
+  // Fetch Klipy settings
+  const fetchKlipySettings = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/settings");
+      if (!response.ok) return;
+      const data = await response.json();
+      const s = data.settings || {};
+      setKlipyEnabled(!!s.klipyEnabled);
+      setKlipyApiKeyHasValue(s.klipyApiKey === "••••••••");
+      setKlipyApiKey(s.klipyApiKey || "");
+    } catch (error) {
+      console.error("Error fetching Klipy settings:", error);
+    }
+  }, []);
+
+  // Save Klipy settings (called by SecureKeyInput onSave or the toggle)
+  const saveKlipySettings = useCallback(
+    async (overrides?: { klipyEnabled?: boolean; klipyApiKey?: string }) => {
+      setSavingKlipy(true);
+      try {
+        const payload: Record<string, unknown> = {
+          klipyEnabled: overrides?.klipyEnabled ?? klipyEnabled,
+        };
+        const keyValue = overrides?.klipyApiKey ?? klipyApiKey;
+        if (keyValue && keyValue !== "••••••••") {
+          payload.klipyApiKey = keyValue;
+        }
+
+        const response = await apiFetch("/api/admin/settings", {
+          method: "PATCH",
+          json: { section: "communication", data: payload },
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || "Failed to save Klipy settings");
+        }
+        toast.success("Klipy settings saved");
+        await fetchKlipySettings();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to save Klipy settings"
+        );
+      } finally {
+        setSavingKlipy(false);
+      }
+    },
+    [klipyEnabled, klipyApiKey, fetchKlipySettings]
+  );
+
   // Fetch mailboxes
   const fetchMailboxes = useCallback(async () => {
     try {
@@ -620,7 +677,8 @@ export function CommunicationSettings() {
   useEffect(() => {
     fetchMailboxes();
     fetchBlocklist();
-  }, [fetchMailboxes, fetchBlocklist]);
+    fetchKlipySettings();
+  }, [fetchMailboxes, fetchBlocklist, fetchKlipySettings]);
 
   // Delete mailbox
   const handleDeleteMailbox = async () => {
@@ -929,6 +987,64 @@ export function CommunicationSettings() {
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Chat GIFs (Klipy) Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-pink-500" />
+            <div>
+              <CardTitle>Chat GIFs (Klipy)</CardTitle>
+              <CardDescription>
+                Connect a{" "}
+                <a
+                  href="https://klipy.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline hover:text-foreground"
+                >
+                  Klipy
+                </a>{" "}
+                API key to enable the GIF picker inside the site chat.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div className="space-y-0.5">
+              <Label className="text-base">Enable GIFs in Chat</Label>
+              <p className="text-sm text-muted-foreground">
+                When on, users see a GIF button in the chat composer.
+              </p>
+            </div>
+            <Switch
+              checked={klipyEnabled}
+              disabled={savingKlipy}
+              onCheckedChange={(checked) => {
+                setKlipyEnabled(checked);
+                saveKlipySettings({ klipyEnabled: checked });
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Klipy API Key</Label>
+            <SecureKeyInput
+              value={klipyApiKey}
+              onChange={setKlipyApiKey}
+              onSave={() => saveKlipySettings()}
+              hasExistingValue={klipyApiKeyHasValue}
+              placeholder="Paste your Klipy API key..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Click <strong>Set Key</strong> to paste a key, then click the
+              checkmark to save it. Your key is stored encrypted server-side
+              and never sent back to the browser.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
