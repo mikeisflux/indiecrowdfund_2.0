@@ -7,7 +7,8 @@ import { useSession } from "@/components/providers/auth-provider";
 import { MessagesPanel } from "@/components/messaging/messages-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   Loader2,
   XCircle,
@@ -63,6 +64,7 @@ export default function CreatorDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unreadEmailCount, setUnreadEmailCount] = useState(0);
+  const [activeTab, setActiveTab] = useState("overview");
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -346,59 +348,127 @@ export default function CreatorDashboard() {
             </Card>
 
             {/* Main Content Tabs */}
-            <Tabs defaultValue="overview" className="space-y-6">
-              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-                <TabsList className="inline-flex w-max md:w-auto bg-card/50 backdrop-blur border border-border/50 p-1">
-                  <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger value="backers" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <Users className="mr-2 h-4 w-4" />
-                    Backers
-                  </TabsTrigger>
-                  <TabsTrigger value="performance" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    Performance
-                  </TabsTrigger>
-                  <TabsTrigger value="email" className="relative data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <Mail className="mr-2 h-4 w-4" />
-                    Email
-                    {unreadEmailCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-lg animate-pulse">
-                        {unreadEmailCount > 99 ? "99+" : unreadEmailCount}
-                      </span>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="messages" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Messages
-                  </TabsTrigger>
-                  <TabsTrigger value="production-order" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <Truck className="mr-2 h-4 w-4" />
-                    Production Order
-                  </TabsTrigger>
-                  <TabsTrigger value="updates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Post Updates
-                  </TabsTrigger>
-                  <TabsTrigger value="social" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Social Hub
-                  </TabsTrigger>
-                  <TabsTrigger value="indiekit-v2" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <Sparkles className="mr-2 h-4 w-4 text-teal-500" />
-                    IndieKit 2.0
-                  </TabsTrigger>
-                  <TabsTrigger value="marketplace" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Marketplace
-                  </TabsTrigger>
-                  <TabsTrigger value="collaborations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                    <Handshake className="mr-2 h-4 w-4" />
-                    Collaborations
-                  </TabsTrigger>
-                </TabsList>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              {/* Sectioned Navigation (mirrors backer dashboard layout) */}
+              <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur divide-y divide-border/30">
+                {/* Overview */}
+                <div className="p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Overview</p>
+                  <div className="flex flex-wrap gap-1">
+                    {([
+                      { value: "overview", icon: BarChart3, label: "Overview", gradient: "from-primary to-purple-500" },
+                      { value: "performance", icon: BarChart3, label: "Performance", gradient: "from-violet-500 to-indigo-500" },
+                    ] as const).map(({ value, icon: Icon, label, gradient }) => (
+                      <button
+                        key={value}
+                        onClick={() => setActiveTab(value)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                          activeTab === value
+                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Audience */}
+                <div className="p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Audience</p>
+                  <div className="flex flex-wrap gap-1">
+                    {([
+                      { value: "backers", icon: Users, label: "Backers", gradient: "from-cyan-500 to-teal-500" },
+                      { value: "messages", icon: MessageSquare, label: "Messages", gradient: "from-blue-500 to-cyan-500" },
+                    ] as const).map(({ value, icon: Icon, label, gradient }) => (
+                      <button
+                        key={value}
+                        onClick={() => setActiveTab(value)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                          activeTab === value
+                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setActiveTab("email")}
+                      className={cn(
+                        "relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                        activeTab === "email"
+                          ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      Email
+                      {unreadEmailCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-lg animate-pulse">
+                          {unreadEmailCount > 99 ? "99+" : unreadEmailCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Marketing */}
+                <div className="p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Marketing</p>
+                  <div className="flex flex-wrap gap-1">
+                    {([
+                      { value: "updates", icon: FileText, label: "Post Updates", gradient: "from-amber-500 to-orange-500" },
+                      { value: "social", icon: Sparkles, label: "Social Hub", gradient: "from-pink-500 to-rose-500" },
+                      { value: "indiekit-v2", icon: Sparkles, label: "IndieKit 2.0", gradient: "from-emerald-500 to-teal-500" },
+                      { value: "marketplace", icon: ShoppingCart, label: "Marketplace", gradient: "from-purple-500 to-fuchsia-500" },
+                    ] as const).map(({ value, icon: Icon, label, gradient }) => (
+                      <button
+                        key={value}
+                        onClick={() => setActiveTab(value)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                          activeTab === value
+                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Operations */}
+                <div className="p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Operations</p>
+                  <div className="flex flex-wrap gap-1">
+                    {([
+                      { value: "production-order", icon: Truck, label: "Production Order", gradient: "from-blue-500 to-indigo-500" },
+                      { value: "collaborations", icon: Handshake, label: "Collaborations", gradient: "from-slate-500 to-zinc-500" },
+                    ] as const).map(({ value, icon: Icon, label, gradient }) => (
+                      <button
+                        key={value}
+                        onClick={() => setActiveTab(value)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                          activeTab === value
+                            ? `bg-gradient-to-r ${gradient} text-white shadow-sm`
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <TabsContent value="overview" className="space-y-6">
