@@ -29,6 +29,7 @@ import {
   Zap,
   MessageCircle,
   LogOut,
+  Heart,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,6 +65,14 @@ interface ChatRoomMembership {
   isOwner: boolean;
 }
 
+interface FollowedCreator {
+  id: string;
+  name: string | null;
+  image: string | null;
+  notifyNewProjects: boolean;
+  notifyUpdates: boolean;
+}
+
 export function NotificationPreferencesTab() {
   const [data, setData] = useState<NotificationData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,13 +81,111 @@ export function NotificationPreferencesTab() {
   const [saving, setSaving] = useState<string | null>(null);
   const [chatRooms, setChatRooms] = useState<ChatRoomMembership[]>([]);
   const [chatRoomsLoading, setChatRoomsLoading] = useState(true);
+  const [followedCreators, setFollowedCreators] = useState<FollowedCreator[]>([]);
+  const [followedLoading, setFollowedLoading] = useState(true);
+  const [emailMaster, setEmailMaster] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchPreferences();
     fetchChatRooms();
+    fetchFollowedCreators();
+    fetchEmailMasterState();
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  const fetchFollowedCreators = async () => {
+    try {
+      setFollowedLoading(true);
+      const res = await fetch("/api/backer/following");
+      if (!res.ok) throw new Error("Failed");
+      const json = await res.json();
+      const list = (json.creators || []).map((c: FollowedCreator) => ({
+        id: c.id,
+        name: c.name,
+        image: c.image,
+        notifyNewProjects: !!c.notifyNewProjects,
+        notifyUpdates: !!c.notifyUpdates,
+      }));
+      setFollowedCreators(list);
+    } catch (err) {
+      console.error("Failed to load followed creators:", err);
+    } finally {
+      setFollowedLoading(false);
+    }
+  };
+
+  const updateCreatorNotification = async (
+    creatorId: string,
+    field: "notifyNewProjects" | "notifyUpdates",
+    value: boolean
+  ) => {
+    setSaving(`creator-${creatorId}-${field}`);
+    setFollowedCreators((prev) =>
+      prev.map((c) => (c.id === creatorId ? { ...c, [field]: value } : c))
+    );
+    try {
+      const res = await apiFetch("/api/backer/following", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updatePreferences",
+          creatorId,
+          [field]: value,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't update creator notifications");
+      setFollowedCreators((prev) =>
+        prev.map((c) =>
+          c.id === creatorId ? { ...c, [field]: !value } : c
+        )
+      );
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const fetchEmailMasterState = async () => {
+    try {
+      const res = await fetch("/api/user/me/email-state");
+      if (!res.ok) {
+        // Fallback: assume subscribed if endpoint doesn't exist yet
+        setEmailMaster(true);
+        return;
+      }
+      const data = await res.json();
+      setEmailMaster(!data.unsubscribed);
+    } catch {
+      setEmailMaster(true);
+    }
+  };
+
+  const setEmailMasterSwitch = async (subscribed: boolean) => {
+    setSaving("email-master");
+    setEmailMaster(subscribed);
+    try {
+      const res = await apiFetch("/api/user/me/email-state", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ unsubscribed: !subscribed }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success(
+        subscribed
+          ? "You'll receive emails again"
+          : "Unsubscribed from all emails"
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't update email master switch");
+      setEmailMaster(!subscribed);
+    } finally {
+      setSaving(null);
+    }
+  };
 
   const fetchChatRooms = async () => {
     try {
@@ -555,6 +662,133 @@ export function NotificationPreferencesTab() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Creators You Follow */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Heart className="h-4 w-4 text-pink-500" />
+            Creators You Follow
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Pick which followed creators ping you when they launch new
+            projects or post updates.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {followedLoading ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              Loading…
+            </div>
+          ) : followedCreators.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              You aren&apos;t following any creators yet. Tap{" "}
+              <span className="font-medium">Follow</span> on any creator
+              profile to start.
+            </div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {followedCreators.map((creator) => (
+                <div
+                  key={creator.id}
+                  className="flex items-center justify-between gap-3 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">
+                      {creator.name || "Unnamed creator"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {creator.notifyNewProjects && creator.notifyUpdates
+                        ? "All notifications on"
+                        : creator.notifyNewProjects
+                          ? "New projects only"
+                          : creator.notifyUpdates
+                            ? "Updates only"
+                            : "Muted"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 flex-shrink-0">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="hidden sm:inline">New projects</span>
+                      <Switch
+                        checked={creator.notifyNewProjects}
+                        onCheckedChange={(v) =>
+                          updateCreatorNotification(
+                            creator.id,
+                            "notifyNewProjects",
+                            v
+                          )
+                        }
+                        disabled={
+                          saving === `creator-${creator.id}-notifyNewProjects`
+                        }
+                        className="scale-75"
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="hidden sm:inline">Updates</span>
+                      <Switch
+                        checked={creator.notifyUpdates}
+                        onCheckedChange={(v) =>
+                          updateCreatorNotification(
+                            creator.id,
+                            "notifyUpdates",
+                            v
+                          )
+                        }
+                        disabled={
+                          saving === `creator-${creator.id}-notifyUpdates`
+                        }
+                        className="scale-75"
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Email Master Switch */}
+      <Card className={cn(
+        "glass-card",
+        emailMaster === false &&
+          "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent"
+      )}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Mail className="h-4 w-4 text-amber-500" />
+            Email Master Switch
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Stop ALL emails from IndieCrowdfund — transactional, marketing,
+            digests, and one-click follows. The chat and on-site notification
+            bell still work.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">
+                {emailMaster === false
+                  ? "Currently unsubscribed from all emails"
+                  : "Receiving emails as normal"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Turn this off only if you want a hard cutoff. Per-type
+                toggles above are usually enough.
+              </p>
+            </div>
+            <Switch
+              checked={emailMaster ?? true}
+              onCheckedChange={(v) => setEmailMasterSwitch(v)}
+              disabled={emailMaster === null || saving === "email-master"}
+              aria-label="Master email switch"
+            />
+          </div>
         </CardContent>
       </Card>
 
