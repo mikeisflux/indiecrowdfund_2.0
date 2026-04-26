@@ -52,12 +52,25 @@ export async function GET(req: NextRequest) {
         where: { roomId },
         select: { userId: true, lastActiveAt: true },
       });
-      const presenceByUser = new Map(
-        presences.map((p) => [p.userId, p.lastActiveAt])
+      const presenceByUser = new Map<string, Date>(
+        presences.map(
+          (p: { userId: string; lastActiveAt: Date }) =>
+            [p.userId, p.lastActiveAt] as [string, Date]
+        )
       );
       const inactiveThreshold = new Date(now.getTime() - INACTIVE_THRESHOLD_MS);
 
-      const users = members.map((m) => {
+      type RoomMemberWithUser = {
+        userId: string;
+        user: {
+          id: string;
+          name: string | null;
+          image: string | null;
+          vanityUrl: string | null;
+        };
+      };
+
+      const users = (members as RoomMemberWithUser[]).map((m) => {
         const lastActive = presenceByUser.get(m.userId);
         let status: "active" | "inactive" | "offline" = "offline";
         if (lastActive) {
@@ -66,7 +79,7 @@ export async function GET(req: NextRequest) {
         return {
           ...m.user,
           status,
-          lastActiveAt: lastActive?.toISOString() ?? null,
+          lastActiveAt: lastActive ? lastActive.toISOString() : null,
         };
       });
 
@@ -84,7 +97,16 @@ export async function GET(req: NextRequest) {
       orderBy: { lastActiveAt: "desc" },
     });
     const inactiveThreshold = new Date(now.getTime() - INACTIVE_THRESHOLD_MS);
-    const users = presenceRecords.map((record) => ({
+    type PresenceRecord = {
+      lastActiveAt: Date;
+      user: {
+        id: string;
+        name: string | null;
+        image: string | null;
+        vanityUrl: string | null;
+      };
+    };
+    const users = (presenceRecords as PresenceRecord[]).map((record) => ({
       ...record.user,
       status:
         record.lastActiveAt >= inactiveThreshold

@@ -29,7 +29,18 @@ export async function GET() {
     },
   });
 
-  const rooms = memberships.map((m) => ({
+  type MembershipRow = {
+    roomId: string;
+    notificationsEnabled: boolean;
+    joinedAt: Date;
+    room: {
+      id: string;
+      name: string;
+      slug: string;
+      ownerUserId: string;
+    };
+  };
+  const rooms = (memberships as MembershipRow[]).map((m) => ({
     roomId: m.roomId,
     name: m.room.name,
     slug: m.room.slug,

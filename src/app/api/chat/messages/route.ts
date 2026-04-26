@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
           update: { lastReadAt: new Date() },
           create: { roomId, userId: session.user.id },
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           chatMessagesLogger.warn({ err: String(err) }, "auto-join failed");
         });
 
@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
                 ? "sent a GIF"
                 : "sent a sticker";
           await db.notification.createMany({
-            data: otherMembers.map((m) => ({
+            data: otherMembers.map((m: { userId: string }) => ({
               userId: m.userId,
               type: "CHAT_MESSAGE" as const,
               title: `New message in ${room?.name || "chat"}`,

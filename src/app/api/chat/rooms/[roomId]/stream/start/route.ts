@@ -93,7 +93,7 @@ export async function POST(
     });
     if (otherMembers.length > 0) {
       await db.notification.createMany({
-        data: otherMembers.map((m) => ({
+        data: otherMembers.map((m: { userId: string }) => ({
           userId: m.userId,
           type: "LIVE_STREAM_STARTED" as const,
           title: `${room.name} is live`,
