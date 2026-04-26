@@ -201,15 +201,17 @@ model PlatformSettings {
   klipyEnabled          Boolean  @default(false)
   klipyApiKey           String?
 
-  // RTMP launch-party settings. Plugs into a self-hosted RTMP server
-  // (SRS, Nginx-RTMP, Owncast, or any RTMP+HLS combo) — creators paste
-  // the ingest URL + stream key we mint into StreamYard's Custom RTMP
-  // destination. URLs are templates; "{key}" is replaced with the
-  // per-session stream key the platform generates on Go Live.
-  rtmpServerEnabled       Boolean @default(false)
-  rtmpIngestUrlTemplate   String?           // e.g. rtmp://stream.indie.com:1935/live
-  rtmpPlaybackUrlTemplate String?           // e.g. https://stream.indie.com/hls/{key}.m3u8
-  rtmpWebhookSecret       String?           // shared secret for SRS/Nginx-RTMP callbacks
+  // Cloudflare Stream — powers RTMP launch parties on creator chat
+  // rooms. Creators paste the ingest URL + stream key we mint into
+  // StreamYard's Custom RTMP destination; viewers get HLS playback
+  // through Cloudflare's CDN inside our embedded player.
+  cloudflareStreamEnabled       Boolean @default(false)
+  cloudflareAccountId           String?
+  cloudflareStreamApiToken      String?  @db.Text
+  cloudflareStreamWebhookSecret String?
+  // The customer-{xxxx} subdomain shown in the Stream dashboard.
+  // Required to build playback manifest URLs.
+  cloudflareCustomerId          String?
 
   // Cloudflare R2 Storage Settings
   r2Enabled             Boolean  @default(false)

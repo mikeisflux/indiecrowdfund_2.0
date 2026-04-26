@@ -103,8 +103,9 @@ export async function GET() {
           maxFileSizeMB: true, allowedFileTypes: true, digitalDownloadsEnabled: true,
           gaEnabled: true, googleAnalyticsId: true, gtmEnabled: true, googleTagManagerId: true,
           klipyEnabled: true, klipyApiKey: true,
-          rtmpServerEnabled: true, rtmpIngestUrlTemplate: true,
-          rtmpPlaybackUrlTemplate: true, rtmpWebhookSecret: true,
+          cloudflareStreamEnabled: true, cloudflareAccountId: true,
+          cloudflareStreamApiToken: true, cloudflareStreamWebhookSecret: true,
+          cloudflareCustomerId: true,
           createdAt: true, updatedAt: true,
         },
       });
@@ -219,7 +220,8 @@ export async function GET() {
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
       klipyApiKey: settings.klipyApiKey ? "••••••••" : null,
-      rtmpWebhookSecret: settings.rtmpWebhookSecret ? "••••••••" : null,
+      cloudflareStreamApiToken: settings.cloudflareStreamApiToken ? "••••••••" : null,
+      cloudflareStreamWebhookSecret: settings.cloudflareStreamWebhookSecret ? "••••••••" : null,
     };
 
     return NextResponse.json({ settings: maskedSettings });
@@ -287,7 +289,7 @@ export async function PATCH(req: NextRequest) {
       'r2AccessKeyId', 'r2SecretAccessKey',
       'recaptchaSiteKey', 'recaptchaSecretKey',
       'klipyApiKey',
-      'rtmpWebhookSecret'
+      'cloudflareStreamApiToken', 'cloudflareStreamWebhookSecret'
     ];
 
     const filteredData = Object.fromEntries(
@@ -376,8 +378,9 @@ export async function PATCH(req: NextRequest) {
       ],
       communication: [
         "klipyEnabled", "klipyApiKey",
-        "rtmpServerEnabled", "rtmpIngestUrlTemplate",
-        "rtmpPlaybackUrlTemplate", "rtmpWebhookSecret"
+        "cloudflareStreamEnabled", "cloudflareAccountId",
+        "cloudflareStreamApiToken", "cloudflareStreamWebhookSecret",
+        "cloudflareCustomerId"
       ]
     };
 
@@ -525,7 +528,8 @@ export async function PATCH(req: NextRequest) {
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
       klipyApiKey: settings.klipyApiKey ? "••••••••" : null,
-      rtmpWebhookSecret: settings.rtmpWebhookSecret ? "••••••••" : null,
+      cloudflareStreamApiToken: settings.cloudflareStreamApiToken ? "••••••••" : null,
+      cloudflareStreamWebhookSecret: settings.cloudflareStreamWebhookSecret ? "••••••••" : null,
     };
 
     return NextResponse.json({

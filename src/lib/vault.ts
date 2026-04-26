@@ -27,7 +27,8 @@ type SecretName =
   | "mailgun_api_key"
   | "anthropic_api_key"
   | "klipy_api_key"
-  | "rtmp_webhook_secret";
+  | "cloudflare_stream_api_token"
+  | "cloudflare_stream_webhook_secret";
 
 interface CachedSecret {
   value: string;

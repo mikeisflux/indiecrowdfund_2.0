@@ -593,15 +593,16 @@ export function CommunicationSettings() {
   const [klipyApiKeyHasValue, setKlipyApiKeyHasValue] = useState(false);
   const [savingKlipy, setSavingKlipy] = useState(false);
 
-  // RTMP launch-party settings (works with any self-hosted RTMP server
-  // such as SRS, Nginx-RTMP, Owncast — or a hosted ingest like Mux).
-  const [rtmpEnabled, setRtmpEnabled] = useState(false);
-  const [rtmpIngestTemplate, setRtmpIngestTemplate] = useState("");
-  const [rtmpPlaybackTemplate, setRtmpPlaybackTemplate] = useState("");
-  const [rtmpWebhookSecret, setRtmpWebhookSecret] = useState("");
-  const [rtmpWebhookSecretHasValue, setRtmpWebhookSecretHasValue] =
+  // Cloudflare Stream (RTMP launch parties) settings.
+  const [cfEnabled, setCfEnabled] = useState(false);
+  const [cfAccountId, setCfAccountId] = useState("");
+  const [cfCustomerId, setCfCustomerId] = useState("");
+  const [cfApiToken, setCfApiToken] = useState("");
+  const [cfApiTokenHasValue, setCfApiTokenHasValue] = useState(false);
+  const [cfWebhookSecret, setCfWebhookSecret] = useState("");
+  const [cfWebhookSecretHasValue, setCfWebhookSecretHasValue] =
     useState(false);
-  const [savingRtmp, setSavingRtmp] = useState(false);
+  const [savingCf, setSavingCf] = useState(false);
 
   // Fetch Klipy + Cloudflare Stream settings (one round-trip).
   const fetchKlipySettings = useCallback(async () => {
@@ -614,35 +615,46 @@ export function CommunicationSettings() {
       setKlipyApiKeyHasValue(s.klipyApiKey === "••••••••");
       setKlipyApiKey(s.klipyApiKey || "");
 
-      setRtmpEnabled(!!s.rtmpServerEnabled);
-      setRtmpIngestTemplate(s.rtmpIngestUrlTemplate || "");
-      setRtmpPlaybackTemplate(s.rtmpPlaybackUrlTemplate || "");
-      setRtmpWebhookSecretHasValue(s.rtmpWebhookSecret === "••••••••");
-      setRtmpWebhookSecret(s.rtmpWebhookSecret || "");
+      setCfEnabled(!!s.cloudflareStreamEnabled);
+      setCfAccountId(s.cloudflareAccountId || "");
+      setCfCustomerId(s.cloudflareCustomerId || "");
+      setCfApiTokenHasValue(s.cloudflareStreamApiToken === "••••••••");
+      setCfApiToken(s.cloudflareStreamApiToken || "");
+      setCfWebhookSecretHasValue(
+        s.cloudflareStreamWebhookSecret === "••••••••"
+      );
+      setCfWebhookSecret(s.cloudflareStreamWebhookSecret || "");
     } catch (error) {
-      console.error("Error fetching Klipy / RTMP settings:", error);
+      console.error("Error fetching Klipy / Cloudflare settings:", error);
     }
   }, []);
 
-  const saveRtmpServer = useCallback(
+  const saveCloudflareStream = useCallback(
     async (overrides?: {
-      rtmpServerEnabled?: boolean;
-      rtmpIngestUrlTemplate?: string;
-      rtmpPlaybackUrlTemplate?: string;
-      rtmpWebhookSecret?: string;
+      cloudflareStreamEnabled?: boolean;
+      cloudflareAccountId?: string;
+      cloudflareCustomerId?: string;
+      cloudflareStreamApiToken?: string;
+      cloudflareStreamWebhookSecret?: string;
     }) => {
-      setSavingRtmp(true);
+      setSavingCf(true);
       try {
         const payload: Record<string, unknown> = {
-          rtmpServerEnabled: overrides?.rtmpServerEnabled ?? rtmpEnabled,
-          rtmpIngestUrlTemplate:
-            overrides?.rtmpIngestUrlTemplate ?? rtmpIngestTemplate,
-          rtmpPlaybackUrlTemplate:
-            overrides?.rtmpPlaybackUrlTemplate ?? rtmpPlaybackTemplate,
+          cloudflareStreamEnabled:
+            overrides?.cloudflareStreamEnabled ?? cfEnabled,
+          cloudflareAccountId:
+            overrides?.cloudflareAccountId ?? cfAccountId,
+          cloudflareCustomerId:
+            overrides?.cloudflareCustomerId ?? cfCustomerId,
         };
-        const secret = overrides?.rtmpWebhookSecret ?? rtmpWebhookSecret;
+        const token = overrides?.cloudflareStreamApiToken ?? cfApiToken;
+        if (token && token !== "••••••••") {
+          payload.cloudflareStreamApiToken = token;
+        }
+        const secret =
+          overrides?.cloudflareStreamWebhookSecret ?? cfWebhookSecret;
         if (secret && secret !== "••••••••") {
-          payload.rtmpWebhookSecret = secret;
+          payload.cloudflareStreamWebhookSecret = secret;
         }
 
         const response = await apiFetch("/api/admin/settings", {
@@ -651,25 +663,26 @@ export function CommunicationSettings() {
         });
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
-          throw new Error(error.error || "Failed to save RTMP server");
+          throw new Error(error.error || "Failed to save Cloudflare Stream");
         }
-        toast.success("RTMP server settings saved");
+        toast.success("Cloudflare Stream settings saved");
         await fetchKlipySettings();
       } catch (error) {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Failed to save RTMP server"
+            : "Failed to save Cloudflare Stream"
         );
       } finally {
-        setSavingRtmp(false);
+        setSavingCf(false);
       }
     },
     [
-      rtmpEnabled,
-      rtmpIngestTemplate,
-      rtmpPlaybackTemplate,
-      rtmpWebhookSecret,
+      cfEnabled,
+      cfAccountId,
+      cfCustomerId,
+      cfApiToken,
+      cfWebhookSecret,
       fetchKlipySettings,
     ]
   );
@@ -1114,22 +1127,19 @@ export function CommunicationSettings() {
         </CardContent>
       </Card>
 
-      {/* Live Streaming (RTMP launch parties) Section */}
+      {/* Cloudflare Stream (RTMP launch parties) Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
             <Inbox className="h-5 w-5 text-orange-500" />
             <div>
-              <CardTitle>Live Streaming (RTMP)</CardTitle>
+              <CardTitle>Live Streaming (Cloudflare Stream)</CardTitle>
               <CardDescription>
                 Powers launch parties on creator chat rooms. Creators hit
-                <strong> Go Live</strong> in their chat — we mint an ingest
-                URL + stream key for them to paste into StreamYard&apos;s
-                Custom RTMP destination, and viewers see the HLS playback
-                inline above the chat. Works with any self-hosted RTMP
-                server (SRS, Nginx-RTMP, Owncast) or hosted ingest.
-                Configure the URL templates below; <code>{"{key}"}</code>{" "}
-                will be replaced with the per-stream key on Go Live.
+                <strong> Go Live</strong> in their chat — we provision a
+                Cloudflare Live Input on the fly, hand back the ingest URL
+                + stream key for StreamYard&apos;s Custom RTMP destination,
+                and viewers watch HLS playback inline above the chat.
               </CardDescription>
             </div>
           </div>
@@ -1139,66 +1149,80 @@ export function CommunicationSettings() {
             <div className="space-y-0.5">
               <Label className="text-base">Enable Live Streams</Label>
               <p className="text-sm text-muted-foreground">
-                When on, creators see a Go Live button in their chat header.
+                When on, room owners see a Go Live button in their chat
+                header.
               </p>
             </div>
             <Switch
-              checked={rtmpEnabled}
-              disabled={savingRtmp}
+              checked={cfEnabled}
+              disabled={savingCf}
               onCheckedChange={(checked) => {
-                setRtmpEnabled(checked);
-                saveRtmpServer({ rtmpServerEnabled: checked });
+                setCfEnabled(checked);
+                saveCloudflareStream({ cloudflareStreamEnabled: checked });
               }}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="rtmpIngest">RTMP Ingest URL</Label>
-            <Input
-              id="rtmpIngest"
-              value={rtmpIngestTemplate}
-              onChange={(e) => setRtmpIngestTemplate(e.target.value)}
-              onBlur={() => saveRtmpServer()}
-              placeholder="rtmp://stream.indiecrowdfund.com:1935/live"
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              Base RTMP URL StreamYard pushes to. The stream key is appended
-              automatically — paste this exact URL into StreamYard.
-            </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="cfAccountId">Cloudflare Account ID</Label>
+              <Input
+                id="cfAccountId"
+                value={cfAccountId}
+                onChange={(e) => setCfAccountId(e.target.value)}
+                onBlur={() => saveCloudflareStream()}
+                placeholder="abc123def456..."
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Cloudflare dashboard → right sidebar.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cfCustomerId">Customer Subdomain</Label>
+              <Input
+                id="cfCustomerId"
+                value={cfCustomerId}
+                onChange={(e) => setCfCustomerId(e.target.value)}
+                onBlur={() => saveCloudflareStream()}
+                placeholder="customer-xxxxxxxxxxxxxxxx"
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                The <code>customer-…</code> prefix Stream uses for playback
+                URLs.
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="rtmpPlayback">HLS Playback URL Template</Label>
-            <Input
-              id="rtmpPlayback"
-              value={rtmpPlaybackTemplate}
-              onChange={(e) => setRtmpPlaybackTemplate(e.target.value)}
-              onBlur={() => saveRtmpServer()}
-              placeholder="https://stream.indiecrowdfund.com/hls/{key}.m3u8"
-              className="font-mono text-sm"
+            <Label>Stream API Token</Label>
+            <SecureKeyInput
+              value={cfApiToken}
+              onChange={setCfApiToken}
+              onSave={() => saveCloudflareStream()}
+              hasExistingValue={cfApiTokenHasValue}
+              placeholder="Cloudflare API token with Stream:Edit..."
             />
             <p className="text-xs text-muted-foreground">
-              HLS manifest URL the in-page player loads. Must include the
-              literal <code>{"{key}"}</code> placeholder; we substitute the
-              per-session key on Go Live.
+              Cloudflare → My Profile → API Tokens → Create Token with{" "}
+              <strong>Stream</strong> permissions on the right account.
             </p>
           </div>
 
           <div className="space-y-2">
             <Label>Webhook Signing Secret</Label>
             <SecureKeyInput
-              value={rtmpWebhookSecret}
-              onChange={setRtmpWebhookSecret}
-              onSave={() => saveRtmpServer()}
-              hasExistingValue={rtmpWebhookSecretHasValue}
+              value={cfWebhookSecret}
+              onChange={setCfWebhookSecret}
+              onSave={() => saveCloudflareStream()}
+              hasExistingValue={cfWebhookSecretHasValue}
               placeholder="Optional shared secret..."
             />
             <p className="text-xs text-muted-foreground">
-              SRS / Nginx-RTMP can POST <code>on_publish</code> /
-              <code> on_unpublish</code> events to{" "}
-              <code>/api/webhooks/rtmp</code>. Set a shared secret here and
-              the same one on the server to verify them.
+              Used to verify connect/disconnect webhooks at{" "}
+              <code>/api/webhooks/cloudflare-stream</code>. Optional — when
+              set, mismatched signatures are rejected.
             </p>
           </div>
         </CardContent>
