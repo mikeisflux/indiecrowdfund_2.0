@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useSession } from "@/components/providers/auth-provider";
+import { MessagesPanel } from "@/components/messaging/messages-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,6 +51,7 @@ import { EmailTab } from "./components/EmailTab";
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
 export default function CreatorDashboard() {
+  const { data: session } = useSession();
   const searchParams = useSearchParams();
   // Initialize from URL param or localStorage so the first fetch uses the correct project
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
@@ -436,23 +439,18 @@ export default function CreatorDashboard() {
               </TabsContent>
 
               <TabsContent value="messages">
-                <Card className="bg-card/50 backdrop-blur border-border/50">
-                  <CardContent className="flex flex-col items-center justify-center py-16">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6 animate-pulse">
-                      <MessageSquare className="h-10 w-10 text-primary" />
-                    </div>
-                    <h3 className="mb-2 font-semibold text-lg">Backer Messages</h3>
-                    <p className="mb-6 text-sm text-muted-foreground text-center max-w-md">
-                      Connect with your backers, answer questions, and keep them updated on your project&apos;s progress.
-                    </p>
-                    <Link href="/dashboard/messages">
-                      <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 shadow-lg shadow-primary/25">
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        Open Messages
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
+                {session?.user?.id ? (
+                  <MessagesPanel
+                    currentUserId={session.user.id}
+                    projectId={selectedProjectId || undefined}
+                  />
+                ) : (
+                  <Card className="bg-card/50 backdrop-blur border-border/50">
+                    <CardContent className="py-16 text-center text-sm text-muted-foreground">
+                      Please log in to view messages.
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="production-order" className="space-y-6">
