@@ -70,7 +70,8 @@ model User {
   sentMessages      Message[] @relation("MessageSender")
   receivedMessages  Message[] @relation("MessageRecipient")
   chatMessages      ChatMessage[] @relation("ChatMessages")
-  chatPresence      ChatPresence?
+  chatPresence      ChatPresence[]
+  chatRoomMemberships ChatRoomMember[] @relation("ChatRoomMembers")
   comments          Comment[]
   behaviors         UserBehavior[]
   preferences       UserPreference?

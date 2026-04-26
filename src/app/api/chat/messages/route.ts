@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const after = searchParams.get("after"); // For polling - get messages after this ID
     const before = searchParams.get("before"); // For scroll-back - get messages before this ID
+    const roomId = searchParams.get("roomId"); // Per-creator room scoping; null = legacy global
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
 
     // Get current user info including role and ban status
@@ -31,9 +32,11 @@ export async function GET(req: NextRequest) {
 
     const whereClause: {
       deletedAt: null;
+      roomId?: string | null;
       createdAt?: { gt?: Date; lt?: Date; gte?: Date };
     } = {
       deletedAt: null,
+      roomId: roomId || null,
     };
 
     // Enforce 6-month (180-day) history retention window for initial/scroll-back loads
@@ -91,6 +94,7 @@ export async function GET(req: NextRequest) {
       const olderCount = await db.chatMessage.count({
         where: {
           deletedAt: null,
+          roomId: roomId || null,
           createdAt: {
             lt: oldestFetched.createdAt,
             gte: retentionCutoff,
@@ -143,7 +147,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { content, type = "TEXT", stickerData } = body;
+    const { content, type = "TEXT", stickerData, roomId } = body;
 
     // Validate message content
     if (type === "TEXT" || type === "EMOJI") {
@@ -211,6 +215,7 @@ export async function POST(req: NextRequest) {
         type,
         stickerData: stickerData || undefined,
         userId: session.user.id,
+        roomId: roomId || null,
       },
       include: {
         user: {
@@ -223,6 +228,61 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+
+    // Auto-join the sender into the room they posted in. Membership is
+    // sticky — they'll keep showing up in the active-users sidebar
+    // (online or offline) until they explicitly click leave.
+    if (roomId) {
+      await db.chatRoomMember
+        .upsert({
+          where: { roomId_userId: { roomId, userId: session.user.id } },
+          update: { lastReadAt: new Date() },
+          create: { roomId, userId: session.user.id },
+        })
+        .catch((err) => {
+          chatMessagesLogger.warn({ err: String(err) }, "auto-join failed");
+        });
+
+      // Best-effort: notify the room's other members. Wrapped in
+      // try/catch so a notification miss never blocks message send.
+      try {
+        const senderName = message.user.name || "Someone";
+        const otherMembers = await db.chatRoomMember.findMany({
+          where: {
+            roomId,
+            userId: { not: session.user.id },
+            notificationsEnabled: true,
+          },
+          select: { userId: true },
+        });
+        if (otherMembers.length > 0) {
+          const room = await db.chatRoom.findUnique({
+            where: { id: roomId },
+            select: { name: true, slug: true },
+          });
+          const preview =
+            type === "TEXT" || type === "EMOJI"
+              ? (content as string).slice(0, 140)
+              : type === "GIF"
+                ? "sent a GIF"
+                : "sent a sticker";
+          await db.notification.createMany({
+            data: otherMembers.map((m) => ({
+              userId: m.userId,
+              type: "CHAT_MESSAGE" as const,
+              title: `New message in ${room?.name || "chat"}`,
+              message: `${senderName}: ${preview}`,
+              actionUrl: `/chat/${room?.slug || roomId}`,
+            })),
+          });
+        }
+      } catch (notifyErr) {
+        chatMessagesLogger.warn(
+          { err: String(notifyErr) },
+          "Chat message notification dispatch failed"
+        );
+      }
+    }
 
     return NextResponse.json({ message });
   } catch (error) {

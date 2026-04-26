@@ -441,11 +441,18 @@ model ChatMessage {
   id        String   @id @default(cuid())
   content   String   @db.Text
 
-  // Message type: text, emoji, sticker
+  // Message type: text, emoji, sticker, gif
   type      ChatMessageType @default(TEXT)
 
-  // For stickers - stores sticker pack and sticker ID
+  // For stickers / gifs - stores extra payload
   stickerData Json?
+
+  // Room scoping. NULL = the legacy global community chat (kept for the
+  // /chat page). Otherwise the creator-owned ChatRoom this message lives
+  // in. Project Community tabs always set this to the project creator's
+  // room id.
+  roomId    String?
+  room      ChatRoom? @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   // Author
   userId    String
@@ -461,6 +468,7 @@ model ChatMessage {
   @@index([userId])
   @@index([createdAt])
   @@index([deletedAt, createdAt])
+  @@index([roomId, createdAt])
 }
 
 enum ChatMessageType {
@@ -472,12 +480,78 @@ enum ChatMessageType {
 
 model ChatPresence {
   id           String   @id @default(cuid())
-  userId       String   @unique
+  userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Same NULL=global semantics as ChatMessage.roomId
+  roomId       String?
+  room         ChatRoom? @relation(fields: [roomId], references: [id], onDelete: Cascade)
   lastActiveAt DateTime @default(now())
   joinedAt     DateTime @default(now())
 
+  @@unique([userId, roomId])
   @@index([lastActiveAt])
+  @@index([roomId, lastActiveAt])
+}
+
+// Per-creator branded chat room. Embedded on every project's Community tab
+// so the same chat travels with a creator across all their projects. The
+// ownerUserIds array lets multiple user accounts (e.g. a personal + a
+// company account run by the same human) share a single room.
+model ChatRoom {
+  id            String   @id @default(cuid())
+  // Brand label shown in the chat header, e.g. "Divinity Comics's Chat".
+  name          String
+  // URL-safe slug for direct links (e.g. /chat/<slug>). Globally unique.
+  slug          String   @unique
+  // Primary owner — used for moderation defaults and the room's "home"
+  // creator if multiple accounts share the room.
+  ownerUserId   String
+  // Every user account allowed to manage this room. The first entry is
+  // always ownerUserId. Used to merge multiple accounts (personal +
+  // company) into one shared chat.
+  ownerUserIds  String[]
+
+  // RTMP / virtual launch party hooks. Wired into the schema now so the
+  // launch-party feature can ship without a follow-up migration; the UI
+  // is not built yet.
+  rtmpEnabled       Boolean   @default(false)
+  rtmpStreamKey     String?   @unique
+  rtmpIngestUrl     String?
+  rtmpPlaybackUrl   String?
+  liveStreamStartedAt DateTime?
+
+  messages      ChatMessage[]
+  presences     ChatPresence[]
+  members       ChatRoomMember[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([ownerUserId])
+}
+
+// Persistent room membership. A user "joins" a creator's chat once and
+// stays joined until they leave. Drives the active-users sidebar (online
+// status comes from the matching ChatPresence row) and the per-room
+// new-message notifications.
+model ChatRoomMember {
+  id            String   @id @default(cuid())
+  roomId        String
+  userId        String
+  // Per-member opt-out for new-message notifications. Defaults to ON; the
+  // user can toggle this from their notification preferences in profile
+  // settings.
+  notificationsEnabled Boolean @default(true)
+  joinedAt      DateTime @default(now())
+  // Last time this member opened the room — used by the notification
+  // dispatcher to skip alerting users who are already actively reading.
+  lastReadAt    DateTime @default(now())
+
+  room          ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user          User     @relation("ChatRoomMembers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
 }
 
 // ============================================

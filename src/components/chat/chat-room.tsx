@@ -113,11 +113,18 @@ interface ActiveUser {
   name: string | null;
   image: string | null;
   vanityUrl: string | null;
-  status: "active" | "inactive";
-  lastActiveAt: string;
+  status: "active" | "inactive" | "offline";
+  lastActiveAt: string | null;
 }
 
-export function ChatRoom() {
+export interface ChatRoomProps {
+  /** Per-creator room ID. Omit for the legacy global /chat feed. */
+  roomId?: string | null;
+  /** Header label, e.g. "Divinity Comics's Chat". Falls back to "Community Chat". */
+  brandName?: string | null;
+}
+
+export function ChatRoom({ roomId = null, brandName }: ChatRoomProps = {}) {
   const { data: session } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -181,6 +188,7 @@ export function ChatRoom() {
       if (isPolling && lastMessageIdRef.current) {
         params.set("after", lastMessageIdRef.current);
       }
+      if (roomId) params.set("roomId", roomId);
 
       const response = await fetch(`/api/chat/messages?${params}`);
       if (!response.ok) throw new Error("Failed to fetch messages");
@@ -235,6 +243,7 @@ export function ChatRoom() {
       const params = new URLSearchParams();
       params.set("before", oldestMessageId);
       params.set("limit", "50");
+      if (roomId) params.set("roomId", roomId);
 
       const response = await fetch(`/api/chat/messages?${params}`);
       if (!response.ok) throw new Error("Failed to load older messages");
@@ -253,10 +262,13 @@ export function ChatRoom() {
     }
   }, [isLoadingMore, hasMore, messages]);
 
-  // Fetch active users
+  // Fetch active users (room members for per-creator chats; presence-only
+  // active list for the legacy global feed).
   const fetchActiveUsers = useCallback(async () => {
     try {
-      const response = await fetch("/api/chat/presence");
+      const params = new URLSearchParams();
+      if (roomId) params.set("roomId", roomId);
+      const response = await fetch(`/api/chat/presence?${params}`);
       if (!response.ok) return;
 
       const data = await response.json();
@@ -267,29 +279,52 @@ export function ChatRoom() {
     } catch (err) {
       console.error("Error fetching active users:", err);
     }
-  }, []);
+  }, [roomId]);
 
-  // Send presence heartbeat
+  // Send presence heartbeat (scoped to this room).
   const sendHeartbeat = useCallback(async () => {
     try {
-      await apiFetch("/api/chat/presence", {
-        method: "POST",
-      });
+      const params = new URLSearchParams();
+      if (roomId) params.set("roomId", roomId);
+      await apiFetch(`/api/chat/presence?${params}`, { method: "POST" });
     } catch (err) {
       console.error("Error sending heartbeat:", err);
     }
-  }, []);
+  }, [roomId]);
 
-  // Leave chat presence
+  // Leave chat presence (drops the heartbeat row, NOT the membership —
+  // user stays in the active-users sidebar as offline until they explicitly
+  // leave the room).
   const leaveChat = useCallback(async () => {
     try {
-      await apiFetch("/api/chat/presence", {
-        method: "DELETE",
-      });
+      const params = new URLSearchParams();
+      if (roomId) params.set("roomId", roomId);
+      await apiFetch(`/api/chat/presence?${params}`, { method: "DELETE" });
     } catch {
       // Ignore errors on leave
     }
-  }, []);
+  }, [roomId]);
+
+  // Fully leave the room (deletes ChatRoomMember + presence). Triggered by
+  // the user clicking "Leave chat" on their own row in the active-users
+  // sidebar.
+  const leaveRoom = useCallback(async () => {
+    if (!roomId) return;
+    try {
+      const res = await apiFetch(`/api/chat/rooms/${roomId}/members`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("You left this chat");
+        setActiveUsers((prev) =>
+          prev.filter((u) => u.id !== session?.user?.id)
+        );
+      }
+    } catch (err) {
+      console.error("Error leaving room:", err);
+      toast.error("Failed to leave chat");
+    }
+  }, [roomId, session?.user?.id]);
 
   // Fetch stickers
   const fetchStickers = useCallback(async () => {
@@ -328,6 +363,7 @@ export function ChatRoom() {
           content,
           type,
           stickerData,
+          roomId,
         }),
       });
 
@@ -479,6 +515,20 @@ export function ChatRoom() {
     fetchActiveUsers();
   }, [fetchMessages, fetchStickers, sendHeartbeat, fetchActiveUsers]);
 
+  // Persistent room join: when this is a per-creator room, register the
+  // viewer as a sticky member so they show up in the active-users list
+  // (online or offline) and start receiving new-message notifications.
+  useEffect(() => {
+    if (!roomId || !session?.user?.id) return;
+    apiFetch(`/api/chat/rooms/${roomId}/members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markRead: true }),
+    }).catch(() => {
+      /* best-effort, retry on next mount */
+    });
+  }, [roomId, session?.user?.id]);
+
   // Set up polling for messages
   useEffect(() => {
     pollIntervalRef.current = setInterval(() => {
@@ -550,6 +600,7 @@ export function ChatRoom() {
 
   const activeCount = activeUsers.filter((u) => u.status === "active").length;
   const inactiveCount = activeUsers.filter((u) => u.status === "inactive").length;
+  const offlineCount = activeUsers.filter((u) => u.status === "offline").length;
 
   return (
     <>
@@ -564,9 +615,13 @@ export function ChatRoom() {
                 <Sparkles className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
               </div>
               <div>
-                <h2 className="font-bold text-lg">Community Chat</h2>
+                <h2 className="font-bold text-lg">
+                  {brandName || "Community Chat"}
+                </h2>
                 <p className="text-xs text-muted-foreground">
-                  Connect with fellow backers and creators
+                  {roomId
+                    ? "Hang out with this creator and their backers"
+                    : "Connect with fellow backers and creators"}
                 </p>
               </div>
             </div>
@@ -1018,10 +1073,10 @@ export function ChatRoom() {
           <div className="px-4 py-3 border-b bg-gradient-to-r from-green-500/10 to-emerald-500/10">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-green-600" />
-              <h3 className="font-semibold text-sm">Active Users</h3>
+              <h3 className="font-semibold text-sm">{roomId ? "Members" : "Active Users"}</h3>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {activeCount} online{inactiveCount > 0 ? ` \u00B7 ${inactiveCount} idle` : ""}
+              {activeCount} online{inactiveCount > 0 ? ` \u00B7 ${inactiveCount} idle` : ""}{offlineCount > 0 ? ` \u00B7 ${offlineCount} offline` : ""}
             </p>
           </div>
 
@@ -1099,6 +1154,62 @@ export function ChatRoom() {
                           </Link>
                         ))}
                     </>
+                  )}
+
+                  {/* Offline members (per-creator rooms only — these are
+                      sticky members who joined but are not currently
+                      connected). */}
+                  {offlineCount > 0 && (
+                    <>
+                      <div className="pt-2 pb-1 px-2">
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                          Offline
+                        </p>
+                      </div>
+                      {activeUsers
+                        .filter((u) => u.status === "offline")
+                        .map((user) => (
+                          <Link
+                            key={user.id}
+                            href={getUserProfileUrl(user)}
+                            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors group opacity-50"
+                          >
+                            <div className="relative">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={user.image || undefined} alt={user.name || "User"} />
+                                <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-medium">
+                                  {getInitials(user.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <Circle className="h-2.5 w-2.5 text-zinc-400 fill-zinc-400 absolute -bottom-0.5 -right-0.5 ring-2 ring-card rounded-full" />
+                            </div>
+                            <span className="text-sm truncate text-muted-foreground group-hover:text-primary transition-colors">
+                              {user.name || "Anonymous"}
+                            </span>
+                            {user.id === session?.user?.id && (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-auto">
+                                you
+                              </Badge>
+                            )}
+                          </Link>
+                        ))}
+                    </>
+                  )}
+
+                  {/* Per-room "Leave chat" footer for the current user.
+                      Visible only when they're a member of this creator
+                      room. Mirrors the request to let users click their
+                      own row to leave. */}
+                  {roomId && activeUsers.some((u) => u.id === session?.user?.id) && (
+                    <div className="pt-3 mt-3 border-t border-border/50">
+                      <button
+                        type="button"
+                        onClick={leaveRoom}
+                        className="w-full text-left text-xs text-destructive hover:text-destructive/80 px-2 py-1.5 rounded-md hover:bg-destructive/10 transition-colors"
+                      >
+                        Leave this chat
+                      </button>
+                    </div>
                   )}
                 </>
               )}

@@ -907,7 +907,10 @@ export default function ProjectPage() {
         )}
 
         {activeTab === "community" && (
-          <CommunityTab />
+          <CommunityTab
+            creatorId={project.creatorId}
+            creatorName={project.creator?.name ?? null}
+          />
         )}
       </section>
 
