@@ -27,6 +27,8 @@ import {
   Settings,
   Clock,
   Zap,
+  MessageCircle,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -54,18 +56,92 @@ interface NotificationData {
   projects: ProjectNotification[];
 }
 
+interface ChatRoomMembership {
+  roomId: string;
+  name: string;
+  slug: string;
+  notificationsEnabled: boolean;
+  isOwner: boolean;
+}
+
 export function NotificationPreferencesTab() {
   const [data, setData] = useState<NotificationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
+  const [chatRooms, setChatRooms] = useState<ChatRoomMembership[]>([]);
+  const [chatRoomsLoading, setChatRoomsLoading] = useState(true);
 
   useEffect(() => {
     fetchPreferences();
+    fetchChatRooms();
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  const fetchChatRooms = async () => {
+    try {
+      setChatRoomsLoading(true);
+      const res = await fetch("/api/chat/rooms/me");
+      if (!res.ok) throw new Error("Failed to load chat rooms");
+      const data = await res.json();
+      setChatRooms(data.rooms || []);
+    } catch (err) {
+      console.error("Failed to fetch chat rooms:", err);
+    } finally {
+      setChatRoomsLoading(false);
+    }
+  };
+
+  const updateChatRoomNotifications = async (
+    roomId: string,
+    enabled: boolean
+  ) => {
+    setSaving(`chat-${roomId}`);
+    setChatRooms((prev) =>
+      prev.map((r) =>
+        r.roomId === roomId ? { ...r, notificationsEnabled: enabled } : r
+      )
+    );
+    try {
+      const res = await apiFetch(`/api/chat/rooms/${roomId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationsEnabled: enabled, markRead: false }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      toast.success(enabled ? "Chat notifications on" : "Chat muted");
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't update chat notifications");
+      // Roll back optimistic update
+      setChatRooms((prev) =>
+        prev.map((r) =>
+          r.roomId === roomId ? { ...r, notificationsEnabled: !enabled } : r
+        )
+      );
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const leaveChatRoom = async (roomId: string) => {
+    setSaving(`chat-${roomId}`);
+    try {
+      const res = await apiFetch(`/api/chat/rooms/${roomId}/members`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to leave");
+      setChatRooms((prev) => prev.filter((r) => r.roomId !== roomId));
+      toast.success("You left the chat");
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't leave the chat");
+    } finally {
+      setSaving(null);
+    }
+  };
 
   const fetchPreferences = async () => {
     try {
@@ -398,6 +474,82 @@ export function NotificationPreferencesTab() {
                         className="scale-75"
                       />
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Chat Rooms */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MessageCircle className="h-4 w-4 text-primary" />
+            Chat Rooms
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Mute new-message notifications for specific creator chats, or leave
+            a room you no longer want to be in.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {chatRoomsLoading ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              Loading…
+            </div>
+          ) : chatRooms.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              You haven&apos;t joined any chat rooms yet. Join a creator&apos;s
+              chat from the Community tab on any of their projects.
+            </div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {chatRooms.map((room) => (
+                <div
+                  key={room.roomId}
+                  className="flex items-center justify-between gap-3 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm truncate">
+                        {room.name}
+                      </p>
+                      {room.isOwner && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase tracking-wider">
+                          Owner
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {room.notificationsEnabled
+                        ? "Notifications on"
+                        : "Muted"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <Switch
+                      checked={room.notificationsEnabled}
+                      onCheckedChange={(checked) =>
+                        updateChatRoomNotifications(room.roomId, checked)
+                      }
+                      disabled={saving === `chat-${room.roomId}`}
+                      aria-label={`${room.name} notifications`}
+                    />
+                    {!room.isOwner && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+                        onClick={() => leaveChatRoom(room.roomId)}
+                        disabled={saving === `chat-${room.roomId}`}
+                      >
+                        <LogOut className="h-3.5 w-3.5 mr-1" />
+                        Leave
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

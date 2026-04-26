@@ -25,6 +25,7 @@ import {
   Activity,
   ChevronRight,
   MapPin,
+  Bell,
 } from "lucide-react";
 
 interface ProjectSummary {
@@ -154,6 +155,10 @@ export function UserProfileDropdown() {
                 <Link href="/dashboard/settings" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
                   <Settings className="h-4 w-4 md:hidden" />
                   <span>Settings</span>
+                </Link>
+                <Link href="/dashboard/backer?tab=notifications" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                  <Bell className="h-4 w-4 md:hidden" />
+                  <span>Notification Settings</span>
                 </Link>
                 <Link href="/dashboard/messages" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
                   <MessageSquare className="h-4 w-4 md:hidden" />
