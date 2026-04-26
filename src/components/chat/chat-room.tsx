@@ -55,10 +55,14 @@ import {
   Circle,
   Search as SearchIcon,
   Radio,
-  Copy,
   StopCircle,
 } from "lucide-react";
 import { LiveStreamPlayer } from "@/components/chat/live-stream-player";
+import { useLiveStream } from "@/components/chat/use-live-stream";
+import {
+  LiveStreamCredentialsCard,
+  StreamYardSetupGuide,
+} from "@/components/chat/live-stream-shared";
 import {
   Dialog,
   DialogContent,
@@ -159,19 +163,31 @@ export function ChatRoom({ roomId = null, brandName }: ChatRoomProps = {}) {
   // Active users
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
 
-  // Live stream state (per-creator rooms only)
-  const [streamLive, setStreamLive] = useState(false);
-  const [streamPlaybackUrl, setStreamPlaybackUrl] = useState<string | null>(null);
-  const [streamStartedAt, setStreamStartedAt] = useState<string | null>(null);
-  const [streamViewerCount, setStreamViewerCount] = useState(0);
-  const [streamIsOwner, setStreamIsOwner] = useState(false);
+  // Live stream lifecycle (per-creator rooms only). Polls /stream/status
+  // every 10s, exposes start/stop, surfaces owner-only ingest credentials.
+  const {
+    status: streamStatus,
+    credentials: streamCredentials,
+    isStarting: streamStarting,
+    isStopping: streamStopping,
+    start: startStream,
+    stop: stopStreamRaw,
+  } = useLiveStream({ roomId });
+  const {
+    live: streamLive,
+    playbackUrl: streamPlaybackUrl,
+    startedAt: streamStartedAt,
+    viewerCount: streamViewerCount,
+    isOwner: streamIsOwner,
+  } = streamStatus;
+  const goLiveLoading = streamStarting || streamStopping;
   const [goLiveOpen, setGoLiveOpen] = useState(false);
-  const [goLiveLoading, setGoLiveLoading] = useState(false);
-  const [streamCredentials, setStreamCredentials] = useState<{
-    ingestUrl: string;
-    streamKey: string;
-  } | null>(null);
-  const [streamKeyVisible, setStreamKeyVisible] = useState(false);
+
+  const stopStream = useCallback(async () => {
+    if (!confirm("End the live stream now?")) return;
+    await stopStreamRaw();
+    setGoLiveOpen(false);
+  }, [stopStreamRaw]);
 
   // Scroll-back history
   const [hasMore, setHasMore] = useState(false);
@@ -352,85 +368,6 @@ export function ChatRoom({ roomId = null, brandName }: ChatRoomProps = {}) {
     }
   }, [roomId, session?.user?.id]);
 
-  // Poll stream status every 10s when in a per-creator room.
-  const fetchStreamStatus = useCallback(async () => {
-    if (!roomId) return;
-    try {
-      const res = await fetch(`/api/chat/rooms/${roomId}/stream/status`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setStreamLive(!!data.live);
-      setStreamPlaybackUrl(data.playbackUrl ?? null);
-      setStreamStartedAt(data.startedAt ?? null);
-      setStreamViewerCount(data.viewerCount ?? 0);
-      setStreamIsOwner(!!data.isOwner);
-    } catch {
-      // Silent fail — stream UI just won't update.
-    }
-  }, [roomId]);
-
-  // Owner: provision a Cloudflare live input and reveal the credentials
-  // so they can paste them into StreamYard.
-  const startStream = useCallback(async () => {
-    if (!roomId) return;
-    setGoLiveLoading(true);
-    try {
-      const res = await apiFetch(`/api/chat/rooms/${roomId}/stream/start`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to start stream");
-      }
-      const data = await res.json();
-      setStreamCredentials({
-        ingestUrl: data.ingestUrl,
-        streamKey: data.streamKey,
-      });
-      setStreamLive(true);
-      setStreamPlaybackUrl(data.playbackUrl ?? null);
-      setStreamStartedAt(new Date().toISOString());
-      toast.success("Stream provisioned — paste these into StreamYard");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to start stream"
-      );
-    } finally {
-      setGoLiveLoading(false);
-    }
-  }, [roomId]);
-
-  // Owner: tear down the live input and clear room state.
-  const stopStream = useCallback(async () => {
-    if (!roomId) return;
-    if (!confirm("End the live stream now?")) return;
-    setGoLiveLoading(true);
-    try {
-      const res = await apiFetch(`/api/chat/rooms/${roomId}/stream/stop`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Failed to stop stream");
-      setStreamLive(false);
-      setStreamPlaybackUrl(null);
-      setStreamStartedAt(null);
-      setStreamCredentials(null);
-      setGoLiveOpen(false);
-      toast.success("Stream ended");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to stop stream"
-      );
-    } finally {
-      setGoLiveLoading(false);
-    }
-  }, [roomId]);
-
-  const copyToClipboard = (label: string, value: string) => {
-    navigator.clipboard
-      .writeText(value)
-      .then(() => toast.success(`${label} copied`))
-      .catch(() => toast.error("Couldn't copy"));
-  };
 
   // Fetch stickers
   const fetchStickers = useCallback(async () => {
@@ -613,22 +550,13 @@ export function ChatRoom({ roomId = null, brandName }: ChatRoomProps = {}) {
     sendMessage(newMessage, "TEXT");
   };
 
-  // Initial load
+  // Initial load. Live-stream status polling is handled by useLiveStream.
   useEffect(() => {
     fetchMessages();
     fetchStickers();
     sendHeartbeat();
     fetchActiveUsers();
-    fetchStreamStatus();
-  }, [fetchMessages, fetchStickers, sendHeartbeat, fetchActiveUsers, fetchStreamStatus]);
-
-  // Poll stream status every 10s in per-creator rooms so non-owners see
-  // the live banner appear without a manual refresh.
-  useEffect(() => {
-    if (!roomId) return;
-    const id = setInterval(fetchStreamStatus, 10000);
-    return () => clearInterval(id);
-  }, [roomId, fetchStreamStatus]);
+  }, [fetchMessages, fetchStickers, sendHeartbeat, fetchActiveUsers]);
 
   // Persistent room join: when this is a per-creator room, register the
   // viewer as a sticky member so they show up in the active-users list
@@ -1463,13 +1391,11 @@ export function ChatRoom({ roomId = null, brandName }: ChatRoomProps = {}) {
       </AlertDialog>
 
       {/* Go Live modal — owner-only. Mints a Cloudflare live input on first
-          open and shows the StreamYard-ready ingest URL + stream key. */}
+          open and shows the StreamYard-ready ingest URL + stream key.
+          Shares its credentials/setup UI with the dashboard Live Stream tab. */}
       <Dialog
         open={goLiveOpen}
-        onOpenChange={(open) => {
-          setGoLiveOpen(open);
-          if (!open) setStreamKeyVisible(false);
-        }}
+        onOpenChange={setGoLiveOpen}
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -1511,80 +1437,8 @@ export function ChatRoom({ roomId = null, brandName }: ChatRoomProps = {}) {
             </div>
           ) : (
             <div className="space-y-4 py-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Server / Ingest URL
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    readOnly
-                    value={streamCredentials.ingestUrl}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() =>
-                      copyToClipboard(
-                        "Ingest URL",
-                        streamCredentials.ingestUrl
-                      )
-                    }
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Stream key (keep this secret)
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    readOnly
-                    type={streamKeyVisible ? "text" : "password"}
-                    value={streamCredentials.streamKey}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setStreamKeyVisible((v) => !v)}
-                    aria-label="Toggle visibility"
-                  >
-                    {streamKeyVisible ? (
-                      <span className="text-xs">Hide</span>
-                    ) : (
-                      <span className="text-xs">Show</span>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() =>
-                      copyToClipboard(
-                        "Stream key",
-                        streamCredentials.streamKey
-                      )
-                    }
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="rounded-md bg-muted/50 border p-3 text-xs space-y-1.5">
-                <p className="font-medium">StreamYard setup</p>
-                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                  <li>Open your broadcast and click <strong>Destinations → Custom RTMP</strong>.</li>
-                  <li>Paste the Server URL and Stream key above.</li>
-                  <li>Hit <strong>Go Live</strong> in StreamYard — viewers see the stream here within ~10 seconds.</li>
-                </ol>
-              </div>
+              <LiveStreamCredentialsCard credentials={streamCredentials} />
+              <StreamYardSetupGuide />
             </div>
           )}
 

@@ -79,28 +79,106 @@ export async function POST(
     },
   });
 
-  // Best-effort notification dispatch — don't block the response if the
-  // notification table write fails.
+  // Best-effort fan-out: every recipient who has an account and a reason
+  // to care this creator is live gets a LIVE_STREAM_STARTED notification.
+  // Three sources, deduped:
+  //   1. Members of this chat room (with notifications enabled)
+  //   2. Followers of any project owned by any of the room's owners
+  //   3. Backers (COMPLETED pledges) of any project owned by any owner
+  // Co-owners of the room and the broadcaster themselves are excluded.
   try {
     const senderName = session.user.name || "A creator";
-    const otherMembers = await db.chatRoomMember.findMany({
-      where: {
-        roomId,
-        userId: { not: session.user.id },
-        notificationsEnabled: true,
+
+    const ownerProjects = await db.project.findMany({
+      where: { creatorId: { in: room.ownerUserIds }, deletedAt: null },
+      select: {
+        id: true,
+        slug: true,
+        status: true,
+        createdAt: true,
+        creator: { select: { vanityUrl: true } },
       },
-      select: { userId: true },
     });
-    if (otherMembers.length > 0) {
+    const projectIds = ownerProjects.map((p: { id: string }) => p.id);
+
+    // Pick a meaningful landing URL: the most recent LIVE project's
+    // Community tab, falling back to the most recent project of any
+    // status, falling back to the legacy /chat/{roomId} path.
+    const liveProject =
+      ownerProjects
+        .filter((p) => p.status === "LIVE")
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )[0] ??
+      ownerProjects.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+    const actionUrl =
+      liveProject && liveProject.creator?.vanityUrl
+        ? `/projects/${liveProject.creator.vanityUrl}/${liveProject.slug}#community`
+        : `/chat/${roomId}`;
+
+    const [chatMembers, followers, backers] = await Promise.all([
+      db.chatRoomMember.findMany({
+        where: {
+          roomId,
+          userId: { not: session.user.id },
+          notificationsEnabled: true,
+        },
+        select: { userId: true },
+      }),
+      projectIds.length > 0
+        ? db.projectFollower.findMany({
+            where: {
+              projectId: { in: projectIds },
+              userId: { not: null },
+            },
+            select: { userId: true },
+          })
+        : Promise.resolve([] as { userId: string | null }[]),
+      projectIds.length > 0
+        ? db.pledge.findMany({
+            where: {
+              projectId: { in: projectIds },
+              status: "COMPLETED",
+            },
+            select: { userId: true },
+            distinct: ["userId"],
+          })
+        : Promise.resolve([] as { userId: string }[]),
+    ]);
+
+    const targetUserIds = new Set<string>();
+    for (const m of chatMembers) targetUserIds.add(m.userId);
+    for (const f of followers) if (f.userId) targetUserIds.add(f.userId);
+    for (const b of backers) targetUserIds.add(b.userId);
+    // Exclude the broadcaster and any co-owners so they don't ping
+    // themselves on every Go Live click.
+    for (const ownerId of room.ownerUserIds) targetUserIds.delete(ownerId);
+    targetUserIds.delete(session.user.id);
+
+    if (targetUserIds.size > 0) {
       await db.notification.createMany({
-        data: otherMembers.map((m: { userId: string }) => ({
-          userId: m.userId,
+        data: Array.from(targetUserIds).map((userId) => ({
+          userId,
           type: "LIVE_STREAM_STARTED" as const,
           title: `${room.name} is live`,
           message: `${senderName} just started streaming. Tap to watch.`,
-          actionUrl: `/chat/${roomId}`,
+          actionUrl,
         })),
       });
+      goLiveLogger.info(
+        {
+          roomId,
+          recipients: targetUserIds.size,
+          chatMembers: chatMembers.length,
+          followers: followers.length,
+          backers: backers.length,
+        },
+        "Live-stream notifications dispatched"
+      );
     }
   } catch (err) {
     goLiveLogger.warn({ err: String(err) }, "Notification dispatch failed");

@@ -21,6 +21,8 @@ export async function GET(
       id: true,
       rtmpEnabled: true,
       rtmpPlaybackUrl: true,
+      rtmpIngestUrl: true,
+      rtmpStreamKey: true,
       liveStreamStartedAt: true,
       viewerCount: true,
       ownerUserIds: true,
@@ -29,11 +31,17 @@ export async function GET(
   if (!room) {
     return NextResponse.json({ error: "Room not found" }, { status: 404 });
   }
+  const isOwner = room.ownerUserIds.includes(session.user.id);
+  // Expose ingest credentials only to the owner so the dashboard panel can
+  // re-display them after a page refresh (the start endpoint returns them
+  // once at provisioning time).
   return NextResponse.json({
     live: !!room.rtmpEnabled,
     playbackUrl: room.rtmpPlaybackUrl ?? null,
     startedAt: room.liveStreamStartedAt?.toISOString() ?? null,
     viewerCount: room.viewerCount ?? 0,
-    isOwner: room.ownerUserIds.includes(session.user.id),
+    isOwner,
+    ingestUrl: isOwner ? room.rtmpIngestUrl ?? null : null,
+    streamKey: isOwner ? room.rtmpStreamKey ?? null : null,
   });
 }

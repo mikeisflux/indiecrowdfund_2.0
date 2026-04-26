@@ -25,6 +25,7 @@ import {
   ArrowLeft,
   Handshake,
   Mail,
+  Radio,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
@@ -48,6 +49,7 @@ import { SocialHubTab } from "./components/SocialHubTab";
 import { IndieKitV2Tab } from "./components/IndieKitV2Tab";
 import { MarketplaceTab } from "./components/MarketplaceTab";
 import { EmailTab } from "./components/EmailTab";
+import { LiveStreamTab } from "./components/LiveStreamTab";
 
 const SELECTED_PROJECT_KEY = "indiecrowdfund_selected_project";
 
@@ -383,6 +385,7 @@ export default function CreatorDashboard() {
                     {([
                       { value: "backers", icon: Users, label: "Backers", gradient: "from-cyan-500 to-teal-500" },
                       { value: "messages", icon: MessageSquare, label: "Messages", gradient: "from-blue-500 to-cyan-500" },
+                      { value: "live-stream", icon: Radio, label: "Live Stream", gradient: "from-red-600 to-rose-600" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
                       <button
                         key={value}
@@ -521,6 +524,10 @@ export default function CreatorDashboard() {
                     </CardContent>
                   </Card>
                 )}
+              </TabsContent>
+
+              <TabsContent value="live-stream" className="space-y-6">
+                <LiveStreamTab creatorId={session?.user?.id} />
               </TabsContent>
 
               <TabsContent value="production-order" className="space-y-6">
