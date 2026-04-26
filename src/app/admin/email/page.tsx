@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/fetch-utils";
 import Image from "next/image";
 import Link from "next/link";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { sanitizeEmailHtml } from "@/lib/utils/sanitize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ import {
   Download,
   Maximize2,
   Minimize2,
+  ArrowLeft,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -72,8 +73,14 @@ export default function EmailPage() {
   const [settings, setSettings] = useState<EmailSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingEmails, setIsLoadingEmails] = useState(false);
+  const [isLoadingMoreEmails, setIsLoadingMoreEmails] = useState(false);
+  const [emailsPage, setEmailsPage] = useState(1);
+  const [emailsTotal, setEmailsTotal] = useState(0);
+  const [emailsHasMore, setEmailsHasMore] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  const EMAIL_PAGE_SIZE = 50;
 
   // Dialog states
   const [isComposing, setIsComposing] = useState(false);
@@ -154,12 +161,19 @@ export default function EmailPage() {
     try {
       const params = new URLSearchParams({
         folder: selectedFolder,
+        page: "1",
+        limit: String(EMAIL_PAGE_SIZE),
         ...(searchQuery && { search: searchQuery }),
       });
       const response = await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setEmails(data.emails || []);
+        const fetched = data.emails || [];
+        setEmails(fetched);
+        setEmailsPage(1);
+        const total = data.pagination?.total ?? fetched.length;
+        setEmailsTotal(total);
+        setEmailsHasMore(fetched.length < total);
       }
     } catch (error) {
       console.error("Error fetching emails:", error);
@@ -167,6 +181,60 @@ export default function EmailPage() {
       setIsLoadingEmails(false);
     }
   }, [selectedMailbox, selectedFolder, searchQuery]);
+
+  // Append the next page to the visible list. Used by both the
+  // intersection-observer sentinel and the manual "Load more" button.
+  const loadMoreEmails = useCallback(async () => {
+    if (!selectedMailbox || isLoadingMoreEmails || !emailsHasMore) return;
+    const nextPage = emailsPage + 1;
+    setIsLoadingMoreEmails(true);
+    try {
+      const params = new URLSearchParams({
+        folder: selectedFolder,
+        page: String(nextPage),
+        limit: String(EMAIL_PAGE_SIZE),
+        ...(searchQuery && { search: searchQuery }),
+      });
+      const response = await fetch(`/api/admin/mailboxes/${selectedMailbox.id}/emails?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        const fetched: Email[] = data.emails || [];
+        if (fetched.length > 0) {
+          setEmails((prev) => {
+            const seen = new Set(prev.map((e) => e.id));
+            const merged = [...prev];
+            for (const e of fetched) if (!seen.has(e.id)) merged.push(e);
+            return merged;
+          });
+          setEmailsPage(nextPage);
+        }
+        const total = data.pagination?.total ?? emailsTotal;
+        setEmailsTotal(total);
+        // hasMore = we now hold fewer rows than the server total.
+        setEmailsHasMore((prev) => {
+          // Recompute against the latest emails length on the next tick;
+          // in the meantime, fall back to "did this page return a full
+          // batch?" as a conservative signal so we don't get stuck.
+          if (fetched.length < EMAIL_PAGE_SIZE) return false;
+          return prev;
+        });
+      }
+    } catch (error) {
+      console.error("Error loading more emails:", error);
+    } finally {
+      setIsLoadingMoreEmails(false);
+    }
+  }, [selectedMailbox, selectedFolder, searchQuery, emailsPage, emailsHasMore, emailsTotal, isLoadingMoreEmails]);
+
+  // Keep emailsHasMore in sync with the current list length whenever
+  // either side changes — covers manual refetches, deletions, etc.
+  useEffect(() => {
+    if (emailsTotal === 0) {
+      setEmailsHasMore(false);
+      return;
+    }
+    setEmailsHasMore(emails.length < emailsTotal);
+  }, [emails.length, emailsTotal]);
 
   useEffect(() => {
     const init = async () => {
@@ -182,6 +250,28 @@ export default function EmailPage() {
       fetchEmails();
     }
   }, [selectedMailbox, selectedFolder, fetchEmails]);
+
+  // Scroll-triggered pagination: fire loadMoreEmails when the sentinel
+  // at the end of the list scrolls into view. The sentinel is only
+  // rendered when emailsHasMore is true so we don't observe a missing
+  // node.
+  useEffect(() => {
+    if (!emailsHasMore) return;
+    const node = loadMoreSentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            loadMoreEmails();
+          }
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [emailsHasMore, loadMoreEmails, emails.length]);
 
   const handleCreateMailbox = () => {
     setEditingMailbox(null);
@@ -541,8 +631,13 @@ export default function EmailPage() {
           </div>
         )}
 
-        {/* Email List */}
-        <div className="w-full lg:w-80 flex-shrink-0">
+        {/* Email List — hidden on mobile when a message is open so the
+            detail pane gets the full viewport (drill-down pattern). */}
+        <div
+          className={`${
+            selectedEmail && !isEmailFullscreen ? "hidden lg:block" : "block"
+          } w-full lg:w-80 flex-shrink-0 min-h-0`}
+        >
           <Card className="h-full flex flex-col">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between gap-4">
@@ -601,6 +696,18 @@ export default function EmailPage() {
                 </div>
               ) : (
                 <ScrollArea className="h-full">
+                  <div className="px-3 pt-2 pb-1 text-[11px] text-muted-foreground flex items-center justify-between">
+                    <span>
+                      Showing {emails.length}
+                      {emailsTotal > 0 ? ` of ${emailsTotal}` : ""}
+                    </span>
+                    {isLoadingMoreEmails && (
+                      <span className="inline-flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        loading…
+                      </span>
+                    )}
+                  </div>
                   <div className="divide-y">
                     {emails.map((email) => (
                       <div
@@ -659,24 +766,65 @@ export default function EmailPage() {
                       </div>
                     ))}
                   </div>
+                  {/* Scroll-triggered pagination sentinel + manual fallback. */}
+                  {emailsHasMore && (
+                    <div
+                      ref={loadMoreSentinelRef}
+                      className="p-3 flex items-center justify-center"
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={loadMoreEmails}
+                        disabled={isLoadingMoreEmails}
+                      >
+                        {isLoadingMoreEmails ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            Loading…
+                          </>
+                        ) : (
+                          <>Load more ({emailsTotal - emails.length} remaining)</>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                  {!emailsHasMore && emails.length > EMAIL_PAGE_SIZE && (
+                    <div className="p-3 text-center text-[11px] text-muted-foreground">
+                      End of inbox
+                    </div>
+                  )}
                 </ScrollArea>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Email Detail (inline panel) */}
+        {/* Email Detail (inline panel) — full width on mobile thanks to
+            the list collapsing in drill-down mode. */}
         {selectedEmail && !isEmailFullscreen && (
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 min-h-0 w-full">
             <Card className="h-full flex flex-col">
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium truncate">{selectedEmail.subject}</CardTitle>
-                  <div className="flex items-center gap-1">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {/* Mobile-only back button — returns to the list. */}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-7 w-7 lg:hidden -ml-1"
+                      title="Back to inbox"
+                      onClick={() => setSelectedEmail(null)}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <CardTitle className="text-sm font-medium truncate">{selectedEmail.subject}</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 hidden sm:inline-flex"
                       title="Open fullscreen"
                       onClick={() => setIsEmailFullscreen(true)}
                     >
@@ -685,7 +833,7 @@ export default function EmailPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-6 w-6 hidden lg:inline-flex"
                       onClick={() => setSelectedEmail(null)}
                     >
                       <X className="h-4 w-4" />
@@ -791,10 +939,11 @@ export default function EmailPage() {
                   </div>
                 )}
 
-                {/* Email Body */}
+                {/* Email Body — width-constrain wide HTML emails so they
+                    don't blow out the mobile viewport. */}
                 {selectedEmail.bodyHtml ? (
                   <div
-                    className="prose prose-sm dark:prose-invert max-w-none [&_img]:cursor-zoom-in [&_img]:transition-opacity [&_img]:hover:opacity-80"
+                    className="prose prose-sm dark:prose-invert max-w-none break-words [&_*]:max-w-full [&_img]:h-auto [&_img]:cursor-zoom-in [&_img]:transition-opacity [&_img]:hover:opacity-80 [&_table]:!w-full [&_table]:block [&_table]:overflow-x-auto"
                     dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedEmail.bodyHtml) }}
                     onClick={(e) => {
                       const target = e.target as HTMLElement;
@@ -807,7 +956,7 @@ export default function EmailPage() {
                     }}
                   />
                 ) : selectedEmail.bodyText ? (
-                  <p className="text-sm whitespace-pre-wrap">{selectedEmail.bodyText}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{selectedEmail.bodyText}</p>
                 ) : (
                   <div className="text-center py-8">
                     <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
@@ -952,7 +1101,7 @@ export default function EmailPage() {
                 {/* Email Body */}
                 {selectedEmail.bodyHtml ? (
                   <div
-                    className="prose dark:prose-invert max-w-none [&_img]:cursor-zoom-in [&_img]:transition-opacity [&_img]:hover:opacity-80"
+                    className="prose dark:prose-invert max-w-none break-words [&_*]:max-w-full [&_img]:h-auto [&_img]:cursor-zoom-in [&_img]:transition-opacity [&_img]:hover:opacity-80 [&_table]:!w-full [&_table]:block [&_table]:overflow-x-auto"
                     dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedEmail.bodyHtml) }}
                     onClick={(e) => {
                       const target = e.target as HTMLElement;
@@ -965,7 +1114,7 @@ export default function EmailPage() {
                     }}
                   />
                 ) : selectedEmail.bodyText ? (
-                  <p className="text-sm whitespace-pre-wrap">{selectedEmail.bodyText}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{selectedEmail.bodyText}</p>
                 ) : (
                   <div className="text-center py-8">
                     <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
