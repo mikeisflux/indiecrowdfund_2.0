@@ -201,6 +201,16 @@ model PlatformSettings {
   klipyEnabled          Boolean  @default(false)
   klipyApiKey           String?
 
+  // RTMP launch-party settings. Plugs into a self-hosted RTMP server
+  // (SRS, Nginx-RTMP, Owncast, or any RTMP+HLS combo) — creators paste
+  // the ingest URL + stream key we mint into StreamYard's Custom RTMP
+  // destination. URLs are templates; "{key}" is replaced with the
+  // per-session stream key the platform generates on Go Live.
+  rtmpServerEnabled       Boolean @default(false)
+  rtmpIngestUrlTemplate   String?           // e.g. rtmp://stream.indie.com:1935/live
+  rtmpPlaybackUrlTemplate String?           // e.g. https://stream.indie.com/hls/{key}.m3u8
+  rtmpWebhookSecret       String?           // shared secret for SRS/Nginx-RTMP callbacks
+
   // Cloudflare R2 Storage Settings
   r2Enabled             Boolean  @default(false)
   r2AccountId           String?
@@ -396,6 +406,7 @@ enum NotificationType {
   PLEDGE_MODIFIED
   PLEDGE_REFUND_DECISION
   CHAT_MESSAGE
+  LIVE_STREAM_STARTED
   SYSTEM
 }
 

@@ -519,6 +519,13 @@ model ChatRoom {
   rtmpIngestUrl     String?
   rtmpPlaybackUrl   String?
   liveStreamStartedAt DateTime?
+  // Per-session identifier used by the RTMP server (SRS / Nginx-RTMP)
+  // for connect/disconnect callbacks and analytics joins. Generated on
+  // every "Go Live" click and discarded on stop.
+  liveSessionId     String?   @unique
+  // Cached viewer count, refreshed by the RTMP server's webhook +
+  // occasional polls. Display-only — never trust as a hard count.
+  viewerCount       Int       @default(0)
 
   messages      ChatMessage[]
   presences     ChatPresence[]

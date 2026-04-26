@@ -103,6 +103,8 @@ export async function GET() {
           maxFileSizeMB: true, allowedFileTypes: true, digitalDownloadsEnabled: true,
           gaEnabled: true, googleAnalyticsId: true, gtmEnabled: true, googleTagManagerId: true,
           klipyEnabled: true, klipyApiKey: true,
+          rtmpServerEnabled: true, rtmpIngestUrlTemplate: true,
+          rtmpPlaybackUrlTemplate: true, rtmpWebhookSecret: true,
           createdAt: true, updatedAt: true,
         },
       });
@@ -217,6 +219,7 @@ export async function GET() {
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
       klipyApiKey: settings.klipyApiKey ? "••••••••" : null,
+      rtmpWebhookSecret: settings.rtmpWebhookSecret ? "••••••••" : null,
     };
 
     return NextResponse.json({ settings: maskedSettings });
@@ -283,7 +286,8 @@ export async function PATCH(req: NextRequest) {
       'stabilityApiKey', 'shuftiSecretKey',
       'r2AccessKeyId', 'r2SecretAccessKey',
       'recaptchaSiteKey', 'recaptchaSecretKey',
-      'klipyApiKey'
+      'klipyApiKey',
+      'rtmpWebhookSecret'
     ];
 
     const filteredData = Object.fromEntries(
@@ -371,7 +375,9 @@ export async function PATCH(req: NextRequest) {
         "gaEnabled", "googleAnalyticsId", "gtmEnabled", "googleTagManagerId"
       ],
       communication: [
-        "klipyEnabled", "klipyApiKey"
+        "klipyEnabled", "klipyApiKey",
+        "rtmpServerEnabled", "rtmpIngestUrlTemplate",
+        "rtmpPlaybackUrlTemplate", "rtmpWebhookSecret"
       ]
     };
 
@@ -519,6 +525,7 @@ export async function PATCH(req: NextRequest) {
       r2SecretAccessKey: settings.r2SecretAccessKey ? "••••••••" : null,
       recaptchaSecretKey: settings.recaptchaSecretKey ? "••••••••" : null,
       klipyApiKey: settings.klipyApiKey ? "••••••••" : null,
+      rtmpWebhookSecret: settings.rtmpWebhookSecret ? "••••••••" : null,
     };
 
     return NextResponse.json({

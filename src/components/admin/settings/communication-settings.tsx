@@ -593,7 +593,17 @@ export function CommunicationSettings() {
   const [klipyApiKeyHasValue, setKlipyApiKeyHasValue] = useState(false);
   const [savingKlipy, setSavingKlipy] = useState(false);
 
-  // Fetch Klipy settings
+  // RTMP launch-party settings (works with any self-hosted RTMP server
+  // such as SRS, Nginx-RTMP, Owncast — or a hosted ingest like Mux).
+  const [rtmpEnabled, setRtmpEnabled] = useState(false);
+  const [rtmpIngestTemplate, setRtmpIngestTemplate] = useState("");
+  const [rtmpPlaybackTemplate, setRtmpPlaybackTemplate] = useState("");
+  const [rtmpWebhookSecret, setRtmpWebhookSecret] = useState("");
+  const [rtmpWebhookSecretHasValue, setRtmpWebhookSecretHasValue] =
+    useState(false);
+  const [savingRtmp, setSavingRtmp] = useState(false);
+
+  // Fetch Klipy + Cloudflare Stream settings (one round-trip).
   const fetchKlipySettings = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/settings");
@@ -603,10 +613,66 @@ export function CommunicationSettings() {
       setKlipyEnabled(!!s.klipyEnabled);
       setKlipyApiKeyHasValue(s.klipyApiKey === "••••••••");
       setKlipyApiKey(s.klipyApiKey || "");
+
+      setRtmpEnabled(!!s.rtmpServerEnabled);
+      setRtmpIngestTemplate(s.rtmpIngestUrlTemplate || "");
+      setRtmpPlaybackTemplate(s.rtmpPlaybackUrlTemplate || "");
+      setRtmpWebhookSecretHasValue(s.rtmpWebhookSecret === "••••••••");
+      setRtmpWebhookSecret(s.rtmpWebhookSecret || "");
     } catch (error) {
-      console.error("Error fetching Klipy settings:", error);
+      console.error("Error fetching Klipy / RTMP settings:", error);
     }
   }, []);
+
+  const saveRtmpServer = useCallback(
+    async (overrides?: {
+      rtmpServerEnabled?: boolean;
+      rtmpIngestUrlTemplate?: string;
+      rtmpPlaybackUrlTemplate?: string;
+      rtmpWebhookSecret?: string;
+    }) => {
+      setSavingRtmp(true);
+      try {
+        const payload: Record<string, unknown> = {
+          rtmpServerEnabled: overrides?.rtmpServerEnabled ?? rtmpEnabled,
+          rtmpIngestUrlTemplate:
+            overrides?.rtmpIngestUrlTemplate ?? rtmpIngestTemplate,
+          rtmpPlaybackUrlTemplate:
+            overrides?.rtmpPlaybackUrlTemplate ?? rtmpPlaybackTemplate,
+        };
+        const secret = overrides?.rtmpWebhookSecret ?? rtmpWebhookSecret;
+        if (secret && secret !== "••••••••") {
+          payload.rtmpWebhookSecret = secret;
+        }
+
+        const response = await apiFetch("/api/admin/settings", {
+          method: "PATCH",
+          json: { section: "communication", data: payload },
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || "Failed to save RTMP server");
+        }
+        toast.success("RTMP server settings saved");
+        await fetchKlipySettings();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to save RTMP server"
+        );
+      } finally {
+        setSavingRtmp(false);
+      }
+    },
+    [
+      rtmpEnabled,
+      rtmpIngestTemplate,
+      rtmpPlaybackTemplate,
+      rtmpWebhookSecret,
+      fetchKlipySettings,
+    ]
+  );
 
   // Save Klipy settings (called by SecureKeyInput onSave or the toggle)
   const saveKlipySettings = useCallback(
@@ -1043,6 +1109,96 @@ export function CommunicationSettings() {
               Click <strong>Set Key</strong> to paste a key, then click the
               checkmark to save it. Your key is stored encrypted server-side
               and never sent back to the browser.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Live Streaming (RTMP launch parties) Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Inbox className="h-5 w-5 text-orange-500" />
+            <div>
+              <CardTitle>Live Streaming (RTMP)</CardTitle>
+              <CardDescription>
+                Powers launch parties on creator chat rooms. Creators hit
+                <strong> Go Live</strong> in their chat — we mint an ingest
+                URL + stream key for them to paste into StreamYard&apos;s
+                Custom RTMP destination, and viewers see the HLS playback
+                inline above the chat. Works with any self-hosted RTMP
+                server (SRS, Nginx-RTMP, Owncast) or hosted ingest.
+                Configure the URL templates below; <code>{"{key}"}</code>{" "}
+                will be replaced with the per-stream key on Go Live.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div className="space-y-0.5">
+              <Label className="text-base">Enable Live Streams</Label>
+              <p className="text-sm text-muted-foreground">
+                When on, creators see a Go Live button in their chat header.
+              </p>
+            </div>
+            <Switch
+              checked={rtmpEnabled}
+              disabled={savingRtmp}
+              onCheckedChange={(checked) => {
+                setRtmpEnabled(checked);
+                saveRtmpServer({ rtmpServerEnabled: checked });
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="rtmpIngest">RTMP Ingest URL</Label>
+            <Input
+              id="rtmpIngest"
+              value={rtmpIngestTemplate}
+              onChange={(e) => setRtmpIngestTemplate(e.target.value)}
+              onBlur={() => saveRtmpServer()}
+              placeholder="rtmp://stream.indiecrowdfund.com:1935/live"
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Base RTMP URL StreamYard pushes to. The stream key is appended
+              automatically — paste this exact URL into StreamYard.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="rtmpPlayback">HLS Playback URL Template</Label>
+            <Input
+              id="rtmpPlayback"
+              value={rtmpPlaybackTemplate}
+              onChange={(e) => setRtmpPlaybackTemplate(e.target.value)}
+              onBlur={() => saveRtmpServer()}
+              placeholder="https://stream.indiecrowdfund.com/hls/{key}.m3u8"
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              HLS manifest URL the in-page player loads. Must include the
+              literal <code>{"{key}"}</code> placeholder; we substitute the
+              per-session key on Go Live.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Webhook Signing Secret</Label>
+            <SecureKeyInput
+              value={rtmpWebhookSecret}
+              onChange={setRtmpWebhookSecret}
+              onSave={() => saveRtmpServer()}
+              hasExistingValue={rtmpWebhookSecretHasValue}
+              placeholder="Optional shared secret..."
+            />
+            <p className="text-xs text-muted-foreground">
+              SRS / Nginx-RTMP can POST <code>on_publish</code> /
+              <code> on_unpublish</code> events to{" "}
+              <code>/api/webhooks/rtmp</code>. Set a shared secret here and
+              the same one on the server to verify them.
             </p>
           </div>
         </CardContent>

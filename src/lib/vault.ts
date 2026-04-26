@@ -26,7 +26,8 @@ type SecretName =
   | "sendgrid_api_key"
   | "mailgun_api_key"
   | "anthropic_api_key"
-  | "klipy_api_key";
+  | "klipy_api_key"
+  | "rtmp_webhook_secret";
 
 interface CachedSecret {
   value: string;
