@@ -95,7 +95,13 @@ export async function GET(
         },
         "Survey GET forbidden: session user does not own pledge"
       );
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        {
+          error:
+            "This survey is for a different account. Please log out and sign in with the email you used when you backed this project.",
+        },
+        { status: 403 }
+      );
     }
 
     // Non-COMPLETED pledges (PENDING/FAILED/REFUNDED/CANCELLED/CHARGEBACK) are not backers.
@@ -317,7 +323,13 @@ export async function POST(
         },
         "Survey POST forbidden: session user does not own pledge"
       );
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        {
+          error:
+            "This survey is for a different account. Please log out and sign in with the email you used when you backed this project.",
+        },
+        { status: 403 }
+      );
     }
 
     // Only backers with a fully COMPLETED pledge may submit survey responses.

@@ -32,7 +32,11 @@ export async function GET(
     );
 
     return NextResponse.json(stats, {
-      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+      headers: {
+        // 30s cache — collapses aggressive client polling into one
+        // origin hit per half-minute (matches the vanity stats route).
+        "Cache-Control": "public, max-age=30, s-maxage=30, stale-while-revalidate=60",
+      },
     });
   } catch (error) {
     projectsSlugStatsLogger.error({ err: String(error) }, "Failed to fetch project stats:");

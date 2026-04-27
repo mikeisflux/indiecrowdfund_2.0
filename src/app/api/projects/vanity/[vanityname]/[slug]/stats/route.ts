@@ -35,7 +35,16 @@ export async function GET(
       goalAmount: project.goalAmount,
     });
 
-    return NextResponse.json(stats);
+    // Stats are public counters with no per-user data, polled aggressively
+    // by the project page. A 30s cache lets the browser + any CDN
+    // collapse the dozens of poll requests per minute into one origin
+    // hit, which both reduces DB load and prevents real visitors from
+    // tripping the 120 req/min general rate limiter (see src/proxy.ts).
+    return NextResponse.json(stats, {
+      headers: {
+        "Cache-Control": "public, max-age=30, s-maxage=30, stale-while-revalidate=60",
+      },
+    });
   } catch (error) {
     projectsVanityStatsLogger.error({ err: String(error) }, "Get project stats error:");
     return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });

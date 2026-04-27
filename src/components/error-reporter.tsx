@@ -76,6 +76,10 @@ export function ErrorReporter() {
       // Facebook in-app browser stripping iOS WebKit bridge from injected scripts
       /window\.webkit\.messageHandlers/,
       /webkit\.messageHandlers/,
+      // Facebook in-app browser autofill bridge — their injected JS
+      // (setContactAutofillValuesFromBridge) sometimes hits an undefined
+      // entry while reading `value`, throws inside their own code. Not ours.
+      /setContactAutofillValuesFromBridge/,
       // Browser feature detection noise
       /Permission denied to access property/,
       /cross-origin object/,
@@ -230,7 +234,12 @@ export function ErrorReporter() {
         (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/stats")) ||
         requestUrl.includes("/api/auth/session") ||
         requestUrl.includes("/api/auth/recaptcha") ||
-        (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/comments"))
+        (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/comments")) ||
+        // Survey respond 403: user logged into a different account than
+        // the one that owns the pledge (or pledge is not COMPLETED).
+        // Server behavior is correct — the UI surfaces a helpful message.
+        // Not an actionable backend error.
+        (requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond"))
       );
       // /api/auth/recaptcha 5xx is transient (nginx upstream briefly down during pm2 reload);
       // the client retries with backoff and falls back to disabled, so failures here are
