@@ -163,6 +163,7 @@ enum PaymentProcessor {
   DIVINITYCOIN
   PAYPAL
   WHOP
+  MAVERICK
 }
 
 enum CampaignType {

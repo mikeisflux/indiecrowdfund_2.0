@@ -28,7 +28,9 @@ type SecretName =
   | "anthropic_api_key"
   | "klipy_api_key"
   | "cloudflare_stream_api_token"
-  | "cloudflare_stream_webhook_secret";
+  | "cloudflare_stream_webhook_secret"
+  | "maverick_api_token"
+  | "maverick_webhook_secret";
 
 interface CachedSecret {
   value: string;

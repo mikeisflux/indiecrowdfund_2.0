@@ -49,6 +49,17 @@ model PlatformSettings {
   whopWebhookSecret     String?
   whopEnvironment       String   @default("production")  // "production" or "sandbox"
 
+  // Maverick Payments Settings (Mentom Payments → Maverick gateway)
+  // Used for goal-based all-or-nothing via Customer Vault tokenize-on-pledge,
+  // charge-on-success pattern. Lives alongside Stripe etc.; selection is
+  // per-creator/per-project via PaymentProcessor enum.
+  maverickEnabled       Boolean  @default(false)
+  maverickApiToken      String?  @db.Text   // Bearer token (encrypted at rest)
+  maverickWebhookSecret String?  @db.Text   // SHA-512 signature secret per webhook URL
+  maverickDbaId         String?             // Maverick DBA ID (e.g. "9")
+  maverickTerminalId    String?             // Default terminal ID for the gateway
+  maverickEnvironment   String   @default("production")  // "production" or "sandbox"
+
   // Payout Settings
   autoPayouts           Boolean  @default(false)
 

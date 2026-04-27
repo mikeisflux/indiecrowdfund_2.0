@@ -45,6 +45,13 @@ interface PaymentSettingsProps {
     whopCompanyId: string;
     whopWebhookSecret: string;
     whopEnvironment: string;
+    // Maverick settings (Mentom Payments → Maverick gateway)
+    maverickEnabled: boolean;
+    maverickApiToken: string;
+    maverickWebhookSecret: string;
+    maverickDbaId: string;
+    maverickTerminalId: string;
+    maverickEnvironment: string;
     // reCAPTCHA settings
     recaptchaEnabled: boolean;
     recaptchaSiteKey: string;
@@ -457,6 +464,108 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               <li>Card payments settle to USDC automatically</li>
               <li>Create a Plan in Checkout links (base template — price is overridden per pledge)</li>
               <li>Subscribe to all webhook events at <code className="bg-muted px-1 rounded">Dashboard → Developer → Webhooks</code></li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Maverick Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Maverick Payments Configuration</CardTitle>
+              <CardDescription>Mentom Payments merchant account piped through the Maverick gateway. Customer Vault tokenization powers all-or-nothing pledges (tokenize at pledge, charge on success).</CardDescription>
+            </div>
+            <Badge variant={settings.maverickEnabled ? "default" : "secondary"}>
+              {settings.maverickEnabled ? "Enabled" : "Disabled"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label>Enable Maverick</Label>
+              <p className="text-sm text-muted-foreground">Allow creators to use Maverick as their payment processor</p>
+            </div>
+            <Switch
+              checked={settings.maverickEnabled}
+              onCheckedChange={(checked) => onSettingsChange({ ...settings, maverickEnabled: checked })}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>API Bearer Token</Label>
+              <SecureKeyInput
+                value={settings.maverickApiToken}
+                onChange={(value) => onSettingsChange({ ...settings, maverickApiToken: value })}
+                onSave={onSave}
+                hasExistingValue={settings.maverickApiToken === "••••••••"}
+                placeholder="Bearer token from Maverick dashboard"
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-muted-foreground">Generated under your Maverick dashboard → API Tokens</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Webhook Signing Secret</Label>
+              <SecureKeyInput
+                value={settings.maverickWebhookSecret}
+                onChange={(value) => onSettingsChange({ ...settings, maverickWebhookSecret: value })}
+                onSave={onSave}
+                hasExistingValue={settings.maverickWebhookSecret === "••••••••"}
+                placeholder="Per-webhook-URL signature secret"
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-muted-foreground">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/maverick</code></p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>DBA ID</Label>
+              <Input
+                value={settings.maverickDbaId}
+                onChange={(e) => onSettingsChange({ ...settings, maverickDbaId: e.target.value })}
+                placeholder="e.g. 9"
+              />
+              <p className="text-xs text-muted-foreground">Your Maverick DBA / merchant ID</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Default Terminal ID</Label>
+              <Input
+                value={settings.maverickTerminalId}
+                onChange={(e) => onSettingsChange({ ...settings, maverickTerminalId: e.target.value })}
+                placeholder="e.g. 14"
+              />
+              <p className="text-xs text-muted-foreground">Terminal used by the gateway for sales/auths</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Environment</Label>
+            <Select
+              value={settings.maverickEnvironment}
+              onValueChange={(v) => onSettingsChange({ ...settings, maverickEnvironment: v })}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="production">Production (gateway.maverickpayments.com)</SelectItem>
+                <SelectItem value="sandbox">Sandbox (sandbox-gateway.maverickpayments.com)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+            <p className="font-medium">Maverick Setup:</p>
+            <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
+              <li>Customer Vault tokenization for all-or-nothing campaigns — card tokenized at pledge time, charged only on campaign success</li>
+              <li>Hosted Card Form keeps card data off our servers (no PCI scope expansion)</li>
+              <li>Webhook events: <code className="bg-muted px-1 rounded">transaction.create</code>, <code className="bg-muted px-1 rounded">transaction.refund</code>, <code className="bg-muted px-1 rounded">transaction.recurring</code></li>
+              <li>Webhook signatures use SHA-512 over <code className="bg-muted px-1 rounded">&lt;secret&gt;&lt;id&gt;&lt;module&gt;&lt;action&gt;&lt;date&gt;</code></li>
+              <li>The 10-day auth-window limitation does not apply — we charge tokens, not held auths</li>
             </ul>
           </div>
         </CardContent>

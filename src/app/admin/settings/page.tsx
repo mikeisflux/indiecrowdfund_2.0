@@ -113,6 +113,13 @@ interface PlatformSettings {
   whopCompanyId: string | null;
   whopWebhookSecret: string | null;
   whopEnvironment: string;
+  // Maverick settings
+  maverickEnabled: boolean;
+  maverickApiToken: string | null;
+  maverickWebhookSecret: string | null;
+  maverickDbaId: string | null;
+  maverickTerminalId: string | null;
+  maverickEnvironment: string;
   // Payment settings
   autoPayouts: boolean;
   // Social auto-posting settings
@@ -230,6 +237,13 @@ export default function SettingsPage() {
     whopCompanyId: "",
     whopWebhookSecret: "",
     whopEnvironment: "production",
+    // Maverick settings (Mentom Payments → Maverick gateway)
+    maverickEnabled: false,
+    maverickApiToken: "",
+    maverickWebhookSecret: "",
+    maverickDbaId: "",
+    maverickTerminalId: "",
+    maverickEnvironment: "production",
     // reCAPTCHA settings
     recaptchaEnabled: false,
     recaptchaSiteKey: "",
@@ -425,6 +439,12 @@ export default function SettingsPage() {
         whopCompanyId: settings.whopCompanyId || "",
         whopWebhookSecret: settings.whopWebhookSecret || "",
         whopEnvironment: settings.whopEnvironment || "production",
+        maverickEnabled: settings.maverickEnabled || false,
+        maverickApiToken: settings.maverickApiToken || "",
+        maverickWebhookSecret: settings.maverickWebhookSecret || "",
+        maverickDbaId: settings.maverickDbaId || "",
+        maverickTerminalId: settings.maverickTerminalId || "",
+        maverickEnvironment: settings.maverickEnvironment || "production",
         recaptchaEnabled: settings.recaptchaEnabled || false,
         recaptchaSiteKey: settings.recaptchaSiteKey || "",
         recaptchaSecretKey: settings.recaptchaSecretKey || "",
@@ -692,6 +712,12 @@ export default function SettingsPage() {
             whopCompanyId: currentPaymentSettings.whopCompanyId,
             whopWebhookSecret: currentPaymentSettings.whopWebhookSecret,
             whopEnvironment: currentPaymentSettings.whopEnvironment,
+            maverickEnabled: currentPaymentSettings.maverickEnabled,
+            maverickApiToken: currentPaymentSettings.maverickApiToken,
+            maverickWebhookSecret: currentPaymentSettings.maverickWebhookSecret,
+            maverickDbaId: currentPaymentSettings.maverickDbaId,
+            maverickTerminalId: currentPaymentSettings.maverickTerminalId,
+            maverickEnvironment: currentPaymentSettings.maverickEnvironment,
             recaptchaEnabled: currentPaymentSettings.recaptchaEnabled,
             recaptchaSiteKey: currentPaymentSettings.recaptchaSiteKey,
             recaptchaSecretKey: currentPaymentSettings.recaptchaSecretKey,
