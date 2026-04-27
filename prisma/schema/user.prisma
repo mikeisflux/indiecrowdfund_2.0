@@ -133,13 +133,28 @@ model User {
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  deletedAt         DateTime?  // Soft delete timestamp
+  deletedAt         DateTime?  // Moderator-initiated soft delete
+
+  // User-initiated permanent account deletion. When set:
+  //   - User cannot log in (auth flow rejects)
+  //   - All sensitive PII has been wiped (password, OAuth, integration
+  //     tokens, image, bio, location, etc.)
+  //   - name + email are intentionally preserved so creators retain
+  //     backer records on completed pledges
+  //   - PENDING pledges are cancelled and reward slots returned
+  //   - COMPLETED pledges keep the funds with the creator; the address
+  //     is replaced with a sentinel "Account deleted" object and any
+  //     PledgeAddon quantities are zeroed
+  // Distinct from deletedAt (moderator-initiated soft delete with
+  // potential to restore). accountDeletedAt is irreversible.
+  accountDeletedAt  DateTime?
 
   @@index([email])
   @@index([vanityUrl])
   @@index([creatorEmailHandle])
   @@index([deletedAt])  // For soft delete filtering
   @@index([lockedAt])   // For locked account filtering
+  @@index([accountDeletedAt])  // For filtering deleted accounts from search/listing
 }
 
 // IP Blocklist for banned users
