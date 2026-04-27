@@ -239,7 +239,13 @@ export function ErrorReporter() {
         // the one that owns the pledge (or pledge is not COMPLETED).
         // Server behavior is correct — the UI surfaces a helpful message.
         // Not an actionable backend error.
-        (requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond"))
+        (requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond")) ||
+        // Upload 403 fires when the logged-in user isn't the project's
+        // creator, an accepted collaborator-with-edit, or an admin
+        // (e.g. landed on someone else's edit URL). The server log
+        // already records userId/role/projectId for diagnosis; the UI
+        // surfaces the rejection as a toast. Not a backend regression.
+        requestUrl === "/api/upload" || requestUrl.endsWith("/api/upload")
       );
       // /api/auth/recaptcha 5xx is transient (nginx upstream briefly down during pm2 reload);
       // the client retries with backoff and falls back to disabled, so failures here are

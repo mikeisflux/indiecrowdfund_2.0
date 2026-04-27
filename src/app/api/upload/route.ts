@@ -41,9 +41,24 @@ function generateFilename(originalName: string, convertToWebP: boolean): string 
   return `${hash}${ext}`;
 }
 
-// Check if user can upload to a project (creator or collaborator with edit permission)
-async function canUploadToProject(projectId: string, userId: string): Promise<boolean> {
-  const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
+// Check if user can upload to a project. Allowed roles:
+//   - The project's creator
+//   - A collaborator with canEditProject = true and ACCEPTED status
+//   - An ADMIN or SUPER_ADMIN (matches the GET-side admin override on
+//     /api/projects/vanity/[vanity]/[slug] — admins should be able to
+//     do everything they can view).
+async function canUploadToProject(
+  projectId: string,
+  userId: string,
+  userRole: string | null | undefined
+): Promise<boolean> {
+  // Admin override — fast-path before hitting the DB.
+  if (userRole === "ADMIN" || userRole === "SUPER_ADMIN") {
+    return true;
+  }
+
+  const project = await db.project.findFirst({
+    where: { id: projectId, deletedAt: null },
     select: { creatorId: true },
   });
 
@@ -88,8 +103,20 @@ export async function POST(req: NextRequest) {
 
     // If projectId is provided, verify user has permission to upload to this project
     if (projectId && projectId !== "temp") {
-      const canUpload = await canUploadToProject(projectId, session.user.id);
+      const canUpload = await canUploadToProject(
+        projectId,
+        session.user.id,
+        session.user.role
+      );
       if (!canUpload) {
+        uploadLogger.warn(
+          {
+            userId: session.user.id,
+            userRole: session.user.role,
+            projectId,
+          },
+          "Upload denied — user is not creator, collaborator-with-edit, or admin"
+        );
         return NextResponse.json(
           { error: "You don't have permission to upload to this project" },
           { status: 403 }
