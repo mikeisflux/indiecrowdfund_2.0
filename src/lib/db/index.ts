@@ -62,6 +62,38 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Reset the cached Prisma client so the next request builds a fresh
+// PrismaClient + adapter + connection pool. Called when:
+//   1. The keepalive ping fails (connection dropped — Postgres restart,
+//      idle timeout, network blip, etc).
+//   2. A user query exhausts its retries against a transient error
+//      (means the pool is dead and retrying inside the same client
+//      will keep failing).
+//
+// Without this reset, every subsequent request hits the disconnected
+// pool, the retry layer fires 4 times against the same dead pool, and
+// the route 500s indefinitely until the process restarts. That's the
+// bug we used to "fix" with a nightly VM reboot.
+function resetPrismaClient(reason: string): void {
+  dbLogger.warn({ reason }, "Resetting Prisma client to recover from stale connection");
+  // Snapshot the dead refs.
+  const stale = globalForPrisma.prisma;
+  const oldTimer = keepaliveTimer;
+  // Synchronously (no awaits) clear both module-level slots so any
+  // concurrent request entering getPrismaClient() sees an empty cache
+  // and rebuilds before our async cleanup runs.
+  globalForPrisma.prisma = undefined;
+  keepaliveTimer = null;
+  // Async cleanup — fire and forget, the pool is probably already
+  // dead so $disconnect() may throw and we don't care.
+  if (oldTimer) clearInterval(oldTimer);
+  if (stale) {
+    Promise.resolve()
+      .then(() => stale.$disconnect())
+      .catch(() => { /* ignore — pool likely already shut down */ });
+  }
+}
+
 // Lazy initialization to avoid build-time errors when Prisma client isn't generated
 function getPrismaClient(): PrismaClient {
   if (isBuildTime) {
@@ -157,6 +189,20 @@ function getPrismaClient(): PrismaClient {
                 await sleep(RETRY_DELAY_MS * (attempt + 1));
                 continue;
               }
+              // Out of retries (or non-transient). If the error was
+              // transient, the pool is almost certainly dead — reset
+              // the cached client so the NEXT request builds a fresh
+              // PrismaClient + adapter + pool. Without this, every
+              // subsequent request would hit the same dead pool and
+              // 500 forever (which is exactly the failure mode the
+              // nightly reboot cron was masking).
+              if (isTransientError(error)) {
+                resetPrismaClient(
+                  `retry exhausted (${attempt + 1} attempts): ${
+                    error instanceof Error ? error.message : String(error)
+                  }`
+                );
+              }
               throw error;
             }
           }
@@ -166,14 +212,20 @@ function getPrismaClient(): PrismaClient {
       },
     }) as unknown as PrismaClient;
 
-    // Start periodic keepalive to prevent stale connections (P1017 errors)
+    // Start periodic keepalive to prevent stale connections (P1017 errors).
+    // On failure we reset the entire client — disconnecting the pool
+    // alone wasn't enough because globalForPrisma.prisma still pointed
+    // at the now-dead extended client, so every subsequent request
+    // rolled queries against the disconnected pool until the process
+    // was restarted.
     if (!keepaliveTimer) {
       keepaliveTimer = setInterval(async () => {
         try {
           await client.$queryRawUnsafe("SELECT 1");
-        } catch {
-          // Connection is stale, disconnect to force fresh connections on next query
-          try { await client.$disconnect(); } catch { /* ignore */ }
+        } catch (err) {
+          resetPrismaClient(
+            `keepalive ping failed: ${err instanceof Error ? err.message : String(err)}`
+          );
         }
       }, KEEPALIVE_INTERVAL_MS);
       // Don't prevent Node.js from exiting
