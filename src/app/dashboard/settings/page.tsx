@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { useSession } from "@/components/providers/auth-provider";
 
-import { UserSettings, EmailChangeState } from "./components/types";
+import { UserSettings, EmailChangeState, PasswordChangeState } from "./components/types";
 import { LoadingState } from "./components/LoadingState";
 import { SettingsHeader } from "./components/SettingsHeader";
 import { ProfileCard } from "./components/ProfileCard";
@@ -19,6 +19,7 @@ import { PrivacyCard } from "./components/PrivacyCard";
 import { PaypalCard } from "./components/PaypalCard";
 import { ConnectedServicesCard } from "./components/ConnectedServicesCard";
 import { EmailChangeDialog } from "./components/EmailChangeDialog";
+import { PasswordChangeDialog } from "./components/PasswordChangeDialog";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -34,6 +35,15 @@ export default function SettingsPage() {
     newEmail: "",
     confirmEmail: "",
     password: "",
+    isChanging: false,
+    error: null,
+    success: false,
+  });
+  const [showPasswordChangeDialog, setShowPasswordChangeDialog] = useState(false);
+  const [passwordChange, setPasswordChange] = useState<PasswordChangeState>({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
     isChanging: false,
     error: null,
     success: false,
@@ -284,6 +294,74 @@ export default function SettingsPage() {
     }
   };
 
+  const handlePasswordChange = async () => {
+    if (!passwordChange.currentPassword) {
+      setPasswordChange({ ...passwordChange, error: "Current password is required" });
+      return;
+    }
+    if (!passwordChange.newPassword) {
+      setPasswordChange({ ...passwordChange, error: "New password is required" });
+      return;
+    }
+    if (passwordChange.newPassword.length < 8) {
+      setPasswordChange({ ...passwordChange, error: "New password must be at least 8 characters" });
+      return;
+    }
+    if (passwordChange.newPassword !== passwordChange.confirmPassword) {
+      setPasswordChange({ ...passwordChange, error: "Passwords do not match" });
+      return;
+    }
+    if (passwordChange.newPassword === passwordChange.currentPassword) {
+      setPasswordChange({ ...passwordChange, error: "New password must differ from current" });
+      return;
+    }
+
+    setPasswordChange({ ...passwordChange, isChanging: true, error: null });
+
+    try {
+      const res = await apiFetch("/api/creator/account/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: passwordChange.currentPassword,
+          newPassword: passwordChange.newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to change password");
+      }
+
+      setPasswordChange({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+        isChanging: false,
+        error: null,
+        success: true,
+      });
+
+      setTimeout(() => {
+        setShowPasswordChangeDialog(false);
+        setPasswordChange({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+          isChanging: false,
+          error: null,
+          success: false,
+        });
+      }, 2000);
+    } catch (err) {
+      setPasswordChange({
+        ...passwordChange,
+        isChanging: false,
+        error: err instanceof Error ? err.message : "Failed to change password",
+      });
+    }
+  };
+
   if (loading) {
     return <LoadingState />;
   }
@@ -350,7 +428,10 @@ export default function SettingsPage() {
             onSettingsChange={setSettings}
           />
 
-          <PrivacyCard settings={settings} />
+          <PrivacyCard
+            settings={settings}
+            onChangePassword={() => setShowPasswordChangeDialog(true)}
+          />
 
           <PaypalCard
             paypalEmail={paypalEmail}
@@ -372,6 +453,14 @@ export default function SettingsPage() {
         emailChange={emailChange}
         onEmailChangeUpdate={setEmailChange}
         onSubmit={handleEmailChange}
+      />
+
+      <PasswordChangeDialog
+        open={showPasswordChangeDialog}
+        onOpenChange={setShowPasswordChangeDialog}
+        passwordChange={passwordChange}
+        onPasswordChangeUpdate={setPasswordChange}
+        onSubmit={handlePasswordChange}
       />
     </div>
   );

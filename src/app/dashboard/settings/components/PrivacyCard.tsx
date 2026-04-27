@@ -8,9 +8,10 @@ import { UserSettings } from "./types";
 
 interface PrivacyCardProps {
   settings: UserSettings;
+  onChangePassword: () => void;
 }
 
-export function PrivacyCard({ settings }: PrivacyCardProps) {
+export function PrivacyCard({ settings, onChangePassword }: PrivacyCardProps) {
   return (
     <Card className="glass-card border shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '300ms' }}>
       <CardHeader>
@@ -50,7 +51,7 @@ export function PrivacyCard({ settings }: PrivacyCardProps) {
               Update your account password
             </p>
           </div>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={onChangePassword}>
             Change
           </Button>
         </div>

@@ -44,6 +44,15 @@ export interface EmailChangeState {
   success: boolean;
 }
 
+export interface PasswordChangeState {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+  isChanging: boolean;
+  error: string | null;
+  success: boolean;
+}
+
 export const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (ET)" },
   { value: "America/Chicago", label: "Central Time (CT)" },
