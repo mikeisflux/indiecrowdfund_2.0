@@ -676,14 +676,18 @@ export async function proxy(req: NextRequest) {
     isGeneralRateLimited(clientIP)
   ) {
     console.log(`[Bot Blocker] General rate limit exceeded: ${clientIP} on ${pathname}`);
-    const blocked = recordSuspiciousRequest(
-      clientIP,
-      `Rate limit exceeded (>${GENERAL_RATE_LIMIT} req/min)`,
-      { path: pathname, userAgent }
-    );
-    if (blocked) {
-      return rewriteToBlocked("Forbidden", 403);
-    }
+    // Return 429 indefinitely without counting toward the 5-violation
+    // auto-ban threshold. Rate-limit overruns from real browsers (e.g.
+    // a backend hiccup makes the page retry-loop on a polled endpoint)
+    // would otherwise turn a transient outage into a 24h customer ban,
+    // which is a worse failure mode than letting an aggressive scraper
+    // get repeated 429s.
+    //
+    // Real browsers back off when they see sustained 429s. Real bots
+    // ignore 429 and keep hammering — they'll trip on the other ban
+    // triggers (scanner paths, invalid action IDs, malformed traffic)
+    // which still call recordSuspiciousRequest and still escalate to
+    // 24h+ blocks.
     return rewriteToBlocked("Too Many Requests", 429);
   }
 
