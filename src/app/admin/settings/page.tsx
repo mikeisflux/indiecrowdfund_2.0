@@ -113,13 +113,13 @@ interface PlatformSettings {
   whopCompanyId: string | null;
   whopWebhookSecret: string | null;
   whopEnvironment: string;
-  // Maverick settings
-  maverickEnabled: boolean;
-  maverickApiToken: string | null;
-  maverickWebhookSecret: string | null;
-  maverickDbaId: string | null;
-  maverickTerminalId: string | null;
-  maverickEnvironment: string;
+  // NMI settings (Network Merchants Inc — direct-post gateway)
+  nmiEnabled: boolean;
+  nmiSecurityKey: string | null;
+  nmiPublicKey: string | null;
+  nmiWebhookSecret: string | null;
+  nmiEnvironment: string;
+  nmiGatewayUrlOverride: string | null;
   // Payment settings
   autoPayouts: boolean;
   // Social auto-posting settings
@@ -237,13 +237,13 @@ export default function SettingsPage() {
     whopCompanyId: "",
     whopWebhookSecret: "",
     whopEnvironment: "production",
-    // Maverick settings (Mentom Payments → Maverick gateway)
-    maverickEnabled: false,
-    maverickApiToken: "",
-    maverickWebhookSecret: "",
-    maverickDbaId: "",
-    maverickTerminalId: "",
-    maverickEnvironment: "production",
+    // NMI settings (Network Merchants Inc — direct-post gateway)
+    nmiEnabled: false,
+    nmiSecurityKey: "",
+    nmiPublicKey: "",
+    nmiWebhookSecret: "",
+    nmiEnvironment: "production",
+    nmiGatewayUrlOverride: "",
     // reCAPTCHA settings
     recaptchaEnabled: false,
     recaptchaSiteKey: "",
@@ -439,12 +439,12 @@ export default function SettingsPage() {
         whopCompanyId: settings.whopCompanyId || "",
         whopWebhookSecret: settings.whopWebhookSecret || "",
         whopEnvironment: settings.whopEnvironment || "production",
-        maverickEnabled: settings.maverickEnabled || false,
-        maverickApiToken: settings.maverickApiToken || "",
-        maverickWebhookSecret: settings.maverickWebhookSecret || "",
-        maverickDbaId: settings.maverickDbaId || "",
-        maverickTerminalId: settings.maverickTerminalId || "",
-        maverickEnvironment: settings.maverickEnvironment || "production",
+        nmiEnabled: settings.nmiEnabled || false,
+        nmiSecurityKey: settings.nmiSecurityKey || "",
+        nmiPublicKey: settings.nmiPublicKey || "",
+        nmiWebhookSecret: settings.nmiWebhookSecret || "",
+        nmiEnvironment: settings.nmiEnvironment || "production",
+        nmiGatewayUrlOverride: settings.nmiGatewayUrlOverride || "",
         recaptchaEnabled: settings.recaptchaEnabled || false,
         recaptchaSiteKey: settings.recaptchaSiteKey || "",
         recaptchaSecretKey: settings.recaptchaSecretKey || "",
@@ -712,12 +712,12 @@ export default function SettingsPage() {
             whopCompanyId: currentPaymentSettings.whopCompanyId,
             whopWebhookSecret: currentPaymentSettings.whopWebhookSecret,
             whopEnvironment: currentPaymentSettings.whopEnvironment,
-            maverickEnabled: currentPaymentSettings.maverickEnabled,
-            maverickApiToken: currentPaymentSettings.maverickApiToken,
-            maverickWebhookSecret: currentPaymentSettings.maverickWebhookSecret,
-            maverickDbaId: currentPaymentSettings.maverickDbaId,
-            maverickTerminalId: currentPaymentSettings.maverickTerminalId,
-            maverickEnvironment: currentPaymentSettings.maverickEnvironment,
+            nmiEnabled: currentPaymentSettings.nmiEnabled,
+            nmiSecurityKey: currentPaymentSettings.nmiSecurityKey,
+            nmiPublicKey: currentPaymentSettings.nmiPublicKey,
+            nmiWebhookSecret: currentPaymentSettings.nmiWebhookSecret,
+            nmiEnvironment: currentPaymentSettings.nmiEnvironment,
+            nmiGatewayUrlOverride: currentPaymentSettings.nmiGatewayUrlOverride,
             recaptchaEnabled: currentPaymentSettings.recaptchaEnabled,
             recaptchaSiteKey: currentPaymentSettings.recaptchaSiteKey,
             recaptchaSecretKey: currentPaymentSettings.recaptchaSecretKey,

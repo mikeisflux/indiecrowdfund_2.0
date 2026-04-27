@@ -49,16 +49,16 @@ model PlatformSettings {
   whopWebhookSecret     String?
   whopEnvironment       String   @default("production")  // "production" or "sandbox"
 
-  // Maverick Payments Settings (Mentom Payments → Maverick gateway)
+  // NMI Settings (Network Merchants Inc — direct-post gateway)
   // Used for goal-based all-or-nothing via Customer Vault tokenize-on-pledge,
   // charge-on-success pattern. Lives alongside Stripe etc.; selection is
   // per-creator/per-project via PaymentProcessor enum.
-  maverickEnabled       Boolean  @default(false)
-  maverickApiToken      String?  @db.Text   // Bearer token (encrypted at rest)
-  maverickWebhookSecret String?  @db.Text   // SHA-512 signature secret per webhook URL
-  maverickDbaId         String?             // Maverick DBA ID (e.g. "9")
-  maverickTerminalId    String?             // Default terminal ID for the gateway
-  maverickEnvironment   String   @default("production")  // "production" or "sandbox"
+  nmiEnabled            Boolean  @default(false)
+  nmiSecurityKey        String?  @db.Text   // Server-side API key (encrypted at rest)
+  nmiPublicKey          String?  @db.Text   // Public key for Collect.js / Hosted Fields
+  nmiWebhookSecret      String?  @db.Text   // Webhook signature secret (when configured)
+  nmiEnvironment        String   @default("production")  // "production" or "sandbox"
+  nmiGatewayUrlOverride String?             // For white-label resellers proxying NMI on a custom host
 
   // Payout Settings
   autoPayouts           Boolean  @default(false)

@@ -45,13 +45,13 @@ interface PaymentSettingsProps {
     whopCompanyId: string;
     whopWebhookSecret: string;
     whopEnvironment: string;
-    // Maverick settings (Mentom Payments → Maverick gateway)
-    maverickEnabled: boolean;
-    maverickApiToken: string;
-    maverickWebhookSecret: string;
-    maverickDbaId: string;
-    maverickTerminalId: string;
-    maverickEnvironment: string;
+    // NMI settings (Network Merchants Inc — direct-post gateway)
+    nmiEnabled: boolean;
+    nmiSecurityKey: string;
+    nmiPublicKey: string;
+    nmiWebhookSecret: string;
+    nmiEnvironment: string;
+    nmiGatewayUrlOverride: string;
     // reCAPTCHA settings
     recaptchaEnabled: boolean;
     recaptchaSiteKey: string;
@@ -469,103 +469,105 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         </CardContent>
       </Card>
 
-      {/* Maverick Settings */}
+      {/* NMI Settings */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Maverick Payments Configuration</CardTitle>
-              <CardDescription>Mentom Payments merchant account piped through the Maverick gateway. Customer Vault tokenization powers all-or-nothing pledges (tokenize at pledge, charge on success).</CardDescription>
+              <CardTitle>NMI Configuration</CardTitle>
+              <CardDescription>Network Merchants direct-post gateway. Customer Vault tokenization powers all-or-nothing pledges — tokenize at pledge time, charge only on campaign success.</CardDescription>
             </div>
-            <Badge variant={settings.maverickEnabled ? "default" : "secondary"}>
-              {settings.maverickEnabled ? "Enabled" : "Disabled"}
+            <Badge variant={settings.nmiEnabled ? "default" : "secondary"}>
+              {settings.nmiEnabled ? "Enabled" : "Disabled"}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label>Enable Maverick</Label>
-              <p className="text-sm text-muted-foreground">Allow creators to use Maverick as their payment processor</p>
+              <Label>Enable NMI</Label>
+              <p className="text-sm text-muted-foreground">Allow creators to use NMI as their payment processor</p>
             </div>
             <Switch
-              checked={settings.maverickEnabled}
-              onCheckedChange={(checked) => onSettingsChange({ ...settings, maverickEnabled: checked })}
+              checked={settings.nmiEnabled}
+              onCheckedChange={(checked) => onSettingsChange({ ...settings, nmiEnabled: checked })}
             />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>API Bearer Token</Label>
+              <Label>Security Key</Label>
               <SecureKeyInput
-                value={settings.maverickApiToken}
-                onChange={(value) => onSettingsChange({ ...settings, maverickApiToken: value })}
+                value={settings.nmiSecurityKey}
+                onChange={(value) => onSettingsChange({ ...settings, nmiSecurityKey: value })}
                 onSave={onSave}
-                hasExistingValue={settings.maverickApiToken === "••••••••"}
-                placeholder="Bearer token from Maverick dashboard"
+                hasExistingValue={settings.nmiSecurityKey === "••••••••"}
+                placeholder="API security key from your merchant control panel"
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-muted-foreground">Generated under your Maverick dashboard → API Tokens</p>
+              <p className="text-xs text-muted-foreground">Merchant Control Panel → Settings → Security Keys (server-side)</p>
             </div>
             <div className="space-y-2">
-              <Label>Webhook Signing Secret</Label>
+              <Label>Public Key (Collect.js)</Label>
               <SecureKeyInput
-                value={settings.maverickWebhookSecret}
-                onChange={(value) => onSettingsChange({ ...settings, maverickWebhookSecret: value })}
+                value={settings.nmiPublicKey}
+                onChange={(value) => onSettingsChange({ ...settings, nmiPublicKey: value })}
                 onSave={onSave}
-                hasExistingValue={settings.maverickWebhookSecret === "••••••••"}
-                placeholder="Per-webhook-URL signature secret"
+                hasExistingValue={settings.nmiPublicKey === "••••••••"}
+                placeholder="Tokenization key for the hosted card form"
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-muted-foreground">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/maverick</code></p>
+              <p className="text-xs text-muted-foreground">Used by Collect.js / Hosted Fields on the pledge page (safe to expose)</p>
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>DBA ID</Label>
-              <Input
-                value={settings.maverickDbaId}
-                onChange={(e) => onSettingsChange({ ...settings, maverickDbaId: e.target.value })}
-                placeholder="e.g. 9"
+              <Label>Webhook Signing Secret</Label>
+              <SecureKeyInput
+                value={settings.nmiWebhookSecret}
+                onChange={(value) => onSettingsChange({ ...settings, nmiWebhookSecret: value })}
+                onSave={onSave}
+                hasExistingValue={settings.nmiWebhookSecret === "••••••••"}
+                placeholder="Optional — leave blank to skip signature checks"
+                forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-muted-foreground">Your Maverick DBA / merchant ID</p>
+              <p className="text-xs text-muted-foreground">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/nmi</code></p>
             </div>
             <div className="space-y-2">
-              <Label>Default Terminal ID</Label>
-              <Input
-                value={settings.maverickTerminalId}
-                onChange={(e) => onSettingsChange({ ...settings, maverickTerminalId: e.target.value })}
-                placeholder="e.g. 14"
-              />
-              <p className="text-xs text-muted-foreground">Terminal used by the gateway for sales/auths</p>
+              <Label>Environment</Label>
+              <Select
+                value={settings.nmiEnvironment}
+                onValueChange={(v) => onSettingsChange({ ...settings, nmiEnvironment: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="production">Production (secure.nmi.com)</SelectItem>
+                  <SelectItem value="sandbox">Sandbox (sandbox.nmi.com)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Environment</Label>
-            <Select
-              value={settings.maverickEnvironment}
-              onValueChange={(v) => onSettingsChange({ ...settings, maverickEnvironment: v })}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="production">Production (gateway.maverickpayments.com)</SelectItem>
-                <SelectItem value="sandbox">Sandbox (sandbox-gateway.maverickpayments.com)</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Custom Gateway URL (white-label resellers)</Label>
+            <Input
+              value={settings.nmiGatewayUrlOverride}
+              onChange={(e) => onSettingsChange({ ...settings, nmiGatewayUrlOverride: e.target.value })}
+              placeholder="Leave blank for standard NMI. e.g. https://gateway.example.com/api/transact.php"
+            />
+            <p className="text-xs text-muted-foreground">Overrides the gateway URL when your ISO proxies NMI on a custom host (e.g. Maverick / Mentom). The protocol and request shape stay identical.</p>
           </div>
 
           <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
-            <p className="font-medium">Maverick Setup:</p>
+            <p className="font-medium">NMI Setup:</p>
             <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
               <li>Customer Vault tokenization for all-or-nothing campaigns — card tokenized at pledge time, charged only on campaign success</li>
-              <li>Hosted Card Form keeps card data off our servers (no PCI scope expansion)</li>
-              <li>Webhook events: <code className="bg-muted px-1 rounded">transaction.create</code>, <code className="bg-muted px-1 rounded">transaction.refund</code>, <code className="bg-muted px-1 rounded">transaction.recurring</code></li>
-              <li>Webhook signatures use SHA-512 over <code className="bg-muted px-1 rounded">&lt;secret&gt;&lt;id&gt;&lt;module&gt;&lt;action&gt;&lt;date&gt;</code></li>
-              <li>The 10-day auth-window limitation does not apply — we charge tokens, not held auths</li>
+              <li>Collect.js (hosted fields) keeps PAN data off our servers — no PCI scope expansion</li>
+              <li>Direct-post API: <code className="bg-muted px-1 rounded">POST /api/transact.php</code> with <code className="bg-muted px-1 rounded">type=sale|auth|capture|void|refund|credit|validate</code></li>
+              <li>Test with sandbox keys first — never use a real Security Key for testing</li>
             </ul>
           </div>
         </CardContent>
