@@ -56,17 +56,13 @@ export function PrivacyCard({ settings, onChangePassword }: PrivacyCardProps) {
           </Button>
         </div>
 
-        <div className="flex items-center justify-between rounded-lg border border-destructive/30 p-4">
-          <div>
-            <p className="font-medium text-destructive">Delete account</p>
-            <p className="text-sm text-muted-foreground">
-              Permanently delete your account and all data
-            </p>
-          </div>
-          <Button variant="destructive" size="sm">
-            Delete
-          </Button>
-        </div>
+        {/* Account deletion intentionally not exposed in the UI. There is
+            no /api/user/delete-account endpoint and the deletion flow
+            (active pledges, refund handling, soft-delete vs hard-delete,
+            GDPR right-to-erasure window) hasn't been designed yet. The
+            previous placeholder button shipped without a handler and
+            confused users; until the flow exists, users requesting
+            deletion go through support@indiecrowdfund.com. */}
       </CardContent>
     </Card>
   );

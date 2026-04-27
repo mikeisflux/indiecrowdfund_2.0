@@ -176,7 +176,7 @@ function MailboxDialog({
       const url = mailbox
         ? `/api/admin/mailboxes/${mailbox.id}`
         : "/api/admin/mailboxes";
-      const method = mailbox ? "PATCH" : "POST";
+      const method = mailbox ? "PUT" : "POST";
 
       const response = await apiFetch(url, {
         method,
