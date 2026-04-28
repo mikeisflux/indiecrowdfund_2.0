@@ -463,6 +463,18 @@ export function BlockEditor({
   const showPlusButton =
     (editorFocused || showBlockMenu) && activeBlockTop !== null;
 
+  // When the active block is close to the bottom of the editor we
+  // open the "+" menu UPWARD instead of downward — otherwise it
+  // gets clipped by the editor's `overflow-hidden` border. The
+  // menus + their dropdowns are roughly ~280px tall combined; we
+  // use 320px as the flip threshold to leave breathing room.
+  const FLIP_THRESHOLD_PX = 320;
+  const containerHeight = containerRef.current?.clientHeight ?? 0;
+  const flipMenuUp =
+    activeBlockTop !== null &&
+    containerHeight > 0 &&
+    containerHeight - activeBlockTop < FLIP_THRESHOLD_PX;
+
   return (
     <div
       ref={containerRef}
@@ -512,12 +524,17 @@ export function BlockEditor({
             />
           </button>
 
-          {/* Block Menu Toolbar */}
+          {/* Block Menu Toolbar — flips above the + button when the
+              active block is near the bottom of the editor so the
+              dropdowns aren't clipped by the editor's overflow-hidden border. */}
           {showBlockMenu && (
             <div
               ref={blockMenuRef}
               onMouseDown={preventFocusLoss}
-              className="absolute top-10 left-0 flex items-center gap-0.5 p-1.5 bg-popover border rounded-lg shadow-xl z-30 min-w-max"
+              className={cn(
+                "absolute left-0 flex items-center gap-0.5 p-1.5 bg-popover border rounded-lg shadow-xl z-30 min-w-max",
+                flipMenuUp ? "bottom-10" : "top-10"
+              )}
             >
               {/* Block Type Dropdown */}
               <div className="relative">
@@ -539,7 +556,12 @@ export function BlockEditor({
                 </button>
 
                 {showTypeDropdown && (
-                  <div className="absolute top-full left-0 mt-1 w-44 bg-popover border rounded-lg shadow-xl py-1 z-40">
+                  <div
+                    className={cn(
+                      "absolute left-0 w-44 bg-popover border rounded-lg shadow-xl py-1 z-40",
+                      flipMenuUp ? "bottom-full mb-1" : "top-full mt-1"
+                    )}
+                  >
                     <button
                       type="button"
                       onClick={() => setBlockType("paragraph")}
@@ -656,7 +678,12 @@ export function BlockEditor({
                 </button>
 
                 {showImageOptions && (
-                  <div className="absolute top-full left-0 mt-1 w-56 bg-popover border rounded-lg shadow-xl py-1 z-40">
+                  <div
+                    className={cn(
+                      "absolute left-0 w-56 bg-popover border rounded-lg shadow-xl py-1 z-40",
+                      flipMenuUp ? "bottom-full mb-1" : "top-full mt-1"
+                    )}
+                  >
                     <button
                       type="button"
                       onClick={() => {
@@ -718,7 +745,10 @@ export function BlockEditor({
             <div
               ref={blockMenuRef}
               onMouseDown={preventFocusLoss}
-              className="absolute top-10 left-0 flex items-center gap-1.5 p-2 bg-popover border rounded-lg shadow-xl z-30"
+              className={cn(
+                "absolute left-0 flex items-center gap-1.5 p-2 bg-popover border rounded-lg shadow-xl z-30",
+                flipMenuUp ? "bottom-10" : "top-10"
+              )}
             >
               <input
                 type="url"
