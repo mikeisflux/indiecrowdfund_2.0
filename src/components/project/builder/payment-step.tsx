@@ -18,13 +18,13 @@ import {
   WhopBankPayoutSection,
   RetailerAccessSection,
   ChargebackCardSection,
-  NmiChargebackCardSection,
   PaymentCloudBankSection,
 } from "./payment-sections";
 import type {
   PaymentCloudBankAccountState,
   PaymentCloudBankAccountStatus,
 } from "./payment-sections";
+import { UserChargebackCardSection } from "@/components/payments/user-chargeback-card-section";
 
 export function PaymentStep() {
   const { payment, updatePayment, basics, projectId, projectStatus } = useProjectStore();
@@ -530,12 +530,10 @@ export function PaymentStep() {
           projects keep the old AES-encrypted form so existing rows still work. */}
       <Separator />
       {payment.paymentProcessor === "NMI" ? (
-        <NmiChargebackCardSection
-          projectId={projectId}
-          publicKey={nmiPublicKey}
-          status={chargebackCardStatus}
-          setStatus={setChargebackCardStatus}
-        />
+        // User-level chargeback card (shared with IndieKit Payments tab
+        // and marketplace settings). Saving here unlocks the same card
+        // everywhere; each creator only sees their own.
+        <UserChargebackCardSection idPrefix="builder-cb" />
       ) : (
         <ChargebackCardSection
           chargebackCard={chargebackCard}

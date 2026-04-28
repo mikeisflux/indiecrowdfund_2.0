@@ -26,14 +26,21 @@ import {
   AlertTriangle,
   Wallet,
   ShoppingBag,
+  Cloud,
 } from "lucide-react";
 import { toast } from "sonner";
+import { UserChargebackCardSection } from "@/components/payments/user-chargeback-card-section";
+import {
+  PaymentCloudBankSection,
+  type PaymentCloudBankAccountState,
+  type PaymentCloudBankAccountStatus,
+} from "@/components/project/builder/payment-sections";
 
 interface PaymentsSectionProps {
   projectId?: string;
 }
 
-type Processor = "PAYPAL" | "DIVINITYCOIN" | "WHOP" | "STRIPE";
+type Processor = "PAYPAL" | "DIVINITYCOIN" | "WHOP" | "STRIPE" | "NMI";
 
 interface BankAccountState {
   bankName: string;
@@ -108,6 +115,29 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSavingBank, setIsSavingBank] = useState(false);
 
+  // PaymentCloud (NMI) state — used only when projectProcessor === "NMI".
+  // Bank account is user-level so the same data shows up here, on the
+  // project creation page, and in marketplace settings.
+  const [pcBank, setPcBank] = useState<PaymentCloudBankAccountState>({
+    bankName: "",
+    firstName: "",
+    lastName: "",
+    accountNumber: "",
+    routingNumber: "",
+    accountType: "checking",
+    billingLine1: "",
+    billingLine2: "",
+    billingCity: "",
+    billingState: "",
+    billingZip: "",
+    billingCountry: "US",
+  });
+  const [pcBankStatus, setPcBankStatus] = useState<PaymentCloudBankAccountStatus>({
+    saved: false,
+    loading: true,
+    lastFour: null,
+  });
+
   const [isSavingPayments, setIsSavingPayments] = useState(false);
   const [paymentSettings, setPaymentSettings] = useState({
     autoRetry: true,
@@ -134,9 +164,44 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     fetchProcessor();
   }, [projectId]);
 
+  // PaymentCloud (NMI) bank account loader — only fires when project is NMI.
+  useEffect(() => {
+    if (projectProcessor !== "NMI") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/creator/paymentcloud-bank-account");
+        if (cancelled) return;
+        if (r.ok) {
+          const data = await r.json();
+          setPcBankStatus({
+            saved: !!data.exists,
+            loading: false,
+            lastFour: data.lastFour ?? null,
+          });
+          if (data.exists) {
+            setPcBank((p) => ({
+              ...p,
+              bankName: data.bankName || "",
+              accountType: data.accountType || "checking",
+            }));
+          }
+        } else {
+          setPcBankStatus({ saved: false, loading: false, lastFour: null });
+        }
+      } catch {
+        if (!cancelled)
+          setPcBankStatus({ saved: false, loading: false, lastFour: null });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectProcessor]);
+
   // Fetch bank account status once we know the processor
   useEffect(() => {
-    if (!projectProcessor || projectProcessor === "STRIPE") {
+    if (!projectProcessor || projectProcessor === "STRIPE" || projectProcessor === "NMI") {
       setBankStatus({ saved: false, loading: false, lastFour: null });
       return;
     }
@@ -293,8 +358,27 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
         </div>
       )}
 
-      {/* Processor locked indicator */}
-      {procMeta && projectProcessor !== "STRIPE" && (
+      {/* Processor locked indicator — PaymentCloud (NMI) gets its own
+          row with the sky-cyan PaymentCloud branding to match the
+          project creation step + marketplace. */}
+      {projectProcessor === "NMI" && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center shrink-0">
+            <Cloud className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm">Payment Processor: PaymentCloud</p>
+            <p className="text-xs text-muted-foreground">
+              Set at campaign creation — cannot be changed after launch.
+            </p>
+          </div>
+          <Badge variant="secondary" className="shrink-0">
+            <Lock className="h-3 w-3 mr-1" />
+            Locked
+          </Badge>
+        </div>
+      )}
+      {procMeta && projectProcessor !== "STRIPE" && projectProcessor !== "NMI" && (
         <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3">
           <div className={`h-8 w-8 rounded-lg ${procMeta.iconBg} flex items-center justify-center shrink-0`}>
             {procMeta.icon}
@@ -312,8 +396,24 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
         </div>
       )}
 
-      {/* Bank account section — only for the project's processor */}
-      {procMeta && projectProcessor !== "STRIPE" && (
+      {/* PaymentCloud creator payout bank + chargeback card (user-level
+          shared sections). Saving here also unlocks the same data on
+          the project creation Payments step and marketplace settings. */}
+      {projectProcessor === "NMI" && (
+        <>
+          <PaymentCloudBankSection
+            bankAccount={pcBank}
+            setBankAccount={setPcBank}
+            status={pcBankStatus}
+            setStatus={setPcBankStatus}
+            projectId={projectId ?? null}
+          />
+          <UserChargebackCardSection idPrefix="ik-cb" />
+        </>
+      )}
+
+      {/* Legacy bank account section — only for non-NMI legacy processors */}
+      {procMeta && projectProcessor !== "STRIPE" && projectProcessor !== "NMI" && (
         <Card className={bankStatus.saved && !showForm ? "border-green-500" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

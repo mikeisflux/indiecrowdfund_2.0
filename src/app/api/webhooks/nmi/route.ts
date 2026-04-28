@@ -205,12 +205,30 @@ async function handleChargeback(payload: Record<string, unknown>): Promise<void>
           id: true,
           title: true,
           creatorId: true,
+          // Per-project (legacy) chargeback card. Used as fallback if
+          // the creator hasn't saved a user-level card yet.
           chargebackCard: {
             select: {
               id: true,
               nmiCustomerVaultId: true,
               cardLastFour: true,
               cardBrand: true,
+            },
+          },
+          // User-level chargeback card on the creator's account —
+          // preferred. One card covers all the creator's pledges and
+          // marketplace sales.
+          creator: {
+            select: {
+              id: true,
+              marketplaceChargebackCard: {
+                select: {
+                  id: true,
+                  nmiCustomerVaultId: true,
+                  cardLastFour: true,
+                  cardBrand: true,
+                },
+              },
             },
           },
         },
@@ -263,7 +281,13 @@ async function handleChargeback(payload: Record<string, unknown>): Promise<void>
     message: string | null;
   } = { success: false, transactionId: null, message: null };
 
-  const cardVaultId = pledge.project.chargebackCard?.nmiCustomerVaultId ?? null;
+  // Prefer the creator's user-level card (one card per creator covers
+  // every pledge + marketplace sale they have). Fall back to the
+  // legacy per-project card if the creator hasn't migrated yet.
+  const cardVaultId =
+    pledge.project.creator?.marketplaceChargebackCard?.nmiCustomerVaultId ??
+    pledge.project.chargebackCard?.nmiCustomerVaultId ??
+    null;
   if (!cardVaultId) {
     recoupResult.message = "Creator has no chargeback card on file";
     nmiWebhookLogger.warn(
