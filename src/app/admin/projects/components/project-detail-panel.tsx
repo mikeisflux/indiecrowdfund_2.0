@@ -32,6 +32,7 @@ import { Project } from "./types";
 import { getFlags, formatDate, formatDuration } from "./utils";
 import { SetVanityUrlDialog } from "./dialogs";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ProjectDetailPanelProps {
   project: Project | null;
@@ -390,6 +391,21 @@ export function ProjectDetailPanel({
             </p>
           )}
 
+          {/* PaymentCloud rolling reserve flag — shown for NMI projects.
+              Auto-set when the project funds with effective revenue at
+              or above $2,500; admins can flip it manually for new /
+              high-risk creators regardless of amount. */}
+          {project.paymentProcessor === "NMI" && (
+            <RollingReserveToggle
+              projectId={project.id}
+              initialSubject={project.rollingReserveSubject}
+              auto={project.rollingReserveAuto}
+              releaseAt={project.rollingReserveReleaseAt}
+              heldAmount={project.rollingReserveAmount}
+              released={project.rollingReserveReleased}
+            />
+          )}
+
           <div className="flex items-center gap-2">
             <Button
               onClick={onApprove}
@@ -430,5 +446,84 @@ export function ProjectDetailPanel({
         onSuccess={(newVanityUrl) => setCurrentVanityUrl(newVanityUrl)}
       />
     </Card>
+  );
+}
+
+interface RollingReserveToggleProps {
+  projectId: string;
+  initialSubject: boolean;
+  auto: boolean;
+  releaseAt: string | null;
+  heldAmount: number;
+  released: boolean;
+}
+
+function RollingReserveToggle({
+  projectId,
+  initialSubject,
+  auto,
+  releaseAt,
+  heldAmount,
+  released,
+}: RollingReserveToggleProps) {
+  const [subject, setSubject] = useState(initialSubject);
+  const [saving, setSaving] = useState(false);
+
+  const handleToggle = async (checked: boolean) => {
+    setSaving(true);
+    try {
+      const r = await apiFetch(`/api/admin/projects/${projectId}/rolling-reserve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rollingReserveSubject: checked }),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to update rolling reserve");
+      }
+      setSubject(checked);
+      toast.success(
+        checked
+          ? "Project flagged for 180-day rolling reserve"
+          : "Rolling reserve flag removed"
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3 mb-4 space-y-2">
+      <label className="flex items-start gap-3 cursor-pointer">
+        <Checkbox
+          checked={subject}
+          onCheckedChange={(v) => handleToggle(v === true)}
+          disabled={saving || released}
+          className="mt-0.5"
+        />
+        <div className="flex-1 text-sm">
+          <p className="font-medium">Subject to PaymentCloud rolling reserve</p>
+          <p className="text-xs text-muted-foreground">
+            Hold 10% of gross revenue in escrow for 180 days. Use for new
+            creators, high-risk creators, or anyone outside the auto-trigger
+            ($2,500+) where additional protection is warranted.
+          </p>
+          {auto && (
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+              Auto-flagged: campaign raised over $2,500.
+            </p>
+          )}
+          {Number(heldAmount) > 0 && releaseAt && (
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+              ${Number(heldAmount).toFixed(2)} held, releases{" "}
+              {new Date(releaseAt).toLocaleDateString()}
+              {released && " · already released"}
+            </p>
+          )}
+        </div>
+      </label>
+    </div>
   );
 }

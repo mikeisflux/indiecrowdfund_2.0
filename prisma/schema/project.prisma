@@ -99,6 +99,18 @@ model Project {
   fulfillmentIntegrations FulfillmentIntegration[]
   chargebackCard        CreatorChargebackCard?
 
+  // PaymentCloud rolling reserve. Projects raising over $2,500 auto-
+  // trigger; new / high-risk creators are toggled by admins on a
+  // case-by-case basis. 10% of gross is held in escrow for 180 days
+  // before processor + platform fees are deducted.
+  rollingReserveSubject  Boolean   @default(false)  // admin manual override
+  rollingReserveAuto     Boolean   @default(false)  // auto-set when funded > threshold
+  rollingReserveAmount   Decimal   @default(0) @db.Decimal(10, 2)
+  rollingReserveHeldAt   DateTime?
+  rollingReserveReleaseAt DateTime?
+  rollingReserveReleased  Boolean  @default(false)
+  rollingReserveReleasedAt DateTime?
+
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   launchedAt            DateTime?

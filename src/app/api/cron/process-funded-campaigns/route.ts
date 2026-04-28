@@ -6,6 +6,58 @@ import { db } from "@/lib/db";
 import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import { loadNmiConfig, saleByVaultToken } from "@/lib/nmi";
+import { evaluateAutoTrigger } from "@/lib/payments/rolling-reserve";
+
+// After NMI pledges have been charged for a funded project, evaluate
+// whether the project should be flagged for the PaymentCloud rolling
+// reserve. Auto-fires when effective revenue >= $2,500. Idempotent:
+// re-running on an already-flagged project preserves heldAt/releaseAt.
+async function evaluateProjectRollingReserve(projectId: string): Promise<void> {
+  const project = await db.project.findFirst({
+    where: { id: projectId, deletedAt: null },
+    select: {
+      paymentProcessor: true,
+      currentAmount: true,
+      rollingReserveSubject: true,
+      rollingReserveAuto: true,
+      rollingReserveAmount: true,
+      rollingReserveHeldAt: true,
+      rollingReserveReleaseAt: true,
+      rollingReserveReleased: true,
+    },
+  });
+  if (!project || project.paymentProcessor !== "NMI") return;
+  if (project.rollingReserveReleased) return;
+  const effectiveRevenue = Number(project.currentAmount);
+  const next = evaluateAutoTrigger(
+    {
+      paymentProcessor: project.paymentProcessor,
+      rollingReserveSubject: project.rollingReserveSubject,
+      rollingReserveAuto: project.rollingReserveAuto,
+      rollingReserveAmount: Number(project.rollingReserveAmount),
+      rollingReserveHeldAt: project.rollingReserveHeldAt,
+      rollingReserveReleaseAt: project.rollingReserveReleaseAt,
+    },
+    effectiveRevenue
+  );
+  // Only write if something changed.
+  if (
+    next.rollingReserveAuto === project.rollingReserveAuto &&
+    Math.abs(next.rollingReserveAmount - Number(project.rollingReserveAmount)) < 0.005 &&
+    next.rollingReserveHeldAt?.getTime() === project.rollingReserveHeldAt?.getTime()
+  ) {
+    return;
+  }
+  await db.project.update({
+    where: { id: projectId },
+    data: {
+      rollingReserveAuto: next.rollingReserveAuto,
+      rollingReserveAmount: next.rollingReserveAmount,
+      rollingReserveHeldAt: next.rollingReserveHeldAt ?? undefined,
+      rollingReserveReleaseAt: next.rollingReserveReleaseAt ?? undefined,
+    },
+  });
+}
 
 // Charge all PENDING NMI pledges for a project that has hit its goal.
 // Pattern is claim-then-process to avoid double-charges if two cron
@@ -376,6 +428,16 @@ export async function GET(req: NextRequest) {
         results.totalFailed += pledgeResults.failed;
 
         cronProcessFundedCampaignsLogger.info(`[Cron] Processed funded campaign "${project.title}": ${pledgeResults.successful}/${pledgeResults.total} pledges charged`);
+
+        // PaymentCloud rolling reserve auto-trigger. Best-effort — a
+        // failure to flag here doesn't block the payout calculation,
+        // which also re-checks the trigger at GET time.
+        await evaluateProjectRollingReserve(project.id).catch((err) =>
+          cronProcessFundedCampaignsLogger.error(
+            { err: String(err), projectId: project.id },
+            "[Cron] Rolling reserve auto-trigger error"
+          )
+        );
       } catch (error) {
         cronProcessFundedCampaignsLogger.error({ err: error }, `[Cron] Error processing pledges for project ${project.id}:`);
         results.processed.push({

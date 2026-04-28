@@ -186,6 +186,17 @@ export function ProjectDetailDialog({
                     <span>Platform Fee (3%)</span>
                     <span className="text-red-500">-{formatCurrency(selectedProject.platformFee)}</span>
                   </div>
+                  {selectedProject.rollingReserveActive && Number(selectedProject.rollingReserveHeld) > 0 && (
+                    <div className="flex justify-between text-amber-700 dark:text-amber-300">
+                      <span>
+                        Rolling Reserve (10%, 180-day hold
+                        {selectedProject.rollingReserveReleaseAt &&
+                          ` · releases ${new Date(selectedProject.rollingReserveReleaseAt).toLocaleDateString()}`}
+                        )
+                      </span>
+                      <span>-{formatCurrency(selectedProject.rollingReserveHeld ?? 0)}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-2 flex justify-between font-bold">
                     <span>Amount Owed to Creator</span>
                     <span>{formatCurrency(selectedProject.amountOwed)}</span>

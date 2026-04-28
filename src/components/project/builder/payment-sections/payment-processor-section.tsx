@@ -152,6 +152,29 @@ export function PaymentProcessorSection({
                 <span>Both All or Nothing & Keep It All</span>
               </div>
             </div>
+
+            {/* Rolling reserve disclosure. PaymentCloud requires this on
+                campaigns that raise over $2,500 (auto-flagged) and on
+                new / high-risk creators (admin-flagged during review). */}
+            <div className="mt-4 rounded-md border border-amber-300 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-950/30 p-3 text-xs space-y-1">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">
+                180-day rolling reserve
+              </p>
+              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
+                PaymentCloud holds <strong>10% of gross funds</strong> in escrow
+                for 180 days as chargeback protection. The hold is calculated
+                <em> before</em> processor + platform fees are deducted.
+              </p>
+              <ul className="text-amber-800 dark:text-amber-300 space-y-0.5 list-disc list-inside">
+                <li>Automatic for any campaign that raises over $2,500.</li>
+                <li>Applied to new or high-risk creators regardless of amount, decided case-by-case during review.</li>
+                <li>The full reserve is released to your payout balance after the 180-day window if no chargebacks remain.</li>
+              </ul>
+              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
+                We absorb what we can on smaller campaigns; what we can&apos;t
+                absorb is held by the processor.
+              </p>
+            </div>
           </CardContent>
         </Card>
 

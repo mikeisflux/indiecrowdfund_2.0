@@ -283,7 +283,19 @@ export async function GET(request: NextRequest) {
       const partnerFee = Math.round((processorFee + perTransactionFee) * 100) / 100;
       const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
       const totalFees = Math.round((partnerFee + platformFee) * 100) / 100;
-      const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
+
+      // PaymentCloud rolling reserve. 10% of effective revenue is held
+      // for 180 days; only deducted from the payable amount while still
+      // in the hold window. Once released (rollingReserveReleased=true),
+      // the held amount is added back into amountOwed for payout.
+      const isReserveActive =
+        isNmi &&
+        (project.rollingReserveSubject || project.rollingReserveAuto) &&
+        !project.rollingReserveReleased;
+      const rollingReserveHeld = isReserveActive
+        ? Math.round(effectiveRevenue * 0.10 * 100) / 100
+        : 0;
+      const amountOwed = Math.round((effectiveRevenue - totalFees - rollingReserveHeld) * 100) / 100;
 
       const settlements = project.divinityCoinSettlements || [];
 
@@ -326,6 +338,13 @@ export async function GET(request: NextRequest) {
         amountSettled,
         remainingAmount,
         backerCount,
+        // Rolling reserve display fields
+        rollingReserveActive: isReserveActive,
+        rollingReserveSubject: project.rollingReserveSubject,
+        rollingReserveAuto: project.rollingReserveAuto,
+        rollingReserveHeld,
+        rollingReserveReleaseAt: project.rollingReserveReleaseAt,
+        rollingReserveReleased: project.rollingReserveReleased,
         hasBank: !!bankAccount,
         bankVerified: bankAccount?.isVerified || false,
         hasPendingSettlement,

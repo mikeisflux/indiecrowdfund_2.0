@@ -62,6 +62,13 @@ export const paymentCloudFeeBreakdown = [
       "Standard credit/debit card processing fee on the IndieCrowdfund PaymentCloud merchant account. Cards are tokenized at pledge time via Collect.js (PAN never touches our servers) and only charged when a campaign hits its goal.",
   },
   {
+    title: "180-Day Rolling Reserve",
+    rate: "10%",
+    description: "Held in escrow for 180 days as chargeback protection",
+    details:
+      "PaymentCloud holds 10% of gross funds (calculated before processing + platform fees) for 180 days on campaigns that raise over $2,500, plus on new or high-risk creators evaluated case-by-case during review. The full reserve is released to your payout balance after the 180-day window if no chargebacks remain. We absorb what we can on smaller campaigns; the rest is held by the processor and released back to you.",
+  },
+  {
     title: "IndieCrowdfund Platform Fee",
     rate: "3%",
     description: "Charged on successfully funded campaigns only",
