@@ -120,6 +120,7 @@ interface PlatformSettings {
   nmiWebhookSecret: string | null;
   nmiEnvironment: string;
   nmiGatewayUrlOverride: string | null;
+  nmiPerTransactionFee: number;
   // Payment settings
   autoPayouts: boolean;
   // Social auto-posting settings
@@ -244,6 +245,7 @@ export default function SettingsPage() {
     nmiWebhookSecret: "",
     nmiEnvironment: "production",
     nmiGatewayUrlOverride: "",
+    nmiPerTransactionFee: "0.13",
     // reCAPTCHA settings
     recaptchaEnabled: false,
     recaptchaSiteKey: "",
@@ -445,6 +447,10 @@ export default function SettingsPage() {
         nmiWebhookSecret: settings.nmiWebhookSecret || "",
         nmiEnvironment: settings.nmiEnvironment || "production",
         nmiGatewayUrlOverride: settings.nmiGatewayUrlOverride || "",
+        nmiPerTransactionFee:
+          settings.nmiPerTransactionFee !== undefined && settings.nmiPerTransactionFee !== null
+            ? String(settings.nmiPerTransactionFee)
+            : "0.13",
         recaptchaEnabled: settings.recaptchaEnabled || false,
         recaptchaSiteKey: settings.recaptchaSiteKey || "",
         recaptchaSecretKey: settings.recaptchaSecretKey || "",
@@ -718,6 +724,7 @@ export default function SettingsPage() {
             nmiWebhookSecret: currentPaymentSettings.nmiWebhookSecret,
             nmiEnvironment: currentPaymentSettings.nmiEnvironment,
             nmiGatewayUrlOverride: currentPaymentSettings.nmiGatewayUrlOverride,
+            nmiPerTransactionFee: parseFloat(currentPaymentSettings.nmiPerTransactionFee) || 0,
             recaptchaEnabled: currentPaymentSettings.recaptchaEnabled,
             recaptchaSiteKey: currentPaymentSettings.recaptchaSiteKey,
             recaptchaSecretKey: currentPaymentSettings.recaptchaSecretKey,

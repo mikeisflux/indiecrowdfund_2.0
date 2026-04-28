@@ -52,6 +52,7 @@ interface PaymentSettingsProps {
     nmiWebhookSecret: string;
     nmiEnvironment: string;
     nmiGatewayUrlOverride: string;
+    nmiPerTransactionFee: string;
     // reCAPTCHA settings
     recaptchaEnabled: boolean;
     recaptchaSiteKey: string;
@@ -551,14 +552,28 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Custom Gateway URL (white-label resellers)</Label>
-            <Input
-              value={settings.nmiGatewayUrlOverride}
-              onChange={(e) => onSettingsChange({ ...settings, nmiGatewayUrlOverride: e.target.value })}
-              placeholder="Leave blank for standard NMI. e.g. https://gateway.example.com/api/transact.php"
-            />
-            <p className="text-xs text-muted-foreground">Overrides the gateway URL when your ISO proxies NMI on a custom host (e.g. Maverick / Mentom). The protocol and request shape stay identical.</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Custom Gateway URL (white-label resellers)</Label>
+              <Input
+                value={settings.nmiGatewayUrlOverride}
+                onChange={(e) => onSettingsChange({ ...settings, nmiGatewayUrlOverride: e.target.value })}
+                placeholder="Leave blank for standard NMI"
+              />
+              <p className="text-xs text-muted-foreground">Overrides the gateway URL when your ISO proxies NMI on a custom host (e.g. Maverick / Mentom). The protocol and request shape stay identical.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Per-Transaction Gateway Fee ($)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={settings.nmiPerTransactionFee}
+                onChange={(e) => onSettingsChange({ ...settings, nmiPerTransactionFee: e.target.value })}
+                placeholder="0.13"
+              />
+              <p className="text-xs text-muted-foreground">Flat fee NMI charges per transaction (USD). Subtracted from creator payouts at fee-calculation time.</p>
+            </div>
           </div>
 
           <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">

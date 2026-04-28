@@ -59,6 +59,11 @@ model PlatformSettings {
   nmiWebhookSecret      String?  @db.Text   // Webhook signature secret (when configured)
   nmiEnvironment        String   @default("production")  // "production" or "sandbox"
   nmiGatewayUrlOverride String?             // For white-label resellers proxying NMI on a custom host
+  // Per-transaction gateway fee charged by NMI (in USD). Subtracted
+  // from creator payouts at fee-calculation time. The default 0.13
+  // matches the rate on the production merchant account; admins
+  // adjust here if their account negotiates a different rate.
+  nmiPerTransactionFee  Float    @default(0.13)
 
   // Payout Settings
   autoPayouts           Boolean  @default(false)
