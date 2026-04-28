@@ -17,7 +17,7 @@ export function PciComplianceContent() {
             <h3 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 m-0">Payment Security Status</h3>
           </div>
           <p className="text-emerald-700 dark:text-emerald-300 m-0">
-            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with <strong>PayPal</strong> (Level 1 PCI Service Provider) as our primary processor, <strong>DivinityCoin</strong> for NSFW/adult content campaigns, and <strong>Whop</strong> as an additional payment processor option for creators. We never store, process, or transmit credit card data on our servers.
+            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with <strong>PayPal</strong> (Level 1 PCI Service Provider) as our primary processor, <strong>PaymentCloud</strong> (NMI gateway with browser-side tokenization via Collect.js), <strong>DivinityCoin</strong> for NSFW/adult content campaigns, and <strong>Whop</strong> as an additional payment processor option for creators. We never store, process, or transmit credit card data on our servers.
           </p>
         </div>
 
@@ -34,6 +34,7 @@ export function PciComplianceContent() {
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li><strong>No storage of card data:</strong> We never store, process, or transmit full credit card numbers on our servers</li>
           <li><strong>Tokenization (PayPal):</strong> All PayPal payment information is securely tokenized before reaching our systems</li>
+          <li><strong>Browser-side tokenization (PaymentCloud):</strong> PaymentCloud uses Collect.js to tokenize card data directly in the backer&apos;s browser. The full card number is sent straight from the browser to PaymentCloud&apos;s vault — IndieCrowdfund servers receive only an opaque token</li>
           <li><strong>Outsourced processing (DivinityCoin):</strong> DivinityCoin is an independent payment sub-processor with its own PCI-compliant infrastructure. Card data entered through DivinityCoin&apos;s payment forms never reaches our servers</li>
           <li><strong>Outsourced processing (Whop):</strong> Whop is an additional independent payment processor with its own PCI-compliant infrastructure. Card data entered through Whop&apos;s payment forms never reaches our servers</li>
           <li><strong>Encrypted connections:</strong> All data transmission uses TLS 1.2+ encryption (HTTPS-only)</li>
@@ -60,6 +61,11 @@ export function PciComplianceContent() {
           </a>
         </p>
 
+        <h4 className="text-lg font-semibold mt-6 mb-3">PaymentCloud</h4>
+        <p className="mb-6">
+          PaymentCloud is a high-risk friendly merchant account on the NMI payment gateway. Card data is tokenized in the backer&apos;s browser via Collect.js before it ever leaves the page — only the resulting opaque token is sent to IndieCrowdfund. We pass the token to PaymentCloud&apos;s vault to charge the card on campaign success. IndieCrowdfund never receives, processes, or stores raw card data from PaymentCloud transactions, keeping these transactions out of our PCI scope. PaymentCloud and the underlying NMI gateway maintain their own PCI DSS Level 1 compliance.
+        </p>
+
         <h4 className="text-lg font-semibold mt-6 mb-3">DivinityCoin</h4>
         <p className="mb-6">
           DivinityCoin is an independent payment sub-processor that maintains its own PCI DSS compliance. When backers pay through DivinityCoin, their card details are entered into DivinityCoin&apos;s own PCI-compliant payment infrastructure. IndieCrowdfund never receives, processes, or stores card data from DivinityCoin transactions, eliminating PCI scope for these transactions on our platform.
@@ -77,7 +83,7 @@ export function PciComplianceContent() {
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li>Have completely outsourced all cardholder data functions to PCI DSS validated third-party service providers</li>
           <li>Do not electronically store, process, or transmit any cardholder data on their systems</li>
-          <li>Use only PCI DSS compliant payment gateways (PayPal, DivinityCoin, Whop) for all card transactions</li>
+          <li>Use only PCI DSS compliant payment gateways (PayPal, PaymentCloud / NMI, DivinityCoin, Whop) for all card transactions</li>
         </ul>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">5. Security Measures We Implement</h3>
@@ -98,6 +104,7 @@ export function PciComplianceContent() {
           <li>Your payment card information is never stored on IndieCrowdfund servers</li>
           <li>All transactions are protected by bank-level security regardless of payment processor</li>
           <li>PayPal&apos;s fraud protection helps prevent unauthorized charges on PayPal transactions</li>
+          <li>PaymentCloud transactions tokenize your card directly in your browser via Collect.js — your card data never reaches IndieCrowdfund</li>
           <li>DivinityCoin transactions use their own PCI-compliant payment infrastructure — your card data never reaches IndieCrowdfund</li>
           <li>Whop transactions use their own PCI-compliant payment infrastructure — your card data never reaches IndieCrowdfund</li>
           <li>You can manage saved payment methods securely through your account</li>
@@ -105,7 +112,7 @@ export function PciComplianceContent() {
 
         <h4 className="text-lg font-semibold mt-6 mb-3">For Creators:</h4>
         <ul className="list-disc pl-6 mb-6 space-y-2">
-          <li>Funds are securely processed through your chosen payment processor (PayPal, DivinityCoin, or Whop)</li>
+          <li>Funds are securely processed through your chosen payment processor (PayPal, PaymentCloud, DivinityCoin, or Whop)</li>
           <li>Settlement account details (bank information) are encrypted with AES-256 encryption</li>
           <li>You never have direct access to backer payment card details</li>
           <li>Chargeback and dispute handling follows industry-standard procedures</li>
@@ -148,7 +155,7 @@ export function PciComplianceContent() {
         <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-6 mt-8">
           <h4 className="text-lg font-semibold mb-4">Summary</h4>
           <p className="mb-0">
-            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with PayPal (Level 1 PCI Service Provider) as our primary processor for standard campaigns, DivinityCoin (independent PCI-compliant payment sub-processor) for NSFW/adult content campaigns, and Whop as an additional payment processor option for creators. We never store credit card information on our servers, enforce CSRF protection on all payment endpoints, and communicate exclusively over HTTPS. This approach ensures the highest level of protection for all financial transactions on our platform.
+            IndieCrowdfund maintains PCI DSS compliance across all payment processors. We partner with PayPal (Level 1 PCI Service Provider) as our primary processor for standard campaigns, PaymentCloud (NMI gateway with browser-side Collect.js tokenization) for high-risk and NSFW/adult content campaigns, DivinityCoin (independent PCI-compliant payment sub-processor) for NSFW/adult content campaigns, and Whop as an additional payment processor option for creators. We never store credit card information on our servers, enforce CSRF protection on all payment endpoints, and communicate exclusively over HTTPS. This approach ensures the highest level of protection for all financial transactions on our platform.
           </p>
         </div>
       </div>

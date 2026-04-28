@@ -15,6 +15,7 @@ import {
   HelpCircle,
   LayoutDashboard,
   ShoppingBag,
+  Cloud,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from "@/components/footer";
@@ -22,6 +23,7 @@ import { Footer } from "@/components/footer";
 const tabs = [
   { id: 'discover', label: 'Finding Projects', icon: Search },
   { id: 'backing', label: 'Making a Pledge', icon: Heart },
+  { id: 'paymentcloud', label: 'Paying with PaymentCloud', icon: Cloud },
   { id: 'paypal', label: 'Paying with PayPal', icon: CreditCard },
   { id: 'divinitycoin', label: 'DivinityCoin', icon: Coins },
   { id: 'whop', label: 'Paying with Whop', icon: ShoppingBag },
@@ -76,10 +78,23 @@ const tabContent: Record<string, TabContent> = {
       { title: 'Review Your Pledge', description: 'See the complete breakdown before payment. Make sure everything looks correct.', tip: 'Take a screenshot for your records.' },
     ]
   },
+  'paymentcloud': {
+    title: 'Paying with PaymentCloud',
+    description: 'PaymentCloud is a high-risk friendly card processor on the NMI gateway. Pay with any major credit/debit card — your card is tokenized in your browser and only charged on campaign success.',
+    alert: { icon: Cloud, title: 'Card Tokenized in Your Browser', text: 'PaymentCloud uses Collect.js to tokenize your card directly in your browser. Your full card number is sent straight to PaymentCloud\'s vault — IndieCrowdfund servers never see or store your PAN. Supports all content types including NSFW/adult.', color: 'sky' },
+    steps: [
+      { title: 'What is PaymentCloud?', description: 'PaymentCloud is a high-risk friendly merchant account on the NMI payment gateway. Some creators choose it for projects that other processors won\'t accept (NSFW/adult, certain digital goods, etc.). For you as a backer, the experience is the same as any normal card checkout.', tip: 'You\'ll see the PaymentCloud branding or just a standard card form at checkout.' },
+      { title: 'How Checkout Works', description: 'At pledge time, click "Back this project" → choose your reward → continue to checkout. The card form (powered by Collect.js) appears inline. Enter your card number, expiration, CVV, and billing zip — then click Pledge.', tip: 'The form supports Visa, Mastercard, American Express, and Discover.' },
+      { title: 'When You\'re Charged', description: 'For All or Nothing campaigns, your card is tokenized at pledge time but NOT charged. The card is only charged when the campaign reaches its funding goal. If the campaign fails, no charge is ever made and the saved card is deleted from PaymentCloud\'s vault.', tip: 'Make sure your card stays valid through the end of the campaign — expired cards can\'t be charged at success.' },
+      { title: 'Keep It All Campaigns', description: 'For Keep It All campaigns, PaymentCloud charges your card immediately at pledge time and the creator keeps the funds regardless of goal status.', tip: 'The campaign type is shown clearly on the project page before you confirm.' },
+      { title: 'Refunds', description: 'Refunds for failed All-or-Nothing campaigns are automatic — your card was never charged in the first place. For other refund cases (creator-approved post-campaign refunds), PaymentCloud returns the money to your original card. Bank processing typically takes 5–10 business days.', tip: 'If a refund hasn\'t arrived after 10 business days, contact support with your pledge ID.' },
+      { title: 'Security', description: 'PaymentCloud is PCI-DSS compliant. Card data is tokenized at the browser, sent directly to PaymentCloud\'s vault, and never touches IndieCrowdfund servers. The lock icon and "Secure Payment" header on the form confirm this.', tip: 'Never enter card details on a page that doesn\'t show the processor name and a lock icon in the URL bar.' },
+    ]
+  },
   'paypal': {
     title: 'Paying with PayPal',
     description: 'Everything about PayPal payments on IndieCrowdfund, including when you\'re charged.',
-    alert: { icon: Shield, title: 'Secure Payment Processing', text: 'Campaign payments are processed securely through PayPal, DivinityCoin, or Whop — depending on the creator\'s chosen processor. You can pay with your credit or debit card at checkout regardless of which processor is used. Your card details are encrypted and never stored on our servers.', color: 'emerald' },
+    alert: { icon: Shield, title: 'Secure Payment Processing', text: 'Campaign payments are processed securely through PayPal, PaymentCloud, DivinityCoin, or Whop — depending on the creator\'s chosen processor. You can pay with your credit or debit card at checkout regardless of which processor is used. Your card details are encrypted and never stored on our servers.', color: 'emerald' },
     steps: [
       { title: 'Select Your Payment Method', description: 'At checkout you\'ll see the PayPal Advanced Checkout form — use your PayPal wallet, or enter a credit/debit card directly. No PayPal account required to pay by card.', tip: 'PayPal is trusted by hundreds of millions worldwide.' },
       { title: 'Enter Card or Use PayPal Wallet', description: 'Fill in your card details (Visa, Mastercard, Amex, Discover) or log into your PayPal account to use your saved payment method.', tip: 'Make sure your card won\'t expire before the campaign ends.' },
@@ -205,7 +220,7 @@ const tabContent: Record<string, TabContent> = {
       { title: 'What is the Marketplace?', description: 'A storefront for completed digital works. Immediate purchase and instant download.', tip: 'Perfect for supporting creators and getting content right away.' },
       { title: 'Browsing', description: 'Explore Featured titles, Staff Picks, or all works. Use search for specific titles.', tip: 'Check out Staff Picks for hand-curated recommendations.' },
       { title: 'Understanding Pricing', description: 'Fixed prices in USD set by creators. You\'re directly supporting them.', tip: 'Digital often costs less than physical - no printing or shipping.' },
-      { title: 'Making a Purchase', description: 'Click "Purchase" to checkout. Pay via PayPal, DivinityCoin, or Whop depending on the creator\'s chosen processor. Charged immediately.', tip: 'Unlike pledges, marketplace purchases are instant.' },
+      { title: 'Making a Purchase', description: 'Click "Purchase" to checkout. Pay via PayPal, PaymentCloud, DivinityCoin, or Whop depending on the creator\'s chosen processor. Charged immediately.', tip: 'Unlike pledges, marketplace purchases are instant.' },
       { title: 'Your Digital Library', description: 'Purchases added to your Digital Library in your dashboard. Access anytime.', tip: 'Bookmark your Digital Library for quick access.' },
       { title: 'Reading and Downloads', description: 'Read in browser or download as PDF for offline reading.', tip: 'Downloaded files are yours to keep. Back them up!' },
     ]
@@ -215,9 +230,9 @@ const tabContent: Record<string, TabContent> = {
     description: 'Common questions about backing projects.',
     steps: [
       { title: 'What are the two campaign types?', description: '"All or Nothing" campaigns are only funded if the goal is reached — if not, no money changes hands. "Keep It All" campaigns let the creator keep all pledges regardless of the goal, and backers are charged immediately when pledging.', tip: 'The campaign type is shown on the project page before you pledge.' },
-      { title: 'What if an All or Nothing project doesn\'t reach its goal?', description: 'No money changes hands. Your payment is never captured, regardless of whether the project uses PayPal, DivinityCoin, or Whop.', tip: 'All-or-nothing funding protects you if the goal isn\'t reached.' },
+      { title: 'What if an All or Nothing project doesn\'t reach its goal?', description: 'No money changes hands. Your payment is never captured, regardless of whether the project uses PayPal, PaymentCloud, DivinityCoin, or Whop.', tip: 'All-or-nothing funding protects you if the goal isn\'t reached.' },
       { title: 'Can I get a refund after pledging?', description: 'Before campaign ends, cancel anytime in your dashboard. After the campaign closes, you can submit a refund request through the platform — the creator must approve it. Contact the creator directly if needed.', tip: 'Refund policies are set by each creator.' },
-      { title: 'Is my payment information secure?', description: 'Yes! PayPal processes standard payments with PCI-DSS Level 1 certification. DivinityCoin and Whop also use PCI-compliant processing. We never store full card numbers on our servers.', tip: 'Look for the secure checkout indicator at checkout.' },
+      { title: 'Is my payment information secure?', description: 'Yes! PayPal processes standard payments with PCI-DSS Level 1 certification. PaymentCloud, DivinityCoin, and Whop also use PCI-compliant processing — card data is tokenized in your browser and never touches IndieCrowdfund servers.', tip: 'Look for the secure checkout indicator at checkout.' },
       { title: 'What if my card is declined?', description: 'We retry automatically 3 times over 9 days. You\'ll get emails to update your card details.', tip: 'Keep card info updated to avoid failed payments.' },
       { title: 'How do I contact a creator?', description: 'Use "Contact" or "Ask a question" on the project page. Backers often have priority response.', tip: 'Always mention your backer email for pledge-specific issues.' },
       { title: 'What if a creator never delivers?', description: 'Crowdfunding carries risk. Creators are legally obligated to fulfill or refund. Report concerns to our support team.', tip: 'Our verification process helps, but due diligence is important.' },
