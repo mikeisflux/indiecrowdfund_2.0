@@ -190,6 +190,32 @@ model PaymentCloudBankAccount {
   @@index([userId])
 }
 
+// Marketplace creator chargeback protection card (user-level).
+//
+// Same Customer Vault pattern as CreatorChargebackCard but scoped to
+// the creator (not a single project). Marketplace sales are user-level
+// transactions, so the chargeback recoup target needs to be too. PAN
+// never touches our DB — only the PaymentCloud Customer Vault id +
+// display data.
+model CreatorMarketplaceChargebackCard {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+
+  nmiCustomerVaultId    String   @unique
+
+  cardLastFour          String
+  cardBrand             String?
+  expMonth              Int
+  expYear               Int
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
 // PayPal bank account for creator payouts (separate from DivinityCoin)
 model PayPalBankAccount {
   id                    String   @id @default(cuid())
