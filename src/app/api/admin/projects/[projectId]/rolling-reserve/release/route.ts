@@ -13,7 +13,7 @@ const log = logger.child({ module: "admin-rolling-reserve-release" });
 // for the next settlement.
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
     const session = await auth();
@@ -28,7 +28,7 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id: projectId } = await params;
+    const { projectId } = await params;
 
     const project = await db.project.findFirst({
       where: { id: projectId, deletedAt: null },

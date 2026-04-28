@@ -23,7 +23,7 @@ const bodySchema = z.object({
 // they flag a project after the fact.
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
     const session = await auth();
@@ -38,7 +38,7 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id: projectId } = await params;
+    const { projectId } = await params;
     const body = await req.json();
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {
