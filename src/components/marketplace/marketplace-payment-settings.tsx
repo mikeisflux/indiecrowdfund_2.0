@@ -1,458 +1,296 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { apiFetch } from "@/lib/fetch-utils";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckCircle, Lock, Cloud, Wallet, Banknote, ShoppingBag, Loader2 } from "lucide-react";
+import { UserChargebackCardSection } from "@/components/payments/user-chargeback-card-section";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Wallet,
-  Banknote,
-  ShoppingBag,
-  CheckCircle,
-  Loader2,
-  Lock,
-  Building2,
-  Check,
-} from "lucide-react";
-import { toast } from "sonner";
+  PaymentCloudBankSection,
+  type PaymentCloudBankAccountState,
+  type PaymentCloudBankAccountStatus,
+} from "@/components/project/builder/payment-sections";
 
-type Processor = "PAYPAL" | "DIVINITYCOIN" | "WHOP";
+// Marketplace creator payment settings (PaymentCloud-only).
+//
+// PaymentCloud is the only processor offered for new marketplace
+// activity. The creator's PaymentCloud payout bank account and
+// chargeback card both live at the user level, so saving them in
+// project creation, IndieKit Payments tab, or here all flows to the
+// same place — saving in one shows the locked / saved state in all.
+//
+// Any legacy DivinityCoin / PayPal / Whop bank account on the
+// creator's record is shown read-only beneath the PaymentCloud
+// section so creators with existing payouts in flight can still see
+// where their money is going. The legacy "select a processor" UI is
+// commented out (not deleted) for back-compat.
 
-interface BankAccountState {
-  bankName: string;
-  accountHolder: string;
-  accountNumber: string;
-  routingNumber: string;
-  accountType: "checking" | "savings";
-}
-
-interface BankStatus {
-  saved: boolean;
-  loading: boolean;
+interface LegacyBankSummary {
+  bankName: string | null;
   lastFour: string | null;
-  bankName?: string;
 }
-
-const EMPTY_BANK: BankAccountState = {
-  bankName: "",
-  accountHolder: "",
-  accountNumber: "",
-  routingNumber: "",
-  accountType: "checking",
-};
-
-const PROCESSORS = [
-  {
-    id: "PAYPAL" as Processor,
-    label: "PayPal",
-    description: "PayPal & card payments",
-    icon: <Wallet className="h-5 w-5 text-white" />,
-    iconBg: "bg-[#003087]",
-    fees: "~6.5% total fees",
-    detail: "Credit/debit cards + PayPal wallet",
-    apiGet: "/api/creator/paypal-bank-account",
-    apiPost: "/api/creator/paypal-bank-account",
-    settlementNote: "Payouts are processed within 14 business days after your marketplace sale.",
-  },
-  {
-    id: "DIVINITYCOIN" as Processor,
-    label: "DivinityCoin",
-    description: "Universal — all content types",
-    icon: <Banknote className="h-5 w-5 text-white" />,
-    iconBg: "bg-[#0066FF]",
-    fees: "~6% total fees",
-    detail: "3% partner + 3% platform",
-    apiGet: "/api/creator/bank-account",
-    apiPost: "/api/creator/bank-account",
-    settlementNote: "DivinityCoin settlements are processed within 14 business days after your sale.",
-  },
-  {
-    id: "WHOP" as Processor,
-    label: "Whop",
-    description: "Embedded checkout — all content types",
-    icon: <ShoppingBag className="h-5 w-5 text-white" />,
-    iconBg: "bg-black",
-    fees: "~6% total fees",
-    detail: "3% Whop + 3% platform",
-    apiGet: "/api/creator/whop-bank-account",
-    apiPost: "/api/creator/whop-bank-account",
-    settlementNote: "Whop payouts are processed after your marketplace sale.",
-  },
-];
 
 export function MarketplacePaymentSettings() {
-  const [selectedProcessor, setSelectedProcessor] = useState<Processor>("PAYPAL");
-  const [bankStatuses, setBankStatuses] = useState<Record<Processor, BankStatus>>({
-    PAYPAL: { saved: false, loading: true, lastFour: null },
-    DIVINITYCOIN: { saved: false, loading: true, lastFour: null },
-    WHOP: { saved: false, loading: true, lastFour: null },
+  const [legacyDc, setLegacyDc] = useState<{ saved: boolean; data: LegacyBankSummary; loading: boolean }>({
+    saved: false, data: { bankName: null, lastFour: null }, loading: true,
   });
-  const [bankForms, setBankForms] = useState<Record<Processor, BankAccountState>>({
-    PAYPAL: { ...EMPTY_BANK },
-    DIVINITYCOIN: { ...EMPTY_BANK },
-    WHOP: { ...EMPTY_BANK },
+  const [legacyPaypal, setLegacyPaypal] = useState<{ saved: boolean; data: LegacyBankSummary; loading: boolean }>({
+    saved: false, data: { bankName: null, lastFour: null }, loading: true,
   });
-  const [editingProcessor, setEditingProcessor] = useState<Processor | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [legacyWhop, setLegacyWhop] = useState<{ saved: boolean; data: LegacyBankSummary; loading: boolean }>({
+    saved: false, data: { bankName: null, lastFour: null }, loading: true,
+  });
 
-  const fetchAllStatuses = useCallback(async () => {
-    await Promise.all(
-      PROCESSORS.map(async (proc) => {
-        try {
-          const res = await fetch(proc.apiGet);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.exists) {
-              setBankStatuses((prev) => ({
-                ...prev,
-                [proc.id]: { saved: true, loading: false, lastFour: data.lastFour || null, bankName: data.bankName },
-              }));
-              setBankForms((prev) => ({
-                ...prev,
-                [proc.id]: {
-                  ...prev[proc.id],
-                  bankName: data.bankName || "",
-                  accountHolder: data.accountHolder || "",
-                  accountType: data.accountType || "checking",
-                },
-              }));
-            } else {
-              setBankStatuses((prev) => ({
-                ...prev,
-                [proc.id]: { saved: false, loading: false, lastFour: null },
-              }));
-            }
-          } else {
-            setBankStatuses((prev) => ({
-              ...prev,
-              [proc.id]: { saved: false, loading: false, lastFour: null },
+  // PaymentCloud bank account is user-level. We hand local state into
+  // the existing PaymentCloudBankSection (built for the project
+  // creation step) and the section keeps it in sync with the API.
+  const [pcBank, setPcBank] = useState<PaymentCloudBankAccountState>({
+    bankName: "",
+    firstName: "",
+    lastName: "",
+    accountNumber: "",
+    routingNumber: "",
+    accountType: "checking",
+    billingLine1: "",
+    billingLine2: "",
+    billingCity: "",
+    billingState: "",
+    billingZip: "",
+    billingCountry: "US",
+  });
+  const [pcBankStatus, setPcBankStatus] = useState<PaymentCloudBankAccountStatus>({
+    saved: false, loading: true, lastFour: null,
+  });
+
+  // Load PaymentCloud bank + any legacy bank accounts on mount.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // PaymentCloud bank
+      try {
+        const r = await fetch("/api/creator/paymentcloud-bank-account");
+        if (cancelled) return;
+        if (r.ok) {
+          const data = await r.json();
+          setPcBankStatus({
+            saved: !!data.exists,
+            loading: false,
+            lastFour: data.lastFour ?? null,
+          });
+          if (data.exists) {
+            setPcBank((p) => ({
+              ...p,
+              bankName: data.bankName || "",
+              accountType: data.accountType || "checking",
             }));
           }
-        } catch {
-          setBankStatuses((prev) => ({
-            ...prev,
-            [proc.id]: { saved: false, loading: false, lastFour: null },
-          }));
+        } else {
+          setPcBankStatus({ saved: false, loading: false, lastFour: null });
         }
-      })
-    );
-  }, []);
-
-  useEffect(() => {
-    fetchAllStatuses();
-  }, [fetchAllStatuses]);
-
-  // Auto-select whichever processor has a saved bank account (prefer PAYPAL)
-  useEffect(() => {
-    const allLoaded = PROCESSORS.every((p) => !bankStatuses[p.id].loading);
-    if (!allLoaded) return;
-    const saved = PROCESSORS.find((p) => bankStatuses[p.id].saved);
-    if (saved) setSelectedProcessor(saved.id);
-  }, [bankStatuses]);
-
-  const handleSave = async (processorId: Processor) => {
-    const proc = PROCESSORS.find((p) => p.id === processorId)!;
-    const form = bankForms[processorId];
-
-    if (!form.bankName || !form.accountHolder || !form.accountNumber || !form.routingNumber) {
-      toast.error("Please fill in all bank account fields");
-      return;
-    }
-    if (form.routingNumber.length !== 9) {
-      toast.error("Routing number must be 9 digits");
-      return;
-    }
-    if (form.accountNumber.length < 4 || form.accountNumber.length > 17) {
-      toast.error("Please enter a valid account number");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const res = await apiFetch(proc.apiPost, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save bank account");
+      } catch {
+        if (!cancelled) setPcBankStatus({ saved: false, loading: false, lastFour: null });
       }
-      const data = await res.json();
-      setBankStatuses((prev) => ({
-        ...prev,
-        [processorId]: { saved: true, loading: false, lastFour: data.lastFour, bankName: form.bankName },
-      }));
-      setBankForms((prev) => ({
-        ...prev,
-        [processorId]: { ...prev[processorId], accountNumber: "", routingNumber: "" },
-      }));
-      setEditingProcessor(null);
-      toast.success("Bank account saved securely!");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save bank account");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
-  const updateForm = (processorId: Processor, field: keyof BankAccountState, value: string) => {
-    setBankForms((prev) => ({
-      ...prev,
-      [processorId]: { ...prev[processorId], [field]: value },
-    }));
-  };
+      // Legacy DC
+      try {
+        const r = await fetch("/api/creator/bank-account");
+        if (!cancelled && r.ok) {
+          const data = await r.json();
+          setLegacyDc({
+            saved: !!data.exists,
+            data: { bankName: data.bankName || null, lastFour: data.lastFour || null },
+            loading: false,
+          });
+        } else if (!cancelled) {
+          setLegacyDc((p) => ({ ...p, loading: false }));
+        }
+      } catch {
+        if (!cancelled) setLegacyDc((p) => ({ ...p, loading: false }));
+      }
 
-  const activeProc = PROCESSORS.find((p) => p.id === selectedProcessor)!;
-  const activeStatus = bankStatuses[selectedProcessor];
-  const activeForm = bankForms[selectedProcessor];
-  const showForm = editingProcessor === selectedProcessor || !activeStatus.saved;
+      // Legacy PayPal
+      try {
+        const r = await fetch("/api/creator/paypal-bank-account");
+        if (!cancelled && r.ok) {
+          const data = await r.json();
+          setLegacyPaypal({
+            saved: !!data.exists,
+            data: { bankName: data.bankName || null, lastFour: data.lastFour || null },
+            loading: false,
+          });
+        } else if (!cancelled) {
+          setLegacyPaypal((p) => ({ ...p, loading: false }));
+        }
+      } catch {
+        if (!cancelled) setLegacyPaypal((p) => ({ ...p, loading: false }));
+      }
+
+      // Legacy Whop
+      try {
+        const r = await fetch("/api/creator/whop-bank-account");
+        if (!cancelled && r.ok) {
+          const data = await r.json();
+          setLegacyWhop({
+            saved: !!data.exists,
+            data: { bankName: data.bankName || null, lastFour: data.lastFour || null },
+            loading: false,
+          });
+        } else if (!cancelled) {
+          setLegacyWhop((p) => ({ ...p, loading: false }));
+        }
+      } catch {
+        if (!cancelled) setLegacyWhop((p) => ({ ...p, loading: false }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="font-semibold">Marketplace Payment Processor</h3>
         <p className="text-sm text-muted-foreground">
-          Select how you want to receive payments from marketplace sales. You can change this at any time.
+          PaymentCloud handles all marketplace transactions. Setting up your
+          payout bank or chargeback card here, on a project, or in IndieKit
+          all save to the same record — fill it in once and you&apos;re done.
         </p>
       </div>
 
-      {/* Processor Selection Cards */}
+      {/* PaymentCloud processor card (the only selectable processor) */}
+      <Card className="border-2 border-primary">
+        <CardContent className="pt-6 pb-5 px-5">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center shrink-0">
+              <Cloud className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold">PaymentCloud</p>
+                <Badge variant="default" className="bg-sky-600 text-xs">Recommended</Badge>
+                <CheckCircle className="h-4 w-4 text-primary ml-auto" />
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Universal — supports all content types including NSFW. ~7.5% total fees (4% + $0.25/txn + 3% platform).
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Cards are tokenized in the buyer&apos;s browser by PaymentCloud — your sales data is never stored on our servers.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Legacy processor cards — DISABLED. Existing creators on
+          DC/PayPal/Whop continue to settle through their original
+          flows; new marketplace activity goes through PaymentCloud.
+          Read-only summaries of any saved legacy accounts render
+          below the PaymentCloud sections.
+
       <div className="grid gap-3 sm:grid-cols-3">
-        {PROCESSORS.map((proc) => {
-          const status = bankStatuses[proc.id];
-          const isSelected = selectedProcessor === proc.id;
-          return (
-            <Card
-              key={proc.id}
-              className={`cursor-pointer transition-all ${
-                isSelected ? "border-2 border-primary" : "border"
-              }`}
-              onClick={() => {
-                setSelectedProcessor(proc.id);
-                setEditingProcessor(null);
-              }}
-            >
-              <CardHeader className="pb-2 pt-4 px-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <div className={`h-8 w-8 rounded-lg ${proc.iconBg} flex items-center justify-center shrink-0`}>
-                      {proc.icon}
-                    </div>
-                    {proc.label}
-                  </CardTitle>
-                  {isSelected && <CheckCircle className="h-4 w-4 text-primary shrink-0" />}
+        {PROCESSORS.map((proc) => ( ... ))}
+      </div>
+      */}
+
+      {/* PaymentCloud payout bank account (user-level — shared across
+          project creation, IndieKit, and this page) */}
+      <PaymentCloudBankSection
+        bankAccount={pcBank}
+        setBankAccount={setPcBank}
+        status={pcBankStatus}
+        setStatus={setPcBankStatus}
+        projectId={null}
+      />
+
+      {/* Chargeback card (user-level — shared across all surfaces) */}
+      <UserChargebackCardSection idPrefix="mkt-cb" />
+
+      {/* Read-only display of any legacy bank accounts so creators can
+          see their existing setup. Each row only renders when the
+          corresponding API said `exists: true`. */}
+      {(legacyDc.saved || legacyPaypal.saved || legacyWhop.saved) && (
+        <div className="space-y-3">
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertTitle>Existing legacy payout accounts</AlertTitle>
+            <AlertDescription>
+              These bank accounts were set up before the PaymentCloud rollout
+              and continue to receive payouts for active campaigns/sales they
+              were attached to. New marketplace activity routes to your
+              PaymentCloud bank above.
+            </AlertDescription>
+          </Alert>
+
+          {legacyDc.saved && (
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-[#0066FF] flex items-center justify-center">
+                  <Banknote className="h-5 w-5 text-white" />
                 </div>
-                <CardDescription className="text-xs mt-1">{proc.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="pb-4 px-4">
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <Check className="h-3 w-3 text-green-500 shrink-0" />
-                    <span>{proc.fees}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Check className="h-3 w-3 text-green-500 shrink-0" />
-                    <span>{proc.detail}</span>
-                  </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">DivinityCoin — Bank Account Connected</p>
+                  <p className="text-xs text-muted-foreground">
+                    {legacyDc.data.bankName || "Saved"} • Account ending in {legacyDc.data.lastFour || "????"}
+                  </p>
                 </div>
-                {status.saved && (
-                  <Badge variant="default" className="mt-2 bg-green-500 text-xs">
-                    <Lock className="h-2.5 w-2.5 mr-1" />
-                    Account saved
-                  </Badge>
-                )}
+                <Badge variant="default" className="bg-green-500">
+                  <Lock className="h-3 w-3 mr-1" />
+                  Secured
+                </Badge>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          )}
 
-      {/* Bank Account Section for Selected Processor */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className={`h-6 w-6 rounded ${activeProc.iconBg} flex items-center justify-center`}>
-            {activeProc.icon}
-          </div>
-          <h4 className="font-medium">{activeProc.label} — Payout Account</h4>
+          {legacyPaypal.saved && (
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-[#003087] flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">PayPal — Bank Account Connected</p>
+                  <p className="text-xs text-muted-foreground">
+                    {legacyPaypal.data.bankName || "Saved"} • Account ending in {legacyPaypal.data.lastFour || "????"}
+                  </p>
+                </div>
+                <Badge variant="default" className="bg-green-500">
+                  <Lock className="h-3 w-3 mr-1" />
+                  Secured
+                </Badge>
+              </CardContent>
+            </Card>
+          )}
+
+          {legacyWhop.saved && (
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-black flex items-center justify-center">
+                  <ShoppingBag className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Whop — Bank Account Connected</p>
+                  <p className="text-xs text-muted-foreground">
+                    {legacyWhop.data.bankName || "Saved"} • Account ending in {legacyWhop.data.lastFour || "????"}
+                  </p>
+                </div>
+                <Badge variant="default" className="bg-green-500">
+                  <Lock className="h-3 w-3 mr-1" />
+                  Secured
+                </Badge>
+              </CardContent>
+            </Card>
+          )}
         </div>
+      )}
 
-        <Card className={activeStatus.saved && !showForm ? "border-green-500" : ""}>
-          <CardContent className="pt-6">
-            {activeStatus.loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : activeStatus.saved && !showForm ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-green-500 flex items-center justify-center shrink-0">
-                      <CheckCircle className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Bank Account Connected</p>
-                      <p className="text-sm text-muted-foreground">
-                        {activeStatus.bankName} • Account ending in {activeStatus.lastFour}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {activeProc.settlementNote}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="default" className="bg-green-500">
-                    <Lock className="h-3 w-3 mr-1" />
-                    Secured
-                  </Badge>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditingProcessor(selectedProcessor)}
-                >
-                  Update Bank Account
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <Lock className="h-4 w-4" />
-                  <AlertTitle>Secure &amp; Encrypted</AlertTitle>
-                  <AlertDescription>
-                    Your bank account information is encrypted using AES-256 before storage.
-                    We never store unencrypted account numbers.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="mp-bank-name">Bank Name</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="mp-bank-name"
-                        placeholder="e.g., Chase Bank, Bank of America"
-                        value={activeForm.bankName}
-                        onChange={(e) => updateForm(selectedProcessor, "bankName", e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="mp-account-holder">Account Holder Name</Label>
-                    <Input
-                      id="mp-account-holder"
-                      placeholder="Name as it appears on account"
-                      value={activeForm.accountHolder}
-                      onChange={(e) => updateForm(selectedProcessor, "accountHolder", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="mp-routing">Routing Number</Label>
-                    <Input
-                      id="mp-routing"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={9}
-                      placeholder="9-digit routing number"
-                      value={activeForm.routingNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 9);
-                        updateForm(selectedProcessor, "routingNumber", value);
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">9 digits — bottom left of your checks</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="mp-account-number">Account Number</Label>
-                    <Input
-                      id="mp-account-number"
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={17}
-                      placeholder="Your account number"
-                      value={activeForm.accountNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 17);
-                        updateForm(selectedProcessor, "accountNumber", value);
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Account Type</Label>
-                  <Select
-                    value={activeForm.accountType}
-                    onValueChange={(v: "checking" | "savings") =>
-                      updateForm(selectedProcessor, "accountType", v)
-                    }
-                  >
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="checking">Checking</SelectItem>
-                      <SelectItem value="savings">Savings</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={() => handleSave(selectedProcessor)}
-                    disabled={isSaving}
-                    className={
-                      selectedProcessor === "DIVINITYCOIN"
-                        ? "bg-[#0066FF] hover:bg-[#0052CC]"
-                        : selectedProcessor === "WHOP"
-                        ? "bg-black hover:bg-zinc-800"
-                        : ""
-                    }
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Encrypting &amp; Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-4 w-4 mr-2" />
-                        Save Bank Account
-                      </>
-                    )}
-                  </Button>
-                  {editingProcessor === selectedProcessor && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingProcessor(null)}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-
-                <p className="text-xs text-muted-foreground">{activeProc.settlementNote}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {(legacyDc.loading || legacyPaypal.loading || legacyWhop.loading) && (
+        <div className="flex items-center justify-center py-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin mr-2" />
+          Checking for existing payout accounts...
+        </div>
+      )}
     </div>
   );
 }
