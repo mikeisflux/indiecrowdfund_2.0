@@ -392,6 +392,20 @@ export function PaymentStep() {
   // (the field is locked once a project goes LIVE/FUNDED/FAILED), and
   // their backend payout/webhook flows continue to work.
 
+  // Auto-migrate legacy non-launched drafts to NMI on load. Without
+  // this, a draft created before the PaymentCloud rollout still has
+  // paymentProcessor="PAYPAL" stored, which renders the wrong fee
+  // breakdown panel beneath the PaymentCloud card (the only
+  // selectable card after the legacy ones were commented out).
+  // Launched projects keep their original processor — admins can
+  // change it via the legacy migration banner if needed.
+  useEffect(() => {
+    if (isLaunched) return;
+    if (!payment.paymentProcessor) return;
+    if (payment.paymentProcessor === "NMI") return;
+    updatePayment({ paymentProcessor: "NMI" });
+  }, [isLaunched, payment.paymentProcessor, updatePayment]);
+
   // Fee calculations
   const avgPledgeSize = 50; // Assume average pledge
   const numTransactions = goalAmount / avgPledgeSize;
