@@ -259,3 +259,17 @@ export async function deleteVaultCustomer(
     customer_vault_id: customerVaultId,
   });
 }
+
+// Run a zero-cost auth-and-void to confirm a saved vault entry is a
+// real, chargeable card. Used at creator chargeback-card save time so
+// invalid/declined cards are caught up front instead of failing during
+// a real chargeback recoup.
+export async function validateVaultCard(
+  config: NmiConfig,
+  customerVaultId: string
+): Promise<NmiResponse> {
+  return nmiPost(config, {
+    type: "validate",
+    customer_vault_id: customerVaultId,
+  });
+}

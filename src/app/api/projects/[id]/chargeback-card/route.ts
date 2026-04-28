@@ -4,35 +4,52 @@ import { logger } from "@/lib/logger";
 const projectsChargebackCardLogger = logger.child({ module: "projects-chargeback-card" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { encrypt, decrypt, getLastDigits } from "@/lib/encryption";
+import { decrypt } from "@/lib/encryption";
+import {
+  loadNmiConfig,
+  addCustomerToVault,
+  deleteVaultCustomer,
+  validateVaultCard,
+} from "@/lib/nmi";
+import { isValidNamePart, describeNameError } from "@/lib/validation/name";
 
 export const dynamic = "force-dynamic";
 
-// Helper to detect card brand from number
-function detectCardBrand(cardNumber: string): string {
-  const num = cardNumber.replace(/\s/g, "");
-  if (/^4/.test(num)) return "Visa";
-  if (/^5[1-5]/.test(num) || /^2[2-7]/.test(num)) return "Mastercard";
-  if (/^3[47]/.test(num)) return "Amex";
-  if (/^6(?:011|5)/.test(num)) return "Discover";
-  return "Unknown";
+// Map a Collect.js card.type string to our CreatorChargebackCard.cardBrand
+// display value. Collect.js returns lowercased BIN-derived brand names
+// (visa, mastercard, amex, discover, etc).
+function brandFromCollectJs(type?: string | null): string | null {
+  if (!type) return null;
+  const t = type.toLowerCase();
+  if (t === "visa") return "Visa";
+  if (t === "mastercard") return "Mastercard";
+  if (t === "amex" || t === "american-express") return "Amex";
+  if (t === "discover") return "Discover";
+  if (t === "jcb") return "JCB";
+  if (t === "diners" || t === "diners-club") return "Diners";
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-// Luhn algorithm to validate card number
-function isValidLuhn(cardNumber: string): boolean {
-  const digits = cardNumber.replace(/\D/g, "");
-  let sum = 0;
-  let alternate = false;
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let n = parseInt(digits[i], 10);
-    if (alternate) {
-      n *= 2;
-      if (n > 9) n -= 9;
-    }
-    sum += n;
-    alternate = !alternate;
-  }
-  return sum % 10 === 0;
+// Collect.js gives the card number as a masked string like "411111******1111".
+function lastFourFromMasked(masked?: string | null): string | null {
+  if (!masked) return null;
+  const digits = masked.replace(/\D/g, "");
+  if (digits.length < 4) return null;
+  return digits.slice(-4);
+}
+
+// Collect.js exp string is "MMYY" (4 chars). Split into ints.
+function parseExp(exp?: string | null): { month: number; year: number } | null {
+  if (!exp) return null;
+  const s = exp.replace(/\D/g, "");
+  if (s.length !== 4) return null;
+  const month = parseInt(s.slice(0, 2), 10);
+  const yearTwo = parseInt(s.slice(2), 10);
+  if (!month || month < 1 || month > 12) return null;
+  if (Number.isNaN(yearTwo)) return null;
+  // Two-digit year → 4-digit year. NMI gives YY for the current century.
+  const year = 2000 + yearTwo;
+  return { month, year };
 }
 
 // GET - Check if project has a chargeback card on file
@@ -102,7 +119,23 @@ export async function GET(
   }
 }
 
-// POST - Save or update chargeback card for project
+// POST — Save or update the chargeback card for a project via PaymentCloud.
+//
+// Body shape (the new tokenized flow):
+//   {
+//     paymentToken:  string  // single-use Collect.js token from the browser
+//     cardMasked?:   string  // "411111******1111" — for last4 display
+//     cardType?:     string  // "visa", "mastercard", … — for brand display
+//     cardExp?:      string  // "MMYY" — for exp display
+//     billingFirstName, billingLastName,
+//     billingLine1, billingLine2?, billingCity, billingState, billingZip,
+//     billingCountry,
+//   }
+//
+// We exchange the single-use payment token for a PaymentCloud Customer
+// Vault id, then run a `type=validate` on it to confirm the card is real
+// and chargeable. On a clean validate we save the vault id + display data
+// and clear any legacy AES-encrypted PAN columns.
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -134,121 +167,149 @@ export async function POST(
 
     const body = await req.json();
     const {
-      cardNumber, expMonth, expYear, cvc,
-      billingName, billingLine1, billingLine2,
-      billingCity, billingState, billingZip, billingCountry,
-    } = body;
+      paymentToken,
+      cardMasked,
+      cardType,
+      cardExp,
+      billingFirstName,
+      billingLastName,
+      billingLine1,
+      billingLine2,
+      billingCity,
+      billingState,
+      billingZip,
+      billingCountry,
+    } = body as Record<string, string | undefined>;
 
-    // Validation
-    const cleanCardNumber = (cardNumber || "").replace(/\s|-/g, "");
-    if (!cleanCardNumber || cleanCardNumber.length < 13 || cleanCardNumber.length > 19) {
+    if (!paymentToken || typeof paymentToken !== "string") {
       return NextResponse.json(
-        { error: "Please enter a valid card number" },
+        { error: "Missing payment token. Please re-enter the card and try again." },
         { status: 400 }
       );
     }
 
-    if (!/^\d+$/.test(cleanCardNumber)) {
-      return NextResponse.json(
-        { error: "Card number must contain only digits" },
-        { status: 400 }
-      );
+    // Validate the cardholder name (first + last as separate fields).
+    // We previously had a single combined "name" field where some
+    // creators were typing in just a first name or pasting their email.
+    if (!isValidNamePart(billingFirstName)) {
+      return NextResponse.json({ error: describeNameError("first name on the card") }, { status: 400 });
+    }
+    if (!isValidNamePart(billingLastName)) {
+      return NextResponse.json({ error: describeNameError("last name on the card") }, { status: 400 });
     }
 
-    // Luhn check to validate card number format
-    if (!isValidLuhn(cleanCardNumber)) {
-      return NextResponse.json(
-        { error: "Invalid card number" },
-        { status: 400 }
-      );
-    }
-
-    const expMonthNum = parseInt(expMonth);
-    const expYearNum = parseInt(expYear);
-    if (!expMonthNum || expMonthNum < 1 || expMonthNum > 12) {
-      return NextResponse.json(
-        { error: "Invalid expiration month" },
-        { status: 400 }
-      );
-    }
-
-    if (!expYearNum || expYearNum < new Date().getFullYear()) {
-      return NextResponse.json(
-        { error: "Card is expired" },
-        { status: 400 }
-      );
-    }
-
-    if (!cvc || cvc.length < 3 || cvc.length > 4) {
-      return NextResponse.json(
-        { error: "Invalid CVC code" },
-        { status: 400 }
-      );
-    }
-
-    if (!billingName || !billingLine1 || !billingCity || !billingState || !billingZip || !billingCountry) {
+    if (!billingLine1 || !billingCity || !billingState || !billingZip || !billingCountry) {
       return NextResponse.json(
         { error: "All billing address fields are required" },
         { status: 400 }
       );
     }
 
-    // Encrypt all sensitive data
-    const encryptedCardNumber = encrypt(cleanCardNumber);
-    const encryptedExpMonth = encrypt(String(expMonthNum));
-    const encryptedExpYear = encrypt(String(expYearNum));
-    const encryptedCvc = encrypt(cvc);
-    const encryptedBillingName = encrypt(billingName);
-    const encryptedBillingLine1 = encrypt(billingLine1);
-    const encryptedBillingLine2 = billingLine2 ? encrypt(billingLine2) : null;
-    const encryptedBillingCity = encrypt(billingCity);
-    const encryptedBillingState = encrypt(billingState);
-    const encryptedBillingZip = encrypt(billingZip);
-    const encryptedBillingCountry = encrypt(billingCountry);
+    const nmiConfig = await loadNmiConfig();
+    if (!nmiConfig) {
+      return NextResponse.json(
+        { error: "Payment processor not configured. Please contact support." },
+        { status: 502 }
+      );
+    }
 
-    // Display data
-    const lastFour = getLastDigits(cleanCardNumber, 4);
-    const brand = detectCardBrand(cleanCardNumber);
+    // Exchange the single-use Collect.js token for a stable Customer Vault id.
+    const vaultResp = await addCustomerToVault(nmiConfig, {
+      paymentToken,
+      firstName: billingFirstName!.trim(),
+      lastName: billingLastName!.trim(),
+      address1: billingLine1!.trim(),
+      city: billingCity!.trim(),
+      state: billingState!.trim(),
+      zip: billingZip!.trim(),
+      country: billingCountry!.trim(),
+    });
+    if (vaultResp.response !== "1" || !vaultResp.customer_vault_id) {
+      projectsChargebackCardLogger.warn(
+        { projectId, response: vaultResp.response, text: vaultResp.responsetext },
+        "PaymentCloud vault add declined for chargeback card"
+      );
+      return NextResponse.json(
+        { error: vaultResp.responsetext || "Card was declined. Please try a different card." },
+        { status: 400 }
+      );
+    }
+    const customerVaultId = vaultResp.customer_vault_id;
 
-    projectsChargebackCardLogger.info(`[Chargeback Card] Card saved for project ${projectId}: ${brand} ****${lastFour}`);
+    // Auto-validate: a $0/$1 auth-and-void to confirm this is a real
+    // chargeable card. If validate declines, the card was issued but
+    // can't be used for purchases — drop the vault entry and reject.
+    const validateResp = await validateVaultCard(nmiConfig, customerVaultId);
+    if (validateResp.response !== "1") {
+      projectsChargebackCardLogger.warn(
+        {
+          projectId,
+          customerVaultId,
+          response: validateResp.response,
+          text: validateResp.responsetext,
+        },
+        "PaymentCloud validate declined for chargeback card"
+      );
+      await deleteVaultCustomer(nmiConfig, customerVaultId).catch(() => null);
+      return NextResponse.json(
+        {
+          error:
+            validateResp.responsetext ||
+            "Card could not be validated. Please try a different card.",
+        },
+        { status: 400 }
+      );
+    }
 
-    // Upsert card for this project
+    const lastFour = lastFourFromMasked(cardMasked) || "0000";
+    const brand = brandFromCollectJs(cardType);
+    const exp = parseExp(cardExp);
+    const expMonth = exp?.month ?? 0;
+    const expYear = exp?.year ?? 0;
+
+    projectsChargebackCardLogger.info(
+      { projectId, brand, lastFour, customerVaultId },
+      "Chargeback card saved (PaymentCloud vault)"
+    );
+
+    // Tear down any prior vault entry on this row so we don't orphan
+    // the previous saved card in PaymentCloud's vault.
+    const existing = await db.creatorChargebackCard.findUnique({
+      where: { projectId },
+      select: { nmiCustomerVaultId: true },
+    });
+    if (existing?.nmiCustomerVaultId && existing.nmiCustomerVaultId !== customerVaultId) {
+      await deleteVaultCustomer(nmiConfig, existing.nmiCustomerVaultId).catch(() => null);
+    }
+
     await db.creatorChargebackCard.upsert({
       where: { projectId },
       update: {
-        cardNumberEncrypted: encryptedCardNumber,
-        expMonthEncrypted: encryptedExpMonth,
-        expYearEncrypted: encryptedExpYear,
-        cvcEncrypted: encryptedCvc,
-        billingNameEncrypted: encryptedBillingName,
-        billingLine1Encrypted: encryptedBillingLine1,
-        billingLine2Encrypted: encryptedBillingLine2,
-        billingCityEncrypted: encryptedBillingCity,
-        billingStateEncrypted: encryptedBillingState,
-        billingZipEncrypted: encryptedBillingZip,
-        billingCountryEncrypted: encryptedBillingCountry,
+        nmiCustomerVaultId: customerVaultId,
         cardLastFour: lastFour,
         cardBrand: brand,
-        expMonth: expMonthNum,
-        expYear: expYearNum,
+        expMonth,
+        expYear,
+        // Clear any legacy AES-encrypted PAN columns left from the old flow.
+        cardNumberEncrypted: null,
+        expMonthEncrypted: null,
+        expYearEncrypted: null,
+        cvcEncrypted: null,
+        billingNameEncrypted: null,
+        billingLine1Encrypted: null,
+        billingLine2Encrypted: null,
+        billingCityEncrypted: null,
+        billingStateEncrypted: null,
+        billingZipEncrypted: null,
+        billingCountryEncrypted: null,
       },
       create: {
         projectId,
-        cardNumberEncrypted: encryptedCardNumber,
-        expMonthEncrypted: encryptedExpMonth,
-        expYearEncrypted: encryptedExpYear,
-        cvcEncrypted: encryptedCvc,
-        billingNameEncrypted: encryptedBillingName,
-        billingLine1Encrypted: encryptedBillingLine1,
-        billingLine2Encrypted: encryptedBillingLine2,
-        billingCityEncrypted: encryptedBillingCity,
-        billingStateEncrypted: encryptedBillingState,
-        billingZipEncrypted: encryptedBillingZip,
-        billingCountryEncrypted: encryptedBillingCountry,
+        nmiCustomerVaultId: customerVaultId,
         cardLastFour: lastFour,
         cardBrand: brand,
-        expMonth: expMonthNum,
-        expYear: expYearNum,
+        expMonth,
+        expYear,
       },
     });
 
@@ -256,17 +317,11 @@ export async function POST(
       success: true,
       lastFour,
       brand,
-      expMonth: expMonthNum,
-      expYear: expYearNum,
+      expMonth,
+      expYear,
     });
   } catch (error) {
     projectsChargebackCardLogger.error({ err: String(error) }, "Error saving chargeback card:");
-    if (error instanceof Error && error.message.includes("BANK_ACCOUNT_ENCRYPTION_KEY")) {
-      return NextResponse.json(
-        { error: "Server configuration error: encryption key not set" },
-        { status: 500 }
-      );
-    }
     return NextResponse.json(
       { error: "Failed to save chargeback card" },
       { status: 500 }
@@ -306,19 +361,34 @@ export async function PUT(
       return NextResponse.json({ error: "No chargeback card on file" }, { status: 404 });
     }
 
-    // Decrypt for admin viewing
+    // New vault-backed cards: PAN lives only in PaymentCloud's vault,
+    // never in our DB. Return the vault id so admins can look it up
+    // in PaymentCloud's portal if they need full card details.
+    if (card.nmiCustomerVaultId) {
+      return NextResponse.json({
+        storage: "paymentcloud_vault",
+        nmiCustomerVaultId: card.nmiCustomerVaultId,
+        lastFour: card.cardLastFour,
+        brand: card.cardBrand,
+        expMonth: card.expMonth,
+        expYear: card.expYear,
+      });
+    }
+
+    // Legacy AES-encrypted rows — decrypt for admin viewing.
     return NextResponse.json({
-      cardNumber: decrypt(card.cardNumberEncrypted),
-      expMonth: decrypt(card.expMonthEncrypted),
-      expYear: decrypt(card.expYearEncrypted),
-      cvc: decrypt(card.cvcEncrypted),
-      billingName: decrypt(card.billingNameEncrypted),
-      billingLine1: decrypt(card.billingLine1Encrypted),
+      storage: "aes_encrypted_legacy",
+      cardNumber: card.cardNumberEncrypted ? decrypt(card.cardNumberEncrypted) : null,
+      expMonth: card.expMonthEncrypted ? decrypt(card.expMonthEncrypted) : null,
+      expYear: card.expYearEncrypted ? decrypt(card.expYearEncrypted) : null,
+      cvc: card.cvcEncrypted ? decrypt(card.cvcEncrypted) : null,
+      billingName: card.billingNameEncrypted ? decrypt(card.billingNameEncrypted) : null,
+      billingLine1: card.billingLine1Encrypted ? decrypt(card.billingLine1Encrypted) : null,
       billingLine2: card.billingLine2Encrypted ? decrypt(card.billingLine2Encrypted) : null,
-      billingCity: decrypt(card.billingCityEncrypted),
-      billingState: decrypt(card.billingStateEncrypted),
-      billingZip: decrypt(card.billingZipEncrypted),
-      billingCountry: decrypt(card.billingCountryEncrypted),
+      billingCity: card.billingCityEncrypted ? decrypt(card.billingCityEncrypted) : null,
+      billingState: card.billingStateEncrypted ? decrypt(card.billingStateEncrypted) : null,
+      billingZip: card.billingZipEncrypted ? decrypt(card.billingZipEncrypted) : null,
+      billingCountry: card.billingCountryEncrypted ? decrypt(card.billingCountryEncrypted) : null,
       lastFour: card.cardLastFour,
       brand: card.cardBrand,
     });

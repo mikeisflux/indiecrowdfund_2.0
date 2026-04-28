@@ -81,6 +81,7 @@ model User {
   divinityCoinBankAccount DivinityCoinBankAccount?
   paypalBankAccount   PayPalBankAccount?
   whopBankAccount     WhopBankAccount?
+  paymentCloudBankAccount PaymentCloudBankAccount?
   paypalPayoutConfig PayPalPayoutConfig?
   divinityCoinBalance Decimal @default(0) @db.Decimal(10, 2)
   divinityCoinRedemptions DivinityCoinRedemption[]

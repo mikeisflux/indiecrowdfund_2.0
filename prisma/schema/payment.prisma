@@ -49,27 +49,45 @@ model StripeConfig {
   @@index([userId])
 }
 
-// Creator chargeback protection card (AES-256 encrypted, per-project)
+// Creator chargeback protection card.
+//
+// New flow (PaymentCloud / NMI Customer Vault): the card is tokenized
+// in the browser via Collect.js → we exchange the single-use token for
+// a stable `nmiCustomerVaultId` and store ONLY that + display data
+// (last4/brand/exp). PAN/CVV never touch our DB. When a chargeback hits,
+// the chargeback webhook handler charges this vault id to recoup.
+//
+// Legacy flow (deprecated, pre-PaymentCloud): card details were AES-256
+// encrypted in our DB. The encrypted columns below are kept nullable so
+// existing rows continue to work, but new creators land in the new flow.
+// Migrate-then-drop the encrypted columns once all live cards have been
+// re-tokenized.
 model CreatorChargebackCard {
   id                    String   @id @default(cuid())
   projectId             String   @unique
 
-  // Encrypted card details (AES-256 encrypted)
-  cardNumberEncrypted   String   @db.Text
-  expMonthEncrypted     String   @db.Text
-  expYearEncrypted      String   @db.Text
-  cvcEncrypted          String   @db.Text
+  // PaymentCloud (NMI) Customer Vault id — preferred storage for new
+  // chargeback cards. Nullable for legacy rows that still use the
+  // encrypted PAN columns below.
+  nmiCustomerVaultId    String?  @unique
 
-  // Encrypted billing address
-  billingNameEncrypted  String   @db.Text
-  billingLine1Encrypted String   @db.Text
+  // Encrypted card details (AES-256). DEPRECATED — only present for
+  // legacy rows. New saves leave these null and use nmiCustomerVaultId.
+  cardNumberEncrypted   String?  @db.Text
+  expMonthEncrypted     String?  @db.Text
+  expYearEncrypted      String?  @db.Text
+  cvcEncrypted          String?  @db.Text
+
+  // Encrypted billing address (legacy)
+  billingNameEncrypted  String?  @db.Text
+  billingLine1Encrypted String?  @db.Text
   billingLine2Encrypted String?  @db.Text
-  billingCityEncrypted  String   @db.Text
-  billingStateEncrypted String   @db.Text
-  billingZipEncrypted   String   @db.Text
-  billingCountryEncrypted String @db.Text
+  billingCityEncrypted  String?  @db.Text
+  billingStateEncrypted String?  @db.Text
+  billingZipEncrypted   String?  @db.Text
+  billingCountryEncrypted String? @db.Text
 
-  // Non-sensitive display data
+  // Non-sensitive display data (used by both flows)
   cardLastFour          String   // e.g., "4242"
   cardBrand             String?  // e.g., "Visa", "Mastercard"
   expMonth              Int
@@ -84,15 +102,35 @@ model CreatorChargebackCard {
 }
 
 // DivinityCoin bank account for creator payouts
+//
+// Account holder is stored as first + last in separate encrypted columns
+// (creators were dropping junk like emails or single-word strings into
+// the legacy combined `accountHolderEncrypted` field). Billing address
+// is captured here too so we have a full KYC record alongside the
+// chargeback card.
 model DivinityCoinBankAccount {
   id                    String   @id @default(cuid())
   userId                String   @unique
 
   // Encrypted bank details (AES-256 encrypted)
   bankNameEncrypted     String   @db.Text
-  accountHolderEncrypted String  @db.Text
+  // Legacy combined "first last" field. New saves leave it null and
+  // populate the split fields below; kept nullable for back-compat.
+  accountHolderEncrypted String? @db.Text
+  accountHolderFirstNameEncrypted String? @db.Text
+  accountHolderLastNameEncrypted  String? @db.Text
   accountNumberEncrypted String  @db.Text
   routingNumberEncrypted String  @db.Text
+
+  // Encrypted billing address (collected on the same campaign-creation
+  // payments screen as the bank account so we can reconcile KYC data
+  // with PaymentCloud + the chargeback card on file).
+  billingLine1Encrypted   String? @db.Text
+  billingLine2Encrypted   String? @db.Text
+  billingCityEncrypted    String? @db.Text
+  billingStateEncrypted   String? @db.Text
+  billingZipEncrypted     String? @db.Text
+  billingCountryEncrypted String? @db.Text
 
   // Non-sensitive display data
   bankNameDisplay       String?  // e.g., "Chase Bank"
@@ -106,6 +144,45 @@ model DivinityCoinBankAccount {
 
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   settlements           DivinityCoinSettlement[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// PaymentCloud (NMI) bank account for creator payouts.
+// Same shape as DivinityCoinBankAccount — pledges flow into the
+// platform's PaymentCloud merchant; we settle creators out of that
+// pool by ACH to the bank account stored here.
+model PaymentCloudBankAccount {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+
+  bankNameEncrypted     String   @db.Text
+  accountHolderFirstNameEncrypted String @db.Text
+  accountHolderLastNameEncrypted  String @db.Text
+  accountNumberEncrypted String  @db.Text
+  routingNumberEncrypted String  @db.Text
+
+  // Billing address (encrypted — captured on the same payments screen
+  // for KYC parity with the chargeback card).
+  billingLine1Encrypted   String  @db.Text
+  billingLine2Encrypted   String? @db.Text
+  billingCityEncrypted    String  @db.Text
+  billingStateEncrypted   String  @db.Text
+  billingZipEncrypted     String  @db.Text
+  billingCountryEncrypted String  @db.Text
+
+  bankNameDisplay       String?
+  accountLastFour       String?
+  accountType           String   @default("checking")
+
+  isVerified            Boolean  @default(false)
+  verifiedAt            DateTime?
+  verificationMethod    String?
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

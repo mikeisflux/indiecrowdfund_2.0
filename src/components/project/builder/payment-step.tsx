@@ -18,6 +18,12 @@ import {
   WhopBankPayoutSection,
   RetailerAccessSection,
   ChargebackCardSection,
+  NmiChargebackCardSection,
+  PaymentCloudBankSection,
+} from "./payment-sections";
+import type {
+  PaymentCloudBankAccountState,
+  PaymentCloudBankAccountStatus,
 } from "./payment-sections";
 
 export function PaymentStep() {
@@ -102,6 +108,31 @@ export function PaymentStep() {
   }>({ saved: false, loading: true, lastFour: null, brand: null, expMonth: null, expYear: null });
   const [isSavingCard, setIsSavingCard] = useState(false);
 
+  // PaymentCloud-specific: public tokenization key for Collect.js +
+  // creator's payout bank account state. Loaded lazily so the legacy
+  // (DivinityCoin/PayPal/Whop) flows aren't affected.
+  const [nmiPublicKey, setNmiPublicKey] = useState<string | null>(null);
+  const [nmiPublicKeyLoading, setNmiPublicKeyLoading] = useState(false);
+  const [pcBankAccount, setPcBankAccount] = useState<PaymentCloudBankAccountState>({
+    bankName: "",
+    firstName: "",
+    lastName: "",
+    accountNumber: "",
+    routingNumber: "",
+    accountType: "checking",
+    billingLine1: "",
+    billingLine2: "",
+    billingCity: "",
+    billingState: "",
+    billingZip: "",
+    billingCountry: "US",
+  });
+  const [pcBankAccountStatus, setPcBankAccountStatus] = useState<PaymentCloudBankAccountStatus>({
+    saved: false,
+    loading: true,
+    lastFour: null,
+  });
+
   // Save DivinityCoin bank account
   const handleSaveBankAccount = async () => {
     if (!bankAccount.bankName || !bankAccount.accountHolder ||
@@ -184,6 +215,60 @@ export function PaymentStep() {
     }
     checkBankAccountStatus();
   }, []);
+
+  // PaymentCloud loaders. We only fetch when the project is on NMI to
+  // avoid hitting a 404 from /api/payments/nmi/public-key on legacy
+  // (PayPal/DivinityCoin/Whop) projects whose admin keys aren't set.
+  useEffect(() => {
+    if (payment.paymentProcessor !== "NMI") return;
+    let cancelled = false;
+    (async () => {
+      // Public tokenization key
+      if (!nmiPublicKey && !nmiPublicKeyLoading) {
+        setNmiPublicKeyLoading(true);
+        try {
+          const r = await fetch("/api/payments/nmi/public-key");
+          if (r.ok) {
+            const data = await r.json();
+            if (!cancelled && data?.publicKey) setNmiPublicKey(data.publicKey);
+          }
+        } catch {
+          /* swallow — form will show "not configured" */
+        } finally {
+          if (!cancelled) setNmiPublicKeyLoading(false);
+        }
+      }
+
+      // Existing PaymentCloud bank account
+      try {
+        const r = await fetch("/api/creator/paymentcloud-bank-account");
+        if (cancelled) return;
+        if (r.ok) {
+          const data = await r.json();
+          setPcBankAccountStatus({
+            saved: !!data.exists,
+            loading: false,
+            lastFour: data.lastFour ?? null,
+          });
+          if (data.exists) {
+            setPcBankAccount((prev) => ({
+              ...prev,
+              bankName: data.bankName || "",
+              accountType: data.accountType || "checking",
+            }));
+          }
+        } else {
+          setPcBankAccountStatus({ saved: false, loading: false, lastFour: null });
+        }
+      } catch {
+        if (!cancelled)
+          setPcBankAccountStatus({ saved: false, loading: false, lastFour: null });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [payment.paymentProcessor, nmiPublicKey, nmiPublicKeyLoading]);
 
   // Check chargeback card status on mount
   useEffect(() => {
@@ -439,6 +524,20 @@ export function PaymentStep() {
         />
       )} */}
 
+      {/* PaymentCloud (NMI) creator payout bank account */}
+      {payment.paymentProcessor === "NMI" && (
+        <>
+          <Separator />
+          <PaymentCloudBankSection
+            bankAccount={pcBankAccount}
+            setBankAccount={setPcBankAccount}
+            status={pcBankAccountStatus}
+            setStatus={setPcBankAccountStatus}
+            projectId={projectId}
+          />
+        </>
+      )}
+
       {/* DivinityCoin Bank Account for Settlements - Only show when DivinityCoin is selected */}
       {payment.paymentProcessor === "DIVINITYCOIN" && (
         <>
@@ -479,16 +578,27 @@ export function PaymentStep() {
         updatePayment={updatePayment}
       />
 
-      {/* Chargeback Protection Card */}
-      <ChargebackCardSection
-        chargebackCard={chargebackCard}
-        setChargebackCard={setChargebackCard}
-        chargebackCardStatus={chargebackCardStatus}
-        setChargebackCardStatus={setChargebackCardStatus}
-        isSavingCard={isSavingCard}
-        handleSaveChargebackCard={handleSaveChargebackCard}
-        projectId={projectId}
-      />
+      {/* Chargeback Protection Card. PaymentCloud projects use Collect.js
+          (PAN never touches our servers); legacy projects keep the old
+          AES-encrypted form so existing rows still work. */}
+      {payment.paymentProcessor === "NMI" ? (
+        <NmiChargebackCardSection
+          projectId={projectId}
+          publicKey={nmiPublicKey}
+          status={chargebackCardStatus}
+          setStatus={setChargebackCardStatus}
+        />
+      ) : (
+        <ChargebackCardSection
+          chargebackCard={chargebackCard}
+          setChargebackCard={setChargebackCard}
+          chargebackCardStatus={chargebackCardStatus}
+          setChargebackCardStatus={setChargebackCardStatus}
+          isSavingCard={isSavingCard}
+          handleSaveChargebackCard={handleSaveChargebackCard}
+          projectId={projectId}
+        />
+      )}
 
       {/* Stripe ConfirmDialog - DISABLED: Stripe Connect removed */}
       {/* <ConfirmDialog
