@@ -188,6 +188,14 @@ export default function FeesPage() {
 
             {/* PaymentCloud */}
             <TabsContent value="paymentcloud">
+              <div className="lg:max-w-4xl lg:mx-auto mb-8 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-6 py-12 sm:py-16 md:py-20 shadow-2xl ring-4 ring-red-500/40 animate-in fade-in zoom-in duration-500">
+                <p className="text-center text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] leading-none">
+                  100% Guaranteed
+                </p>
+                <p className="mt-3 sm:mt-4 text-center text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] leading-none">
+                  NSFW Friendly
+                </p>
+              </div>
               <FeeBreakdownCards fees={paymentCloudFeeBreakdown} iconBg="bg-gradient-to-br from-sky-500 to-cyan-500" rateClass="bg-gradient-to-r from-sky-600 to-cyan-600 bg-clip-text text-transparent" Icon={Cloud} />
               <Card className="mt-8 lg:max-w-4xl lg:mx-auto border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-900/10">
                 <CardContent className="p-6">
@@ -205,10 +213,10 @@ export default function FeesPage() {
                         <li>Backer enters their card at checkout — instantly tokenized via Collect.js</li>
                         <li>Card is stored in PaymentCloud&apos;s vault, no charge yet</li>
                         <li>When your campaign funds, we charge the saved card</li>
-                        <li>PaymentCloud processing (4.5% of $100 = $4.50) deducted at settlement</li>
-                        <li>Per-transaction fee ($0.13 × 1 txn = $0.13) deducted at settlement</li>
-                        <li>Platform fee (3% of $95.37 = $2.86) deducted at settlement</li>
-                        <li>You receive <strong>$92.51</strong> deposited to your bank account</li>
+                        <li>PaymentCloud processing (4% of $100 = $4.00) deducted at settlement</li>
+                        <li>Per-transaction fee ($0.25 × 1 txn = $0.25) deducted at settlement</li>
+                        <li>Platform fee (3% of $95.75 = $2.87) deducted at settlement</li>
+                        <li>You receive <strong>$92.88</strong> deposited to your bank account</li>
                       </ol>
                       <p className="text-xs text-muted-foreground">PaymentCloud supports both <strong>All-or-Nothing</strong> and <strong>Keep-It-All</strong> campaigns. Cards are only charged on campaign success — failed campaigns trigger zero fees and zero charges.</p>
                     </div>
@@ -403,11 +411,11 @@ export default function FeesPage() {
                   ) : paymentMethod === "paymentcloud" ? (
                     <>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">PaymentCloud processing (4.5%)</span>
+                        <span className="text-zinc-600 dark:text-muted-foreground">PaymentCloud processing (4%)</span>
                         <span className="text-red-500">-${paymentCloudFees.paymentCloudFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">Per-transaction fee ($0.13/txn)</span>
+                        <span className="text-zinc-600 dark:text-muted-foreground">Per-transaction fee ($0.25/txn)</span>
                         <span className="text-red-500">-${paymentCloudFees.perTransactionFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">

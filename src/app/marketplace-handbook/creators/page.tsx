@@ -64,8 +64,8 @@ const overviewSteps: Step[] = [
   },
   {
     title: 'How Payments Work',
-    description: 'When a customer purchases your book, they pay immediately through Stripe. After the platform fee is deducted, your earnings are available in your creator dashboard. Payouts are processed according to your payout schedule settings.',
-    example: 'Customer pays $9.99 → Stripe takes 2.9% + $0.30 ($0.59) → Platform takes 3% ($0.30) → You receive $9.10',
+    description: 'When a customer purchases your book, they pay immediately through your selected processor (PayPal, PaymentCloud, DivinityCoin, or Whop). After the platform fee is deducted, your earnings are available in your creator dashboard. Payouts are processed according to your payout schedule settings.',
+    example: 'Customer pays $9.99 → PaymentCloud takes 4% + $0.25 ($0.65) → Platform takes 3% ($0.28) → You receive $9.06',
   },
 ];
 
@@ -77,7 +77,7 @@ const setupSteps: Step[] = [
   },
   {
     title: 'Set Up Payment Settings',
-    description: 'Before you can sell, configure your payment settings in the Marketplace dashboard. Connect your Stripe account or set up DivinityCoin receiving preferences. This is where your earnings will be deposited.',
+    description: 'Before you can sell, configure your payment settings in the Marketplace dashboard. Choose your processor (PayPal, PaymentCloud, DivinityCoin, or Whop) and add your payout/bank details. This is where your earnings will be deposited.',
     example: 'Navigate to Dashboard → Marketplace → Payment Settings to connect your payout method.',
   },
   {
@@ -120,8 +120,8 @@ const creatingSteps: Step[] = [
   },
   {
     title: 'Set Content Flags',
-    description: 'If your content contains mature themes or NSFW content, mark it appropriately. This ensures proper age verification and enables the correct payment processor. NSFW content uses DivinityCoin payments.',
-    example: 'A horror comic with graphic violence would be flagged as NSFW and processed through DivinityCoin.',
+    description: 'If your content contains mature themes or NSFW content, mark it appropriately. This ensures proper age verification and enables an NSFW-friendly payment processor. NSFW content uses PaymentCloud, DivinityCoin, or Whop (PayPal does not allow adult content).',
+    example: 'A horror comic with graphic violence would be flagged as NSFW and processed through PaymentCloud, DivinityCoin, or Whop.',
   },
   {
     title: 'Add Tags',
@@ -144,11 +144,11 @@ const pricingSteps: Step[] = [
   {
     title: 'Understanding Platform Fees',
     description: 'IndieCrowdfund charges a 3% platform fee on marketplace sales. This is significantly lower than many other platforms and helps keep more money in creators\' pockets.',
-    example: '$9.99 book → 3% platform fee ($0.30) + Stripe processing ($0.59) → You receive $9.10',
+    example: '$9.99 book → 3% platform fee ($0.28) + PaymentCloud processing ($0.65) → You receive $9.06',
   },
   {
     title: 'Payment Processing',
-    description: 'Standard content uses Stripe for payment processing, which charges 2.9% + $0.30 per transaction. NSFW content uses DivinityCoin, which has different fee structures. Your net earnings appear in your dashboard.',
+    description: 'Choose from four processors during setup. PayPal (3.49% + $0.49) for standard content, PaymentCloud (4% + $0.25) for any content including NSFW, DivinityCoin (3% + $0.30) for NSFW, or Whop (~3%) for NSFW. Your net earnings appear in your dashboard.',
     tip: 'Factor in all fees when setting your price. Use the fee calculator in the book creation form to see your exact earnings.',
   },
   {
@@ -441,7 +441,7 @@ export default function MarketplaceCreatorHandbookPage() {
                         <div>
                           <h4 className="font-medium text-foreground">Payment Setup</h4>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            Connect Stripe or DivinityCoin to receive earnings from sales.
+                            Connect PayPal, PaymentCloud, DivinityCoin, or Whop to receive earnings from sales.
                           </p>
                         </div>
                       </div>
@@ -526,8 +526,8 @@ export default function MarketplaceCreatorHandbookPage() {
                         <p className="text-2xl font-bold text-foreground">$9.99</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">
-                        <p className="text-sm text-muted-foreground">Stripe (2.9% + $0.30)</p>
-                        <p className="text-2xl font-bold text-destructive">-$0.59</p>
+                        <p className="text-sm text-muted-foreground">PaymentCloud (4% + $0.25)</p>
+                        <p className="text-2xl font-bold text-destructive">-$0.65</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">
                         <p className="text-sm text-muted-foreground">Platform Fee (3%)</p>

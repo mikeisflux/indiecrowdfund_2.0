@@ -112,8 +112,8 @@ const purchasingSteps: Step[] = [
   },
   {
     title: 'Payment Options',
-    description: 'The marketplace accepts credit and debit cards through Stripe, our secure payment processor. Enter your card details to complete the purchase. All payments are encrypted and secure.',
-    tip: 'Save your card for faster future purchases. Your card details are stored securely by Stripe, not on our servers.',
+    description: 'The marketplace accepts credit and debit cards through one of our four payment processors (PayPal, PaymentCloud, DivinityCoin, or Whop) — the creator chooses which one. Enter your card details to complete the purchase. All payments are encrypted and secure.',
+    tip: 'Save your card for faster future purchases. Your card details are tokenized in your browser and stored securely by the payment processor — never on IndieCrowdfund servers.',
   },
   {
     title: 'Instant Delivery',
@@ -443,7 +443,7 @@ export default function MarketplaceBackerHandbookPage() {
                       <div>
                         <h4 className="font-medium text-foreground">Secure & Instant</h4>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          All payments are processed securely through Stripe. Once payment completes, your content is available immediately in your Digital Library.
+                          All payments are processed securely through PayPal, PaymentCloud, DivinityCoin, or Whop (depending on the creator&apos;s chosen processor). Once payment completes, your content is available immediately in your Digital Library.
                         </p>
                       </div>
                     </div>

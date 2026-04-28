@@ -56,7 +56,7 @@ export const paypalFeeBreakdown = [
 export const paymentCloudFeeBreakdown = [
   {
     title: "PaymentCloud Processing Fee",
-    rate: "4.5% + $0.13",
+    rate: "4% + $0.25",
     description: "Per-transaction merchant account rate",
     details:
       "Standard credit/debit card processing fee on the IndieCrowdfund PaymentCloud merchant account. Cards are tokenized at pledge time via Collect.js (PAN never touches our servers) and only charged when a campaign hits its goal.",
@@ -91,7 +91,7 @@ export const comparisonData = [
   {
     platform: "IndieCrowdfund (PaymentCloud)",
     platformFee: "3%",
-    paymentFee: "4.5% + $0.13/txn",
+    paymentFee: "4% + $0.25/txn",
     total: "~7.5%",
     highlight: true,
   },

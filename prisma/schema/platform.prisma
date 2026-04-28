@@ -60,14 +60,14 @@ model PlatformSettings {
   nmiEnvironment        String   @default("production")  // "production" or "sandbox"
   nmiGatewayUrlOverride String?             // For white-label resellers proxying NMI on a custom host
   // Per-transaction gateway fee charged by PaymentCloud (in USD). Subtracted
-  // from creator payouts at fee-calculation time. The default 0.13
+  // from creator payouts at fee-calculation time. The default 0.25
   // matches the rate on the production merchant account; admins
   // adjust here if their account negotiates a different rate.
-  nmiPerTransactionFee  Float    @default(0.13)
+  nmiPerTransactionFee  Float    @default(0.25)
   // Percentage fee charged by PaymentCloud (decimal, not percentage —
-  // 0.045 = 4.5%). Default is the rate on the production merchant
+  // 0.04 = 4%). Default is the rate on the production merchant
   // account; admins adjust if their account negotiates a different rate.
-  nmiPercentageFee      Float    @default(0.045)
+  nmiPercentageFee      Float    @default(0.04)
 
   // Payout Settings
   autoPayouts           Boolean  @default(false)

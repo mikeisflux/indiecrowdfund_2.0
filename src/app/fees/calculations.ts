@@ -81,14 +81,14 @@ export function calculateWhopFees(amount: number): WhopFeeResult {
   return { whopFee, platformFee, totalFees, youReceive, feePercentage: (totalFees / amount) * 100 };
 }
 
-// 4.5% PaymentCloud + $0.13 per transaction, then 3% platform fee on the remainder
+// 4% PaymentCloud + $0.25 per transaction, then 3% platform fee on the remainder
 export function calculatePaymentCloudFees(
   amount: number,
   averagePledge = 50
 ): PaymentCloudFeeResult {
-  const paymentCloudFee = amount * 0.045;
+  const paymentCloudFee = amount * 0.04;
   const numTransactions = Math.ceil(amount / averagePledge);
-  const perTransactionFee = numTransactions * 0.13;
+  const perTransactionFee = numTransactions * 0.25;
   const afterProcessor = amount - paymentCloudFee - perTransactionFee;
   const platformFee = afterProcessor * 0.03;
   const totalFees = paymentCloudFee + perTransactionFee + platformFee;
