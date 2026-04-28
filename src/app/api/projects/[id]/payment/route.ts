@@ -11,7 +11,13 @@ export const dynamic = "force-dynamic";
 
 const paymentSchema = z.object({
   projectType: z.enum(["INDIVIDUAL", "BUSINESS", "NONPROFIT"]).optional(),
-  paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN", "PAYPAL", "WHOP", "NMI"]).optional(),
+  // Permissive on purpose: previously enum-gated to STRIPE/DIVINITYCOIN/
+  // PAYPAL/WHOP/NMI but we lifted that while we sort out edge cases
+  // around legacy drafts that were created before the NMI rollout. The
+  // server-side write only persists the string into a Prisma enum
+  // column anyway, which will reject anything outside the schema's
+  // PaymentProcessor values with a clear DB-level error.
+  paymentProcessor: z.string().optional(),
   campaignType: z.enum(["ALL_OR_NOTHING", "KEEP_IT_ALL"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),
@@ -66,6 +72,11 @@ export async function POST(
       // ALL_OR_NOTHING on a live project because that breaks backer
       // expectations and payment collection timing.
       "campaignType",
+      // TEMP: allow processor changes on launched projects too while we
+      // sort out the rollout. The legacy guard rejected any change to
+      // paymentProcessor on LIVE/FUNDED/etc. projects, which blocks
+      // creators who need to migrate from PAYPAL/DC/WHOP onto NMI.
+      "paymentProcessor",
     ];
 
     if (permission.isLaunched && !isSuperAdmin) {
