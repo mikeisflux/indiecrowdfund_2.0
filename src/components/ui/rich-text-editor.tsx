@@ -47,6 +47,7 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastEmittedRef = useRef<string>(value);
 
   const uploadImage = async (file: File): Promise<string | null> => {
     setIsUploading(true);
@@ -189,7 +190,9 @@ export function RichTextEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      const html = editor.getHTML();
+      lastEmittedRef.current = html;
+      onChange(html);
     },
     // Fix Next.js SSR hydration warning + prevents NoModificationAllowedError
     // that fires when React tries to hydrate TipTap's DOM before the editor
@@ -198,11 +201,15 @@ export function RichTextEditor({
     immediatelyRender: false,
   });
 
-  // Update content if value changes externally
+  // Sync only on true external changes — never on the round-trip echo
+  // of our own onUpdate. setContent is destructive (nukes cursor) and
+  // emitUpdate=false stops it from firing onUpdate again, which would
+  // otherwise loop. See block-editor.tsx for the full rationale.
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value);
-    }
+    if (!editor) return;
+    if (value === lastEmittedRef.current) return;
+    lastEmittedRef.current = value;
+    editor.commands.setContent(value, false);
   }, [value, editor]);
 
   const addLink = useCallback(() => {

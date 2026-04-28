@@ -84,6 +84,7 @@ export function EmailEditor({
   const [linkUrl, setLinkUrl] = useState("");
   const [linkFetching, setLinkFetching] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastEmittedRef = useRef<string>(value);
 
   const uploadImage = async (file: File): Promise<string | null> => {
     setIsUploading(true);
@@ -218,14 +219,18 @@ export function EmailEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      const html = editor.getHTML();
+      lastEmittedRef.current = html;
+      onChange(html);
     },
   });
 
+  // Sync only on true external changes — see block-editor.tsx for rationale.
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value);
-    }
+    if (!editor) return;
+    if (value === lastEmittedRef.current) return;
+    lastEmittedRef.current = value;
+    editor.commands.setContent(value, false);
   }, [value, editor]);
 
   const addLink = useCallback(() => {

@@ -59,8 +59,14 @@ export function BlockEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const blockMenuRef = useRef<HTMLDivElement>(null);
   const plusButtonRef = useRef<HTMLButtonElement>(null);
-  const isInternalUpdate = useRef(false);
-  const hasInitialized = useRef(false);
+  // Track the last HTML we emitted upward. The parent often round-trips
+  // it through state, sometimes through normalization (trim, attribute
+  // ordering, etc.), and the round-tripped value comes back as a new
+  // string identity even when it's logically identical. Without this
+  // ref, the value-sync useEffect calls setContent on that round-trip,
+  // which destroys cursor state, fires another update, and loops —
+  // visible as "after I add a heading I can't type anything else".
+  const lastEmittedRef = useRef<string>(value);
 
   // Image upload function
   const uploadImage = useCallback(
@@ -208,8 +214,9 @@ export function BlockEditor({
       });
     },
     onUpdate: ({ editor: ed }) => {
-      isInternalUpdate.current = true;
-      onChange(ed.getHTML());
+      const html = ed.getHTML();
+      lastEmittedRef.current = html;
+      onChange(html);
     },
     onFocus: () => setEditorFocused(true),
     onBlur: ({ event }) => {
@@ -229,26 +236,22 @@ export function BlockEditor({
     },
   });
 
-  // Update content if value changes externally (not from the editor's own onUpdate)
+  // Sync content when the parent passes a *different* value than what we
+  // last emitted. We only call setContent for true external changes
+  // (e.g. an "AI rewrite" replacing the body) — never on the round-trip
+  // echo of our own onUpdate. setContent is destructive: it nukes cursor
+  // and selection state, so calling it on every keystroke (which is what
+  // happens if you compare against editor.getHTML() — TipTap normalizes
+  // HTML, so the strings rarely match exactly) makes the editor feel
+  // frozen after structural changes like toggling a heading.
+  //
+  // emitUpdate=false on setContent prevents firing onUpdate, which
+  // would re-emit and round-trip again.
   useEffect(() => {
-    if (isInternalUpdate.current) {
-      isInternalUpdate.current = false;
-      return;
-    }
     if (!editor || !isEditorReady || editor.isDestroyed) return;
-
-    // Skip the first sync — editor was already created with content: value.
-    // TipTap normalizes HTML, so value !== editor.getHTML() is almost always
-    // true on first check, but calling setContent again reconstructs the DOM
-    // and causes insertBefore crashes when BubbleMenu is attaching.
-    if (!hasInitialized.current) {
-      hasInitialized.current = true;
-      return;
-    }
-
-    if (value !== editor.getHTML()) {
-      editor.commands.setContent(value);
-    }
+    if (value === lastEmittedRef.current) return;
+    lastEmittedRef.current = value;
+    editor.commands.setContent(value, false);
   }, [value, editor, isEditorReady]);
 
   // Track active block position for + button
@@ -392,7 +395,11 @@ export function BlockEditor({
           editor.chain().focus().setHorizontalRule().run();
           break;
       }
+      // Close both menus so the user isn't blocked from typing.
       setShowTypeDropdown(false);
+      setShowBlockMenu(false);
+      setShowImageOptions(false);
+      setShowUrlInput(false);
     },
     [editor]
   );
