@@ -107,18 +107,38 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Restrict access to DRAFT/SUBMITTED projects — only creator or admin may preview,
-    // UNLESS the creator has explicitly flipped prelaunchActive=true. In that case the
-    // project opts into public visibility for its /prelaunch page even before launch,
-    // which is how the home page's "Projects in Prelaunch" section links work.
+    // Restrict access to DRAFT/SUBMITTED projects — only creator, admin,
+    // or an ACCEPTED ProjectCollaborator may preview, UNLESS the creator
+    // has explicitly flipped prelaunchActive=true. In that case the
+    // project opts into public visibility for its /prelaunch page even
+    // before launch, which is how the home page's "Projects in
+    // Prelaunch" section links work.
     const isCreatorOrAdmin =
       userId === project.creatorId ||
       userRole === "ADMIN" ||
       userRole === "SUPER_ADMIN";
 
+    let isCollaborator = false;
+    if (!isCreatorOrAdmin && userId) {
+      const userEmail = session?.user?.email?.toLowerCase();
+      const collab = await db.projectCollaborator.findFirst({
+        where: {
+          projectId: project.id,
+          status: "ACCEPTED",
+          OR: [
+            { userId },
+            ...(userEmail ? [{ email: { equals: userEmail, mode: "insensitive" as const } }] : []),
+          ],
+        },
+        select: { id: true },
+      });
+      isCollaborator = !!collab;
+    }
+
     if (
       (project.status === "DRAFT" || project.status === "SUBMITTED") &&
       !isCreatorOrAdmin &&
+      !isCollaborator &&
       !project.prelaunchActive
     ) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });

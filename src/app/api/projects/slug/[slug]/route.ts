@@ -92,13 +92,37 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Restrict access to DRAFT/SUBMITTED projects — only creator or admin may preview
+    // Restrict access to DRAFT/SUBMITTED projects — only creator, admin,
+    // or an ACCEPTED ProjectCollaborator may preview. Without the collab
+    // check, creators who invited a teammate / linked-account as a
+    // collaborator hit 404 here even though they have edit rights.
     const isCreatorOrAdmin =
       userId === project.creatorId ||
       userRole === "ADMIN" ||
       userRole === "SUPER_ADMIN";
 
-    if ((project.status === "DRAFT" || project.status === "SUBMITTED") && !isCreatorOrAdmin) {
+    let isCollaborator = false;
+    if (!isCreatorOrAdmin && userId) {
+      const userEmail = session?.user?.email?.toLowerCase();
+      const collab = await db.projectCollaborator.findFirst({
+        where: {
+          projectId: project.id,
+          status: "ACCEPTED",
+          OR: [
+            { userId },
+            ...(userEmail ? [{ email: { equals: userEmail, mode: "insensitive" as const } }] : []),
+          ],
+        },
+        select: { id: true },
+      });
+      isCollaborator = !!collab;
+    }
+
+    if (
+      (project.status === "DRAFT" || project.status === "SUBMITTED") &&
+      !isCreatorOrAdmin &&
+      !isCollaborator
+    ) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
