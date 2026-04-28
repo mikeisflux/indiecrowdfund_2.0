@@ -4,15 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Check, ExternalLink, AlertTriangle, CheckCircle, Banknote, Wallet, ShoppingBag, Cloud } from "lucide-react";
+import { Check, ExternalLink, AlertTriangle, CheckCircle, Banknote, Cloud } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { PaymentProcessorSectionProps } from "./types";
 
 export function PaymentProcessorSection({
   payment,
   updatePayment,
-  mustUseAltProcessor,
-  campaignType,
   isLaunched,
   goalAmount,
   platformFee,
@@ -46,6 +44,8 @@ export function PaymentProcessorSection({
         </Alert>
       )}
 
+      {/* NSFW alert disabled — PaymentCloud is the only processor for new
+          campaigns and supports all content types.
       {mustUseAltProcessor && (
         <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
           <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
@@ -56,9 +56,12 @@ export function PaymentProcessorSection({
           </AlertDescription>
         </Alert>
       )}
+      */}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {/* PayPal Option — first / recommended for SFW */}
+      <div className="grid gap-4 md:grid-cols-1 lg:max-w-2xl lg:mx-auto">
+        {/* PayPal disabled — PaymentCloud is the only processor for new
+            campaigns. Existing PAYPAL projects continue to function via
+            their original webhooks/payouts.
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "PAYPAL" ? "border-2 border-primary" : "border"
@@ -103,8 +106,10 @@ export function PaymentProcessorSection({
             </div>
           </CardContent>
         </Card>
+        */}
 
-        {/* PaymentCloud Option — NMI white-label, NSFW-friendly, supports AoN + KIA */}
+        {/* PaymentCloud Option — NMI white-label, NSFW-friendly, supports AoN + KIA.
+            Currently the only processor offered for new campaigns. */}
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "NMI" ? "border-2 border-primary" : "border"
@@ -118,9 +123,7 @@ export function PaymentProcessorSection({
                   <Cloud className="h-5 w-5 text-white" />
                 </div>
                 PaymentCloud
-                {mustUseAltProcessor && (
-                  <Badge variant="default" className="ml-2 bg-sky-600">NSFW Friendly</Badge>
-                )}
+                <Badge variant="default" className="ml-2 bg-sky-600">Recommended</Badge>
               </CardTitle>
               {payment.paymentProcessor === "NMI" && (
                 <CheckCircle className="h-5 w-5 text-primary" />
@@ -142,13 +145,18 @@ export function PaymentProcessorSection({
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
+                <span>100% guaranteed NSFW friendly</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
                 <span>Both All or Nothing & Keep It All</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* DivinityCoin Option */}
+        {/* DivinityCoin disabled — kept selectable only by existing DC
+            projects via DB; new campaigns route to PaymentCloud.
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "DIVINITYCOIN" ? "border-2 border-primary" : "border"
@@ -191,8 +199,9 @@ export function PaymentProcessorSection({
             </div>
           </CardContent>
         </Card>
+        */}
 
-        {/* Whop Option */}
+        {/* Whop disabled — PaymentCloud is the only processor for new campaigns.
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "WHOP" ? "border-2 border-primary" : "border"
@@ -239,6 +248,7 @@ export function PaymentProcessorSection({
             </div>
           </CardContent>
         </Card>
+        */}
 
         {/* Stripe Option - DISABLED: Replaced by PayPal */}
         {/* <Card> ... </Card> */}

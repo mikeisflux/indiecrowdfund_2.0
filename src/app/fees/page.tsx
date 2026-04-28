@@ -162,14 +162,17 @@ export default function FeesPage() {
           </div>
 
           <Tabs
-            defaultValue="whop"
+            defaultValue="paymentcloud"
             className="w-full"
             onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
           >
-            <TabsList className="grid w-full sm:max-w-3xl mx-auto grid-cols-2 sm:grid-cols-4 mb-8">
+            <TabsList className="grid w-full sm:max-w-md mx-auto grid-cols-1 mb-8">
               <TabsTrigger value="paymentcloud" className="flex items-center gap-2">
                 <Cloud className="h-4 w-4" /> PaymentCloud
               </TabsTrigger>
+              {/* Legacy processor tabs hidden — PaymentCloud is the only processor
+                  offered for new campaigns. Backend continues to honor existing
+                  Whop/PayPal/DivinityCoin campaigns.
               <TabsTrigger value="whop" className="flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" /> Whop
               </TabsTrigger>
@@ -179,7 +182,6 @@ export default function FeesPage() {
               <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" /> DivinityCoin
               </TabsTrigger>
-              {/* Stripe (Legacy) - hidden for now
               <TabsTrigger value="stripe" className="flex items-center gap-2 opacity-50">
                 <CreditCard className="h-4 w-4" /> Stripe (Legacy)
               </TabsTrigger>
@@ -354,7 +356,7 @@ export default function FeesPage() {
               {/* Payment method toggle */}
               <div className="flex justify-center mb-6">
                 <div className="inline-flex rounded-lg border p-1 bg-white dark:bg-zinc-800 flex-wrap gap-1">
-                  {(["paymentcloud", "whop", "paypal", "divinitycoin"] as PaymentMethod[]).map((m) => (
+                  {(["paymentcloud"] as PaymentMethod[]).map((m) => (
                     <button
                       key={m}
                       onClick={() => setPaymentMethod(m)}
@@ -474,7 +476,13 @@ export default function FeesPage() {
               {/* Quick comparison */}
               <div className="mt-8 pt-8 border-t">
                 <h4 className="text-sm font-medium text-muted-foreground mb-4">Compare with other platforms at ${amount.toLocaleString()}</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className={`text-center p-3 rounded-lg transition-all ring-2 ring-sky-400 bg-sky-50 dark:bg-sky-900/30`}>
+                    <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (PaymentCloud)</div>
+                    <div className="font-bold text-sky-600">${paymentCloudFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  </div>
+                  {/* Legacy processor comparison cells hidden — PaymentCloud is the
+                      only processor offered for new campaigns.
                   <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "whop" ? "ring-2 ring-zinc-400 bg-muted dark:bg-zinc-700" : "bg-muted dark:bg-zinc-800"}`}>
                     <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (Whop)</div>
                     <div className="font-bold text-zinc-700 dark:text-muted-foreground">${whopFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
@@ -483,6 +491,7 @@ export default function FeesPage() {
                     <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (PayPal)</div>
                     <div className="font-bold text-blue-600">${paypalFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
+                  */}
                   <div className="text-center p-3 bg-muted dark:bg-zinc-800 rounded-lg">
                     <div className="text-xs text-muted-foreground mb-1">Kickstarter</div>
                     <div className="font-bold text-zinc-600 dark:text-muted-foreground">${(amount * 0.92).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
@@ -584,15 +593,15 @@ export default function FeesPage() {
               </p>
             </div>
             <div className="rounded-lg border p-6">
-              <h3 className="font-semibold">What&apos;s the difference between Stripe and DivinityCoin?</h3>
+              <h3 className="font-semibold">What payment processor does IndieCrowdfund use?</h3>
               <p className="mt-2 text-zinc-600 dark:text-muted-foreground">
-                Stripe is our legacy payment processor (~6% total). DivinityCoin is an alternative payment sub-processor (~6.5% total: 3% partner + $0.30/txn + 3% platform) that supports all content types including NSFW/adult projects. Both accept credit and debit cards at checkout.
+                All new campaigns are processed through PaymentCloud (~7.5% total: 4% + $0.25/txn processing + 3% platform fee). PaymentCloud supports all content types including NSFW/adult projects, both All-or-Nothing and Keep-It-All campaign styles, and tokenizes cards in your browser via Collect.js so card data never touches our servers.
               </p>
             </div>
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold">How quickly will I receive my funds?</h3>
               <p className="mt-2 text-zinc-600 dark:text-muted-foreground">
-                For Stripe payments, funds are typically transferred within 14 business days. For DivinityCoin, settlements occur weekly or monthly based on your settings.
+                Funds settle to your bank account on PaymentCloud&apos;s standard merchant schedule (typically within 1–2 business days of capture for funded campaigns).
               </p>
             </div>
           </div>

@@ -300,34 +300,12 @@ export function PaymentStep() {
   const campaignType = payment.campaignType || "ALL_OR_NOTHING";
   const isLaunched = ["LIVE", "FUNDED", "FAILED", "CANCELLED"].includes(projectStatus || "");
 
-  // Auto-switch away from PayPal/Stripe if adult/controversial content is
-  // selected. Default the new pick to PaymentCloud (NMI) since it supports
-  // both AoN and KIA — the previous behavior forced DivinityCoin which is
-  // also fine, but PaymentCloud is the new primary high-risk processor.
-  useEffect(() => {
-    if (
-      mustUseAltProcessor &&
-      payment.paymentProcessor !== "DIVINITYCOIN" &&
-      payment.paymentProcessor !== "WHOP" &&
-      payment.paymentProcessor !== "NMI"
-    ) {
-      updatePayment({ paymentProcessor: "NMI" });
-    }
-  }, [mustUseAltProcessor, payment.paymentProcessor, updatePayment]);
-
-  // PaymentCloud + DivinityCoin both support All-or-Nothing for NSFW content
-  // via tokenize-and-charge-later. The old "NSFW must be KEEP_IT_ALL" rule
-  // only existed because Whop is the one NSFW processor that can't hold
-  // authorizations — that constraint now lives on the Whop card itself, not
-  // on NSFW projects globally.
-
-  // Auto-switch away from Whop if campaign type changes to ALL_OR_NOTHING.
-  // Default to PaymentCloud for NSFW (was DivinityCoin), PayPal for SFW.
-  useEffect(() => {
-    if (payment.campaignType === "ALL_OR_NOTHING" && payment.paymentProcessor === "WHOP") {
-      updatePayment({ paymentProcessor: mustUseAltProcessor ? "NMI" : "PAYPAL" });
-    }
-  }, [payment.campaignType, payment.paymentProcessor, mustUseAltProcessor, updatePayment]);
+  // PaymentCloud is the only processor for new campaigns. The auto-switch
+  // effects that previously routed projects between PayPal/DivinityCoin/
+  // Whop are no longer needed because there's nothing to switch between.
+  // Existing projects already on those processors keep their selection
+  // (the field is locked once a project goes LIVE/FUNDED/FAILED), and
+  // their backend payout/webhook flows continue to work.
 
   // Fee calculations
   const avgPledgeSize = 50; // Assume average pledge

@@ -64,7 +64,7 @@ const overviewSteps: Step[] = [
   },
   {
     title: 'How Payments Work',
-    description: 'When a customer purchases your book, they pay immediately through your selected processor (PayPal, PaymentCloud, DivinityCoin, or Whop). After the platform fee is deducted, your earnings are available in your creator dashboard. Payouts are processed according to your payout schedule settings.',
+    description: 'When a customer purchases your book, they pay immediately through PaymentCloud. After the platform fee is deducted, your earnings are available in your creator dashboard. Payouts are processed on PaymentCloud\'s standard merchant schedule.',
     example: 'Customer pays $9.99 → PaymentCloud takes 4% + $0.25 ($0.65) → Platform takes 3% ($0.28) → You receive $9.06',
   },
 ];
@@ -77,7 +77,7 @@ const setupSteps: Step[] = [
   },
   {
     title: 'Set Up Payment Settings',
-    description: 'Before you can sell, configure your payment settings in the Marketplace dashboard. Choose your processor (PayPal, PaymentCloud, DivinityCoin, or Whop) and add your payout/bank details. This is where your earnings will be deposited.',
+    description: 'Before you can sell, configure your payment settings in the Marketplace dashboard. Add your bank details — earnings will be deposited there on PaymentCloud\'s standard merchant schedule.',
     example: 'Navigate to Dashboard → Marketplace → Payment Settings to connect your payout method.',
   },
   {
@@ -120,8 +120,8 @@ const creatingSteps: Step[] = [
   },
   {
     title: 'Set Content Flags',
-    description: 'If your content contains mature themes or NSFW content, mark it appropriately. This ensures proper age verification and enables an NSFW-friendly payment processor. NSFW content uses PaymentCloud, DivinityCoin, or Whop (PayPal does not allow adult content).',
-    example: 'A horror comic with graphic violence would be flagged as NSFW and processed through PaymentCloud, DivinityCoin, or Whop.',
+    description: 'If your content contains mature themes or NSFW content, mark it appropriately for proper age verification on the listing. PaymentCloud accepts all content types, so flagging won\'t change your processor.',
+    example: 'A horror comic with graphic violence would be flagged as NSFW for the age gate; payment still flows through PaymentCloud.',
   },
   {
     title: 'Add Tags',
@@ -148,7 +148,7 @@ const pricingSteps: Step[] = [
   },
   {
     title: 'Payment Processing',
-    description: 'Choose from four processors during setup. PayPal (3.49% + $0.49) for standard content, PaymentCloud (4% + $0.25) for any content including NSFW, DivinityCoin (3% + $0.30) for NSFW, or Whop (~3%) for NSFW. Your net earnings appear in your dashboard.',
+    description: 'All marketplace sales are processed through PaymentCloud (4% + $0.25/txn) — supports all content types including NSFW. Your net earnings (after the 3% platform fee) appear in your dashboard.',
     tip: 'Factor in all fees when setting your price. Use the fee calculator in the book creation form to see your exact earnings.',
   },
   {
@@ -269,7 +269,7 @@ const faqs: FAQ[] = [
   },
   {
     question: 'What content isn\'t allowed?',
-    answer: 'Content must not violate our community guidelines. This includes illegal content, stolen/plagiarized work, or misleading listings. NSFW content is allowed but must be properly flagged and uses DivinityCoin payments.',
+    answer: 'Content must not violate our community guidelines. This includes illegal content, stolen/plagiarized work, or misleading listings. NSFW content is allowed but must be properly flagged for age gating; payment is processed through PaymentCloud regardless.',
   },
   {
     question: 'Can I sell books from my crowdfunding campaigns?',
@@ -441,7 +441,7 @@ export default function MarketplaceCreatorHandbookPage() {
                         <div>
                           <h4 className="font-medium text-foreground">Payment Setup</h4>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            Connect PayPal, PaymentCloud, DivinityCoin, or Whop to receive earnings from sales.
+                            Add your bank details so PaymentCloud can deposit your earnings from sales.
                           </p>
                         </div>
                       </div>

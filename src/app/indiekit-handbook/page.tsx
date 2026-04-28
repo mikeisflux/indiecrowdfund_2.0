@@ -579,7 +579,7 @@ const tabContent: Record<string, TabContent> = {
       { step: 'Browse transactions', detail: 'See every pledge and after-sale transaction listed chronologically. Each entry shows: backer name/email, amount, transaction type (Pledge or After-sale), and payment processor.' },
       { step: 'Search transactions', detail: 'Search by backer name or email to find specific transactions quickly.' },
       { step: 'Filter by type', detail: 'Filter to see only Pledges (original campaign payments) or After-sales (add-on purchases and shipping charges).' },
-      { step: 'View transaction details', detail: 'Each transaction shows the payment processor used (PayPal, PaymentCloud, DivinityCoin, or Whop) and the processor-specific transaction ID for debugging payment issues.' },
+      { step: 'View transaction details', detail: 'Each transaction shows the payment processor used and the processor-specific transaction ID for debugging payment issues. New campaigns use PaymentCloud; existing campaigns may show legacy processors.' },
       { step: 'Review statistics', detail: 'See total transaction count, total revenue, and revenue breakdowns at the top of the tab.' },
     ],
     tips: [

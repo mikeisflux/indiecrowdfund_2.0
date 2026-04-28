@@ -112,7 +112,7 @@ const purchasingSteps: Step[] = [
   },
   {
     title: 'Payment Options',
-    description: 'The marketplace accepts credit and debit cards through one of our four payment processors (PayPal, PaymentCloud, DivinityCoin, or Whop) — the creator chooses which one. Enter your card details to complete the purchase. All payments are encrypted and secure.',
+    description: 'The marketplace accepts credit and debit cards through PaymentCloud, our secure payment processor. Enter your card details to complete the purchase — they\'re tokenized in your browser via Collect.js and never touch our servers.',
     tip: 'Save your card for faster future purchases. Your card details are tokenized in your browser and stored securely by the payment processor — never on IndieCrowdfund servers.',
   },
   {
@@ -261,8 +261,8 @@ const faqs: FAQ[] = [
     answer: 'Yes, they\'re completely separate. Marketplace purchases appear in your Digital Library, while crowdfunding pledge rewards are managed through your Backer Dashboard\'s pledge section. You might receive digital content from both sources.',
   },
   {
-    question: 'Can I pay with DivinityCoin in the marketplace?',
-    answer: 'Yes! If a creator has selected DivinityCoin as their payment processor for their marketplace listings, you can pay using DivinityCoin at checkout. You\'ll enter your credit or debit card details into DivinityCoin\'s secure payment form — the experience is the same seamless card payment as standard checkout. Look for the payment options when purchasing a book.',
+    question: 'What payment processor does the marketplace use?',
+    answer: 'The marketplace uses PaymentCloud — you enter your credit or debit card at checkout. Your card is tokenized in the browser via Collect.js (PAN never touches our servers) and you\'re charged immediately at purchase. Existing creators with DivinityCoin or other legacy processors continue to be supported on their previous campaigns.',
   },
 ];
 
@@ -443,7 +443,7 @@ export default function MarketplaceBackerHandbookPage() {
                       <div>
                         <h4 className="font-medium text-foreground">Secure & Instant</h4>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          All payments are processed securely through PayPal, PaymentCloud, DivinityCoin, or Whop (depending on the creator&apos;s chosen processor). Once payment completes, your content is available immediately in your Digital Library.
+                          All payments are processed securely through PaymentCloud. Once payment completes, your content is available immediately in your Digital Library.
                         </p>
                       </div>
                     </div>

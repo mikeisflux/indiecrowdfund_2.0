@@ -95,27 +95,29 @@ export const comparisonData = [
     total: "~7.5%",
     highlight: true,
   },
-  {
-    platform: "IndieCrowdfund (PayPal)",
-    platformFee: "3%",
-    paymentFee: "3.49% + $0.49",
-    total: "~6.5%",
-    highlight: false,
-  },
-  {
-    platform: "IndieCrowdfund (DivinityCoin)",
-    platformFee: "3%",
-    paymentFee: "3% + $0.30/txn",
-    total: "~6.5%",
-    highlight: false,
-  },
-  {
-    platform: "IndieCrowdfund (Whop)",
-    platformFee: "3%",
-    paymentFee: "3% Whop",
-    total: "~6%",
-    highlight: false,
-  },
+  // Legacy processor rows hidden — PaymentCloud is the only option for new
+  // campaigns. Existing PayPal/DivinityCoin/Whop campaigns continue to run.
+  // {
+  //   platform: "IndieCrowdfund (PayPal)",
+  //   platformFee: "3%",
+  //   paymentFee: "3.49% + $0.49",
+  //   total: "~6.5%",
+  //   highlight: false,
+  // },
+  // {
+  //   platform: "IndieCrowdfund (DivinityCoin)",
+  //   platformFee: "3%",
+  //   paymentFee: "3% + $0.30/txn",
+  //   total: "~6.5%",
+  //   highlight: false,
+  // },
+  // {
+  //   platform: "IndieCrowdfund (Whop)",
+  //   platformFee: "3%",
+  //   paymentFee: "3% Whop",
+  //   total: "~6%",
+  //   highlight: false,
+  // },
   // Stripe (Legacy) - hidden for now
   // {
   //   platform: "IndieCrowdfund (Stripe – Legacy)",
