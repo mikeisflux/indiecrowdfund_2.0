@@ -470,13 +470,13 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         </CardContent>
       </Card>
 
-      {/* NMI Settings */}
+      {/* PaymentCloud Settings (NMI white-label) */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>NMI Configuration</CardTitle>
-              <CardDescription>Network Merchants direct-post gateway. Customer Vault tokenization powers all-or-nothing pledges — tokenize at pledge time, charge only on campaign success.</CardDescription>
+              <CardTitle>PaymentCloud Configuration</CardTitle>
+              <CardDescription>PaymentCloud merchant account on the NMI gateway. Customer Vault tokenization powers all-or-nothing pledges — tokenize at pledge time, charge only on campaign success.</CardDescription>
             </div>
             <Badge variant={settings.nmiEnabled ? "default" : "secondary"}>
               {settings.nmiEnabled ? "Enabled" : "Disabled"}
@@ -486,8 +486,8 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label>Enable NMI</Label>
-              <p className="text-sm text-muted-foreground">Allow creators to use NMI as their payment processor</p>
+              <Label>Enable PaymentCloud</Label>
+              <p className="text-sm text-muted-foreground">Allow creators to use PaymentCloud as their payment processor</p>
             </div>
             <Switch
               checked={settings.nmiEnabled}
@@ -545,7 +545,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="production">Production (secure.nmi.com)</SelectItem>
+                  <SelectItem value="production">Production (paymentcloud.transactiongateway.com)</SelectItem>
                   <SelectItem value="sandbox">Sandbox (sandbox.nmi.com)</SelectItem>
                 </SelectContent>
               </Select>
@@ -554,13 +554,13 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Custom Gateway URL (white-label resellers)</Label>
+              <Label>Custom Gateway URL (override)</Label>
               <Input
                 value={settings.nmiGatewayUrlOverride}
                 onChange={(e) => onSettingsChange({ ...settings, nmiGatewayUrlOverride: e.target.value })}
-                placeholder="Leave blank for standard NMI"
+                placeholder="Leave blank to use the default for the selected environment"
               />
-              <p className="text-xs text-muted-foreground">Overrides the gateway URL when your ISO proxies NMI on a custom host (e.g. Maverick / Mentom). The protocol and request shape stay identical.</p>
+              <p className="text-xs text-muted-foreground">Overrides the gateway URL if you switch to a different ISO. The protocol stays identical to NMI Direct Post regardless of host.</p>
             </div>
             <div className="space-y-2">
               <Label>Per-Transaction Gateway Fee ($)</Label>
@@ -572,16 +572,17 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onChange={(e) => onSettingsChange({ ...settings, nmiPerTransactionFee: e.target.value })}
                 placeholder="0.13"
               />
-              <p className="text-xs text-muted-foreground">Flat fee NMI charges per transaction (USD). Subtracted from creator payouts at fee-calculation time.</p>
+              <p className="text-xs text-muted-foreground">Flat fee PaymentCloud charges per transaction (USD). Subtracted from creator payouts at fee-calculation time.</p>
             </div>
           </div>
 
           <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
-            <p className="font-medium">NMI Setup:</p>
+            <p className="font-medium">PaymentCloud Setup:</p>
             <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
               <li>Customer Vault tokenization for all-or-nothing campaigns — card tokenized at pledge time, charged only on campaign success</li>
               <li>Collect.js (hosted fields) keeps PAN data off our servers — no PCI scope expansion</li>
               <li>Direct-post API: <code className="bg-muted px-1 rounded">POST /api/transact.php</code> with <code className="bg-muted px-1 rounded">type=sale|auth|capture|void|refund|credit|validate</code></li>
+              <li>PaymentCloud is a white-label of NMI&apos;s gateway, so the protocol matches NMI&apos;s public docs verbatim</li>
               <li>Test with sandbox keys first — never use a real Security Key for testing</li>
             </ul>
           </div>

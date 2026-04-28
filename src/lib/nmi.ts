@@ -55,10 +55,15 @@ export async function loadNmiConfig(): Promise<NmiConfig | null> {
     : null;
 
   const env = settings.nmiEnvironment === "sandbox" ? "sandbox" : "production";
+  // Production defaults to PaymentCloud's NMI-white-label host (the
+  // documented POST URL in their integration portal). Sandbox falls
+  // back to NMI's shared sandbox since white-labels typically don't
+  // mint a separate sandbox subdomain. Either is overridable via
+  // nmiGatewayUrlOverride for any other ISO that proxies NMI.
   const defaultUrl =
     env === "sandbox"
       ? "https://sandbox.nmi.com/api/transact.php"
-      : "https://secure.nmi.com/api/transact.php";
+      : "https://paymentcloud.transactiongateway.com/api/transact.php";
   const gatewayUrl = settings.nmiGatewayUrlOverride?.trim() || defaultUrl;
 
   return {
