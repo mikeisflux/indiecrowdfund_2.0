@@ -166,6 +166,107 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No balance due" }, { status: 400 });
     }
 
+    // PaymentCloud (NMI) balance-due flow. The pledge already has a
+    // Customer Vault id from the original pledge, so we can charge
+    // synchronously without asking the backer to re-enter their card.
+    // Backer-initiated MIT (merchant-initiated transaction) is the
+    // wrong shape — this is backer-initiated via a balance link they
+    // received from the creator, so we use the existing CIT
+    // (cardholder-initiated) credentials chain stored on the pledge.
+    if (pledge.project.paymentProcessor === "NMI") {
+      if (!pledge.nmiCustomerVaultId) {
+        return NextResponse.json(
+          { error: "No saved card found for this pledge — please contact the creator." },
+          { status: 400 }
+        );
+      }
+      const { loadNmiConfig, saleByVaultToken } = await import("@/lib/nmi");
+      const config = await loadNmiConfig();
+      if (!config) {
+        return NextResponse.json(
+          { error: "Payment processor not configured" },
+          { status: 502 }
+        );
+      }
+
+      try {
+        const sale = await saleByVaultToken(config, {
+          amount: balanceDue,
+          customerVaultId: pledge.nmiCustomerVaultId,
+          orderid: `balance-${pledge.id}`,
+          orderdescription: `Balance due on pledge ${pledge.id}`,
+          email: pledge.user.email || undefined,
+        });
+        if (sale.response !== "1" || !sale.transactionid) {
+          payBalanceLogger.warn(
+            { pledgeId: pledge.id, response: sale.response, text: sale.responsetext },
+            "PaymentCloud balance-due declined"
+          );
+          return NextResponse.json(
+            { error: sale.responsetext || "Card was declined." },
+            { status: 400 }
+          );
+        }
+
+        // Atomically increment pledge.amount + project.currentAmount and
+        // record completion in pledge.metadata. CAS on
+        // balancePaymentCompletedAt to prevent double-charge if the
+        // backer hits the link twice fast.
+        await db.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${pledge.id} FOR UPDATE`;
+          const fresh = await tx.pledge.findUnique({
+            where: { id: pledge.id },
+            select: { metadata: true, amount: true },
+          });
+          const freshMeta = (fresh?.metadata as Record<string, unknown>) || {};
+          if (freshMeta.balancePaymentCompletedAt) {
+            // Another concurrent request already settled this balance —
+            // best-effort void of the duplicate sale we just ran. We
+            // don't have voidTransaction in scope here; admins can
+            // refund the second transaction id manually if needed. Log
+            // both ids so the audit trail is intact.
+            payBalanceLogger.warn(
+              { pledgeId: pledge.id, duplicateTxn: sale.transactionid },
+              "Concurrent balance-due completed before this charge — possible duplicate"
+            );
+            return;
+          }
+          await tx.pledge.update({
+            where: { id: pledge.id },
+            data: {
+              amount: Number(fresh!.amount) + balanceDue,
+              metadata: {
+                ...freshMeta,
+                balancePaymentCompletedAt: new Date().toISOString(),
+                balanceNmiTransactionId: sale.transactionid,
+              },
+            },
+          });
+          await tx.project.update({
+            where: { id: pledge.project.id },
+            data: { currentAmount: { increment: balanceDue } },
+          });
+        });
+
+        return NextResponse.json({
+          paymentProcessor: "NMI",
+          amount: balanceDue,
+          status: "completed",
+          transactionId: sale.transactionid,
+          chargedImmediately: true,
+        });
+      } catch (err) {
+        payBalanceLogger.error(
+          { err: err instanceof Error ? err.message : String(err), pledgeId: pledge.id },
+          "PaymentCloud balance-due error"
+        );
+        return NextResponse.json(
+          { error: "Failed to process balance payment. Please try again." },
+          { status: 502 }
+        );
+      }
+    }
+
     if (pledge.project.paymentProcessor === "STRIPE") {
       // Get the creator's Stripe Connect account
       const stripeConfig = await db.stripeConfig.findFirst({

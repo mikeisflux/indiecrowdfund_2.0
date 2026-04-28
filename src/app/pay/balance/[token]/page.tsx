@@ -23,7 +23,7 @@ interface BalanceDetails {
   projectTitle: string;
   projectSlug: string;
   backerName: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "NMI";
   balanceDue: number;
   reward: { title: string; amount: number } | null;
   addons: Array<{ title: string; quantity: number; amount: number }>;
@@ -109,6 +109,16 @@ export default function BalancePaymentPage() {
       }
 
       const data = await res.json();
+
+      // PaymentCloud (NMI) charges synchronously against the saved
+      // pledge vault — the server returns status=completed and we
+      // jump straight to the success screen. No card form needed.
+      if (data.paymentProcessor === "NMI" && data.status === "completed") {
+        setPaymentSuccess(true);
+        setPaymentStarted(false);
+        return;
+      }
+
       setClientSecret(data.clientSecret);
 
       // For DivinityCoin, load the DC Stripe instance using the publishable key from the API

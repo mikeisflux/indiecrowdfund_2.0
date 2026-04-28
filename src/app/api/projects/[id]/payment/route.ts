@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const paymentSchema = z.object({
   projectType: z.enum(["INDIVIDUAL", "BUSINESS", "NONPROFIT"]).optional(),
-  paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN", "PAYPAL", "WHOP"]).optional(),
+  paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN", "PAYPAL", "WHOP", "NMI"]).optional(),
   campaignType: z.enum(["ALL_OR_NOTHING", "KEEP_IT_ALL"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),

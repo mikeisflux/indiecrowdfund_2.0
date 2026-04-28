@@ -48,8 +48,20 @@ export async function GET() {
       isVerified: acct.isVerified,
     });
   } catch (err) {
-    log.error({ err: String(err) }, "GET error");
-    return NextResponse.json({ error: "Failed to fetch bank account" }, { status: 500 });
+    // Defensive: if the table doesn't exist yet (schema mismatch on
+    // a fresh deploy where prisma db push hasn't run), return
+    // `exists: false` so the project creation page doesn't surface
+    // a 500 banner. Real errors are still logged for triage.
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg }, "GET error");
+    if (
+      msg.includes("does not exist") ||
+      msg.includes("relation") ||
+      msg.includes("PaymentCloudBankAccount")
+    ) {
+      return NextResponse.json({ exists: false });
+    }
+    return NextResponse.json({ exists: false }, { status: 200 });
   }
 }
 

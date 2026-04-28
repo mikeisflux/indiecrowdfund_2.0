@@ -57,7 +57,7 @@ model MarketplaceBook {
   hasAdultContent   Boolean  @default(false)
   hasRiskyContent   Boolean  @default(false)
   promoContentSfw   Boolean  @default(true)
-  paymentProcessor  PaymentProcessor @default(STRIPE)
+  paymentProcessor  PaymentProcessor @default(NMI)
 
   // Status & Moderation
   status            MarketplaceBookStatus @default(DRAFT)
@@ -232,6 +232,11 @@ model MarketplacePurchase {
 
   // PayPal fields
   paypalOrderId         String?  @unique
+
+  // PaymentCloud (NMI) fields. Customer Vault token is the saved
+  // card; transactionId is the sale record we use for refunds.
+  nmiCustomerVaultId    String?  @unique
+  nmiTransactionId      String?  @unique
 
   // Status
   status            MarketplacePurchaseStatus @default(PENDING)

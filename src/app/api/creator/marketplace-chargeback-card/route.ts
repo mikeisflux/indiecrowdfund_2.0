@@ -78,8 +78,12 @@ export async function GET() {
       updatedAt: card.updatedAt,
     });
   } catch (err) {
-    log.error({ err: String(err) }, "GET error");
-    return NextResponse.json({ error: "Failed to load card" }, { status: 500 });
+    // Defensive: if the table doesn't exist yet (fresh deploy without
+    // prisma db push), return `exists: false` so consumer pages don't
+    // surface a 500 banner.
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg }, "GET error");
+    return NextResponse.json({ exists: false }, { status: 200 });
   }
 }
 

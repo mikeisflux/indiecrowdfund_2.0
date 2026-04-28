@@ -45,6 +45,7 @@ import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { StripePaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm";
 import { MarketplacePayPalForm } from "@/app/marketplace/components/MarketplacePayPalForm";
+import { NmiMarketplacePaymentForm } from "@/components/marketplace/nmi-marketplace-payment-form";
 
 interface Book {
   id: string;
@@ -65,7 +66,7 @@ interface Book {
   publishedAt: string | null;
   hasAdultContent: boolean;
   hasRiskyContent: boolean;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "NMI";
   creator: {
     id: string;
     name: string | null;
@@ -112,6 +113,9 @@ export default function BookDetailPage() {
   // PayPal state
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
   const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
+  // PaymentCloud (NMI) state
+  const [nmiPublicKey, setNmiPublicKey] = useState<string | null>(null);
+  const [nmiPurchaseId, setNmiPurchaseId] = useState<string | null>(null);
 
   const fetchBook = useCallback(async () => {
     try {
@@ -194,9 +198,11 @@ export default function BookDetailPage() {
 
   const resetPaypalPayment = () => {
     setPaypalOrderId(null);
+    setNmiPublicKey(null);
+    setNmiPurchaseId(null);
   };
 
-  const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin" | "paypal") => {
+  const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin" | "paypal" | "nmi") => {
     if (!book) return;
 
     // Redirect unauthenticated users to login before attempting purchase
@@ -285,6 +291,28 @@ export default function BookDetailPage() {
           setShowPaymentModal(false);
           return;
         }
+      } else if (paymentMethod === "nmi") {
+        // PaymentCloud Collect.js flow — server returns the public
+        // tokenization key + purchaseId; the form does the rest.
+        const res = await apiFetch("/api/marketplace/purchase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookId: book.id,
+            paymentMethod: "nmi",
+            promoCode: appliedPromo?.code,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to initialize PaymentCloud");
+        if (!data.publicKey || !data.purchaseId) {
+          throw new Error("PaymentCloud configuration is missing — contact support.");
+        }
+        setNmiPublicKey(data.publicKey);
+        setNmiPurchaseId(data.purchaseId);
+        setShowPaymentModal(false);
+        setPurchasing(false);
+        return;
       } else {
         // DivinityCoin seamless payment - get clientSecret + publishableKey
         const res = await apiFetch("/api/marketplace/purchase", {
@@ -419,6 +447,7 @@ export default function BookDetailPage() {
   // Show DC payment form if clientSecret is ready
   const showDcPaymentForm = dcClientSecret && dcStripePromise;
   const showPaypalForm = !!(paypalOrderId && paypalClientId);
+  const showNmiForm = !!(nmiPublicKey && nmiPurchaseId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -635,8 +664,39 @@ export default function BookDetailPage() {
                   </div>
                 )}
 
-                {/* PayPal Advanced Checkout Form */}
-                {showPaypalForm ? (
+                {/* PaymentCloud (NMI) Collect.js form */}
+                {showNmiForm ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-foreground">Complete Payment</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground"
+                        onClick={() => {
+                          setNmiPublicKey(null);
+                          setNmiPurchaseId(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    <NmiMarketplacePaymentForm
+                      publicKey={nmiPublicKey!}
+                      purchaseId={nmiPurchaseId!}
+                      amount={Number(book.price)}
+                      currency={book.currency || "usd"}
+                      onSuccess={() => {
+                        setNmiPublicKey(null);
+                        setNmiPurchaseId(null);
+                        toast.success("Purchase complete!");
+                        // Refresh book data to flip purchased state
+                        fetchBook();
+                      }}
+                      onError={(msg) => toast.error(msg)}
+                    />
+                  </div>
+                ) : showPaypalForm ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-foreground">Complete Payment</h3>
@@ -916,7 +976,23 @@ export default function BookDetailPage() {
               </Button>
             ) : (
               <>
-                {book?.paymentProcessor === "PAYPAL" ? (
+                {book?.paymentProcessor === "NMI" ? (
+                  <Button
+                    className="h-16 bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 justify-start"
+                    onClick={() => handlePurchase("nmi")}
+                    disabled={purchasing}
+                  >
+                    {purchasing ? (
+                      <Loader2 className="w-6 h-6 mr-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="w-6 h-6 mr-4" />
+                    )}
+                    <div className="text-left">
+                      <div className="font-semibold text-white">PaymentCloud</div>
+                      <div className="text-sm opacity-80 text-white">Pay with credit or debit card</div>
+                    </div>
+                  </Button>
+                ) : book?.paymentProcessor === "PAYPAL" ? (
                   <Button
                     className="h-16 bg-[#003087] hover:bg-[#002070] justify-start"
                     onClick={() => handlePurchase("paypal")}
