@@ -45,7 +45,7 @@ interface PaymentSettingsProps {
     whopCompanyId: string;
     whopWebhookSecret: string;
     whopEnvironment: string;
-    // NMI settings (Network Merchants Inc — direct-post gateway)
+    // PaymentCloud settings (NMI white-label, direct-post gateway)
     nmiEnabled: boolean;
     nmiSecurityKey: string;
     nmiPublicKey: string;
@@ -53,6 +53,7 @@ interface PaymentSettingsProps {
     nmiEnvironment: string;
     nmiGatewayUrlOverride: string;
     nmiPerTransactionFee: string;
+    nmiPercentageFee: string;
     // reCAPTCHA settings
     recaptchaEnabled: boolean;
     recaptchaSiteKey: string;
@@ -530,10 +531,10 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onChange={(value) => onSettingsChange({ ...settings, nmiWebhookSecret: value })}
                 onSave={onSave}
                 hasExistingValue={settings.nmiWebhookSecret === "••••••••"}
-                placeholder="Optional — leave blank to skip signature checks"
+                placeholder="Required — webhook handler rejects unsigned events"
                 forceShowValue={showAllKeys}
               />
-              <p className="text-xs text-muted-foreground">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/nmi</code></p>
+              <p className="text-xs text-muted-foreground">From Settings → Webhooks → signing key. Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/nmi</code></p>
             </div>
             <div className="space-y-2">
               <Label>Environment</Label>
@@ -573,6 +574,19 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 placeholder="0.13"
               />
               <p className="text-xs text-muted-foreground">Flat fee PaymentCloud charges per transaction (USD). Subtracted from creator payouts at fee-calculation time.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Percentage Fee (%)</Label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={settings.nmiPercentageFee}
+                onChange={(e) => onSettingsChange({ ...settings, nmiPercentageFee: e.target.value })}
+                placeholder="4.5"
+              />
+              <p className="text-xs text-muted-foreground">Percentage PaymentCloud charges per transaction. Subtracted from creator payouts at fee-calculation time.</p>
             </div>
           </div>
 

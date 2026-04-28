@@ -113,7 +113,7 @@ interface PlatformSettings {
   whopCompanyId: string | null;
   whopWebhookSecret: string | null;
   whopEnvironment: string;
-  // NMI settings (Network Merchants Inc — direct-post gateway)
+  // PaymentCloud settings (NMI white-label, direct-post gateway)
   nmiEnabled: boolean;
   nmiSecurityKey: string | null;
   nmiPublicKey: string | null;
@@ -121,6 +121,7 @@ interface PlatformSettings {
   nmiEnvironment: string;
   nmiGatewayUrlOverride: string | null;
   nmiPerTransactionFee: number;
+  nmiPercentageFee: number;
   // Payment settings
   autoPayouts: boolean;
   // Social auto-posting settings
@@ -238,7 +239,7 @@ export default function SettingsPage() {
     whopCompanyId: "",
     whopWebhookSecret: "",
     whopEnvironment: "production",
-    // NMI settings (Network Merchants Inc — direct-post gateway)
+    // PaymentCloud settings (NMI white-label, direct-post gateway)
     nmiEnabled: false,
     nmiSecurityKey: "",
     nmiPublicKey: "",
@@ -246,6 +247,7 @@ export default function SettingsPage() {
     nmiEnvironment: "production",
     nmiGatewayUrlOverride: "",
     nmiPerTransactionFee: "0.13",
+    nmiPercentageFee: "4.5",
     // reCAPTCHA settings
     recaptchaEnabled: false,
     recaptchaSiteKey: "",
@@ -451,6 +453,10 @@ export default function SettingsPage() {
           settings.nmiPerTransactionFee !== undefined && settings.nmiPerTransactionFee !== null
             ? String(settings.nmiPerTransactionFee)
             : "0.13",
+        nmiPercentageFee:
+          settings.nmiPercentageFee !== undefined && settings.nmiPercentageFee !== null
+            ? String(settings.nmiPercentageFee * 100)
+            : "4.5",
         recaptchaEnabled: settings.recaptchaEnabled || false,
         recaptchaSiteKey: settings.recaptchaSiteKey || "",
         recaptchaSecretKey: settings.recaptchaSecretKey || "",
@@ -725,6 +731,7 @@ export default function SettingsPage() {
             nmiEnvironment: currentPaymentSettings.nmiEnvironment,
             nmiGatewayUrlOverride: currentPaymentSettings.nmiGatewayUrlOverride,
             nmiPerTransactionFee: parseFloat(currentPaymentSettings.nmiPerTransactionFee) || 0,
+            nmiPercentageFee: (parseFloat(currentPaymentSettings.nmiPercentageFee) || 0) / 100,
             recaptchaEnabled: currentPaymentSettings.recaptchaEnabled,
             recaptchaSiteKey: currentPaymentSettings.recaptchaSiteKey,
             recaptchaSecretKey: currentPaymentSettings.recaptchaSecretKey,

@@ -9,15 +9,15 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DollarSign, CheckCircle, ArrowRight, HelpCircle, Calculator,
-  Gift, CreditCard, Coins, ExternalLink, ArrowLeft, ShoppingBag,
+  Gift, CreditCard, Coins, ExternalLink, ArrowLeft, ShoppingBag, Cloud,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 import {
   divinityCoinFeeBreakdown, paypalFeeBreakdown,
-  whopFeeBreakdown, comparisonData, features, type PaymentMethod,
+  whopFeeBreakdown, paymentCloudFeeBreakdown, comparisonData, features, type PaymentMethod,
 } from "./data";
 import {
-  calculatePayPalFees, calculateDivinityCoinFees, calculateWhopFees,
+  calculatePayPalFees, calculateDivinityCoinFees, calculateWhopFees, calculatePaymentCloudFees,
 } from "./calculations";
 
 // ─── Sub-components ────────────────────────────────────────────────────────
@@ -86,23 +86,27 @@ export default function FeesPage() {
   const divinityFees = calculateDivinityCoinFees(amount);
   const paypalFees = calculatePayPalFees(amount);
   const whopFees = calculateWhopFees(amount);
+  const paymentCloudFees = calculatePaymentCloudFees(amount);
 
   const fees =
     paymentMethod === "paypal" ? paypalFees
     : paymentMethod === "whop" ? whopFees
+    : paymentMethod === "paymentcloud" ? paymentCloudFees
     : divinityFees;
 
   const methodLabel =
     paymentMethod === "paypal" ? "PayPal"
     : paymentMethod === "whop" ? "Whop"
+    : paymentMethod === "paymentcloud" ? "PaymentCloud"
     : "DivinityCoin";
 
-  const methodColor = {
+  const methodColor = ({
     paypal: { bg: "bg-blue-50 dark:bg-blue-900/20", text: "text-[#003087] dark:text-blue-400" },
     stripe: { bg: "bg-emerald-50 dark:bg-emerald-900/20", text: "text-emerald-600 dark:text-emerald-400" },
     whop: { bg: "bg-muted/50 dark:bg-zinc-900/20", text: "text-zinc-700 dark:text-muted-foreground" },
     divinitycoin: { bg: "bg-purple-50 dark:bg-purple-900/20", text: "text-purple-600 dark:text-purple-400" },
-  }[paymentMethod];
+    paymentcloud: { bg: "bg-sky-50 dark:bg-sky-900/20", text: "text-sky-600 dark:text-sky-400" },
+  } as const)[paymentMethod] ?? { bg: "bg-muted", text: "text-foreground" };
 
   return (
     <div className="relative min-h-screen bg-background overflow-hidden">
@@ -162,7 +166,10 @@ export default function FeesPage() {
             className="w-full"
             onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
           >
-            <TabsList className="grid w-full sm:max-w-2xl mx-auto grid-cols-3 mb-8">
+            <TabsList className="grid w-full sm:max-w-3xl mx-auto grid-cols-2 sm:grid-cols-4 mb-8">
+              <TabsTrigger value="paymentcloud" className="flex items-center gap-2">
+                <Cloud className="h-4 w-4" /> PaymentCloud
+              </TabsTrigger>
               <TabsTrigger value="whop" className="flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" /> Whop
               </TabsTrigger>
@@ -178,6 +185,38 @@ export default function FeesPage() {
               </TabsTrigger>
               */}
             </TabsList>
+
+            {/* PaymentCloud */}
+            <TabsContent value="paymentcloud">
+              <FeeBreakdownCards fees={paymentCloudFeeBreakdown} iconBg="bg-gradient-to-br from-sky-500 to-cyan-500" rateClass="bg-gradient-to-r from-sky-600 to-cyan-600 bg-clip-text text-transparent" Icon={Cloud} />
+              <Card className="mt-8 lg:max-w-4xl lg:mx-auto border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-900/10">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/30">
+                      <Cloud className="h-6 w-6 text-sky-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is PaymentCloud?</h3>
+                      <p className="text-sm text-zinc-600 dark:text-muted-foreground mb-3">
+                        PaymentCloud is a high-risk friendly merchant account on the NMI gateway. Backers enter their card directly on your campaign page — the card is securely tokenized in the browser via Collect.js (PAN never touches our servers) and only charged when your campaign hits its funding goal.
+                      </p>
+                      <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows (example: $100 pledge):</h4>
+                      <ol className="text-sm text-zinc-600 dark:text-muted-foreground space-y-1 list-decimal list-inside mb-4">
+                        <li>Backer enters their card at checkout — instantly tokenized via Collect.js</li>
+                        <li>Card is stored in PaymentCloud&apos;s vault, no charge yet</li>
+                        <li>When your campaign funds, we charge the saved card</li>
+                        <li>PaymentCloud processing (4.5% of $100 = $4.50) deducted at settlement</li>
+                        <li>Per-transaction fee ($0.13 × 1 txn = $0.13) deducted at settlement</li>
+                        <li>Platform fee (3% of $95.37 = $2.86) deducted at settlement</li>
+                        <li>You receive <strong>$92.51</strong> deposited to your bank account</li>
+                      </ol>
+                      <p className="text-xs text-muted-foreground">PaymentCloud supports both <strong>All-or-Nothing</strong> and <strong>Keep-It-All</strong> campaigns. Cards are only charged on campaign success — failed campaigns trigger zero fees and zero charges.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <TotalBadge color="bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400" text="Total fees with PaymentCloud: approximately 7.5% of funds raised" />
+            </TabsContent>
 
             {/* Whop */}
             <TabsContent value="whop">
@@ -307,7 +346,7 @@ export default function FeesPage() {
               {/* Payment method toggle */}
               <div className="flex justify-center mb-6">
                 <div className="inline-flex rounded-lg border p-1 bg-white dark:bg-zinc-800 flex-wrap gap-1">
-                  {(["whop", "paypal", "divinitycoin"] as PaymentMethod[]).map((m) => (
+                  {(["paymentcloud", "whop", "paypal", "divinitycoin"] as PaymentMethod[]).map((m) => (
                     <button
                       key={m}
                       onClick={() => setPaymentMethod(m)}
@@ -317,7 +356,7 @@ export default function FeesPage() {
                           : "text-zinc-600 hover:text-zinc-900 dark:text-muted-foreground"
                       }`}
                     >
-                      {m === "divinitycoin" ? "DivinityCoin" : m.charAt(0).toUpperCase() + m.slice(1)}
+                      {m === "divinitycoin" ? "DivinityCoin" : m === "paymentcloud" ? "PaymentCloud" : m.charAt(0).toUpperCase() + m.slice(1)}
                     </button>
                   ))}
                 </div>
@@ -359,6 +398,21 @@ export default function FeesPage() {
                       <div className="flex justify-between py-2 border-b">
                         <span className="text-zinc-600 dark:text-muted-foreground">PayPal processing (3.49% + $0.49/txn)</span>
                         <span className="text-red-500">-${paypalFees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    </>
+                  ) : paymentMethod === "paymentcloud" ? (
+                    <>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-zinc-600 dark:text-muted-foreground">PaymentCloud processing (4.5%)</span>
+                        <span className="text-red-500">-${paymentCloudFees.paymentCloudFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-zinc-600 dark:text-muted-foreground">Per-transaction fee ($0.13/txn)</span>
+                        <span className="text-red-500">-${paymentCloudFees.perTransactionFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-zinc-600 dark:text-muted-foreground">Platform fee (3% of net)</span>
+                        <span className="text-red-500">-${paymentCloudFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </>
                   ) : paymentMethod === "whop" ? (

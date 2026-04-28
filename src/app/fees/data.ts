@@ -1,6 +1,6 @@
 import { Shield, CheckCircle, Zap, Globe } from "lucide-react";
 
-export type PaymentMethod = "stripe" | "paypal" | "divinitycoin" | "whop";
+export type PaymentMethod = "stripe" | "paypal" | "divinitycoin" | "whop" | "paymentcloud";
 
 export const stripeFeeBreakdown = [
   {
@@ -53,6 +53,23 @@ export const paypalFeeBreakdown = [
   },
 ];
 
+export const paymentCloudFeeBreakdown = [
+  {
+    title: "PaymentCloud Processing Fee",
+    rate: "4.5% + $0.13",
+    description: "Per-transaction merchant account rate",
+    details:
+      "Standard credit/debit card processing fee on the IndieCrowdfund PaymentCloud merchant account. Cards are tokenized at pledge time via Collect.js (PAN never touches our servers) and only charged when a campaign hits its goal.",
+  },
+  {
+    title: "IndieCrowdfund Platform Fee",
+    rate: "3%",
+    description: "Charged on successfully funded campaigns only",
+    details:
+      "Applied on the remainder after PaymentCloud processing fees are deducted. Covers hosting, tools, and customer support.",
+  },
+];
+
 export const whopFeeBreakdown = [
   {
     title: "Whop Processing Fee",
@@ -72,11 +89,18 @@ export const whopFeeBreakdown = [
 
 export const comparisonData = [
   {
+    platform: "IndieCrowdfund (PaymentCloud)",
+    platformFee: "3%",
+    paymentFee: "4.5% + $0.13/txn",
+    total: "~7.5%",
+    highlight: true,
+  },
+  {
     platform: "IndieCrowdfund (PayPal)",
     platformFee: "3%",
     paymentFee: "3.49% + $0.49",
     total: "~6.5%",
-    highlight: true,
+    highlight: false,
   },
   {
     platform: "IndieCrowdfund (DivinityCoin)",
