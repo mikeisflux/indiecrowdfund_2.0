@@ -42,6 +42,11 @@ const createPledgeSchema = z.object({
     country: z.string().max(10),
     phone: z.string().max(30).optional(),
   }).optional(),
+  // PaymentCloud-only: Collect.js payment_token from the browser. The
+  // PAN never touches our server — we exchange the single-use token
+  // for a stable Customer Vault id server-side, then either save it
+  // for charge-on-success (AoN) or sell against it immediately (KIA).
+  paymentToken: z.string().min(1).max(200).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -384,6 +389,133 @@ export async function POST(req: NextRequest) {
             { status: 502 }
           );
         }
+      }
+
+      // PaymentCloud (NMI white-label) payment processor.
+      //
+      // Two-phase to match the other processors:
+      //   1. Here: create the PENDING pledge row, return the public
+      //      tokenization key + pledgeId so the browser can load
+      //      Collect.js and tokenize the card.
+      //   2. POST /api/pledges/[pledgeId]/confirm-nmi: client posts the
+      //      payment_token from Collect.js → server adds to Customer
+      //      Vault, optionally charges (KIA), updates pledge.
+      // No card data ever touches our server — the PAN goes straight
+      // from Collect.js into PaymentCloud's vault.
+      if (project.paymentProcessor === "NMI") {
+        const completedNmiPledge = await db.pledge.findFirst({
+          where: {
+            userId: session.user.id,
+            deletedAt: null,
+            projectId: data.projectId,
+            paymentProcessor: "NMI",
+            status: "COMPLETED",
+          },
+        });
+        if (completedNmiPledge) {
+          return NextResponse.json(
+            { error: "You have already backed this project" },
+            { status: 400 }
+          );
+        }
+
+        // Clean up old PENDING pledges + their vault entries (same pattern as DC).
+        const pendingNmiPledges = await db.pledge.findMany({
+          where: {
+            userId: session.user.id,
+            deletedAt: null,
+            projectId: data.projectId,
+            paymentProcessor: "NMI",
+            status: "PENDING",
+          },
+          select: { id: true, nmiCustomerVaultId: true },
+        });
+        if (pendingNmiPledges.length > 0) {
+          const pendingIds = pendingNmiPledges.map((p) => p.id);
+          pledgeLogger.info({ correlationId, pendingIds }, "Cleaning up old PENDING NMI pledges");
+          await db.pledgeAddon.deleteMany({ where: { pledgeId: { in: pendingIds } } });
+          await db.pledge.deleteMany({ where: { id: { in: pendingIds } } });
+          try {
+            const { loadNmiConfig, deleteVaultCustomer } = await import("@/lib/nmi");
+            const cleanupConfig = await loadNmiConfig();
+            if (cleanupConfig) {
+              for (const p of pendingNmiPledges) {
+                if (p.nmiCustomerVaultId) {
+                  await deleteVaultCustomer(cleanupConfig, p.nmiCustomerVaultId).catch(() => null);
+                }
+              }
+            }
+          } catch {
+            /* best-effort */
+          }
+        }
+
+        const rewardAmountValue = reward ? Number(reward.amount) : 0;
+        const rewardAmount = isNaN(rewardAmountValue) ? 0 : rewardAmountValue;
+        const addonIds = addonsWithQuantity.map((a) => a.id);
+        const addonRecords = addonIds.length > 0
+          ? await db.reward.findMany({
+              where: { id: { in: addonIds } },
+              select: { id: true, amount: true },
+            })
+          : [];
+        const addonAmountMap = new Map(addonRecords.map((a) => [a.id, Number(a.amount)]));
+        const addonsAmountValue = addonsWithQuantity.reduce(
+          (sum, a) => sum + (addonAmountMap.get(a.id) || 0) * a.quantity,
+          0
+        );
+        const addonsAmount = isNaN(addonsAmountValue) ? 0 : addonsAmountValue;
+        const shippingAmount = data.shippingAmount || 0;
+
+        const { loadNmiConfig } = await import("@/lib/nmi");
+        const nmiConfig = await loadNmiConfig();
+        if (!nmiConfig?.publicKey) {
+          pledgeLogger.error({ correlationId, projectId: data.projectId }, "PaymentCloud not configured (no public key) but project is NMI");
+          return NextResponse.json(
+            { error: "Payment processor not configured. Please contact support." },
+            { status: 502 }
+          );
+        }
+
+        const pledge = await db.pledge.create({
+          data: {
+            userId: session.user.id,
+            projectId: data.projectId,
+            rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
+            amount: data.amount,
+            rewardAmount,
+            addonsAmount,
+            shippingAmount,
+            status: "PENDING",
+            paymentProcessor: "NMI",
+            chargedImmediately: false,
+            shippingAddress: data.shippingAddress
+              ? (data.shippingAddress as unknown as Record<string, unknown>)
+              : undefined,
+            ...(sourceCampaignId ? { sourceCampaignId } : {}),
+          },
+        });
+
+        if (addonsWithQuantity.length > 0) {
+          await db.pledgeAddon.createMany({
+            data: addonsWithQuantity.map((a) => ({
+              pledgeId: pledge.id,
+              addonId: a.id,
+              quantity: a.quantity,
+              amount: (addonAmountMap.get(a.id) || 0) * a.quantity,
+            })),
+          });
+        }
+
+        metrics.pledgesCreated.inc({ status: "pending", processor: "nmi" });
+        return NextResponse.json({
+          paymentMethod: "NMI",
+          type: "nmi_tokenize",
+          pledgeId: pledge.id,
+          publicKey: nmiConfig.publicKey,
+          isKeepItAll: project.campaignType === "KEEP_IT_ALL",
+          chargedImmediately: false,
+        });
       }
 
       // Whop payment processor

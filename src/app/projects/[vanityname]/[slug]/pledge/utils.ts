@@ -127,6 +127,9 @@ export async function createPledgeForPayment(
   type?: string;
   paypalOrderId?: string;
   whopSessionId?: string;
+  // PaymentCloud (NMI) — public tokenization key for Collect.js
+  publicKey?: string;
+  isKeepItAll?: boolean;
 }> {
   const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
     id,
@@ -160,6 +163,8 @@ export async function createPledgeForPayment(
     type: data.type,
     paypalOrderId: data.paypalOrderId,
     whopSessionId: data.whopSessionId,
+    publicKey: data.publicKey,
+    isKeepItAll: data.isKeepItAll,
   };
 }
 

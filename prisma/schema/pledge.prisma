@@ -38,6 +38,16 @@ model Pledge {
   whopCheckoutId        String?      @unique
   whopPaymentId         String?      @unique  // Whop payment ID for refunds (from payment.succeeded webhook)
 
+  // PaymentCloud (NMI white-label) fields. The Customer Vault token is the
+  // stable handle used to charge the saved card on campaign success
+  // (All-or-Nothing) or to issue refunds. The transaction id is set after
+  // a successful sale; the initial transaction id is the first sale we
+  // ever ran on this vault entry, used for CIT/MIT credential-on-file
+  // chains on subsequent charges (rare for crowdfunding but cheap to keep).
+  nmiCustomerVaultId      String?    @unique
+  nmiInitialTransactionId String?
+  nmiTransactionId        String?    @unique
+
   // Payment retry tracking
   retryCount            Int          @default(0)
   nextRetryAt           DateTime?

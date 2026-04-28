@@ -166,6 +166,8 @@ export default function PledgePage() {
                 whopSessionId={pledge.whopSessionId}
                 whopPlanId={pledge.whopPlanId}
                 whopEnvironment={pledge.whopEnvironment}
+                nmiPublicKey={pledge.nmiPublicKey}
+                nmiIsKeepItAll={pledge.nmiIsKeepItAll}
               />
             )}
           </div>

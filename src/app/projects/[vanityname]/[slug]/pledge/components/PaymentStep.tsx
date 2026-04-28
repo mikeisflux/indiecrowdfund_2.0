@@ -9,6 +9,7 @@ import type { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
 import { PayPalPaymentForm } from "./PayPalPaymentForm";
 import { WhopPaymentForm } from "./WhopPaymentForm";
+import { NmiPaymentForm } from "./NmiPaymentForm";
 import { apiFetch } from "@/lib/fetch-utils";
 
 // Dynamically import the DC/Stripe wrapper so Stripe.js only loads when payment is initiated
@@ -46,6 +47,8 @@ interface PaymentStepProps {
   whopSessionId: string | null;
   whopPlanId: string | null;
   whopEnvironment: "production" | "sandbox";
+  nmiPublicKey: string | null;
+  nmiIsKeepItAll: boolean;
 }
 
 const isEmailVerificationError = (error: string | null) =>
@@ -120,6 +123,8 @@ export function PaymentStep({
   whopSessionId,
   whopPlanId,
   whopEnvironment,
+  nmiPublicKey,
+  nmiIsKeepItAll,
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
@@ -227,8 +232,44 @@ export function PaymentStep({
             </div>
           )} */}
 
-          {/* Payment Form - Whop, PayPal, DivinityCoin, or Stripe */}
-          {project?.paymentProcessor === "WHOP" ? (
+          {/* Payment Form — NMI (PaymentCloud) is the primary processor for
+              new campaigns; Whop / PayPal / DivinityCoin branches stay for
+              existing campaigns that were created before the swap. */}
+          {project?.paymentProcessor === "NMI" ? (
+            nmiPublicKey && currentPledgeId ? (
+              <NmiPaymentForm
+                publicKey={nmiPublicKey}
+                pledgeId={currentPledgeId}
+                isKeepItAll={nmiIsKeepItAll}
+                total={displayTotal}
+                agreedToTerms={agreedToTerms}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            ) : paymentError ? (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    setPaymentError(null);
+                    setIsProcessing(false);
+                  }}
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">Loading PaymentCloud...</p>
+              </div>
+            )
+          ) : project?.paymentProcessor === "WHOP" ? (
             /* Whop Embedded Checkout */
             whopSessionId && whopPlanId && currentPledgeId ? (
               <WhopPaymentForm

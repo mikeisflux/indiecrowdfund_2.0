@@ -5,6 +5,90 @@ const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-fu
 import { db } from "@/lib/db";
 import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
+import { loadNmiConfig, saleByVaultToken } from "@/lib/nmi";
+
+// Charge all PENDING NMI pledges for a project that has hit its goal
+// (or is KIA — though KIA NMI pledges are already charged at pledge
+// time, so this is a no-op for them in practice). Each pledge has a
+// `nmiCustomerVaultId` from the confirm-nmi step, which we hit with
+// `saleByVaultToken` to actually take the money. On success we mark
+// COMPLETED + store the transaction id; on decline we mark FAILED.
+async function captureNmiPendingPledges(projectId: string): Promise<{
+  total: number;
+  successful: number;
+  failed: number;
+}> {
+  const result = { total: 0, successful: 0, failed: 0 };
+  const config = await loadNmiConfig();
+  if (!config) return result;
+
+  const pledges = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      paymentProcessor: "NMI",
+      chargedImmediately: false,
+      deletedAt: null,
+      NOT: { nmiCustomerVaultId: null },
+    },
+    select: {
+      id: true,
+      amount: true,
+      nmiCustomerVaultId: true,
+      project: { select: { title: true } },
+      user: { select: { email: true } },
+    },
+  });
+
+  result.total = pledges.length;
+  for (const p of pledges) {
+    if (!p.nmiCustomerVaultId) continue;
+    try {
+      const sale = await saleByVaultToken(config, {
+        amount: Number(p.amount),
+        customerVaultId: p.nmiCustomerVaultId,
+        orderid: p.id,
+        orderdescription: `Pledge to ${p.project.title}`,
+        email: p.user.email || undefined,
+      });
+      if (sale.response === "1" && sale.transactionid) {
+        await db.pledge.update({
+          where: { id: p.id },
+          data: {
+            status: "COMPLETED",
+            chargedImmediately: true,
+            nmiTransactionId: sale.transactionid,
+            nmiInitialTransactionId: sale.transactionid,
+          },
+        });
+        result.successful++;
+      } else {
+        await db.pledge.update({
+          where: { id: p.id },
+          data: {
+            status: "FAILED",
+            lastFailureReason: sale.responsetext || "PaymentCloud declined",
+          },
+        });
+        result.failed++;
+      }
+    } catch (err) {
+      cronProcessFundedCampaignsLogger.error(
+        { err: err instanceof Error ? err.message : String(err), pledgeId: p.id },
+        "[Cron] NMI charge error"
+      );
+      await db.pledge.update({
+        where: { id: p.id },
+        data: {
+          status: "FAILED",
+          lastFailureReason: err instanceof Error ? err.message : "PaymentCloud error",
+        },
+      }).catch(() => null);
+      result.failed++;
+    }
+  }
+  return result;
+}
 
 /**
  * Sync payment methods from Stripe for pledges that have SetupIntents
@@ -127,13 +211,20 @@ export async function GET(req: NextRequest) {
         currentAmount: true,
         goalAmount: true,
         campaignType: true,
+        paymentProcessor: true,
         _count: {
           select: {
             pledges: {
               where: {
                 status: "PENDING",
                 chargedImmediately: false,
-                NOT: { stripePaymentMethodId: null },
+                // Either a Stripe payment method (legacy/Stripe campaigns)
+                // or a PaymentCloud vault id (NMI campaigns) — anything we
+                // can actually charge.
+                OR: [
+                  { NOT: { stripePaymentMethodId: null } },
+                  { NOT: { nmiCustomerVaultId: null } },
+                ],
               },
             },
           },
@@ -201,7 +292,10 @@ export async function GET(req: NextRequest) {
               where: {
                 status: "PENDING",
                 chargedImmediately: false,
-                NOT: { stripePaymentMethodId: null },
+                OR: [
+                  { NOT: { stripePaymentMethodId: null } },
+                  { NOT: { nmiCustomerVaultId: null } },
+                ],
               },
             },
           },
@@ -215,7 +309,7 @@ export async function GET(req: NextRequest) {
     for (const project of projectsReadyToCharge) {
       try {
         // Only charge via Stripe if Stripe is enabled
-        const pledgeResults = stripeEnabled
+        const stripeResults = stripeEnabled
           ? await processPendingPledgesForProject(project.id)
           : { total: 0, successful: 0, failed: 0 };
 
@@ -223,6 +317,22 @@ export async function GET(req: NextRequest) {
         await captureAuthorizedPaypalPledges(project.id).catch(err =>
           cronProcessFundedCampaignsLogger.error({ err: String(err) }, `[Cron] PayPal capture error for project ${project.id}`)
         );
+
+        // Charge any PENDING PaymentCloud (NMI) vault tokens. AoN campaigns
+        // tokenize at pledge time and defer the actual sale to here.
+        const nmiResults = await captureNmiPendingPledges(project.id).catch((err) => {
+          cronProcessFundedCampaignsLogger.error(
+            { err: String(err) },
+            `[Cron] NMI capture error for project ${project.id}`
+          );
+          return { total: 0, successful: 0, failed: 0 };
+        });
+
+        const pledgeResults = {
+          total: stripeResults.total + nmiResults.total,
+          successful: stripeResults.successful + nmiResults.successful,
+          failed: stripeResults.failed + nmiResults.failed,
+        };
 
         results.processed.push({
           projectId: project.id,
