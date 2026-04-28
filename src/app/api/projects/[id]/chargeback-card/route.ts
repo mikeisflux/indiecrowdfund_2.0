@@ -272,15 +272,18 @@ export async function POST(
       "Chargeback card saved (PaymentCloud vault)"
     );
 
-    // Tear down any prior vault entry on this row so we don't orphan
-    // the previous saved card in PaymentCloud's vault.
+    // Note the prior vault entry (if any) BEFORE we upsert so we can
+    // delete it AFTER the new row is committed. Doing it in this order
+    // means a failed upsert never leaves the row pointing at a
+    // deleted vault entry.
     const existing = await db.creatorChargebackCard.findUnique({
       where: { projectId },
       select: { nmiCustomerVaultId: true },
     });
-    if (existing?.nmiCustomerVaultId && existing.nmiCustomerVaultId !== customerVaultId) {
-      await deleteVaultCustomer(nmiConfig, existing.nmiCustomerVaultId).catch(() => null);
-    }
+    const priorVaultId =
+      existing?.nmiCustomerVaultId && existing.nmiCustomerVaultId !== customerVaultId
+        ? existing.nmiCustomerVaultId
+        : null;
 
     await db.creatorChargebackCard.upsert({
       where: { projectId },
@@ -312,6 +315,13 @@ export async function POST(
         expYear,
       },
     });
+
+    // Best-effort vault cleanup of the prior saved card now that the
+    // new one is committed. A failure here only leaves an orphan in
+    // PaymentCloud's vault — no creator-visible breakage.
+    if (priorVaultId) {
+      await deleteVaultCustomer(nmiConfig, priorVaultId).catch(() => null);
+    }
 
     return NextResponse.json({
       success: true,

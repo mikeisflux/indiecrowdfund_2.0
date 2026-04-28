@@ -403,6 +403,13 @@ export async function POST(req: NextRequest) {
       // No card data ever touches our server — the PAN goes straight
       // from Collect.js into PaymentCloud's vault.
       if (project.paymentProcessor === "NMI") {
+        // Note: a double-tapped "Back this project" can race two NMI
+        // pledge creates for the same (userId, projectId). The vault
+        // step in confirm-nmi is CAS-guarded so we never double-charge
+        // or double-vault the user's actual card; the worst case from
+        // the race is two empty PENDING rows with no vault attached,
+        // which the next cleanup-of-stale-PENDING step deletes. Same
+        // shape as the DC/PayPal/Whop branches above.
         const completedNmiPledge = await db.pledge.findFirst({
           where: {
             userId: session.user.id,

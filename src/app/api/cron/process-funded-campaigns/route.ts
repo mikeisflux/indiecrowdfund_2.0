@@ -7,12 +7,17 @@ import { processPendingPledgesForProject, getStripeInstance } from "@/lib/paymen
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import { loadNmiConfig, saleByVaultToken } from "@/lib/nmi";
 
-// Charge all PENDING NMI pledges for a project that has hit its goal
-// (or is KIA — though KIA NMI pledges are already charged at pledge
-// time, so this is a no-op for them in practice). Each pledge has a
-// `nmiCustomerVaultId` from the confirm-nmi step, which we hit with
-// `saleByVaultToken` to actually take the money. On success we mark
-// COMPLETED + store the transaction id; on decline we mark FAILED.
+// Charge all PENDING NMI pledges for a project that has hit its goal.
+// Pattern is claim-then-process to avoid double-charges if two cron
+// runs overlap (the schedule is every 5 minutes; one slow run can
+// still be in flight when the next fires):
+//   1. CAS-flip chargedImmediately false→true while still PENDING.
+//      Only the request that wins the CAS owns this pledge for this
+//      cycle; concurrent runs see chargedImmediately=true and skip.
+//   2. Run the sale with the won pledge.
+//   3. On success → mark COMPLETED with the transaction id.
+//      On decline → mark FAILED + restore chargedImmediately=false so
+//      a future cron / admin retry can try again with a different card.
 async function captureNmiPendingPledges(projectId: string): Promise<{
   total: number;
   successful: number;
@@ -43,6 +48,28 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
   result.total = pledges.length;
   for (const p of pledges) {
     if (!p.nmiCustomerVaultId) continue;
+
+    // Atomic claim. If a concurrent worker already flipped
+    // chargedImmediately to true (or the pledge already has a
+    // transaction id), we skip — they own the charge.
+    const claimed = await db.pledge.updateMany({
+      where: {
+        id: p.id,
+        status: "PENDING",
+        chargedImmediately: false,
+        nmiTransactionId: null,
+        deletedAt: null,
+      },
+      data: { chargedImmediately: true },
+    });
+    if (claimed.count === 0) {
+      cronProcessFundedCampaignsLogger.info(
+        { pledgeId: p.id },
+        "[Cron] NMI pledge already claimed by a concurrent worker; skipping"
+      );
+      continue;
+    }
+
     try {
       const sale = await saleByVaultToken(config, {
         amount: Number(p.amount),
@@ -56,17 +83,19 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
           where: { id: p.id },
           data: {
             status: "COMPLETED",
-            chargedImmediately: true,
             nmiTransactionId: sale.transactionid,
             nmiInitialTransactionId: sale.transactionid,
           },
         });
         result.successful++;
       } else {
+        // Decline: mark FAILED and roll back chargedImmediately so a
+        // future retry (manual or scheduled) can try again.
         await db.pledge.update({
           where: { id: p.id },
           data: {
             status: "FAILED",
+            chargedImmediately: false,
             lastFailureReason: sale.responsetext || "PaymentCloud declined",
           },
         });
@@ -77,13 +106,15 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
         { err: err instanceof Error ? err.message : String(err), pledgeId: p.id },
         "[Cron] NMI charge error"
       );
-      await db.pledge.update({
-        where: { id: p.id },
-        data: {
-          status: "FAILED",
-          lastFailureReason: err instanceof Error ? err.message : "PaymentCloud error",
-        },
-      }).catch(() => null);
+      // Network/HTTP error — uncertain whether NMI captured. Don't
+      // mark FAILED (they might have actually charged); roll back the
+      // claim so the next cron cycle can retry with the same card.
+      await db.pledge
+        .updateMany({
+          where: { id: p.id, status: "PENDING", nmiTransactionId: null },
+          data: { chargedImmediately: false },
+        })
+        .catch(() => null);
       result.failed++;
     }
   }

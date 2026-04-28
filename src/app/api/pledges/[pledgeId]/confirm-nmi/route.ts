@@ -145,10 +145,38 @@ export async function POST(
       );
     }
     const customerVaultId = vaultResp.customer_vault_id;
-    await db.pledge.update({
-      where: { id: pledge.id },
+
+    // CAS-update: only attach this vault id if the pledge is still
+    // PENDING with a null vault id. If the user double-tapped or two
+    // network retries reached the server in parallel, the second one
+    // loses this guard and we delete the vault entry it just created
+    // so we don't leak orphans inside PaymentCloud's vault.
+    const claimed = await db.pledge.updateMany({
+      where: {
+        id: pledge.id,
+        status: "PENDING",
+        nmiCustomerVaultId: null,
+        deletedAt: null,
+      },
       data: { nmiCustomerVaultId: customerVaultId },
     });
+    if (claimed.count === 0) {
+      // Lost the race — another request already saved a vault entry
+      // for this pledge. Tear down the duplicate vault we just created
+      // and report success so the client doesn't see a confusing error.
+      await deleteVaultCustomer(nmiConfig, customerVaultId).catch(() => null);
+      const fresh = await db.pledge.findUnique({
+        where: { id: pledge.id },
+        select: { status: true, chargedImmediately: true },
+      });
+      return NextResponse.json({
+        ok: true,
+        pledgeId: pledge.id,
+        chargedImmediately: !!fresh?.chargedImmediately,
+        status: fresh?.status ?? "PENDING",
+        alreadyConfirmed: true,
+      });
+    }
 
     const isKeepItAll = pledge.project.campaignType === "KEEP_IT_ALL";
     if (!isKeepItAll) {
@@ -158,6 +186,37 @@ export async function POST(
         pledgeId: pledge.id,
         chargedImmediately: false,
         status: "PENDING",
+      });
+    }
+
+    // KIA: claim the COMPLETED transition before running the sale so
+    // a duplicate concurrent confirm-nmi can't sell the same vault
+    // twice. We flip chargedImmediately=true while still PENDING; the
+    // sale call below either flips to COMPLETED on success or rolls
+    // back chargedImmediately=false on decline.
+    const charging = await db.pledge.updateMany({
+      where: {
+        id: pledge.id,
+        status: "PENDING",
+        chargedImmediately: false,
+        nmiTransactionId: null,
+        deletedAt: null,
+      },
+      data: { chargedImmediately: true },
+    });
+    if (charging.count === 0) {
+      // Another request beat us to the charge — return whatever the
+      // pledge looks like now so the client can move on.
+      const fresh = await db.pledge.findUnique({
+        where: { id: pledge.id },
+        select: { status: true, chargedImmediately: true },
+      });
+      return NextResponse.json({
+        ok: true,
+        pledgeId: pledge.id,
+        chargedImmediately: !!fresh?.chargedImmediately,
+        status: fresh?.status ?? "PENDING",
+        alreadyConfirmed: true,
       });
     }
 
@@ -175,8 +234,13 @@ export async function POST(
         { pledgeId, err: err instanceof Error ? err.message : String(err) },
         "PaymentCloud KIA sale error"
       );
-      // Card got vaulted but charge failed; vault id stays so user can retry
-      // via support without re-entering the card. Pledge stays PENDING.
+      // Roll back the chargedImmediately claim so a retry can run.
+      await db.pledge
+        .updateMany({
+          where: { id: pledge.id, status: "PENDING", chargedImmediately: true, nmiTransactionId: null },
+          data: { chargedImmediately: false },
+        })
+        .catch(() => null);
       return NextResponse.json(
         { error: "Failed to charge card. Please try again or contact support." },
         { status: 502 }
@@ -185,11 +249,11 @@ export async function POST(
 
     if (saleResp.response !== "1" || !saleResp.transactionid) {
       // Decline — clean up the vault entry so the user can retry with a
-      // different card without leaking saved cards.
+      // different card without leaking saved cards. Roll back the claim.
       await deleteVaultCustomer(nmiConfig, customerVaultId).catch(() => null);
-      await db.pledge.update({
-        where: { id: pledge.id },
-        data: { nmiCustomerVaultId: null },
+      await db.pledge.updateMany({
+        where: { id: pledge.id, status: "PENDING", chargedImmediately: true, nmiTransactionId: null },
+        data: { chargedImmediately: false, nmiCustomerVaultId: null },
       });
       return NextResponse.json(
         { error: saleResp.responsetext || "Card was declined. Please try a different card." },
@@ -201,7 +265,6 @@ export async function POST(
       where: { id: pledge.id },
       data: {
         status: "COMPLETED",
-        chargedImmediately: true,
         nmiTransactionId: saleResp.transactionid,
         nmiInitialTransactionId: saleResp.transactionid,
       },
