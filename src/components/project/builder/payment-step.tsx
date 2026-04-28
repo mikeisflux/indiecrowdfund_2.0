@@ -292,30 +292,40 @@ export function PaymentStep() {
   const goalAmount = Number(basics.goalAmount) || 10000;
   const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
 
-  // If adult/risky content is selected, Stripe is NOT allowed (PayPal/DivinityCoin/Whop are all fine)
+  // If adult/risky content is selected, PayPal is NOT allowed (DivinityCoin,
+  // Whop, and PaymentCloud are all fine). PayPal flags adult content during
+  // their KYC review, so we steer creators away from it up front.
   const mustUseAltProcessor = payment.hasAdultContent || payment.hasRiskyContent;
 
   const campaignType = payment.campaignType || "ALL_OR_NOTHING";
   const isLaunched = ["LIVE", "FUNDED", "FAILED", "CANCELLED"].includes(projectStatus || "");
 
-  // Auto-switch away from Stripe/PayPal if adult/controversial content is selected (DivinityCoin and Whop only)
+  // Auto-switch away from PayPal/Stripe if adult/controversial content is
+  // selected. Default the new pick to PaymentCloud (NMI) since it supports
+  // both AoN and KIA — the previous behavior forced DivinityCoin which is
+  // also fine, but PaymentCloud is the new primary high-risk processor.
   useEffect(() => {
-    if (mustUseAltProcessor && payment.paymentProcessor !== "DIVINITYCOIN" && payment.paymentProcessor !== "WHOP") {
-      updatePayment({ paymentProcessor: "DIVINITYCOIN" });
+    if (
+      mustUseAltProcessor &&
+      payment.paymentProcessor !== "DIVINITYCOIN" &&
+      payment.paymentProcessor !== "WHOP" &&
+      payment.paymentProcessor !== "NMI"
+    ) {
+      updatePayment({ paymentProcessor: "NMI" });
     }
   }, [mustUseAltProcessor, payment.paymentProcessor, updatePayment]);
 
-  // Auto-switch to KEEP_IT_ALL if NSFW content is selected (DivinityCoin/Whop don't support holds)
-  useEffect(() => {
-    if (mustUseAltProcessor && payment.campaignType !== "KEEP_IT_ALL") {
-      updatePayment({ campaignType: "KEEP_IT_ALL" });
-    }
-  }, [mustUseAltProcessor, payment.campaignType, updatePayment]);
+  // PaymentCloud + DivinityCoin both support All-or-Nothing for NSFW content
+  // via tokenize-and-charge-later. The old "NSFW must be KEEP_IT_ALL" rule
+  // only existed because Whop is the one NSFW processor that can't hold
+  // authorizations — that constraint now lives on the Whop card itself, not
+  // on NSFW projects globally.
 
-  // Auto-switch away from Whop if campaign type changes to ALL_OR_NOTHING
+  // Auto-switch away from Whop if campaign type changes to ALL_OR_NOTHING.
+  // Default to PaymentCloud for NSFW (was DivinityCoin), PayPal for SFW.
   useEffect(() => {
     if (payment.campaignType === "ALL_OR_NOTHING" && payment.paymentProcessor === "WHOP") {
-      updatePayment({ paymentProcessor: mustUseAltProcessor ? "DIVINITYCOIN" : "PAYPAL" });
+      updatePayment({ paymentProcessor: mustUseAltProcessor ? "NMI" : "PAYPAL" });
     }
   }, [payment.campaignType, payment.paymentProcessor, mustUseAltProcessor, updatePayment]);
 
@@ -338,6 +348,15 @@ export function PaymentStep() {
   const whopFee = goalAmount * 0.03;
   const whopTotalFees = whopFee + platformFee;
   const whopNetAmount = goalAmount - whopTotalFees;
+
+  // PaymentCloud (NMI white-label): 4% + $0.25 per transaction.
+  // Platform fee is taken on the remainder after processor fees.
+  const paymentCloudFee = goalAmount * 0.04;
+  const paymentCloudPerTxnFee = numTransactions * 0.25;
+  const paymentCloudPlatformFee = (goalAmount - paymentCloudFee - paymentCloudPerTxnFee) * 0.03;
+  const paymentCloudTotalFees =
+    paymentCloudFee + paymentCloudPerTxnFee + paymentCloudPlatformFee;
+  const paymentCloudNetAmount = goalAmount - paymentCloudTotalFees;
 
   // Stripe Connect handlers - DISABLED: Stripe replaced by PayPal
   // const handleConnectStripe = async () => { ... };
@@ -422,6 +441,10 @@ export function PaymentStep() {
         whopFee={whopFee}
         whopTotalFees={whopTotalFees}
         whopNetAmount={whopNetAmount}
+        paymentCloudFee={paymentCloudFee}
+        paymentCloudPerTxnFee={paymentCloudPerTxnFee}
+        paymentCloudTotalFees={paymentCloudTotalFees}
+        paymentCloudNetAmount={paymentCloudNetAmount}
       />
 
       <Separator />

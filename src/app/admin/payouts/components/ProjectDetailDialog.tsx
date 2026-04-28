@@ -154,14 +154,34 @@ export function ProjectDetailDialog({
                       </div>
                     </>
                   )}
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>DivinityCoin Partner Fee (3% + $0.30/txn)</span>
-                    <span className="text-red-500">-{formatCurrency(selectedProject.processorFee)}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Per-Transaction Fee ({selectedProject.backerCount} × $0.30)</span>
-                    <span className="text-red-500">-{formatCurrency(selectedProject.perTransactionFee)}</span>
-                  </div>
+                  {(() => {
+                    const proc = selectedProject.paymentProcessor;
+                    const label =
+                      proc === "DIVINITYCOIN" ? "DivinityCoin Partner Fee (3%)"
+                      : proc === "WHOP" ? "Whop Processing Fee (~3%)"
+                      : proc === "NMI" ? "PaymentCloud Processing Fee (4%)"
+                      : proc === "PAYPAL" ? "PayPal Processing Fee (3.49%)"
+                      : "Processor Fee";
+                    const perTxnRate =
+                      proc === "DIVINITYCOIN" ? 0.30
+                      : proc === "NMI" ? 0.25
+                      : proc === "PAYPAL" ? 0.49
+                      : 0;
+                    return (
+                      <>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>{label}</span>
+                          <span className="text-red-500">-{formatCurrency(selectedProject.processorFee)}</span>
+                        </div>
+                        {perTxnRate > 0 && (
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Per-Transaction Fee ({selectedProject.backerCount} × ${perTxnRate.toFixed(2)})</span>
+                            <span className="text-red-500">-{formatCurrency(selectedProject.perTransactionFee)}</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                   <div className="flex justify-between text-muted-foreground">
                     <span>Platform Fee (3%)</span>
                     <span className="text-red-500">-{formatCurrency(selectedProject.platformFee)}</span>

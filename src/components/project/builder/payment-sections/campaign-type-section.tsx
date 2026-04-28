@@ -2,19 +2,20 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, Target, Zap, AlertTriangle } from "lucide-react";
+import { CheckCircle, Target, Zap } from "lucide-react";
 
 interface CampaignTypeSectionProps {
   campaignType: "ALL_OR_NOTHING" | "KEEP_IT_ALL";
   onSelect: (type: "ALL_OR_NOTHING" | "KEEP_IT_ALL") => void;
-  mustUseAltProcessor: boolean;
+  // Kept for back-compat with the parent — no longer used to gate the
+  // campaign type since PaymentCloud + DivinityCoin both support
+  // tokenize-and-charge-on-success for NSFW All-or-Nothing.
+  mustUseAltProcessor?: boolean;
 }
 
 export function CampaignTypeSection({
   campaignType,
   onSelect,
-  mustUseAltProcessor,
 }: CampaignTypeSectionProps) {
   return (
     <div className="space-y-4">
@@ -54,7 +55,7 @@ export function CampaignTypeSection({
             <ul className="space-y-1 text-xs text-muted-foreground">
               <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Builds backer trust — zero risk to them</li>
               <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Creates urgency and momentum</li>
-              <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Compatible with PayPal & DivinityCoin</li>
+              <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Compatible with PayPal, PaymentCloud & DivinityCoin</li>
               <li className="flex items-center gap-1.5"><span className="text-amber-500">!</span> Funds held until goal is reached</li>
             </ul>
           </CardContent>
@@ -66,7 +67,7 @@ export function CampaignTypeSection({
             campaignType === "KEEP_IT_ALL"
               ? "border-2 border-primary shadow-md"
               : "border hover:border-muted-foreground/50"
-          } ${mustUseAltProcessor ? "opacity-75" : ""}`}
+          }`}
           onClick={() => onSelect("KEEP_IT_ALL")}
         >
           <CardContent className="p-5">
@@ -75,9 +76,6 @@ export function CampaignTypeSection({
                 <Zap className="h-5 w-5 text-white" />
               </div>
               <div className="flex items-center gap-2">
-                {mustUseAltProcessor && (
-                  <Badge variant="default" className="bg-amber-500 text-white text-xs">Required for NSFW</Badge>
-                )}
                 {campaignType === "KEEP_IT_ALL" && (
                   <CheckCircle className="h-5 w-5 text-primary" />
                 )}
@@ -90,21 +88,11 @@ export function CampaignTypeSection({
             <ul className="space-y-1 text-xs text-muted-foreground">
               <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Guaranteed revenue from every backer</li>
               <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Immediate payment collection</li>
-              <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Compatible with PayPal, DivinityCoin & Whop</li>
-              <li className="flex items-center gap-1.5"><span className="text-amber-500">!</span> Required for NSFW/adult content projects</li>
+              <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Compatible with all four processors</li>
             </ul>
           </CardContent>
         </Card>
       </div>
-
-      {mustUseAltProcessor && campaignType === "ALL_OR_NOTHING" && (
-        <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800 dark:text-amber-300">
-            <strong>Note:</strong> Projects with adult or controversial content require <strong>Keep It All</strong> campaign style. Payment processors that support NSFW content (DivinityCoin and Whop) process payments immediately and cannot hold authorizations like standard processors.
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }

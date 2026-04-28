@@ -36,6 +36,12 @@ export interface PaymentProcessorSectionProps {
   whopFee: number;
   whopTotalFees: number;
   whopNetAmount: number;
+  // PaymentCloud-specific (4% + $0.25/txn — NMI white-label, NSFW friendly,
+  // supports both AoN and KIA via vault tokenize/charge-on-success)
+  paymentCloudFee: number;
+  paymentCloudPerTxnFee: number;
+  paymentCloudTotalFees: number;
+  paymentCloudNetAmount: number;
 }
 
 export interface StripeConnectSectionProps {

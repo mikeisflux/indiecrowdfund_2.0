@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Check, ExternalLink, AlertTriangle, CheckCircle, Banknote, Wallet, ShoppingBag } from "lucide-react";
+import { Check, ExternalLink, AlertTriangle, CheckCircle, Banknote, Wallet, ShoppingBag, Cloud } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { PaymentProcessorSectionProps } from "./types";
 
@@ -22,6 +22,10 @@ export function PaymentProcessorSection({
   whopFee,
   whopTotalFees,
   whopNetAmount,
+  paymentCloudFee,
+  paymentCloudPerTxnFee,
+  paymentCloudTotalFees,
+  paymentCloudNetAmount,
 }: PaymentProcessorSectionProps) {
   return (
     <div className="space-y-4">
@@ -45,16 +49,16 @@ export function PaymentProcessorSection({
       {mustUseAltProcessor && (
         <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
           <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
-          <AlertTitle>Alternative Processor Required</AlertTitle>
+          <AlertTitle>NSFW-Friendly Processor Required</AlertTitle>
           <AlertDescription>
-            Projects with adult or controversial content must use DivinityCoin or Whop for payment processing.
-            Stripe and PayPal do not process payments for this type of content.
+            Projects with adult or controversial content must use PaymentCloud, DivinityCoin, or Whop.
+            PayPal does not process payments for this type of content.
           </AlertDescription>
         </Alert>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* PayPal Option — first / recommended */}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {/* PayPal Option — first / recommended for SFW */}
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "PAYPAL" ? "border-2 border-primary" : "border"
@@ -95,6 +99,50 @@ export function PaymentProcessorSection({
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
                 <span>Inline Advanced Checkout form</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* PaymentCloud Option — NMI white-label, NSFW-friendly, supports AoN + KIA */}
+        <Card
+          className={`cursor-pointer transition-all ${
+            payment.paymentProcessor === "NMI" ? "border-2 border-primary" : "border"
+          } ${isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={() => !isLaunched && updatePayment({ paymentProcessor: "NMI" })}
+        >
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center">
+                  <Cloud className="h-5 w-5 text-white" />
+                </div>
+                PaymentCloud
+                {mustUseAltProcessor && (
+                  <Badge variant="default" className="ml-2 bg-sky-600">NSFW Friendly</Badge>
+                )}
+              </CardTitle>
+              {payment.paymentProcessor === "NMI" && (
+                <CheckCircle className="h-5 w-5 text-primary" />
+              )}
+            </div>
+            <CardDescription>
+              High-risk friendly merchant — supports all content types and both campaign styles
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
+                <span>~7.5% total fees (4% + $0.25/txn + 3% platform)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
+                <span>Cards tokenized in browser via Collect.js</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
+                <span>Both All or Nothing & Keep It All</span>
               </div>
             </div>
           </CardContent>
@@ -309,6 +357,39 @@ export function PaymentProcessorSection({
             <div className="flex justify-between font-semibold text-lg">
               <span>You receive</span>
               <span className="text-green-600">{formatCurrency(paypalNetAmount)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {payment.paymentProcessor === "NMI" && (
+        <div className="rounded-lg bg-muted/50 p-4 border">
+          <h4 className="font-medium mb-3">
+            PaymentCloud Fee Breakdown for {formatCurrency(goalAmount)} Goal
+          </h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>PaymentCloud processing (4%)</span>
+              <span className="font-medium">{formatCurrency(paymentCloudFee)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Per-transaction fee ($0.25/txn)</span>
+              <span className="font-medium">{formatCurrency(paymentCloudPerTxnFee)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Platform fee (3% of net)</span>
+              <span className="font-medium">
+                {formatCurrency(paymentCloudTotalFees - paymentCloudFee - paymentCloudPerTxnFee)}
+              </span>
+            </div>
+            <Separator className="my-2" />
+            <div className="flex justify-between font-semibold">
+              <span>Total fees</span>
+              <span className="text-amber-600">{formatCurrency(paymentCloudTotalFees)}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-lg">
+              <span>You receive</span>
+              <span className="text-green-600">{formatCurrency(paymentCloudNetAmount)}</span>
             </div>
           </div>
         </div>

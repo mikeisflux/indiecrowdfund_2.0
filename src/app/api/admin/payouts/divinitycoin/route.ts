@@ -41,13 +41,15 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const status = searchParams.get("status"); // pending, settled, processing, all
 
-    // Build where clause for DivinityCoin projects only
-    // Stripe projects use Stripe Connect - payouts are automatic
-    // Include FUNDED/FAILED projects AND LIVE projects that ended with goal met
-    // (safety net for before the cron transitions status)
+    // Build where clause for manually-settled processors (DivinityCoin +
+    // PaymentCloud). PayPal/Whop have their own dedicated tabs/endpoints
+    // because they have different settlement flows. Stripe-Connect-based
+    // legacy projects pay out automatically and don't appear here.
+    // Include FUNDED/FAILED projects AND LIVE projects that ended with
+    // goal met (safety net for before the cron transitions status).
     const now = new Date();
     const where: Record<string, unknown> = {
-      paymentProcessor: "DIVINITYCOIN",
+      paymentProcessor: { in: ["DIVINITYCOIN", "NMI"] },
       deletedAt: null,
       OR: [
         { status: { in: ["FUNDED", "FAILED"] } },
@@ -267,11 +269,14 @@ export async function GET(request: NextRequest) {
       // (Full refunds are already excluded since pledge status is REFUNDED)
       const effectiveRevenue = Math.round((totalRaised - projectRefunds.partialRefundTotal) * 100) / 100;
 
-      // DivinityCoin Partner Fee: 3% (fixed by DC agreement)
-      // IndieCrowdfund Platform Fee: from platformSettings
-      const partnerFeeRate = 0.03;
+      // Processor-specific fees:
+      //   DivinityCoin: 3% partner + $0.30/txn
+      //   PaymentCloud (NMI white-label): 4% + $0.25/txn
+      // IndieCrowdfund Platform Fee: from platformSettings (default 3%)
+      const isNmi = project.paymentProcessor === "NMI";
+      const partnerFeeRate = isNmi ? 0.04 : 0.03;
+      const perTransactionRate = isNmi ? 0.25 : 0.30;
       const platformFeeRate = configuredPlatformFeeRate;
-      const perTransactionRate = 0.30;
       const backerCount = project.pledges.length;
       const processorFee = Math.round(effectiveRevenue * partnerFeeRate * 100) / 100;
       const perTransactionFee = Math.round(perTransactionRate * backerCount * 100) / 100;
@@ -308,7 +313,7 @@ export async function GET(request: NextRequest) {
         slug: project.slug,
         imageUrl: project.imageUrl,
         status: project.status,
-        paymentProcessor: "DIVINITYCOIN",
+        paymentProcessor: project.paymentProcessor,
         fundedAt: project.fundedAt,
         totalRaised,
         effectiveRevenue,
@@ -573,9 +578,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (project.paymentProcessor !== "DIVINITYCOIN") {
+    if (project.paymentProcessor !== "DIVINITYCOIN" && project.paymentProcessor !== "NMI") {
       return NextResponse.json(
-        { error: "This endpoint only handles DivinityCoin project payouts. Stripe projects use Stripe Connect." },
+        { error: "This endpoint only handles DivinityCoin and PaymentCloud project payouts." },
         { status: 400 }
       );
     }
@@ -605,7 +610,11 @@ export async function POST(request: NextRequest) {
       select: { platformFee: true },
     });
     const payoutPlatformFeeRate = payoutPlatformSettings?.platformFee ? Number(payoutPlatformSettings.platformFee) / 100 : 0.03;
-    const partnerFee = Math.round(grossAmount * 0.03 * 100) / 100; // DC partner fee is fixed at 3%
+    // Processor-specific partner/processing rate. DC = 3% flat; PaymentCloud = 4% flat.
+    // (per-transaction fees are not duplicated into the settlement-record breakdown
+    // here — that's already netted into amountOwed by the GET projection above.)
+    const isNmiPayout = project.paymentProcessor === "NMI";
+    const partnerFee = Math.round(grossAmount * (isNmiPayout ? 0.04 : 0.03) * 100) / 100;
     const platformFee = Math.round(grossAmount * payoutPlatformFeeRate * 100) / 100;
 
     // Create the DivinityCoin settlement record as COMPLETED.
