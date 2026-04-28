@@ -402,61 +402,31 @@ export async function POST(req: NextRequest) {
       //      Vault, optionally charges (KIA), updates pledge.
       // No card data ever touches our server — the PAN goes straight
       // from Collect.js into PaymentCloud's vault.
+      //
+      // Concurrency: the read-modify-write below is wrapped in a Postgres
+      // transaction with a (userId, projectId)-keyed advisory lock so
+      // concurrent "Back this project" double-clicks serialize and
+      // produce exactly one PENDING pledge. External calls (NMI vault
+      // cleanup) happen AFTER commit so we don't hold the lock across
+      // a network round-trip.
       if (project.paymentProcessor === "NMI") {
-        // Note: a double-tapped "Back this project" can race two NMI
-        // pledge creates for the same (userId, projectId). The vault
-        // step in confirm-nmi is CAS-guarded so we never double-charge
-        // or double-vault the user's actual card; the worst case from
-        // the race is two empty PENDING rows with no vault attached,
-        // which the next cleanup-of-stale-PENDING step deletes. Same
-        // shape as the DC/PayPal/Whop branches above.
-        const completedNmiPledge = await db.pledge.findFirst({
-          where: {
-            userId: session.user.id,
-            deletedAt: null,
-            projectId: data.projectId,
-            paymentProcessor: "NMI",
-            status: "COMPLETED",
-          },
-        });
-        if (completedNmiPledge) {
+        // Load NMI config OUTSIDE the lock — it only reads
+        // platformSettings and doesn't need transactional consistency
+        // with the pledge create. Fail fast if not configured.
+        const { loadNmiConfig, deleteVaultCustomer } = await import("@/lib/nmi");
+        const nmiConfig = await loadNmiConfig();
+        if (!nmiConfig?.publicKey) {
+          pledgeLogger.error(
+            { correlationId, projectId: data.projectId },
+            "PaymentCloud not configured (no public key) but project is NMI"
+          );
           return NextResponse.json(
-            { error: "You have already backed this project" },
-            { status: 400 }
+            { error: "Payment processor not configured. Please contact support." },
+            { status: 502 }
           );
         }
 
-        // Clean up old PENDING pledges + their vault entries (same pattern as DC).
-        const pendingNmiPledges = await db.pledge.findMany({
-          where: {
-            userId: session.user.id,
-            deletedAt: null,
-            projectId: data.projectId,
-            paymentProcessor: "NMI",
-            status: "PENDING",
-          },
-          select: { id: true, nmiCustomerVaultId: true },
-        });
-        if (pendingNmiPledges.length > 0) {
-          const pendingIds = pendingNmiPledges.map((p) => p.id);
-          pledgeLogger.info({ correlationId, pendingIds }, "Cleaning up old PENDING NMI pledges");
-          await db.pledgeAddon.deleteMany({ where: { pledgeId: { in: pendingIds } } });
-          await db.pledge.deleteMany({ where: { id: { in: pendingIds } } });
-          try {
-            const { loadNmiConfig, deleteVaultCustomer } = await import("@/lib/nmi");
-            const cleanupConfig = await loadNmiConfig();
-            if (cleanupConfig) {
-              for (const p of pendingNmiPledges) {
-                if (p.nmiCustomerVaultId) {
-                  await deleteVaultCustomer(cleanupConfig, p.nmiCustomerVaultId).catch(() => null);
-                }
-              }
-            }
-          } catch {
-            /* best-effort */
-          }
-        }
-
+        // Pre-compute reward + addon amounts (read-only, no races).
         const rewardAmountValue = reward ? Number(reward.amount) : 0;
         const rewardAmount = isNaN(rewardAmountValue) ? 0 : rewardAmountValue;
         const addonIds = addonsWithQuantity.map((a) => a.id);
@@ -474,51 +444,129 @@ export async function POST(req: NextRequest) {
         const addonsAmount = isNaN(addonsAmountValue) ? 0 : addonsAmountValue;
         const shippingAmount = data.shippingAmount || 0;
 
-        const { loadNmiConfig } = await import("@/lib/nmi");
-        const nmiConfig = await loadNmiConfig();
-        if (!nmiConfig?.publicKey) {
-          pledgeLogger.error({ correlationId, projectId: data.projectId }, "PaymentCloud not configured (no public key) but project is NMI");
+        // Sentinel error type so the transaction can short-circuit with
+        // a typed message that we surface to the client. Throwing any
+        // other error type rolls the transaction back as a 500.
+        type NmiCreateOutcome =
+          | { kind: "completed_already" }
+          | {
+              kind: "ok";
+              pledgeId: string;
+              orphanedVaultIds: string[];
+            };
+
+        let outcome: NmiCreateOutcome;
+        try {
+          outcome = await db.$transaction<NmiCreateOutcome>(async (tx) => {
+            // Serialize concurrent NMI pledge creates from the same
+            // (userId, projectId). Lock is auto-released on commit/rollback.
+            const lockKey = `nmi-pledge-${session.user.id}-${data.projectId}`;
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+
+            const completed = await tx.pledge.findFirst({
+              where: {
+                userId: session.user.id,
+                deletedAt: null,
+                projectId: data.projectId,
+                paymentProcessor: "NMI",
+                status: "COMPLETED",
+              },
+              select: { id: true },
+            });
+            if (completed) return { kind: "completed_already" };
+
+            // Atomically delete any PENDING rows for this user/project
+            // and capture their vault ids for cleanup-after-commit.
+            const pendingRows = await tx.pledge.findMany({
+              where: {
+                userId: session.user.id,
+                deletedAt: null,
+                projectId: data.projectId,
+                paymentProcessor: "NMI",
+                status: "PENDING",
+              },
+              select: { id: true, nmiCustomerVaultId: true },
+            });
+            const orphanedVaultIds = pendingRows
+              .map((p) => p.nmiCustomerVaultId)
+              .filter((v): v is string => !!v);
+            if (pendingRows.length > 0) {
+              const pendingIds = pendingRows.map((p) => p.id);
+              await tx.pledgeAddon.deleteMany({ where: { pledgeId: { in: pendingIds } } });
+              await tx.pledge.deleteMany({ where: { id: { in: pendingIds } } });
+            }
+
+            const created = await tx.pledge.create({
+              data: {
+                userId: session.user.id,
+                projectId: data.projectId,
+                rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
+                amount: data.amount,
+                rewardAmount,
+                addonsAmount,
+                shippingAmount,
+                status: "PENDING",
+                paymentProcessor: "NMI",
+                chargedImmediately: false,
+                shippingAddress: data.shippingAddress
+                  ? (data.shippingAddress as unknown as Record<string, unknown>)
+                  : undefined,
+                ...(sourceCampaignId ? { sourceCampaignId } : {}),
+              },
+              select: { id: true },
+            });
+
+            if (addonsWithQuantity.length > 0) {
+              await tx.pledgeAddon.createMany({
+                data: addonsWithQuantity.map((a) => ({
+                  pledgeId: created.id,
+                  addonId: a.id,
+                  quantity: a.quantity,
+                  amount: (addonAmountMap.get(a.id) || 0) * a.quantity,
+                })),
+              });
+            }
+
+            return { kind: "ok", pledgeId: created.id, orphanedVaultIds };
+          });
+        } catch (err) {
+          pledgeLogger.error(
+            { correlationId, err: err instanceof Error ? err.message : String(err) },
+            "NMI pledge create transaction error"
+          );
           return NextResponse.json(
-            { error: "Payment processor not configured. Please contact support." },
-            { status: 502 }
+            { error: "Failed to create pledge. Please try again." },
+            { status: 500 }
           );
         }
 
-        const pledge = await db.pledge.create({
-          data: {
-            userId: session.user.id,
-            projectId: data.projectId,
-            rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
-            amount: data.amount,
-            rewardAmount,
-            addonsAmount,
-            shippingAmount,
-            status: "PENDING",
-            paymentProcessor: "NMI",
-            chargedImmediately: false,
-            shippingAddress: data.shippingAddress
-              ? (data.shippingAddress as unknown as Record<string, unknown>)
-              : undefined,
-            ...(sourceCampaignId ? { sourceCampaignId } : {}),
-          },
-        });
+        if (outcome.kind === "completed_already") {
+          return NextResponse.json(
+            { error: "You have already backed this project" },
+            { status: 400 }
+          );
+        }
 
-        if (addonsWithQuantity.length > 0) {
-          await db.pledgeAddon.createMany({
-            data: addonsWithQuantity.map((a) => ({
-              pledgeId: pledge.id,
-              addonId: a.id,
-              quantity: a.quantity,
-              amount: (addonAmountMap.get(a.id) || 0) * a.quantity,
-            })),
-          });
+        // Fire-and-forget vault cleanup for any orphaned PENDING vault
+        // entries we just deleted. Failures here only leak entries
+        // inside PaymentCloud's vault — no creator/backer impact.
+        if (outcome.orphanedVaultIds.length > 0) {
+          pledgeLogger.info(
+            { correlationId, orphanedVaultIds: outcome.orphanedVaultIds },
+            "Cleaning up orphaned PENDING NMI vault entries"
+          );
+          void Promise.allSettled(
+            outcome.orphanedVaultIds.map((id) =>
+              deleteVaultCustomer(nmiConfig, id).catch(() => null)
+            )
+          );
         }
 
         metrics.pledgesCreated.inc({ status: "pending", processor: "nmi" });
         return NextResponse.json({
           paymentMethod: "NMI",
           type: "nmi_tokenize",
-          pledgeId: pledge.id,
+          pledgeId: outcome.pledgeId,
           publicKey: nmiConfig.publicKey,
           isKeepItAll: project.campaignType === "KEEP_IT_ALL",
           chargedImmediately: false,
