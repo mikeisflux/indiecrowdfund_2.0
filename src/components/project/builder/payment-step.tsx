@@ -524,6 +524,30 @@ export function PaymentStep() {
         />
       )} */}
 
+      {/* Chargeback Protection Card — placed before the payout bank
+          section so creators set up their recoup card first. PaymentCloud
+          projects use Collect.js (PAN never touches our servers); legacy
+          projects keep the old AES-encrypted form so existing rows still work. */}
+      <Separator />
+      {payment.paymentProcessor === "NMI" ? (
+        <NmiChargebackCardSection
+          projectId={projectId}
+          publicKey={nmiPublicKey}
+          status={chargebackCardStatus}
+          setStatus={setChargebackCardStatus}
+        />
+      ) : (
+        <ChargebackCardSection
+          chargebackCard={chargebackCard}
+          setChargebackCard={setChargebackCard}
+          chargebackCardStatus={chargebackCardStatus}
+          setChargebackCardStatus={setChargebackCardStatus}
+          isSavingCard={isSavingCard}
+          handleSaveChargebackCard={handleSaveChargebackCard}
+          projectId={projectId}
+        />
+      )}
+
       {/* PaymentCloud (NMI) creator payout bank account */}
       {payment.paymentProcessor === "NMI" && (
         <>
@@ -577,28 +601,6 @@ export function PaymentStep() {
         payment={payment}
         updatePayment={updatePayment}
       />
-
-      {/* Chargeback Protection Card. PaymentCloud projects use Collect.js
-          (PAN never touches our servers); legacy projects keep the old
-          AES-encrypted form so existing rows still work. */}
-      {payment.paymentProcessor === "NMI" ? (
-        <NmiChargebackCardSection
-          projectId={projectId}
-          publicKey={nmiPublicKey}
-          status={chargebackCardStatus}
-          setStatus={setChargebackCardStatus}
-        />
-      ) : (
-        <ChargebackCardSection
-          chargebackCard={chargebackCard}
-          setChargebackCard={setChargebackCard}
-          chargebackCardStatus={chargebackCardStatus}
-          setChargebackCardStatus={setChargebackCardStatus}
-          isSavingCard={isSavingCard}
-          handleSaveChargebackCard={handleSaveChargebackCard}
-          projectId={projectId}
-        />
-      )}
 
       {/* Stripe ConfirmDialog - DISABLED: Stripe Connect removed */}
       {/* <ConfirmDialog
