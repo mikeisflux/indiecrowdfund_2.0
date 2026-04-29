@@ -173,6 +173,9 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
         ccexp: { selector: `#${idPrefix}-ccexp`, placeholder: "MM / YY" },
         cvv: { selector: `#${idPrefix}-cvv`, placeholder: "CVV" },
       },
+      // No-op acknowledgement of attachment — see the verifier below.
+      // (CollectJS doesn't expose a callback for "iframes attached",
+      // so we poll once after a short delay.)
       callback: async (resp: CollectJsCallbackResponse) => {
         if (!resp?.token) {
           setIsSavingRef.current(false);
@@ -221,6 +224,31 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
         }
       },
     });
+
+    // Iframe-attach verifier. If the user navigates to this section
+    // from another page that already loaded Collect.js (e.g. the
+    // pledge form), window.CollectJS persists across the SPA route
+    // change but its internal "configured" state may not re-attach
+    // iframes to our new selectors — leaving the cardholder with an
+    // empty bordered box where the card-number input should be. A
+    // single confirmed report ("backer has all my details but no
+    // text bar for the card number") matches that exact symptom.
+    //
+    // Strategy: wait 1.5s, check whether ccnumber div has an iframe
+    // child. If not, blow away the cached script + window.CollectJS
+    // and force a fresh load via the script-loader effect (which
+    // gets triggered again by setScriptReady(false)).
+    const verifyTimer = setTimeout(() => {
+      const ccnumberDiv = document.getElementById(`${idPrefix}-ccnumber`);
+      if (ccnumberDiv && !ccnumberDiv.querySelector("iframe")) {
+        const existing = document.querySelector<HTMLScriptElement>("script#nmi-collectjs");
+        if (existing) existing.remove();
+        // CollectJS isn't typed as deletable on Window; use a cast.
+        (window as unknown as { CollectJS?: unknown }).CollectJS = undefined;
+        setScriptReady(false);
+      }
+    }, 1500);
+    return () => clearTimeout(verifyTimer);
   }, [scriptReady, idPrefix]);
 
   const handleSubmit = (e: React.FormEvent) => {
