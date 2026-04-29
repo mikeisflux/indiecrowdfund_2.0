@@ -158,9 +158,14 @@ export function ErrorReporter() {
       reportError(`Unhandled Promise Rejection: ${message}`, stack);
     };
 
-    // Intercept fetch to report HTTP 4xx/5xx errors to admin error logs
+    // Intercept fetch to report HTTP 4xx/5xx errors to admin error logs.
+    // Facebook's in-app browser (FB_IAB) makes window.fetch non-writable
+    // to prevent monkey-patching, so guard the assignment — if it
+    // throws, we just skip the fetch interception (network errors will
+    // still surface through normal handlers, just not auto-reported).
     const originalFetch = window.fetch;
-    window.fetch = async function (...args: Parameters<typeof window.fetch>) {
+    let fetchPatched = false;
+    const patchedFetch = async function (...args: Parameters<typeof window.fetch>) {
       let response: Response;
       try {
         response = await originalFetch.apply(this, args);
@@ -294,13 +299,30 @@ export function ErrorReporter() {
       return response;
     };
 
+    try {
+      window.fetch = patchedFetch;
+      fetchPatched = true;
+    } catch {
+      // Some embedded browsers (Facebook IAB on Android, certain
+      // hardened WebViews) define window.fetch as a non-writable
+      // property — assigning throws TypeError. We can't intercept
+      // fetch errors there; rely on the standard error/rejection
+      // handlers below for diagnostics.
+    }
+
     window.addEventListener("error", handleError);
     window.addEventListener("unhandledrejection", handleRejection);
 
     return () => {
       window.removeEventListener("error", handleError);
       window.removeEventListener("unhandledrejection", handleRejection);
-      window.fetch = originalFetch;
+      if (fetchPatched) {
+        try {
+          window.fetch = originalFetch;
+        } catch {
+          // Same defense — restore is also forbidden in the same envs.
+        }
+      }
     };
   }, []);
 
