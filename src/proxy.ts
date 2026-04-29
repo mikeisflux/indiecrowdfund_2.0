@@ -540,7 +540,7 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
     `script-src ${scriptSrc}`,
     // Note: 'unsafe-inline' for styles is required for CSS-in-JS libraries (Tailwind, styled-components, etc.)
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
+    "font-src 'self' https://fonts.gstatic.com https://applepay.cdn-apple.com data:",
     "img-src 'self' data: blob: https: http:",
     "connect-src 'self' blob: https://api.stripe.com https://*.paypal.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com https://unpkg.com wss: https://api.whop.com https://*.whop.com https://paymentcloud.transactiongateway.com https://secure.networkmerchants.com https://apple-pay-gateway.apple.com https://*.apple.com",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://www.youtube.com https://youtube.com https://player.vimeo.com https://www.google.com https://recaptcha.google.com https://whop.com https://*.whop.com",
