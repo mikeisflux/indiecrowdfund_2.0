@@ -17,6 +17,18 @@ interface CreatePaymentParams {
   sourceCampaignId?: string; // Campaign that led to this pledge (for conversion tracking)
   shippingAmount?: number; // Shipping cost
   shippingCountry?: string; // Country code for shipping
+  // Default shipping address resolved by /api/pledges from the user's
+  // saved profile address. Attached to the Pledge row for fulfillment.
+  shippingAddress?: {
+    name: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+    phone?: string;
+  };
 }
 
 /**
@@ -32,6 +44,7 @@ export async function createStripePayment({
   userId,
   sourceCampaignId,
   shippingAmount = 0,
+  shippingAddress,
 }: CreatePaymentParams) {
   const stripeClient = await getStripeInstance();
 
@@ -332,6 +345,9 @@ export async function createStripePayment({
       status: "PENDING",
       stripeCustomerId: customerId,
       chargedImmediately: isCampaignFunded,
+      shippingAddress: shippingAddress
+        ? (shippingAddress as unknown as Record<string, unknown>)
+        : undefined,
       // Only include sourceCampaignId if it has a value (requires migration)
       ...(sourceCampaignId ? { sourceCampaignId } : {}),
     },

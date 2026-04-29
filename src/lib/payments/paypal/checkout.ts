@@ -17,6 +17,19 @@ interface CreatePayPalPaymentParams {
   userId: string;
   sourceCampaignId?: string;
   shippingAmount?: number;
+  // Default shipping address resolved by /api/pledges from the user's
+  // saved profile address. Attached to the Pledge row so downstream
+  // (fulfillment, AVS on stored-credential recharges, refunds) has it.
+  shippingAddress?: {
+    name: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+    phone?: string;
+  };
 }
 
 /**
@@ -33,6 +46,7 @@ export async function createPayPalPayment({
   userId,
   sourceCampaignId,
   shippingAmount = 0,
+  shippingAddress,
 }: CreatePayPalPaymentParams) {
   const config = await getPayPalConfig();
 
@@ -115,6 +129,9 @@ export async function createPayPalPayment({
       paymentProcessor: "PAYPAL",
       status: "PENDING",
       chargedImmediately: isFunded,
+      shippingAddress: shippingAddress
+        ? (shippingAddress as unknown as Record<string, unknown>)
+        : undefined,
       ...(sourceCampaignId ? { sourceCampaignId } : {}),
     },
   });

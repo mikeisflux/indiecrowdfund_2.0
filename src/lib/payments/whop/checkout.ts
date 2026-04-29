@@ -18,6 +18,18 @@ interface CreateWhopPaymentParams {
   userId: string;
   sourceCampaignId?: string;
   shippingAmount?: number;
+  // Default shipping address resolved by /api/pledges from the user's
+  // saved profile address. Attached to the Pledge row for fulfillment.
+  shippingAddress?: {
+    name: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+    phone?: string;
+  };
 }
 
 /**
@@ -32,6 +44,7 @@ export async function createWhopPayment({
   userId,
   sourceCampaignId,
   shippingAmount = 0,
+  shippingAddress,
 }: CreateWhopPaymentParams) {
   const config = await getWhopConfig();
 
@@ -104,6 +117,9 @@ export async function createWhopPayment({
       paymentProcessor: "WHOP",
       status: "PENDING",
       chargedImmediately: true,
+      shippingAddress: shippingAddress
+        ? (shippingAddress as unknown as Record<string, unknown>)
+        : undefined,
       ...(sourceCampaignId ? { sourceCampaignId } : {}),
     },
   });

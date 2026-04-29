@@ -316,6 +316,9 @@ export async function POST(req: NextRequest) {
             status: "PENDING",
             paymentProcessor: "DIVINITYCOIN",
             chargedImmediately: true,
+            shippingAddress: resolvedShippingAddress
+              ? (resolvedShippingAddress as unknown as Record<string, unknown>)
+              : undefined,
             ...(sourceCampaignId ? { sourceCampaignId } : {}),
           },
         });
@@ -413,6 +416,7 @@ export async function POST(req: NextRequest) {
             userId: session.user.id,
             sourceCampaignId,
             shippingAmount: data.shippingAmount || 0,
+            shippingAddress: resolvedShippingAddress,
           });
 
           metrics.pledgesCreated.inc({ status: "pending", processor: "paypal" });
@@ -625,6 +629,7 @@ export async function POST(req: NextRequest) {
             userId: session.user.id,
             sourceCampaignId,
             shippingAmount: data.shippingAmount || 0,
+            shippingAddress: resolvedShippingAddress,
           });
 
           metrics.pledgesCreated.inc({ status: "pending", processor: "whop" });
@@ -676,6 +681,7 @@ export async function POST(req: NextRequest) {
         sourceCampaignId,
         shippingAmount: data.shippingAmount || 0,
         shippingCountry: data.shippingCountry,
+        shippingAddress: resolvedShippingAddress,
       });
 
       const durationSec = (Date.now() - startTime) / 1000;
