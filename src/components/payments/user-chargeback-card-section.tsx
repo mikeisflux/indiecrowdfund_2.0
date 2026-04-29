@@ -50,7 +50,6 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
   });
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
-  const [fieldsReady, setFieldsReady] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
@@ -154,8 +153,11 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
 
   useEffect(() => {
     if (!scriptReady || !window.CollectJS) return;
+    // Match the official Collect.js React demo's shape exactly —
+    // `paymentSelector` and `fieldsAvailableCallback` trip the JS-API
+    // validator with "Unexpected fields for collectjs" despite being
+    // documented as data-* attributes.
     window.CollectJS.configure({
-      paymentSelector: `#${idPrefix}-pay`,
       variant: "inline",
       styleSniffer: "true",
       fields: {
@@ -163,7 +165,6 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
         ccexp: { selector: `#${idPrefix}-ccexp`, placeholder: "MM / YY" },
         cvv: { selector: `#${idPrefix}-cvv`, placeholder: "CVV" },
       },
-      fieldsAvailableCallback: () => setFieldsReady(true),
       callback: async (resp: CollectJsCallbackResponse) => {
         if (!resp?.token) {
           setIsSavingRef.current(false);
@@ -224,7 +225,7 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
       toast.error("Please enter the full billing address.");
       return;
     }
-    if (!fieldsReady || !window.CollectJS) {
+    if (!scriptReady || !window.CollectJS) {
       toast.error("Card form is still loading — please wait a moment.");
       return;
     }
@@ -364,7 +365,7 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
             </div>
           </div>
 
-          <Button id={`${idPrefix}-pay`} type="submit" disabled={!fieldsReady || isSaving} className="w-full">
+          <Button id={`${idPrefix}-pay`} type="submit" disabled={!scriptReady || isSaving} className="w-full">
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSaving ? "Saving..." : status.saved ? "Replace Card" : "Save Chargeback Card"}
           </Button>

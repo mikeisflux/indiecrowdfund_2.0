@@ -41,7 +41,6 @@ export function NmiMarketplacePaymentForm({
   onError,
 }: NmiMarketplacePaymentFormProps) {
   const [scriptReady, setScriptReady] = useState(false);
-  const [fieldsReady, setFieldsReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const onSuccessRef = useRef(onSuccess);
@@ -83,8 +82,11 @@ export function NmiMarketplacePaymentForm({
 
   useEffect(() => {
     if (!scriptReady || !window.CollectJS) return;
+    // Match the official Collect.js React demo's shape exactly —
+    // `paymentSelector` and `fieldsAvailableCallback` trip the JS-API
+    // validator with "Unexpected fields for collectjs" despite being
+    // documented as data-* attributes.
     window.CollectJS.configure({
-      paymentSelector: "#nmi-mkt-pay",
       variant: "inline",
       styleSniffer: "true",
       fields: {
@@ -92,7 +94,6 @@ export function NmiMarketplacePaymentForm({
         ccexp: { selector: "#nmi-mkt-ccexp", placeholder: "MM / YY" },
         cvv: { selector: "#nmi-mkt-cvv", placeholder: "CVV" },
       },
-      fieldsAvailableCallback: () => setFieldsReady(true),
       callback: async (resp: CollectJsResponse) => {
         if (!resp?.token) {
           setIsProcessingRef.current(false);
@@ -127,7 +128,7 @@ export function NmiMarketplacePaymentForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fieldsReady || !window.CollectJS) {
+    if (!scriptReady || !window.CollectJS) {
       onError("Card form is still loading — please wait a moment.");
       return;
     }
@@ -181,7 +182,7 @@ export function NmiMarketplacePaymentForm({
         type="submit"
         size="lg"
         className="w-full"
-        disabled={!fieldsReady || isProcessing}
+        disabled={!scriptReady || isProcessing}
       >
         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {isProcessing

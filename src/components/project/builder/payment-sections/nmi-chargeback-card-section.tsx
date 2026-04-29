@@ -62,7 +62,6 @@ export function NmiChargebackCardSection({
   setStatus,
 }: NmiChargebackCardSectionProps) {
   const [scriptReady, setScriptReady] = useState(false);
-  const [fieldsReady, setFieldsReady] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
@@ -113,8 +112,11 @@ export function NmiChargebackCardSection({
 
   useEffect(() => {
     if (!scriptReady || !window.CollectJS) return;
+    // Match the official Collect.js React demo's shape exactly —
+    // `paymentSelector` and `fieldsAvailableCallback` trip the JS-API
+    // validator with "Unexpected fields for collectjs" despite being
+    // documented as data-* attributes.
     window.CollectJS.configure({
-      paymentSelector: "#nmi-cb-pay-button",
       variant: "inline",
       styleSniffer: "true",
       fields: {
@@ -122,7 +124,6 @@ export function NmiChargebackCardSection({
         ccexp: { selector: "#nmi-cb-ccexp", placeholder: "MM / YY" },
         cvv: { selector: "#nmi-cb-cvv", placeholder: "CVV" },
       },
-      fieldsAvailableCallback: () => setFieldsReady(true),
       callback: async (resp: CollectJsCallbackResponse) => {
         if (!resp?.token) {
           setIsSavingRef.current(false);
@@ -196,7 +197,7 @@ export function NmiChargebackCardSection({
       toast.error("Please enter the full billing address.");
       return;
     }
-    if (!fieldsReady || !window.CollectJS) {
+    if (!scriptReady || !window.CollectJS) {
       toast.error("Card form is still loading — please wait a moment.");
       return;
     }
@@ -379,7 +380,7 @@ export function NmiChargebackCardSection({
           <Button
             id="nmi-cb-pay-button"
             type="submit"
-            disabled={!publicKey || !fieldsReady || !projectId || isSaving}
+            disabled={!publicKey || !scriptReady || !projectId || isSaving}
             className="w-full"
           >
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

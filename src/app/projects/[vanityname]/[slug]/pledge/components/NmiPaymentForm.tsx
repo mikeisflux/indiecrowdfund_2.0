@@ -57,7 +57,6 @@ export function NmiPaymentForm({
   onError,
 }: NmiPaymentFormProps) {
   const [scriptReady, setScriptReady] = useState(false);
-  const [fieldsReady, setFieldsReady] = useState(false);
   const onSuccessRef = useRef(onSuccess);
   const onErrorRef = useRef(onError);
   const setIsProcessingRef = useRef(setIsProcessing);
@@ -101,8 +100,15 @@ export function NmiPaymentForm({
   useEffect(() => {
     if (!scriptReady || !window.CollectJS) return;
     // Configure once. Subsequent calls would re-mount the iframes.
+    // Keep this config minimal and match the official Collect.js React demo's
+    // shape exactly — `paymentSelector` and `fieldsAvailableCallback` are
+    // documented as `data-*` attributes but trip Collect.js's JS-API
+    // validator with "Unexpected fields for collectjs" when passed via
+    // configure(). We trigger startPaymentRequest manually from our
+    // form's onSubmit handler instead, and treat fields as ready as soon
+    // as the script loads (Collect.js mounts iframes synchronously after
+    // configure() returns).
     window.CollectJS.configure({
-      paymentSelector: "#nmi-pay-button",
       variant: "inline",
       styleSniffer: "true",
       fields: {
@@ -119,7 +125,6 @@ export function NmiPaymentForm({
           placeholder: "CVV",
         },
       },
-      fieldsAvailableCallback: () => setFieldsReady(true),
       callback: async (resp: CollectJsResponse) => {
         if (!resp?.token) {
           setIsProcessingRef.current(false);
@@ -158,7 +163,7 @@ export function NmiPaymentForm({
       onError("Please agree to the terms before pledging.");
       return;
     }
-    if (!fieldsReady || !window.CollectJS) {
+    if (!scriptReady || !window.CollectJS) {
       onError("Card form is still loading — please wait a moment.");
       return;
     }
@@ -222,7 +227,7 @@ export function NmiPaymentForm({
         type="submit"
         size="lg"
         className="w-full"
-        disabled={!fieldsReady || !agreedToTerms || isProcessing}
+        disabled={!scriptReady || !agreedToTerms || isProcessing}
       >
         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {buttonLabel}
