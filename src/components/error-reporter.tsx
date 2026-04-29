@@ -165,10 +165,10 @@ export function ErrorReporter() {
     // still surface through normal handlers, just not auto-reported).
     const originalFetch = window.fetch;
     let fetchPatched = false;
-    const patchedFetch = async function (...args: Parameters<typeof window.fetch>) {
+    const patchedFetch = async function (this: unknown, ...args: Parameters<typeof window.fetch>) {
       let response: Response;
       try {
-        response = await originalFetch.apply(this, args);
+        response = await originalFetch.apply(window, args);
       } catch (err) {
         // Network failures, AbortErrors, etc. — let them propagate naturally
         // but don't report them (the caller's catch handler should deal with these)
