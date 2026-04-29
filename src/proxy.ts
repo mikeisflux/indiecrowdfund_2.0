@@ -526,7 +526,8 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
   // Note: https://unpkg.com is needed for pdf.js worker
   // Note: https://www.google.com and https://www.gstatic.com are needed for reCAPTCHA
   // Note: https://paymentcloud.transactiongateway.com hosts NMI Collect.js for PaymentCloud tokenization
-  const scriptSrc = "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com https://www.google.com https://www.gstatic.com https://whop.com https://*.whop.com https://paymentcloud.transactiongateway.com";
+  // Note: https://applepay.cdn-apple.com hosts the Apple Pay JS SDK that Collect.js auto-loads on Apple devices
+  const scriptSrc = "'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com https://www.google.com https://www.gstatic.com https://whop.com https://*.whop.com https://paymentcloud.transactiongateway.com https://applepay.cdn-apple.com";
 
   // For Shopify iframe routes, allow embedding from Shopify domains
   // Include 'self' and all Shopify admin domains
@@ -541,7 +542,7 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https: http:",
-    "connect-src 'self' blob: https://api.stripe.com https://*.paypal.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com https://unpkg.com wss: https://api.whop.com https://*.whop.com https://paymentcloud.transactiongateway.com https://secure.networkmerchants.com",
+    "connect-src 'self' blob: https://api.stripe.com https://*.paypal.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com https://unpkg.com wss: https://api.whop.com https://*.whop.com https://paymentcloud.transactiongateway.com https://secure.networkmerchants.com https://apple-pay-gateway.apple.com https://*.apple.com",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://www.youtube.com https://youtube.com https://player.vimeo.com https://www.google.com https://recaptcha.google.com https://whop.com https://*.whop.com",
     // Worker sources - allow blob URLs for pdf.js web worker
     "worker-src 'self' blob:",
