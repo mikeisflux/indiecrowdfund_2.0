@@ -80,7 +80,7 @@ function TotalBadge({ color, text }: { color: string; text: string }) {
 
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("whop");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("paymentcloud");
   const amount = sliderValue[0];
 
   const divinityFees = calculateDivinityCoinFees(amount);
