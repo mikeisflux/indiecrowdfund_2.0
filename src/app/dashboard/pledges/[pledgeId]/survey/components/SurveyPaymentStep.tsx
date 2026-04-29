@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Stripe } from "@stripe/stripe-js";
 import { SurveyData } from "./types";
+import { NmiPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/NmiPaymentForm";
 
 // Stripe Payment Form for Survey Addons
 function SurveyPaymentForm({
@@ -93,10 +94,12 @@ function SurveyPaymentForm({
 
 interface SurveyPaymentStepProps {
   data: SurveyData;
+  pledgeId: string;
   selectedAddons: Record<string, number>;
   addonsTotal: number;
   clientSecret: string | null;
   stripePromise: Promise<Stripe | null> | null;
+  nmiPublicKey: string | null;
   isProcessingPayment: boolean;
   setIsProcessingPayment: (val: boolean) => void;
   paymentError: string | null;
@@ -110,10 +113,12 @@ interface SurveyPaymentStepProps {
 
 export function SurveyPaymentStep({
   data,
+  pledgeId,
   selectedAddons,
   addonsTotal,
   clientSecret,
   stripePromise,
+  nmiPublicKey,
   isProcessingPayment,
   setIsProcessingPayment,
   paymentError,
@@ -177,10 +182,24 @@ export function SurveyPaymentStep({
         </div>
       )}
 
-      {/* Stripe Payment Form */}
+      {/* Payment Form — Stripe (Elements) for STRIPE/DC, Collect.js for NMI */}
       <Card>
         <CardContent className="py-5">
-          {clientSecret && stripePromise ? (
+          {nmiPublicKey ? (
+            <NmiPaymentForm
+              publicKey={nmiPublicKey}
+              pledgeId={pledgeId}
+              isKeepItAll={true}
+              total={addonsTotal}
+              agreedToTerms={true}
+              isProcessing={isProcessingPayment}
+              setIsProcessing={setIsProcessingPayment}
+              onSuccess={onSuccess}
+              onError={onError}
+              endpoint={`/api/pledges/${encodeURIComponent(pledgeId)}/confirm-add-items`}
+              submitLabel={`Pay $${addonsTotal.toFixed(2)} & add items`}
+            />
+          ) : clientSecret && stripePromise ? (
             <Elements
               key={clientSecret}
               stripe={stripePromise}

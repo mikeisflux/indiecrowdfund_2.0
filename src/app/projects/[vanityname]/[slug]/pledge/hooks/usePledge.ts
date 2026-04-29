@@ -269,7 +269,18 @@ export function usePledge() {
     try {
       const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({ id, quantity }));
       const result = await modifyPledgeAPI(modifyPledgeId, selectedReward?.id || "no-reward", addonsWithQuantity, total, totalShipping, shippingCountry);
-      if (result.requiresPayment && result.clientSecret) {
+      if (result.requiresPayment && result.paymentMethod === "NMI" && result.nmiPublicKey) {
+        // PaymentCloud upcharge: server stashed pendingModification and
+        // returned the Collect.js public key. Render NmiPaymentForm in
+        // modify mode and POST the resulting payment_token to
+        // /confirm-modify to charge the delta and apply changes.
+        const chargeAmount = result.amountDiff ?? (total - originalPledgeAmount);
+        setModifyChargeAmount(chargeAmount > 0 ? chargeAmount : null);
+        setNmiPublicKey(result.nmiPublicKey);
+        setNmiIsKeepItAll(true);
+        setCurrentPledgeId(modifyPledgeId);
+        setIsProcessing(false);
+      } else if (result.requiresPayment && result.clientSecret) {
         const chargeAmount = total - originalPledgeAmount;
         setModifyChargeAmount(chargeAmount > 0 ? chargeAmount : null);
         setClientSecret(result.clientSecret);

@@ -77,8 +77,11 @@ export async function modifyPledge(
 ): Promise<{
   success: boolean;
   requiresPayment: boolean;
+  paymentMethod?: string;
   clientSecret?: string;
   publishableKey?: string;
+  nmiPublicKey?: string;
+  amountDiff?: number;
   refundAmount?: number;
   message: string;
 }> {
@@ -104,8 +107,11 @@ export async function modifyPledge(
   return {
     success: data.success,
     requiresPayment: data.requiresPayment || false,
+    paymentMethod: data.paymentMethod,
     clientSecret: data.clientSecret,
     publishableKey: data.publishableKey,
+    nmiPublicKey: data.nmiPublicKey,
+    amountDiff: data.amountDiff,
     refundAmount: data.refundAmount,
     message: data.message,
   };

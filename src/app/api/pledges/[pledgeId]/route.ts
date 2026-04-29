@@ -10,6 +10,7 @@ import { callDivinityCoinAPI, getDivinityCoinConfig } from "@/lib/payments/divin
 import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { getWhopClient } from "@/lib/payments/whop";
+import { loadNmiConfig, refund as nmiRefund, deleteVaultCustomer } from "@/lib/nmi";
 
 export const dynamic = "force-dynamic";
 
@@ -395,6 +396,42 @@ export async function PATCH(
             pledgesLogger.error({ err: String(whopError) }, "Whop refund error");
             return NextResponse.json({ error: "Failed to process Whop refund." }, { status: 500 });
           }
+        } else if (paymentProcessor === "NMI") {
+          // PaymentCloud (NMI): KIA pledges have nmiTransactionId set by
+          // confirm-nmi; AoN pledges have nmiCustomerVaultId only (no
+          // sale yet — but COMPLETED + AoN means the charge-on-success
+          // cron already ran a sale, so nmiTransactionId should be set).
+          if (!pledge.nmiTransactionId) {
+            return NextResponse.json(
+              { error: "No PaymentCloud transaction found to refund. Please contact support." },
+              { status: 400 }
+            );
+          }
+          try {
+            const nmiConfig = await loadNmiConfig();
+            if (!nmiConfig) {
+              return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+            }
+            const refundResp = await nmiRefund(nmiConfig, pledge.nmiTransactionId);
+            if (refundResp.response !== "1") {
+              pledgesLogger.error(
+                { pledgeId: pledge.id, response: refundResp.response, text: refundResp.responsetext },
+                "PaymentCloud refund declined"
+              );
+              return NextResponse.json(
+                { error: refundResp.responsetext || "Refund failed" },
+                { status: 400 }
+              );
+            }
+            // Best-effort: delete the vault entry too (AoN only — KIA
+            // never created one). Ignore failures, refund already ran.
+            if (pledge.nmiCustomerVaultId) {
+              await deleteVaultCustomer(nmiConfig, pledge.nmiCustomerVaultId).catch(() => null);
+            }
+          } catch (nmiError) {
+            pledgesLogger.error({ err: String(nmiError) }, "PaymentCloud refund error");
+            return NextResponse.json({ error: "Failed to process PaymentCloud refund." }, { status: 500 });
+          }
         } else {
           // Stripe refund
           if (!pledge.stripePaymentIntentId) {
@@ -507,6 +544,15 @@ export async function PATCH(
       }
       if (pledge.stripePaymentIntentId) {
         await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
+      }
+
+      // Tear down any PaymentCloud vault entry left over from an AoN
+      // pledge so we don't leak stored cards on cancel.
+      if (pledge.nmiCustomerVaultId) {
+        const nmiConfig = await loadNmiConfig();
+        if (nmiConfig) {
+          await deleteVaultCustomer(nmiConfig, pledge.nmiCustomerVaultId).catch(() => null);
+        }
       }
 
       // Atomic CAS from PENDING → CANCELLED. Guards against
@@ -706,6 +752,52 @@ export async function PATCH(
       if (isAlreadyCharged && amountDiff > 0) {
         // Price went UP - need to collect additional payment
         const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
+
+        if (paymentProcessor === "NMI") {
+          // PaymentCloud upcharge: KIA pledges have no vault entry
+          // (skipped at original pledge time to avoid the per-txn
+          // Vault fee), so we re-prompt the user for their card via
+          // Collect.js and run a fresh saleByPaymentToken for the
+          // delta. We stash the pending modification on the pledge
+          // and let confirm-modify finish the work once the client
+          // POSTs back with a payment_token.
+          const nmiConfigCheck = await loadNmiConfig();
+          if (!nmiConfigCheck) {
+            return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+          }
+
+          const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+            ? pledge.metadata as Record<string, unknown>
+            : {};
+
+          await db.pledge.update({
+            where: { id: pledgeId },
+            data: {
+              metadata: {
+                ...currentMetadata,
+                pendingModification: {
+                  paymentMethod: "NMI",
+                  rewardId: rewardId || null,
+                  addons: addonsWithQuantity,
+                  newAmount,
+                  oldAmount,
+                  amountDiff,
+                  createdAt: new Date().toISOString(),
+                },
+              },
+            },
+          });
+
+          return NextResponse.json({
+            success: true,
+            requiresPayment: true,
+            paymentMethod: "NMI",
+            nmiPublicKey: nmiConfigCheck.publicKey,
+            amountDiff,
+            message: `Additional $${amountDiff.toFixed(2)} payment required`,
+            newAmount: effectiveNewAmount,
+          });
+        }
 
         if (paymentProcessor === "DIVINITYCOIN") {
           // Call DC's create-payment-intent for the upcharge amount
@@ -907,6 +999,34 @@ export async function PATCH(
               { status: 500 }
             );
           }
+        } else if (paymentProcessor === "NMI") {
+          // PaymentCloud partial refund against the original sale.
+          if (!pledge.nmiTransactionId) {
+            return NextResponse.json(
+              { error: "No PaymentCloud transaction found to refund. Please contact support." },
+              { status: 400 }
+            );
+          }
+          try {
+            const nmiConfig = await loadNmiConfig();
+            if (!nmiConfig) {
+              return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+            }
+            const refundResp = await nmiRefund(nmiConfig, pledge.nmiTransactionId, refundAmount);
+            if (refundResp.response !== "1") {
+              pledgesLogger.error(
+                { pledgeId: pledge.id, response: refundResp.response, text: refundResp.responsetext },
+                "PaymentCloud partial refund declined"
+              );
+              return NextResponse.json(
+                { error: refundResp.responsetext || "Refund failed" },
+                { status: 400 }
+              );
+            }
+          } catch (nmiError) {
+            pledgesLogger.error({ err: String(nmiError) }, "PaymentCloud partial refund error");
+            return NextResponse.json({ error: "Failed to process refund" }, { status: 500 });
+          }
         } else {
           // Stripe partial refund
           if (!pledge.stripePaymentIntentId) {
@@ -995,6 +1115,18 @@ export async function PATCH(
         if (paymentProcessor === "DIVINITYCOIN") {
           // DC pledges require a payment form for upcharges - the dashboard doesn't have one.
           // Direct users to "Change Reward or Add-ons" which has full payment support.
+          return NextResponse.json(
+            { error: "To increase your pledge amount, please use 'Change Reward or Add-ons' from your pledge dashboard." },
+            { status: 400 }
+          );
+        }
+
+        if (paymentProcessor === "NMI") {
+          // Same reasoning as DC: KIA NMI pledges have no vault entry,
+          // so increasing the amount requires re-prompting for a card
+          // via Collect.js. The dashboard quick-increase form doesn't
+          // host that flow; route the user through Change Reward or
+          // Add-ons instead.
           return NextResponse.json(
             { error: "To increase your pledge amount, please use 'Change Reward or Add-ons' from your pledge dashboard." },
             { status: 400 }
@@ -1167,6 +1299,16 @@ export async function DELETE(
     }
     if (pledge.stripePaymentIntentId) {
       await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
+    }
+
+    // Tear down any PaymentCloud vault entry left over from an AoN
+    // pledge so we don't leak stored cards on cancel. KIA pledges
+    // never get a vault entry; this is a no-op for them.
+    if (pledge.nmiCustomerVaultId) {
+      const nmiConfig = await loadNmiConfig();
+      if (nmiConfig) {
+        await deleteVaultCustomer(nmiConfig, pledge.nmiCustomerVaultId).catch(() => null);
+      }
     }
 
     // Atomic CAS from PENDING → CANCELLED (same guard as the PATCH

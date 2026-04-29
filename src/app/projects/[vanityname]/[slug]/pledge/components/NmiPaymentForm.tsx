@@ -68,6 +68,13 @@ interface NmiPaymentFormProps {
   setIsProcessing: (val: boolean) => void;
   onSuccess: () => void;
   onError: (message: string) => void;
+  // Endpoint to POST the tokenized card to. Defaults to confirm-nmi
+  // for the new-pledge flow; pass confirm-modify or confirm-add-items
+  // when reusing this form for upcharges on existing pledges.
+  endpoint?: string;
+  // Submit-button label override. Defaults to "Pay $X" / "Pledge $X"
+  // depending on isKeepItAll.
+  submitLabel?: string;
 }
 
 export function NmiPaymentForm({
@@ -80,6 +87,8 @@ export function NmiPaymentForm({
   setIsProcessing,
   onSuccess,
   onError,
+  endpoint,
+  submitLabel,
 }: NmiPaymentFormProps) {
   const [scriptReady, setScriptReady] = useState(false);
 
@@ -100,6 +109,7 @@ export function NmiPaymentForm({
   const onErrorRef = useRef(onError);
   const setIsProcessingRef = useRef(setIsProcessing);
   const pledgeIdRef = useRef(pledgeId);
+  const endpointRef = useRef(endpoint);
   const billingRef = useRef({ firstName, lastName, line1, line2, city, stateField, zip, country });
   // Keep refs current so the Collect.js callback (registered once on
   // mount) sees the latest handlers/pledge id/billing without re-registering.
@@ -108,6 +118,7 @@ export function NmiPaymentForm({
     onErrorRef.current = onError;
     setIsProcessingRef.current = setIsProcessing;
     pledgeIdRef.current = pledgeId;
+    endpointRef.current = endpoint;
     billingRef.current = { firstName, lastName, line1, line2, city, stateField, zip, country };
   }, [onSuccess, onError, setIsProcessing, pledgeId, firstName, lastName, line1, line2, city, stateField, zip, country]);
 
@@ -220,24 +231,23 @@ export function NmiPaymentForm({
                 country: wallet?.country || "US",
               }
             : billingRef.current;
-          const r = await apiFetch(
-            `/api/pledges/${encodeURIComponent(pledgeIdRef.current)}/confirm-nmi`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                paymentToken: resp.token,
-                billingFirstName: b.firstName,
-                billingLastName: b.lastName,
-                billingLine1: b.line1,
-                billingLine2: b.line2 || undefined,
-                billingCity: b.city,
-                billingState: b.stateField,
-                billingZip: b.zip,
-                billingCountry: b.country,
-              }),
-            }
-          );
+          const targetEndpoint = endpointRef.current
+            || `/api/pledges/${encodeURIComponent(pledgeIdRef.current)}/confirm-nmi`;
+          const r = await apiFetch(targetEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              paymentToken: resp.token,
+              billingFirstName: b.firstName,
+              billingLastName: b.lastName,
+              billingLine1: b.line1,
+              billingLine2: b.line2 || undefined,
+              billingCity: b.city,
+              billingState: b.stateField,
+              billingZip: b.zip,
+              billingCountry: b.country,
+            }),
+          });
           const data = await r.json().catch(() => ({}));
           if (!r.ok) {
             setIsProcessingRef.current(false);
@@ -279,6 +289,8 @@ export function NmiPaymentForm({
 
   const buttonLabel = isProcessing
     ? "Processing..."
+    : submitLabel
+    ? submitLabel
     : isKeepItAll
     ? `Pay $${total.toFixed(2)}`
     : `Pledge $${total.toFixed(2)}`;

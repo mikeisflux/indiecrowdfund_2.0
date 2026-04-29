@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { loadNmiConfig, saleByPaymentToken } from "@/lib/nmi";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm-add-items
@@ -29,6 +30,8 @@ export async function POST(
     }
 
     const { pledgeId } = await params;
+    const body = await req.json().catch(() => ({}));
+    const paymentToken: string | undefined = typeof body?.paymentToken === "string" ? body.paymentToken : undefined;
 
     // Get the pledge with metadata
     const pledge = await db.pledge.findFirst({
@@ -37,6 +40,7 @@ export async function POST(
         project: {
           select: {
             id: true,
+            title: true,
             currentAmount: true,
           },
         },
@@ -134,6 +138,62 @@ export async function POST(
           { status: 400 }
         );
       }
+    } else if (paymentMethod === "NMI") {
+      // PaymentCloud add-items: run the upcharge sale right here using
+      // the payment_token the client just got from Collect.js. We stash
+      // the resulting transaction id into pendingItems.paymentIntentId
+      // so the downstream advisory-lock dedup keys still work.
+      if (!paymentToken) {
+        return NextResponse.json(
+          { error: "Missing payment token" },
+          { status: 400 }
+        );
+      }
+      const nmiConfig = await loadNmiConfig();
+      if (!nmiConfig) {
+        return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+      }
+
+      const userRecord = await db.user.findFirst({
+        where: { id: session.user.id, deletedAt: null },
+        select: { email: true, name: true },
+      });
+
+      let saleResp;
+      try {
+        saleResp = await saleByPaymentToken(nmiConfig, {
+          amount: pendingItems.amount,
+          paymentToken,
+          orderid: `${pledgeId}-additems-${Date.now()}`,
+          orderdescription: `Additional items for pledge to ${pledge.project.title}`,
+          email: userRecord?.email || undefined,
+        });
+      } catch (err) {
+        pledgesConfirmAddItemsLogger.error(
+          { pledgeId, err: err instanceof Error ? err.message : String(err) },
+          "[ConfirmAddItems NMI] Sale error"
+        );
+        return NextResponse.json(
+          { error: "Failed to charge card. Please try again or contact support." },
+          { status: 502 }
+        );
+      }
+
+      if (saleResp.response !== "1" || !saleResp.transactionid) {
+        pledgesConfirmAddItemsLogger.warn(
+          { pledgeId, response: saleResp.response, text: saleResp.responsetext },
+          "[ConfirmAddItems NMI] Sale declined"
+        );
+        return NextResponse.json(
+          { error: saleResp.responsetext || "Card was declined. Please try a different card." },
+          { status: 400 }
+        );
+      }
+
+      // Stash the transaction id back into the pending block so the
+      // advisory-lock dedup below has a stable key, and so the
+      // completedAdditionalItems audit trail records the txn id.
+      pendingItems.paymentIntentId = saleResp.transactionid;
     }
 
     // Get the addons, scoped to the pledge's project for defense in depth

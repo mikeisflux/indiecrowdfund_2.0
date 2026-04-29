@@ -253,6 +253,20 @@ export function PaymentStep({
                   setIsProcessing={setIsProcessing}
                   onSuccess={handlePaymentSuccess}
                   onError={handlePaymentError}
+                  endpoint={
+                    isModifyMode
+                      ? `/api/pledges/${encodeURIComponent(currentPledgeId)}/confirm-modify`
+                      : isAddItemsMode
+                      ? `/api/pledges/${encodeURIComponent(currentPledgeId)}/confirm-add-items`
+                      : undefined
+                  }
+                  submitLabel={
+                    isModifyMode
+                      ? `Pay $${displayTotal.toFixed(2)} & update pledge`
+                      : isAddItemsMode
+                      ? `Pay $${displayTotal.toFixed(2)} & add items`
+                      : undefined
+                  }
                 />
               </>
             ) : paymentError ? (

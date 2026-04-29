@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, assignBackerNumber } from "@/lib/payments/stripe";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import { loadNmiConfig } from "@/lib/nmi";
 
 export const dynamic = "force-dynamic";
 
@@ -351,6 +352,42 @@ export async function POST(
           { status: 500 }
         );
       }
+    }
+
+    // PaymentCloud (NMI): KIA pledges have no vault entry, so we
+    // re-prompt for a card via Collect.js and run a fresh
+    // saleByPaymentToken when the client comes back to confirm-add-items
+    // with the payment_token. Stash the pending items here.
+    if (paymentProcessor === "NMI") {
+      const nmiConfig = await loadNmiConfig();
+      if (!nmiConfig) {
+        return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+      }
+
+      await db.pledge.update({
+        where: { id: pledgeId },
+        data: {
+          metadata: {
+            ...currentMetadata,
+            pendingAdditionalItems: {
+              paymentMethod: "NMI",
+              addons: addonsWithQuantity,
+              amount,
+              createdAt: new Date().toISOString(),
+            },
+          },
+        },
+      });
+
+      pledgesAddItemsLogger.info(`[AddItems NMI] Stashed pending items for pledge ${pledgeId}: ${addonsWithQuantity.length} addons, $${amount}`);
+
+      return NextResponse.json({
+        paymentMethod: "NMI",
+        type: "nmi_collectjs",
+        nmiPublicKey: nmiConfig.publicKey,
+        pledgeId: pledge.id,
+        amount,
+      });
     }
 
     // Stripe: Create PaymentIntent for immediate charge
