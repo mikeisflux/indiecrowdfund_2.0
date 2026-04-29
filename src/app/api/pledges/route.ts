@@ -129,14 +129,55 @@ export async function POST(req: NextRequest) {
       const addonsWithQuantity = data.addons || data.addonIds.map(id => ({ id, quantity: 1 }));
 
       // Validate all addons belong to this project and are of type ADDON (prevents cross-project abuse)
+      // Also pull shippingType for the address-required gate below.
+      const addonShippingTypes: string[] = [];
       if (addonsWithQuantity.length > 0) {
         const addonIdList = addonsWithQuantity.map((a: { id: string }) => a.id);
-        const validAddonCount = await db.reward.count({
+        const addonRows = await db.reward.findMany({
           where: { id: { in: addonIdList }, projectId: data.projectId, type: "ADDON", isEnded: false },
+          select: { id: true, shippingType: true },
         });
-        if (validAddonCount !== addonIdList.length) {
+        if (addonRows.length !== addonIdList.length) {
           return NextResponse.json({ error: "One or more invalid addons" }, { status: 400 });
         }
+        for (const row of addonRows) addonShippingTypes.push(row.shippingType);
+      }
+
+      // Address-required gate. If anything in this cart ships, the
+      // backer must have a saved address. Shipping cost is calculated
+      // against the saved profile address; the resulting Pledge row
+      // also needs shippingAddress so confirm-nmi can run AVS for
+      // PaymentCloud sales. We auto-attach the user's default address
+      // to the pledge when they have one — clients don't need to
+      // re-send it.
+      const cartHasShipping =
+        (reward && reward.shippingType !== "NO_SHIPPING") ||
+        addonShippingTypes.some((t) => t !== "NO_SHIPPING");
+      let resolvedShippingAddress: typeof data.shippingAddress = data.shippingAddress;
+      if (cartHasShipping && !resolvedShippingAddress) {
+        const savedAddr = await db.userAddress.findFirst({
+          where: { userId: session.user.id },
+          orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+        });
+        if (!savedAddr) {
+          return NextResponse.json(
+            {
+              error:
+                "Please add a shipping address to your profile before pledging. Go to Dashboard → Backer → Addresses.",
+            },
+            { status: 400 }
+          );
+        }
+        resolvedShippingAddress = {
+          name: savedAddr.fullName,
+          address1: savedAddr.line1,
+          address2: savedAddr.line2 ?? undefined,
+          city: savedAddr.city,
+          state: savedAddr.state,
+          zip: savedAddr.postalCode,
+          country: savedAddr.country,
+          phone: savedAddr.phone ?? undefined,
+        };
       }
 
       // Server-side amount validation: prevent underselling (user cannot submit less than reward+addon prices)
@@ -508,8 +549,8 @@ export async function POST(req: NextRequest) {
                 status: "PENDING",
                 paymentProcessor: "NMI",
                 chargedImmediately: false,
-                shippingAddress: data.shippingAddress
-                  ? (data.shippingAddress as unknown as Record<string, unknown>)
+                shippingAddress: resolvedShippingAddress
+                  ? (resolvedShippingAddress as unknown as Record<string, unknown>)
                   : undefined,
                 ...(sourceCampaignId ? { sourceCampaignId } : {}),
               },

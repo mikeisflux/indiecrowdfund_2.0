@@ -294,6 +294,25 @@ export function usePledge() {
     if (clientSecret || paypalOrderId || whopSessionId || nmiPublicKey) return;
     if (currentPledgeId) return;
     if (creatingPaymentRef.current) return;
+    // Block pledge creation when the cart contains shippable items and
+    // the backer has no saved address. Shipping cost is calculated off
+    // the saved profile address; without it we can't charge the right
+    // shipping rate, and the creator can't run AVS on the resulting
+    // sale either. The AddressWarning banner already nudges the user
+    // upstream — this is the hard gate.
+    const cartHasShipping =
+      (selectedReward && selectedReward.shippingType !== "NO_SHIPPING") ||
+      Object.entries(selectedAddons).some(([id, qty]) => {
+        if (!qty) return false;
+        const addon = addons.find((a) => a.id === id);
+        return addon && addon.shippingType !== "NO_SHIPPING";
+      });
+    if (cartHasShipping && hasSavedAddress === false) {
+      setPaymentError(
+        "Please add your shipping address to your profile before pledging. Open Dashboard → Backer → Addresses to add one."
+      );
+      return;
+    }
     creatingPaymentRef.current = true;
     setIsProcessing(true);
     setPaymentError(null);
