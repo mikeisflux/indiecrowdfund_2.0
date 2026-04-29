@@ -24,6 +24,16 @@ const log = logger.child({ module: "marketplace-purchase-confirm-nmi" });
 
 const bodySchema = z.object({
   paymentToken: z.string().min(1).max(200),
+  // Billing fields collected on the marketplace card form. NMI uses
+  // address1 + zip for AVS; missing them downgrades interchange.
+  billingFirstName: z.string().trim().max(100).optional(),
+  billingLastName: z.string().trim().max(100).optional(),
+  billingLine1: z.string().trim().max(200).optional(),
+  billingLine2: z.string().trim().max(200).optional(),
+  billingCity: z.string().trim().max(100).optional(),
+  billingState: z.string().trim().max(100).optional(),
+  billingZip: z.string().trim().max(20).optional(),
+  billingCountry: z.string().trim().max(3).optional(),
 });
 
 export async function POST(
@@ -41,7 +51,17 @@ export async function POST(
     if (!parsed.success) {
       return NextResponse.json({ error: "Missing payment token" }, { status: 400 });
     }
-    const { paymentToken } = parsed.data;
+    const {
+      paymentToken,
+      billingFirstName,
+      billingLastName,
+      billingLine1,
+      billingLine2,
+      billingCity,
+      billingState,
+      billingZip,
+      billingCountry,
+    } = parsed.data;
 
     const purchase = await db.marketplacePurchase.findFirst({
       where: { id: purchaseId },
@@ -95,15 +115,22 @@ export async function POST(
       select: { email: true, name: true },
     });
 
-    // Tokenize → vault.
+    // Tokenize → vault. Prefer cardholder-typed billing for AVS;
+    // fall back to account name when an older client didn't send it.
     let vaultResp;
     try {
       const [first, ...rest] = (userRecord?.name || "").split(" ");
       vaultResp = await addCustomerToVault(nmiConfig, {
         paymentToken,
-        firstName: first || undefined,
-        lastName: rest.join(" ") || undefined,
+        firstName: billingFirstName || first || undefined,
+        lastName: billingLastName || rest.join(" ") || undefined,
         email: userRecord?.email || undefined,
+        address1: billingLine1,
+        address2: billingLine2,
+        city: billingCity,
+        state: billingState,
+        zip: billingZip,
+        country: billingCountry,
       });
     } catch (err) {
       log.error(
@@ -151,7 +178,8 @@ export async function POST(
       });
     }
 
-    // Sale.
+    // Sale. Tag as the FIRST sale on the freshly-stored credential
+    // (CIT/initial) per Direct Post API "Stored Credentials (CIT/MIT)".
     let saleResp;
     try {
       saleResp = await saleByVaultToken(nmiConfig, {
@@ -160,6 +188,8 @@ export async function POST(
         orderid: purchase.id,
         orderdescription: `Marketplace purchase: ${purchase.book.title}`,
         email: userRecord?.email || undefined,
+        initiatedBy: "customer",
+        storedCredentialIndicator: "stored",
       });
     } catch (err) {
       log.error(

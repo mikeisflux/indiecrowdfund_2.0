@@ -247,6 +247,7 @@ export interface AddCustomerInput {
   lastName?: string;
   email?: string;
   address1?: string;
+  address2?: string;
   city?: string;
   state?: string;
   zip?: string;
@@ -264,6 +265,7 @@ export async function addCustomerToVault(
     last_name: input.lastName,
     email: input.email,
     address1: input.address1,
+    address2: input.address2,
     city: input.city,
     state: input.state,
     zip: input.zip,

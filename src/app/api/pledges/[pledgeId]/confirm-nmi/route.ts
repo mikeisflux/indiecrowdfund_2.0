@@ -21,6 +21,18 @@ const log = logger.child({ module: "pledges-confirm-nmi" });
 
 const bodySchema = z.object({
   paymentToken: z.string().min(1).max(200),
+  // Billing fields collected on the pledge form. Used for AVS on the
+  // sale + stored on the Customer Vault so future re-charges (chargeback
+  // recoup, retries) carry consistent CIT/MIT context. Optional so old
+  // clients still work, but every new browser submit sends them.
+  billingFirstName: z.string().trim().max(100).optional(),
+  billingLastName: z.string().trim().max(100).optional(),
+  billingLine1: z.string().trim().max(200).optional(),
+  billingLine2: z.string().trim().max(200).optional(),
+  billingCity: z.string().trim().max(100).optional(),
+  billingState: z.string().trim().max(100).optional(),
+  billingZip: z.string().trim().max(20).optional(),
+  billingCountry: z.string().trim().max(3).optional(),
 });
 
 export async function POST(
@@ -39,7 +51,17 @@ export async function POST(
     if (!parse.success) {
       return NextResponse.json({ error: "Missing payment token" }, { status: 400 });
     }
-    const { paymentToken } = parse.data;
+    const {
+      paymentToken,
+      billingFirstName,
+      billingLastName,
+      billingLine1,
+      billingLine2,
+      billingCity,
+      billingState,
+      billingZip,
+      billingCountry,
+    } = parse.data;
 
     const pledge = await db.pledge.findFirst({
       where: { id: pledgeId, deletedAt: null },
@@ -109,19 +131,27 @@ export async function POST(
 
     let vaultResp;
     try {
+      // Prefer billing fields the cardholder typed on the form. Fall
+      // back to shipping / account name only when an older client (or
+      // a retry of an old request) didn't send them.
       const [acctFirst, ...acctLastParts] = (userRecord?.name || "").split(" ");
       const shipName = shippingAddress?.name || "";
       const [shipFirst, ...shipLastParts] = shipName.split(" ");
       vaultResp = await addCustomerToVault(nmiConfig, {
         paymentToken,
-        firstName: shipFirst || acctFirst || undefined,
-        lastName: shipLastParts.join(" ") || acctLastParts.join(" ") || undefined,
+        firstName: billingFirstName || shipFirst || acctFirst || undefined,
+        lastName:
+          billingLastName ||
+          shipLastParts.join(" ") ||
+          acctLastParts.join(" ") ||
+          undefined,
         email: userRecord?.email || undefined,
-        address1: shippingAddress?.address1,
-        city: shippingAddress?.city,
-        state: shippingAddress?.state,
-        zip: shippingAddress?.zip,
-        country: shippingAddress?.country,
+        address1: billingLine1 || shippingAddress?.address1,
+        address2: billingLine2,
+        city: billingCity || shippingAddress?.city,
+        state: billingState || shippingAddress?.state,
+        zip: billingZip || shippingAddress?.zip,
+        country: billingCountry || shippingAddress?.country,
       });
     } catch (err) {
       log.error(
@@ -222,12 +252,22 @@ export async function POST(
 
     let saleResp;
     try {
+      // Tag this as the FIRST sale on the freshly-stored credential.
+      // Per NMI's Direct Post API "Stored Credentials (CIT/MIT)" section
+      // (docs/-Direct-Post-API.pdf), the initial transaction that
+      // creates the credential-on-file relationship gets initiated_by
+      // "customer" + stored_credential_indicator "stored". Subsequent
+      // re-charges (chargeback recoup, retries) use initiated_by
+      // "merchant" + stored_credential_indicator "used" +
+      // initial_transaction_id pointing back to this txn.
       saleResp = await saleByVaultToken(nmiConfig, {
         amount: Number(pledge.amount),
         customerVaultId,
         orderid: pledge.id,
         orderdescription: `Pledge to ${pledge.project.title}`,
         email: userRecord?.email || undefined,
+        initiatedBy: "customer",
+        storedCredentialIndicator: "stored",
       });
     } catch (err) {
       log.error(

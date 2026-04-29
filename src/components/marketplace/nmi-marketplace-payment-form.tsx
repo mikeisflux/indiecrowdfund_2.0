@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader2, Lock } from "lucide-react";
 import { apiFetch } from "@/lib/fetch-utils";
 
@@ -31,7 +33,8 @@ interface NmiMarketplacePaymentFormProps {
 // Marketplace PaymentCloud (NMI) Collect.js form. Mirrors the pledge
 // flow's NmiPaymentForm but the success path POSTs to the marketplace
 // confirm-nmi endpoint and the form charges immediately (marketplace
-// items always charge at purchase time).
+// items always charge at purchase time). Captures cardholder name +
+// billing address inline so AVS runs and we keep interchange / risk down.
 export function NmiMarketplacePaymentForm({
   publicKey,
   purchaseId,
@@ -43,16 +46,27 @@ export function NmiMarketplacePaymentForm({
   const [scriptReady, setScriptReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [line1, setLine1] = useState("");
+  const [line2, setLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [stateField, setStateField] = useState("");
+  const [zip, setZip] = useState("");
+  const [country, setCountry] = useState("US");
+
   const onSuccessRef = useRef(onSuccess);
   const onErrorRef = useRef(onError);
   const setIsProcessingRef = useRef(setIsProcessing);
   const purchaseIdRef = useRef(purchaseId);
+  const billingRef = useRef({ firstName, lastName, line1, line2, city, stateField, zip, country });
   useEffect(() => {
     onSuccessRef.current = onSuccess;
     onErrorRef.current = onError;
     setIsProcessingRef.current = setIsProcessing;
     purchaseIdRef.current = purchaseId;
-  }, [onSuccess, onError, purchaseId]);
+    billingRef.current = { firstName, lastName, line1, line2, city, stateField, zip, country };
+  }, [onSuccess, onError, purchaseId, firstName, lastName, line1, line2, city, stateField, zip, country]);
 
   useEffect(() => {
     if (!publicKey) return;
@@ -101,12 +115,23 @@ export function NmiMarketplacePaymentForm({
           return;
         }
         try {
+          const b = billingRef.current;
           const r = await apiFetch(
             `/api/marketplace/purchase/${encodeURIComponent(purchaseIdRef.current)}/confirm-nmi`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentToken: resp.token }),
+              body: JSON.stringify({
+                paymentToken: resp.token,
+                billingFirstName: b.firstName,
+                billingLastName: b.lastName,
+                billingLine1: b.line1,
+                billingLine2: b.line2 || undefined,
+                billingCity: b.city,
+                billingState: b.stateField,
+                billingZip: b.zip,
+                billingCountry: b.country,
+              }),
             }
           );
           const data = await r.json().catch(() => ({}));
@@ -128,6 +153,14 @@ export function NmiMarketplacePaymentForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firstName.trim() || !lastName.trim()) {
+      onError("Please enter the cardholder's first and last name.");
+      return;
+    }
+    if (!line1.trim() || !city.trim() || !stateField.trim() || !zip.trim() || !country.trim()) {
+      onError("Please enter the full billing address.");
+      return;
+    }
     if (!scriptReady || !window.CollectJS) {
       onError("Card form is still loading — please wait a moment.");
       return;
@@ -145,11 +178,103 @@ export function NmiMarketplacePaymentForm({
         </div>
       )}
 
-      <div className={scriptReady ? "space-y-3" : "hidden"}>
+      <div className={scriptReady ? "space-y-4" : "hidden"}>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="nmi-mkt-first-name">First name</Label>
+            <Input
+              id="nmi-mkt-first-name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              autoComplete="cc-given-name"
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="nmi-mkt-last-name">Last name</Label>
+            <Input
+              id="nmi-mkt-last-name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              autoComplete="cc-family-name"
+              required
+            />
+          </div>
+        </div>
+
         <div className="space-y-1">
-          <label className="text-sm font-medium" htmlFor="nmi-mkt-ccnumber">
-            Card number
-          </label>
+          <Label htmlFor="nmi-mkt-line1">Billing address</Label>
+          <Input
+            id="nmi-mkt-line1"
+            value={line1}
+            onChange={(e) => setLine1(e.target.value)}
+            autoComplete="billing address-line1"
+            placeholder="Street address"
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="nmi-mkt-line2" className="text-xs text-muted-foreground">
+            Apt / suite (optional)
+          </Label>
+          <Input
+            id="nmi-mkt-line2"
+            value={line2}
+            onChange={(e) => setLine2(e.target.value)}
+            autoComplete="billing address-line2"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="nmi-mkt-city">City</Label>
+            <Input
+              id="nmi-mkt-city"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              autoComplete="billing address-level2"
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="nmi-mkt-state">State / region</Label>
+            <Input
+              id="nmi-mkt-state"
+              value={stateField}
+              onChange={(e) => setStateField(e.target.value)}
+              autoComplete="billing address-level1"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="nmi-mkt-zip">Postal code</Label>
+            <Input
+              id="nmi-mkt-zip"
+              value={zip}
+              onChange={(e) => setZip(e.target.value)}
+              autoComplete="billing postal-code"
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="nmi-mkt-country">Country</Label>
+            <Input
+              id="nmi-mkt-country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value.toUpperCase())}
+              autoComplete="billing country"
+              maxLength={2}
+              placeholder="US"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1 pt-2">
+          <Label htmlFor="nmi-mkt-ccnumber">Card number</Label>
           <div
             id="nmi-mkt-ccnumber"
             className="h-11 rounded-md border border-input bg-background px-3 flex items-center"
@@ -157,18 +282,14 @@ export function NmiMarketplacePaymentForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="nmi-mkt-ccexp">
-              Expiration
-            </label>
+            <Label htmlFor="nmi-mkt-ccexp">Expiration</Label>
             <div
               id="nmi-mkt-ccexp"
               className="h-11 rounded-md border border-input bg-background px-3 flex items-center"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="nmi-mkt-cvv">
-              CVV
-            </label>
+            <Label htmlFor="nmi-mkt-cvv">CVV</Label>
             <div
               id="nmi-mkt-cvv"
               className="h-11 rounded-md border border-input bg-background px-3 flex items-center"
