@@ -197,6 +197,48 @@ export async function saleByVaultToken(
   });
 }
 
+export interface SaleByPaymentTokenInput {
+  amount: number;
+  paymentToken: string;
+  orderid?: string;
+  orderdescription?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+}
+
+// One-shot sale against a Collect.js payment_token. No Customer Vault
+// entry created. Used for KIA pledges where the cardholder is present
+// and we charge immediately — no future re-charge is needed, so paying
+// the per-txn vault fee + storing a credential-on-file would be waste.
+export async function saleByPaymentToken(
+  config: NmiConfig,
+  input: SaleByPaymentTokenInput
+): Promise<NmiResponse> {
+  return nmiPost(config, {
+    type: "sale",
+    payment_token: input.paymentToken,
+    amount: input.amount.toFixed(2),
+    orderid: input.orderid,
+    orderdescription: input.orderdescription,
+    email: input.email,
+    first_name: input.firstName,
+    last_name: input.lastName,
+    address1: input.address1,
+    address2: input.address2,
+    city: input.city,
+    state: input.state,
+    zip: input.zip,
+    country: input.country,
+  });
+}
+
 export async function refund(
   config: NmiConfig,
   transactionId: string,
@@ -243,6 +285,12 @@ export async function captureAuth(
 
 export interface AddCustomerInput {
   paymentToken: string;
+  // Caller-supplied vault id. PaymentCloud's white-label has been
+  // observed to NOT echo customer_vault_id back on add_customer
+  // responses (response=1, "Customer Added", but no vault id field).
+  // Pass our own and store it locally; NMI accepts arbitrary strings
+  // and uses them as-is per the Direct Post API.
+  customerVaultId?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -260,6 +308,7 @@ export async function addCustomerToVault(
 ): Promise<NmiResponse> {
   return nmiPost(config, {
     customer_vault: "add_customer",
+    customer_vault_id: input.customerVaultId,
     payment_token: input.paymentToken,
     first_name: input.firstName,
     last_name: input.lastName,

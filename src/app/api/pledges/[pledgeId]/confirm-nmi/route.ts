@@ -6,18 +6,21 @@ import { logger } from "@/lib/logger";
 import {
   loadNmiConfig,
   addCustomerToVault,
-  saleByVaultToken,
-  deleteVaultCustomer,
+  saleByPaymentToken,
 } from "@/lib/nmi";
 
 const log = logger.child({ module: "pledges-confirm-nmi" });
 
 // Phase 2 of the PaymentCloud pledge flow. The browser tokenized the
 // card via Collect.js and now POSTs the single-use payment_token here.
-// We exchange it for a Customer Vault id and either:
-//   - AoN: keep the pledge PENDING and let the charge-on-success cron
-//     run the sale when the campaign hits its goal
-//   - KIA: run the sale now and mark the pledge COMPLETED
+// What we do with it depends on the campaign type:
+//   - KIA: run the sale immediately against the payment_token, mark
+//     the pledge COMPLETED. No vault entry — cardholder is present
+//     and we never need to re-charge this card.
+//   - AoN: store the card in the Customer Vault now and let the
+//     charge-on-success cron run the sale when the campaign hits
+//     its goal. Vault is required because the cardholder won't be
+//     present at charge time.
 
 const bodySchema = z.object({
   paymentToken: z.string().min(1).max(200),
@@ -129,68 +132,139 @@ export async function POST(
         }
       | null;
 
-    let vaultResp;
-    try {
-      // Prefer billing fields the cardholder typed on the form. Fall
-      // back to shipping / account name only when an older client (or
-      // a retry of an old request) didn't send them.
-      const [acctFirst, ...acctLastParts] = (userRecord?.name || "").split(" ");
-      const shipName = shippingAddress?.name || "";
-      const [shipFirst, ...shipLastParts] = shipName.split(" ");
-      vaultResp = await addCustomerToVault(nmiConfig, {
-        paymentToken,
-        firstName: billingFirstName || shipFirst || acctFirst || undefined,
-        lastName:
-          billingLastName ||
-          shipLastParts.join(" ") ||
-          acctLastParts.join(" ") ||
-          undefined,
-        email: userRecord?.email || undefined,
-        address1: billingLine1 || shippingAddress?.address1,
-        address2: billingLine2,
-        city: billingCity || shippingAddress?.city,
-        state: billingState || shippingAddress?.state,
-        zip: billingZip || shippingAddress?.zip,
-        country: billingCountry || shippingAddress?.country,
-      });
-    } catch (err) {
-      log.error(
-        { pledgeId, err: err instanceof Error ? err.message : String(err) },
-        "PaymentCloud vault add error"
-      );
-      return NextResponse.json(
-        { error: "Failed to save card. Please try a different card or contact support." },
-        { status: 502 }
-      );
-    }
+    // Prefer billing fields the cardholder typed on the form. Fall
+    // back to shipping / account name only when an older client (or
+    // a retry of an old request) didn't send them.
+    const [acctFirst, ...acctLastParts] = (userRecord?.name || "").split(" ");
+    const shipName = shippingAddress?.name || "";
+    const [shipFirst, ...shipLastParts] = shipName.split(" ");
+    const firstName = billingFirstName || shipFirst || acctFirst || undefined;
+    const lastName =
+      billingLastName ||
+      shipLastParts.join(" ") ||
+      acctLastParts.join(" ") ||
+      undefined;
+    const address1 = billingLine1 || shippingAddress?.address1;
+    const address2 = billingLine2;
+    const city = billingCity || shippingAddress?.city;
+    const state = billingState || shippingAddress?.state;
+    const zip = billingZip || shippingAddress?.zip;
+    const country = billingCountry || shippingAddress?.country;
 
-    if (vaultResp.response !== "1" || !vaultResp.customer_vault_id) {
-      // Log the full raw response so we can see exactly which fields
-      // NMI returned. We've hit a case where response=1 ("Customer
-      // Added") came back without a customer_vault_id key — likely a
-      // PaymentCloud white-label difference in field naming.
-      log.warn(
-        {
-          pledgeId,
-          response: vaultResp.response,
-          text: vaultResp.responsetext,
-          rawKeys: Object.keys(vaultResp.raw),
-          raw: vaultResp.raw,
+    const isKeepItAll = pledge.project.campaignType === "KEEP_IT_ALL";
+
+    if (isKeepItAll) {
+      // KIA: charge the payment_token directly. No vault entry — the
+      // cardholder is present and we'll never re-charge this card, so
+      // storing a credential-on-file would just burn the per-txn
+      // Vault fee.
+
+      // CAS-claim the COMPLETED transition before running the sale so
+      // a duplicate concurrent confirm-nmi can't double-charge.
+      const charging = await db.pledge.updateMany({
+        where: {
+          id: pledge.id,
+          status: "PENDING",
+          chargedImmediately: false,
+          nmiTransactionId: null,
+          deletedAt: null,
         },
-        "PaymentCloud vault add declined"
-      );
-      return NextResponse.json(
-        { error: vaultResp.responsetext || "Card was declined. Please try a different card." },
-        { status: 400 }
-      );
-    }
-    const customerVaultId = vaultResp.customer_vault_id;
+        data: { chargedImmediately: true },
+      });
+      if (charging.count === 0) {
+        const fresh = await db.pledge.findUnique({
+          where: { id: pledge.id },
+          select: { status: true, chargedImmediately: true },
+        });
+        return NextResponse.json({
+          ok: true,
+          pledgeId: pledge.id,
+          chargedImmediately: !!fresh?.chargedImmediately,
+          status: fresh?.status ?? "PENDING",
+          alreadyConfirmed: true,
+        });
+      }
 
-    // CAS-update: only attach this vault id if the pledge is still
-    // PENDING with a null vault id. If the user double-tapped or two
-    // network retries reached the server in parallel, the second one
-    // loses this guard and we delete the vault entry it just created
-    // so we don't leak orphans inside PaymentCloud's vault.
+      let saleResp;
+      try {
+        saleResp = await saleByPaymentToken(nmiConfig, {
+          amount: Number(pledge.amount),
+          paymentToken,
+          orderid: pledge.id,
+          orderdescription: `Pledge to ${pledge.project.title}`,
+          email: userRecord?.email || undefined,
+          firstName,
+          lastName,
+          address1,
+          address2,
+          city,
+          state,
+          zip,
+          country,
+        });
+      } catch (err) {
+        log.error(
+          { pledgeId, err: err instanceof Error ? err.message : String(err) },
+          "PaymentCloud KIA sale error"
+        );
+        await db.pledge
+          .updateMany({
+            where: { id: pledge.id, status: "PENDING", chargedImmediately: true, nmiTransactionId: null },
+            data: { chargedImmediately: false },
+          })
+          .catch(() => null);
+        return NextResponse.json(
+          { error: "Failed to charge card. Please try again or contact support." },
+          { status: 502 }
+        );
+      }
+
+      if (saleResp.response !== "1" || !saleResp.transactionid) {
+        log.warn(
+          {
+            pledgeId,
+            response: saleResp.response,
+            text: saleResp.responsetext,
+            rawKeys: Object.keys(saleResp.raw),
+          },
+          "PaymentCloud KIA sale declined"
+        );
+        await db.pledge.updateMany({
+          where: { id: pledge.id, status: "PENDING", chargedImmediately: true, nmiTransactionId: null },
+          data: { chargedImmediately: false },
+        });
+        return NextResponse.json(
+          { error: saleResp.responsetext || "Card was declined. Please try a different card." },
+          { status: 400 }
+        );
+      }
+
+      await db.pledge.update({
+        where: { id: pledge.id },
+        data: {
+          status: "COMPLETED",
+          nmiTransactionId: saleResp.transactionid,
+          nmiInitialTransactionId: saleResp.transactionid,
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        pledgeId: pledge.id,
+        chargedImmediately: true,
+        status: "COMPLETED",
+      });
+    }
+
+    // AoN: store the card in the Customer Vault now; the
+    // charge-on-success cron will run the sale when the campaign
+    // hits its goal. We mint our own customer_vault_id because
+    // PaymentCloud's white-label doesn't echo NMI's auto-generated
+    // id back on add_customer responses (observed: response=1
+    // "Customer Added" with no customer_vault_id field present).
+    // CAS-claim the vault id atomically BEFORE the gateway call
+    // so a concurrent retry can't create two vault entries.
+    const customerVaultId = pledge.id;
     const claimed = await db.pledge.updateMany({
       where: {
         id: pledge.id,
@@ -201,10 +275,6 @@ export async function POST(
       data: { nmiCustomerVaultId: customerVaultId },
     });
     if (claimed.count === 0) {
-      // Lost the race — another request already saved a vault entry
-      // for this pledge. Tear down the duplicate vault we just created
-      // and report success so the client doesn't see a confusing error.
-      await deleteVaultCustomer(nmiConfig, customerVaultId).catch(() => null);
       const fresh = await db.pledge.findUnique({
         where: { id: pledge.id },
         select: { status: true, chargedImmediately: true },
@@ -218,113 +288,63 @@ export async function POST(
       });
     }
 
-    const isKeepItAll = pledge.project.campaignType === "KEEP_IT_ALL";
-    if (!isKeepItAll) {
-      // AoN — defer the sale to the charge-on-success cron.
-      return NextResponse.json({
-        ok: true,
-        pledgeId: pledge.id,
-        chargedImmediately: false,
-        status: "PENDING",
-      });
-    }
-
-    // KIA: claim the COMPLETED transition before running the sale so
-    // a duplicate concurrent confirm-nmi can't sell the same vault
-    // twice. We flip chargedImmediately=true while still PENDING; the
-    // sale call below either flips to COMPLETED on success or rolls
-    // back chargedImmediately=false on decline.
-    const charging = await db.pledge.updateMany({
-      where: {
-        id: pledge.id,
-        status: "PENDING",
-        chargedImmediately: false,
-        nmiTransactionId: null,
-        deletedAt: null,
-      },
-      data: { chargedImmediately: true },
-    });
-    if (charging.count === 0) {
-      // Another request beat us to the charge — return whatever the
-      // pledge looks like now so the client can move on.
-      const fresh = await db.pledge.findUnique({
-        where: { id: pledge.id },
-        select: { status: true, chargedImmediately: true },
-      });
-      return NextResponse.json({
-        ok: true,
-        pledgeId: pledge.id,
-        chargedImmediately: !!fresh?.chargedImmediately,
-        status: fresh?.status ?? "PENDING",
-        alreadyConfirmed: true,
-      });
-    }
-
-    let saleResp;
+    let vaultResp;
     try {
-      // Tag this as the FIRST sale on the freshly-stored credential.
-      // Per NMI's Direct Post API "Stored Credentials (CIT/MIT)" section
-      // (docs/-Direct-Post-API.pdf), the initial transaction that
-      // creates the credential-on-file relationship gets initiated_by
-      // "customer" + stored_credential_indicator "stored". Subsequent
-      // re-charges (chargeback recoup, retries) use initiated_by
-      // "merchant" + stored_credential_indicator "used" +
-      // initial_transaction_id pointing back to this txn.
-      saleResp = await saleByVaultToken(nmiConfig, {
-        amount: Number(pledge.amount),
+      vaultResp = await addCustomerToVault(nmiConfig, {
+        paymentToken,
         customerVaultId,
-        orderid: pledge.id,
-        orderdescription: `Pledge to ${pledge.project.title}`,
+        firstName,
+        lastName,
         email: userRecord?.email || undefined,
-        initiatedBy: "customer",
-        storedCredentialIndicator: "stored",
+        address1,
+        address2,
+        city,
+        state,
+        zip,
+        country,
       });
     } catch (err) {
       log.error(
         { pledgeId, err: err instanceof Error ? err.message : String(err) },
-        "PaymentCloud KIA sale error"
+        "PaymentCloud vault add error"
       );
-      // Roll back the chargedImmediately claim so a retry can run.
       await db.pledge
         .updateMany({
-          where: { id: pledge.id, status: "PENDING", chargedImmediately: true, nmiTransactionId: null },
-          data: { chargedImmediately: false },
+          where: { id: pledge.id, status: "PENDING", nmiCustomerVaultId: customerVaultId },
+          data: { nmiCustomerVaultId: null },
         })
         .catch(() => null);
       return NextResponse.json(
-        { error: "Failed to charge card. Please try again or contact support." },
+        { error: "Failed to save card. Please try a different card or contact support." },
         { status: 502 }
       );
     }
 
-    if (saleResp.response !== "1" || !saleResp.transactionid) {
-      // Decline — clean up the vault entry so the user can retry with a
-      // different card without leaking saved cards. Roll back the claim.
-      await deleteVaultCustomer(nmiConfig, customerVaultId).catch(() => null);
+    if (vaultResp.response !== "1") {
+      log.warn(
+        {
+          pledgeId,
+          response: vaultResp.response,
+          text: vaultResp.responsetext,
+          rawKeys: Object.keys(vaultResp.raw),
+        },
+        "PaymentCloud vault add declined"
+      );
       await db.pledge.updateMany({
-        where: { id: pledge.id, status: "PENDING", chargedImmediately: true, nmiTransactionId: null },
-        data: { chargedImmediately: false, nmiCustomerVaultId: null },
+        where: { id: pledge.id, status: "PENDING", nmiCustomerVaultId: customerVaultId },
+        data: { nmiCustomerVaultId: null },
       });
       return NextResponse.json(
-        { error: saleResp.responsetext || "Card was declined. Please try a different card." },
+        { error: vaultResp.responsetext || "Card was declined. Please try a different card." },
         { status: 400 }
       );
     }
 
-    await db.pledge.update({
-      where: { id: pledge.id },
-      data: {
-        status: "COMPLETED",
-        nmiTransactionId: saleResp.transactionid,
-        nmiInitialTransactionId: saleResp.transactionid,
-      },
-    });
-
     return NextResponse.json({
       ok: true,
       pledgeId: pledge.id,
-      chargedImmediately: true,
-      status: "COMPLETED",
+      chargedImmediately: false,
+      status: "PENDING",
     });
   } catch (err) {
     log.error(
