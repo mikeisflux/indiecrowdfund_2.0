@@ -35,6 +35,27 @@ interface CollectJsResponse {
     exp?: string;
     type?: string;
   };
+  // Apple Pay / Google Pay path — Collect.js puts the wallet-supplied
+  // billing/shipping contact here instead of expecting us to read it
+  // off React state. We use it when tokenType is "applePay" or
+  // "googlePay".
+  wallet?: {
+    cardDetails?: string;
+    cardNetwork?: string;
+    email?: string | null;
+    billingInfo?: {
+      address1?: string | null;
+      address2?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      postalCode?: string | null;
+      city?: string | null;
+      state?: string | null;
+      country?: string | null;
+      phone?: string | null;
+    };
+    shippingInfo?: Record<string, unknown>;
+  };
 }
 
 interface NmiPaymentFormProps {
@@ -114,6 +135,31 @@ export function NmiPaymentForm({
     // `collectjs` and trips "Unexpected fields for collectjs".
     script.id = "nmi-collectjs";
     script.setAttribute("data-tokenization-key", publicKey);
+    // Required by Apple Pay's PaymentRequestAbstraction (the merchant has
+    // Apple Pay enabled at the gateway). Without these three, configure()
+    // logs "Could not create PaymentRequestAbstraction". Set as data-*
+    // because that's the form documented in the Collect.js PDF —
+    // the camelCase JS-API equivalents aren't documented and could trip
+    // "Unexpected fields".
+    script.setAttribute("data-price", total.toFixed(2));
+    script.setAttribute("data-currency", "USD");
+    script.setAttribute("data-country", "US");
+    // Apple Pay button rendering — only Safari / iOS will actually show
+    // anything; other browsers ignore. Bind to .nmi-applepay-button div
+    // below. Capture billing postal address + name from the Apple Pay
+    // sheet so the resulting tokenized sale carries AVS data.
+    script.setAttribute("data-field-apple-pay-selector", ".nmi-applepay-button");
+    script.setAttribute("data-field-apple-pay-type", "buy");
+    script.setAttribute("data-field-apple-pay-total-label", "IndieCrowdfund");
+    script.setAttribute(
+      "data-field-apple-pay-required-billing-contact-fields",
+      JSON.stringify(["postalAddress", "name"])
+    );
+    script.setAttribute(
+      "data-field-apple-pay-contact-fields",
+      JSON.stringify(["email"])
+    );
+    script.setAttribute("data-field-apple-pay-contact-fields-mapped-to", "billing");
     script.addEventListener("load", () => setScriptReady(true), { once: true });
     script.addEventListener("error", () => {
       onErrorRef.current("Failed to load card form. Please refresh and try again.");
@@ -156,7 +202,24 @@ export function NmiPaymentForm({
           return;
         }
         try {
-          const b = billingRef.current;
+          // For Apple Pay / Google Pay, take billing from the wallet
+          // sheet — the user never typed our billing fields. For card
+          // entry, use the typed fields.
+          const wallet = resp.wallet?.billingInfo;
+          const isWallet =
+            resp.tokenType === "applePay" || resp.tokenType === "googlePay";
+          const b = isWallet
+            ? {
+                firstName: wallet?.firstName || "",
+                lastName: wallet?.lastName || "",
+                line1: wallet?.address1 || "",
+                line2: wallet?.address2 || "",
+                city: wallet?.city || "",
+                stateField: wallet?.state || "",
+                zip: wallet?.postalCode || "",
+                country: wallet?.country || "US",
+              }
+            : billingRef.current;
           const r = await apiFetch(
             `/api/pledges/${encodeURIComponent(pledgeIdRef.current)}/confirm-nmi`,
             {
@@ -230,6 +293,12 @@ export function NmiPaymentForm({
       )}
 
       <div className={scriptReady ? "space-y-4" : "hidden"}>
+        {/* Apple Pay button — Collect.js renders the actual styled
+            button into this div on Safari/iOS only; on other browsers
+            this stays empty. Bypasses our typed billing fields entirely
+            because the wallet sheet provides billing info directly. */}
+        <div className="nmi-applepay-button" />
+
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label htmlFor="nmi-first-name">First name</Label>

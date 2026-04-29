@@ -149,6 +149,12 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
     // own script tag as a config key.
     s.id = "nmi-collectjs";
     s.setAttribute("data-tokenization-key", publicKey);
+    // Required because the merchant has Apple Pay enabled at the gateway;
+    // missing these triggers "Could not create PaymentRequestAbstraction".
+    // Card-on-file save (no charge), so the price is a placeholder.
+    s.setAttribute("data-price", "1.00");
+    s.setAttribute("data-currency", "USD");
+    s.setAttribute("data-country", "US");
     s.addEventListener("load", () => setScriptReady(true), { once: true });
     document.body.appendChild(s);
   }, [showForm, publicKey]);

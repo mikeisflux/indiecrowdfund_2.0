@@ -89,6 +89,11 @@ export function NmiMarketplacePaymentForm({
     // own script tag as a config key.
     script.id = "nmi-collectjs";
     script.setAttribute("data-tokenization-key", publicKey);
+    // Required because the merchant has Apple Pay enabled at the gateway;
+    // missing these triggers "Could not create PaymentRequestAbstraction".
+    script.setAttribute("data-price", amount.toFixed(2));
+    script.setAttribute("data-currency", currency.toUpperCase());
+    script.setAttribute("data-country", "US");
     script.addEventListener("load", () => setScriptReady(true), { once: true });
     script.addEventListener("error", () => {
       onErrorRef.current("Failed to load card form. Please refresh and try again.");
