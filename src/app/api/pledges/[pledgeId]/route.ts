@@ -1061,31 +1061,81 @@ export async function PATCH(
           }
         } else if (paymentProcessor === "NMI") {
           // PaymentCloud partial refund against the original sale.
+          //
+          // Concurrent-downgrade race: two PATCH modify-refund calls
+          // would both call nmiRefund(txnId, refundAmount) and the
+          // loser would surface NMI's "amount exceeds available" or
+          // "already refunded" error to the user even though the
+          // refund actually went through earlier in the race.
+          // Serialize via a per-pledge advisory_xact_lock + amount
+          // re-check inside the tx. The first call refunds and stamps
+          // pledge.amount = effectiveNewAmount; the second wakes up,
+          // sees pledge.amount no longer matches its oldAmount, aborts
+          // with a 409 telling the user to refresh.
           if (!pledge.nmiTransactionId) {
             return NextResponse.json(
               { error: "No PaymentCloud transaction found to refund. Please contact support." },
               { status: 400 }
             );
           }
+
+          let aborted = false;
+          let abortReason: string | null = null;
+          let abortStatus = 400;
+
           try {
-            const nmiConfig = await loadNmiConfig();
-            if (!nmiConfig) {
-              return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
-            }
-            const refundResp = await nmiRefund(nmiConfig, pledge.nmiTransactionId, refundAmount);
-            if (refundResp.response !== "1") {
-              pledgesLogger.error(
-                { pledgeId: pledge.id, response: refundResp.response, text: refundResp.responsetext },
-                "PaymentCloud partial refund declined"
-              );
-              return NextResponse.json(
-                { error: refundResp.responsetext || "Refund failed" },
-                { status: 400 }
-              );
-            }
+            await db.$transaction(async (tx) => {
+              await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`partial-refund-${pledgeId}`}))`;
+
+              const fresh = await tx.pledge.findFirst({
+                where: { id: pledgeId, deletedAt: null },
+                select: { amount: true, nmiTransactionId: true },
+              });
+              if (!fresh) {
+                aborted = true; abortReason = "Pledge not found"; abortStatus = 404; return;
+              }
+              if (Number(fresh.amount) !== oldAmount) {
+                aborted = true;
+                abortReason = "Pledge amount changed since this modification was started. Please refresh and try again.";
+                abortStatus = 409;
+                return;
+              }
+              if (!fresh.nmiTransactionId) {
+                aborted = true; abortReason = "No PaymentCloud transaction found to refund."; return;
+              }
+
+              const nmiConfig = await loadNmiConfig();
+              if (!nmiConfig) {
+                aborted = true; abortReason = "PaymentCloud not configured"; abortStatus = 502; return;
+              }
+              const refundResp = await nmiRefund(nmiConfig, fresh.nmiTransactionId, refundAmount);
+              if (refundResp.response !== "1") {
+                pledgesLogger.error(
+                  { pledgeId: pledge.id, response: refundResp.response, text: refundResp.responsetext },
+                  "PaymentCloud partial refund declined"
+                );
+                aborted = true;
+                abortReason = refundResp.responsetext || "Refund failed";
+                return;
+              }
+
+              // Stamp pledge.amount inside the lock so a concurrent
+              // request waiting on this lock sees the new value and
+              // bails. applyModificationChanges below idempotently
+              // re-sets the same value alongside the addon/reward
+              // swaps so this is safe.
+              await tx.pledge.update({
+                where: { id: pledgeId },
+                data: { amount: effectiveNewAmount },
+              });
+            });
           } catch (nmiError) {
-            pledgesLogger.error({ err: String(nmiError) }, "PaymentCloud partial refund error");
+            pledgesLogger.error({ err: String(nmiError) }, "PaymentCloud partial refund tx error");
             return NextResponse.json({ error: "Failed to process refund" }, { status: 500 });
+          }
+
+          if (aborted) {
+            return NextResponse.json({ error: abortReason || "Refund failed" }, { status: abortStatus });
           }
         } else {
           // Stripe partial refund
