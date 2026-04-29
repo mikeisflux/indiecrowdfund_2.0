@@ -73,6 +73,51 @@ else
     exit 1
 fi
 
+# Step 4b: Route-tree pre-flight check.
+# Catches the slug-collision class of error before deploy. Next.js's
+# route registration runs at server startup, not at build time, which
+# means a build can succeed and still produce code that crash-loops
+# on boot. We do the same sibling-slug-name check Next does, ahead of
+# build, so the deploy aborts loudly instead of swapping a broken .next.
+echo ""
+echo "🛣️  Step 4b: Validating route tree..."
+ROUTE_VALIDATION=$(node -e '
+const fs = require("fs");
+const path = require("path");
+const issues = [];
+function walk(dir) {
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  const slugDirs = entries.filter(e =>
+    e.isDirectory() && /^\[.+\]$/.test(e.name) && !e.name.startsWith("[...")
+  );
+  if (slugDirs.length > 1) {
+    issues.push(dir + ": conflicting slug names " + slugDirs.map(s => s.name).join(", "));
+  }
+  for (const e of entries) {
+    if (e.isDirectory()) walk(path.join(dir, e.name));
+  }
+}
+walk("src/app");
+if (issues.length) {
+  console.error("ROUTE TREE INVALID:");
+  for (const i of issues) console.error("  " + i);
+  process.exit(1);
+}
+console.log("ok");
+' 2>&1)
+ROUTE_VALIDATION_EXIT=$?
+if [ $ROUTE_VALIDATION_EXIT -eq 0 ]; then
+    echo -e "${GREEN}   Route tree OK${NC}"
+else
+    echo -e "${RED}❌ ERROR: Route tree validation failed!${NC}"
+    echo "$ROUTE_VALIDATION"
+    echo ""
+    echo "Sibling [slug] directories must use the same parameter name."
+    echo "Fix the listed paths and re-run."
+    exit 1
+fi
+
 # Step 5: Clean up any previous failed build attempts
 echo ""
 echo "🧹 Step 5: Cleaning up previous build attempts..."
@@ -154,15 +199,66 @@ else
     exit 1
 fi
 
-# Step 8: Verify app is running
+# Step 8: Post-deploy health check.
+# `pm2 reload` returns success even if every worker crashes 1 second
+# later. We give the cluster 15 seconds to settle, then read PM2's
+# JSON state to detect restart-looping workers. If any worker has
+# accumulated unstable_restarts > 2 in this window, roll back to the
+# previous build. Catches runtime errors that slipped past type-check
+# + route validation (missing dep, schema mismatch, etc).
 echo ""
-echo "🔍 Step 8: Verifying deployment..."
-sleep 3
-if pm2 status | grep -q "online"; then
-    echo -e "${GREEN}   App is running!${NC}"
+echo "🔍 Step 8: Verifying deployment (15s settle)..."
+sleep 15
+
+PM2_STATE=$(pm2 jlist 2>/dev/null)
+if [ -z "$PM2_STATE" ]; then
+    echo -e "${RED}❌ Could not read PM2 state${NC}"
+    exit 1
+fi
+
+UNSTABLE_COUNT=$(echo "$PM2_STATE" | node -e '
+let raw = "";
+process.stdin.on("data", c => raw += c);
+process.stdin.on("end", () => {
+  try {
+    const apps = JSON.parse(raw);
+    let unstable = 0;
+    for (const app of apps) {
+      const env = app.pm2_env || {};
+      // unstable_restarts counts crashes within the min_uptime window.
+      // > 2 in 15s after a deploy means the new build is crash-looping.
+      if ((env.unstable_restarts || 0) > 2 || env.status === "errored") {
+        unstable++;
+      }
+    }
+    process.stdout.write(String(unstable));
+  } catch { process.stdout.write("ERR"); }
+});
+')
+
+if [ "$UNSTABLE_COUNT" = "0" ]; then
+    ONLINE_COUNT=$(echo "$PM2_STATE" | node -e '
+let raw = ""; process.stdin.on("data", c => raw += c); process.stdin.on("end", () => {
+  try { const apps = JSON.parse(raw); let n=0; for (const a of apps) if (a.pm2_env && a.pm2_env.status === "online") n++; process.stdout.write(String(n)); }
+  catch { process.stdout.write("ERR"); }
+});
+')
+    echo -e "${GREEN}   Deployment healthy: ${ONLINE_COUNT} worker(s) online, no restart loops${NC}"
+elif [ "$UNSTABLE_COUNT" = "ERR" ]; then
+    echo -e "${YELLOW}⚠️  Could not parse PM2 state — proceeding without rollback check${NC}"
 else
-    echo -e "${RED}❌ App may not be running correctly!${NC}"
-    echo "   Check: pm2 logs"
+    echo -e "${RED}❌ ${UNSTABLE_COUNT} worker(s) restart-looping — rolling back!${NC}"
+    LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
+    if [ -n "$LATEST_BACKUP" ]; then
+        rm -rf .next
+        mv "$LATEST_BACKUP" .next
+        pm2 reload all --update-env
+        echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
+        echo "   New build crashed on startup. Check logs:"
+        echo "   tail -100 /var/log/pm2/indiecrowdfund-error-*.log"
+    else
+        echo -e "${RED}   No backup available to roll back to!${NC}"
+    fi
     exit 1
 fi
 
