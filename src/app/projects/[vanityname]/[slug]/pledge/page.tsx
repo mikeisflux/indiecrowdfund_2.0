@@ -168,6 +168,7 @@ export default function PledgePage() {
                 whopEnvironment={pledge.whopEnvironment}
                 nmiPublicKey={pledge.nmiPublicKey}
                 nmiIsKeepItAll={pledge.nmiIsKeepItAll}
+                nmiModificationId={pledge.nmiModificationId}
               />
             )}
           </div>

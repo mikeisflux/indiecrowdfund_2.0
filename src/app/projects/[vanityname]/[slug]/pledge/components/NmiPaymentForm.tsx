@@ -75,6 +75,11 @@ interface NmiPaymentFormProps {
   // Submit-button label override. Defaults to "Pay $X" / "Pledge $X"
   // depending on isKeepItAll.
   submitLabel?: string;
+  // Extra fields to merge into the POST body alongside paymentToken +
+  // billing fields. Used by modify-upcharge to send modificationId so
+  // confirm-modify can reject submissions whose pendingModification
+  // was superseded by a later modify call.
+  extraBody?: Record<string, string | number | boolean>;
 }
 
 export function NmiPaymentForm({
@@ -89,6 +94,7 @@ export function NmiPaymentForm({
   onError,
   endpoint,
   submitLabel,
+  extraBody,
 }: NmiPaymentFormProps) {
   const [scriptReady, setScriptReady] = useState(false);
 
@@ -110,6 +116,7 @@ export function NmiPaymentForm({
   const setIsProcessingRef = useRef(setIsProcessing);
   const pledgeIdRef = useRef(pledgeId);
   const endpointRef = useRef(endpoint);
+  const extraBodyRef = useRef(extraBody);
   const billingRef = useRef({ firstName, lastName, line1, line2, city, stateField, zip, country });
   // Keep refs current so the Collect.js callback (registered once on
   // mount) sees the latest handlers/pledge id/billing without re-registering.
@@ -119,8 +126,9 @@ export function NmiPaymentForm({
     setIsProcessingRef.current = setIsProcessing;
     pledgeIdRef.current = pledgeId;
     endpointRef.current = endpoint;
+    extraBodyRef.current = extraBody;
     billingRef.current = { firstName, lastName, line1, line2, city, stateField, zip, country };
-  }, [onSuccess, onError, setIsProcessing, pledgeId, endpoint, firstName, lastName, line1, line2, city, stateField, zip, country]);
+  }, [onSuccess, onError, setIsProcessing, pledgeId, endpoint, extraBody, firstName, lastName, line1, line2, city, stateField, zip, country]);
 
   useEffect(() => {
     if (!publicKey) return;
@@ -246,6 +254,7 @@ export function NmiPaymentForm({
               billingState: b.stateField,
               billingZip: b.zip,
               billingCountry: b.country,
+              ...(extraBodyRef.current || {}),
             }),
           });
           const data = await r.json().catch(() => ({}));

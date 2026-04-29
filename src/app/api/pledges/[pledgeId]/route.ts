@@ -266,6 +266,10 @@ export async function PATCH(
     const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status) || campaignEnded;
     if (action === "cancel") {
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
+      // NMI pre-CASes COMPLETED → REFUNDED before issuing refund to
+      // serialize concurrent cancels. When set, skip the post-refund
+      // CAS below since we already did it.
+      let nmiCancelClaimed = false;
 
       // COMPLETED pledges: for closed campaigns, create a refund request (requires creator approval)
       // For live campaigns, process the refund immediately
@@ -407,9 +411,35 @@ export async function PATCH(
               { status: 400 }
             );
           }
+
+          // Pre-CAS COMPLETED → REFUNDED to serialize concurrent cancel
+          // requests BEFORE we call NMI. Without this both racers would
+          // call nmiRefund(txn) and the loser would surface NMI's
+          // "already refunded" error to the user as a 400 — confusing
+          // since the refund actually went through. Roll back to
+          // COMPLETED on refund failure so the user can retry.
+          const nmiClaim = await db.pledge.updateMany({
+            where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
+            data: { status: "REFUNDED", lastFailureReason: body.reason || "Cancelled by backer" },
+          });
+          if (nmiClaim.count === 0) {
+            return NextResponse.json({
+              success: true,
+              refunded: true,
+              message: "Pledge was already refunded by a concurrent request",
+              alreadyRefunded: true,
+            });
+          }
+          nmiCancelClaimed = true;
+
           try {
             const nmiConfig = await loadNmiConfig();
             if (!nmiConfig) {
+              await db.pledge.updateMany({
+                where: { id: pledgeId, status: "REFUNDED" },
+                data: { status: "COMPLETED", lastFailureReason: null },
+              }).catch(() => null);
+              nmiCancelClaimed = false;
               return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
             }
             const refundResp = await nmiRefund(nmiConfig, pledge.nmiTransactionId);
@@ -418,6 +448,11 @@ export async function PATCH(
                 { pledgeId: pledge.id, response: refundResp.response, text: refundResp.responsetext },
                 "PaymentCloud refund declined"
               );
+              await db.pledge.updateMany({
+                where: { id: pledgeId, status: "REFUNDED" },
+                data: { status: "COMPLETED", lastFailureReason: null },
+              }).catch(() => null);
+              nmiCancelClaimed = false;
               return NextResponse.json(
                 { error: refundResp.responsetext || "Refund failed" },
                 { status: 400 }
@@ -430,6 +465,11 @@ export async function PATCH(
             }
           } catch (nmiError) {
             pledgesLogger.error({ err: String(nmiError) }, "PaymentCloud refund error");
+            await db.pledge.updateMany({
+              where: { id: pledgeId, status: "REFUNDED" },
+              data: { status: "COMPLETED", lastFailureReason: null },
+            }).catch(() => null);
+            nmiCancelClaimed = false;
             return NextResponse.json({ error: "Failed to process PaymentCloud refund." }, { status: 500 });
           }
         } else {
@@ -475,13 +515,20 @@ export async function PATCH(
         // returns the existing refund on retry; DC's API dedups), so
         // a lost CAS just means we skip the decrement — the provider
         // refund itself isn't double-applied.
-        const refundCas = await db.pledge.updateMany({
-          where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
-          data: {
-            status: "REFUNDED",
-            lastFailureReason: body.reason || "Cancelled by backer",
-          },
-        });
+        //
+        // For NMI we already pre-CAS'd to serialize concurrent
+        // cancels (NMI's refund() is NOT idempotent — duplicate calls
+        // surface confusing "already refunded" errors), so this CAS
+        // would always lose-race against our own claim. Skip it.
+        const refundCas = nmiCancelClaimed
+          ? { count: 1 }
+          : await db.pledge.updateMany({
+              where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
+              data: {
+                status: "REFUNDED",
+                lastFailureReason: body.reason || "Cancelled by backer",
+              },
+            });
 
         if (refundCas.count === 0) {
           return NextResponse.json({
@@ -770,6 +817,17 @@ export async function PATCH(
             ? pledge.metadata as Record<string, unknown>
             : {};
 
+          // Mismatched-cart guard: the supersede logic above unconditionally
+          // overwrites a prior pendingModification when a new modify call
+          // comes in. For NMI we hand the user back to Collect.js with the
+          // amountDiff displayed on their form — if a second tab supersedes
+          // before the first submits its paymentToken, confirm-modify would
+          // otherwise charge the SECOND tab's amountDiff against the first
+          // tab's card data. Stamp a unique modificationId here, return it
+          // to the client, and require the form to echo it on submit so
+          // confirm-modify can reject stale submissions.
+          const modificationId = `mod_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+
           await db.pledge.update({
             where: { id: pledgeId },
             data: {
@@ -777,6 +835,7 @@ export async function PATCH(
                 ...currentMetadata,
                 pendingModification: {
                   paymentMethod: "NMI",
+                  modificationId,
                   rewardId: rewardId || null,
                   addons: addonsWithQuantity,
                   newAmount,
@@ -793,6 +852,7 @@ export async function PATCH(
             requiresPayment: true,
             paymentMethod: "NMI",
             nmiPublicKey: nmiConfigCheck.publicKey,
+            modificationId,
             amountDiff,
             message: `Additional $${amountDiff.toFixed(2)} payment required`,
             newAmount: effectiveNewAmount,

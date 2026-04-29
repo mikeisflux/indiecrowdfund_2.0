@@ -81,6 +81,7 @@ export async function modifyPledge(
   clientSecret?: string;
   publishableKey?: string;
   nmiPublicKey?: string;
+  modificationId?: string;
   amountDiff?: number;
   refundAmount?: number;
   message: string;
@@ -111,6 +112,7 @@ export async function modifyPledge(
     clientSecret: data.clientSecret,
     publishableKey: data.publishableKey,
     nmiPublicKey: data.nmiPublicKey,
+    modificationId: data.modificationId,
     amountDiff: data.amountDiff,
     refundAmount: data.refundAmount,
     message: data.message,

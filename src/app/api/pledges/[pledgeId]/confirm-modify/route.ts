@@ -28,6 +28,12 @@ export async function POST(
     const { pledgeId } = await params;
     const body = await req.json().catch(() => ({}));
     const paymentToken: string | undefined = typeof body?.paymentToken === "string" ? body.paymentToken : undefined;
+    // Echo of pendingModification.modificationId from the PATCH response.
+    // Used for NMI to reject submissions whose pendingModification was
+    // superseded by a later modify call (different cart, different
+    // amountDiff). Stripe/DC don't need this because the clientSecret
+    // is itself cart-specific and a superseded PI fails at the gateway.
+    const submittedModificationId: string | undefined = typeof body?.modificationId === "string" ? body.modificationId : undefined;
 
     const pledge = await db.pledge.findFirst({
       where: { id: pledgeId, deletedAt: null },
@@ -60,6 +66,12 @@ export async function POST(
         // re-charge the user. Presence here means "money was already
         // taken; just retry the apply, do not re-tokenize".
         nmiTransactionId?: string;
+        // Stamped on the PATCH that created this pendingModification,
+        // returned to the client, and required to be echoed back on
+        // the confirm-modify submission. A mismatch means the cart
+        // was superseded by another modify call — reject so we don't
+        // charge the wrong amountDiff.
+        modificationId?: string;
         rewardId?: string | null;
         addons?: { id: string; quantity: number }[];
         newAmount: number;
@@ -121,6 +133,24 @@ export async function POST(
         );
       }
     } else if (pending.paymentMethod === "NMI") {
+      // Cart-mismatch guard: ensure the pendingModification we're about
+      // to charge against is the same one the client's form was built
+      // for. If a later modify call superseded this one, the form's
+      // displayed amountDiff is stale and we must NOT charge silently.
+      if (
+        pending.modificationId &&
+        submittedModificationId &&
+        pending.modificationId !== submittedModificationId
+      ) {
+        pledgesConfirmModifyLogger.warn(
+          { pledgeId, expected: pending.modificationId, got: submittedModificationId },
+          "[ConfirmModify NMI] modificationId mismatch — pending was superseded"
+        );
+        return NextResponse.json(
+          { error: "Your modification was superseded by a more recent change. Refresh and try again." },
+          { status: 409 }
+        );
+      }
       // PaymentCloud modify-upcharge: charge the delta against a fresh
       // Collect.js payment_token. CRITICAL: we may be retrying a
       // previous attempt that ran the sale but crashed before the

@@ -49,6 +49,7 @@ interface PaymentStepProps {
   whopEnvironment: "production" | "sandbox";
   nmiPublicKey: string | null;
   nmiIsKeepItAll: boolean;
+  nmiModificationId?: string | null;
 }
 
 const isEmailVerificationError = (error: string | null) =>
@@ -125,6 +126,7 @@ export function PaymentStep({
   whopEnvironment,
   nmiPublicKey,
   nmiIsKeepItAll,
+  nmiModificationId,
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
@@ -265,6 +267,11 @@ export function PaymentStep({
                       ? `Pay $${displayTotal.toFixed(2)} & update pledge`
                       : isAddItemsMode
                       ? `Pay $${displayTotal.toFixed(2)} & add items`
+                      : undefined
+                  }
+                  extraBody={
+                    isModifyMode && nmiModificationId
+                      ? { modificationId: nmiModificationId }
                       : undefined
                   }
                 />

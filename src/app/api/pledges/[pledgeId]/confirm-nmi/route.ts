@@ -321,6 +321,31 @@ export async function POST(
     }
 
     if (vaultResp.response !== "1") {
+      // "Customer Vault id already exists" recovery: a prior attempt
+      // may have succeeded at PaymentCloud but the response was lost
+      // to a network blip — we rolled back nmiCustomerVaultId locally
+      // so the CAS just succeeded again with the same minted id
+      // (pledge.id), but the vault entry is still on the gateway side.
+      // NMI's add_customer with a duplicate id returns response=3
+      // ("Failed") with responsetext containing "exists" / "duplicate".
+      // Treat that as success — the vault entry IS there with our id,
+      // which is all the AoN cron needs to charge it later.
+      const text = (vaultResp.responsetext || "").toLowerCase();
+      const looksLikeDuplicateVault =
+        text.includes("vault") && (text.includes("exist") || text.includes("duplicate"));
+      if (looksLikeDuplicateVault) {
+        log.warn(
+          { pledgeId, response: vaultResp.response, text: vaultResp.responsetext },
+          "PaymentCloud vault add returned duplicate-id error; treating as recovered (vault entry already on gateway from prior attempt)"
+        );
+        return NextResponse.json({
+          ok: true,
+          pledgeId: pledge.id,
+          chargedImmediately: false,
+          status: "PENDING",
+          recovered: true,
+        });
+      }
       log.warn(
         {
           pledgeId,

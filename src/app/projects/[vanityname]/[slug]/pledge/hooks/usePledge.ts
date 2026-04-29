@@ -88,6 +88,11 @@ export function usePledge() {
   // or just save the card (AoN).
   const [nmiPublicKey, setNmiPublicKey] = useState<string | null>(null);
   const [nmiIsKeepItAll, setNmiIsKeepItAll] = useState<boolean>(false);
+  // For NMI modify-upcharge: server stamps a modificationId on
+  // pendingModification when this PATCH wins. The form echoes it back
+  // on confirm-modify so a superseded modify can't charge against the
+  // displayed amountDiff.
+  const [nmiModificationId, setNmiModificationId] = useState<string | null>(null);
 
   const creatingPaymentRef = useRef(false);
 
@@ -278,6 +283,7 @@ export function usePledge() {
         setModifyChargeAmount(chargeAmount > 0 ? chargeAmount : null);
         setNmiPublicKey(result.nmiPublicKey);
         setNmiIsKeepItAll(true);
+        setNmiModificationId(result.modificationId ?? null);
         setCurrentPledgeId(modifyPledgeId);
         setIsProcessing(false);
       } else if (result.requiresPayment && result.clientSecret) {
@@ -560,7 +566,7 @@ export function usePledge() {
     // Whop
     whopSessionId, whopPlanId, whopEnvironment,
     // PaymentCloud (NMI)
-    nmiPublicKey, nmiIsKeepItAll,
+    nmiPublicKey, nmiIsKeepItAll, nmiModificationId,
     // Totals
     totalShipping, addonsShipping, total, addItemsTotal,
     // Handlers
