@@ -63,10 +63,14 @@ function verifySignature(
   return { ok: true };
 }
 
-// PaymentCloud webhook bodies arrive as either a JSON envelope (new
-// format with `data: {...}`) or a flat query-string payload. We
-// normalize by trying common field names at both top level and under
-// `data` so the handler is resilient to either shape.
+// PaymentCloud webhook bodies arrive in one of three shapes:
+//   - flat query-string-style: { transaction_id: "...", ... }
+//   - JSON with `data`: { data: { transaction_id: "...", ... } }
+//   - JSON with `event_body` (new envelope format observed in prod
+//     2026-04-29: { event_id, event_type, event_body: { transaction_id,
+//     order_id, action: { ... }, ... } })
+// We normalize by trying common field names at top level and under
+// each known nesting key so the handler is resilient to all shapes.
 function readPayloadField(
   payload: Record<string, unknown>,
   keys: string[]
@@ -76,13 +80,15 @@ function readPayloadField(
     if (typeof top === "string" && top.length > 0) return top;
     if (typeof top === "number") return String(top);
   }
-  const data = payload.data;
-  if (data && typeof data === "object") {
-    const obj = data as Record<string, unknown>;
-    for (const k of keys) {
-      const v = obj[k];
-      if (typeof v === "string" && v.length > 0) return v;
-      if (typeof v === "number") return String(v);
+  for (const nestKey of ["data", "event_body"]) {
+    const nested = payload[nestKey];
+    if (nested && typeof nested === "object") {
+      const obj = nested as Record<string, unknown>;
+      for (const k of keys) {
+        const v = obj[k];
+        if (typeof v === "string" && v.length > 0) return v;
+        if (typeof v === "number") return String(v);
+      }
     }
   }
   return null;

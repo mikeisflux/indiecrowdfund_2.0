@@ -237,17 +237,24 @@ export function PaymentStep({
               existing campaigns that were created before the swap. */}
           {project?.paymentProcessor === "NMI" ? (
             nmiPublicKey && currentPledgeId ? (
-              <NmiPaymentForm
-                publicKey={nmiPublicKey}
-                pledgeId={currentPledgeId}
-                isKeepItAll={nmiIsKeepItAll}
-                total={displayTotal}
-                agreedToTerms={agreedToTerms}
-                isProcessing={isProcessing}
-                setIsProcessing={setIsProcessing}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-              />
+              <>
+                {paymentError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-4">
+                    <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                  </div>
+                )}
+                <NmiPaymentForm
+                  publicKey={nmiPublicKey}
+                  pledgeId={currentPledgeId}
+                  isKeepItAll={nmiIsKeepItAll}
+                  total={displayTotal}
+                  agreedToTerms={agreedToTerms}
+                  isProcessing={isProcessing}
+                  setIsProcessing={setIsProcessing}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                />
+              </>
             ) : paymentError ? (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>

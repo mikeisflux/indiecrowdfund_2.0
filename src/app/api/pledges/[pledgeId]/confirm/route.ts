@@ -166,6 +166,20 @@ export async function POST(
           error: "Payment not completed. Please try again.",
         }, { status: 400 });
       }
+    } else if (pledge.chargedImmediately && pledge.paymentProcessor === "NMI") {
+      // KIA NMI: confirm-nmi already ran the sale via saleByPaymentToken
+      // and stored the transaction id on the pledge. Treat the presence
+      // of nmiTransactionId as proof of payment.
+      if (pledge.nmiTransactionId) {
+        paymentVerified = true;
+        pledgesConfirmLogger.info(`[Confirm] NMI KIA pledge ${pledgeId} verified via transaction ${pledge.nmiTransactionId}`);
+      } else {
+        pledgesConfirmLogger.warn(`[Confirm] NMI chargedImmediately pledge ${pledgeId} has no nmiTransactionId — confirm-nmi did not complete`);
+        return NextResponse.json({
+          success: false,
+          error: "Payment not completed. Please try again.",
+        }, { status: 400 });
+      }
     } else if (pledge.chargedImmediately && pledge.stripePaymentIntentId) {
       // Stripe PaymentIntent: verify the actual status with Stripe
       try {
@@ -204,6 +218,18 @@ export async function POST(
         success: false,
         error: "Payment not completed. Please try again.",
       }, { status: 400 });
+    } else if (pledge.paymentProcessor === "NMI") {
+      // AoN NMI: confirm-nmi stored the card in the Customer Vault.
+      // Charge will run via the charge-on-success cron when the
+      // campaign hits its goal. Vault id presence = setup verified.
+      if (!pledge.nmiCustomerVaultId) {
+        pledgesConfirmLogger.warn(`[Confirm] NMI AoN pledge ${pledgeId} has no nmiCustomerVaultId — confirm-nmi did not complete`);
+        return NextResponse.json({
+          success: false,
+          error: "Card not saved — checkout incomplete. Please try again.",
+        }, { status: 400 });
+      }
+      pledgesConfirmLogger.info(`[Confirm] NMI AoN pledge ${pledgeId} verified via vault ${pledge.nmiCustomerVaultId}`);
     } else {
       // SetupIntent pledge: verify payment method was saved
       if (!paymentMethodId && pledge.stripeSetupIntentId) {
