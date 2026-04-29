@@ -253,7 +253,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
             quantityAvailable: reward.quantityAvailable,
             visibility: reward.visibility,
             isEnded: reward.isEnded,
-            items: reward.items.map(item => ({
+            items: (reward.items ?? []).map(item => ({
               projectItemId: item.id,
               title: item.title,
               description: item.description,
@@ -291,8 +291,10 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
   const openEditRewardForm = (index: number) => {
     const reward = rewards[index];
     setCurrentReward(reward);
-    // Use projectItemId if available (from API), otherwise try to match by title, then fall back to id
-    const selectedIds = reward.items.map((rewardItem) => {
+    // Use projectItemId if available (from API), otherwise try to match by title, then fall back to id.
+    // Older reward records loaded from the API may have items as undefined rather than an empty array;
+    // default to [] so clicking Edit on a no-items tier doesn't throw.
+    const selectedIds = (reward.items ?? []).map((rewardItem) => {
       // First try projectItemId
       if (rewardItem.projectItemId) {
         return rewardItem.projectItemId;
@@ -551,7 +553,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
     if (!tier) return;
 
     // Ensure items have projectItemId set for checkbox persistence
-    const itemsWithProjectItemId = tier.items.map(item => ({
+    const itemsWithProjectItemId = (tier.items ?? []).map(item => ({
       ...item,
       projectItemId: item.projectItemId || item.id,
     }));

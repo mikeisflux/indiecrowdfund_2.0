@@ -131,9 +131,9 @@ function SortableAddonRow({
 
         {/* Includes */}
         <div className="col-span-3">
-          {addon.items.length > 0 ? (
+          {(addon.items?.length ?? 0) > 0 ? (
             <ul className="list-disc list-inside text-sm">
-              {addon.items.map((item, i) => (
+              {(addon.items ?? []).map((item, i) => (
                 <li key={i}>{item.title}</li>
               ))}
             </ul>

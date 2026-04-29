@@ -134,9 +134,9 @@ function SortableTierRow({
 
         {/* Includes */}
         <div className="col-span-3">
-          {tier.items.length > 0 ? (
+          {(tier.items?.length ?? 0) > 0 ? (
             <ul className="list-disc list-inside text-sm">
-              {tier.items.map((item, i) => (
+              {(tier.items ?? []).map((item, i) => (
                 <li key={i}>{item.title}</li>
               ))}
             </ul>

@@ -199,7 +199,7 @@ export function ProjectBuilder() {
           // Rewrite reward items to reference the newly-created ProjectItem IDs
           const rewardsWithRealItemIds = transformedRewards.map((reward) => ({
             ...reward,
-            items: reward.items.map((item) => {
+            items: (reward.items ?? []).map((item) => {
               const oldId = item.id || item.projectItemId || "";
               const newId = oldToNewItemIdMap[oldId];
               return {
