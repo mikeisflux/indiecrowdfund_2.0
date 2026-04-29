@@ -87,15 +87,29 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
       chargedImmediately: false,
       deletedAt: null,
       NOT: { nmiCustomerVaultId: null },
+      // Honour the retry schedule: skip any pledge that's been put
+      // on a backoff window by a prior failure.
+      OR: [
+        { nextRetryAt: null },
+        { nextRetryAt: { lte: new Date() } },
+      ],
     },
     select: {
       id: true,
       amount: true,
       nmiCustomerVaultId: true,
+      nmiInitialTransactionId: true,
+      retryCount: true,
       project: { select: { title: true } },
       user: { select: { email: true } },
     },
   });
+
+  // Cap auto-retries at 5 with exponential-ish backoff (1h, 6h, 24h,
+  // 72h, 168h). Past the cap a pledge is marked FAILED for an admin
+  // to look at — better than retrying a perma-declining card forever.
+  const MAX_NMI_RETRIES = 5;
+  const BACKOFF_HOURS = [1, 6, 24, 72, 168];
 
   result.total = pledges.length;
   for (const p of pledges) {
@@ -123,12 +137,21 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
     }
 
     try {
+      // Tag this as MIT (merchant-initiated) — the cardholder isn't
+      // present at the time of charge. If we already have an
+      // initial_transaction_id from a prior charge on this vault
+      // entry, mark stored_credential_indicator="used"; otherwise
+      // this IS the first charge so it's "stored".
+      const hasInitial = !!p.nmiInitialTransactionId;
       const sale = await saleByVaultToken(config, {
         amount: Number(p.amount),
         customerVaultId: p.nmiCustomerVaultId,
         orderid: p.id,
         orderdescription: `Pledge to ${p.project.title}`,
         email: p.user.email || undefined,
+        initiatedBy: "merchant",
+        storedCredentialIndicator: hasInitial ? "used" : "stored",
+        initialTransactionId: p.nmiInitialTransactionId || undefined,
       });
       if (sale.response === "1" && sale.transactionid) {
         await db.pledge.update({
@@ -136,21 +159,44 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
           data: {
             status: "COMPLETED",
             nmiTransactionId: sale.transactionid,
-            nmiInitialTransactionId: sale.transactionid,
+            // Only persist the initial transaction id on the first
+            // successful sale. Subsequent retries already have it
+            // set and shouldn't overwrite.
+            ...(hasInitial ? {} : { nmiInitialTransactionId: sale.transactionid }),
+            retryCount: 0,
+            nextRetryAt: null,
           },
         });
         result.successful++;
       } else {
-        // Decline: mark FAILED and roll back chargedImmediately so a
-        // future retry (manual or scheduled) can try again.
-        await db.pledge.update({
-          where: { id: p.id },
-          data: {
-            status: "FAILED",
-            chargedImmediately: false,
-            lastFailureReason: sale.responsetext || "PaymentCloud declined",
-          },
-        });
+        // Decline. Within the retry budget, schedule another attempt
+        // and roll back the claim. Past the cap, mark FAILED so an
+        // admin notices.
+        const newRetryCount = (p.retryCount || 0) + 1;
+        if (newRetryCount >= MAX_NMI_RETRIES) {
+          await db.pledge.update({
+            where: { id: p.id },
+            data: {
+              status: "FAILED",
+              chargedImmediately: false,
+              retryCount: newRetryCount,
+              nextRetryAt: null,
+              lastFailureReason: `${sale.responsetext || "PaymentCloud declined"} (after ${newRetryCount} attempts)`,
+            },
+          });
+        } else {
+          const backoffHours = BACKOFF_HOURS[Math.min(newRetryCount - 1, BACKOFF_HOURS.length - 1)];
+          const nextRetryAt = new Date(Date.now() + backoffHours * 60 * 60 * 1000);
+          await db.pledge.update({
+            where: { id: p.id },
+            data: {
+              chargedImmediately: false,
+              retryCount: newRetryCount,
+              nextRetryAt,
+              lastFailureReason: sale.responsetext || "PaymentCloud declined",
+            },
+          });
+        }
         result.failed++;
       }
     } catch (err) {
@@ -160,11 +206,19 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
       );
       // Network/HTTP error — uncertain whether NMI captured. Don't
       // mark FAILED (they might have actually charged); roll back the
-      // claim so the next cron cycle can retry with the same card.
+      // claim and schedule a retry on the next backoff window.
+      const newRetryCount = (p.retryCount || 0) + 1;
+      const backoffHours =
+        BACKOFF_HOURS[Math.min(newRetryCount - 1, BACKOFF_HOURS.length - 1)];
+      const nextRetryAt = new Date(Date.now() + backoffHours * 60 * 60 * 1000);
       await db.pledge
         .updateMany({
           where: { id: p.id, status: "PENDING", nmiTransactionId: null },
-          data: { chargedImmediately: false },
+          data: {
+            chargedImmediately: false,
+            retryCount: newRetryCount,
+            nextRetryAt,
+          },
         })
         .catch(() => null);
       result.failed++;

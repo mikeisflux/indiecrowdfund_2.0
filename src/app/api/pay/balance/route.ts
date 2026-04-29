@@ -190,12 +190,20 @@ export async function POST(req: NextRequest) {
       }
 
       try {
+        // Tag as merchant-initiated COF re-use. The backer clicked a
+        // link to pay, but the *transaction* is using a stored card
+        // from the original pledge — PaymentCloud + the card networks
+        // expect this to be tagged as a credential-on-file
+        // re-charge, not a fresh CIT.
         const sale = await saleByVaultToken(config, {
           amount: balanceDue,
           customerVaultId: pledge.nmiCustomerVaultId,
           orderid: `balance-${pledge.id}`,
           orderdescription: `Balance due on pledge ${pledge.id}`,
           email: pledge.user.email || undefined,
+          initiatedBy: "merchant",
+          storedCredentialIndicator: pledge.nmiInitialTransactionId ? "used" : "stored",
+          initialTransactionId: pledge.nmiInitialTransactionId || undefined,
         });
         if (sale.response !== "1" || !sale.transactionid) {
           payBalanceLogger.warn(

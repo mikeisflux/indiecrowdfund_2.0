@@ -600,6 +600,8 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               <li>Test with sandbox keys first — never use a real Security Key for testing</li>
             </ul>
           </div>
+
+          <NmiTestConnectionButton />
         </CardContent>
       </Card>
 
@@ -721,5 +723,68 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         </CardContent>
       </Card>
     </TabsContent>
+  );
+}
+
+// Smoke-test the saved PaymentCloud credentials. Hits an admin-only
+// endpoint that runs a no-op vault add against the gateway — no card
+// data, no transactions — and reports back whether the security key
+// is accepted. Catches typos before a real pledge fails.
+function NmiTestConnectionButton() {
+  const [status, setStatus] = useState<
+    | { kind: "idle" }
+    | { kind: "loading" }
+    | { kind: "ok"; message: string; gatewayUrl: string; environment: string; hasPublicKey: boolean; hasWebhookSecret: boolean }
+    | { kind: "error"; message: string }
+  >({ kind: "idle" });
+
+  const handleTest = async () => {
+    setStatus({ kind: "loading" });
+    try {
+      const r = await fetch("/api/admin/payments/nmi/test", { method: "POST" });
+      const data = await r.json().catch(() => ({}));
+      if (data.ok) {
+        setStatus({
+          kind: "ok",
+          message: data.message,
+          gatewayUrl: data.gatewayUrl,
+          environment: data.environment,
+          hasPublicKey: data.hasPublicKey,
+          hasWebhookSecret: data.hasWebhookSecret,
+        });
+      } else {
+        setStatus({ kind: "error", message: data.message || "Test failed" });
+      }
+    } catch (err) {
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Network error",
+      });
+    }
+  };
+
+  return (
+    <div className="flex items-start gap-3 mt-2">
+      <Button variant="outline" size="sm" onClick={handleTest} disabled={status.kind === "loading"}>
+        {status.kind === "loading" ? "Testing..." : "Test Connection"}
+      </Button>
+      {status.kind === "ok" && (
+        <div className="text-xs space-y-0.5 text-emerald-700 dark:text-emerald-400">
+          <p className="font-medium">✓ Security key accepted</p>
+          <p className="text-muted-foreground">
+            Gateway: <code className="bg-muted px-1 rounded">{status.gatewayUrl}</code> ({status.environment})
+          </p>
+          <p className="text-muted-foreground">
+            Public key: {status.hasPublicKey ? "✓ saved" : "✗ missing"} · Webhook secret: {status.hasWebhookSecret ? "✓ saved" : "✗ missing"}
+          </p>
+        </div>
+      )}
+      {status.kind === "error" && (
+        <div className="text-xs text-red-600 dark:text-red-400">
+          <p className="font-medium">✗ Connection failed</p>
+          <p className="text-muted-foreground">{status.message}</p>
+        </div>
+      )}
+    </div>
   );
 }

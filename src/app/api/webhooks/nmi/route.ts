@@ -300,11 +300,18 @@ async function handleChargeback(payload: Record<string, unknown>): Promise<void>
       recoupResult.message = "PaymentCloud not configured";
     } else {
       try {
+        // Merchant-initiated transaction — the creator isn't present
+        // when we charge their saved chargeback card to recoup the
+        // backer's chargeback. We don't keep a credential-on-file
+        // chain on the chargeback card (only validate at save time),
+        // so we tag it "stored" for a first-of-chain MIT.
         const sale = await saleByVaultToken(config, {
           amount: recoupAmount,
           customerVaultId: cardVaultId,
           orderid: `recoup-${pledge.id}-${chargebackId || Date.now()}`,
           orderdescription: `Chargeback recoup for ${pledge.project.title} (pledge ${pledge.id})`,
+          initiatedBy: "merchant",
+          storedCredentialIndicator: "stored",
         });
         if (sale.response === "1" && sale.transactionid) {
           recoupResult = {

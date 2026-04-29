@@ -160,6 +160,24 @@ export interface SaleByTokenInput {
   orderid?: string;
   orderdescription?: string;
   email?: string;
+  // PaymentCloud / NMI credential-on-file (CIT/MIT) tagging. Set on
+  // re-charges of a card already stored in the Customer Vault so the
+  // gateway and card networks recognize the transaction as expected
+  // recurring activity rather than fraud.
+  //   initiatedBy: "merchant" for AoN charge-on-success / chargeback
+  //                recoup / scheduled retries (we charge without the
+  //                cardholder present)
+  //                "customer" for KIA pledge confirm-nmi (cardholder
+  //                just entered the card; this is a CIT)
+  //   storedCredentialIndicator: "stored" on the first sale that
+  //                creates the credential-on-file relationship,
+  //                "used" on subsequent sales using the saved card
+  //   initialTransactionId: the transaction id of the first sale on
+  //                this vault entry, required when
+  //                stored_credential_indicator="used"
+  initiatedBy?: "customer" | "merchant";
+  storedCredentialIndicator?: "stored" | "used";
+  initialTransactionId?: string;
 }
 
 export async function saleByVaultToken(
@@ -173,6 +191,9 @@ export async function saleByVaultToken(
     orderid: input.orderid,
     orderdescription: input.orderdescription,
     email: input.email,
+    initiated_by: input.initiatedBy,
+    stored_credential_indicator: input.storedCredentialIndicator,
+    initial_transaction_id: input.initialTransactionId,
   });
 }
 
@@ -258,6 +279,49 @@ export async function deleteVaultCustomer(
     customer_vault: "delete_customer",
     customer_vault_id: customerVaultId,
   });
+}
+
+// Smoke-test the security key against the gateway WITHOUT touching a
+// real card. We post a customer_vault add_customer with no payment
+// data — the gateway responds with response=3 + responsetext that
+// either tells us the card was missing (security_key works, request
+// was just incomplete — what we want) or that the security_key is
+// wrong (what we're trying to detect). Either way the call is free
+// and doesn't create any vault entries.
+export async function pingNmi(config: NmiConfig): Promise<{
+  ok: boolean;
+  message: string;
+  gatewayUrl: string;
+}> {
+  try {
+    const resp = await nmiPost(config, {
+      customer_vault: "add_customer",
+    });
+    const text = (resp.responsetext || "").toLowerCase();
+    const looksLikeBadKey =
+      text.includes("invalid security key") ||
+      text.includes("security key") ||
+      text.includes("not authenticated") ||
+      text.includes("authentication");
+    if (looksLikeBadKey) {
+      return {
+        ok: false,
+        message: resp.responsetext || "Security key rejected by gateway",
+        gatewayUrl: config.gatewayUrl,
+      };
+    }
+    return {
+      ok: true,
+      message: resp.responsetext || "Connected to PaymentCloud",
+      gatewayUrl: config.gatewayUrl,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Network error reaching PaymentCloud",
+      gatewayUrl: config.gatewayUrl,
+    };
+  }
 }
 
 // Run a zero-cost auth-and-void to confirm a saved vault entry is a

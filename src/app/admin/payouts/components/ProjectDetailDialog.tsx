@@ -26,6 +26,9 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
+import { useState } from "react";
+import { apiFetch } from "@/lib/fetch-utils";
+import { toast } from "sonner";
 import { CreatorProject } from "./types";
 import { getSettlementBadge } from "./SettlementBadge";
 
@@ -187,15 +190,21 @@ export function ProjectDetailDialog({
                     <span className="text-red-500">-{formatCurrency(selectedProject.platformFee)}</span>
                   </div>
                   {selectedProject.rollingReserveActive && Number(selectedProject.rollingReserveHeld) > 0 && (
-                    <div className="flex justify-between text-amber-700 dark:text-amber-300">
-                      <span>
-                        Rolling Reserve (10%, 180-day hold
-                        {selectedProject.rollingReserveReleaseAt &&
-                          ` · releases ${new Date(selectedProject.rollingReserveReleaseAt).toLocaleDateString()}`}
-                        )
-                      </span>
-                      <span>-{formatCurrency(selectedProject.rollingReserveHeld ?? 0)}</span>
-                    </div>
+                    <>
+                      <div className="flex justify-between text-amber-700 dark:text-amber-300">
+                        <span>
+                          Rolling Reserve (10%, 180-day hold
+                          {selectedProject.rollingReserveReleaseAt &&
+                            ` · releases ${new Date(selectedProject.rollingReserveReleaseAt).toLocaleDateString()}`}
+                          )
+                        </span>
+                        <span>-{formatCurrency(selectedProject.rollingReserveHeld ?? 0)}</span>
+                      </div>
+                      <ReleaseReserveButton
+                        projectId={selectedProject.id}
+                        releaseAt={selectedProject.rollingReserveReleaseAt ?? null}
+                      />
+                    </>
                   )}
                   <div className="border-t pt-2 flex justify-between font-bold">
                     <span>Amount Owed to Creator</span>
@@ -379,5 +388,74 @@ export function ProjectDetailDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Release the held PaymentCloud rolling reserve. Admin-only confirm-
+// before-action: by default we expect this to be clicked once the
+// 180-day hold window has elapsed, but we let admins release early
+// for rare cases (campaign fully shipped + zero chargebacks at 90
+// days, etc). After release the held amount returns to amountOwed
+// on the next payouts page reload.
+function ReleaseReserveButton({
+  projectId,
+  releaseAt,
+}: {
+  projectId: string;
+  releaseAt: string | null;
+}) {
+  const [isReleasing, setIsReleasing] = useState(false);
+  const isPastWindow = releaseAt ? new Date(releaseAt) <= new Date() : false;
+
+  const handleRelease = async () => {
+    const earlyMsg = isPastWindow
+      ? "Release this rolling reserve to the creator's payable balance?"
+      : "The 180-day hold window has NOT yet elapsed. Release this reserve early anyway? This is rare — only do it if you're sure (e.g. campaign fully shipped with zero chargebacks).";
+    if (!confirm(earlyMsg)) return;
+
+    setIsReleasing(true);
+    try {
+      const r = await apiFetch(
+        `/api/admin/projects/${encodeURIComponent(projectId)}/rolling-reserve/release`,
+        { method: "POST" }
+      );
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        throw new Error(data?.error || "Release failed");
+      }
+      toast.success(
+        `Released $${Number(data.releasedAmount || 0).toFixed(2)} to the creator's payable balance.`
+      );
+      // Reload the parent payouts page so the new amountOwed
+      // appears. Avoids a full data refetch wired through props.
+      if (typeof window !== "undefined") window.location.reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to release reserve");
+    } finally {
+      setIsReleasing(false);
+    }
+  };
+
+  return (
+    <div className="flex justify-end pt-1">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleRelease}
+        disabled={isReleasing}
+        className={isPastWindow ? "border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300" : ""}
+      >
+        {isReleasing ? (
+          <>
+            <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+            Releasing...
+          </>
+        ) : isPastWindow ? (
+          "Release Reserve"
+        ) : (
+          "Release Reserve Early"
+        )}
+      </Button>
+    </div>
   );
 }

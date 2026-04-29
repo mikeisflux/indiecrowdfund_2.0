@@ -109,15 +109,12 @@ export function PaymentProcessorSection({
         */}
 
         {/* PaymentCloud Option — NMI white-label, NSFW-friendly, supports AoN + KIA.
-            Currently the only processor offered for new campaigns.
-            isLaunched guard temporarily lifted so creators can migrate
-            launched projects onto PaymentCloud while we sort out the
-            rollout. */}
+            Currently the only processor offered for new campaigns. */}
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "NMI" ? "border-2 border-primary" : "border"
-          }`}
-          onClick={() => updatePayment({ paymentProcessor: "NMI" })}
+          } ${isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={() => !isLaunched && updatePayment({ paymentProcessor: "NMI" })}
         >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
