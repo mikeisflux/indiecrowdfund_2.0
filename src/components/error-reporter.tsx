@@ -202,6 +202,12 @@ export function ErrorReporter() {
         requestUrl.includes("/api/user/profile") ||
         requestUrl.includes("/api/user/settings") ||
         (requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond")) ||
+        // Project submit returns 400 with `validationErrors: string[]` when
+        // the creator's draft is missing required fields (title length,
+        // image, rewards, chargeback card, etc.). The UI surfaces those
+        // back to the creator inline — admin-logging them is duplicate
+        // noise from normal user-input validation.
+        /\/api\/projects\/[^/]+\/submit$/.test(requestUrl) ||
         isStatsPollerPath
       );
       // Bot-probe 404s on well-known paths that we don't serve (ads.txt,
