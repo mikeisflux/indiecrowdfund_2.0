@@ -142,8 +142,44 @@ export async function POST(
             { status: 400 }
           );
         }
+
+        // Concurrent-tabs guard: same race as confirm-add-items. Two
+        // tabs reading pledge.metadata before either stamps would both
+        // run the upcharge sale and double-charge. Atomically stamp a
+        // 60s claimedAt; loser 409s.
+        const claimRows = await db.$queryRaw<Array<{ id: string }>>`
+          UPDATE "Pledge"
+          SET metadata = jsonb_set(
+            metadata,
+            '{pendingModification,claimedAt}',
+            to_jsonb(NOW()::text),
+            true
+          )
+          WHERE id = ${pledgeId}
+            AND metadata ? 'pendingModification'
+            AND (
+              metadata->'pendingModification'->>'nmiTransactionId' IS NULL
+            )
+            AND (
+              metadata->'pendingModification'->>'claimedAt' IS NULL
+              OR (metadata->'pendingModification'->>'claimedAt')::timestamp < NOW() - interval '60 seconds'
+            )
+          RETURNING id
+        `;
+        if (claimRows.length === 0) {
+          return NextResponse.json(
+            { error: "Another payment is in progress for this modification. Please wait a moment and try again." },
+            { status: 409 }
+          );
+        }
+
         const nmiConfig = await loadNmiConfig();
         if (!nmiConfig) {
+          await db.$executeRaw`
+            UPDATE "Pledge"
+            SET metadata = metadata #- '{pendingModification,claimedAt}'
+            WHERE id = ${pledgeId}
+          `.catch(() => null);
           return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
         }
 
@@ -166,6 +202,11 @@ export async function POST(
             { pledgeId, err: err instanceof Error ? err.message : String(err) },
             "[ConfirmModify NMI] Sale error"
           );
+          await db.$executeRaw`
+            UPDATE "Pledge"
+            SET metadata = metadata #- '{pendingModification,claimedAt}'
+            WHERE id = ${pledgeId}
+          `.catch(() => null);
           return NextResponse.json(
             { error: "Failed to charge card. Please try again or contact support." },
             { status: 502 }
@@ -177,6 +218,11 @@ export async function POST(
             { pledgeId, response: saleResp.response, text: saleResp.responsetext },
             "[ConfirmModify NMI] Sale declined"
           );
+          await db.$executeRaw`
+            UPDATE "Pledge"
+            SET metadata = metadata #- '{pendingModification,claimedAt}'
+            WHERE id = ${pledgeId}
+          `.catch(() => null);
           return NextResponse.json(
             { error: saleResp.responsetext || "Card was declined. Please try a different card." },
             { status: 400 }

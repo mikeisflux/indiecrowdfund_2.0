@@ -162,8 +162,50 @@ export async function POST(
             { status: 400 }
           );
         }
+
+        // Concurrent-tabs guard: the retry check above (nmiTransactionId
+        // already stamped) protects against retry-after-crash, but two
+        // tabs that both read pledge.metadata BEFORE either stamps would
+        // both fall through to here and run separate sales — double-
+        // charging the cardholder. Atomically stamp a 60s-fresh
+        // claimedAt marker; the loser sees the fresh claim and 409s.
+        const claimRows = await db.$queryRaw<Array<{ id: string }>>`
+          UPDATE "Pledge"
+          SET metadata = jsonb_set(
+            metadata,
+            '{pendingAdditionalItems,claimedAt}',
+            to_jsonb(NOW()::text),
+            true
+          )
+          WHERE id = ${pledgeId}
+            AND metadata ? 'pendingAdditionalItems'
+            AND (
+              metadata->'pendingAdditionalItems'->>'nmiTransactionId' IS NULL
+            )
+            AND (
+              metadata->'pendingAdditionalItems'->>'claimedAt' IS NULL
+              OR (metadata->'pendingAdditionalItems'->>'claimedAt')::timestamp < NOW() - interval '60 seconds'
+            )
+          RETURNING id
+        `;
+        if (claimRows.length === 0) {
+          // Either another tab is mid-sale (fresh claim) or the sale
+          // already ran and stamped nmiTransactionId — re-read and let
+          // the function dispatch on the new state.
+          return NextResponse.json(
+            { error: "Another payment is in progress for these items. Please wait a moment and try again." },
+            { status: 409 }
+          );
+        }
+
         const nmiConfig = await loadNmiConfig();
         if (!nmiConfig) {
+          // Clear the claim so user can retry once config is fixed.
+          await db.$executeRaw`
+            UPDATE "Pledge"
+            SET metadata = metadata #- '{pendingAdditionalItems,claimedAt}'
+            WHERE id = ${pledgeId}
+          `.catch(() => null);
           return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
         }
 
@@ -186,6 +228,11 @@ export async function POST(
             { pledgeId, err: err instanceof Error ? err.message : String(err) },
             "[ConfirmAddItems NMI] Sale error"
           );
+          await db.$executeRaw`
+            UPDATE "Pledge"
+            SET metadata = metadata #- '{pendingAdditionalItems,claimedAt}'
+            WHERE id = ${pledgeId}
+          `.catch(() => null);
           return NextResponse.json(
             { error: "Failed to charge card. Please try again or contact support." },
             { status: 502 }
@@ -197,6 +244,11 @@ export async function POST(
             { pledgeId, response: saleResp.response, text: saleResp.responsetext },
             "[ConfirmAddItems NMI] Sale declined"
           );
+          await db.$executeRaw`
+            UPDATE "Pledge"
+            SET metadata = metadata #- '{pendingAdditionalItems,claimedAt}'
+            WHERE id = ${pledgeId}
+          `.catch(() => null);
           return NextResponse.json(
             { error: saleResp.responsetext || "Card was declined. Please try a different card." },
             { status: 400 }
