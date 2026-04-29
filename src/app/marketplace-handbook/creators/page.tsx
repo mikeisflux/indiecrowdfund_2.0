@@ -65,7 +65,7 @@ const overviewSteps: Step[] = [
   {
     title: 'How Payments Work',
     description: 'When a customer purchases your book, they pay immediately through PaymentCloud. After the platform fee is deducted, your earnings are available in your creator dashboard. Payouts are processed on PaymentCloud\'s standard merchant schedule.',
-    example: 'Customer pays $9.99 → PaymentCloud takes 4% + $0.25 ($0.65) → Platform takes 3% ($0.28) → You receive $9.06',
+    example: 'Customer pays $9.99 → PaymentCloud takes 4% + $0.38 ($0.78) → Platform takes 3% ($0.28) → You receive $8.93',
   },
 ];
 
@@ -148,7 +148,7 @@ const pricingSteps: Step[] = [
   },
   {
     title: 'Payment Processing',
-    description: 'All marketplace sales are processed through PaymentCloud (4% + $0.25/txn) — supports all content types including NSFW. Your net earnings (after the 3% platform fee) appear in your dashboard.',
+    description: 'All marketplace sales are processed through PaymentCloud (4% + $0.38/txn) — supports all content types including NSFW. Your net earnings (after the 3% platform fee) appear in your dashboard.',
     tip: 'Factor in all fees when setting your price. Use the fee calculator in the book creation form to see your exact earnings.',
   },
   {
@@ -526,7 +526,7 @@ export default function MarketplaceCreatorHandbookPage() {
                         <p className="text-2xl font-bold text-foreground">$9.99</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">
-                        <p className="text-sm text-muted-foreground">PaymentCloud (4% + $0.25)</p>
+                        <p className="text-sm text-muted-foreground">PaymentCloud (4% + $0.38)</p>
                         <p className="text-2xl font-bold text-destructive">-$0.65</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">

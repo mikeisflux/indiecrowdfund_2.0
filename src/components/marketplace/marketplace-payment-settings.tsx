@@ -173,7 +173,7 @@ export function MarketplacePaymentSettings() {
                 <CheckCircle className="h-4 w-4 text-primary ml-auto" />
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Universal — supports all content types including NSFW. ~7.5% total fees (4% + $0.25/txn + 3% platform).
+                Universal — supports all content types including NSFW. ~7.5% total fees (4% + $0.38/txn + 3% platform).
               </p>
               <p className="text-xs text-muted-foreground mt-2">
                 Cards are tokenized in the buyer&apos;s browser by PaymentCloud — your sales data is never stored on our servers.

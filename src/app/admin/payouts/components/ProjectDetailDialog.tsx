@@ -167,7 +167,7 @@ export function ProjectDetailDialog({
                       : "Processor Fee";
                     const perTxnRate =
                       proc === "DIVINITYCOIN" ? 0.30
-                      : proc === "NMI" ? 0.25
+                      : proc === "NMI" ? 0.38
                       : proc === "PAYPAL" ? 0.49
                       : 0;
                     return (

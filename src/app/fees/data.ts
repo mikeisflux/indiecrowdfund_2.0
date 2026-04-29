@@ -56,10 +56,10 @@ export const paypalFeeBreakdown = [
 export const paymentCloudFeeBreakdown = [
   {
     title: "PaymentCloud Processing Fee",
-    rate: "4% + $0.25",
-    description: "Per-transaction merchant account rate",
+    rate: "4% + $0.38",
+    description: "Per-transaction merchant account rate (incl. Customer Vault)",
     details:
-      "Standard credit/debit card processing fee on the IndieCrowdfund PaymentCloud merchant account. Cards are tokenized at pledge time via Collect.js (PAN never touches our servers) and only charged when a campaign hits its goal.",
+      "Standard credit/debit card processing fee on the IndieCrowdfund PaymentCloud merchant account ($0.25 gateway + $0.13 Customer Vault per-transaction). Cards are tokenized at pledge time via Collect.js (PAN never touches our servers) and only charged when a campaign hits its goal.",
   },
   {
     title: "180-Day Rolling Reserve",
@@ -98,7 +98,7 @@ export const comparisonData = [
   {
     platform: "IndieCrowdfund (PaymentCloud)",
     platformFee: "3%",
-    paymentFee: "4% + $0.25/txn",
+    paymentFee: "4% + $0.38/txn",
     total: "~7.5%",
     highlight: true,
   },

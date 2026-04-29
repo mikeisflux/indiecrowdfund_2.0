@@ -426,10 +426,12 @@ export function PaymentStep() {
   const whopTotalFees = whopFee + platformFee;
   const whopNetAmount = goalAmount - whopTotalFees;
 
-  // PaymentCloud (NMI white-label): 4% + $0.25 per transaction.
-  // Platform fee is taken on the remainder after processor fees.
+  // PaymentCloud (NMI white-label): 4% + $0.38 per transaction
+  // ($0.25 NMI gateway + $0.13 Customer Vault per-txn fee, since
+  // every pledge tokenizes through the vault). Platform fee is taken
+  // on the remainder after processor fees.
   const paymentCloudFee = goalAmount * 0.04;
-  const paymentCloudPerTxnFee = numTransactions * 0.25;
+  const paymentCloudPerTxnFee = numTransactions * 0.38;
   const paymentCloudPlatformFee = (goalAmount - paymentCloudFee - paymentCloudPerTxnFee) * 0.03;
   const paymentCloudTotalFees =
     paymentCloudFee + paymentCloudPerTxnFee + paymentCloudPlatformFee;

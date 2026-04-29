@@ -216,8 +216,8 @@ export default function FeesPage() {
                         <li>Card is stored in PaymentCloud&apos;s vault, no charge yet</li>
                         <li>When your campaign funds, we charge the saved card</li>
                         <li>PaymentCloud processing (4% of $100 = $4.00) deducted at settlement</li>
-                        <li>Per-transaction fee ($0.25 × 1 txn = $0.25) deducted at settlement</li>
-                        <li>Platform fee (3% of $95.75 = $2.87) deducted at settlement</li>
+                        <li>Per-transaction fee ($0.38 × 1 txn = $0.38) deducted at settlement</li>
+                        <li>Platform fee (3% of $95.62 = $2.87) deducted at settlement</li>
                         <li>You receive <strong>$92.88</strong> deposited to your bank account</li>
                       </ol>
                       <p className="text-xs text-muted-foreground">PaymentCloud supports both <strong>All-or-Nothing</strong> and <strong>Keep-It-All</strong> campaigns. Cards are only charged on campaign success — failed campaigns trigger zero fees and zero charges.</p>
@@ -417,7 +417,7 @@ export default function FeesPage() {
                         <span className="text-red-500">-${paymentCloudFees.paymentCloudFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">Per-transaction fee ($0.25/txn)</span>
+                        <span className="text-zinc-600 dark:text-muted-foreground">Per-transaction fee ($0.38/txn)</span>
                         <span className="text-red-500">-${paymentCloudFees.perTransactionFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
@@ -595,7 +595,7 @@ export default function FeesPage() {
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold">What payment processor does IndieCrowdfund use?</h3>
               <p className="mt-2 text-zinc-600 dark:text-muted-foreground">
-                All new campaigns are processed through PaymentCloud (~7.5% total: 4% + $0.25/txn processing + 3% platform fee). PaymentCloud supports all content types including NSFW/adult projects, both All-or-Nothing and Keep-It-All campaign styles, and tokenizes cards in your browser via Collect.js so card data never touches our servers.
+                All new campaigns are processed through PaymentCloud (~7.5% total: 4% + $0.38/txn processing + 3% platform fee). PaymentCloud supports all content types including NSFW/adult projects, both All-or-Nothing and Keep-It-All campaign styles, and tokenizes cards in your browser via Collect.js so card data never touches our servers.
               </p>
             </div>
             <div className="rounded-lg border p-6">

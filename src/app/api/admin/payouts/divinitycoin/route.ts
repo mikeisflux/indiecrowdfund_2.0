@@ -271,11 +271,11 @@ export async function GET(request: NextRequest) {
 
       // Processor-specific fees:
       //   DivinityCoin: 3% partner + $0.30/txn
-      //   PaymentCloud (NMI white-label): 4% + $0.25/txn
+      //   PaymentCloud (NMI white-label): 4% + $0.38/tx ($0.25 NMI + $0.13 Customer Vault per-txn)
       // IndieCrowdfund Platform Fee: from platformSettings (default 3%)
       const isNmi = project.paymentProcessor === "NMI";
       const partnerFeeRate = isNmi ? 0.04 : 0.03;
-      const perTransactionRate = isNmi ? 0.25 : 0.30;
+      const perTransactionRate = isNmi ? 0.38 : 0.30;
       const platformFeeRate = configuredPlatformFeeRate;
       const backerCount = project.pledges.length;
       const processorFee = Math.round(effectiveRevenue * partnerFeeRate * 100) / 100;
