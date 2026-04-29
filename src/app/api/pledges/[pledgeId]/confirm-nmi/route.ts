@@ -165,8 +165,18 @@ export async function POST(
     }
 
     if (vaultResp.response !== "1" || !vaultResp.customer_vault_id) {
+      // Log the full raw response so we can see exactly which fields
+      // NMI returned. We've hit a case where response=1 ("Customer
+      // Added") came back without a customer_vault_id key — likely a
+      // PaymentCloud white-label difference in field naming.
       log.warn(
-        { pledgeId, response: vaultResp.response, text: vaultResp.responsetext },
+        {
+          pledgeId,
+          response: vaultResp.response,
+          text: vaultResp.responsetext,
+          rawKeys: Object.keys(vaultResp.raw),
+          raw: vaultResp.raw,
+        },
         "PaymentCloud vault add declined"
       );
       return NextResponse.json(
