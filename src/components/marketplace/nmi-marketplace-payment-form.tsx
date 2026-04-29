@@ -76,7 +76,7 @@ export function NmiMarketplacePaymentForm({
       return;
     }
     const existing = document.querySelector<HTMLScriptElement>(
-      "script[data-collectjs]"
+      "script#nmi-collectjs"
     );
     if (existing) {
       existing.addEventListener("load", () => setScriptReady(true), { once: true });
@@ -85,7 +85,9 @@ export function NmiMarketplacePaymentForm({
     const script = document.createElement("script");
     script.src = "https://paymentcloud.transactiongateway.com/token/Collect.js";
     script.async = true;
-    script.dataset.collectjs = "true";
+    // Use id, not data-* — Collect.js auto-parses every data-* on its
+    // own script tag as a config key.
+    script.id = "nmi-collectjs";
     script.setAttribute("data-tokenization-key", publicKey);
     script.addEventListener("load", () => setScriptReady(true), { once: true });
     script.addEventListener("error", () => {

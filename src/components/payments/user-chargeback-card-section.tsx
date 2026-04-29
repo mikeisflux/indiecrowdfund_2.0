@@ -137,7 +137,7 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
       setScriptReady(true);
       return;
     }
-    const existing = document.querySelector<HTMLScriptElement>("script[data-collectjs]");
+    const existing = document.querySelector<HTMLScriptElement>("script#nmi-collectjs");
     if (existing) {
       existing.addEventListener("load", () => setScriptReady(true), { once: true });
       return;
@@ -145,7 +145,9 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
     const s = document.createElement("script");
     s.src = "https://paymentcloud.transactiongateway.com/token/Collect.js";
     s.async = true;
-    s.dataset.collectjs = "true";
+    // Use id, not data-* — Collect.js auto-parses every data-* on its
+    // own script tag as a config key.
+    s.id = "nmi-collectjs";
     s.setAttribute("data-tokenization-key", publicKey);
     s.addEventListener("load", () => setScriptReady(true), { once: true });
     document.body.appendChild(s);

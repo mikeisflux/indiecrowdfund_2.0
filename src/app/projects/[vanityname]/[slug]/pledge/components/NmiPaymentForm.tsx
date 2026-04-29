@@ -99,7 +99,7 @@ export function NmiPaymentForm({
       return;
     }
     const existing = document.querySelector<HTMLScriptElement>(
-      "script[data-collectjs]"
+      "script#nmi-collectjs"
     );
     if (existing) {
       existing.addEventListener("load", () => setScriptReady(true), { once: true });
@@ -108,7 +108,11 @@ export function NmiPaymentForm({
     const script = document.createElement("script");
     script.src = "https://paymentcloud.transactiongateway.com/token/Collect.js";
     script.async = true;
-    script.dataset.collectjs = "true";
+    // Use id, not a data-* attribute — Collect.js auto-parses every
+    // `data-*` on its own script tag as a config key, so a marker like
+    // `data-collectjs="true"` becomes the rejected config field
+    // `collectjs` and trips "Unexpected fields for collectjs".
+    script.id = "nmi-collectjs";
     script.setAttribute("data-tokenization-key", publicKey);
     script.addEventListener("load", () => setScriptReady(true), { once: true });
     script.addEventListener("error", () => {
