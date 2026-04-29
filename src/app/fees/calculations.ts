@@ -34,11 +34,12 @@ export interface PaymentCloudFeeResult extends FeeResult {
 // 3% platform + 2.9% + $0.30 per transaction
 export function calculateStripeFees(
   amount: number,
-  averagePledge = 50
+  averagePledge = 50,
+  numTransactions?: number
 ): StripeFeeResult {
   const platformFee = amount * 0.03;
-  const numTransactions = Math.ceil(amount / averagePledge);
-  const processingFee = amount * 0.029 + numTransactions * 0.3;
+  const txns = numTransactions ?? Math.ceil(amount / averagePledge);
+  const processingFee = amount * 0.029 + txns * 0.3;
   const totalFees = platformFee + processingFee;
   const youReceive = amount - totalFees;
   return { platformFee, processingFee, totalFees, youReceive, feePercentage: (totalFees / amount) * 100 };
@@ -47,11 +48,12 @@ export function calculateStripeFees(
 // 3% platform + 3.49% + $0.49 per transaction
 export function calculatePayPalFees(
   amount: number,
-  averagePledge = 50
+  averagePledge = 50,
+  numTransactions?: number
 ): PayPalFeeResult {
   const platformFee = amount * 0.03;
-  const numTransactions = Math.ceil(amount / averagePledge);
-  const processingFee = amount * 0.0349 + numTransactions * 0.49;
+  const txns = numTransactions ?? Math.ceil(amount / averagePledge);
+  const processingFee = amount * 0.0349 + txns * 0.49;
   const totalFees = platformFee + processingFee;
   const youReceive = amount - totalFees;
   return { platformFee, processingFee, totalFees, youReceive, feePercentage: (totalFees / amount) * 100 };
@@ -60,11 +62,12 @@ export function calculatePayPalFees(
 // 3% DivinityCoin partner fee + $0.30 per transaction, then 3% platform fee on the remainder
 export function calculateDivinityCoinFees(
   amount: number,
-  averagePledge = 50
+  averagePledge = 50,
+  numTransactions?: number
 ): DivinityCoinFeeResult {
   const divinityPartnerFee = amount * 0.03;
-  const numTransactions = Math.ceil(amount / averagePledge);
-  const perTransactionFee = numTransactions * 0.3;
+  const txns = numTransactions ?? Math.ceil(amount / averagePledge);
+  const perTransactionFee = txns * 0.3;
   const afterPartner = amount - divinityPartnerFee - perTransactionFee;
   const platformFee = afterPartner * 0.03;
   const totalFees = divinityPartnerFee + perTransactionFee + platformFee;
@@ -85,12 +88,13 @@ export function calculateWhopFees(amount: number): WhopFeeResult {
 // then 3% platform fee on the remainder
 export function calculatePaymentCloudFees(
   amount: number,
-  averagePledge = 50
+  averagePledge = 50,
+  numTransactions?: number
 ): PaymentCloudFeeResult {
   const paymentCloudFee = amount * 0.04;
-  const numTransactions = Math.ceil(amount / averagePledge);
+  const txns = numTransactions ?? Math.ceil(amount / averagePledge);
   // $0.25 NMI gateway + $0.13 Customer Vault per-txn (tokenizes every card).
-  const perTransactionFee = numTransactions * 0.38;
+  const perTransactionFee = txns * 0.38;
   const afterProcessor = amount - paymentCloudFee - perTransactionFee;
   const platformFee = afterProcessor * 0.03;
   const totalFees = paymentCloudFee + perTransactionFee + platformFee;

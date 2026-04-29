@@ -80,13 +80,19 @@ function TotalBadge({ color, text }: { color: string; text: string }) {
 
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]);
+  // Backer count drives per-transaction fees ($0.38/txn for PaymentCloud,
+  // $0.30/txn for Stripe/DC, $0.49/txn for PayPal). Default 1000 backers
+  // = $50/backer at $50k raised, which matches the historical default.
+  const [backerSliderValue, setBackerSliderValue] = useState([1000]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("paymentcloud");
   const amount = sliderValue[0];
+  const numBackers = Math.max(1, backerSliderValue[0]);
+  const avgPledge = amount / numBackers;
 
-  const divinityFees = calculateDivinityCoinFees(amount);
-  const paypalFees = calculatePayPalFees(amount);
+  const divinityFees = calculateDivinityCoinFees(amount, avgPledge, numBackers);
+  const paypalFees = calculatePayPalFees(amount, avgPledge, numBackers);
   const whopFees = calculateWhopFees(amount);
-  const paymentCloudFees = calculatePaymentCloudFees(amount);
+  const paymentCloudFees = calculatePaymentCloudFees(amount, avgPledge, numBackers);
 
   const fees =
     paymentMethod === "paypal" ? paypalFees
@@ -372,7 +378,7 @@ export default function FeesPage() {
                 </div>
               </div>
 
-              {/* Slider */}
+              {/* Amount slider */}
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-sm text-muted-foreground">$1,000</span>
@@ -384,6 +390,23 @@ export default function FeesPage() {
                   <span>Small Campaign</span>
                   <span>Medium Campaign</span>
                   <span>Large Campaign</span>
+                </div>
+              </div>
+
+              {/* Backer count slider — drives per-transaction fees */}
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-sm text-muted-foreground">10 backers</span>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-zinc-900 dark:text-white">{numBackers.toLocaleString()} backers</div>
+                    <div className="text-xs text-muted-foreground mt-1">~${avgPledge.toFixed(2)} avg pledge</div>
+                  </div>
+                  <span className="text-sm text-muted-foreground">10,000 backers</span>
+                </div>
+                <Slider value={backerSliderValue} onValueChange={setBackerSliderValue} min={10} max={10000} step={10} className="w-full" />
+                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                  <span>Few backers, high pledges</span>
+                  <span>Mass-market</span>
                 </div>
               </div>
 
