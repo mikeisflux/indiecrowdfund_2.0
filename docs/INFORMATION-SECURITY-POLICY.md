@@ -1,6 +1,6 @@
 # IndieCrowdfund — Information Security Policy
 
-**Document version:** 1.0
+**Document version:** 1.1
 **Effective date:** 2026-04-29
 **Next scheduled review:** 2027-04-29
 **Policy owner:** Director (Mike Wheeler)
@@ -75,7 +75,9 @@ Cardholder data (PAN, full track data, CVV, PIN/PIN block) is **out of scope** f
 
 ## 9. Third-Party Service Providers
 
-IndieCrowdfund relies on the following PCI DSS-validated and otherwise compliant third parties. Each maintains their own compliance posture; we monitor their status and require contractual incident notification.
+IndieCrowdfund relies on the following PCI DSS-validated and otherwise compliant third parties. Each maintains their own compliance posture; we monitor their status and require contractual incident notification. The use of a PCI DSS compliant TPSP does not transfer IndieCrowdfund's own PCI DSS responsibilities to that provider — it only narrows the scope of what IndieCrowdfund must directly control.
+
+### 9.1 TPSP Register (PCI DSS Requirement 12.8.1)
 
 | Provider | Service | Compliance | Scope of CHD |
 |---|---|---|---|
@@ -87,7 +89,67 @@ IndieCrowdfund relies on the following PCI DSS-validated and otherwise compliant
 | Hosting provider | Compute and storage for application and database | SOC 2 Type II | None (no CHD ever resides here) |
 | GitHub | Source control | SOC 2 Type II | None (no CHD in source code) |
 
-A current list of these providers, their compliance evidence, and contact information is maintained by the Policy Owner.
+A current list of these providers, their compliance evidence (AOC / SOC reports / TOS attestations), and primary contact information is maintained by the Policy Owner.
+
+### 9.2 Written Agreements (PCI DSS Requirement 12.8.2)
+
+IndieCrowdfund has a written agreement in place with each TPSP listed above. Each agreement (whether a custom contract or the provider's standard Terms of Service) includes the provider's acknowledgement that they are responsible for the security of cardholder data they possess, store, process, transmit on IndieCrowdfund's behalf, or could otherwise affect.
+
+| Provider | Form of agreement | Where the PCI/security clause lives |
+|---|---|---|
+| PaymentCloud | Merchant Processing Agreement | Acquirer/processor agreement; PCI compliance clause + AOC delivered annually |
+| DivinityCoin | Service Agreement | Vendor contract; PCI/security responsibilities clause |
+| PayPal | Standard Merchant Agreement + Acceptable Use Policy | PayPal's published merchant TOS includes its PCI obligations |
+| Whop | Whop Creator Agreement | Whop's TOS includes payment-data security obligations |
+| Cloudflare | Self-Serve Subscription Agreement / Enterprise MSA | Cloudflare's DPA + security addendum + published SOC 2 / ISO 27001 reports |
+| Hosting provider | Standard hosting agreement | Provider's TOS + DPA |
+| GitHub | GitHub Customer Agreement / DPA | GitHub's published security and DPA terms |
+
+### 9.3 TPSP Onboarding and Due Diligence (PCI DSS Requirement 12.8.3)
+
+Before engaging any new TPSP that will store, process, or transmit cardholder data, or that could otherwise affect the security of cardholder data, the Policy Owner performs the following due diligence:
+
+1. Confirm the provider holds applicable compliance attestations (PCI DSS AOC / SOC 2 Type II / ISO 27001) and request a current copy.
+2. Review the provider's incident-notification SLA (must be ≤ 24 hours for breaches affecting our data).
+3. Confirm a written agreement is in place that captures their PCI/security responsibilities (Section 9.2).
+4. Confirm the data flow with the new provider — what data they receive, retain, and for how long.
+5. Document the result in this register (Section 9.1) and assign a responsibility line in the matrix (Section 9.5).
+6. Provision access on a least-privilege basis.
+
+### 9.4 Ongoing TPSP Monitoring (PCI DSS Requirement 12.8.4)
+
+At least once every 12 months — and concurrent with the annual policy review (Section 12) — the Policy Owner verifies the compliance status of every TPSP listed above:
+
+- Request a current AOC / SOC 2 / ISO 27001 report and confirm the date is within the past 12 months.
+- Verify the provider has not had a publicly disclosed breach affecting our data.
+- Re-confirm the responsibility matrix (Section 9.5) is still accurate after any service or contract change.
+- Update Section 9.1 if a provider has been added, removed, or had a material service change.
+
+If a TPSP fails to provide current compliance evidence, the Policy Owner either obtains a written remediation plan from the provider or migrates off that provider before the next assessment.
+
+### 9.5 PCI DSS Responsibility Matrix (PCI DSS Requirement 12.8.5)
+
+This matrix documents which PCI DSS requirements are managed by IndieCrowdfund directly, which are inherited from a TPSP, and which are shared. Inheritance from PaymentCloud (and the other processors for their respective campaigns) is the basis for IndieCrowdfund's SAQ A scope.
+
+| PCI DSS Requirement (v4.0, abbreviated) | IndieCrowdfund | PaymentCloud (or routed processor) | Cloudflare | Hosting / GitHub |
+|---|---|---|---|---|
+| 1 — Network security controls | — | ✓ (CDE perimeter) | ✓ (edge WAF, DDoS) | ✓ (host firewall) |
+| 2 — Secure configuration | — | ✓ | — | ✓ |
+| 3 — Protect stored account data | N/A | ✓ (vault, tokenization) | — | — |
+| 4 — Protect CHD in transit | N/A | ✓ | ✓ (TLS 1.2+ at edge) | — |
+| 5 — Anti-malware | — | ✓ | — | ✓ |
+| 6 — Develop / maintain secure systems | Shared (our app, dependencies, deploy pipeline) | ✓ (their gateway code) | — | ✓ (host patching) |
+| 7 — Restrict access by need-to-know | ✓ (our app + admin access) | ✓ (their systems) | — | ✓ (host access) |
+| 8 — Identify and authenticate users | ✓ (our app users + admin) | ✓ (their systems) | — | ✓ |
+| 9 — Restrict physical access to CHD | N/A | ✓ | ✓ (data centers) | ✓ (data centers) |
+| 10 — Log and monitor | Shared (app + PM2 logs) | ✓ (gateway logs) | ✓ (edge logs) | ✓ (host logs) |
+| 11 — Test security of systems / networks | Shared (TLS scans on our domain via Cloudflare/SSL Labs) | ✓ (full ASV scans) | ✓ | ✓ |
+| 12 — Maintain an information security policy | ✓ (this document) | ✓ (their own policy) | ✓ | ✓ |
+
+**N/A** = scope removed because PAN never enters our environment.
+**✓** = the named party owns that requirement for its share of the joint environment.
+
+The Policy Owner reviews and updates this matrix during the annual TPSP review (Section 9.4) and whenever a TPSP is added, removed, or materially changes its services.
 
 ## 10. Security Awareness
 
