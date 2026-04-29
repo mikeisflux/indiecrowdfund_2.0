@@ -27,8 +27,12 @@ export default function GlobalError({
         if (!sessionStorage.getItem(key)) {
           sessionStorage.setItem(key, "1");
           window.location.reload();
-          return;
         }
+        // Don't report chunk errors to the admin log either way —
+        // they're a deploy-rotation artifact, not a code bug. The
+        // first occurrence reloads, the second (same session, e.g.
+        // CDN still serving the stale chunk) shows the reset UI.
+        return;
       }
 
       // Report to self-hosted error tracker
