@@ -1,6 +1,6 @@
 # IndieCrowdfund — Information Security Policy
 
-**Document version:** 1.1
+**Document version:** 1.2
 **Effective date:** 2026-04-29
 **Next scheduled review:** 2027-04-29
 **Policy owner:** Director (Mike Wheeler)
@@ -157,18 +157,120 @@ The Policy Owner reviews and updates this matrix during the annual TPSP review (
 - The Policy Owner sends an annual reminder summarizing recent threats relevant to the platform (phishing, credential stuffing, supply-chain attacks, NMI-specific risks like skimming kits and chargeback fraud).
 - Personnel are expected to report suspected phishing attempts, leaked credentials, or unusual system behavior to the Policy Owner immediately.
 
-## 11. Incident Response
+## 11. Incident Response Plan
 
-If a suspected security incident occurs (data breach, credential compromise, unauthorized access, suspicious payment activity, vendor breach affecting our data):
+This is IndieCrowdfund's documented Incident Response Plan, ready to be activated in the event of a suspected or confirmed security incident. It is reviewed at least annually as part of Section 12 and after every actual incident.
 
-1. **Contain.** Revoke compromised credentials, rotate keys, isolate affected systems.
-2. **Assess.** Determine scope of impact: which data, which users, which time window, which systems.
-3. **Notify.**
-   - PaymentCloud and any other affected processor — within 24 hours if cardholder data could be affected.
-   - Affected users — without unreasonable delay, per applicable breach notification laws (GDPR, US state laws).
-   - Card networks (Visa, Mastercard, etc.) — through PaymentCloud's incident process if a CHD breach is confirmed.
-4. **Remediate.** Patch the root cause, deploy fixes, validate via deploy health checks, document the incident.
-5. **Review.** Post-incident review within 7 days. Update this policy or related procedures if the incident reveals a gap.
+### 11.1 Roles, Responsibilities, and Communication
+
+| Role | Held by | Responsibility during an incident |
+|---|---|---|
+| Incident Commander | Director (Mike Wheeler) | Final authority on response decisions, external comms approval, post-incident review owner. |
+| Technical Lead | Site Reliability personnel | Containment, log collection, forensic preservation, root-cause investigation, deploy of fixes. |
+| Communications Lead | Director (Mike Wheeler) by default; may delegate | User-facing notifications, regulator/processor notifications, status page updates. |
+| Legal Liaison | Director, with outside counsel as needed | Determines breach-notification obligations under applicable laws. |
+
+**Internal escalation:** the first responder pages the Director by phone (number maintained in the off-platform contact list). If unreachable within 15 minutes, escalate to backup contact. All discussion of an active incident moves to a private channel established for that incident; no incident specifics are posted in shared chat tools.
+
+**External contacts maintained off-platform** (in case core systems are unavailable):
+- PaymentCloud / NMI gateway support — phone + email
+- DivinityCoin, PayPal, Whop processor support contacts
+- Cloudflare emergency support
+- Hosting provider emergency support
+- Outside legal counsel
+- Cyber-insurance carrier claim line (if applicable)
+
+### 11.2 Incident Categorization and Containment
+
+Different incident types trigger different containment paths. The Technical Lead picks the matching playbook on first response:
+
+| Incident type | Immediate containment |
+|---|---|
+| Stolen / leaked credential (staff or service) | Revoke the credential. Rotate any keys it could have touched (`VAULT_KEY`, NMI security key, processor API keys, DB password). Force re-auth on related sessions. |
+| Suspicious admin activity | Disable the admin account. Pull `pm2 logs` + DB audit trail for the affected window. Preserve logs to a separate location before any restart. |
+| Application vulnerability under active exploitation | Block the offending request pattern at Cloudflare (WAF rule). Take affected route offline if necessary. Deploy fix via `build-and-swap.sh`; rollback path is built in. |
+| Suspected card data exposure on our systems | Treat as P0. Snapshot affected systems for forensics before remediation. Notify PaymentCloud within 24 hours. **Note:** by design IndieCrowdfund does not store PAN — discovery of PAN on our systems is itself the indicator of a serious deviation from our architecture and triggers full P0 response. |
+| TPSP breach affecting our data (e.g. PaymentCloud, Cloudflare, hosting) | Confirm scope with the TPSP. Determine whether tokens, customer PII, or session data are affected. Trigger user-notification and regulator-notification paths as relevant. |
+| DDoS / availability incident | Engage Cloudflare protection (Under Attack mode if needed). No CHD impact expected — focus is service restoration per business continuity plan (Section 11.4). |
+| Insider threat / lost laptop with cached production access | Revoke that person's credentials immediately. Rotate `VAULT_KEY` and processor API keys. Audit recent activity from that account. |
+| Suspicious payment activity (high chargeback rate, fraud spike) | Lock affected creator's payouts. Engage PaymentCloud's risk team. Increase fraud-rule sensitivity at the gateway. |
+
+### 11.3 Notification Decision Tree
+
+After containment, in parallel with investigation, the Communications Lead works the following decision tree:
+
+1. **Was cardholder data potentially exposed (PAN, full track, CVV)?**
+   - Yes → Notify the affected payment processor (PaymentCloud, etc.) within 24 hours per the merchant agreement. PaymentCloud handles onward notification to Visa / Mastercard / Discover / Amex per their incident response procedures.
+   - No → Skip to step 2.
+
+2. **Was non-CHD personal data potentially exposed (names, emails, addresses, hashed passwords, NMI tokens)?**
+   - Yes → Engage Legal Liaison to determine notification obligations. At minimum:
+     - **GDPR** (EU/UK residents): notify the relevant supervisory authority within 72 hours and affected data subjects without undue delay if there is a high risk to them.
+     - **US state breach laws** (CCPA/CPRA in California, NY SHIELD Act, plus the other 48 state laws): notify affected residents per each state's specific timeline, typically within 30–60 days of discovery.
+     - **Other jurisdictions**: review per-jurisdiction obligations (PIPEDA Canada, LGPD Brazil, PDPA Singapore, etc.).
+   - No → No external user/regulator notification required, but proceed with internal documentation.
+
+3. **Was the incident reportable to a regulator regardless of CHD/PII status?**
+   - PCI DSS service providers we depend on may have contractual reporting obligations to us — but as a SAQ A merchant, IndieCrowdfund's primary regulator-facing duty runs through the payment brands via PaymentCloud.
+
+### 11.4 Business Continuity and Recovery
+
+| Asset | Recovery approach | Recovery objective |
+|---|---|---|
+| Production application (Next.js + PM2 cluster) | `build-and-swap.sh` keeps the previous build as `.next-backup-<timestamp>`; rollback is a single move-and-reload. PM2 cluster mode (4 workers) survives single-worker crashes. | RTO: 5 minutes for a known-good rollback. |
+| Database (PostgreSQL) | Hosting-provider point-in-time recovery (PITR) plus daily logical backups stored off the production host. | RTO: ≤ 4 hours. RPO: ≤ 1 hour via PITR. |
+| DNS / TLS edge | Cloudflare; failover handled by Cloudflare's anycast network. Origin can be repointed to a backup host if needed. | RTO: < 15 minutes for DNS change. |
+| Source code | GitHub primary; local clones held by Director and any active contributors act as ad-hoc mirrors. | RTO: immediate (clone available locally). |
+| Object storage (Cloudflare R2) | Cloudflare's durability guarantees. Critical assets (project images) regenerable from creator uploads. | RPO: per Cloudflare R2 SLA. |
+| Source-of-truth payment data | PaymentCloud's vault is authoritative for tokenized cards; their reporting is authoritative for transaction history. We can rebuild our pledge-status state from PaymentCloud's records via the Query API if our DB is lost. | RTO: 24 hours for full reconciliation. |
+
+If the production application is unavailable, the public site shows a Cloudflare-served maintenance page. Pledges in flight at the time of an outage are marked PENDING; the cron-driven reconciliation on next boot resolves them via PaymentCloud's transaction history.
+
+### 11.5 Data Backup Processes
+
+- **Application database:** the hosting provider performs continuous PITR (write-ahead log shipping). Daily logical backups (`pg_dump`) are written to encrypted off-host storage. Backups are retained for 30 days minimum.
+- **Encryption keys:** `VAULT_KEY` and other master secrets are kept in the Director's password manager (with a sealed copy in a fireproof location). These are NOT backed up to the application's database backups.
+- **Source code:** GitHub remote + local clones.
+- **Logs:** PM2 persistent logs at `/var/log/pm2/` survive PM2 reloads, deploys, and reboots; rotated monthly via `pm2-logrotate`.
+- **Backup integrity:** the Policy Owner verifies backup integrity by performing a test restore at least once every 12 months.
+
+### 11.6 Critical System Components
+
+The plan covers all critical components in IndieCrowdfund's operating environment:
+
+- Application servers (Next.js + PM2)
+- Application database (PostgreSQL)
+- Vault / secrets storage (`vault.ts` + `VAULT_KEY`)
+- Cloudflare edge (DNS, WAF, R2 object storage)
+- Source-control system (GitHub)
+- All TPSPs listed in Section 9.1
+
+### 11.7 Payment Brand Incident Response Procedures
+
+PaymentCloud, as our acquirer and gateway, is the channel through which payment-brand incident response procedures (Visa CISP, Mastercard SDP, Discover DISC, Amex DSOP) are activated. In the event of a confirmed CHD compromise:
+
+1. IndieCrowdfund notifies PaymentCloud within 24 hours.
+2. PaymentCloud invokes the appropriate brand-specific Incident Response procedure on our behalf.
+3. IndieCrowdfund cooperates fully with any forensic investigator (PFI) engaged by the brands and provides logs, code, and access as requested.
+4. Brand-specific reporting deadlines, fines, and remediation timelines are tracked by the Director with input from outside counsel.
+
+A current copy of PaymentCloud's incident-reporting contact information is maintained in the off-platform contact list (Section 11.1).
+
+### 11.8 Standard Response Workflow
+
+For any incident, the steps below are executed in order (steps 2–4 may overlap):
+
+1. **Contain.** Revoke compromised credentials, rotate keys, isolate affected systems per the matching row in Section 11.2.
+2. **Assess.** Determine scope of impact: which data, which users, which time window, which systems. Preserve evidence (logs, snapshots, memory dumps if needed) before remediation.
+3. **Notify.** Run the decision tree in Section 11.3.
+4. **Remediate.** Patch the root cause, deploy fixes via `build-and-swap.sh`, validate via deploy health checks, document the change.
+5. **Review.** Post-incident review within 7 days of resolution. Identify root cause, contributing factors, and policy or procedure updates needed. Update this plan accordingly.
+
+### 11.9 Plan Activation, Testing, and Maintenance
+
+- This plan is "ready to be activated" — there are no preconditions or sign-offs needed before initiating containment.
+- The plan is tested at least once every 12 months via a tabletop walkthrough (the Director walks through one of the categorized incident types in Section 11.2 end-to-end and validates that contacts, runbooks, and recovery objectives are still accurate).
+- After every real incident or annual tabletop, the plan is updated to reflect any gaps discovered.
 
 ## 12. Annual Review
 
