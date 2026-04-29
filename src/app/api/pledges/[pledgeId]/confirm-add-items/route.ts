@@ -61,6 +61,11 @@ export async function POST(
       pendingAdditionalItems?: {
         paymentMethod?: string;
         paymentIntentId?: string;
+        // For NMI: stamped after the saleByPaymentToken sale completes
+        // so a retry that fails inside the apply transaction doesn't
+        // re-charge the user. Presence here means "money was already
+        // taken; just retry the apply, do not re-tokenize".
+        nmiTransactionId?: string;
         addons?: { id: string; quantity: number }[]; // New format with quantities
         addonIds?: string[]; // Legacy format
         amount: number;
@@ -139,61 +144,84 @@ export async function POST(
         );
       }
     } else if (paymentMethod === "NMI") {
-      // PaymentCloud add-items: run the upcharge sale right here using
-      // the payment_token the client just got from Collect.js. We stash
-      // the resulting transaction id into pendingItems.paymentIntentId
-      // so the downstream advisory-lock dedup keys still work.
-      if (!paymentToken) {
-        return NextResponse.json(
-          { error: "Missing payment token" },
-          { status: 400 }
+      // PaymentCloud add-items: charge the upcharge sale here using
+      // the Collect.js payment_token. CRITICAL retry handling: if a
+      // previous attempt ran the sale but crashed before the apply
+      // transaction committed, pendingItems.nmiTransactionId is set
+      // — DO NOT re-charge; just retry the apply.
+      if (pendingItems.nmiTransactionId) {
+        pendingItems.paymentIntentId = pendingItems.nmiTransactionId;
+        pledgesConfirmAddItemsLogger.info(
+          { pledgeId, nmiTransactionId: pendingItems.nmiTransactionId },
+          "[ConfirmAddItems NMI] Sale already ran on prior attempt; retrying apply only"
         );
-      }
-      const nmiConfig = await loadNmiConfig();
-      if (!nmiConfig) {
-        return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
-      }
+      } else {
+        if (!paymentToken) {
+          return NextResponse.json(
+            { error: "Missing payment token" },
+            { status: 400 }
+          );
+        }
+        const nmiConfig = await loadNmiConfig();
+        if (!nmiConfig) {
+          return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+        }
 
-      const userRecord = await db.user.findFirst({
-        where: { id: session.user.id, deletedAt: null },
-        select: { email: true, name: true },
-      });
-
-      let saleResp;
-      try {
-        saleResp = await saleByPaymentToken(nmiConfig, {
-          amount: pendingItems.amount,
-          paymentToken,
-          orderid: `${pledgeId}-additems-${Date.now()}`,
-          orderdescription: `Additional items for pledge to ${pledge.project.title}`,
-          email: userRecord?.email || undefined,
+        const userRecord = await db.user.findFirst({
+          where: { id: session.user.id, deletedAt: null },
+          select: { email: true, name: true },
         });
-      } catch (err) {
-        pledgesConfirmAddItemsLogger.error(
-          { pledgeId, err: err instanceof Error ? err.message : String(err) },
-          "[ConfirmAddItems NMI] Sale error"
-        );
-        return NextResponse.json(
-          { error: "Failed to charge card. Please try again or contact support." },
-          { status: 502 }
-        );
-      }
 
-      if (saleResp.response !== "1" || !saleResp.transactionid) {
-        pledgesConfirmAddItemsLogger.warn(
-          { pledgeId, response: saleResp.response, text: saleResp.responsetext },
-          "[ConfirmAddItems NMI] Sale declined"
-        );
-        return NextResponse.json(
-          { error: saleResp.responsetext || "Card was declined. Please try a different card." },
-          { status: 400 }
-        );
-      }
+        let saleResp;
+        try {
+          saleResp = await saleByPaymentToken(nmiConfig, {
+            amount: pendingItems.amount,
+            paymentToken,
+            orderid: `${pledgeId}-additems-${Date.now()}`,
+            orderdescription: `Additional items for pledge to ${pledge.project.title}`,
+            email: userRecord?.email || undefined,
+          });
+        } catch (err) {
+          pledgesConfirmAddItemsLogger.error(
+            { pledgeId, err: err instanceof Error ? err.message : String(err) },
+            "[ConfirmAddItems NMI] Sale error"
+          );
+          return NextResponse.json(
+            { error: "Failed to charge card. Please try again or contact support." },
+            { status: 502 }
+          );
+        }
 
-      // Stash the transaction id back into the pending block so the
-      // advisory-lock dedup below has a stable key, and so the
-      // completedAdditionalItems audit trail records the txn id.
-      pendingItems.paymentIntentId = saleResp.transactionid;
+        if (saleResp.response !== "1" || !saleResp.transactionid) {
+          pledgesConfirmAddItemsLogger.warn(
+            { pledgeId, response: saleResp.response, text: saleResp.responsetext },
+            "[ConfirmAddItems NMI] Sale declined"
+          );
+          return NextResponse.json(
+            { error: saleResp.responsetext || "Card was declined. Please try a different card." },
+            { status: 400 }
+          );
+        }
+
+        // Persist the txn id IMMEDIATELY so a crash before the apply
+        // transaction commits doesn't lose it. Without this the next
+        // request would re-tokenize and re-charge the user.
+        const metadataForStamp = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+          ? pledge.metadata as Record<string, unknown>
+          : {};
+        const stampedPending = { ...pendingItems, nmiTransactionId: saleResp.transactionid, paymentIntentId: saleResp.transactionid };
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            metadata: {
+              ...metadataForStamp,
+              pendingAdditionalItems: stampedPending,
+            },
+          },
+        });
+        pendingItems.nmiTransactionId = saleResp.transactionid;
+        pendingItems.paymentIntentId = saleResp.transactionid;
+      }
     }
 
     // Get the addons, scoped to the pledge's project for defense in depth

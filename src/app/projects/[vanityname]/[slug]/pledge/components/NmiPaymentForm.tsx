@@ -120,7 +120,7 @@ export function NmiPaymentForm({
     pledgeIdRef.current = pledgeId;
     endpointRef.current = endpoint;
     billingRef.current = { firstName, lastName, line1, line2, city, stateField, zip, country };
-  }, [onSuccess, onError, setIsProcessing, pledgeId, firstName, lastName, line1, line2, city, stateField, zip, country]);
+  }, [onSuccess, onError, setIsProcessing, pledgeId, endpoint, firstName, lastName, line1, line2, city, stateField, zip, country]);
 
   useEffect(() => {
     if (!publicKey) return;
