@@ -461,7 +461,7 @@ export function MarketplaceContent({
                         <h2 className="text-xl font-bold text-foreground">Featured</h2>
                       </div>
                       <Link
-                        href="/marketplace/books/featured"
+                        href="/marketplace/comics/featured"
                         className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300 flex items-center gap-1 group"
                       >
                         View All
@@ -498,7 +498,7 @@ export function MarketplaceContent({
                         <h2 className="text-xl font-bold text-foreground">Staff Picks</h2>
                       </div>
                       <Link
-                        href="/marketplace/books/staff-picks"
+                        href="/marketplace/comics/staff-picks"
                         className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300 flex items-center gap-1 group"
                       >
                         View All
@@ -530,7 +530,7 @@ export function MarketplaceContent({
                 <BookSection
                   title="All Comics"
                   books={allBooks}
-                  viewAllHref="/marketplace/books"
+                  viewAllHref="/marketplace/comics/all"
                   loading={loading}
                   icon={TrendingUp}
                 />

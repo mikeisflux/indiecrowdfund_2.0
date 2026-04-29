@@ -23,6 +23,11 @@ export async function GET(request: Request) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20") || 20));
     const search = searchParams.get("search");
+    // sort=hot orders by purchase + view count for the marketplace
+    // "Hot Songs" / "Trending" listings. Default remains publishedAt
+    // desc (newest first) to stay backwards compatible with callers
+    // that don't pass sort.
+    const sort = searchParams.get("sort");
 
     const skip = (page - 1) * limit;
 
@@ -110,6 +115,8 @@ export async function GET(request: Request) {
         ? { featuredOrder: "asc" }
         : staffPick
         ? { staffPickOrder: "asc" }
+        : sort === "hot"
+        ? [{ purchaseCount: "desc" }, { viewCount: "desc" }]
         : { publishedAt: "desc" },
       skip,
       take: limit,
