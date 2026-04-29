@@ -294,16 +294,20 @@ export default function ProjectPage() {
     checkCollaboratorStatus();
   }, [project.id, project.creatorId, currentUser]);
 
-  // Poll for real-time funding stats updates every 10 seconds
+  // Poll for real-time funding stats updates.
+  // Interval is 15s but the response carries `Cache-Control: max-age=30`,
+  // so the browser serves most polls from cache without hitting origin —
+  // a single tab generates ~2 origin requests per minute, not 12. This
+  // matters because the per-IP rate limiter is 120/min: a user with two
+  // tabs open polling at 5s with `no-store` was hitting that ceiling and
+  // tripping 502/503/504 from this endpoint specifically.
   useEffect(() => {
     if (!slug || !vanityname || loading || error) return;
 
     const pollStats = async () => {
       try {
         const statsUrl = `/api/projects/vanity/${vanityname}/${slug}/stats`;
-        const response = await fetch(statsUrl, {
-          cache: "no-store",
-        });
+        const response = await fetch(statsUrl);
         if (response.ok) {
           const stats = await response.json();
           setProject((prev) => {
@@ -328,8 +332,7 @@ export default function ProjectPage() {
     // Poll immediately on mount
     pollStats();
 
-    // Poll every 5 seconds for near real-time updates
-    const intervalId = setInterval(pollStats, 5000);
+    const intervalId = setInterval(pollStats, 15000);
 
     // Also poll immediately when page becomes visible (user returns to tab)
     const handleVisibilityChange = () => {
