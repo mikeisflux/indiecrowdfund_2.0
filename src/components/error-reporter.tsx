@@ -208,6 +208,12 @@ export function ErrorReporter() {
         // back to the creator inline — admin-logging them is duplicate
         // noise from normal user-input validation.
         /\/api\/projects\/[^/]+\/submit$/.test(requestUrl) ||
+        // Creator marketplace files: DELETE returns 400 with
+        // "Cannot delete file that is in use by a book" when the
+        // creator tries to remove a PDF that's still referenced by an
+        // active book record. The edit UI surfaces the message inline;
+        // admin-logging it is the same kind of user-input noise.
+        requestUrl.includes("/api/creator/marketplace/files") ||
         isStatsPollerPath
       );
       // Bot-probe 404s on well-known paths that we don't serve (ads.txt,
@@ -230,6 +236,7 @@ export function ErrorReporter() {
         response.status === 401 && /\/api\/projects\/[^/]+\/[^/?]+/.test(requestUrl);
       const isExpected401 = response.status === 401 && (
         requestUrl.includes("/api/user/following") ||
+        requestUrl.includes("/api/backer/following") ||
         requestUrl.includes("/api/user/vanity-url") ||
         requestUrl.includes("/api/user/notifications") ||
         requestUrl.includes("/api/messages") ||
