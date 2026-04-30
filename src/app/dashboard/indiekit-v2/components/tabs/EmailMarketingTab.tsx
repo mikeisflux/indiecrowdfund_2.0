@@ -7,8 +7,12 @@ import { Mail, UsersRound, Layers, Lock } from "lucide-react";
 
 // Import existing tabs from v1
 import { EmailsTab } from "../../../indiekit/components/tabs";
-import { EmailListTab } from "../../../indiekit/components/tabs";
 import { SegmentsTab } from "../../../indiekit/components/tabs";
+// Creator-wide subscriber list (replaces the per-project EmailListTab
+// that lived under "Subscribers" before — it pointed at project
+// followers, which meant creators couldn't actually search or remove
+// people they had imported into their global email list).
+import { CreatorSubscribersTab } from "./CreatorSubscribersTab";
 
 import type { EmailCampaign, Segment } from "../../types";
 
@@ -18,7 +22,11 @@ interface EmailMarketingTabProps {
   projectId: string;
   onRefresh: () => void;
   segments: Segment[];
-  hasActiveCampaign: boolean;
+  // Was passed to the per-project EmailListTab to gate prelaunch
+  // imports while a live campaign was in flight; the new
+  // CreatorSubscribersTab is creator-wide and doesn't need it. Keep
+  // the prop optional so callers don't have to change.
+  hasActiveCampaign?: boolean;
   emailAccessLocked?: boolean;
 }
 
@@ -31,7 +39,6 @@ export function EmailMarketingTab({
   projectId,
   onRefresh,
   segments,
-  hasActiveCampaign,
   emailAccessLocked,
 }: EmailMarketingTabProps) {
   const [subTab, setSubTab] = useState("campaigns");
@@ -82,7 +89,7 @@ export function EmailMarketingTab({
         </TabsContent>
 
         <TabsContent value="subscribers">
-          <EmailListTab projectId={projectId} hasActiveCampaign={hasActiveCampaign} />
+          <CreatorSubscribersTab />
         </TabsContent>
 
         <TabsContent value="segments">

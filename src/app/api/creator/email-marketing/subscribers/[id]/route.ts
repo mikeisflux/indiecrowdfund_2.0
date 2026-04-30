@@ -148,8 +148,23 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const subscriber = await verifySubscriberOwnership(id, session.user.id);
 
+    // Try EmailListSubscriber first — that's the primary table for the
+    // creator-wide email list shown on the indiekit subscribers tab and
+    // counted on campaign sends. Only delete if the row belongs to
+    // this creator.
+    const elsDeleted = await db.emailListSubscriber.deleteMany({
+      where: { id, creatorId: session.user.id },
+    });
+    if (elsDeleted.count > 0) {
+      return NextResponse.json({ success: true });
+    }
+
+    // Fall back to legacy NewsletterSubscriber records imported by this
+    // creator. Older imports + manual adds went there instead of
+    // EmailListSubscriber; keep the path working so creators can still
+    // clean those out.
+    const subscriber = await verifySubscriberOwnership(id, session.user.id);
     if (!subscriber) {
       return NextResponse.json({ error: "Subscriber not found" }, { status: 404 });
     }

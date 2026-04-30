@@ -17,17 +17,31 @@ async function getCreatorTag(userId: string) {
 }
 
 // GET - Fetch creator's subscribers (from EmailListSubscriber + backers)
-export async function GET() {
+// Optional ?search=foo filters by email or name, case-insensitive.
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get creator's email list subscribers
+    const { searchParams } = new URL(request.url);
+    const search = (searchParams.get("search") || "").trim();
+
+    // Get creator's email list subscribers (filter at DB level when
+    // search is provided so big lists don't load everything just to
+    // throw most of it away client-side).
     const emailListSubscribers = await db.emailListSubscriber.findMany({
       where: {
         creatorId: session.user.id,
+        ...(search
+          ? {
+              OR: [
+                { email: { contains: search, mode: "insensitive" } },
+                { name: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : {}),
       },
       orderBy: { createdAt: "desc" },
     });
