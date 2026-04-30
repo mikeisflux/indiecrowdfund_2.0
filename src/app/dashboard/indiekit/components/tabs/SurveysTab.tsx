@@ -5,11 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, ClipboardList, FormInput, ShoppingCart } from "lucide-react";
 
 // Import existing tabs from v1
-import { EmailsTab } from "../../../indiekit/components/tabs";
-import { ManageSurveyTab } from "../../../indiekit/components/tabs";
-import { SurveyBuilderTab } from "../../../indiekit/components/tabs";
-import { AddonsTab } from "../../../indiekit/components/tabs";
-import { ImportAddonFromProjectDialog } from "../../../indiekit/components/dialogs/import-addon-from-project-dialog";
+import { EmailsTab } from "../components/tabs";
+import { ManageSurveyTab } from "../components/tabs";
+import { SurveyBuilderTab } from "../components/tabs";
+import { AddonsTab } from "../components/tabs";
+import { ImportAddonFromProjectDialog } from "../components/dialogs/import-addon-from-project-dialog";
 
 import type { EmailCampaign, FulfillmentStats, Backer, SurveyAddon, SurveyQuestion } from "../../types";
 

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Truck, CheckCircle, Package, Sparkles, Download, Check, X, Pencil } from "lucide-react";
+import { Truck, CheckCircle, Package, Download, Check, X, Pencil } from "lucide-react";
 import { CircularProgress } from "./CircularProgress";
 import { toast } from "sonner";
 import type { ProductionOrderStats } from "../types";
@@ -481,12 +481,6 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                 <Button size="sm" className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 shadow-lg shadow-primary/25">
                   <Package className="mr-1.5 h-3.5 w-3.5" />
                   Open IndieKit
-                </Button>
-              </Link>
-              <Link href="/dashboard/indiekit-v2">
-                <Button size="sm" className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white shadow-lg shadow-teal-500/25">
-                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                  IndieKit 2.0
                 </Button>
               </Link>
             </div>

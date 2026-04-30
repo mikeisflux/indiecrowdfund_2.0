@@ -5,8 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, BarChart3 } from "lucide-react";
 
 // Import existing tabs from v1
-import { OverviewTab } from "../../../indiekit/components/tabs";
-import { CountsTab } from "../../../indiekit/components/tabs";
+import { OverviewTab } from "../components/tabs";
+import { CountsTab } from "../components/tabs";
 
 import type { FulfillmentStats, Backer, TimelineEntry } from "../../types";
 

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function DashboardProjectsPage() {
-  redirect("/dashboard/indiekit-v2");
+  redirect("/dashboard/indiekit");
 }

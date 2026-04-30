@@ -1,7 +1,7 @@
 "use client";
 
 // Re-export the existing Digital tab from v1 with new name
-import { DigitalTab } from "../../../indiekit/components/tabs";
+import { DigitalTab } from "../components/tabs";
 
 import type { FulfillmentStats, DigitalFile, DistributionRule } from "../../types";
 

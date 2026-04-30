@@ -2,11 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
-import { InitialProjectIdContext } from "@/app/dashboard/indiekit-v2/constants";
+import { InitialProjectIdContext } from "@/app/dashboard/indiekit/constants";
 
-// Lazy-load the full IndieKit V2 page component to keep the main dashboard bundle small
-const IndieKitV2Page = dynamic(
-  () => import("@/app/dashboard/indiekit-v2/page"),
+// Lazy-load the full IndieKit page to keep the main dashboard bundle small.
+const IndieKitPage = dynamic(
+  () => import("@/app/dashboard/indiekit/page"),
   {
     loading: () => (
       <div className="flex items-center justify-center py-12">
@@ -16,11 +16,11 @@ const IndieKitV2Page = dynamic(
   }
 );
 
-interface IndieKitV2TabProps {
+interface IndieKitTabProps {
   projectId: string;
 }
 
-export function IndieKitV2Tab({ projectId }: IndieKitV2TabProps) {
+export function IndieKitTab({ projectId }: IndieKitTabProps) {
   // Pass projectId via context so the embedded page uses the dashboard's
   // selected project instead of relying on URL params or localStorage.
   if (typeof window !== "undefined" && projectId) {
@@ -29,16 +29,16 @@ export function IndieKitV2Tab({ projectId }: IndieKitV2TabProps) {
 
   return (
     <InitialProjectIdContext.Provider value={projectId}>
-      <div className="indiekit-v2-embedded -mx-4 sm:-mx-6 lg:-mx-8">
+      <div className="indiekit-embedded -mx-4 sm:-mx-6 lg:-mx-8">
         <style jsx>{`
-          .indiekit-v2-embedded :global(header.sticky) {
+          .indiekit-embedded :global(header.sticky) {
             display: none !important;
           }
-          .indiekit-v2-embedded :global(.floating-orb) {
+          .indiekit-embedded :global(.floating-orb) {
             display: none !important;
           }
         `}</style>
-        <IndieKitV2Page />
+        <IndieKitPage />
       </div>
     </InitialProjectIdContext.Provider>
   );

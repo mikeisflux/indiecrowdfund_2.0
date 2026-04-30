@@ -5,8 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BoxIcon, Link2 } from "lucide-react";
 
 // Import existing tabs from v1
-import { ProductsTab } from "../../../indiekit/components/tabs";
-import { SkuMappingTab } from "../../../indiekit/components/tabs";
+import { ProductsTab } from "../components/tabs";
+import { SkuMappingTab } from "../components/tabs";
 
 import type { Product } from "../../types";
 

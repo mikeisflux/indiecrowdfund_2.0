@@ -46,7 +46,7 @@ import { ProductionOrderView } from "./components/ProductionOrderView";
 import { CollaborationsTab } from "./components/CollaborationsTab";
 import { PostUpdatesTab } from "./components/PostUpdatesTab";
 import { SocialHubTab } from "./components/SocialHubTab";
-import { IndieKitV2Tab } from "./components/IndieKitV2Tab";
+import { IndieKitTab } from "./components/IndieKitTab";
 import { MarketplaceTab } from "./components/MarketplaceTab";
 import { EmailTab } from "./components/EmailTab";
 import { LiveStreamTab } from "./components/LiveStreamTab";
@@ -452,7 +452,7 @@ export default function CreatorDashboard() {
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Operations</p>
                   <div className="flex flex-wrap gap-1">
                     {([
-                      { value: "indiekit-v2", icon: Sparkles, label: "IndieKit 2.0", gradient: "from-emerald-500 to-teal-500" },
+                      { value: "indiekit", icon: Sparkles, label: "IndieKit", gradient: "from-emerald-500 to-teal-500" },
                       { value: "production-order", icon: Truck, label: "Production Order", gradient: "from-blue-500 to-indigo-500" },
                       { value: "collaborations", icon: Handshake, label: "Collaborations", gradient: "from-slate-500 to-zinc-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
@@ -542,8 +542,8 @@ export default function CreatorDashboard() {
                 <SocialHubTab />
               </TabsContent>
 
-              <TabsContent value="indiekit-v2" className="space-y-6">
-                <IndieKitV2Tab projectId={selectedProjectId} />
+              <TabsContent value="indiekit" className="space-y-6">
+                <IndieKitTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="marketplace" className="space-y-6">

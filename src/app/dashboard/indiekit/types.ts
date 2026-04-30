@@ -250,3 +250,29 @@ export const STATUS_LABELS: Record<Backer["status"], string> = {
   pushed: "Pushed",
   shipped: "Complete",
 };
+
+// Three-phase fulfillment workflow. See PHASES in ./constants.
+export type FulfillmentPhase = "pre-fulfillment" | "fulfillment" | "post-fulfillment";
+
+export type AlwaysAvailableTab =
+  | "dashboard"
+  | "backers"
+  | "email-marketing"
+  | "updates"
+  | "refund-requests"
+  | "settings"
+  | "account"
+  | "projects";
+
+export type PreFulfillmentTab = "setup" | "surveys" | "finalize" | "teaser-pages";
+export type FulfillmentTab = "payments" | "digital-delivery" | "physical-delivery";
+export type PostFulfillmentTab = "reports" | "late-backers";
+
+export type PhaseTab = PreFulfillmentTab | FulfillmentTab | PostFulfillmentTab;
+
+export interface PhaseInfo {
+  id: FulfillmentPhase;
+  label: string;
+  description: string;
+  tabs: { id: PhaseTab; label: string; icon: string }[];
+}

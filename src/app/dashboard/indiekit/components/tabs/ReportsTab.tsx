@@ -5,9 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, FileDown, BarChart3 } from "lucide-react";
 
 // Import existing tabs from v1
-import { TimelineTab } from "../../../indiekit/components/tabs";
-import { ExportTab } from "../../../indiekit/components/tabs";
-import { CountsTab } from "../../../indiekit/components/tabs";
+import { TimelineTab } from "../components/tabs";
+import { ExportTab } from "../components/tabs";
+import { CountsTab } from "../components/tabs";
 
 import type { FulfillmentStats, TimelineEntry } from "../../types";
 
