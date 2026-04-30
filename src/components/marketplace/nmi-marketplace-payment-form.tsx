@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Lock } from "lucide-react";
 import { apiFetch } from "@/lib/fetch-utils";
+import { useCollectJsIframeVerify } from "@/components/payments/use-collectjs-iframe-verify";
 
 declare global {
   interface Window {
@@ -44,6 +45,15 @@ export function NmiMarketplacePaymentForm({
   onError,
 }: NmiMarketplacePaymentFormProps) {
   const [scriptReady, setScriptReady] = useState(false);
+  // Two-strike iframe verifier — see use-collectjs-iframe-verify.
+  // First failed attach tears down + reloads the script; second
+  // failed attach surfaces a visible "Card form failed to load"
+  // error so the user isn't stuck on an empty box silently.
+  const { loadFailed: cardFormLoadFailed } = useCollectJsIframeVerify({
+    scriptReady,
+    ccnumberId: "nmi-mkt-ccnumber",
+    setScriptReady,
+  });
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [firstName, setFirstName] = useState("");
@@ -178,14 +188,25 @@ export function NmiMarketplacePaymentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {!scriptReady && (
+      {!scriptReady && !cardFormLoadFailed && (
         <div className="flex flex-col items-center justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">Loading card form...</p>
         </div>
       )}
 
-      <div className={scriptReady ? "space-y-4" : "hidden"}>
+      {cardFormLoadFailed && (
+        <div className="p-3 rounded-md border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+          <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-1">
+            Card form failed to load.
+          </p>
+          <p className="text-xs text-red-600 dark:text-red-400">
+            The PaymentCloud card-input iframe didn&apos;t attach. Please refresh the page or disable any browser extensions that block third-party iframes (privacy / cookie blockers, strict tracking protection).
+          </p>
+        </div>
+      )}
+
+      <div className={scriptReady && !cardFormLoadFailed ? "space-y-4" : "hidden"}>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label htmlFor="nmi-mkt-first-name">First name</Label>

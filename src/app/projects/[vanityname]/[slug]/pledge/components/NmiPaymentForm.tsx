@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/fetch-utils";
+import { useCollectJsIframeVerify } from "@/components/payments/use-collectjs-iframe-verify";
 
 // PaymentCloud (NMI) Collect.js inline form. The script is loaded with
 // `data-tokenization-key={publicKey}` and the actual card fields render
@@ -97,6 +98,14 @@ export function NmiPaymentForm({
   extraBody,
 }: NmiPaymentFormProps) {
   const [scriptReady, setScriptReady] = useState(false);
+  // Two-strike iframe verifier — see use-collectjs-iframe-verify.
+  // First failed attach reloads the script; second surfaces a
+  // visible error instead of leaving an empty card-number box.
+  const { loadFailed: cardFormLoadFailed } = useCollectJsIframeVerify({
+    scriptReady,
+    ccnumberId: "nmi-ccnumber",
+    setScriptReady,
+  });
 
   // Cardholder name + billing address. NMI/PaymentCloud uses zip + address1
   // for AVS and rejects (or downgrades to higher fees) sales with no
@@ -306,14 +315,25 @@ export function NmiPaymentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {!scriptReady && (
+      {!scriptReady && !cardFormLoadFailed && (
         <div className="flex flex-col items-center justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">Loading card form...</p>
         </div>
       )}
 
-      <div className={scriptReady ? "space-y-4" : "hidden"}>
+      {cardFormLoadFailed && (
+        <div className="p-3 rounded-md border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+          <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-1">
+            Card form failed to load.
+          </p>
+          <p className="text-xs text-red-600 dark:text-red-400">
+            The PaymentCloud card-input iframe didn&apos;t attach. Please refresh the page or disable any browser extensions that block third-party iframes (privacy / cookie blockers, strict tracking protection).
+          </p>
+        </div>
+      )}
+
+      <div className={scriptReady && !cardFormLoadFailed ? "space-y-4" : "hidden"}>
         {/* Apple Pay button — Collect.js renders the actual styled
             button into this div on Safari/iOS only; on other browsers
             this stays empty. Bypasses our typed billing fields entirely
