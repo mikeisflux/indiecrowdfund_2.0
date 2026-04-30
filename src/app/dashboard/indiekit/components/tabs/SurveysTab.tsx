@@ -5,11 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, ClipboardList, FormInput, ShoppingCart } from "lucide-react";
 
 // Import existing tabs from v1
-import { EmailsTab } from "../components/tabs";
-import { ManageSurveyTab } from "../components/tabs";
-import { SurveyBuilderTab } from "../components/tabs";
-import { AddonsTab } from "../components/tabs";
-import { ImportAddonFromProjectDialog } from "../components/dialogs/import-addon-from-project-dialog";
+import { EmailsTab } from "./index";
+import { ManageSurveyTab } from "./index";
+import { SurveyBuilderTab } from "./index";
+import { AddonsTab } from "./index";
+import { ImportAddonFromProjectDialog } from "../dialogs/import-addon-from-project-dialog";
 
 import type { EmailCampaign, FulfillmentStats, Backer, SurveyAddon, SurveyQuestion } from "../../types";
 

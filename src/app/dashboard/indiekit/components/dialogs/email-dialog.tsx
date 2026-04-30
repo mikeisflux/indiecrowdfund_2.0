@@ -466,9 +466,41 @@ export function EmailDialog({
 
                 {/* Unsubscribe Info Link */}
                 <div>
-                  <Button variant="link" className="text-teal-600 p-0 h-auto text-sm">
-                    What happens to a member that unsubscribes?
-                  </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="link" className="text-teal-600 p-0 h-auto text-sm">
+                        What happens to a member that unsubscribes?
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-96 text-sm space-y-3" align="start">
+                      <p className="font-semibold">When a subscriber unsubscribes:</p>
+                      <ul className="space-y-2 list-disc pl-4 text-muted-foreground">
+                        <li>
+                          They click the <span className="font-medium text-foreground">Unsubscribe</span> link at the
+                          bottom of any campaign email — it&apos;s a one-click signed token, no login required.
+                        </li>
+                        <li>
+                          Their record stays in your subscribers list with a{" "}
+                          <span className="font-medium text-foreground">Unsubscribed</span> badge instead of being
+                          deleted, so a future CSV re-import won&apos;t silently re-add them.
+                        </li>
+                        <li>
+                          They&apos;re excluded from every future campaign send — the Send To count and Filter
+                          Members popover only consider <span className="font-medium text-foreground">subscribed</span>{" "}
+                          members.
+                        </li>
+                        <li>
+                          Bounced emails work the same way (status flips to{" "}
+                          <span className="font-medium text-foreground">Bounced</span>) so you don&apos;t keep
+                          spending sender reputation on dead addresses.
+                        </li>
+                      </ul>
+                      <p className="text-xs text-muted-foreground pt-1 border-t">
+                        Unsubscribe is required by CAN-SPAM, GDPR, and most email providers — every campaign
+                        IndieCrowdfund sends includes the link automatically.
+                      </p>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             )}

@@ -5,8 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Box, Truck } from "lucide-react";
 
 // Import existing tabs from v1
-import { PackagesTab } from "../components/tabs";
-import { ShippingTab } from "../components/tabs";
+import { PackagesTab } from "./index";
+import { ShippingTab } from "./index";
 
 import type { PackageGroup, ShippingService } from "../../types";
 

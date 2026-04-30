@@ -6,8 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Mail, UsersRound, Layers, Lock } from "lucide-react";
 
 // Import existing tabs from v1
-import { EmailsTab } from "../components/tabs";
-import { SegmentsTab } from "../components/tabs";
+import { EmailsTab } from "./index";
+import { SegmentsTab } from "./index";
 // Creator-wide subscriber list (replaces the per-project EmailListTab
 // that lived under "Subscribers" before — it pointed at project
 // followers, which meant creators couldn't actually search or remove
