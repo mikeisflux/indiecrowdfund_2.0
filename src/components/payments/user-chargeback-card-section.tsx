@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, ShieldCheck, CheckCircle2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
+import { useCollectJsIframeVerify } from "@/components/payments/use-collectjs-iframe-verify";
 
 declare global {
   interface Window {
@@ -159,6 +160,17 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
     document.body.appendChild(s);
   }, [showForm, publicKey]);
 
+  // Iframe-attach verifier — after scriptReady the placeholder divs
+  // should host Collect.js iframes. If they don't (cached
+  // window.CollectJS from a prior SPA-route mount silently failed to
+  // re-target new selectors), the hook reloads the script once and
+  // surfaces loadFailed=true on a second failed attach.
+  const { loadFailed: cardFormLoadFailed, resetFailure: resetCardFormFailure } = useCollectJsIframeVerify({
+    scriptReady,
+    ccnumberId: `${idPrefix}-ccnumber`,
+    setScriptReady,
+  });
+
   useEffect(() => {
     if (!scriptReady || !window.CollectJS) return;
     // Match the official Collect.js React demo's shape exactly —
@@ -173,9 +185,9 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
         ccexp: { selector: `#${idPrefix}-ccexp`, placeholder: "MM / YY" },
         cvv: { selector: `#${idPrefix}-cvv`, placeholder: "CVV" },
       },
-      // No-op acknowledgement of attachment — see the verifier below.
-      // (CollectJS doesn't expose a callback for "iframes attached",
-      // so we poll once after a short delay.)
+      // No-op acknowledgement of attachment — verification runs in
+      // useCollectJsIframeVerify above. CollectJS doesn't expose a
+      // callback for "iframes attached".
       callback: async (resp: CollectJsCallbackResponse) => {
         if (!resp?.token) {
           setIsSavingRef.current(false);
@@ -224,31 +236,6 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
         }
       },
     });
-
-    // Iframe-attach verifier. If the user navigates to this section
-    // from another page that already loaded Collect.js (e.g. the
-    // pledge form), window.CollectJS persists across the SPA route
-    // change but its internal "configured" state may not re-attach
-    // iframes to our new selectors — leaving the cardholder with an
-    // empty bordered box where the card-number input should be. A
-    // single confirmed report ("backer has all my details but no
-    // text bar for the card number") matches that exact symptom.
-    //
-    // Strategy: wait 1.5s, check whether ccnumber div has an iframe
-    // child. If not, blow away the cached script + window.CollectJS
-    // and force a fresh load via the script-loader effect (which
-    // gets triggered again by setScriptReady(false)).
-    const verifyTimer = setTimeout(() => {
-      const ccnumberDiv = document.getElementById(`${idPrefix}-ccnumber`);
-      if (ccnumberDiv && !ccnumberDiv.querySelector("iframe")) {
-        const existing = document.querySelector<HTMLScriptElement>("script#nmi-collectjs");
-        if (existing) existing.remove();
-        // CollectJS isn't typed as deletable on Window; use a cast.
-        (window as unknown as { CollectJS?: unknown }).CollectJS = undefined;
-        setScriptReady(false);
-      }
-    }, 1500);
-    return () => clearTimeout(verifyTimer);
   }, [scriptReady, idPrefix]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -341,7 +328,33 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
             </div>
           </div>
 
-          <div className={scriptReady ? "space-y-3" : "hidden"}>
+          {cardFormLoadFailed && (
+            <div className="p-3 rounded-md border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+              <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-1">
+                Card form failed to load.
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-400 mb-2">
+                The PaymentCloud card-input iframe didn&apos;t attach. Please refresh the page or disable any browser extensions that block third-party iframes (privacy / cookie blockers, strict tracking protection).
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  resetCardFormFailure();
+                  // Trigger the script-loader effect to retry by
+                  // toggling showForm off+on. Cheaper than reloading
+                  // the page.
+                  setShowForm(false);
+                  setTimeout(() => setShowForm(true), 50);
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+
+          <div className={scriptReady && !cardFormLoadFailed ? "space-y-3" : "hidden"}>
             <div className="space-y-1">
               <Label htmlFor={`${idPrefix}-ccnumber`}>Card number</Label>
               <div
