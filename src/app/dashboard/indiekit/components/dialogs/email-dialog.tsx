@@ -2,11 +2,12 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmailEditor } from "@/components/ui/email-editor";
 import {
   Dialog,
@@ -21,6 +22,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -99,6 +105,83 @@ export function EmailDialog({
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
 
+  // Filter Members: a creator with a heterogeneous list (CSV imports,
+  // teaser signups, manually-added) can scope a campaign send to one
+  // or more EmailListSubscriber.source values. When `selectedSources`
+  // is null we send to every subscribed member (back-compat default).
+  // The breakdown is fetched from /api/creator/email-marketing/subscribers
+  // when the popover opens; we group by `sourceType` and show counts.
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+  const [selectedSources, setSelectedSources] = useState<string[] | null>(null);
+  const [sourceBreakdown, setSourceBreakdown] = useState<{
+    label: string;
+    sources: string[];   // EmailListSubscriber.source values mapped to this group
+    count: number;
+  }[]>([]);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+
+  const fetchSourceBreakdown = useCallback(async () => {
+    setBreakdownLoading(true);
+    try {
+      const r = await apiFetch("/api/creator/email-marketing/subscribers");
+      if (!r.ok) return;
+      const data = await r.json();
+      const subs: Array<{ status: string; source: string; sourceType: string }> = data.subscribers || [];
+      // Group by sourceType (which the API normalizes for us). Only
+      // count subscribed-status records since unsubscribed/bounced
+      // aren't sendable.
+      const groups: Record<string, { label: string; sources: Set<string>; count: number }> = {
+        import: { label: "Imported (CSV / project)", sources: new Set(), count: 0 },
+        teaser: { label: "Teaser signups", sources: new Set(), count: 0 },
+        manual: { label: "Manually added", sources: new Set(), count: 0 },
+      };
+      for (const s of subs) {
+        if (s.status !== "active") continue;
+        const g = groups[s.sourceType];
+        if (!g) continue;
+        g.sources.add(s.source);
+        g.count += 1;
+      }
+      setSourceBreakdown(
+        Object.values(groups)
+          .filter((g) => g.count > 0)
+          .map((g) => ({ label: g.label, sources: Array.from(g.sources), count: g.count }))
+      );
+    } finally {
+      setBreakdownLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (filterPopoverOpen && sourceBreakdown.length === 0 && !breakdownLoading) {
+      fetchSourceBreakdown();
+    }
+  }, [filterPopoverOpen, sourceBreakdown.length, breakdownLoading, fetchSourceBreakdown]);
+
+  // Effective recipient count after applying source filter. When no
+  // filter is set, fall back to the full count from the parent.
+  const filteredCount = selectedSources === null
+    ? memberCount
+    : sourceBreakdown
+        .filter((g) => g.sources.some((s) => selectedSources.includes(s)))
+        .reduce((sum, g) => sum + g.count, 0);
+
+  const toggleGroup = (groupSources: string[]) => {
+    setSelectedSources((prev) => {
+      // Treat null (no filter) as "everything selected" for the toggle
+      // semantics: clicking a group when no filter is set becomes a
+      // single-group filter; clicking that group again clears the
+      // filter back to null.
+      const all = sourceBreakdown.flatMap((g) => g.sources);
+      const current = prev ?? all;
+      const isOn = groupSources.every((s) => current.includes(s));
+      const next = isOn
+        ? current.filter((s) => !groupSources.includes(s))
+        : Array.from(new Set([...current, ...groupSources]));
+      return next.length === all.length ? null : next;
+    });
+  };
+
   // Initialize/update form when project changes or template is provided
   useEffect(() => {
     if (initialTemplate) {
@@ -176,8 +259,12 @@ export function EmailDialog({
   };
 
   const handleSendCampaign = async () => {
-    if (memberCount === 0) {
-      toast.error("No members in your email list. Import members first.");
+    if (filteredCount === 0) {
+      toast.error(
+        selectedSources === null
+          ? "No members in your email list. Import members first."
+          : "No members match the current filter. Adjust the filter or send to everyone."
+      );
       return;
     }
 
@@ -197,6 +284,7 @@ export function EmailDialog({
           projectId: currentProjectId,
           senderName: senderName || undefined,
           replyTo: replyToEmail || undefined,
+          ...(selectedSources && { sources: selectedSources }),
           ...(scheduledDate && { scheduledFor: new Date(scheduledDate).toISOString() }),
         }),
       });
@@ -512,15 +600,88 @@ export function EmailDialog({
                     <Label>Send To</Label>
                     <div className="flex items-end gap-4">
                       <div>
-                        <p className="text-4xl font-bold">{memberCount.toLocaleString()}</p>
+                        <p className="text-4xl font-bold">{filteredCount.toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground">
-                          {memberCount === 0 ? "No members in your email list yet" : "members in your email list"}
+                          {filteredCount === 0
+                            ? "No members match the filter"
+                            : selectedSources === null
+                            ? "members in your email list"
+                            : `members match the filter (of ${memberCount.toLocaleString()} total)`}
                         </p>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <Filter className="h-4 w-4 mr-2" />
-                        Filter Members
-                      </Button>
+                      <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Filter className="h-4 w-4 mr-2" />
+                            Filter Members
+                            {selectedSources !== null && (
+                              <Badge variant="secondary" className="ml-2 px-1.5 py-0 h-5 text-[10px]">
+                                {selectedSources.length}
+                              </Badge>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-0" align="end">
+                          <div className="p-3 border-b">
+                            <p className="text-sm font-semibold">Filter recipients</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Send only to subscribers from selected sources.
+                            </p>
+                          </div>
+                          <div className="p-3 space-y-2">
+                            {breakdownLoading && (
+                              <div className="flex items-center justify-center py-4 text-xs text-muted-foreground">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
+                                Loading…
+                              </div>
+                            )}
+                            {!breakdownLoading && sourceBreakdown.length === 0 && (
+                              <p className="text-xs text-muted-foreground py-2">
+                                No source breakdown available — your list may be empty or
+                                only contain backers (added separately).
+                              </p>
+                            )}
+                            {!breakdownLoading && sourceBreakdown.map((g) => {
+                              const all = sourceBreakdown.flatMap((x) => x.sources);
+                              const current = selectedSources ?? all;
+                              const isOn = g.sources.every((s) => current.includes(s));
+                              return (
+                                <label
+                                  key={g.label}
+                                  className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded px-1.5 py-1.5"
+                                >
+                                  <Checkbox
+                                    checked={isOn}
+                                    onCheckedChange={() => toggleGroup(g.sources)}
+                                  />
+                                  <span className="text-sm flex-1">{g.label}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {g.count.toLocaleString()}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          <div className="p-3 border-t flex items-center justify-between gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedSources(null)}
+                              disabled={selectedSources === null}
+                            >
+                              Reset
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => setFilterPopoverOpen(false)}
+                            >
+                              Done
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
 

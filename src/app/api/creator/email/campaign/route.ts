@@ -42,6 +42,11 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { subject, content, projectId, senderName, replyTo, scheduledFor } = body;
+    // Optional list of EmailListSubscriber.source values to filter to.
+    // When omitted/empty, send to all subscribed members (back-compat).
+    const sources: string[] | undefined = Array.isArray(body.sources)
+      ? body.sources.filter((s: unknown): s is string => typeof s === "string")
+      : undefined;
 
     if (!subject?.trim() || !content?.trim()) {
       return NextResponse.json(
@@ -76,6 +81,7 @@ export async function POST(request: NextRequest) {
             projectId: projectId || undefined,
             senderName: senderName || undefined,
             replyTo: replyTo || undefined,
+            sources: sources && sources.length > 0 ? sources : undefined,
           },
         },
       });
@@ -105,10 +111,17 @@ export async function POST(request: NextRequest) {
     const replyToEmail = replyTo || creator.email || fromEmail;
 
     // Get all subscribed members from creator's email list
+    // Optional source filter: when provided, only send to subscribers
+    // whose `source` matches one of the listed values. Unknown sources
+    // are silently ignored — empty intersection just means zero
+    // recipients which the no-subscribers check below catches.
     const subscribers = await db.emailListSubscriber.findMany({
       where: {
         creatorId: session.user.id,
         status: "subscribed",
+        ...(Array.isArray(sources) && sources.length > 0
+          ? { source: { in: sources } }
+          : {}),
       },
       select: { email: true, name: true },
     });
@@ -204,7 +217,9 @@ export async function POST(request: NextRequest) {
         openCount: 0,
         clickCount: 0,
         createdBy: session.user.id,
-        filters: projectId ? { projectId } : undefined,
+        filters: (projectId || (sources && sources.length > 0))
+          ? { projectId: projectId || undefined, sources: sources && sources.length > 0 ? sources : undefined }
+          : undefined,
       },
     });
 
