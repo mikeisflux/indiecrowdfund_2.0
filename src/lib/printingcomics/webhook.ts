@@ -10,6 +10,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type PCWebhookEvent =
   | "order.created"
+  | "order.payment_link_created"
   | "order.paid"
   | "order.in_production"
   | "order.shipped"

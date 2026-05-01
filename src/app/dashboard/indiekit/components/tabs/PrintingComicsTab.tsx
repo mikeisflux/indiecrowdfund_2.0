@@ -31,6 +31,8 @@ import {
   RefreshCw,
   Send,
   Plus,
+  CreditCard,
+  RotateCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
@@ -90,6 +92,14 @@ interface ProjectPrintOrder {
   taxCents: number | null;
   totalCents: number | null;
   currency: string | null;
+  // PayPal-hosted payment fields. approvalUrl + expiresAt are nullable
+  // (cleared on paid, never set on markAsPaid path); paymentProvider
+  // is "paypal" | "manual" | null.
+  paymentApprovalUrl: string | null;
+  paymentApprovalUrlExpiresAt: string | null;
+  paymentProvider: string | null;
+  paymentReference: string | null;
+  paidAt: string | null;
   notes: string | null;
   createdAt: string;
 }
@@ -139,6 +149,36 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
   const [contactEmail, setContactEmail] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Per-row "Refresh payment link" busy state (the row id we're
+  // currently refreshing, or null).
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
+
+  const handleRefreshPaymentLink = async (orderId: string) => {
+    setRefreshingId(orderId);
+    try {
+      const r = await apiFetch(
+        `/api/creator/printingcomics/project-orders/${encodeURIComponent(orderId)}/refresh-payment-link`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
+      );
+      const data = await r.json();
+      if (!r.ok) {
+        toast.error(data?.error || `Refresh failed (HTTP ${r.status})`);
+        return;
+      }
+      // Open the new approval URL immediately — that's the whole
+      // point of clicking refresh.
+      if (data.payment?.approvalUrl) {
+        window.open(data.payment.approvalUrl, "_blank", "noopener,noreferrer");
+      }
+      toast.success("New PayPal link opened");
+      loadOrders();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Refresh failed");
+    } finally {
+      setRefreshingId(null);
+    }
+  };
 
   const loadOrders = useCallback(async () => {
     if (!projectId) {
@@ -353,39 +393,96 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
             </p>
           ) : (
             <div className="border rounded-md divide-y">
-              {orders.map((o) => (
-                <div key={o.id} className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">
-                        {o.quantity}× <code className="text-xs px-1.5 py-0.5 rounded bg-muted font-mono">{o.productSlug}</code>
-                        {o.printingComicsOrderNumber && (
-                          <span className="text-xs text-muted-foreground ml-2">{o.printingComicsOrderNumber}</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Ships to {o.shippingAddress.firstName} {o.shippingAddress.lastName}, {o.shippingAddress.city}, {o.shippingAddress.region} {o.shippingAddress.postalCode} {o.shippingAddress.country}
-                      </p>
-                      {o.trackingNumber && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Tracking: {o.trackingNumber}{o.shippingMethod ? ` · ${o.shippingMethod}` : ""}
-                        </p>
-                      )}
-                      {o.totalCents != null && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Total: ${(o.totalCents / 100).toFixed(2)} {o.currency || "USD"}
-                          {o.status === "PENDING" && (
-                            <span className="ml-2 text-amber-700 dark:text-amber-400">— pay Printing Comics to release this order</span>
+              {orders.map((o) => {
+                // Approval URL is "live" if it exists and hasn't
+                // expired (ish — provider's clock vs ours). Treat a
+                // 5-minute buffer as expired.
+                const expiresAt = o.paymentApprovalUrlExpiresAt
+                  ? new Date(o.paymentApprovalUrlExpiresAt).getTime()
+                  : 0;
+                const linkLive = !!o.paymentApprovalUrl && expiresAt > Date.now() + 5 * 60 * 1000;
+                const linkExpired = !!o.paymentApprovalUrl && !linkLive;
+                const needsPayment =
+                  !o.paidAt &&
+                  (o.status === "PENDING" || o.status === "DRAFT") &&
+                  !!o.printingComicsOrderId;
+                return (
+                  <div key={o.id} className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">
+                          {o.quantity}× <code className="text-xs px-1.5 py-0.5 rounded bg-muted font-mono">{o.productSlug}</code>
+                          {o.printingComicsOrderNumber && (
+                            <span className="text-xs text-muted-foreground ml-2">{o.printingComicsOrderNumber}</span>
                           )}
                         </p>
-                      )}
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Ships to {o.shippingAddress.firstName} {o.shippingAddress.lastName}, {o.shippingAddress.city}, {o.shippingAddress.region} {o.shippingAddress.postalCode} {o.shippingAddress.country}
+                        </p>
+                        {o.trackingNumber && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Tracking: {o.trackingNumber}{o.shippingMethod ? ` · ${o.shippingMethod}` : ""}
+                          </p>
+                        )}
+                        {o.totalCents != null && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Total: ${(o.totalCents / 100).toFixed(2)} {o.currency || "USD"}
+                            {o.paidAt && (
+                              <span className="ml-2 text-emerald-700 dark:text-emerald-400">
+                                · paid {new Date(o.paidAt).toLocaleDateString()}
+                                {o.paymentProvider ? ` (${o.paymentProvider})` : ""}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                      <Badge className={STATUS_BADGE[o.status] || "bg-zinc-200 text-zinc-700"}>
+                        {o.status.replace(/_/g, " ")}
+                      </Badge>
                     </div>
-                    <Badge className={STATUS_BADGE[o.status] || "bg-zinc-200 text-zinc-700"}>
-                      {o.status.replace(/_/g, " ")}
-                    </Badge>
+                    {needsPayment && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {linkLive ? (
+                          <Button asChild size="sm">
+                            <a
+                              href={o.paymentApprovalUrl!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                              Pay with PayPal
+                              <ExternalLink className="h-3 w-3 ml-1.5" />
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => handleRefreshPaymentLink(o.id)}
+                            disabled={refreshingId === o.id}
+                          >
+                            {refreshingId === o.id ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <RotateCw className="h-3.5 w-3.5 mr-1.5" />
+                            )}
+                            {linkExpired ? "Refresh PayPal link" : "Generate PayPal link"}
+                          </Button>
+                        )}
+                        {linkExpired && (
+                          <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                            The previous PayPal link expired (links live ~3h). Click refresh to mint a new one.
+                          </p>
+                        )}
+                        {!linkLive && !linkExpired && (
+                          <p className="text-[11px] text-muted-foreground">
+                            Click to mint a PayPal approval URL — pay there with a PayPal account or guest credit card.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

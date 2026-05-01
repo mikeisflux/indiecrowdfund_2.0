@@ -131,6 +131,12 @@ export interface PCOrderItemInput {
 
 export interface PCCreateOrderInput {
   externalRef: string;        // platform-side stable id (pledge id)
+  // Per PrintingComics 2026-05-01 update: tag every order with the
+  // creator's campaign id so paid revenue rolls up by project on
+  // their side. We pass our internal Project.id; their server
+  // auto-upserts a project row keyed by (partner, externalProjectId)
+  // if you don't pre-register via POST /projects.
+  projectId?: string;
   email: string;
   customerName?: string;
   shippingAddress: PCAddress;
@@ -139,12 +145,32 @@ export interface PCCreateOrderInput {
   couponCode?: string;
   notes?: string;
   markAsPaid?: boolean;
+  // Default true; set false to skip auto-generating the PayPal
+  // approval URL on order create (mint on demand via createPaymentLink).
+  generatePaymentLink?: boolean;
+}
+
+export interface PCPaymentLink {
+  provider: "paypal" | "manual";
+  approvalUrl: string;
+  expiresAt: string;          // ISO 8601
+  amountCents: number;
+}
+
+export interface PCPayment {
+  status: "unpaid" | "pending" | "paid" | "failed" | "refunded";
+  amountCents: number;
+  provider: "paypal" | "manual" | null;
+  providerRef?: string | null; // PayPal order id while pending, capture id once paid
+  paidAt?: string | null;
+  hasPendingApproval?: boolean;
 }
 
 export interface PCOrder {
   id: string;
   number: string;
   externalRef?: string;
+  projectId?: string;
   status: "PENDING" | "PAID" | "IN_PRODUCTION" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "REFUNDED";
   paymentStatus: "PENDING" | "AUTHORIZED" | "CAPTURED" | "FAILED" | "REFUNDED";
   subtotalCents: number;
@@ -175,10 +201,16 @@ export interface PCOrder {
   }>;
 }
 
+export interface PCCreateOrderResponse {
+  order: PCOrder;
+  payment?: PCPaymentLink;     // present when generatePaymentLink !== false and order isn't markAsPaid
+  idempotent?: boolean;
+}
+
 export async function createOrder(
   config: PrintingComicsConfig,
   input: PCCreateOrderInput
-): Promise<{ order: PCOrder; idempotent?: boolean }> {
+): Promise<PCCreateOrderResponse> {
   return pcFetch(config, { method: "POST", path: "/orders", body: input });
 }
 
@@ -201,5 +233,86 @@ export async function cancelOrder(
     method: "POST",
     path: `/orders/${encodeURIComponent(idOrNumber)}/cancel`,
     body: reason ? { reason } : {},
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Projects (creator campaigns)
+// ──────────────────────────────────────────────────────────────────
+
+export interface PCProjectInput {
+  externalProjectId: string;     // our Project.id
+  title?: string;
+  url?: string;
+  creatorName?: string;
+  creatorEmail?: string;
+  status?: "active" | "completed" | "cancelled";
+  notes?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PCProject {
+  id: string;
+  externalProjectId: string;
+  title?: string;
+  url?: string;
+  creatorName?: string;
+  creatorEmail?: string;
+  status?: "active" | "completed" | "cancelled";
+  notes?: string;
+  metadata?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// POST /projects is an upsert keyed on (partner, externalProjectId),
+// safe to call before every order so creator info stays fresh.
+export async function upsertProject(
+  config: PrintingComicsConfig,
+  input: PCProjectInput
+): Promise<{ project: PCProject }> {
+  return pcFetch(config, { method: "POST", path: "/projects", body: input });
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Payments
+// ──────────────────────────────────────────────────────────────────
+
+export async function getPayment(
+  config: PrintingComicsConfig,
+  idOrNumber: string
+): Promise<{ payment: PCPayment }> {
+  return pcFetch(config, {
+    method: "GET",
+    path: `/orders/${encodeURIComponent(idOrNumber)}/payment`,
+  });
+}
+
+// Mint a fresh PayPal approval URL for an unpaid order. Existing
+// pending PayPal orders on the same Printing Comics order are
+// invalidated — only the latest URL works.
+export async function refreshPaymentLink(
+  config: PrintingComicsConfig,
+  idOrNumber: string,
+  options?: { returnUrl?: string; cancelUrl?: string }
+): Promise<{ payment: PCPaymentLink }> {
+  return pcFetch(config, {
+    method: "POST",
+    path: `/orders/${encodeURIComponent(idOrNumber)}/payment-link`,
+    body: options || {},
+  });
+}
+
+// Assert the order has been paid out-of-band (wire / ACH / internal
+// billing). Flips order to PAID/CAPTURED and fires order.paid.
+export async function markOrderPaid(
+  config: PrintingComicsConfig,
+  idOrNumber: string,
+  body: { reference?: string; amountCents?: number; note?: string }
+): Promise<{ payment: PCPayment }> {
+  return pcFetch(config, {
+    method: "POST",
+    path: `/orders/${encodeURIComponent(idOrNumber)}/mark-paid`,
+    body,
   });
 }

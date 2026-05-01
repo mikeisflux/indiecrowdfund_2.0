@@ -361,11 +361,12 @@ enum CollaboratorStatus {
 // the creator fulfills backers themselves. So this is a project-
 // level record, not per-pledge.
 //
-// One project can have many print orders over time (initial run,
-// reprints, variant covers, restocks, etc).
-//
-// printingComicsOrderId doubles as the externalRef on the provider
-// side — this row's id is what we send so re-submits are idempotent.
+// Payment flow (PrintingComics 2026-05-01 update): default path
+// returns a PayPal-hosted approval URL on order create — creator
+// pays PayPal directly (or guest CC), we capture, fires order.paid.
+// Approval URLs expire in ~3h; refresh via POST /payment-link.
+// Out-of-band path: mark paid at create with markAsPaid:true, or
+// after the fact via POST /mark-paid.
 model ProjectPrintOrder {
   id                          String    @id @default(cuid())
   projectId                   String
@@ -375,7 +376,7 @@ model ProjectPrintOrder {
   // /api/webhooks/printingcomics receiver.
   printingComicsOrderId       String?   @unique
   printingComicsOrderNumber   String?
-  status                      String    @default("DRAFT")  // DRAFT (local) | PENDING | PAID | IN_PRODUCTION | SHIPPED | DELIVERED | CANCELLED | REFUNDED
+  status                      String    @default("DRAFT")  // DRAFT (local) | PENDING | PAID | IN_PRODUCTION | SHIPPED | DELIVERED | CANCELLED | REFUNDED | FAILED
   trackingNumber              String?
   shippingMethod              String?
   lastSyncedAt                DateTime?
@@ -399,6 +400,16 @@ model ProjectPrintOrder {
   discountCents               Int?
   totalCents                  Int?
   currency                    String?   @default("USD")
+
+  // Payment state. paymentApprovalUrl is a PayPal-hosted checkout
+  // URL the creator clicks to pay; expires ~3h after issuance and is
+  // refreshable via POST /api/creator/printingcomics/project-orders/[id]/refresh-payment-link
+  // → PrintingComics' POST /orders/:id/payment-link.
+  paymentApprovalUrl          String?
+  paymentApprovalUrlExpiresAt DateTime?
+  paymentProvider             String?   // "paypal" | "manual" | null
+  paymentReference            String?   // PayPal capture id once paid; ref string for manual settlement
+  paidAt                      DateTime?
 
   notes                       String?
 

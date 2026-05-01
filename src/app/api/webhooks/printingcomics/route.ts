@@ -37,11 +37,24 @@ interface PCWebhookPayload {
       shippingMethod?: string;
       trackingNumber?: string;
     };
+    payment?: {
+      approvalUrl?: string;
+      expiresAt?: string;
+      provider?: string;
+      providerRef?: string;
+      amountCents?: number;
+      paidAt?: string;
+    };
   };
 }
 
-const STATUS_MAP: Record<PCWebhookEvent, string> = {
+// payment_link_created doesn't map to an order status — it just
+// updates the cached approvalUrl + expiresAt on the local row. We
+// model it with a sentinel here and skip the status-update branch
+// when we see it.
+const STATUS_MAP: Record<PCWebhookEvent, string | null> = {
   "order.created": "PENDING",
+  "order.payment_link_created": null,
   "order.paid": "PAID",
   "order.in_production": "IN_PRODUCTION",
   "order.shipped": "SHIPPED",
@@ -103,11 +116,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "missing_event_or_order" });
   }
 
-  const mappedStatus = STATUS_MAP[eventName];
-  if (!mappedStatus) {
+  // STATUS_MAP returns null for events that don't change the local
+  // order status (currently just order.payment_link_created — a pure
+  // payment-URL refresh). Anything not in the map at all is ignored.
+  if (!(eventName in STATUS_MAP)) {
     log.warn({ eventName }, "Unknown Printing Comics event — acking and ignoring");
     return NextResponse.json({ ok: true, ignored: true });
   }
+  const mappedStatus = STATUS_MAP[eventName];
 
   // Find the local ProjectPrintOrder. externalRef is now formatted
   // "<projectId>:<printOrderId>" so PrintingComics' admin can group
@@ -127,17 +143,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "no_resolvable_key" });
   }
 
+  // Per-event data side-effects layered onto the base status update.
+  const data: Record<string, unknown> = {
+    printingComicsOrderId: order.id || undefined,
+    printingComicsOrderNumber: order.number || undefined,
+    shippingMethod: order.shippingMethod || undefined,
+    trackingNumber: order.trackingNumber || undefined,
+    lastSyncedAt: new Date(),
+  };
+  if (mappedStatus) data.status = mappedStatus;
+
+  // payment_link_created — refresh the cached PayPal approval URL.
+  if (eventName === "order.payment_link_created" && payload.data?.payment) {
+    if (payload.data.payment.approvalUrl) data.paymentApprovalUrl = payload.data.payment.approvalUrl;
+    if (payload.data.payment.expiresAt) data.paymentApprovalUrlExpiresAt = new Date(payload.data.payment.expiresAt);
+    if (payload.data.payment.provider) data.paymentProvider = payload.data.payment.provider;
+  }
+
+  // order.paid — stamp paidAt + provider + reference, clear any stale
+  // approval URL since the order's now paid.
+  if (eventName === "order.paid") {
+    data.paidAt = payload.data?.payment?.paidAt ? new Date(payload.data.payment.paidAt) : new Date();
+    if (payload.data?.payment?.provider) data.paymentProvider = payload.data.payment.provider;
+    if (payload.data?.payment?.providerRef) data.paymentReference = payload.data.payment.providerRef;
+    data.paymentApprovalUrl = null;
+    data.paymentApprovalUrlExpiresAt = null;
+  }
+
   try {
     const updateResult = await db.projectPrintOrder.updateMany({
       where,
-      data: {
-        printingComicsOrderId: order.id || undefined,
-        printingComicsOrderNumber: order.number || undefined,
-        status: mappedStatus,
-        shippingMethod: order.shippingMethod || undefined,
-        trackingNumber: order.trackingNumber || undefined,
-        lastSyncedAt: new Date(),
-      },
+      data,
     });
     if (updateResult.count === 0) {
       log.warn({ eventName, where }, "Printing Comics webhook didn't match any print order");

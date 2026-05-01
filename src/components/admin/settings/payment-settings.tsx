@@ -54,6 +54,14 @@ interface PaymentSettingsProps {
     nmiGatewayUrlOverride: string;
     nmiPerTransactionFee: string;
     nmiPercentageFee: string;
+    // Printing Comics fulfillment integration. Pass-through fields —
+    // PaymentSettings doesn't render them (the dedicated Fulfillment
+    // tab does), but the parent's combined state object carries them
+    // so we declare the shape here to satisfy the onSettingsChange
+    // callback's full-object setter pattern.
+    printingComicsApiKey: string;
+    printingComicsWebhookSecret: string;
+    printingComicsEnvironment: string;
     // reCAPTCHA settings
     recaptchaEnabled: boolean;
     recaptchaSiteKey: string;

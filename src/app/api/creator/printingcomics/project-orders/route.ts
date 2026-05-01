@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { loadPrintingComicsConfig } from "@/lib/printingcomics/config";
 import {
   createOrder,
+  upsertProject,
   PrintingComicsApiError,
   type PCOrderItemInput,
   type PCAddress,
@@ -137,7 +138,14 @@ export async function POST(req: NextRequest) {
           { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
         ],
       },
-      select: { id: true, title: true },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        creator: {
+          select: { name: true, email: true, vanityUrl: true },
+        },
+      },
     });
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
@@ -180,29 +188,56 @@ export async function POST(req: NextRequest) {
     ];
 
     try {
-      // externalRef format: "<projectId>:<printOrderId>" so Printing
-      // Comics' admin sees which IndieCrowdfund project each order
-      // belongs to (we host many creators on one API key) AND we
-      // still get per-row idempotency from the printOrderId on the
-      // tail. Splittable on ":" if their side wants to group by
-      // project. Re-POSTing the same value returns the original
-      // order per their idempotency rules.
+      // Pre-register / upsert the campaign on PrintingComics' side so
+      // their admin shows title + creator contact info. Their POST
+      // /projects is idempotent on (partner, externalProjectId) so
+      // re-running this for every order keeps the metadata fresh.
+      // Failures here aren't fatal — passing projectId on the order
+      // also auto-creates the project — so we swallow + log.
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+      const projectUrl = appUrl && project.slug && project.creator?.vanityUrl
+        ? `${appUrl}/projects/${project.creator.vanityUrl}/${project.slug}`
+        : undefined;
+      try {
+        await upsertProject(config, {
+          externalProjectId: project.id,
+          title: project.title,
+          url: projectUrl,
+          creatorName: project.creator?.name || undefined,
+          creatorEmail: project.creator?.email || undefined,
+          status: "active",
+        });
+      } catch (upsertErr) {
+        log.warn(
+          { err: String(upsertErr), projectId: project.id },
+          "Project upsert on PrintingComics failed; relying on order auto-upsert"
+        );
+      }
+
+      // externalRef format: "<projectId>:<printOrderId>". Their
+      // admin can split on ':' to group by IndieCrowdfund campaign;
+      // the printOrderId tail keeps idempotency per row.
       const externalRef = `${project.id}:${row.id}`;
       const result = await createOrder(config, {
         externalRef,
+        // Their server uses this to associate the order with the
+        // (auto- or pre-)created project record. Our internal
+        // Project.id doubles as their externalProjectId.
+        projectId: project.id,
         email: body.email!,
         customerName: `${ship.firstName} ${ship.lastName}`.trim() || undefined,
         shippingAddress: ship,
         items,
         shippingRateId: body.shippingRateId,
         couponCode: body.couponCode,
-        // Tag the project info in notes too so it's visible without
-        // parsing externalRef (their order admin shows notes inline).
         notes: [
           `IndieCrowdfund project: ${project.title} (${project.id})`,
           body.notes,
         ].filter(Boolean).join("\n\n"),
         markAsPaid: !!body.markAsPaid,
+        // We always want the PayPal approval URL on create unless the
+        // caller explicitly opted out (e.g. markAsPaid path).
+        generatePaymentLink: body.markAsPaid ? false : true,
       });
 
       const updated = await db.projectPrintOrder.update({
@@ -218,6 +253,17 @@ export async function POST(req: NextRequest) {
           taxCents: result.order.taxCents ?? null,
           discountCents: result.order.discountCents ?? null,
           totalCents: result.order.totalCents ?? null,
+          // Cache the PayPal approval URL + expiry returned on create
+          // so the dashboard can render a "Pay with PayPal" button
+          // without having to re-call /payment-link. The webhook
+          // (order.payment_link_created) keeps these fresh on refresh.
+          paymentApprovalUrl: result.payment?.approvalUrl || null,
+          paymentApprovalUrlExpiresAt: result.payment?.expiresAt
+            ? new Date(result.payment.expiresAt)
+            : null,
+          paymentProvider: result.payment?.provider
+            || (body.markAsPaid ? "manual" : null),
+          paidAt: body.markAsPaid ? new Date() : null,
           lastSyncedAt: new Date(),
         },
       });
