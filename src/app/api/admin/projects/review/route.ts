@@ -124,9 +124,21 @@ export async function POST(req: NextRequest) {
       case "REJECTED":
         newStatus = "DRAFT"; // Reset to draft so they can't resubmit same content
         reviewAction = "REJECTED";
-        if (!rejectionReason || rejectionReason.trim().length < 10) {
+        // The dropdown sends a category enum (rejectionReason, e.g.
+        // "Other") and the textarea sends the human explanation
+        // (notes). The 10-char minimum is for the explanation — that
+        // text gets shown to the creator + emailed. Earlier we
+        // checked rejectionReason.length, which always failed the
+        // dropdown enum (most values are < 10 chars).
+        if (!rejectionReason) {
           return NextResponse.json(
-            { error: "Rejection reason must be at least 10 characters" },
+            { error: "Pick a rejection category" },
+            { status: 400 }
+          );
+        }
+        if (!notes || notes.trim().length < 10) {
+          return NextResponse.json(
+            { error: "Explanation to creator must be at least 10 characters" },
             { status: 400 }
           );
         }

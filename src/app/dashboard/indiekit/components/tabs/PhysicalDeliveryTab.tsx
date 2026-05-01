@@ -74,7 +74,7 @@ export function PhysicalDeliveryTab({
         </TabsContent>
 
         <TabsContent value="printing-comics">
-          <PrintingComicsTab />
+          <PrintingComicsTab projectId={projectId} />
         </TabsContent>
       </Tabs>
     </div>
