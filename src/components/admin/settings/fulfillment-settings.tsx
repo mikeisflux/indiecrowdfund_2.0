@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { TabsContent } from "@/components/ui/tabs";
 import { SecureKeyInput } from "@/components/ui/secure-key-input";
@@ -11,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Printer, AlertTriangle } from "lucide-react";
+import { Printer, AlertTriangle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/fetch-utils";
 
 interface FulfillmentSettingsProps {
   settings: {
@@ -30,11 +33,43 @@ interface FulfillmentSettingsProps {
 //
 // Provider docs at printingcomics.com/developers are not yet public,
 // so the field set is best-effort. Add fields here as the spec lands.
+type TestState =
+  | { kind: "idle" }
+  | { kind: "testing" }
+  | { kind: "ok"; name: string | null; scopes: string[]; environment: string }
+  | { kind: "err"; message: string };
+
 export function FulfillmentSettings({
   settings,
   onSettingsChange,
   onSave,
 }: FulfillmentSettingsProps) {
+  const [test, setTest] = useState<TestState>({ kind: "idle" });
+
+  const handleTest = async () => {
+    setTest({ kind: "testing" });
+    try {
+      const r = await apiFetch("/api/admin/printingcomics/test-connection", { method: "POST" });
+      const data = await r.json();
+      if (!r.ok) {
+        setTest({ kind: "err", message: data?.error || `HTTP ${r.status}` });
+        return;
+      }
+      if (!data.ok) {
+        setTest({ kind: "err", message: data.error || "Test failed" });
+        return;
+      }
+      setTest({
+        kind: "ok",
+        name: data.name ?? null,
+        scopes: Array.isArray(data.scopes) ? data.scopes : [],
+        environment: data.environment || "production",
+      });
+    } catch (err) {
+      setTest({ kind: "err", message: err instanceof Error ? err.message : "Network error" });
+    }
+  };
+
   return (
     <TabsContent value="fulfillment" className="mt-6 space-y-6">
       <Card>
@@ -129,11 +164,60 @@ export function FulfillmentSettings({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Toggle to sandbox once a non-production endpoint is
-                available; production by default so we don&apos;t
-                accidentally send live orders to a test host.
+                Provider doesn&apos;t publish a separate sandbox host — the
+                key prefix (pc_test_ vs pc_live_) determines test mode on
+                their side. Toggle here is informational + gates whether
+                we send real orders.
               </p>
             </div>
+          </div>
+
+          <div className="pt-2 border-t space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label>Connection test</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Calls Printing Comics&apos; <code className="text-[10px]">/me</code> with the saved key and shows the granted scopes. Save first, then test.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleTest}
+                disabled={test.kind === "testing"}
+              >
+                {test.kind === "testing" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Testing…
+                  </>
+                ) : (
+                  "Test connection"
+                )}
+              </Button>
+            </div>
+
+            {test.kind === "ok" && (
+              <div className="flex items-start gap-2 p-3 rounded-md border border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-900/20 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-medium text-emerald-900 dark:text-emerald-200">
+                    Connected{test.name ? ` — ${test.name}` : ""}
+                  </p>
+                  <p className="text-xs text-emerald-800 dark:text-emerald-300">
+                    Environment: {test.environment} · Scopes: {test.scopes.length > 0 ? test.scopes.join(", ") : "(none reported)"}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {test.kind === "err" && (
+              <div className="flex items-start gap-2 p-3 rounded-md border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20 text-sm">
+                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                <p className="text-red-800 dark:text-red-300">{test.message}</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

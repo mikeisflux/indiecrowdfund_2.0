@@ -31,7 +31,9 @@ type SecretName =
   | "cloudflare_stream_webhook_secret"
   | "nmi_security_key"
   | "nmi_public_key"
-  | "nmi_webhook_secret";
+  | "nmi_webhook_secret"
+  | "printingcomics_api_key"
+  | "printingcomics_webhook_secret";
 
 interface CachedSecret {
   value: string;
