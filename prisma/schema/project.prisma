@@ -98,6 +98,7 @@ model Project {
   notificationPrefs     ProjectNotificationPreference[]
   fulfillmentIntegrations FulfillmentIntegration[]
   chargebackCard        CreatorChargebackCard?
+  printOrders           ProjectPrintOrder[]
 
   // PaymentCloud rolling reserve. Projects raising over $2,500 auto-
   // trigger; new / high-risk creators are toggled by admins on a
@@ -352,4 +353,62 @@ enum CollaboratorStatus {
   PENDING
   ACCEPTED
   DECLINED
+}
+
+// Printing Comics print run for a campaign. The CREATOR submits an
+// order to Printing Comics to print N copies of their book; the
+// printer ships the cartons to the creator's warehouse / home, and
+// the creator fulfills backers themselves. So this is a project-
+// level record, not per-pledge.
+//
+// One project can have many print orders over time (initial run,
+// reprints, variant covers, restocks, etc).
+//
+// printingComicsOrderId doubles as the externalRef on the provider
+// side — this row's id is what we send so re-submits are idempotent.
+model ProjectPrintOrder {
+  id                          String    @id @default(cuid())
+  projectId                   String
+  submittedById               String
+
+  // PrintingComics-side identifiers + status, kept in sync via the
+  // /api/webhooks/printingcomics receiver.
+  printingComicsOrderId       String?   @unique
+  printingComicsOrderNumber   String?
+  status                      String    @default("DRAFT")  // DRAFT (local) | PENDING | PAID | IN_PRODUCTION | SHIPPED | DELIVERED | CANCELLED | REFUNDED
+  trackingNumber              String?
+  shippingMethod              String?
+  lastSyncedAt                DateTime?
+
+  // What we sent to the printer.
+  productSlug                 String
+  quantity                    Int
+  options                     Json      // configurator key→value map
+  files                       Json      // [{uploadId, purpose}]
+
+  // Where the cartons ship TO (creator's warehouse / home — NOT
+  // the backer). Stored as a flat object so we can render it in the
+  // dashboard without joining anything.
+  shippingAddress             Json
+  email                       String    // contact for the printer
+
+  // Cost breakdown returned by Printing Comics on create.
+  subtotalCents               Int?
+  shippingCents               Int?
+  taxCents                    Int?
+  discountCents               Int?
+  totalCents                  Int?
+  currency                    String?   @default("USD")
+
+  notes                       String?
+
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  project                     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submittedBy                 User      @relation("PrintOrderSubmitter", fields: [submittedById], references: [id])
+
+  @@index([projectId])
+  @@index([submittedById])
+  @@index([status])
 }

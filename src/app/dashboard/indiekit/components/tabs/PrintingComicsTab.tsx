@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -23,52 +23,79 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, Printer, Loader2, ExternalLink, RefreshCw, Send } from "lucide-react";
+import {
+  AlertTriangle,
+  Printer,
+  Loader2,
+  ExternalLink,
+  RefreshCw,
+  Send,
+  Plus,
+} from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
 
-// PrintingComics integration tab. Backed by:
+// PRINT ORDERS for the campaign — creator submits ONE order per
+// print run (initial run, reprint, variant cover, etc). Books ship
+// to the CREATOR, who then fulfills backers manually.
+//
+// Backed by:
 //   GET  /api/creator/printingcomics/catalog
 //   GET  /api/creator/printingcomics/uploads
-//   POST /api/creator/printingcomics/uploads   (push R2 PDFs to provider)
-//   POST /api/creator/printingcomics/orders    (per-pledge submit)
+//   POST /api/creator/printingcomics/uploads        — push R2 PDFs
+//   GET  /api/creator/printingcomics/project-orders
+//   POST /api/creator/printingcomics/project-orders
 //
-// Webhook receiver at /api/webhooks/printingcomics keeps the
-// printingComicsStatus column fresh on each Pledge as orders move
-// through PAID → IN_PRODUCTION → SHIPPED → DELIVERED.
+// Status updates land via /api/webhooks/printingcomics → updates the
+// ProjectPrintOrder row in place.
 
 interface PCProductSummary {
   id: string;
   slug: string;
   name: string;
   shortDescription?: string;
-  priceCents?: number;
-  minQuantity?: number;
-  image?: string;
 }
 
 interface PCUploadSummary {
   id: string;
   filename: string;
-  size: number;
   purpose?: string;
-  contentHash: string;
+}
+
+interface ProjectPrintOrder {
+  id: string;
+  printingComicsOrderId: string | null;
+  printingComicsOrderNumber: string | null;
+  status: string;
+  shippingMethod: string | null;
+  trackingNumber: string | null;
+  lastSyncedAt: string | null;
+  productSlug: string;
+  quantity: number;
+  options: Record<string, unknown>;
+  files: Array<{ uploadId: string; purpose: string }>;
+  shippingAddress: {
+    firstName: string;
+    lastName: string;
+    line1: string;
+    line2?: string;
+    city: string;
+    region: string;
+    postalCode: string;
+    country: string;
+  };
+  email: string;
+  subtotalCents: number | null;
+  shippingCents: number | null;
+  taxCents: number | null;
+  totalCents: number | null;
+  currency: string | null;
+  notes: string | null;
   createdAt: string;
 }
 
-interface BackerRow {
-  id: string;            // pledge id
-  name: string;
-  email: string;
-  rewardTitle: string | null;
-  hasShippingAddress: boolean;
-  printingComicsStatus: string | null;
-  printingComicsOrderNumber: string | null;
-  printingComicsTrackingNumber: string | null;
-  printingComicsLastSyncedAt: string | null;
-}
-
 const STATUS_BADGE: Record<string, string> = {
+  DRAFT: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
   PAID: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
   IN_PRODUCTION: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
@@ -76,6 +103,7 @@ const STATUS_BADGE: Record<string, string> = {
   DELIVERED: "bg-green-200 text-green-900 dark:bg-green-900/40 dark:text-green-200",
   CANCELLED: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   REFUNDED: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+  FAILED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
 };
 
 interface PrintingComicsTabProps {
@@ -83,142 +111,159 @@ interface PrintingComicsTabProps {
 }
 
 export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
-  // Catalog state — load lazily when admin expands the catalog card.
-  const [catalogOpen, setCatalogOpen] = useState(false);
+  // Catalog state — load lazily when the form is opened.
   const [catalog, setCatalog] = useState<PCProductSummary[] | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
-
-  // Backers — only fulfillable pledges (chargedImmediately + shipping
-  // address present). Loaded once on mount.
-  const [backers, setBackers] = useState<BackerRow[]>([]);
-  const [backersLoading, setBackersLoading] = useState(true);
-  const [backersError, setBackersError] = useState<string | null>(null);
-
-  // Uploads on the provider key — fetched on demand to populate the
-  // file picker in the submit dialog.
   const [uploads, setUploads] = useState<PCUploadSummary[]>([]);
-  const [uploadsLoaded, setUploadsLoaded] = useState(false);
 
-  // Submit dialog state. One row at a time.
-  const [submitTarget, setSubmitTarget] = useState<BackerRow | null>(null);
-  const [submitProductSlug, setSubmitProductSlug] = useState("");
-  const [submitQuantity, setSubmitQuantity] = useState("25");
-  const [submitOptions, setSubmitOptions] = useState("{}");
-  const [submitCoverUploadId, setSubmitCoverUploadId] = useState("");
-  const [submitInteriorUploadId, setSubmitInteriorUploadId] = useState("");
+  // Project's existing print orders.
+  const [orders, setOrders] = useState<ProjectPrintOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+
+  // New-order form state.
+  const [formOpen, setFormOpen] = useState(false);
+  const [productSlug, setProductSlug] = useState("");
+  const [quantity, setQuantity] = useState("250");
+  const [optionsJson, setOptionsJson] = useState("{}");
+  const [coverUploadId, setCoverUploadId] = useState("");
+  const [interiorUploadId, setInteriorUploadId] = useState("");
+  const [shipFirstName, setShipFirstName] = useState("");
+  const [shipLastName, setShipLastName] = useState("");
+  const [shipLine1, setShipLine1] = useState("");
+  const [shipLine2, setShipLine2] = useState("");
+  const [shipCity, setShipCity] = useState("");
+  const [shipRegion, setShipRegion] = useState("");
+  const [shipPostalCode, setShipPostalCode] = useState("");
+  const [shipCountry, setShipCountry] = useState("US");
+  const [contactEmail, setContactEmail] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const loadCatalog = useCallback(async () => {
-    setCatalogLoading(true);
-    setCatalogError(null);
-    try {
-      const r = await apiFetch("/api/creator/printingcomics/catalog");
-      const data = await r.json();
-      if (!r.ok) {
-        setCatalogError(data?.error || `HTTP ${r.status}`);
-        setCatalog(null);
-        return;
-      }
-      setCatalog(Array.isArray(data?.products) ? data.products : []);
-    } catch (err) {
-      setCatalogError(err instanceof Error ? err.message : "Failed to load catalog");
-    } finally {
-      setCatalogLoading(false);
-    }
-  }, []);
-
-  const loadUploads = useCallback(async () => {
-    try {
-      const r = await apiFetch("/api/creator/printingcomics/uploads?limit=100");
-      const data = await r.json();
-      if (r.ok && Array.isArray(data?.uploads)) setUploads(data.uploads);
-      setUploadsLoaded(true);
-    } catch {
-      setUploadsLoaded(true);
-    }
-  }, []);
-
-  const loadBackers = useCallback(async () => {
+  const loadOrders = useCallback(async () => {
     if (!projectId) {
-      setBackersLoading(false);
+      setOrdersLoading(false);
       return;
     }
-    setBackersLoading(true);
-    setBackersError(null);
+    setOrdersLoading(true);
+    setOrdersError(null);
     try {
       const r = await apiFetch(
-        `/api/creator/printingcomics/backers?projectId=${encodeURIComponent(projectId)}`
+        `/api/creator/printingcomics/project-orders?projectId=${encodeURIComponent(projectId)}`
       );
       const data = await r.json();
       if (!r.ok) {
-        setBackersError(data?.error || `HTTP ${r.status}`);
-        setBackers([]);
+        setOrdersError(data?.error || `HTTP ${r.status}`);
+        setOrders([]);
         return;
       }
-      setBackers(Array.isArray(data?.backers) ? data.backers : []);
+      setOrders(Array.isArray(data?.orders) ? data.orders : []);
+      // If the creator's previous order has a shipping address, pre-fill
+      // the form so they don't retype it for reprints.
+      const last = (data?.orders || [])[0] as ProjectPrintOrder | undefined;
+      if (last) {
+        setShipFirstName((p) => p || last.shippingAddress.firstName || "");
+        setShipLastName((p) => p || last.shippingAddress.lastName || "");
+        setShipLine1((p) => p || last.shippingAddress.line1 || "");
+        setShipLine2((p) => p || last.shippingAddress.line2 || "");
+        setShipCity((p) => p || last.shippingAddress.city || "");
+        setShipRegion((p) => p || last.shippingAddress.region || "");
+        setShipPostalCode((p) => p || last.shippingAddress.postalCode || "");
+        setShipCountry((p) => p || last.shippingAddress.country || "US");
+        setContactEmail((p) => p || last.email || "");
+      }
     } catch (err) {
-      setBackersError(err instanceof Error ? err.message : "Failed to load backers");
+      setOrdersError(err instanceof Error ? err.message : "Failed to load orders");
     } finally {
-      setBackersLoading(false);
+      setOrdersLoading(false);
     }
   }, [projectId]);
 
-  useEffect(() => {
-    loadBackers();
-  }, [loadBackers]);
+  const loadCatalogAndUploads = useCallback(async () => {
+    if (catalog === null && !catalogLoading) {
+      setCatalogLoading(true);
+      try {
+        const [cr, ur] = await Promise.all([
+          apiFetch("/api/creator/printingcomics/catalog"),
+          apiFetch("/api/creator/printingcomics/uploads?limit=100"),
+        ]);
+        const cd = await cr.json();
+        const ud = await ur.json();
+        setCatalog(Array.isArray(cd?.products) ? cd.products : []);
+        setUploads(Array.isArray(ud?.uploads) ? ud.uploads : []);
+      } catch {
+        // toast handled when user actually submits
+      } finally {
+        setCatalogLoading(false);
+      }
+    }
+  }, [catalog, catalogLoading]);
 
   useEffect(() => {
-    if (catalogOpen && catalog === null && !catalogLoading) loadCatalog();
-  }, [catalogOpen, catalog, catalogLoading, loadCatalog]);
+    loadOrders();
+  }, [loadOrders]);
 
-  const openSubmit = (row: BackerRow) => {
-    setSubmitTarget(row);
-    setSubmitProductSlug("");
-    setSubmitQuantity("25");
-    setSubmitOptions("{}");
-    setSubmitCoverUploadId("");
-    setSubmitInteriorUploadId("");
-    if (!uploadsLoaded) loadUploads();
+  const openForm = () => {
+    setFormOpen(true);
+    loadCatalogAndUploads();
   };
 
-  const handleSubmitOrder = async () => {
-    if (!submitTarget) return;
-    if (!submitProductSlug.trim()) {
-      toast.error("Pick a product slug from the catalog");
+  const handleSubmit = async () => {
+    if (!projectId) {
+      toast.error("Pick a project first");
+      return;
+    }
+    if (!productSlug.trim()) {
+      toast.error("Pick a product slug");
       return;
     }
     let parsedOptions: Record<string, string | number> = {};
     try {
-      parsedOptions = JSON.parse(submitOptions || "{}");
+      parsedOptions = JSON.parse(optionsJson || "{}");
     } catch {
       toast.error("Options must be valid JSON");
       return;
     }
-    const qty = parseInt(submitQuantity, 10);
+    const qty = parseInt(quantity, 10);
     if (!Number.isFinite(qty) || qty < 1) {
       toast.error("Quantity must be a positive number");
       return;
     }
+    if (!shipFirstName || !shipLastName || !shipLine1 || !shipCity || !shipRegion || !shipPostalCode || !shipCountry) {
+      toast.error("Fill in the full ship-to address (this is YOUR receiving address — printer ships the cartons here)");
+      return;
+    }
+    if (!contactEmail) {
+      toast.error("Contact email is required");
+      return;
+    }
     const files: { uploadId: string; purpose: string }[] = [];
-    if (submitCoverUploadId) files.push({ uploadId: submitCoverUploadId, purpose: "cover" });
-    if (submitInteriorUploadId) files.push({ uploadId: submitInteriorUploadId, purpose: "interior" });
+    if (coverUploadId) files.push({ uploadId: coverUploadId, purpose: "cover" });
+    if (interiorUploadId) files.push({ uploadId: interiorUploadId, purpose: "interior" });
 
     setSubmitting(true);
     try {
-      const r = await apiFetch("/api/creator/printingcomics/orders", {
+      const r = await apiFetch("/api/creator/printingcomics/project-orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pledgeId: submitTarget.id,
-          items: [
-            {
-              productSlug: submitProductSlug.trim(),
-              quantity: qty,
-              options: parsedOptions,
-              files: files.length > 0 ? files : undefined,
-            },
-          ],
+          projectId,
+          productSlug: productSlug.trim(),
+          quantity: qty,
+          options: parsedOptions,
+          files,
+          shippingAddress: {
+            firstName: shipFirstName,
+            lastName: shipLastName,
+            line1: shipLine1,
+            line2: shipLine2 || undefined,
+            city: shipCity,
+            region: shipRegion,
+            postalCode: shipPostalCode,
+            country: shipCountry,
+          },
+          email: contactEmail,
+          notes: orderNotes || undefined,
         }),
       });
       const data = await r.json();
@@ -228,11 +273,11 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
       }
       toast.success(
         data.idempotent
-          ? `Already submitted as ${data.order?.number}`
-          : `Submitted ${data.order?.number}`
+          ? `Already submitted as ${data.order?.printingComicsOrderNumber}`
+          : `Submitted ${data.order?.printingComicsOrderNumber || "(awaiting number)"}`
       );
-      setSubmitTarget(null);
-      loadBackers();
+      setFormOpen(false);
+      loadOrders();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Submit failed");
     } finally {
@@ -242,8 +287,7 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Beta warning — must be the FIRST thing the creator sees so
-          they don't click through into a half-wired flow. */}
+      {/* Beta warning — first thing the creator sees */}
       <div
         role="alert"
         className="flex items-start gap-3 p-4 rounded-lg border-2 border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20"
@@ -264,246 +308,263 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
               printingcomics.com/developers
               <ExternalLink className="h-3 w-3" />
             </a>
-            . Anything you submit here calls the live API. Use this
-            against the sandbox until the integration is verified end-to-end.
+            . Submitting on this page calls the live API. The creator pays Printing Comics directly via their billing; books ship to the address you enter (your warehouse / home), then you fulfill backers.
           </p>
         </div>
       </div>
 
-      {/* Catalog browser — collapsed by default to keep the page short */}
+      {/* Existing orders for this project */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="font-semibold text-sm">Browse Printing Comics catalog</p>
-              <p className="text-xs text-muted-foreground">
-                Pick a product slug and copy it into the submit dialog below.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCatalogOpen((o) => !o)}
-            >
-              {catalogOpen ? "Hide" : "Show"}
-            </Button>
-          </div>
-
-          {catalogOpen && (
-            <div className="mt-4 space-y-2">
-              {catalogError && (
-                <div className="p-3 rounded-md border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 text-sm text-red-700 dark:text-red-300">
-                  {catalogError}
-                </div>
-              )}
-              {catalogLoading && (
-                <div className="space-y-2">
-                  {[0, 1, 2].map((i) => <Skeleton key={i} className="h-14 w-full rounded-md" />)}
-                </div>
-              )}
-              {!catalogLoading && catalog && catalog.length === 0 && (
-                <p className="text-sm text-muted-foreground py-4">No products returned.</p>
-              )}
-              {!catalogLoading && catalog && catalog.length > 0 && (
-                <div className="border rounded-md divide-y">
-                  {catalog.map((p) => (
-                    <div key={p.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/40">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{p.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{p.shortDescription || p.slug}</p>
-                      </div>
-                      <code className="text-[10px] px-2 py-0.5 rounded bg-muted font-mono">{p.slug}</code>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          navigator.clipboard.writeText(p.slug);
-                          toast.success(`Copied ${p.slug}`);
-                        }}
-                      >
-                        Copy
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Backers table with status + per-row submit */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center justify-between gap-3 mb-4">
             <div>
               <p className="font-semibold text-sm flex items-center gap-2">
                 <Printer className="h-4 w-4" />
-                Backers ready for printing
+                Print orders for this campaign
               </p>
               <p className="text-xs text-muted-foreground">
-                Only completed pledges with a shipping address. Click Submit to send the order to Printing Comics.
+                Each order is one print run (e.g. initial 500 copies, then a reprint of 100).
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={loadBackers} disabled={backersLoading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${backersLoading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={loadOrders} disabled={ordersLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${ordersLoading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <Button size="sm" onClick={openForm} disabled={!projectId}>
+                <Plus className="h-4 w-4 mr-2" />
+                New print order
+              </Button>
+            </div>
           </div>
 
-          {backersError && (
+          {ordersError && (
             <div className="p-3 rounded-md border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 text-sm text-red-700 dark:text-red-300 mb-3">
-              {backersError}
+              {ordersError}
             </div>
           )}
-          {backersLoading ? (
+          {ordersLoading ? (
             <div className="space-y-2">
-              {[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
+              {[0, 1].map((i) => <Skeleton key={i} className="h-16 w-full rounded-md" />)}
             </div>
-          ) : backers.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              No fulfillable pledges yet — backers need a completed pledge with a shipping address.
+          ) : orders.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No print orders yet for this campaign. Click <strong>New print order</strong> to submit one.
             </p>
           ) : (
             <div className="border rounded-md divide-y">
-              {backers.map((b) => (
-                <div key={b.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/40 text-sm">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{b.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{b.email}{b.rewardTitle ? ` · ${b.rewardTitle}` : ""}</p>
-                  </div>
-                  {b.printingComicsStatus ? (
-                    <div className="flex flex-col items-end shrink-0">
-                      <Badge className={STATUS_BADGE[b.printingComicsStatus] || "bg-zinc-200 text-zinc-700"}>
-                        {b.printingComicsStatus.replace("_", " ")}
-                      </Badge>
-                      {b.printingComicsOrderNumber && (
-                        <span className="text-[10px] text-muted-foreground mt-0.5">{b.printingComicsOrderNumber}</span>
+              {orders.map((o) => (
+                <div key={o.id} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">
+                        {o.quantity}× <code className="text-xs px-1.5 py-0.5 rounded bg-muted font-mono">{o.productSlug}</code>
+                        {o.printingComicsOrderNumber && (
+                          <span className="text-xs text-muted-foreground ml-2">{o.printingComicsOrderNumber}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Ships to {o.shippingAddress.firstName} {o.shippingAddress.lastName}, {o.shippingAddress.city}, {o.shippingAddress.region} {o.shippingAddress.postalCode} {o.shippingAddress.country}
+                      </p>
+                      {o.trackingNumber && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Tracking: {o.trackingNumber}{o.shippingMethod ? ` · ${o.shippingMethod}` : ""}
+                        </p>
                       )}
-                      {b.printingComicsTrackingNumber && (
-                        <span className="text-[10px] text-muted-foreground mt-0.5">Track: {b.printingComicsTrackingNumber}</span>
+                      {o.totalCents != null && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Total: ${(o.totalCents / 100).toFixed(2)} {o.currency || "USD"}
+                          {o.status === "PENDING" && (
+                            <span className="ml-2 text-amber-700 dark:text-amber-400">— pay Printing Comics to release this order</span>
+                          )}
+                        </p>
                       )}
                     </div>
-                  ) : !b.hasShippingAddress ? (
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400">No address</span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">Not submitted</span>
-                  )}
-                  <Button
-                    variant={b.printingComicsStatus ? "outline" : "default"}
-                    size="sm"
-                    disabled={!b.hasShippingAddress}
-                    onClick={() => openSubmit(b)}
-                  >
-                    <Send className="h-3.5 w-3.5 mr-1.5" />
-                    {b.printingComicsStatus ? "Re-submit" : "Submit"}
-                  </Button>
+                    <Badge className={STATUS_BADGE[o.status] || "bg-zinc-200 text-zinc-700"}>
+                      {o.status.replace(/_/g, " ")}
+                    </Badge>
+                  </div>
                 </div>
               ))}
             </div>
           )}
-          <p className="text-[11px] text-muted-foreground mt-3">
-            Pledge id is sent as <code>externalRef</code> so re-submits are idempotent — clicking Submit twice returns the original order.
-            Status updates land via webhook at{" "}
-            <Link href="/admin/settings" className="underline">
-              /admin/settings → Fulfillment
-            </Link>{" "}
-            (configure the webhook URL with Printing Comics support).
-          </p>
         </CardContent>
       </Card>
 
-      {/* Submit dialog */}
-      <Dialog open={!!submitTarget} onOpenChange={(o) => !o && setSubmitTarget(null)}>
-        <DialogContent className="max-w-lg">
+      {/* New-order dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Submit print order</DialogTitle>
+            <DialogTitle>Submit a new print order</DialogTitle>
             <DialogDescription>
-              Pledge will be sent as <code>externalRef</code>; re-submission is idempotent.
+              Cartons will ship to the address you enter — that&apos;s YOUR address, not a backer&apos;s. Once the books arrive you&apos;ll fulfill backers from your end.
             </DialogDescription>
           </DialogHeader>
-          {submitTarget && (
-            <div className="space-y-4">
-              <div className="text-sm bg-muted/40 rounded-md px-3 py-2">
-                <p className="font-medium">{submitTarget.name}</p>
-                <p className="text-xs text-muted-foreground">{submitTarget.email}</p>
-              </div>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>Product slug</Label>
-                <Input
-                  value={submitProductSlug}
-                  onChange={(e) => setSubmitProductSlug(e.target.value)}
-                  placeholder="standard-comic-book"
-                />
-                <p className="text-[10px] text-muted-foreground">From the catalog browser above.</p>
+                <Label>Product</Label>
+                {catalogLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : catalog && catalog.length > 0 ? (
+                  <Select value={productSlug} onValueChange={setProductSlug}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pick a product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalog.map((p) => (
+                        <SelectItem key={p.id} value={p.slug}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={productSlug}
+                    onChange={(e) => setProductSlug(e.target.value)}
+                    placeholder="standard-comic-book"
+                  />
+                )}
+                <p className="text-[10px] text-muted-foreground">From the Printing Comics catalog.</p>
               </div>
               <div className="space-y-1">
                 <Label>Quantity</Label>
                 <Input
                   type="number"
                   min={1}
-                  value={submitQuantity}
-                  onChange={(e) => setSubmitQuantity(e.target.value)}
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
                 />
+                <p className="text-[10px] text-muted-foreground">Total copies for this print run.</p>
               </div>
-              <div className="space-y-1">
-                <Label>Options (JSON)</Label>
-                <Input
-                  value={submitOptions}
-                  onChange={(e) => setSubmitOptions(e.target.value)}
-                  placeholder='{"interior_pages":32,"interior_color":"Full Color"}'
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Per-product configurator values. See provider docs for keys + accepted values.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Cover upload</Label>
-                  <Select value={submitCoverUploadId} onValueChange={setSubmitCoverUploadId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={uploadsLoaded ? "(none)" : "Loading…"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">(none)</SelectItem>
-                      {uploads.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.filename}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label>Interior upload</Label>
-                  <Select value={submitInteriorUploadId} onValueChange={setSubmitInteriorUploadId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={uploadsLoaded ? "(none)" : "Loading…"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">(none)</SelectItem>
-                      {uploads.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.filename}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Configurator options (JSON)</Label>
+              <Textarea
+                rows={3}
+                value={optionsJson}
+                onChange={(e) => setOptionsJson(e.target.value)}
+                placeholder='{"interior_pages":32,"interior_color":"Full Color","interior_paper":"80lb Gloss","cover_paper":"100lb Gloss"}'
+              />
               <p className="text-[10px] text-muted-foreground">
-                To upload a new PDF, POST it to <code>/api/creator/printingcomics/uploads</code> with{" "}
-                <code>{`{ r2Key, purpose }`}</code> first. UI for picking from R2 is coming next.
+                Per-product configurator values. See provider docs for keys + accepted values.
               </p>
             </div>
-          )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Cover PDF</Label>
+                <Select value={coverUploadId} onValueChange={setCoverUploadId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="(none)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">(none)</SelectItem>
+                    {uploads.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Interior PDF</Label>
+                <Select value={interiorUploadId} onValueChange={setInteriorUploadId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="(none)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">(none)</SelectItem>
+                    {uploads.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground -mt-2">
+              Need to upload a new PDF? POST <code>{`{r2Key, purpose}`}</code> to <code>/api/creator/printingcomics/uploads</code> first. UI to pick from R2 is coming.
+            </p>
+
+            <div className="pt-2 border-t">
+              <p className="text-sm font-semibold mb-2">Ship cartons to (your receiving address)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>First name</Label>
+                  <Input value={shipFirstName} onChange={(e) => setShipFirstName(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label>Last name</Label>
+                  <Input value={shipLastName} onChange={(e) => setShipLastName(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-1 mt-3">
+                <Label>Address line 1</Label>
+                <Input value={shipLine1} onChange={(e) => setShipLine1(e.target.value)} />
+              </div>
+              <div className="space-y-1 mt-3">
+                <Label>Address line 2 (optional)</Label>
+                <Input value={shipLine2} onChange={(e) => setShipLine2(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                <div className="space-y-1">
+                  <Label>City</Label>
+                  <Input value={shipCity} onChange={(e) => setShipCity(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label>State / region</Label>
+                  <Input value={shipRegion} onChange={(e) => setShipRegion(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label>Postal code</Label>
+                  <Input value={shipPostalCode} onChange={(e) => setShipPostalCode(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-1 mt-3">
+                <Label>Country</Label>
+                <Input value={shipCountry} onChange={(e) => setShipCountry(e.target.value)} placeholder="US" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 pt-2 border-t">
+              <div className="space-y-1">
+                <Label>Contact email</Label>
+                <Input
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Printing Comics emails order updates + invoices here.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label>Notes (optional)</Label>
+                <Textarea
+                  rows={2}
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  placeholder="Any special instructions for the printer."
+                />
+              </div>
+            </div>
+
+            <div className="text-xs text-muted-foreground bg-muted/40 p-3 rounded-md">
+              On submit we send <code>externalRef = {projectId ? "<orderId>" : "—"}</code> to Printing Comics so re-submitting the same order is idempotent. Payment is handled directly between you and Printing Comics through their billing; we just track status here via webhook.
+            </div>
+          </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSubmitTarget(null)} disabled={submitting}>
+            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button onClick={handleSubmitOrder} disabled={submitting}>
+            <Button onClick={handleSubmit} disabled={submitting}>
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Submit
+              <Send className="h-4 w-4 mr-2" />
+              Submit print order
             </Button>
           </DialogFooter>
         </DialogContent>

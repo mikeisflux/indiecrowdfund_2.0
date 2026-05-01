@@ -48,15 +48,6 @@ model Pledge {
   nmiInitialTransactionId String?
   nmiTransactionId        String?    @unique
 
-  // Printing Comics fulfillment integration. Set when the creator
-  // submits this pledge to the printer; pledge.id doubles as the
-  // externalRef on their side so re-submits are idempotent.
-  printingComicsOrderId       String?    @unique
-  printingComicsOrderNumber   String?    // Human-readable PCAPI-… number
-  printingComicsStatus        String?    // PENDING | PAID | IN_PRODUCTION | SHIPPED | DELIVERED | CANCELLED | REFUNDED
-  printingComicsTrackingNumber String?
-  printingComicsLastSyncedAt  DateTime?  // Updated by webhook + reconciler cron
-
   // Payment retry tracking
   retryCount            Int          @default(0)
   nextRetryAt           DateTime?

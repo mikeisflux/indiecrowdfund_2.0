@@ -67,6 +67,7 @@ model User {
   createdProjects   Project[] @relation("ProjectCreator")
   collaborations    ProjectCollaborator[]
   pledges           Pledge[]
+  printOrdersSubmitted ProjectPrintOrder[] @relation("PrintOrderSubmitter")
   sentMessages      Message[] @relation("MessageSender")
   receivedMessages  Message[] @relation("MessageRecipient")
   chatMessages      ChatMessage[] @relation("ChatMessages")

@@ -19,10 +19,10 @@ export const dynamic = "force-dynamic";
 //   X-PC-Signature: t=<unix>,v1=<hmac-sha256-of-${t}.${rawBody}>
 // They time out after 8s and store non-2xx responses for manual replay.
 //
-// We resolve the inbound event back to a Pledge using one of two keys
-// depending on what the provider includes in the payload:
-//   - data.order.externalRef   (we set this to pledge.id on submit)
-//   - data.order.id            (saved on Pledge.printingComicsOrderId
+// We resolve the inbound event back to a ProjectPrintOrder using one
+// of two keys depending on what the provider includes:
+//   - data.order.externalRef   (we set this to ProjectPrintOrder.id on submit)
+//   - data.order.id            (saved on ProjectPrintOrder.printingComicsOrderId
 //                               after the create-order response)
 
 interface PCWebhookPayload {
@@ -109,31 +109,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ignored: true });
   }
 
-  // Find the pledge: prefer externalRef (= pledge.id), fall back to
-  // the orderId we stored at submit time.
-  const where = order.externalRef
-    ? { id: order.externalRef }
-    : order.id
-    ? { printingComicsOrderId: order.id }
-    : null;
+  // Find the local ProjectPrintOrder. externalRef is now formatted
+  // "<projectId>:<printOrderId>" so PrintingComics' admin can group
+  // by project — split on ':' to get the print-order id we use as
+  // the primary key. Fall back to a raw match (older rows) and to
+  // the printingComicsOrderId we stored at submit time.
+  let where: { id: string } | { printingComicsOrderId: string } | null = null;
+  if (order.externalRef) {
+    const parts = order.externalRef.split(":");
+    const printOrderId = parts.length > 1 ? parts[parts.length - 1] : order.externalRef;
+    where = { id: printOrderId };
+  } else if (order.id) {
+    where = { printingComicsOrderId: order.id };
+  }
   if (!where) {
     log.warn({ eventName, order }, "Printing Comics webhook had no resolvable order key");
     return NextResponse.json({ ok: false, reason: "no_resolvable_key" });
   }
 
   try {
-    const updateResult = await db.pledge.updateMany({
-      where: { ...where, deletedAt: null },
+    const updateResult = await db.projectPrintOrder.updateMany({
+      where,
       data: {
         printingComicsOrderId: order.id || undefined,
         printingComicsOrderNumber: order.number || undefined,
-        printingComicsStatus: mappedStatus,
-        printingComicsTrackingNumber: order.trackingNumber || undefined,
-        printingComicsLastSyncedAt: new Date(),
+        status: mappedStatus,
+        shippingMethod: order.shippingMethod || undefined,
+        trackingNumber: order.trackingNumber || undefined,
+        lastSyncedAt: new Date(),
       },
     });
     if (updateResult.count === 0) {
-      log.warn({ eventName, where }, "Printing Comics webhook didn't match any pledge");
+      log.warn({ eventName, where }, "Printing Comics webhook didn't match any print order");
     } else {
       log.info(
         { eventName, status: mappedStatus, where, count: updateResult.count },
@@ -142,8 +149,6 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     log.error({ err: String(err), eventName }, "Printing Comics webhook DB write failed");
-    // Reply 5xx so the provider retries — better to double-process
-    // than miss a status update.
     return NextResponse.json({ ok: false, error: "db_write_failed" }, { status: 500 });
   }
 
