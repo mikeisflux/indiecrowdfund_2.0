@@ -108,9 +108,20 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
     };
   }, []);
 
+  // The card form is visible whenever the creator has no saved card
+  // OR they explicitly clicked "Replace" on a saved one (line ~306
+  // below: `!status.loading && (!status.saved || showForm)`). Both
+  // the publicKey fetch, the Collect.js script-load effect, and the
+  // "Loading card form..." indicator need to run in either case —
+  // gating them on `showForm` alone broke the first-time-creator
+  // path: the form rendered but Collect.js never loaded, so the user
+  // saw billing fields with no card-number / exp / CVV inputs and
+  // no loading indicator. Reported on the project-creation flow.
+  const formVisible = !status.saved || showForm;
+
   // Load PaymentCloud public key only when the form is open.
   useEffect(() => {
-    if (!showForm) return;
+    if (!formVisible) return;
     if (publicKey) return;
     let cancelled = false;
     (async () => {
@@ -128,11 +139,11 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
     return () => {
       cancelled = true;
     };
-  }, [showForm, publicKey]);
+  }, [formVisible, publicKey]);
 
   // Load Collect.js once we know the public key and the form is open.
   useEffect(() => {
-    if (!showForm || !publicKey) return;
+    if (!formVisible || !publicKey) return;
     if (typeof window === "undefined") return;
     if (window.CollectJS) {
       setScriptReady(true);
@@ -158,7 +169,7 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
     s.setAttribute("data-country", "US");
     s.addEventListener("load", () => setScriptReady(true), { once: true });
     document.body.appendChild(s);
-  }, [showForm, publicKey]);
+  }, [formVisible, publicKey]);
 
   // Iframe-attach verifier — after scriptReady the placeholder divs
   // should host Collect.js iframes. If they don't (cached
@@ -380,7 +391,7 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
             </div>
           </div>
 
-          {!scriptReady && publicKey && showForm && (
+          {!scriptReady && publicKey && formVisible && (
             <div className="flex flex-col items-center justify-center py-6 border rounded-md">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mb-2" />
               <p className="text-xs text-muted-foreground">Loading card form...</p>
