@@ -247,6 +247,17 @@ model PlatformSettings {
   digitalDownloadsEnabled Boolean @default(false)
   signedUrlExpirationMinutes Int @default(60)
 
+  // Printing Comics fulfillment integration. The provider's developer
+  // docs aren't published yet (printingcomics.com/developers is locked
+  // down), so the exact field set is best-effort: a server-side API
+  // key for order submission, an environment toggle so we can flip
+  // between any future sandbox + prod hosts, and a webhook secret
+  // slot for whenever they expose order-status callbacks. Add more
+  // fields here as the API ships.
+  printingComicsApiKey        String?  @db.Text   // Server-side API key (encrypted at rest)
+  printingComicsWebhookSecret String?  @db.Text   // Webhook signature secret (when exposed)
+  printingComicsEnvironment   String   @default("production") // "production" or "sandbox"
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

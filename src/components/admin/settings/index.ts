@@ -10,3 +10,4 @@ export { DatabaseSettings } from "./database-settings";
 export { StorageSettings } from "./storage-settings";
 export { CommunicationSettings } from "./communication-settings";
 export { AnalyticsSettings } from "./analytics-settings";
+export { FulfillmentSettings } from "./fulfillment-settings";

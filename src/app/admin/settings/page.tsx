@@ -21,6 +21,7 @@ import {
   MessageSquare,
   CreditCard,
   BarChart3,
+  Printer,
 } from "lucide-react";
 import {
   GeneralSettings,
@@ -35,6 +36,7 @@ import {
   StorageSettings,
   CommunicationSettings,
   AnalyticsSettings,
+  FulfillmentSettings,
 } from "@/components/admin/settings";
 
 interface PlatformSettings {
@@ -122,6 +124,10 @@ interface PlatformSettings {
   nmiGatewayUrlOverride: string | null;
   nmiPerTransactionFee: number;
   nmiPercentageFee: number;
+  // Printing Comics fulfillment integration (provider docs pending)
+  printingComicsApiKey: string | null;
+  printingComicsWebhookSecret: string | null;
+  printingComicsEnvironment: string;
   // Payment settings
   autoPayouts: boolean;
   // Social auto-posting settings
@@ -248,6 +254,10 @@ export default function SettingsPage() {
     nmiGatewayUrlOverride: "",
     nmiPerTransactionFee: "0.13",
     nmiPercentageFee: "4.5",
+    // Printing Comics fulfillment integration
+    printingComicsApiKey: "",
+    printingComicsWebhookSecret: "",
+    printingComicsEnvironment: "production",
     // reCAPTCHA settings
     recaptchaEnabled: false,
     recaptchaSiteKey: "",
@@ -449,6 +459,9 @@ export default function SettingsPage() {
         nmiWebhookSecret: settings.nmiWebhookSecret || "",
         nmiEnvironment: settings.nmiEnvironment || "production",
         nmiGatewayUrlOverride: settings.nmiGatewayUrlOverride || "",
+        printingComicsApiKey: (settings as unknown as Record<string, unknown>).printingComicsApiKey as string || "",
+        printingComicsWebhookSecret: (settings as unknown as Record<string, unknown>).printingComicsWebhookSecret as string || "",
+        printingComicsEnvironment: (settings as unknown as Record<string, unknown>).printingComicsEnvironment as string || "production",
         nmiPerTransactionFee:
           settings.nmiPerTransactionFee !== undefined && settings.nmiPerTransactionFee !== null
             ? String(settings.nmiPerTransactionFee)
@@ -732,6 +745,9 @@ export default function SettingsPage() {
             nmiGatewayUrlOverride: currentPaymentSettings.nmiGatewayUrlOverride,
             nmiPerTransactionFee: parseFloat(currentPaymentSettings.nmiPerTransactionFee) || 0,
             nmiPercentageFee: (parseFloat(currentPaymentSettings.nmiPercentageFee) || 0) / 100,
+            printingComicsApiKey: currentPaymentSettings.printingComicsApiKey,
+            printingComicsWebhookSecret: currentPaymentSettings.printingComicsWebhookSecret,
+            printingComicsEnvironment: currentPaymentSettings.printingComicsEnvironment,
             recaptchaEnabled: currentPaymentSettings.recaptchaEnabled,
             recaptchaSiteKey: currentPaymentSettings.recaptchaSiteKey,
             recaptchaSecretKey: currentPaymentSettings.recaptchaSecretKey,
@@ -855,6 +871,18 @@ export default function SettingsPage() {
             googleTagManagerId: analyticsSettings.googleTagManagerId,
           };
           break;
+        case "fulfillment":
+          // Printing Comics keys live on PlatformSettings under the
+          // payments section's persist list (see secret-fields list in
+          // /api/admin/settings/route.ts), so the section name reused
+          // here is "payments" — that's what the API recognizes.
+          section = "payments";
+          data = {
+            printingComicsApiKey: paymentSettingsRef.current.printingComicsApiKey,
+            printingComicsWebhookSecret: paymentSettingsRef.current.printingComicsWebhookSecret,
+            printingComicsEnvironment: paymentSettingsRef.current.printingComicsEnvironment,
+          };
+          break;
         default:
           // For tabs without database storage (API, Database)
           setSaveMessage("Settings saved successfully");
@@ -968,6 +996,10 @@ export default function SettingsPage() {
             <BarChart3 className="mr-2 h-4 w-4" />
             Analytics
           </TabsTrigger>
+          <TabsTrigger value="fulfillment">
+            <Printer className="mr-2 h-4 w-4" />
+            Fulfillment
+          </TabsTrigger>
           <TabsTrigger value="api">
             <Key className="mr-2 h-4 w-4" />
             API
@@ -1039,6 +1071,23 @@ export default function SettingsPage() {
         <AnalyticsSettings
           settings={analyticsSettings}
           onSettingsChange={setAnalyticsSettings}
+          onSave={handleSave}
+        />
+
+        <FulfillmentSettings
+          settings={{
+            printingComicsApiKey: paymentSettings.printingComicsApiKey,
+            printingComicsWebhookSecret: paymentSettings.printingComicsWebhookSecret,
+            printingComicsEnvironment: paymentSettings.printingComicsEnvironment,
+          }}
+          onSettingsChange={(next) =>
+            setPaymentSettings({
+              ...paymentSettings,
+              printingComicsApiKey: next.printingComicsApiKey,
+              printingComicsWebhookSecret: next.printingComicsWebhookSecret,
+              printingComicsEnvironment: next.printingComicsEnvironment,
+            })
+          }
           onSave={handleSave}
         />
 
