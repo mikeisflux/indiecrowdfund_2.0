@@ -88,9 +88,19 @@ export function NmiChargebackCardSection({
     setShowFormRef.current = setShowForm;
   }, [firstName, lastName, line1, line2, city, state, zip, country, projectId, setStatus]);
 
+  // The card form is visible whenever the creator has no saved card OR
+  // they explicitly clicked "Replace" on a saved one. Both the Collect.js
+  // script-load effect and the "Loading card form..." indicator below
+  // need to run in either case — gating either of them on `showForm`
+  // alone broke the first-time-creator path: the form rendered (because
+  // !status.saved), but Collect.js never loaded, and the loading
+  // indicator never appeared, so the user saw an empty form with no
+  // card-number / exp / CVV fields.
+  const formVisible = !status.saved || showForm;
+
   // Load Collect.js once we know the public key and the form is open.
   useEffect(() => {
-    if (!showForm || !publicKey) return;
+    if (!formVisible || !publicKey) return;
     if (typeof window === "undefined") return;
     if (window.CollectJS) {
       setScriptReady(true);
@@ -116,7 +126,7 @@ export function NmiChargebackCardSection({
     s.setAttribute("data-country", "US");
     s.addEventListener("load", () => setScriptReady(true), { once: true });
     document.body.appendChild(s);
-  }, [showForm, publicKey]);
+  }, [formVisible, publicKey]);
 
   useEffect(() => {
     if (!scriptReady || !window.CollectJS) return;
@@ -306,7 +316,7 @@ export function NmiChargebackCardSection({
             </div>
           </div>
 
-          {!scriptReady && publicKey && showForm && (
+          {!scriptReady && publicKey && formVisible && (
             <div className="flex flex-col items-center justify-center py-6 border rounded-md">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mb-2" />
               <p className="text-xs text-muted-foreground">Loading card form...</p>
