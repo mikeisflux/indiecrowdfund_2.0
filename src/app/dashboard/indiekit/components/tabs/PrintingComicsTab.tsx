@@ -554,12 +554,15 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Cover PDF</Label>
-                <Select value={coverUploadId} onValueChange={setCoverUploadId}>
+                <Select
+                  value={coverUploadId || "__none__"}
+                  onValueChange={(v) => setCoverUploadId(v === "__none__" ? "" : v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="(none)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">(none)</SelectItem>
+                    <SelectItem value="__none__">(none)</SelectItem>
                     {uploads.map((u) => (
                       <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
                     ))}
@@ -568,12 +571,15 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
               </div>
               <div className="space-y-1">
                 <Label>Interior PDF</Label>
-                <Select value={interiorUploadId} onValueChange={setInteriorUploadId}>
+                <Select
+                  value={interiorUploadId || "__none__"}
+                  onValueChange={(v) => setInteriorUploadId(v === "__none__" ? "" : v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="(none)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">(none)</SelectItem>
+                    <SelectItem value="__none__">(none)</SelectItem>
                     {uploads.map((u) => (
                       <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
                     ))}

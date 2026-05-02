@@ -214,6 +214,16 @@ export function ErrorReporter() {
         // active book record. The edit UI surfaces the message inline;
         // admin-logging it is the same kind of user-input noise.
         requestUrl.includes("/api/creator/marketplace/files") ||
+        // PaymentCloud confirm-nmi: 400 means the card was declined,
+        // the pledge has already moved on (back/forward retry hits an
+        // already-completed/cancelled pledge), or the card form was
+        // submitted with stale state. The pledge UI surfaces the gateway
+        // error message ("Card was declined", "Insufficient funds", etc.)
+        // inline as a toast and lets the user try a different card.
+        // Admin-logging every decline is noise — real backend regressions
+        // here surface as 5xx, not 4xx.
+        /\/api\/pledges\/[^/]+\/confirm-nmi$/.test(requestUrl) ||
+        /\/api\/marketplace\/purchase\/[^/]+\/confirm-nmi$/.test(requestUrl) ||
         isStatsPollerPath
       );
       // Bot-probe 404s on well-known paths that we don't serve (ads.txt,
@@ -293,8 +303,20 @@ export function ErrorReporter() {
           requestUrl.includes("/api/user/following") ||
           requestUrl.includes("/api/messages")
         );
+      // Project detail page background fetches: similar projects + comments.
+      // Both are read-only, fired on mount, and self-heal on next page load.
+      // 5xx during a pm2 reload, scraper attack burst (rate limiter trips
+      // 502/503), or transient DB hiccup is expected — the UI degrades to
+      // empty similar-projects rail / empty comments list rather than crash.
+      // Filtering these matches the same logic we already apply to the stats
+      // poller and dashboard pollers above.
+      const isProjectDetailPoller5xx = response.status >= 500 && response.status < 600 &&
+        (
+          requestUrl.includes("/api/projects/similar") ||
+          (requestUrl.includes("/api/projects/") && requestUrl.includes("/comments"))
+        );
       const isExpected5xx = response.status >= 500 && response.status < 600 &&
-        (requestUrl.includes("/api/auth/recaptcha") || isStatsPoller5xx || isDashboardPoller5xx);
+        (requestUrl.includes("/api/auth/recaptcha") || isStatsPoller5xx || isDashboardPoller5xx || isProjectDetailPoller5xx);
       const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403 || isExpected5xx;
       if (response.status >= 400 && !isInternal) {
         reportError(

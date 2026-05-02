@@ -76,7 +76,20 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ projects: formattedProjects });
+    return NextResponse.json(
+      { projects: formattedProjects },
+      {
+        headers: {
+          // Browser + edge cache for 5 minutes; SWR for 10 more.
+          // The similar-projects rail is purely cosmetic — slightly stale
+          // results are fine, and caching cuts repeat hits from page
+          // reloads / Instagram in-app browser preloads down to a single
+          // origin request per 5min per IP, which keeps the endpoint off
+          // the rate limiter's radar during traffic bursts.
+          "Cache-Control": "public, max-age=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (error) {
     projectsSimilarLogger.error({ err: String(error) }, "Similar projects error:");
     return NextResponse.json({ projects: [] });
