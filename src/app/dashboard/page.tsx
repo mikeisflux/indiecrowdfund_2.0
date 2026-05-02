@@ -25,6 +25,7 @@ import {
   ArrowLeft,
   Handshake,
   Mail,
+  Printer,
   Radio,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
@@ -47,6 +48,7 @@ import { CollaborationsTab } from "./components/CollaborationsTab";
 import { PostUpdatesTab } from "./components/PostUpdatesTab";
 import { SocialHubTab } from "./components/SocialHubTab";
 import { IndieKitTab } from "./components/IndieKitTab";
+import { PrintingComicsTab } from "./indiekit/components/tabs/PrintingComicsTab";
 import { MarketplaceTab } from "./components/MarketplaceTab";
 import { EmailTab } from "./components/EmailTab";
 import { LiveStreamTab } from "./components/LiveStreamTab";
@@ -453,6 +455,7 @@ export default function CreatorDashboard() {
                   <div className="flex flex-wrap gap-1">
                     {([
                       { value: "indiekit", icon: Sparkles, label: "IndieKit", gradient: "from-emerald-500 to-teal-500" },
+                      { value: "printing-comics", icon: Printer, label: "Printing Comics", gradient: "from-purple-500 to-pink-500" },
                       { value: "production-order", icon: Truck, label: "Production Order", gradient: "from-blue-500 to-indigo-500" },
                       { value: "collaborations", icon: Handshake, label: "Collaborations", gradient: "from-slate-500 to-zinc-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
@@ -544,6 +547,10 @@ export default function CreatorDashboard() {
 
               <TabsContent value="indiekit" className="space-y-6">
                 <IndieKitTab projectId={selectedProjectId} />
+              </TabsContent>
+
+              <TabsContent value="printing-comics" className="space-y-6">
+                <PrintingComicsTab projectId={selectedProjectId} />
               </TabsContent>
 
               <TabsContent value="marketplace" className="space-y-6">

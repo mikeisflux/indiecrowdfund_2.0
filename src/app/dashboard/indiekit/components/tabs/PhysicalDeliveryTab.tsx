@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Box, Truck, Printer } from "lucide-react";
+import { Box, Truck } from "lucide-react";
 
 // Import existing tabs from v1
 import { PackagesTab } from "./index";
 import { ShippingTab } from "./index";
-import { PrintingComicsTab } from "./PrintingComicsTab";
 
 import type { PackageGroup, ShippingService } from "../../types";
 
@@ -23,6 +22,11 @@ interface PhysicalDeliveryTabProps {
 
 /**
  * Physical Delivery Tab - Merges Packages + Shipping from v1
+ *
+ * Note: Printing Comics integration lives at the dashboard level
+ * under Operations → Printing Comics, not here. Putting it inside
+ * IndieKit → Fulfillment → Physical Delivery → Printing Comics
+ * was three levels too deep — creators couldn't find it.
  */
 export function PhysicalDeliveryTab({
   packageGroups,
@@ -48,13 +52,6 @@ export function PhysicalDeliveryTab({
             <Truck className="h-4 w-4 mr-2" />
             Shipping Config
           </TabsTrigger>
-          <TabsTrigger value="printing-comics">
-            <Printer className="h-4 w-4 mr-2" />
-            Printing Comics
-            <span className="ml-2 text-[10px] uppercase tracking-wide font-semibold text-amber-700 dark:text-amber-300">
-              Beta
-            </span>
-          </TabsTrigger>
         </TabsList>
         </div>
 
@@ -71,10 +68,6 @@ export function PhysicalDeliveryTab({
 
         <TabsContent value="shipping">
           <ShippingTab shippingServices={shippingServices} projectId={projectId} onRefresh={onRefresh} />
-        </TabsContent>
-
-        <TabsContent value="printing-comics">
-          <PrintingComicsTab projectId={projectId} />
         </TabsContent>
       </Tabs>
     </div>
