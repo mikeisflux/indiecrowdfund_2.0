@@ -382,10 +382,18 @@ model ProjectPrintOrder {
   lastSyncedAt                DateTime?
 
   // What we sent to the printer.
+  // The legacy single-item fields (productSlug/quantity/options/files)
+  // are populated from items[0] for backwards compatibility — the
+  // dashboard, webhook receiver, and orders list still read them.
+  // New orders that include multiple line items (e.g. 6 different
+  // cover variants for one print run) store the full array in `items`.
   productSlug                 String
   quantity                    Int
   options                     Json      // configurator key→value map
   files                       Json      // [{uploadId, purpose}]
+  // Per-product line items: [{productSlug, quantity, options, files}].
+  // Null on legacy rows — read those via the flat fields above.
+  items                       Json?
 
   // Where the cartons ship TO (creator's warehouse / home — NOT
   // the backer). Stored as a flat object so we can render it in the

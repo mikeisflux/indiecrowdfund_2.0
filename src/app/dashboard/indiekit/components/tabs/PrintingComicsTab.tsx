@@ -31,6 +31,7 @@ import {
   RefreshCw,
   Send,
   Plus,
+  Trash2,
   CreditCard,
   RotateCw,
 } from "lucide-react";
@@ -76,6 +77,15 @@ interface ProjectPrintOrder {
   quantity: number;
   options: Record<string, unknown>;
   files: Array<{ uploadId: string; purpose: string }>;
+  // Multi-item orders store the full line-item array here. Null on
+  // legacy rows; in that case we render from the flat fields above.
+  items: Array<{
+    productSlug: string;
+    quantity: number;
+    options?: Record<string, unknown>;
+    files?: Array<{ uploadId: string; purpose: string }>;
+    label?: string;
+  }> | null;
   shippingAddress: {
     firstName: string;
     lastName: string;
@@ -131,13 +141,44 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
 
-  // New-order form state.
+  // New-order form state. Each "line item" is one variant the printer
+  // will produce as part of this print run — e.g. 6 different cover
+  // variants of the same comic, or a regular edition + a hardcover
+  // edition shipped together. Common Printing Comics configurator
+  // keys (interior_pages, interior_color, interior_paper, cover_paper)
+  // are surfaced as labeled fields per item; everything else falls
+  // through the "advanced JSON" textarea on each item.
+  interface LineItemState {
+    productSlug: string;
+    quantity: string;
+    interiorPages: string;
+    interiorColor: string;
+    interiorPaper: string;
+    coverPaper: string;
+    coverFinish: string;
+    binding: string;
+    extraOptionsJson: string;
+    coverUploadId: string;
+    interiorUploadId: string;
+    label: string;        // creator-facing label for "Variant A", "Hardcover", etc
+  }
+  const blankItem = (): LineItemState => ({
+    productSlug: "",
+    quantity: "250",
+    interiorPages: "",
+    interiorColor: "",
+    interiorPaper: "",
+    coverPaper: "",
+    coverFinish: "",
+    binding: "",
+    extraOptionsJson: "",
+    coverUploadId: "",
+    interiorUploadId: "",
+    label: "",
+  });
+
   const [formOpen, setFormOpen] = useState(false);
-  const [productSlug, setProductSlug] = useState("");
-  const [quantity, setQuantity] = useState("250");
-  const [optionsJson, setOptionsJson] = useState("{}");
-  const [coverUploadId, setCoverUploadId] = useState("");
-  const [interiorUploadId, setInteriorUploadId] = useState("");
+  const [lineItems, setLineItems] = useState<LineItemState[]>([blankItem()]);
   const [shipFirstName, setShipFirstName] = useState("");
   const [shipLastName, setShipLastName] = useState("");
   const [shipLine1, setShipLine1] = useState("");
@@ -248,27 +289,85 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
     loadCatalogAndUploads();
   };
 
+  // Build the items[] payload from the form state. Returns null + a
+  // toast if anything is malformed, so the caller just bails.
+  const buildItemsPayload = (): Array<{
+    productSlug: string;
+    quantity: number;
+    options: Record<string, string | number>;
+    files: { uploadId: string; purpose: string }[];
+  }> | null => {
+    const out: Array<{
+      productSlug: string;
+      quantity: number;
+      options: Record<string, string | number>;
+      files: { uploadId: string; purpose: string }[];
+    }> = [];
+    for (const [idx, item] of lineItems.entries()) {
+      const human = item.label || `Item ${idx + 1}`;
+      if (!item.productSlug.trim()) {
+        toast.error(`${human}: pick a product`);
+        return null;
+      }
+      const qty = parseInt(item.quantity, 10);
+      if (!Number.isFinite(qty) || qty < 1) {
+        toast.error(`${human}: quantity must be a positive number`);
+        return null;
+      }
+      // Structured fields → configurator key/value map. Empty values
+      // are skipped so the printer falls back to product defaults.
+      const options: Record<string, string | number> = {};
+      if (item.interiorPages.trim()) {
+        const pages = parseInt(item.interiorPages, 10);
+        if (!Number.isFinite(pages) || pages < 1) {
+          toast.error(`${human}: interior pages must be a positive number`);
+          return null;
+        }
+        options.interior_pages = pages;
+      }
+      if (item.interiorColor) options.interior_color = item.interiorColor;
+      if (item.interiorPaper) options.interior_paper = item.interiorPaper;
+      if (item.coverPaper) options.cover_paper = item.coverPaper;
+      if (item.coverFinish) options.cover_finish = item.coverFinish;
+      if (item.binding) options.binding = item.binding;
+      // Power-user escape hatch: any extra configurator keys not
+      // covered by the structured fields go through the JSON textarea.
+      if (item.extraOptionsJson.trim()) {
+        try {
+          const extra = JSON.parse(item.extraOptionsJson) as Record<string, string | number>;
+          if (extra && typeof extra === "object" && !Array.isArray(extra)) {
+            Object.assign(options, extra);
+          } else {
+            toast.error(`${human}: advanced options must be a JSON object`);
+            return null;
+          }
+        } catch {
+          toast.error(`${human}: advanced options must be valid JSON`);
+          return null;
+        }
+      }
+      const files: { uploadId: string; purpose: string }[] = [];
+      if (item.coverUploadId) files.push({ uploadId: item.coverUploadId, purpose: "cover" });
+      if (item.interiorUploadId) files.push({ uploadId: item.interiorUploadId, purpose: "interior" });
+      out.push({ productSlug: item.productSlug.trim(), quantity: qty, options, files });
+    }
+    return out;
+  };
+
+  const updateLineItem = (idx: number, patch: Partial<LineItemState>) => {
+    setLineItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  };
+  const addLineItem = () => setLineItems((prev) => [...prev, blankItem()]);
+  const removeLineItem = (idx: number) =>
+    setLineItems((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== idx)));
+
   const handleSubmit = async () => {
     if (!projectId) {
       toast.error("Pick a project first");
       return;
     }
-    if (!productSlug.trim()) {
-      toast.error("Pick a product slug");
-      return;
-    }
-    let parsedOptions: Record<string, string | number> = {};
-    try {
-      parsedOptions = JSON.parse(optionsJson || "{}");
-    } catch {
-      toast.error("Options must be valid JSON");
-      return;
-    }
-    const qty = parseInt(quantity, 10);
-    if (!Number.isFinite(qty) || qty < 1) {
-      toast.error("Quantity must be a positive number");
-      return;
-    }
+    const items = buildItemsPayload();
+    if (!items) return;
     if (!shipFirstName || !shipLastName || !shipLine1 || !shipCity || !shipRegion || !shipPostalCode || !shipCountry) {
       toast.error("Fill in the full ship-to address (this is YOUR receiving address — printer ships the cartons here)");
       return;
@@ -277,9 +376,6 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
       toast.error("Contact email is required");
       return;
     }
-    const files: { uploadId: string; purpose: string }[] = [];
-    if (coverUploadId) files.push({ uploadId: coverUploadId, purpose: "cover" });
-    if (interiorUploadId) files.push({ uploadId: interiorUploadId, purpose: "interior" });
 
     setSubmitting(true);
     try {
@@ -288,10 +384,7 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId,
-          productSlug: productSlug.trim(),
-          quantity: qty,
-          options: parsedOptions,
-          files,
+          items,
           shippingAddress: {
             firstName: shipFirstName,
             lastName: shipLastName,
@@ -412,6 +505,11 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">
                           {o.quantity}× <code className="text-xs px-1.5 py-0.5 rounded bg-muted font-mono">{o.productSlug}</code>
+                          {Array.isArray(o.items) && o.items.length > 1 && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              +{o.items.length - 1} more variant{o.items.length - 1 === 1 ? "" : "s"}
+                            </span>
+                          )}
                           {o.printingComicsOrderNumber && (
                             <span className="text-xs text-muted-foreground ml-2">{o.printingComicsOrderNumber}</span>
                           )}
@@ -499,97 +597,268 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Product</Label>
-                {catalogLoading ? (
-                  <Skeleton className="h-10 w-full" />
-                ) : catalog && catalog.length > 0 ? (
-                  <Select value={productSlug} onValueChange={setProductSlug}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pick a product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {catalog.map((p) => (
-                        <SelectItem key={p.id} value={p.slug}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    value={productSlug}
-                    onChange={(e) => setProductSlug(e.target.value)}
-                    placeholder="standard-comic-book"
-                  />
-                )}
-                <p className="text-[10px] text-muted-foreground">From the Printing Comics catalog.</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Books in this print run</p>
+                  <p className="text-xs text-muted-foreground">
+                    Add a separate item for each variant — different cover art, hardcover vs softcover, page-count variant, etc. They&apos;ll all ship together to the address below.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label>Quantity</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
-                <p className="text-[10px] text-muted-foreground">Total copies for this print run.</p>
-              </div>
-            </div>
 
-            <div className="space-y-1">
-              <Label>Configurator options (JSON)</Label>
-              <Textarea
-                rows={3}
-                value={optionsJson}
-                onChange={(e) => setOptionsJson(e.target.value)}
-                placeholder='{"interior_pages":32,"interior_color":"Full Color","interior_paper":"80lb Gloss","cover_paper":"100lb Gloss"}'
-              />
+              {lineItems.map((item, idx) => (
+                <div key={idx} className="border rounded-lg p-3 space-y-3 bg-muted/20">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground shrink-0">
+                        Item {idx + 1}
+                      </span>
+                      <Input
+                        value={item.label}
+                        onChange={(e) => updateLineItem(idx, { label: e.target.value })}
+                        placeholder='Optional label (e.g. "Cover A", "Hardcover edition")'
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    {lineItems.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeLineItem(idx)}
+                        aria-label={`Remove item ${idx + 1}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Product</Label>
+                      {catalogLoading ? (
+                        <Skeleton className="h-10 w-full" />
+                      ) : catalog && catalog.length > 0 ? (
+                        <Select
+                          value={item.productSlug}
+                          onValueChange={(v) => updateLineItem(idx, { productSlug: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pick a product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {catalog.map((p) => (
+                              <SelectItem key={p.id} value={p.slug}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          value={item.productSlug}
+                          onChange={(e) => updateLineItem(idx, { productSlug: e.target.value })}
+                          placeholder="standard-comic-book"
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Quantity</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={item.quantity}
+                        onChange={(e) => updateLineItem(idx, { quantity: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Interior pages</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        step={4}
+                        value={item.interiorPages}
+                        onChange={(e) => updateLineItem(idx, { interiorPages: e.target.value })}
+                        placeholder="e.g. 32"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Multiples of 4. Leave blank for product default.</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Interior color</Label>
+                      <Select
+                        value={item.interiorColor || "__default__"}
+                        onValueChange={(v) =>
+                          updateLineItem(idx, { interiorColor: v === "__default__" ? "" : v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Product default" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Product default</SelectItem>
+                          <SelectItem value="Full Color">Full color</SelectItem>
+                          <SelectItem value="Black & White">Black &amp; white</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Interior paper</Label>
+                      <Select
+                        value={item.interiorPaper || "__default__"}
+                        onValueChange={(v) =>
+                          updateLineItem(idx, { interiorPaper: v === "__default__" ? "" : v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Product default" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Product default</SelectItem>
+                          <SelectItem value="60lb Uncoated">60lb uncoated (matte / classic feel)</SelectItem>
+                          <SelectItem value="70lb Matte">70lb matte</SelectItem>
+                          <SelectItem value="80lb Gloss">80lb gloss (vibrant color)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Cover paper</Label>
+                      <Select
+                        value={item.coverPaper || "__default__"}
+                        onValueChange={(v) =>
+                          updateLineItem(idx, { coverPaper: v === "__default__" ? "" : v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Product default" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Product default</SelectItem>
+                          <SelectItem value="80lb Cover">80lb cover</SelectItem>
+                          <SelectItem value="100lb Cover">100lb cover</SelectItem>
+                          <SelectItem value="10pt C1S">10pt C1S</SelectItem>
+                          <SelectItem value="12pt C1S">12pt C1S</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Cover finish</Label>
+                      <Select
+                        value={item.coverFinish || "__default__"}
+                        onValueChange={(v) =>
+                          updateLineItem(idx, { coverFinish: v === "__default__" ? "" : v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Product default" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Product default</SelectItem>
+                          <SelectItem value="None">None</SelectItem>
+                          <SelectItem value="Gloss Lamination">Gloss lamination</SelectItem>
+                          <SelectItem value="Matte Lamination">Matte lamination</SelectItem>
+                          <SelectItem value="Spot UV">Spot UV</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Binding</Label>
+                      <Select
+                        value={item.binding || "__default__"}
+                        onValueChange={(v) =>
+                          updateLineItem(idx, { binding: v === "__default__" ? "" : v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Product default" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Product default</SelectItem>
+                          <SelectItem value="Saddle Stitch">Saddle stitch (stapled)</SelectItem>
+                          <SelectItem value="Perfect Bound">Perfect bound (glued spine)</SelectItem>
+                          <SelectItem value="Hardcover">Hardcover</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Cover PDF</Label>
+                      <Select
+                        value={item.coverUploadId || "__none__"}
+                        onValueChange={(v) =>
+                          updateLineItem(idx, { coverUploadId: v === "__none__" ? "" : v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="(none)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">(none)</SelectItem>
+                          {uploads.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Interior PDF</Label>
+                      <Select
+                        value={item.interiorUploadId || "__none__"}
+                        onValueChange={(v) =>
+                          updateLineItem(idx, { interiorUploadId: v === "__none__" ? "" : v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="(none)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">(none)</SelectItem>
+                          {uploads.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground select-none">
+                      Advanced: extra configurator options (JSON)
+                    </summary>
+                    <Textarea
+                      rows={2}
+                      value={item.extraOptionsJson}
+                      onChange={(e) => updateLineItem(idx, { extraOptionsJson: e.target.value })}
+                      placeholder='{"trim_size":"6.625x10.25","custom_key":"value"}'
+                      className="mt-2 font-mono text-xs"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Only needed for product-specific options not in the dropdowns above. See provider docs for keys.
+                    </p>
+                  </details>
+                </div>
+              ))}
+
+              <Button type="button" variant="outline" size="sm" onClick={addLineItem} className="w-full">
+                <Plus className="h-4 w-4 mr-2" />
+                Add another book / cover variant
+              </Button>
+
               <p className="text-[10px] text-muted-foreground">
-                Per-product configurator values. See provider docs for keys + accepted values.
+                Need to upload a new PDF? POST <code>{`{r2Key, purpose}`}</code> to <code>/api/creator/printingcomics/uploads</code> first. UI to pick from R2 is coming.
               </p>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Cover PDF</Label>
-                <Select
-                  value={coverUploadId || "__none__"}
-                  onValueChange={(v) => setCoverUploadId(v === "__none__" ? "" : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="(none)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">(none)</SelectItem>
-                    {uploads.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Interior PDF</Label>
-                <Select
-                  value={interiorUploadId || "__none__"}
-                  onValueChange={(v) => setInteriorUploadId(v === "__none__" ? "" : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="(none)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">(none)</SelectItem>
-                    {uploads.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <p className="text-[10px] text-muted-foreground -mt-2">
-              Need to upload a new PDF? POST <code>{`{r2Key, purpose}`}</code> to <code>/api/creator/printingcomics/uploads</code> first. UI to pick from R2 is coming.
-            </p>
 
             <div className="pt-2 border-t">
               <p className="text-sm font-semibold mb-2">Ship cartons to (your receiving address)</p>

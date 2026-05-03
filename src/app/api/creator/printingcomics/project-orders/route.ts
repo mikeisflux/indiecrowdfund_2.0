@@ -82,8 +82,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    type LineItem = {
+      productSlug?: string;
+      quantity?: number;
+      options?: Record<string, string | number>;
+      files?: Array<{ uploadId: string; purpose: string }>;
+    };
     let body: {
       projectId?: string;
+      // Multi-item shape (preferred): one row in the printer order per
+      // entry. Lets the creator order N variants in a single print run
+      // (6 different cover variants of the same book, mixed page counts,
+      // etc).
+      items?: LineItem[];
+      // Legacy single-item shape — kept so older clients keep working.
       productSlug?: string;
       quantity?: number;
       options?: Record<string, string | number>;
@@ -101,6 +113,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
+    // Normalize: if the client sent a top-level single-item shape, fold
+    // it into a one-element items array so the rest of the route only
+    // has to think about one shape.
+    const items: LineItem[] =
+      Array.isArray(body.items) && body.items.length > 0
+        ? body.items
+        : [{
+            productSlug: body.productSlug,
+            quantity: body.quantity,
+            options: body.options,
+            files: body.files,
+          }];
+
+    if (items.length > 50) {
+      return NextResponse.json(
+        { error: "A single print order can have at most 50 line items" },
+        { status: 400 }
+      );
+    }
+
     const required = (v: unknown, name: string) =>
       v === undefined || v === null || v === ""
         ? NextResponse.json({ error: `${name} is required` }, { status: 400 })
@@ -109,14 +141,23 @@ export async function POST(req: NextRequest) {
     const checks: NextResponse[] = [];
     let r: NextResponse | null;
     if ((r = required(body.projectId, "projectId"))) checks.push(r);
-    if ((r = required(body.productSlug, "productSlug"))) checks.push(r);
-    if ((r = required(body.quantity, "quantity"))) checks.push(r);
     if ((r = required(body.email, "email"))) checks.push(r);
     if ((r = required(body.shippingAddress, "shippingAddress"))) checks.push(r);
     if (checks.length > 0) return checks[0];
 
-    if (typeof body.quantity !== "number" || body.quantity < 1) {
-      return NextResponse.json({ error: "quantity must be a positive number" }, { status: 400 });
+    for (const [idx, it] of items.entries()) {
+      if (!it.productSlug || typeof it.productSlug !== "string") {
+        return NextResponse.json(
+          { error: `items[${idx}].productSlug is required` },
+          { status: 400 }
+        );
+      }
+      if (typeof it.quantity !== "number" || it.quantity < 1) {
+        return NextResponse.json(
+          { error: `items[${idx}].quantity must be a positive number` },
+          { status: 400 }
+        );
+      }
     }
     const ship = body.shippingAddress!;
     for (const f of ["firstName", "lastName", "line1", "city", "region", "postalCode", "country"] as const) {
@@ -163,29 +204,36 @@ export async function POST(req: NextRequest) {
     // externalRef. If the gateway call fails we mark it FAILED;
     // re-submitting the form generates a fresh row + fresh
     // externalRef so retries don't collide on the provider side.
+    //
+    // Legacy fields (productSlug/quantity/options/files) hold the FIRST
+    // item's data so existing dashboard cards / webhook handlers /
+    // status emails keep rendering. The full multi-item array goes into
+    // `items`; new code reads that and falls back to the flat fields
+    // for old rows.
+    const firstItem = items[0];
+    const totalQuantity = items.reduce((sum, it) => sum + (it.quantity || 0), 0);
     const row = await db.projectPrintOrder.create({
       data: {
         projectId: project.id,
         submittedById: session.user.id,
         status: "DRAFT",
-        productSlug: body.productSlug!,
-        quantity: body.quantity,
-        options: body.options || {},
-        files: body.files || [],
+        productSlug: firstItem.productSlug!,
+        quantity: totalQuantity,
+        options: (firstItem.options || {}) as object,
+        files: (firstItem.files || []) as object,
+        items: items as unknown as object,
         shippingAddress: ship as unknown as object,
         email: body.email!,
         notes: body.notes || null,
       },
     });
 
-    const items: PCOrderItemInput[] = [
-      {
-        productSlug: body.productSlug!,
-        quantity: body.quantity,
-        options: body.options || {},
-        files: body.files,
-      },
-    ];
+    const pcItems: PCOrderItemInput[] = items.map((it) => ({
+      productSlug: it.productSlug!,
+      quantity: it.quantity!,
+      options: it.options || {},
+      files: it.files,
+    }));
 
     try {
       // Pre-register / upsert the campaign on PrintingComics' side so
@@ -227,7 +275,7 @@ export async function POST(req: NextRequest) {
         email: body.email!,
         customerName: `${ship.firstName} ${ship.lastName}`.trim() || undefined,
         shippingAddress: ship,
-        items,
+        items: pcItems,
         shippingRateId: body.shippingRateId,
         couponCode: body.couponCode,
         notes: [
