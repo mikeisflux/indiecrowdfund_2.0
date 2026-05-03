@@ -74,53 +74,51 @@ export async function GET(
       where.isComplete = false;
     }
 
-    // Get responses with pledge and user info
+    // Get responses for this page. SurveyResponse has no `pledge`
+    // relation defined in schema (only a pledgeId FK string), so we
+    // batch-fetch pledges separately by id below — Prisma 7 strict
+    // mode rejects `include: { survey: false }` here, and the previous
+    // Promise.all of N findFirst calls exhausted the connection pool
+    // on projects with hundreds of responses, surfacing as a 500.
     const responses = await db.surveyResponse.findMany({
       where,
-      include: {
-        survey: false,
-      },
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
     });
 
-    // Get pledge and user info for each response
-    const responsesWithDetails = await Promise.all(
-      responses.map(async (response) => {
-        const pledge = await db.pledge.findFirst({
-          where: { id: response.pledgeId, deletedAt: null },
-          include: {
-            user: {
-              select: { id: true, name: true, email: true },
-            },
-            reward: {
-              select: { id: true, title: true },
-            },
-            addons: {
-              include: {
-                addon: {
-                  select: { id: true, title: true },
+    // Single batched pledge lookup — replaces the previous N+1 over
+    // db.pledge.findFirst inside Promise.all.
+    const pledgeIds = responses.map((r) => r.pledgeId);
+    const pledges =
+      pledgeIds.length > 0
+        ? await db.pledge.findMany({
+            where: { id: { in: pledgeIds }, deletedAt: null },
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+              reward: { select: { id: true, title: true } },
+              addons: {
+                include: {
+                  addon: { select: { id: true, title: true } },
                 },
               },
             },
-          },
-        });
+          })
+        : [];
+    const pledgeMap = new Map(pledges.map((p) => [p.id, p]));
 
-        // Filter by reward if specified
+    const filteredResponses = responses
+      .map((response) => {
+        const pledge = pledgeMap.get(response.pledgeId) ?? null;
+        // Filter by reward if specified — drop responses whose pledge
+        // either isn't on this reward or whose pledge has been
+        // soft-deleted (pledge=null).
         if (rewardId && pledge?.rewardId !== rewardId) {
           return null;
         }
-
-        return {
-          ...response,
-          pledge,
-        };
+        return { ...response, pledge };
       })
-    );
-
-    // Filter out nulls from reward filtering
-    const filteredResponses = responsesWithDetails.filter(Boolean);
+      .filter(Boolean);
 
     // Get totals
     const total = await db.surveyResponse.count({ where });
@@ -213,22 +211,32 @@ export async function POST(
       return NextResponse.json({ error: "Survey not found" }, { status: 404 });
     }
 
-    // Get all responses with full details (capped at 10000 to prevent memory exhaustion)
+    // Get all responses (capped at 10000 to prevent memory exhaustion).
+    // SurveyResponse has no `pledge` relation in the schema (only a
+    // pledgeId FK), so the previous `include: { pledge: {...} }` blew
+    // up Prisma's strict relation validation. Batch-fetch the linked
+    // pledges separately and zip them in.
     const responses = await db.surveyResponse.findMany({
       where: { surveyId: survey.id },
       take: 10000,
-      include: {
-        pledge: {
-          include: {
-            user: { select: { name: true, email: true } },
-            reward: { select: { title: true, amount: true } },
-          },
-        },
-      },
     });
+    const pledgeIds = responses.map((r) => r.pledgeId);
+    const pledges =
+      pledgeIds.length > 0
+        ? await db.pledge.findMany({
+            where: { id: { in: pledgeIds }, deletedAt: null },
+            select: {
+              id: true,
+              amount: true,
+              user: { select: { name: true, email: true } },
+              reward: { select: { title: true, amount: true } },
+            },
+          })
+        : [];
+    const pledgeMap = new Map(pledges.map((p) => [p.id, p]));
 
     const responsesWithDetails = responses.map((response) => {
-      const pledge = response.pledge;
+      const pledge = pledgeMap.get(response.pledgeId);
       return {
         backerName: pledge?.user.name || "Unknown",
         backerEmail: pledge?.user.email || "Unknown",

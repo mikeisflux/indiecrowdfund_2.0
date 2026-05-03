@@ -224,6 +224,14 @@ export function ErrorReporter() {
         // here surface as 5xx, not 4xx.
         /\/api\/pledges\/[^/]+\/confirm-nmi$/.test(requestUrl) ||
         /\/api\/marketplace\/purchase\/[^/]+\/confirm-nmi$/.test(requestUrl) ||
+        // Marketplace + per-project chargeback card POST: 400 means the
+        // card was declined by PaymentCloud during vault add / validate,
+        // a billing field was empty, or the name failed our validation.
+        // The edit page surfaces the gateway / validation message as a
+        // toast and lets the creator try a different card. Same user-input
+        // noise pattern as confirm-nmi above.
+        requestUrl.includes("/api/creator/marketplace-chargeback-card") ||
+        /\/api\/projects\/[^/]+\/chargeback-card$/.test(requestUrl) ||
         isStatsPollerPath
       );
       // Bot-probe 404s on well-known paths that we don't serve (ads.txt,

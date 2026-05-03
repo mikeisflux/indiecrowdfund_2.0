@@ -82,9 +82,24 @@ export async function GET(
     });
 
     if (!survey) {
+      // Still return the pledge block — the page header always renders
+      // backer name/email/reward even when no survey is configured.
+      // Returning the no-survey state without `pledge` made the dashboard
+      // crash with "Cannot read properties of undefined (reading
+      // 'backerName')" inside the dashboard error boundary.
       return NextResponse.json({
         survey: null,
         response: null,
+        pledge: {
+          id: pledge.id,
+          rewardTitle: pledge.reward?.title || "No Reward",
+          backerName: pledge.user?.name,
+          backerEmail: pledge.user?.email,
+          addons: pledge.addons.map((a: { addon: { id: string; title: string } }) => ({
+            id: a.addon.id,
+            title: a.addon.title,
+          })),
+        },
         questions: { itemQuestions: [], backerQuestions: [] },
       });
     }
