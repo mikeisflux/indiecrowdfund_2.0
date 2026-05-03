@@ -144,38 +144,56 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
   // New-order form state. Each "line item" is one variant the printer
   // will produce as part of this print run — e.g. 6 different cover
   // variants of the same comic, or a regular edition + a hardcover
-  // edition shipped together. Common Printing Comics configurator
-  // keys (interior_pages, interior_color, interior_paper, cover_paper)
-  // are surfaced as labeled fields per item; everything else falls
-  // through the "advanced JSON" textarea on each item.
+  // edition shipped together.
+  //
+  // The configurator option keys + accepted values are PER-PRODUCT and
+  // pulled live from PrintingComics' catalog (`GET /catalog/products/:slug`).
+  // We render dropdowns from that response so the values exactly match
+  // what the storefront accepts — no hardcoded guesses about whether
+  // a product offers "60lb Uncoated" or only "80lb Gloss".
   interface LineItemState {
     productSlug: string;
     quantity: string;
-    interiorPages: string;
-    interiorColor: string;
-    interiorPaper: string;
-    coverPaper: string;
-    coverFinish: string;
-    binding: string;
-    extraOptionsJson: string;
+    options: Record<string, string | number>;  // keyed by configurator option key
+    extraOptionsJson: string;                   // power-user override
     coverUploadId: string;
     interiorUploadId: string;
-    label: string;        // creator-facing label for "Variant A", "Hardcover", etc
+    label: string;                              // creator-facing variant label
   }
   const blankItem = (): LineItemState => ({
     productSlug: "",
     quantity: "250",
-    interiorPages: "",
-    interiorColor: "",
-    interiorPaper: "",
-    coverPaper: "",
-    coverFinish: "",
-    binding: "",
+    options: {},
     extraOptionsJson: "",
     coverUploadId: "",
     interiorUploadId: "",
     label: "",
   });
+
+  // Per-product configurator schema, fetched on demand from the catalog
+  // proxy. Keyed by product slug. Each option carries its key, label,
+  // type, and (for select-type options) the accepted values.
+  interface PCOptionValue {
+    label: string;
+    value: string | number;
+    priceModifierCents?: number;
+  }
+  interface PCOption {
+    key: string;
+    label: string;
+    type: "select" | "number" | "text";
+    required?: boolean;
+    values?: PCOptionValue[];           // present when type === "select"
+    min?: number; max?: number; step?: number; // present when type === "number"
+    defaultValue?: string | number;
+  }
+  interface PCProductFull {
+    slug: string;
+    name: string;
+    minQuantity?: number;
+    options: PCOption[];
+  }
+  const [productConfig, setProductConfig] = useState<Record<string, PCProductFull | "loading" | "error">>({});
 
   const [formOpen, setFormOpen] = useState(false);
   const [lineItems, setLineItems] = useState<LineItemState[]>([blankItem()]);
@@ -291,6 +309,33 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
 
   // Build the items[] payload from the form state. Returns null + a
   // toast if anything is malformed, so the caller just bails.
+  // Fetch the per-product configurator from PrintingComics' catalog the
+  // first time a creator picks the product. Cached forever in component
+  // state — products don't change schema during a single dialog session.
+  const loadProductConfig = useCallback(async (slug: string) => {
+    if (!slug) return;
+    setProductConfig((prev) => {
+      if (prev[slug]) return prev;
+      return { ...prev, [slug]: "loading" };
+    });
+    try {
+      const r = await apiFetch(
+        `/api/creator/printingcomics/catalog?slug=${encodeURIComponent(slug)}`
+      );
+      const data = await r.json();
+      if (!r.ok) {
+        setProductConfig((prev) => ({ ...prev, [slug]: "error" }));
+        return;
+      }
+      // The provider's response wraps the product in either { product }
+      // or returns the product directly — accept both.
+      const product: PCProductFull = (data?.product || data) as PCProductFull;
+      setProductConfig((prev) => ({ ...prev, [slug]: product }));
+    } catch {
+      setProductConfig((prev) => ({ ...prev, [slug]: "error" }));
+    }
+  }, []);
+
   const buildItemsPayload = (): Array<{
     productSlug: string;
     quantity: number;
@@ -314,24 +359,10 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
         toast.error(`${human}: quantity must be a positive number`);
         return null;
       }
-      // Structured fields → configurator key/value map. Empty values
-      // are skipped so the printer falls back to product defaults.
-      const options: Record<string, string | number> = {};
-      if (item.interiorPages.trim()) {
-        const pages = parseInt(item.interiorPages, 10);
-        if (!Number.isFinite(pages) || pages < 1) {
-          toast.error(`${human}: interior pages must be a positive number`);
-          return null;
-        }
-        options.interior_pages = pages;
-      }
-      if (item.interiorColor) options.interior_color = item.interiorColor;
-      if (item.interiorPaper) options.interior_paper = item.interiorPaper;
-      if (item.coverPaper) options.cover_paper = item.coverPaper;
-      if (item.coverFinish) options.cover_finish = item.coverFinish;
-      if (item.binding) options.binding = item.binding;
-      // Power-user escape hatch: any extra configurator keys not
-      // covered by the structured fields go through the JSON textarea.
+      // Start from the per-item options map (structured dropdowns from
+      // the live catalog); merge the advanced JSON on top so power users
+      // can override or add keys the dropdowns don't surface.
+      const options: Record<string, string | number> = { ...item.options };
       if (item.extraOptionsJson.trim()) {
         try {
           const extra = JSON.parse(item.extraOptionsJson) as Record<string, string | number>;
@@ -356,6 +387,30 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
 
   const updateLineItem = (idx: number, patch: Partial<LineItemState>) => {
     setLineItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  };
+  // Set/clear a single configurator option on a line item without
+  // disturbing the other options.
+  const updateLineItemOption = (idx: number, key: string, value: string | number | undefined) => {
+    setLineItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== idx) return it;
+        const nextOptions = { ...it.options };
+        if (value === undefined || value === "" || value === "__default__") {
+          delete nextOptions[key];
+        } else {
+          nextOptions[key] = value;
+        }
+        return { ...it, options: nextOptions };
+      })
+    );
+  };
+  // When a product is picked, fetch its configurator and clear stale
+  // option values from a previously-selected product.
+  const updateLineItemProduct = (idx: number, slug: string) => {
+    setLineItems((prev) =>
+      prev.map((it, i) => (i === idx ? { ...it, productSlug: slug, options: {} } : it))
+    );
+    if (slug) loadProductConfig(slug);
   };
   const addLineItem = () => setLineItems((prev) => [...prev, blankItem()]);
   const removeLineItem = (idx: number) =>
@@ -642,7 +697,7 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                       ) : catalog && catalog.length > 0 ? (
                         <Select
                           value={item.productSlug}
-                          onValueChange={(v) => updateLineItem(idx, { productSlug: v })}
+                          onValueChange={(v) => updateLineItemProduct(idx, v)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Pick a product" />
@@ -658,7 +713,7 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                       ) : (
                         <Input
                           value={item.productSlug}
-                          onChange={(e) => updateLineItem(idx, { productSlug: e.target.value })}
+                          onChange={(e) => updateLineItemProduct(idx, e.target.value)}
                           placeholder="standard-comic-book"
                         />
                       )}
@@ -674,122 +729,117 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label>Interior pages</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        step={4}
-                        value={item.interiorPages}
-                        onChange={(e) => updateLineItem(idx, { interiorPages: e.target.value })}
-                        placeholder="e.g. 32"
-                      />
-                      <p className="text-[10px] text-muted-foreground">Multiples of 4. Leave blank for product default.</p>
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Interior color</Label>
-                      <Select
-                        value={item.interiorColor || "__default__"}
-                        onValueChange={(v) =>
-                          updateLineItem(idx, { interiorColor: v === "__default__" ? "" : v })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Product default" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__default__">Product default</SelectItem>
-                          <SelectItem value="Full Color">Full color</SelectItem>
-                          <SelectItem value="Black & White">Black &amp; white</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label>Interior paper</Label>
-                      <Select
-                        value={item.interiorPaper || "__default__"}
-                        onValueChange={(v) =>
-                          updateLineItem(idx, { interiorPaper: v === "__default__" ? "" : v })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Product default" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__default__">Product default</SelectItem>
-                          <SelectItem value="60lb Uncoated">60lb uncoated (matte / classic feel)</SelectItem>
-                          <SelectItem value="70lb Matte">70lb matte</SelectItem>
-                          <SelectItem value="80lb Gloss">80lb gloss (vibrant color)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Cover paper</Label>
-                      <Select
-                        value={item.coverPaper || "__default__"}
-                        onValueChange={(v) =>
-                          updateLineItem(idx, { coverPaper: v === "__default__" ? "" : v })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Product default" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__default__">Product default</SelectItem>
-                          <SelectItem value="80lb Cover">80lb cover</SelectItem>
-                          <SelectItem value="100lb Cover">100lb cover</SelectItem>
-                          <SelectItem value="10pt C1S">10pt C1S</SelectItem>
-                          <SelectItem value="12pt C1S">12pt C1S</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label>Cover finish</Label>
-                      <Select
-                        value={item.coverFinish || "__default__"}
-                        onValueChange={(v) =>
-                          updateLineItem(idx, { coverFinish: v === "__default__" ? "" : v })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Product default" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__default__">Product default</SelectItem>
-                          <SelectItem value="None">None</SelectItem>
-                          <SelectItem value="Gloss Lamination">Gloss lamination</SelectItem>
-                          <SelectItem value="Matte Lamination">Matte lamination</SelectItem>
-                          <SelectItem value="Spot UV">Spot UV</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Binding</Label>
-                      <Select
-                        value={item.binding || "__default__"}
-                        onValueChange={(v) =>
-                          updateLineItem(idx, { binding: v === "__default__" ? "" : v })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Product default" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__default__">Product default</SelectItem>
-                          <SelectItem value="Saddle Stitch">Saddle stitch (stapled)</SelectItem>
-                          <SelectItem value="Perfect Bound">Perfect bound (glued spine)</SelectItem>
-                          <SelectItem value="Hardcover">Hardcover</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                  {/* Per-product configurator. Pulled live from
+                      /catalog/products/:slug so the available options
+                      and accepted values exactly match what the
+                      storefront accepts. */}
+                  {(() => {
+                    const cfg = item.productSlug ? productConfig[item.productSlug] : undefined;
+                    if (!item.productSlug) return null;
+                    if (cfg === "loading") {
+                      return (
+                        <div className="space-y-2">
+                          <Skeleton className="h-10 w-full" />
+                          <Skeleton className="h-10 w-full" />
+                        </div>
+                      );
+                    }
+                    if (cfg === "error" || !cfg) {
+                      return (
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          Couldn&apos;t load this product&apos;s options. Use the Advanced JSON below to set them, or pick a different product.
+                        </p>
+                      );
+                    }
+                    if (!Array.isArray(cfg.options) || cfg.options.length === 0) {
+                      return (
+                        <p className="text-[11px] text-muted-foreground">
+                          This product has no extra options to configure.
+                        </p>
+                      );
+                    }
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {cfg.options.map((opt) => {
+                          const current = item.options[opt.key];
+                          if (opt.type === "select" && Array.isArray(opt.values) && opt.values.length > 0) {
+                            const value = current != null ? String(current) : "__default__";
+                            return (
+                              <div key={opt.key} className="space-y-1">
+                                <Label>{opt.label}{opt.required ? " *" : ""}</Label>
+                                <Select
+                                  value={value}
+                                  onValueChange={(v) =>
+                                    updateLineItemOption(
+                                      idx,
+                                      opt.key,
+                                      v === "__default__"
+                                        ? undefined
+                                        : (opt.values?.find((o) => String(o.value) === v)?.value ?? v)
+                                    )
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={opt.required ? "Pick one" : "Product default"} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {!opt.required && <SelectItem value="__default__">Product default</SelectItem>}
+                                    {opt.values.map((v) => (
+                                      <SelectItem key={String(v.value)} value={String(v.value)}>
+                                        {v.label}
+                                        {v.priceModifierCents
+                                          ? ` (+$${(v.priceModifierCents / 100).toFixed(2)})`
+                                          : ""}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            );
+                          }
+                          if (opt.type === "number") {
+                            return (
+                              <div key={opt.key} className="space-y-1">
+                                <Label>{opt.label}{opt.required ? " *" : ""}</Label>
+                                <Input
+                                  type="number"
+                                  min={opt.min}
+                                  max={opt.max}
+                                  step={opt.step ?? 1}
+                                  value={current != null ? String(current) : ""}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    updateLineItemOption(
+                                      idx,
+                                      opt.key,
+                                      v === "" ? undefined : Number(v)
+                                    );
+                                  }}
+                                  placeholder={opt.defaultValue != null ? `e.g. ${opt.defaultValue}` : ""}
+                                />
+                              </div>
+                            );
+                          }
+                          // Fallback: plain text input
+                          return (
+                            <div key={opt.key} className="space-y-1">
+                              <Label>{opt.label}{opt.required ? " *" : ""}</Label>
+                              <Input
+                                value={current != null ? String(current) : ""}
+                                onChange={(e) =>
+                                  updateLineItemOption(
+                                    idx,
+                                    opt.key,
+                                    e.target.value === "" ? undefined : e.target.value
+                                  )
+                                }
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
