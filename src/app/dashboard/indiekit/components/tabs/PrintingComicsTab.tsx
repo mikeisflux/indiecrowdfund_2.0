@@ -209,6 +209,37 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
   const [orderNotes, setOrderNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Live pricing preview from PrintingComics' /pricing/quote. Recomputed
+  // on a debounce as the creator changes items / address / shipping
+  // method, so the total they see in the dialog matches what they'll
+  // be charged on the PayPal approval URL down to the cent.
+  interface PricingQuoteLine {
+    productSlug: string;
+    quantity: number;
+    unitPriceCents: number;
+    totalCents: number;
+  }
+  interface PricingQuoteShippingOption {
+    id: string;
+    name: string;
+    rateCents: number;
+    estimatedDays?: string;
+  }
+  interface PricingQuote {
+    items: PricingQuoteLine[];
+    subtotalCents: number;
+    discountCents: number;
+    shippingOptions: PricingQuoteShippingOption[];
+    shippingCents?: number;
+    taxCents: number;
+    totalCents: number;
+    currency: string;
+  }
+  const [pricingQuote, setPricingQuote] = useState<PricingQuote | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingError, setPricingError] = useState<string | null>(null);
+  const [shippingRateId, setShippingRateId] = useState<string>("");
+
   // Per-row "Refresh payment link" busy state (the row id we're
   // currently refreshing, or null).
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
@@ -304,6 +335,9 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
 
   const openForm = () => {
     setFormOpen(true);
+    setPricingQuote(null);
+    setPricingError(null);
+    setShippingRateId("");
     loadCatalogAndUploads();
   };
 
@@ -416,6 +450,84 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
   const removeLineItem = (idx: number) =>
     setLineItems((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== idx)));
 
+  // Debounced pricing preview. Re-runs whenever the items, destination,
+  // or selected shipping option change. We don't toast errors — just
+  // surface them inline so the creator can still submit even if the
+  // quote fetch is having a moment.
+  useEffect(() => {
+    if (!formOpen) return;
+    // Need at least one fully-specified line item AND a country to
+    // ask for a quote. Anything less and the API will reject anyway.
+    const validItems = lineItems
+      .filter((it) => it.productSlug.trim() && parseInt(it.quantity, 10) > 0)
+      .map((it) => ({
+        productSlug: it.productSlug.trim(),
+        quantity: parseInt(it.quantity, 10),
+        // Merge structured options with the advanced JSON, mirroring
+        // buildItemsPayload(). Bad JSON just falls back to dropdowns.
+        options: (() => {
+          let extra: Record<string, string | number> = {};
+          if (it.extraOptionsJson.trim()) {
+            try {
+              const parsed = JSON.parse(it.extraOptionsJson);
+              if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                extra = parsed;
+              }
+            } catch {
+              // ignore — quote uses what we have, full validation runs at submit
+            }
+          }
+          return { ...it.options, ...extra };
+        })(),
+      }));
+    if (validItems.length === 0 || !shipCountry.trim()) {
+      setPricingQuote(null);
+      setPricingError(null);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      setPricingLoading(true);
+      setPricingError(null);
+      try {
+        const r = await apiFetch("/api/creator/printingcomics/pricing/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: validItems,
+            shippingAddress: {
+              country: shipCountry.trim(),
+              region: shipRegion.trim() || undefined,
+              postalCode: shipPostalCode.trim() || undefined,
+            },
+            shippingRateId: shippingRateId || undefined,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          setPricingQuote(null);
+          setPricingError(typeof data?.error === "string" ? data.error : `Quote failed (HTTP ${r.status})`);
+          return;
+        }
+        setPricingQuote(data as PricingQuote);
+        // If the user hasn't picked a shipping rate yet, default to the
+        // cheapest option so the total has a real number rather than a
+        // "+ shipping TBD" placeholder.
+        if (!shippingRateId && Array.isArray(data?.shippingOptions) && data.shippingOptions.length > 0) {
+          const cheapest = [...data.shippingOptions].sort(
+            (a: PricingQuoteShippingOption, b: PricingQuoteShippingOption) => a.rateCents - b.rateCents
+          )[0];
+          setShippingRateId(cheapest.id);
+        }
+      } catch (err) {
+        setPricingError(err instanceof Error ? err.message : "Quote failed");
+      } finally {
+        setPricingLoading(false);
+      }
+    }, 600);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formOpen, lineItems, shipCountry, shipRegion, shipPostalCode, shippingRateId]);
+
   const handleSubmit = async () => {
     if (!projectId) {
       toast.error("Pick a project first");
@@ -451,6 +563,7 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
             country: shipCountry,
           },
           email: contactEmail,
+          shippingRateId: shippingRateId || undefined,
           notes: orderNotes || undefined,
         }),
       });
@@ -972,6 +1085,103 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                   placeholder="Any special instructions for the printer."
                 />
               </div>
+            </div>
+
+            {/* Live pricing preview from /pricing/quote. Total here is
+                what the creator gets charged on PayPal — same pipeline
+                the storefront cart uses. */}
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold">Estimated cost</p>
+                {pricingLoading && (
+                  <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Updating
+                  </span>
+                )}
+              </div>
+              {pricingError ? (
+                <div className="p-3 rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20 text-xs text-amber-800 dark:text-amber-300">
+                  Couldn&apos;t price this order: {pricingError}. You can still submit — Printing Comics will price it on their side and send the PayPal link with the real total.
+                </div>
+              ) : !pricingQuote ? (
+                <p className="text-xs text-muted-foreground">
+                  Pick a product, set a quantity, and enter a country to see the estimated total.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {/* Per-line breakdown */}
+                  <div className="border rounded-md divide-y text-xs">
+                    {pricingQuote.items.map((line, i) => (
+                      <div key={i} className="px-3 py-2 flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium">
+                            {line.quantity}× <code className="text-[10px] px-1 py-0.5 rounded bg-muted font-mono">{line.productSlug}</code>
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            ${(line.unitPriceCents / 100).toFixed(2)} per unit
+                          </p>
+                        </div>
+                        <p className="font-medium tabular-nums">
+                          ${(line.totalCents / 100).toFixed(2)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Shipping option picker — populated from quote response */}
+                  {pricingQuote.shippingOptions.length > 0 && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Shipping method</Label>
+                      <Select value={shippingRateId} onValueChange={setShippingRateId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pick a shipping method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pricingQuote.shippingOptions.map((opt) => (
+                            <SelectItem key={opt.id} value={opt.id}>
+                              {opt.name} — ${(opt.rateCents / 100).toFixed(2)}
+                              {opt.estimatedDays ? ` (${opt.estimatedDays} days)` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Totals */}
+                  <div className="text-xs space-y-1 border-t pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="tabular-nums">${(pricingQuote.subtotalCents / 100).toFixed(2)}</span>
+                    </div>
+                    {pricingQuote.discountCents > 0 && (
+                      <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+                        <span>Discount</span>
+                        <span className="tabular-nums">−${(pricingQuote.discountCents / 100).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {pricingQuote.shippingCents != null && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Shipping</span>
+                        <span className="tabular-nums">${(pricingQuote.shippingCents / 100).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {pricingQuote.taxCents > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Tax</span>
+                        <span className="tabular-nums">${(pricingQuote.taxCents / 100).toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t pt-1.5 font-semibold text-sm">
+                      <span>Total</span>
+                      <span className="tabular-nums">
+                        ${(pricingQuote.totalCents / 100).toFixed(2)} {pricingQuote.currency || "USD"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="text-xs text-muted-foreground bg-muted/40 p-3 rounded-md">

@@ -316,3 +316,65 @@ export async function markOrderPaid(
     body,
   });
 }
+
+// Pricing quote — runs the same pipeline the storefront cart uses, so
+// what the creator is quoted is what they'll be charged. Includes
+// per-line breakdown (qty discount tier, page upgrades, option
+// modifiers), live shipping options for the destination country, and
+// computed tax.
+export interface PCQuoteAddress {
+  country: string;
+  region?: string;
+  postalCode?: string;
+}
+export interface PCQuoteInput {
+  items: Array<{
+    productSlug: string;
+    quantity: number;
+    options: Record<string, string | number>;
+  }>;
+  shippingAddress?: PCQuoteAddress;
+  shippingRateId?: string;
+  couponCode?: string;
+}
+export interface PCQuoteShippingOption {
+  id: string;
+  name: string;
+  rateCents: number;
+  estimatedDays?: string;
+}
+export interface PCQuoteLine {
+  productSlug: string;
+  quantity: number;
+  unitPriceCents: number;
+  totalCents: number;
+  breakdown?: {
+    baseCents?: number;
+    modifierCents?: Record<string, number>;
+    pagesCents?: number;
+    combinedListCents?: number;
+    discountBps?: number;
+    unitCents?: number;
+    totalCents?: number;
+  };
+}
+export interface PCQuoteResponse {
+  items: PCQuoteLine[];
+  subtotalCents: number;
+  discountCents: number;
+  shippingOptions: PCQuoteShippingOption[];
+  shippingCents?: number;
+  taxCents: number;
+  totalCents: number;
+  currency: string;
+}
+export async function quotePricing(
+  config: PrintingComicsConfig,
+  input: PCQuoteInput
+): Promise<PCQuoteResponse> {
+  return pcFetch<PCQuoteResponse>(config, {
+    method: "POST",
+    path: "/pricing/quote",
+    body: input,
+  });
+}
