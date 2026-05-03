@@ -365,6 +365,16 @@ async function cancelPaypalAuthorizedPledges(projectId: string) {
     select: { id: true, rewardId: true, confirmationEmailSent: true, amount: true, paypalAuthorizationId: true },
   });
 
+  // Skip the PayPal OAuth + the rest of the void loop entirely when
+  // there's nothing to do. Otherwise every failed-campaign iteration
+  // pulls fresh PayPal credentials and burns an OAuth call — and if
+  // the platform's PayPal credentials are wrong/expired (`invalid_client`),
+  // the cron logs an error per failed project per run despite there
+  // being no PayPal pledges that needed voiding in the first place.
+  if (pledges.length === 0) {
+    return { count: 0 };
+  }
+
   let count = 0;
   try {
     const paypalConfig = await getPayPalConfig();
