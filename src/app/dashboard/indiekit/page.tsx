@@ -243,8 +243,12 @@ export default function IndieKitPage() {
       setLoading(true);
       const params = new URLSearchParams();
       if (selectedProjectId) params.set("projectId", selectedProjectId);
-      params.set("backersPage", String(backersPage));
-      params.set("backersLimit", "50");
+      // Pull every backer for the project. The Backers tab filters,
+      // bulk-acts, segments, and exports — all of which need the full
+      // set in memory. Server-side pagination here was the root cause
+      // of the "filter by foil addon shows 1 of 6 backers" bug: the
+      // missing 5 sat on pages the client never fetched.
+      params.set("backersLimit", "0");
 
       const res = await fetch(`/api/creator/indiekit?${params}`);
       if (!res.ok) {

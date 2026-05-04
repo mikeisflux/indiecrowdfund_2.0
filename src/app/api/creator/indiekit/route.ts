@@ -37,8 +37,24 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
+    // IndieKit's Backers tab is a fulfillment view — every feature on
+    // it (filter by addon/SKU/location, bulk-action checkboxes, segment
+    // builder, CSV export) needs the full backer set in scope. Keep
+    // pagination params on the wire for back-compat but raise the cap
+    // way past any realistic campaign size, and let callers ask for
+    // "everything" by passing backersLimit=0 / "all".
+    //
+    // Background: with the previous 50-row default, a client-side
+    // addon filter only saw page 1 of pledges and silently missed
+    // matches on later pages — a 6-foil order showed up as "1 backer
+    // has the foil addon" because 5 of the 6 foil pledges were on
+    // pages 2+ that the dashboard never loaded.
+    const rawLimit = searchParams.get("backersLimit");
+    const backersLimit =
+      rawLimit === "0" || rawLimit === "all"
+        ? 100000
+        : Math.min(Math.max(1, parseInt(rawLimit || "10000", 10) || 10000), 100000);
     const backersPage = Math.max(1, parseInt(searchParams.get("backersPage") || "1", 10) || 1);
-    const backersLimit = Math.min(Math.max(1, parseInt(searchParams.get("backersLimit") || "50", 10) || 50), 200);
     const backersOffset = (backersPage - 1) * backersLimit;
     // Field selection: comma-separated list of sections to include
     // e.g. ?fields=backers,stats,emails — if omitted, all sections are returned
