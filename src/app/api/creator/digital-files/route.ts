@@ -358,7 +358,7 @@ export async function PATCH(request: NextRequest) {
         const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
         const escapeMap: Record<string, string> = { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" };
         const safeFileName = file.name.replace(/[<>&"]/g, (c: string) => escapeMap[c] ?? c);
-        const downloadsUrl = `${APP_URL}/dashboard/backer?tab=digital-downloads`;
+        const downloadsUrl = `${APP_URL}/dashboard/backer?tab=downloads`;
 
         const emailResults = await Promise.allSettled(
           pledges

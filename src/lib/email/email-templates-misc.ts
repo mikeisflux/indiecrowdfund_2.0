@@ -526,7 +526,7 @@ export async function sendDigitalDeliveryEmail(
             <p>Head to your Digital Library to download your files, read comics in the built-in page-flip reader, or stream music and movies right in your browser.</p>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${APP_URL}/dashboard/backer?tab=digital-downloads" style="display: inline-block; background: #22c55e; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+              <a href="${APP_URL}/dashboard/backer?tab=downloads" style="display: inline-block; background: #22c55e; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
                 Access Your Downloads
               </a>
             </div>
