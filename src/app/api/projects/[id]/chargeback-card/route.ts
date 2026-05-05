@@ -221,7 +221,12 @@ export async function POST(
     // `!vaultResp.customer_vault_id` check below and reject every save with
     // "Card was declined" even though the vault entry was created on the
     // gateway side. Same workaround the AoN confirm-nmi flow already uses.
-    const customerVaultId = `cb_proj_${randomUUID()}`;
+    //
+    // PaymentCloud caps customer_vault_id at 36 characters
+    // ("Customer Vault ID may not exceed 36 characters" REFID error),
+    // so use a 32-char dashless UUID (no prefix — uniqueness alone is
+    // what NMI requires).
+    const customerVaultId = randomUUID().replace(/-/g, "");
     const vaultResp = await addCustomerToVault(nmiConfig, {
       paymentToken,
       customerVaultId,
