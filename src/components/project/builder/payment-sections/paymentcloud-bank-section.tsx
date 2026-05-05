@@ -52,7 +52,16 @@ export function PaymentCloudBankSection({
   projectId,
 }: PaymentCloudBankSectionProps) {
   const [isSaving, setIsSaving] = useState(false);
-  const [showForm, setShowForm] = useState(!status.saved);
+  // Default to closed so the saved-bank card shows up when the parent's
+  // GET resolves. Initializing this from `!status.saved` was the bug:
+  // useState only reads its argument on the first render, so when the
+  // parent's status flipped from { saved: false, loading: true } (the
+  // pre-fetch default) to { saved: true } after the GET, this stayed
+  // pinned at `showForm=true` and the form kept rendering on top of
+  // the already-saved account. Looked exactly like "fields aren't
+  // saving" to the creator since their entries appeared blank again
+  // on every reload.
+  const [showForm, setShowForm] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +141,16 @@ export function PaymentCloudBankSection({
         below at settlement. Your bank details are AES-256 encrypted at rest.
       </p>
 
-      {status.saved && !showForm && (
+      {status.loading && (
+        <Card>
+          <CardContent className="p-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Checking saved bank account…
+          </CardContent>
+        </Card>
+      )}
+
+      {!status.loading && status.saved && !showForm && (
         <Card>
           <CardContent className="p-4 flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
@@ -153,7 +171,7 @@ export function PaymentCloudBankSection({
         </Card>
       )}
 
-      {(!status.saved || showForm) && (
+      {!status.loading && (!status.saved || showForm) && (
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
