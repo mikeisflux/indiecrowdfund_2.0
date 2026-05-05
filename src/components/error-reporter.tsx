@@ -281,7 +281,13 @@ export function ErrorReporter() {
         // (e.g. landed on someone else's edit URL). The server log
         // already records userId/role/projectId for diagnosis; the UI
         // surfaces the rejection as a toast. Not a backend regression.
-        requestUrl === "/api/upload" || requestUrl.endsWith("/api/upload")
+        requestUrl === "/api/upload" || requestUrl.endsWith("/api/upload") ||
+        // Creator email compose 403: the sender doesn't have a LIVE
+        // project or a project with prelaunchActive=true (or is a
+        // collaborator without canManageCommunity). The compose form
+        // surfaces the rejection inline as a toast — admin-logging
+        // every "tried to email before launch" is noise, not a bug.
+        requestUrl.includes("/api/creator/email/compose")
       );
       // /api/auth/recaptcha 5xx is transient (nginx upstream briefly down during pm2 reload);
       // the client retries with backoff and falls back to disabled, so failures here are
