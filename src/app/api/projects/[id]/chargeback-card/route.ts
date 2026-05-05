@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { logger } from "@/lib/logger";
 
 const projectsChargebackCardLogger = logger.child({ module: "projects-chargeback-card" });
@@ -213,9 +214,17 @@ export async function POST(
       );
     }
 
-    // Exchange the single-use Collect.js token for a stable Customer Vault id.
+    // Mint our own customer_vault_id BEFORE the gateway call. PaymentCloud's
+    // white-label has been observed to NOT echo customer_vault_id back on
+    // add_customer responses (response=1, "Customer Added", but no
+    // customer_vault_id field), which used to trip the
+    // `!vaultResp.customer_vault_id` check below and reject every save with
+    // "Card was declined" even though the vault entry was created on the
+    // gateway side. Same workaround the AoN confirm-nmi flow already uses.
+    const customerVaultId = `cb_proj_${randomUUID()}`;
     const vaultResp = await addCustomerToVault(nmiConfig, {
       paymentToken,
+      customerVaultId,
       firstName: billingFirstName!.trim(),
       lastName: billingLastName!.trim(),
       address1: billingLine1!.trim(),
@@ -224,17 +233,28 @@ export async function POST(
       zip: billingZip!.trim(),
       country: billingCountry!.trim(),
     });
-    if (vaultResp.response !== "1" || !vaultResp.customer_vault_id) {
+    if (vaultResp.response !== "1") {
+      // Treat "duplicate vault id" as success — vault entry exists on the
+      // gateway from a prior attempt whose response was lost in transit,
+      // and our minted id is unique per save.
+      const text = (vaultResp.responsetext || "").toLowerCase();
+      const looksLikeDuplicateVault =
+        text.includes("vault") && (text.includes("exist") || text.includes("duplicate"));
+      if (!looksLikeDuplicateVault) {
+        projectsChargebackCardLogger.warn(
+          { projectId, response: vaultResp.response, text: vaultResp.responsetext },
+          "PaymentCloud vault add declined for chargeback card"
+        );
+        return NextResponse.json(
+          { error: vaultResp.responsetext || "Card was declined. Please try a different card." },
+          { status: 400 }
+        );
+      }
       projectsChargebackCardLogger.warn(
         { projectId, response: vaultResp.response, text: vaultResp.responsetext },
-        "PaymentCloud vault add declined for chargeback card"
-      );
-      return NextResponse.json(
-        { error: vaultResp.responsetext || "Card was declined. Please try a different card." },
-        { status: 400 }
+        "PaymentCloud vault add returned duplicate-id; treating as recovered"
       );
     }
-    const customerVaultId = vaultResp.customer_vault_id;
 
     // Auto-validate: a $0/$1 auth-and-void to confirm this is a real
     // chargeable card. If validate declines, the card was issued but
