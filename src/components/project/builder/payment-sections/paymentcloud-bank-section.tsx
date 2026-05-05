@@ -28,6 +28,10 @@ interface PaymentCloudBankAccountStatus {
   saved: boolean;
   loading: boolean;
   lastFour: string | null;
+  // false = caller is a collaborator viewing the project creator's
+  // bank account. We hide the Replace button + form so collaborators
+  // can confirm the bank is set up without being able to mutate it.
+  canEdit?: boolean;
 }
 
 interface PaymentCloudBankSectionProps {
@@ -117,7 +121,7 @@ export function PaymentCloudBankSection({
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "Failed to save bank account");
-      setStatus({ saved: true, loading: false, lastFour: data.lastFour ?? null });
+      setStatus({ saved: true, loading: false, lastFour: data.lastFour ?? null, canEdit: true });
       setShowForm(false);
       // Wipe sensitive fields from local state so they don't sit in memory.
       setBankAccount((prev) => ({ ...prev, accountNumber: "", routingNumber: "" }));
@@ -161,17 +165,28 @@ export function PaymentCloudBankSection({
                 </p>
                 <p className="text-muted-foreground capitalize">
                   {bankAccount.accountType} account · stored securely
+                  {status.canEdit === false && " · saved by the project creator"}
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
-              Replace
-            </Button>
+            {status.canEdit !== false && (
+              <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+                Replace
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {!status.loading && (!status.saved || showForm) && (
+      {!status.loading && !status.saved && status.canEdit === false && (
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            The project creator hasn&apos;t set up a payout bank account yet. They&apos;ll need to add one before launch.
+          </CardContent>
+        </Card>
+      )}
+
+      {!status.loading && status.canEdit !== false && (!status.saved || showForm) && (
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">

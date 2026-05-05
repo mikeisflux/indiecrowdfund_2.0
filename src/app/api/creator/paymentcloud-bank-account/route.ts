@@ -18,15 +18,44 @@ const log = logger.child({ module: "creator-paymentcloud-bank-account" });
 // AES-256 encryption per the existing pattern; non-sensitive display
 // data (bank name, last4, account type) is stored in plaintext for UI.
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // When a projectId is passed, scope the lookup to the project's
+    // creator instead of the caller. Lets accepted collaborators see
+    // the same "saved" indicator the creator sees on the Payments
+    // step / IndieKit Payments tab. We only return safe display fields
+    // (last4, bankName, accountType) — no encrypted PAN/account number.
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get("projectId");
+    let targetUserId = session.user.id;
+    if (projectId) {
+      const project = await db.project.findFirst({
+        where: {
+          id: projectId,
+          deletedAt: null,
+          OR: [
+            { creatorId: session.user.id },
+            { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+          ],
+        },
+        select: { creatorId: true },
+      });
+      if (!project) {
+        // Don't 403 — the creator hasn't saved a bank yet, OR caller
+        // isn't on the project. Either way the UI should show the
+        // form-not-saved state, which `exists: false` triggers.
+        return NextResponse.json({ exists: false });
+      }
+      targetUserId = project.creatorId;
+    }
+
     const acct = await db.paymentCloudBankAccount.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: targetUserId },
       select: {
         id: true,
         bankNameDisplay: true,
@@ -46,6 +75,9 @@ export async function GET() {
       lastFour: acct.accountLastFour,
       accountType: acct.accountType,
       isVerified: acct.isVerified,
+      // Surface to the UI whether the caller can edit this record (only
+      // the owner, never collaborators). Collaborators see read-only.
+      canEdit: targetUserId === session.user.id,
     });
   } catch (err) {
     // Defensive: if the table doesn't exist yet (schema mismatch on

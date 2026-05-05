@@ -131,6 +131,7 @@ export function PaymentStep() {
     saved: false,
     loading: true,
     lastFour: null,
+    canEdit: true,
   });
 
   // Save DivinityCoin bank account
@@ -239,9 +240,13 @@ export function PaymentStep() {
         }
       }
 
-      // Existing PaymentCloud bank account
+      // Existing PaymentCloud bank account. Pass projectId so collaborators
+      // see the project creator's saved bank, not their own.
       try {
-        const r = await fetch("/api/creator/paymentcloud-bank-account");
+        const url = projectId
+          ? `/api/creator/paymentcloud-bank-account?projectId=${encodeURIComponent(projectId)}`
+          : "/api/creator/paymentcloud-bank-account";
+        const r = await fetch(url);
         if (cancelled) return;
         if (r.ok) {
           const data = await r.json();
@@ -249,6 +254,7 @@ export function PaymentStep() {
             saved: !!data.exists,
             loading: false,
             lastFour: data.lastFour ?? null,
+            canEdit: data.canEdit !== false,
           });
           if (data.exists) {
             setPcBankAccount((prev) => ({
@@ -258,11 +264,11 @@ export function PaymentStep() {
             }));
           }
         } else {
-          setPcBankAccountStatus({ saved: false, loading: false, lastFour: null });
+          setPcBankAccountStatus({ saved: false, loading: false, lastFour: null, canEdit: true });
         }
       } catch {
         if (!cancelled)
-          setPcBankAccountStatus({ saved: false, loading: false, lastFour: null });
+          setPcBankAccountStatus({ saved: false, loading: false, lastFour: null, canEdit: true });
       }
     })();
     return () => {
@@ -548,8 +554,9 @@ export function PaymentStep() {
       {payment.paymentProcessor === "NMI" ? (
         // User-level chargeback card (shared with IndieKit Payments tab
         // and marketplace settings). Saving here unlocks the same card
-        // everywhere; each creator only sees their own.
-        <UserChargebackCardSection idPrefix="builder-cb" />
+        // everywhere; pass projectId so accepted collaborators see the
+        // same "saved" indicator the creator does.
+        <UserChargebackCardSection idPrefix="builder-cb" projectId={projectId} />
       ) : (
         <ChargebackCardSection
           chargebackCard={chargebackCard}

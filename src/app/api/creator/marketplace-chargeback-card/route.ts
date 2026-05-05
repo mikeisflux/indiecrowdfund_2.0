@@ -50,15 +50,41 @@ function parseExp(exp?: string | null): { month: number; year: number } | null {
   return { month, year: 2000 + yearTwo };
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // When a projectId is passed, scope the lookup to the project's
+    // creator instead of the caller — accepted collaborators get the
+    // same "saved" indicator the creator sees. Only safe display data
+    // (last4, brand, exp) is returned; the actual card lives in the
+    // PaymentCloud vault, never in our DB.
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get("projectId");
+    let targetUserId = session.user.id;
+    if (projectId) {
+      const project = await db.project.findFirst({
+        where: {
+          id: projectId,
+          deletedAt: null,
+          OR: [
+            { creatorId: session.user.id },
+            { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
+          ],
+        },
+        select: { creatorId: true },
+      });
+      if (!project) {
+        return NextResponse.json({ exists: false });
+      }
+      targetUserId = project.creatorId;
+    }
+
     const card = await db.creatorMarketplaceChargebackCard.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: targetUserId },
       select: {
         cardLastFour: true,
         cardBrand: true,
@@ -77,6 +103,7 @@ export async function GET() {
       expMonth: card.expMonth,
       expYear: card.expYear,
       updatedAt: card.updatedAt,
+      canEdit: targetUserId === session.user.id,
     });
   } catch (err) {
     // Defensive: if the table doesn't exist yet (fresh deploy without

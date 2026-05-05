@@ -32,6 +32,11 @@ interface SavedCardStatus {
   brand: string | null;
   expMonth: number | null;
   expYear: number | null;
+  // false = caller is a collaborator viewing the project creator's card.
+  // The Replace button + form are hidden in that case so collaborators
+  // see the same "saved" indicator without being able to mutate the
+  // creator's saved card.
+  canEdit: boolean;
 }
 
 // Shared user-level chargeback card section. Same Collect.js + Customer
@@ -40,7 +45,18 @@ interface SavedCardStatus {
 // + filled in every other surface that renders this component
 // (project creation Payments step, IndieKit Payments tab, marketplace
 // settings). PAN never enters our DOM — Collect.js iframes own it.
-export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?: string }) {
+//
+// Pass projectId to render in collaborator-aware mode: the GET resolves
+// the project creator and shows the creator's saved card to any accepted
+// collaborator. Without projectId we fall back to user-scoped lookup
+// (marketplace settings page) where the caller is always the owner.
+export function UserChargebackCardSection({
+  idPrefix = "user-cb",
+  projectId,
+}: {
+  idPrefix?: string;
+  projectId?: string | null;
+}) {
   const [status, setStatus] = useState<SavedCardStatus>({
     saved: false,
     loading: true,
@@ -48,6 +64,7 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
     brand: null,
     expMonth: null,
     expYear: null,
+    canEdit: true,
   });
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
@@ -79,7 +96,10 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch("/api/creator/marketplace-chargeback-card");
+        const url = projectId
+          ? `/api/creator/marketplace-chargeback-card?projectId=${encodeURIComponent(projectId)}`
+          : "/api/creator/marketplace-chargeback-card";
+        const r = await fetch(url);
         if (cancelled) return;
         if (r.ok) {
           const data = await r.json();
@@ -91,22 +111,23 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
               brand: data.brand ?? null,
               expMonth: data.expMonth ?? null,
               expYear: data.expYear ?? null,
+              canEdit: data.canEdit !== false,
             });
           } else {
-            setStatus({ saved: false, loading: false, lastFour: null, brand: null, expMonth: null, expYear: null });
+            setStatus({ saved: false, loading: false, lastFour: null, brand: null, expMonth: null, expYear: null, canEdit: data.canEdit !== false });
           }
         } else {
-          setStatus({ saved: false, loading: false, lastFour: null, brand: null, expMonth: null, expYear: null });
+          setStatus({ saved: false, loading: false, lastFour: null, brand: null, expMonth: null, expYear: null, canEdit: true });
         }
       } catch {
         if (!cancelled)
-          setStatus({ saved: false, loading: false, lastFour: null, brand: null, expMonth: null, expYear: null });
+          setStatus({ saved: false, loading: false, lastFour: null, brand: null, expMonth: null, expYear: null, canEdit: true });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [projectId]);
 
   // The card form is visible whenever the creator has no saved card
   // OR they explicitly clicked "Replace" on a saved one (line ~306
@@ -237,6 +258,7 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
             brand: data.brand ?? null,
             expMonth: data.expMonth ?? null,
             expYear: data.expYear ?? null,
+            canEdit: true, // we just saved as the owner
           });
           setIsSavingRef.current(false);
           setShowFormRef.current(false);
@@ -304,17 +326,31 @@ export function UserChargebackCardSection({ idPrefix = "user-cb" }: { idPrefix?:
                   {status.expMonth && status.expYear
                     ? `Exp ${String(status.expMonth).padStart(2, "0")}/${String(status.expYear).slice(-2)}`
                     : "Saved"} · validated and ready
+                  {!status.canEdit && " · saved by the project creator"}
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
-              Replace
-            </Button>
+            {status.canEdit && (
+              <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+                Replace
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {!status.loading && (!status.saved || showForm) && (
+      {/* Collaborators viewing a project where the creator has NOT yet
+          saved a chargeback card see a read-only message — the form is
+          owner-only, so we don't render it for non-editors. */}
+      {!status.loading && !status.saved && !status.canEdit && (
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            The project creator hasn&apos;t saved a chargeback protection card yet. They&apos;ll need to add one before launch.
+          </CardContent>
+        </Card>
+      )}
+
+      {!status.loading && status.canEdit && (!status.saved || showForm) && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
