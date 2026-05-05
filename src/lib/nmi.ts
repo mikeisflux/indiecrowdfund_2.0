@@ -363,13 +363,13 @@ export async function pingNmi(config: NmiConfig): Promise<{
     }
     return {
       ok: true,
-      message: resp.responsetext || "Connected to PaymentCloud",
+      message: resp.responsetext || "Connected to Mentom Payments",
       gatewayUrl: config.gatewayUrl,
     };
   } catch (err) {
     return {
       ok: false,
-      message: err instanceof Error ? err.message : "Network error reaching PaymentCloud",
+      message: err instanceof Error ? err.message : "Network error reaching Mentom Payments",
       gatewayUrl: config.gatewayUrl,
     };
   }

@@ -304,9 +304,9 @@ export default function BookDetailPage() {
           }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to initialize PaymentCloud");
+        if (!res.ok) throw new Error(data.error || "Failed to initialize Mentom Payments");
         if (!data.publicKey || !data.purchaseId) {
-          throw new Error("PaymentCloud configuration is missing — contact support.");
+          throw new Error("Mentom Payments configuration is missing — contact support.");
         }
         setNmiPublicKey(data.publicKey);
         setNmiPurchaseId(data.purchaseId);
@@ -988,7 +988,7 @@ export default function BookDetailPage() {
                       <CreditCard className="w-6 h-6 mr-4" />
                     )}
                     <div className="text-left">
-                      <div className="font-semibold text-white">PaymentCloud</div>
+                      <div className="font-semibold text-white">Mentom Payments</div>
                       <div className="text-sm opacity-80 text-white">Pay with credit or debit card</div>
                     </div>
                   </Button>

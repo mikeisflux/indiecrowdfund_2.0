@@ -35,7 +35,7 @@ export async function POST() {
         {
           ok: false,
           message:
-            "PaymentCloud is disabled or no security key is saved. Save a key first, then test.",
+            "Mentom Payments is disabled or no security key is saved. Save a key first, then test.",
         },
         { status: 200 }
       );

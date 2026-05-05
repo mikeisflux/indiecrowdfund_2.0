@@ -80,7 +80,7 @@ function TotalBadge({ color, text }: { color: string; text: string }) {
 
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]);
-  // Backer count drives per-transaction fees ($0.38/txn for PaymentCloud,
+  // Backer count drives per-transaction fees ($0.38/txn for Mentom Payments,
   // $0.30/txn for Stripe/DC, $0.49/txn for PayPal). Default 1000 backers
   // = $50/backer at $50k raised, which matches the historical default.
   const [backerSliderValue, setBackerSliderValue] = useState([1000]);
@@ -103,7 +103,7 @@ export default function FeesPage() {
   const methodLabel =
     paymentMethod === "paypal" ? "PayPal"
     : paymentMethod === "whop" ? "Whop"
-    : paymentMethod === "paymentcloud" ? "PaymentCloud"
+    : paymentMethod === "paymentcloud" ? "Mentom Payments"
     : "DivinityCoin";
 
   const methodColor = ({
@@ -174,9 +174,9 @@ export default function FeesPage() {
           >
             <TabsList className="grid w-full sm:max-w-md mx-auto grid-cols-1 mb-8">
               <TabsTrigger value="paymentcloud" className="flex items-center gap-2">
-                <Cloud className="h-4 w-4" /> PaymentCloud
+                <Cloud className="h-4 w-4" /> Mentom Payments
               </TabsTrigger>
-              {/* Legacy processor tabs hidden — PaymentCloud is the only processor
+              {/* Legacy processor tabs hidden — Mentom Payments is the only processor
                   offered for new campaigns. Backend continues to honor existing
                   Whop/PayPal/DivinityCoin campaigns.
               <TabsTrigger value="whop" className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export default function FeesPage() {
               */}
             </TabsList>
 
-            {/* PaymentCloud */}
+            {/* Mentom Payments */}
             <TabsContent value="paymentcloud">
               <div className="lg:max-w-4xl lg:mx-auto mb-8 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-6 py-12 sm:py-16 md:py-20 shadow-2xl ring-4 ring-red-500/40 animate-in fade-in zoom-in duration-500">
                 <p className="text-center text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] leading-none">
@@ -212,26 +212,26 @@ export default function FeesPage() {
                       <Cloud className="h-6 w-6 text-sky-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is PaymentCloud?</h3>
+                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is Mentom Payments?</h3>
                       <p className="text-sm text-zinc-600 dark:text-muted-foreground mb-3">
-                        PaymentCloud is a high-risk friendly merchant account on the NMI gateway. Backers enter their card directly on your campaign page — the card is securely tokenized in the browser via Collect.js (PAN never touches our servers) and only charged when your campaign hits its funding goal.
+                        Mentom Payments is a high-risk friendly merchant account on the NMI gateway. Backers enter their card directly on your campaign page — the card is securely tokenized in the browser via Collect.js (PAN never touches our servers) and only charged when your campaign hits its funding goal.
                       </p>
                       <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows (example: $100 pledge):</h4>
                       <ol className="text-sm text-zinc-600 dark:text-muted-foreground space-y-1 list-decimal list-inside mb-4">
                         <li>Backer enters their card at checkout — instantly tokenized via Collect.js</li>
-                        <li>Card is stored in PaymentCloud&apos;s vault, no charge yet</li>
+                        <li>Card is stored in Mentom Payments&apos;s vault, no charge yet</li>
                         <li>When your campaign funds, we charge the saved card</li>
-                        <li>PaymentCloud processing (4% of $100 = $4.00) deducted at settlement</li>
+                        <li>Mentom Payments processing (4% of $100 = $4.00) deducted at settlement</li>
                         <li>Per-transaction fee ($0.38 × 1 txn = $0.38) deducted at settlement</li>
                         <li>Platform fee (3% of $95.62 = $2.87) deducted at settlement</li>
                         <li>You receive <strong>$92.88</strong> deposited to your bank account</li>
                       </ol>
-                      <p className="text-xs text-muted-foreground">PaymentCloud supports both <strong>All-or-Nothing</strong> and <strong>Keep-It-All</strong> campaigns. Cards are only charged on campaign success — failed campaigns trigger zero fees and zero charges.</p>
+                      <p className="text-xs text-muted-foreground">Mentom Payments supports both <strong>All-or-Nothing</strong> and <strong>Keep-It-All</strong> campaigns. Cards are only charged on campaign success — failed campaigns trigger zero fees and zero charges.</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <TotalBadge color="bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400" text="Total fees with PaymentCloud: approximately 7.5% of funds raised" />
+              <TotalBadge color="bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400" text="Total fees with Mentom Payments: approximately 7.5% of funds raised" />
             </TabsContent>
 
             {/* Whop */}
@@ -372,7 +372,7 @@ export default function FeesPage() {
                           : "text-zinc-600 hover:text-zinc-900 dark:text-muted-foreground"
                       }`}
                     >
-                      {m === "divinitycoin" ? "DivinityCoin" : m === "paymentcloud" ? "PaymentCloud" : m.charAt(0).toUpperCase() + m.slice(1)}
+                      {m === "divinitycoin" ? "DivinityCoin" : m === "paymentcloud" ? "Mentom Payments" : m.charAt(0).toUpperCase() + m.slice(1)}
                     </button>
                   ))}
                 </div>
@@ -436,7 +436,7 @@ export default function FeesPage() {
                   ) : paymentMethod === "paymentcloud" ? (
                     <>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">PaymentCloud processing (4%)</span>
+                        <span className="text-zinc-600 dark:text-muted-foreground">Mentom Payments processing (4%)</span>
                         <span className="text-red-500">-${paymentCloudFees.paymentCloudFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
@@ -501,10 +501,10 @@ export default function FeesPage() {
                 <h4 className="text-sm font-medium text-muted-foreground mb-4">Compare with other platforms at ${amount.toLocaleString()}</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   <div className={`text-center p-3 rounded-lg transition-all ring-2 ring-sky-400 bg-sky-50 dark:bg-sky-900/30`}>
-                    <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (PaymentCloud)</div>
+                    <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (Mentom Payments)</div>
                     <div className="font-bold text-sky-600">${paymentCloudFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
-                  {/* Legacy processor comparison cells hidden — PaymentCloud is the
+                  {/* Legacy processor comparison cells hidden — Mentom Payments is the
                       only processor offered for new campaigns.
                   <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "whop" ? "ring-2 ring-zinc-400 bg-muted dark:bg-zinc-700" : "bg-muted dark:bg-zinc-800"}`}>
                     <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (Whop)</div>
@@ -618,13 +618,13 @@ export default function FeesPage() {
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold">What payment processor does IndieCrowdfund use?</h3>
               <p className="mt-2 text-zinc-600 dark:text-muted-foreground">
-                All new campaigns are processed through PaymentCloud (~7.5% total: 4% + $0.38/txn processing + 3% platform fee). PaymentCloud supports all content types including NSFW/adult projects, both All-or-Nothing and Keep-It-All campaign styles, and tokenizes cards in your browser via Collect.js so card data never touches our servers.
+                All new campaigns are processed through Mentom Payments (~7.5% total: 4% + $0.38/txn processing + 3% platform fee). Mentom Payments supports all content types including NSFW/adult projects, both All-or-Nothing and Keep-It-All campaign styles, and tokenizes cards in your browser via Collect.js so card data never touches our servers.
               </p>
             </div>
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold">How quickly will I receive my funds?</h3>
               <p className="mt-2 text-zinc-600 dark:text-muted-foreground">
-                Funds settle to your bank account on PaymentCloud&apos;s standard merchant schedule (typically within 1–2 business days of capture for funded campaigns).
+                Funds settle to your bank account on Mentom Payments&apos;s standard merchant schedule (typically within 1–2 business days of capture for funded campaigns).
               </p>
             </div>
           </div>

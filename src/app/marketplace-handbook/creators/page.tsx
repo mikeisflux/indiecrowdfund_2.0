@@ -526,7 +526,7 @@ export default function MarketplaceCreatorHandbookPage() {
                         <p className="text-2xl font-bold text-foreground">$9.99</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">
-                        <p className="text-sm text-muted-foreground">PaymentCloud (4% + $0.38)</p>
+                        <p className="text-sm text-muted-foreground">Mentom Payments (4% + $0.38)</p>
                         <p className="text-2xl font-bold text-destructive">-$0.65</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">

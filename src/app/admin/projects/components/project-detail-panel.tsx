@@ -504,7 +504,7 @@ function RollingReserveToggle({
           className="mt-0.5"
         />
         <div className="flex-1 text-sm">
-          <p className="font-medium">Subject to PaymentCloud rolling reserve</p>
+          <p className="font-medium">Subject to Mentom Payments rolling reserve</p>
           <p className="text-xs text-muted-foreground">
             Hold 10% of gross revenue in escrow for 180 days. Use for new
             creators, high-risk creators, or anyone outside the auto-trigger

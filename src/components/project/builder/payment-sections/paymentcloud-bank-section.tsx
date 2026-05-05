@@ -137,10 +137,10 @@ export function PaymentCloudBankSection({
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Banknote className="h-4 w-4 text-sky-600" />
-        <h3 className="font-semibold">PaymentCloud Payout Bank Account</h3>
+        <h3 className="font-semibold">Mentom Payments Payout Bank Account</h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        IndieCrowdfund collects all pledges into the platform&apos;s PaymentCloud
+        IndieCrowdfund collects all pledges into the platform&apos;s Mentom Payments
         merchant account, then deposits your net earnings to the bank account
         below at settlement. Your bank details are AES-256 encrypted at rest.
       </p>

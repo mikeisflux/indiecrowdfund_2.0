@@ -168,7 +168,7 @@ export function MarketplacePaymentSettings() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="font-semibold">PaymentCloud</p>
+                <p className="font-semibold">Mentom Payments</p>
                 <Badge variant="default" className="bg-sky-600 text-xs">Recommended</Badge>
                 <CheckCircle className="h-4 w-4 text-primary ml-auto" />
               </div>
@@ -176,7 +176,7 @@ export function MarketplacePaymentSettings() {
                 Universal — supports all content types including NSFW. ~7.5% total fees (4% + $0.38/txn + 3% platform).
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                Cards are tokenized in the buyer&apos;s browser by PaymentCloud — your sales data is never stored on our servers.
+                Cards are tokenized in the buyer&apos;s browser by Mentom Payments — your sales data is never stored on our servers.
               </p>
             </div>
           </div>

@@ -471,7 +471,7 @@ export function NmiPaymentForm({
       </Button>
 
       <p className="text-xs text-muted-foreground text-center">
-        Card details are tokenized in your browser by PaymentCloud — they never touch our servers.
+        Card details are tokenized in your browser by Mentom Payments — they never touch our servers.
       </p>
     </form>
   );

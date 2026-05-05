@@ -51,7 +51,7 @@ export function PaymentProcessorSection({
           <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
           <AlertTitle>NSFW-Friendly Processor Required</AlertTitle>
           <AlertDescription>
-            Projects with adult or controversial content must use PaymentCloud, DivinityCoin, or Whop.
+            Projects with adult or controversial content must use Mentom Payments, DivinityCoin, or Whop.
             PayPal does not process payments for this type of content.
           </AlertDescription>
         </Alert>
@@ -122,7 +122,7 @@ export function PaymentProcessorSection({
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center">
                   <Cloud className="h-5 w-5 text-white" />
                 </div>
-                PaymentCloud
+                Mentom Payments
                 <Badge variant="default" className="ml-2 bg-sky-600">Recommended</Badge>
               </CardTitle>
               {payment.paymentProcessor === "NMI" && (
@@ -161,7 +161,7 @@ export function PaymentProcessorSection({
                 180-day rolling reserve
               </p>
               <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
-                PaymentCloud holds <strong>10% of gross funds</strong> in escrow
+                Mentom Payments holds <strong>10% of gross funds</strong> in escrow
                 for 180 days as chargeback protection. The hold is calculated
                 <em> before</em> processor + platform fees are deducted.
               </p>
@@ -398,11 +398,11 @@ export function PaymentProcessorSection({
       {payment.paymentProcessor === "NMI" && (
         <div className="rounded-lg bg-muted/50 p-4 border">
           <h4 className="font-medium mb-3">
-            PaymentCloud Fee Breakdown for {formatCurrency(goalAmount)} Goal
+            Mentom Payments Fee Breakdown for {formatCurrency(goalAmount)} Goal
           </h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span>PaymentCloud processing (4%)</span>
+              <span>Mentom Payments processing (4%)</span>
               <span className="font-medium">{formatCurrency(paymentCloudFee)}</span>
             </div>
             <div className="flex justify-between">

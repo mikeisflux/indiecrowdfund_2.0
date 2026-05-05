@@ -37,7 +37,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/backer-handbook" className="hover:text-foreground">Backer Handbook</Link></li>
               <li><Link href="/marketplace-handbook/backers" className="hover:text-foreground">Marketplace Handbook</Link></li>
-              <li><Link href="/backer-handbook#paymentcloud" className="hover:text-foreground">Paying with PaymentCloud</Link></li>
+              <li><Link href="/backer-handbook#paymentcloud" className="hover:text-foreground">Paying with Mentom Payments</Link></li>
               {/* Legacy processor explainers — hidden while PaymentCloud is the only
                   processor offered for new campaigns. Backend support continues for
                   existing PayPal/DivinityCoin/Whop campaigns.

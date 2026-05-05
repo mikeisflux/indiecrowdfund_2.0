@@ -294,7 +294,7 @@ export function PaymentStep({
             ) : (
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">Loading PaymentCloud...</p>
+                <p className="text-sm text-muted-foreground">Loading Mentom Payments...</p>
               </div>
             )
           ) : project?.paymentProcessor === "WHOP" ? (

@@ -361,7 +361,7 @@ export async function POST(
     if (paymentProcessor === "NMI") {
       const nmiConfig = await loadNmiConfig();
       if (!nmiConfig) {
-        return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+        return NextResponse.json({ error: "Mentom Payments not configured" }, { status: 502 });
       }
 
       await db.pledge.update({

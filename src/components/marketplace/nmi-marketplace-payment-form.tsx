@@ -341,7 +341,7 @@ export function NmiMarketplacePaymentForm({
 
       <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
         <Lock className="h-3 w-3" />
-        Card details are tokenized in your browser by PaymentCloud — they
+        Card details are tokenized in your browser by Mentom Payments — they
         never touch our servers.
       </p>
     </form>

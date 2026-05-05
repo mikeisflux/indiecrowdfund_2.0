@@ -87,12 +87,12 @@ export function TermsOfServiceContent() {
           <li>Transfer net funds to the creator</li>
         </ul>
 
-        <h4 className="text-lg font-semibold mt-6 mb-2">6a. PaymentCloud Rolling Reserve</h4>
+        <h4 className="text-lg font-semibold mt-6 mb-2">6a. Mentom Payments Rolling Reserve</h4>
         <p className="mb-4">
-          PaymentCloud — the merchant processor IndieCrowdfund uses for new
+          Mentom Payments — the merchant processor IndieCrowdfund uses for new
           campaigns — requires a 180-day rolling reserve on certain projects
           to protect against chargebacks, refunds, and other disputes. By
-          launching a campaign on PaymentCloud, creators agree to the
+          launching a campaign on Mentom Payments, creators agree to the
           following:
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
@@ -126,12 +126,12 @@ export function TermsOfServiceContent() {
           <li>
             <strong>Cost absorption:</strong> IndieCrowdfund absorbs the
             reserve cost where commercially feasible on smaller campaigns;
-            the remainder is held by PaymentCloud and released to the
+            the remainder is held by Mentom Payments and released to the
             creator after the 180-day window.
           </li>
           <li>
             <strong>Chargeback offset:</strong> If chargebacks occur during or
-            after the hold period, IndieCrowdfund and PaymentCloud may use
+            after the hold period, IndieCrowdfund and Mentom Payments may use
             the reserve and the creator&apos;s on-file chargeback card to
             recoup losses before the remaining reserve is released.
           </li>
@@ -150,7 +150,7 @@ export function TermsOfServiceContent() {
           <li><strong>Social Media & Online Presence Audit:</strong> We log and verify all social media accounts linked to the creator. Our team searches other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review the creator&apos;s previous campaign history.</li>
           <li><strong>Fulfillment History Review:</strong> We review backer comments, reviews, and public feedback on all prior campaigns across all platforms. We contact creators directly when discrepancies or concerns are identified.</li>
           <li><strong>Internal Documentation:</strong> All verification findings, correspondence, and review decisions are documented internally and retained for compliance and audit purposes.</li>
-          <li><strong>Payment Account Verification:</strong> Creators must add a valid PayPal payout email (for standard campaigns), complete bank account setup through PaymentCloud or DivinityCoin (for NSFW/adult content campaigns), or connect a Whop account (for Whop-processed campaigns) to receive payouts.</li>
+          <li><strong>Payment Account Verification:</strong> Creators must add a valid PayPal payout email (for standard campaigns), complete bank account setup through Mentom Payments or DivinityCoin (for NSFW/adult content campaigns), or connect a Whop account (for Whop-processed campaigns) to receive payouts.</li>
         </ul>
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
           <p className="text-red-800 dark:text-red-200 font-medium mb-2">Automatic Disqualification</p>

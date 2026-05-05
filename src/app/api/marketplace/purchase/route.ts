@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     }
     if (book.paymentProcessor === "NMI" && paymentMethod !== "nmi") {
       return NextResponse.json(
-        { error: "This book requires PaymentCloud payment" },
+        { error: "This book requires Mentom Payments payment" },
         { status: 400 }
       );
     }
@@ -277,7 +277,7 @@ export async function POST(request: Request) {
         marketplacePurchaseLogger.error({ err: String(err) }, "[Marketplace NMI] init error");
         await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
         return NextResponse.json(
-          { error: "Failed to initialize PaymentCloud payment" },
+          { error: "Failed to initialize Mentom Payments payment" },
           { status: 502 }
         );
       }

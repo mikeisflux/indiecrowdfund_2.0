@@ -181,7 +181,7 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
               chargedImmediately: false,
               retryCount: newRetryCount,
               nextRetryAt: null,
-              lastFailureReason: `${sale.responsetext || "PaymentCloud declined"} (after ${newRetryCount} attempts)`,
+              lastFailureReason: `${sale.responsetext || "Mentom Payments declined"} (after ${newRetryCount} attempts)`,
             },
           });
         } else {
@@ -193,7 +193,7 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
               chargedImmediately: false,
               retryCount: newRetryCount,
               nextRetryAt,
-              lastFailureReason: sale.responsetext || "PaymentCloud declined",
+              lastFailureReason: sale.responsetext || "Mentom Payments declined",
             },
           });
         }

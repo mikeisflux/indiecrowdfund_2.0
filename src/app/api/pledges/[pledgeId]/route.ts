@@ -407,7 +407,7 @@ export async function PATCH(
           // cron already ran a sale, so nmiTransactionId should be set).
           if (!pledge.nmiTransactionId) {
             return NextResponse.json(
-              { error: "No PaymentCloud transaction found to refund. Please contact support." },
+              { error: "No Mentom Payments transaction found to refund. Please contact support." },
               { status: 400 }
             );
           }
@@ -440,7 +440,7 @@ export async function PATCH(
                 data: { status: "COMPLETED", lastFailureReason: null },
               }).catch(() => null);
               nmiCancelClaimed = false;
-              return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+              return NextResponse.json({ error: "Mentom Payments not configured" }, { status: 502 });
             }
             const refundResp = await nmiRefund(nmiConfig, pledge.nmiTransactionId);
             if (refundResp.response !== "1") {
@@ -470,7 +470,7 @@ export async function PATCH(
               data: { status: "COMPLETED", lastFailureReason: null },
             }).catch(() => null);
             nmiCancelClaimed = false;
-            return NextResponse.json({ error: "Failed to process PaymentCloud refund." }, { status: 500 });
+            return NextResponse.json({ error: "Failed to process Mentom Payments refund." }, { status: 500 });
           }
         } else {
           // Stripe refund
@@ -810,7 +810,7 @@ export async function PATCH(
           // POSTs back with a payment_token.
           const nmiConfigCheck = await loadNmiConfig();
           if (!nmiConfigCheck) {
-            return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+            return NextResponse.json({ error: "Mentom Payments not configured" }, { status: 502 });
           }
 
           const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
@@ -1074,7 +1074,7 @@ export async function PATCH(
           // with a 409 telling the user to refresh.
           if (!pledge.nmiTransactionId) {
             return NextResponse.json(
-              { error: "No PaymentCloud transaction found to refund. Please contact support." },
+              { error: "No Mentom Payments transaction found to refund. Please contact support." },
               { status: 400 }
             );
           }
@@ -1106,7 +1106,7 @@ export async function PATCH(
 
               const nmiConfig = await loadNmiConfig();
               if (!nmiConfig) {
-                aborted = true; abortReason = "PaymentCloud not configured"; abortStatus = 502; return;
+                aborted = true; abortReason = "Mentom Payments not configured"; abortStatus = 502; return;
               }
               const refundResp = await nmiRefund(nmiConfig, fresh.nmiTransactionId, refundAmount);
               if (refundResp.response !== "1") {

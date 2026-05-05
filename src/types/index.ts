@@ -12,9 +12,9 @@ export type ProjectType = "INDIVIDUAL" | "BUSINESS" | "NONPROFIT";
 
 export type DurationType = "FIXED_DAYS" | "END_DATE";
 
-// "NMI" is the internal enum value for PaymentCloud (NMI white-label
+// "NMI" is the internal enum value for Mentom Payments (NMI white-label
 // merchant account). DB columns use the nmi* prefix; the customer-
-// facing brand is "PaymentCloud".
+// facing brand is "Mentom Payments".
 export type PaymentProcessor = "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP" | "NMI";
 
 // Reward types

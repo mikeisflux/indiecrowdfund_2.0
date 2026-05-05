@@ -206,7 +206,7 @@ export async function POST(
             SET metadata = metadata #- '{pendingAdditionalItems,claimedAt}'
             WHERE id = ${pledgeId}
           `.catch(() => null);
-          return NextResponse.json({ error: "PaymentCloud not configured" }, { status: 502 });
+          return NextResponse.json({ error: "Mentom Payments not configured" }, { status: 502 });
         }
 
         const userRecord = await db.user.findFirst({

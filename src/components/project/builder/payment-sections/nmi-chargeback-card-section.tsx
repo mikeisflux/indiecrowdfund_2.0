@@ -192,7 +192,7 @@ export function NmiChargebackCardSection({
           });
           setIsSavingRef.current(false);
           setShowFormRef.current(false);
-          toast.success("Chargeback card saved and validated by PaymentCloud.");
+          toast.success("Chargeback card saved and validated by Mentom Payments.");
         } catch (e) {
           setIsSavingRef.current(false);
           toast.error(e instanceof Error ? e.message : "Failed to save chargeback card.");
@@ -230,9 +230,9 @@ export function NmiChargebackCardSection({
         <h3 className="font-semibold">Chargeback Protection Card</h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        Save a credit card that PaymentCloud can charge to recoup any
+        Save a credit card that Mentom Payments can charge to recoup any
         chargebacks filed against your campaign. The card is tokenized in
-        your browser by PaymentCloud — we never see or store the card number.
+        your browser by Mentom Payments — we never see or store the card number.
         We&apos;ll run a small auth-and-void on it now to confirm it&apos;s valid.
       </p>
 
@@ -390,8 +390,8 @@ export function NmiChargebackCardSection({
 
           {!publicKey && (
             <p className="text-xs text-amber-600">
-              PaymentCloud isn&apos;t configured yet — admins can add the public key in
-              Settings → Payments → PaymentCloud Configuration.
+              Mentom Payments isn&apos;t configured yet — admins can add the public key in
+              Settings → Payments → Mentom Payments Configuration.
             </p>
           )}
 

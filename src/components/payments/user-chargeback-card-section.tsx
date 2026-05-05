@@ -262,7 +262,7 @@ export function UserChargebackCardSection({
           });
           setIsSavingRef.current(false);
           setShowFormRef.current(false);
-          toast.success("Chargeback card saved and validated by PaymentCloud.");
+          toast.success("Chargeback card saved and validated by Mentom Payments.");
         } catch (e) {
           setIsSavingRef.current(false);
           toast.error(e instanceof Error ? e.message : "Failed to save chargeback card.");
@@ -302,7 +302,7 @@ export function UserChargebackCardSection({
       </div>
       <p className="text-sm text-muted-foreground">
         One card on file covers chargeback recoups across all your campaigns
-        and marketplace sales. PaymentCloud tokenizes the card in your
+        and marketplace sales. Mentom Payments tokenizes the card in your
         browser — we never see or store the card number, and we&apos;ll run
         a small auth-and-void to confirm it&apos;s valid before saving.
       </p>
@@ -381,7 +381,7 @@ export function UserChargebackCardSection({
                 Card form failed to load.
               </p>
               <p className="text-xs text-red-600 dark:text-red-400 mb-2">
-                The PaymentCloud card-input iframe didn&apos;t attach. Please refresh the page or disable any browser extensions that block third-party iframes (privacy / cookie blockers, strict tracking protection).
+                The Mentom Payments card-input iframe didn&apos;t attach. Please refresh the page or disable any browser extensions that block third-party iframes (privacy / cookie blockers, strict tracking protection).
               </p>
               <Button
                 type="button"

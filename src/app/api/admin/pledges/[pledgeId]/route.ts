@@ -549,7 +549,7 @@ export async function PATCH(
       if (pledge.paymentProcessor === "NMI") {
         if (!pledge.nmiTransactionId) {
           return NextResponse.json(
-            { error: "Pledge has no PaymentCloud transaction to refund (was the campaign successfully funded?)" },
+            { error: "Pledge has no Mentom Payments transaction to refund (was the campaign successfully funded?)" },
             { status: 400 }
           );
         }
@@ -558,7 +558,7 @@ export async function PATCH(
           const nmiConfig = await loadNmiConfig();
           if (!nmiConfig) {
             return NextResponse.json(
-              { error: "PaymentCloud not configured" },
+              { error: "Mentom Payments not configured" },
               { status: 502 }
             );
           }
@@ -573,7 +573,7 @@ export async function PATCH(
               "PaymentCloud refund declined"
             );
             return NextResponse.json(
-              { error: resp.responsetext || "PaymentCloud refused the refund." },
+              { error: resp.responsetext || "Mentom Payments refused the refund." },
               { status: 502 }
             );
           }
@@ -609,7 +609,7 @@ export async function PATCH(
             "PaymentCloud admin refund error"
           );
           return NextResponse.json(
-            { error: "Failed to process PaymentCloud refund" },
+            { error: "Failed to process Mentom Payments refund" },
             { status: 500 }
           );
         }

@@ -23,7 +23,7 @@ export async function GET() {
     const config = await loadNmiConfig();
     if (!config?.publicKey) {
       return NextResponse.json(
-        { error: "PaymentCloud not configured" },
+        { error: "Mentom Payments not configured" },
         { status: 404 }
       );
     }

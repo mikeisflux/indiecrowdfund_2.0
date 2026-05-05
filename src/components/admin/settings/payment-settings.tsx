@@ -45,7 +45,7 @@ interface PaymentSettingsProps {
     whopCompanyId: string;
     whopWebhookSecret: string;
     whopEnvironment: string;
-    // PaymentCloud settings (NMI white-label, direct-post gateway)
+    // Mentom Payments settings (NMI white-label, direct-post gateway)
     nmiEnabled: boolean;
     nmiSecurityKey: string;
     nmiPublicKey: string;
@@ -479,13 +479,13 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         </CardContent>
       </Card>
 
-      {/* PaymentCloud Settings (NMI white-label) */}
+      {/* Mentom Payments Settings (NMI white-label) */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>PaymentCloud Configuration</CardTitle>
-              <CardDescription>PaymentCloud merchant account on the NMI gateway. Customer Vault tokenization powers all-or-nothing pledges — tokenize at pledge time, charge only on campaign success.</CardDescription>
+              <CardTitle>Mentom Payments Configuration</CardTitle>
+              <CardDescription>Mentom Payments merchant account on the NMI gateway. Customer Vault tokenization powers all-or-nothing pledges — tokenize at pledge time, charge only on campaign success.</CardDescription>
             </div>
             <Badge variant={settings.nmiEnabled ? "default" : "secondary"}>
               {settings.nmiEnabled ? "Enabled" : "Disabled"}
@@ -495,8 +495,8 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label>Enable PaymentCloud</Label>
-              <p className="text-sm text-muted-foreground">Allow creators to use PaymentCloud as their payment processor</p>
+              <Label>Enable Mentom Payments</Label>
+              <p className="text-sm text-muted-foreground">Allow creators to use Mentom Payments as their payment processor</p>
             </div>
             <Switch
               checked={settings.nmiEnabled}
@@ -581,7 +581,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onChange={(e) => onSettingsChange({ ...settings, nmiPerTransactionFee: e.target.value })}
                 placeholder="0.13"
               />
-              <p className="text-xs text-muted-foreground">Flat fee PaymentCloud charges per transaction (USD). Subtracted from creator payouts at fee-calculation time.</p>
+              <p className="text-xs text-muted-foreground">Flat fee Mentom Payments charges per transaction (USD). Subtracted from creator payouts at fee-calculation time.</p>
             </div>
             <div className="space-y-2">
               <Label>Percentage Fee (%)</Label>
@@ -594,17 +594,17 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onChange={(e) => onSettingsChange({ ...settings, nmiPercentageFee: e.target.value })}
                 placeholder="4.5"
               />
-              <p className="text-xs text-muted-foreground">Percentage PaymentCloud charges per transaction. Subtracted from creator payouts at fee-calculation time.</p>
+              <p className="text-xs text-muted-foreground">Percentage Mentom Payments charges per transaction. Subtracted from creator payouts at fee-calculation time.</p>
             </div>
           </div>
 
           <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
-            <p className="font-medium">PaymentCloud Setup:</p>
+            <p className="font-medium">Mentom Payments Setup:</p>
             <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
               <li>Customer Vault tokenization for all-or-nothing campaigns — card tokenized at pledge time, charged only on campaign success</li>
               <li>Collect.js (hosted fields) keeps PAN data off our servers — no PCI scope expansion</li>
               <li>Direct-post API: <code className="bg-muted px-1 rounded">POST /api/transact.php</code> with <code className="bg-muted px-1 rounded">type=sale|auth|capture|void|refund|credit|validate</code></li>
-              <li>PaymentCloud is a white-label of NMI&apos;s gateway, so the protocol matches NMI&apos;s public docs verbatim</li>
+              <li>Mentom Payments is a white-label of NMI&apos;s gateway, so the protocol matches NMI&apos;s public docs verbatim</li>
               <li>Test with sandbox keys first — never use a real Security Key for testing</li>
             </ul>
           </div>
@@ -734,7 +734,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
   );
 }
 
-// Smoke-test the saved PaymentCloud credentials. Hits an admin-only
+// Smoke-test the saved Mentom Payments credentials. Hits an admin-only
 // endpoint that runs a no-op vault add against the gateway — no card
 // data, no transactions — and reports back whether the security key
 // is accepted. Catches typos before a real pledge fails.

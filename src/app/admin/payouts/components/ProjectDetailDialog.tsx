@@ -162,7 +162,7 @@ export function ProjectDetailDialog({
                     const label =
                       proc === "DIVINITYCOIN" ? "DivinityCoin Partner Fee (3%)"
                       : proc === "WHOP" ? "Whop Processing Fee (~3%)"
-                      : proc === "NMI" ? "PaymentCloud Processing Fee (4%)"
+                      : proc === "NMI" ? "Mentom Payments Processing Fee (4%)"
                       : proc === "PAYPAL" ? "PayPal Processing Fee (3.49%)"
                       : "Processor Fee";
                     const perTxnRate =

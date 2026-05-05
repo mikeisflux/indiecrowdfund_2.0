@@ -599,7 +599,7 @@ export async function POST(request: NextRequest) {
 
     if (project.paymentProcessor !== "DIVINITYCOIN" && project.paymentProcessor !== "NMI") {
       return NextResponse.json(
-        { error: "This endpoint only handles DivinityCoin and PaymentCloud project payouts." },
+        { error: "This endpoint only handles DivinityCoin and Mentom Payments project payouts." },
         { status: 400 }
       );
     }

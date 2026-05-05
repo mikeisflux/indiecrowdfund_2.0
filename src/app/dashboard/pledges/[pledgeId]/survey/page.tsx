@@ -347,7 +347,7 @@ export default function BackerSurveyPage() {
       // PaymentCloud (NMI) — Collect.js flow, no Stripe instance needed.
       if (result.paymentMethod === "NMI") {
         if (!result.nmiPublicKey) {
-          throw new Error("PaymentCloud public key missing from response. Please contact support.");
+          throw new Error("Mentom Payments public key missing from response. Please contact support.");
         }
         setNmiPublicKey(result.nmiPublicKey);
         setIsProcessingPayment(false);

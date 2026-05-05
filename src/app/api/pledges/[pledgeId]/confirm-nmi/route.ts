@@ -87,7 +87,7 @@ export async function POST(
     }
     if (pledge.paymentProcessor !== "NMI") {
       return NextResponse.json(
-        { error: "Pledge is not on PaymentCloud" },
+        { error: "Pledge is not on Mentom Payments" },
         { status: 400 }
       );
     }

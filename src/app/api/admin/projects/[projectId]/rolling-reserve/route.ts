@@ -64,7 +64,7 @@ export async function POST(
     }
     if (project.paymentProcessor !== "NMI") {
       return NextResponse.json(
-        { error: "Rolling reserve only applies to PaymentCloud (NMI) projects" },
+        { error: "Rolling reserve only applies to Mentom Payments (NMI) projects" },
         { status: 400 }
       );
     }

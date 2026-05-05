@@ -30,7 +30,7 @@ const sections = [
         subtitle: "Information You Provide",
         items: [
           "Account information: name, email address, password, profile picture",
-          "Payment information: processed securely through PayPal, PaymentCloud, DivinityCoin, or Whop (we never store card numbers)",
+          "Payment information: processed securely through PayPal, Mentom Payments, DivinityCoin, or Whop (we never store card numbers)",
           "Project information: descriptions, images, videos, rewards, and updates you create",
           "Communication data: messages, comments, and support requests",
           "Shipping addresses for reward fulfillment",
@@ -101,7 +101,7 @@ const sections = [
       {
         subtitle: "With Service Providers",
         items: [
-          "Payment processors (PayPal, PaymentCloud, DivinityCoin, Whop) for secure transaction handling",
+          "Payment processors (PayPal, Mentom Payments, DivinityCoin, Whop) for secure transaction handling",
           "Cloud hosting and infrastructure providers",
           "Analytics services to help us understand usage",
           "Email service providers for communications",

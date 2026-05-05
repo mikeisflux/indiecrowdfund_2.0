@@ -585,7 +585,7 @@ export function OrderSummary({
                 : project?.paymentProcessor === "WHOP"
                 ? ", and for Whop to process your payment."
                 : project?.paymentProcessor === "NMI"
-                ? ", and for PaymentCloud to process your payment."
+                ? ", and for Mentom Payments to process your payment."
                 : ", and for PayPal to process your payment."
               }
             </p>

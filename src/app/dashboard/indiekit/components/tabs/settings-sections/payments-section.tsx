@@ -367,7 +367,7 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
             <Cloud className="h-5 w-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm">Payment Processor: PaymentCloud</p>
+            <p className="font-medium text-sm">Payment Processor: Mentom Payments</p>
             <p className="text-xs text-muted-foreground">
               Set at campaign creation — cannot be changed after launch.
             </p>

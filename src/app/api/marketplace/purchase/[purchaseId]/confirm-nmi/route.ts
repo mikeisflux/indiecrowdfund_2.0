@@ -83,7 +83,7 @@ export async function POST(
     }
     if (purchase.paymentProcessor !== "NMI") {
       return NextResponse.json(
-        { error: "Purchase is not on PaymentCloud" },
+        { error: "Purchase is not on Mentom Payments" },
         { status: 400 }
       );
     }

@@ -55,25 +55,25 @@ export const paypalFeeBreakdown = [
 
 export const paymentCloudFeeBreakdown = [
   {
-    title: "PaymentCloud Processing Fee",
+    title: "Mentom Payments Processing Fee",
     rate: "4% + $0.38",
     description: "Per-transaction merchant account rate (incl. Customer Vault)",
     details:
-      "Standard credit/debit card processing fee on the IndieCrowdfund PaymentCloud merchant account ($0.25 gateway + $0.13 Customer Vault per-transaction). Cards are tokenized at pledge time via Collect.js (PAN never touches our servers) and only charged when a campaign hits its goal.",
+      "Standard credit/debit card processing fee on the IndieCrowdfund Mentom Payments merchant account ($0.25 gateway + $0.13 Customer Vault per-transaction). Cards are tokenized at pledge time via Collect.js (PAN never touches our servers) and only charged when a campaign hits its goal.",
   },
   {
     title: "180-Day Rolling Reserve",
     rate: "10%",
     description: "Held in escrow for 180 days as chargeback protection",
     details:
-      "PaymentCloud holds 10% of gross funds (calculated before processing + platform fees) for 180 days on campaigns that raise over $2,500, plus on new or high-risk creators evaluated case-by-case during review. The full reserve is released to your payout balance after the 180-day window if no chargebacks remain. We absorb what we can on smaller campaigns; the rest is held by the processor and released back to you.",
+      "Mentom Payments holds 10% of gross funds (calculated before processing + platform fees) for 180 days on campaigns that raise over $2,500, plus on new or high-risk creators evaluated case-by-case during review. The full reserve is released to your payout balance after the 180-day window if no chargebacks remain. We absorb what we can on smaller campaigns; the rest is held by the processor and released back to you.",
   },
   {
     title: "IndieCrowdfund Platform Fee",
     rate: "3%",
     description: "Charged on successfully funded campaigns only",
     details:
-      "Applied on the remainder after PaymentCloud processing fees are deducted. Covers hosting, tools, and customer support.",
+      "Applied on the remainder after Mentom Payments processing fees are deducted. Covers hosting, tools, and customer support.",
   },
 ];
 
@@ -96,13 +96,13 @@ export const whopFeeBreakdown = [
 
 export const comparisonData = [
   {
-    platform: "IndieCrowdfund (PaymentCloud)",
+    platform: "IndieCrowdfund (Mentom Payments)",
     platformFee: "3%",
     paymentFee: "4% + $0.38/txn",
     total: "~7.5%",
     highlight: true,
   },
-  // Legacy processor rows hidden — PaymentCloud is the only option for new
+  // Legacy processor rows hidden — Mentom Payments is the only option for new
   // campaigns. Existing PayPal/DivinityCoin/Whop campaigns continue to run.
   // {
   //   platform: "IndieCrowdfund (PayPal)",
