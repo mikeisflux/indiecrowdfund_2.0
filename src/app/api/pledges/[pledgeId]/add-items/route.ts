@@ -5,7 +5,7 @@ const pledgesAddItemsLogger = logger.child({ module: "pledges-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, assignBackerNumber } from "@/lib/payments/stripe";
-import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import { getDivinityCoinConfig, chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
 import { loadNmiConfig } from "@/lib/nmi";
 
 export const dynamic = "force-dynamic";
@@ -279,7 +279,109 @@ export async function POST(
       throw lockErr;
     }
 
-    // DivinityCoin: create payment intent via DC's API, then store pending items
+    // DivinityCoin add-items: prefer the off-session saved-card path
+    // when a pm_... is on file (AoN saved-card flow). The cardholder
+    // isn't actively at checkout for an upcharge, so we charge directly
+    // via DC's /charge-saved-payment-method and skip the client-side
+    // confirm step entirely. Falls through to create-payment-intent
+    // when there's no saved card (legacy DC pledges that charged
+    // immediately, KIA pledges, or backers who paid before the saved-
+    // card flow shipped).
+    if (paymentProcessor === "DIVINITYCOIN" && pledge.divinityCoinPaymentMethodId) {
+      // Use a fresh idempotency key per upcharge so the existing
+      // pledgeId-keyed initial charge doesn't dedupe with us. Pattern:
+      // `${pledgeId}-addon-${timestamp}`. Same key on retry of the same
+      // upcharge by including the existing pendingAdditionalItems.id.
+      const upchargeIdempotencyKey = `${pledge.id}-addon-${Date.now()}`;
+      try {
+        const charge = await chargeDcSavedPaymentMethod({
+          platformUserId: session.user.id,
+          paymentMethodId: pledge.divinityCoinPaymentMethodId,
+          amount: Math.round(amount * 100),
+          currency: "usd",
+          pledgeId: upchargeIdempotencyKey,
+          projectId: pledge.projectId,
+          description: "Add-on items for existing pledge",
+        });
+
+        if (!charge.success || charge.status !== "succeeded" || !charge.paymentIntentId) {
+          // Roll back the pendingAdditionalItems reservation we stamped
+          // under the row lock above so the next attempt isn't blocked.
+          await db.pledge.update({
+            where: { id: pledgeId },
+            data: { metadata: { ...currentMetadata } },
+          }).catch(() => null);
+          const reason =
+            charge.error ||
+            (charge.declineCode ? `Card declined: ${charge.declineCode}` : "Charge failed");
+          pledgesAddItemsLogger.warn(
+            { pledgeId, declineCode: charge.declineCode, status: charge.status },
+            "[AddItems DC] Saved-card off-session charge declined"
+          );
+          return NextResponse.json(
+            { error: reason, declineCode: charge.declineCode },
+            { status: 402 }
+          );
+        }
+
+        // Charge succeeded — apply the new addons + bump the pledge
+        // amount in a single transaction. The webhook handler that
+        // normally fans out add-ons fires off the original PaymentIntent
+        // confirmation, so for the off-session path we apply them here.
+        await db.$transaction(async (tx) => {
+          for (const a of addonsWithQuantity) {
+            const reward = await tx.reward.findFirst({
+              where: { id: a.id, projectId: pledge.projectId },
+              select: { amount: true },
+            });
+            const unitAmount = reward ? Number(reward.amount) : 0;
+            await tx.pledgeAddon.create({
+              data: {
+                pledgeId: pledge.id,
+                addonId: a.id,
+                quantity: a.quantity,
+                amount: unitAmount * a.quantity,
+              },
+            });
+          }
+          await tx.pledge.update({
+            where: { id: pledge.id },
+            data: {
+              amount: { increment: amount },
+              addonsAmount: { increment: amount },
+              metadata: { ...currentMetadata },
+            },
+          });
+        });
+
+        pledgesAddItemsLogger.info(
+          { pledgeId, paymentIntentId: charge.paymentIntentId, amount },
+          "[AddItems DC] Saved-card off-session charge succeeded"
+        );
+        return NextResponse.json({
+          ok: true,
+          paymentMethod: "DIVINITYCOIN",
+          type: "off_session_charge",
+          paymentIntentId: charge.paymentIntentId,
+          amount: charge.amount,
+        });
+      } catch (dcError) {
+        // Roll back the reservation marker so the user can retry.
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: { metadata: { ...currentMetadata } },
+        }).catch(() => null);
+        const message = dcError instanceof Error ? dcError.message : "Unknown error";
+        pledgesAddItemsLogger.error({ err: message }, "[AddItems DC saved-card] error:");
+        return NextResponse.json(
+          { error: `Failed to charge saved card: ${message}` },
+          { status: 502 }
+        );
+      }
+    }
+
+    // DivinityCoin (no saved card): legacy on-session flow — create a
+    // PaymentIntent and have the client confirm with Stripe Elements.
     if (paymentProcessor === "DIVINITYCOIN") {
       try {
         const dcConfig = await getDivinityCoinConfig();

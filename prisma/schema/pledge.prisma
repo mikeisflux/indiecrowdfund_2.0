@@ -29,6 +29,15 @@ model Pledge {
 
   // DivinityCoin fields
   divinityCoinPaymentId String?      @unique
+  // AoN saved-card flow (DC partner API 2026-05-05): when an AoN
+  // campaign hasn't hit its goal yet, we save the card via DC's
+  // /create-setup-intent and store the resulting `pm_...` here. The
+  // charge-on-success cron later calls /charge-saved-payment-method
+  // with this pm + pledge.id (idempotency key) to capture the funds.
+  // Null on KIA pledges, on legacy DC pledges that charged immediately,
+  // and on non-DC pledges.
+  divinityCoinSetupIntentId    String?  @unique
+  divinityCoinPaymentMethodId  String?
 
   // PayPal fields
   paypalOrderId            String?      @unique

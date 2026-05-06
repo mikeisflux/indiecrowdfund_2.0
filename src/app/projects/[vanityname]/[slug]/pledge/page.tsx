@@ -169,6 +169,7 @@ export default function PledgePage() {
                 nmiPublicKey={pledge.nmiPublicKey}
                 nmiIsKeepItAll={pledge.nmiIsKeepItAll}
                 nmiModificationId={pledge.nmiModificationId}
+                intentType={pledge.intentType}
               />
             )}
           </div>

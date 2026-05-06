@@ -18,6 +18,12 @@ interface StripePaymentFormProps {
   projectPath?: string;
   buttonLabel?: string;
   returnUrl?: string;
+  // For DC AoN saved-card flow: after stripe.confirmSetup() succeeds,
+  // POST the resulting pm_... + setup intent id to this URL so the
+  // server can persist the pm on the pledge. The cron later charges
+  // it via DC's /charge-saved-payment-method when the campaign funds.
+  // No-op when omitted (kept generic so other processors can reuse).
+  setupConfirmUrl?: string;
 }
 
 // Fire-and-forget diagnostic report to PM2 logs
@@ -78,6 +84,7 @@ export function StripePaymentForm({
   total,
   intentType,
   pledgeId,
+  setupConfirmUrl,
   projectPath,
   buttonLabel,
   returnUrl,
@@ -126,6 +133,7 @@ export function StripePaymentForm({
         `${window.location.origin}${projectPath || ""}/pledge?success=true${pledgeId ? `&pledgeId=${pledgeId}` : ""}`;
 
       let error;
+      let setupIntent: { id?: string; payment_method?: string | null | { id?: string } } | undefined;
 
       if (intentType === "setup_intent") {
         const result = await stripe.confirmSetup({
@@ -136,6 +144,7 @@ export function StripePaymentForm({
           redirect: "if_required",
         });
         error = result.error;
+        setupIntent = result.setupIntent as typeof setupIntent;
       } else {
         const result = await stripe.confirmPayment({
           elements,
@@ -158,6 +167,53 @@ export function StripePaymentForm({
         onError(error.message || "Payment failed");
         setIsProcessing(false);
       } else {
+        // SetupIntent flow (DC AoN saved-card): persist the pm_... back
+        // to our server before reporting success. If the persist fails,
+        // surface it to the user — without the pm on the pledge, the
+        // charge-on-success cron has nothing to charge.
+        if (intentType === "setup_intent" && setupConfirmUrl && setupIntent) {
+          const paymentMethodId =
+            typeof setupIntent.payment_method === "string"
+              ? setupIntent.payment_method
+              : setupIntent.payment_method?.id;
+          if (!paymentMethodId) {
+            reportDiag("setup_no_pm", { pledgeId, setupIntentId: setupIntent.id });
+            onError("Card was authorized but the saved-card token was missing. Please try again.");
+            setIsProcessing(false);
+            return;
+          }
+          try {
+            const r = await apiFetch(setupConfirmUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                setupIntentId: setupIntent.id,
+                paymentMethodId,
+              }),
+            });
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) {
+              reportDiag("setup_persist_failed", {
+                pledgeId,
+                setupIntentId: setupIntent.id,
+                status: r.status,
+                error: data?.error,
+              });
+              onError(data?.error || "Failed to save card. Please try again.");
+              setIsProcessing(false);
+              return;
+            }
+          } catch (persistErr) {
+            reportDiag("setup_persist_exception", {
+              pledgeId,
+              setupIntentId: setupIntent.id,
+              error: persistErr instanceof Error ? persistErr.message : String(persistErr),
+            });
+            onError("Network error saving card. Please try again.");
+            setIsProcessing(false);
+            return;
+          }
+        }
         reportDiag("confirm_success", { pledgeId, intentType, total });
         onSuccess();
       }

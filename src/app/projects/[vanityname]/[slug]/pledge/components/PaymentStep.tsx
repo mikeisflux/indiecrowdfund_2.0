@@ -50,6 +50,10 @@ interface PaymentStepProps {
   nmiPublicKey: string | null;
   nmiIsKeepItAll: boolean;
   nmiModificationId?: string | null;
+  // Drives Stripe-based forms (DC) — "setup_intent" for AoN-unfunded
+  // DC pledges that save the card now and defer the charge to the
+  // success cron, "payment_intent" for KIA / already-funded AoN.
+  intentType: "payment_intent" | "setup_intent";
 }
 
 const isEmailVerificationError = (error: string | null) =>
@@ -127,6 +131,7 @@ export function PaymentStep({
   nmiPublicKey,
   nmiIsKeepItAll,
   nmiModificationId,
+  intentType,
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
@@ -385,6 +390,7 @@ export function PaymentStep({
                 onError={handlePaymentError}
                 displayTotal={displayTotal}
                 isModifyMode={isModifyMode}
+                intentType={intentType}
               />
             ) : (
               <div className="space-y-4">

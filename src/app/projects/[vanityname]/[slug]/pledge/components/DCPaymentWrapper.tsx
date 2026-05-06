@@ -16,6 +16,10 @@ interface DCPaymentWrapperProps {
   onError: (message: string) => void;
   displayTotal: number;
   isModifyMode?: boolean;
+  // "setup_intent" when this is a DC AoN-unfunded pledge that saves the
+  // card now and defers the charge to the cron. "payment_intent" for
+  // KIA / already-funded AoN where the charge happens on confirm.
+  intentType?: "payment_intent" | "setup_intent";
 }
 
 export default function DCPaymentWrapper({
@@ -30,6 +34,7 @@ export default function DCPaymentWrapper({
   onError,
   displayTotal,
   isModifyMode,
+  intentType = "payment_intent",
 }: DCPaymentWrapperProps) {
   return (
     <Elements
@@ -62,10 +67,21 @@ export default function DCPaymentWrapper({
         isProcessing={isProcessing}
         setIsProcessing={setIsProcessing}
         total={displayTotal}
-        intentType="payment_intent"
+        intentType={intentType}
         pledgeId={pledgeId}
         projectPath={projectPath}
-        buttonLabel={isModifyMode ? `Pay Additional $${displayTotal.toFixed(2)}` : undefined}
+        buttonLabel={
+          isModifyMode
+            ? `Pay Additional $${displayTotal.toFixed(2)}`
+            : intentType === "setup_intent"
+              ? `Pledge $${displayTotal.toFixed(2)}`
+              : undefined
+        }
+        setupConfirmUrl={
+          intentType === "setup_intent" && pledgeId
+            ? `/api/pledges/${encodeURIComponent(pledgeId)}/confirm-dc-setup`
+            : undefined
+        }
       />
     </Elements>
   );

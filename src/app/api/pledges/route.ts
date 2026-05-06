@@ -304,6 +304,15 @@ export async function POST(req: NextRequest) {
           shippingCountry: data.shippingCountry,
         }, "Creating new DivinityCoin pledge");
 
+        // AoN saved-card mode: when the campaign is All-or-Nothing AND
+        // the goal hasn't been met yet, we save the card via DC's
+        // /create-setup-intent and defer the actual charge to the
+        // process-funded-campaigns cron. KIA campaigns and AoN campaigns
+        // already at goal still charge immediately via /create-payment-intent.
+        const isKeepItAll = project.campaignType === "KEEP_IT_ALL";
+        const isAlreadyFunded = Number(project.currentAmount) >= Number(project.goalAmount);
+        const useSavedCardFlow = !isKeepItAll && !isAlreadyFunded;
+
         const pledge = await db.pledge.create({
           data: {
             userId: session.user.id,
@@ -315,7 +324,10 @@ export async function POST(req: NextRequest) {
             shippingAmount,
             status: "PENDING",
             paymentProcessor: "DIVINITYCOIN",
-            chargedImmediately: true,
+            // chargedImmediately reflects whether this pledge will charge
+            // at confirm time (KIA / already-funded AoN) or wait for the
+            // success cron (AoN saved-card flow).
+            chargedImmediately: !useSavedCardFlow,
             shippingAddress: resolvedShippingAddress
               ? (resolvedShippingAddress as unknown as Record<string, unknown>)
               : undefined,
@@ -343,15 +355,16 @@ export async function POST(req: NextRequest) {
 
           const dcAbortController = new AbortController();
           const dcTimeout = setTimeout(() => dcAbortController.abort(), 15000); // 15s timeout
-          let dcResponse: Response;
-          try {
-            dcResponse = await fetch(`${dcConfig.baseUrl}?action=create-payment-intent`, {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${dcConfig.apiKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
+          // Branch the DC API call: SetupIntent for AoN-unfunded, regular
+          // PaymentIntent for KIA / already-funded AoN.
+          const action = useSavedCardFlow ? "create-setup-intent" : "create-payment-intent";
+          const reqBody: Record<string, unknown> = useSavedCardFlow
+            ? {
+                platformUserId: session.user.id,
+                email: userRecord?.email || "",
+                name: userRecord?.name || "",
+              }
+            : {
                 amount: Math.round(data.amount * 100),
                 currency: "usd",
                 platformUserId: session.user.id,
@@ -359,7 +372,16 @@ export async function POST(req: NextRequest) {
                 name: userRecord?.name || "",
                 pledgeId: pledge.id,
                 projectId: data.projectId,
-              }),
+              };
+          let dcResponse: Response;
+          try {
+            dcResponse = await fetch(`${dcConfig.baseUrl}?action=${action}`, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${dcConfig.apiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(reqBody),
               signal: dcAbortController.signal,
             });
           } finally {
@@ -368,13 +390,33 @@ export async function POST(req: NextRequest) {
 
           const dcResult = await dcResponse.json();
           if (!dcResponse.ok || !dcResult.success) {
-            pledgeLogger.error({ correlationId, pledgeId: pledge.id, dcResult }, "Failed to create DivinityCoin payment intent");
+            pledgeLogger.error({ correlationId, pledgeId: pledge.id, dcResult }, "Failed to create DivinityCoin intent");
             await db.pledgeAddon.deleteMany({ where: { pledgeId: pledge.id } });
             await db.pledge.deleteMany({ where: { id: pledge.id } });
             return NextResponse.json(
               { error: dcResult.error || "Failed to initialize payment" },
               { status: 502 }
             );
+          }
+
+          if (useSavedCardFlow) {
+            // Save the SetupIntent id on the pledge. The pm_... id will
+            // be persisted by /api/pledges/[id]/confirm-dc-setup once the
+            // browser finishes Stripe Elements confirmation.
+            await db.pledge.update({
+              where: { id: pledge.id },
+              data: { divinityCoinSetupIntentId: dcResult.setupIntentId },
+            });
+            metrics.pledgesCreated.inc({ status: "pending", processor: "divinitycoin" });
+            return NextResponse.json({
+              paymentMethod: "DIVINITYCOIN",
+              type: "setup_intent",
+              clientSecret: dcResult.clientSecret,
+              publishableKey: dcResult.publishableKey,
+              setupIntentId: dcResult.setupIntentId,
+              pledgeId: pledge.id,
+              chargedImmediately: false,
+            });
           }
 
           await db.pledge.update({

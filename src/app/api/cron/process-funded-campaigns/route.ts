@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import { loadNmiConfig, saleByVaultToken } from "@/lib/nmi";
+import { chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
 import { evaluateAutoTrigger } from "@/lib/payments/rolling-reserve";
 
 // After NMI pledges have been charged for a funded project, evaluate
@@ -227,6 +228,151 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
   return result;
 }
 
+// Charge all PENDING DivinityCoin pledges with a saved card (pm_...)
+// for a project that has hit its goal. Mirrors captureNmiPendingPledges:
+// CAS-claim chargedImmediately false→true while still PENDING, run
+// /charge-saved-payment-method off-session, then COMPLETE on success
+// or roll back the claim + schedule a backoff retry on decline.
+//
+// Idempotency is keyed on pledge.id (also passed to DC as `pledgeId`),
+// so a duplicate run for the same pledge returns the original
+// PaymentIntent rather than double-charging.
+async function captureDcPendingPledges(projectId: string): Promise<{
+  total: number;
+  successful: number;
+  failed: number;
+}> {
+  const result = { total: 0, successful: 0, failed: 0 };
+  const pledges = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      paymentProcessor: "DIVINITYCOIN",
+      chargedImmediately: false,
+      deletedAt: null,
+      NOT: { divinityCoinPaymentMethodId: null },
+      OR: [
+        { nextRetryAt: null },
+        { nextRetryAt: { lte: new Date() } },
+      ],
+    },
+    select: {
+      id: true,
+      userId: true,
+      amount: true,
+      retryCount: true,
+      divinityCoinPaymentMethodId: true,
+      project: { select: { title: true } },
+    },
+  });
+
+  const MAX_DC_RETRIES = 5;
+  const BACKOFF_HOURS = [1, 6, 24, 72, 168];
+
+  result.total = pledges.length;
+  for (const p of pledges) {
+    if (!p.divinityCoinPaymentMethodId) continue;
+
+    // Atomic claim — concurrent cron runs see chargedImmediately=true
+    // and skip without re-charging.
+    const claimed = await db.pledge.updateMany({
+      where: {
+        id: p.id,
+        status: "PENDING",
+        chargedImmediately: false,
+        divinityCoinPaymentId: null,
+        deletedAt: null,
+      },
+      data: { chargedImmediately: true },
+    });
+    if (claimed.count === 0) {
+      cronProcessFundedCampaignsLogger.info(
+        { pledgeId: p.id },
+        "[Cron] DC pledge already claimed by a concurrent worker; skipping"
+      );
+      continue;
+    }
+
+    try {
+      const charge = await chargeDcSavedPaymentMethod({
+        platformUserId: p.userId,
+        paymentMethodId: p.divinityCoinPaymentMethodId,
+        amount: Math.round(Number(p.amount) * 100),
+        currency: "usd",
+        pledgeId: p.id,
+        projectId,
+        description: `Pledge to ${p.project.title}`,
+      });
+      if (charge.success && charge.status === "succeeded" && charge.paymentIntentId) {
+        await db.pledge.update({
+          where: { id: p.id },
+          data: {
+            status: "COMPLETED",
+            divinityCoinPaymentId: charge.paymentIntentId,
+            retryCount: 0,
+            nextRetryAt: null,
+          },
+        });
+        result.successful++;
+      } else {
+        const newRetryCount = (p.retryCount || 0) + 1;
+        const reason =
+          charge.error ||
+          (charge.declineCode ? `Card declined: ${charge.declineCode}` : "DivinityCoin declined");
+        if (newRetryCount >= MAX_DC_RETRIES) {
+          await db.pledge.update({
+            where: { id: p.id },
+            data: {
+              status: "FAILED",
+              chargedImmediately: false,
+              retryCount: newRetryCount,
+              nextRetryAt: null,
+              lastFailureReason: `${reason} (after ${newRetryCount} attempts)`,
+            },
+          });
+        } else {
+          const backoffHours = BACKOFF_HOURS[Math.min(newRetryCount - 1, BACKOFF_HOURS.length - 1)];
+          const nextRetryAt = new Date(Date.now() + backoffHours * 60 * 60 * 1000);
+          await db.pledge.update({
+            where: { id: p.id },
+            data: {
+              chargedImmediately: false,
+              retryCount: newRetryCount,
+              nextRetryAt,
+              lastFailureReason: reason,
+            },
+          });
+        }
+        result.failed++;
+      }
+    } catch (err) {
+      cronProcessFundedCampaignsLogger.error(
+        { err: err instanceof Error ? err.message : String(err), pledgeId: p.id },
+        "[Cron] DC charge error"
+      );
+      // Network / HTTP error: uncertain whether DC captured. Don't mark
+      // FAILED (idempotency on pledgeId means a retry returns the same
+      // PI if it succeeded). Roll the claim back and schedule a retry.
+      const newRetryCount = (p.retryCount || 0) + 1;
+      const backoffHours =
+        BACKOFF_HOURS[Math.min(newRetryCount - 1, BACKOFF_HOURS.length - 1)];
+      const nextRetryAt = new Date(Date.now() + backoffHours * 60 * 60 * 1000);
+      await db.pledge
+        .updateMany({
+          where: { id: p.id, status: "PENDING", divinityCoinPaymentId: null },
+          data: {
+            chargedImmediately: false,
+            retryCount: newRetryCount,
+            nextRetryAt,
+          },
+        })
+        .catch(() => null);
+      result.failed++;
+    }
+  }
+  return result;
+}
+
 /**
  * Sync payment methods from Stripe for pledges that have SetupIntents
  * but are missing payment method IDs (e.g., webhook failed)
@@ -355,12 +501,14 @@ export async function GET(req: NextRequest) {
               where: {
                 status: "PENDING",
                 chargedImmediately: false,
-                // Either a Stripe payment method (legacy/Stripe campaigns)
-                // or a PaymentCloud vault id (NMI campaigns) — anything we
+                // Either a Stripe payment method (legacy/Stripe campaigns),
+                // a PaymentCloud vault id (NMI campaigns), or a DC saved
+                // pm (DivinityCoin AoN saved-card flow) — anything we
                 // can actually charge.
                 OR: [
                   { NOT: { stripePaymentMethodId: null } },
                   { NOT: { nmiCustomerVaultId: null } },
+                  { NOT: { divinityCoinPaymentMethodId: null } },
                 ],
               },
             },
@@ -432,6 +580,7 @@ export async function GET(req: NextRequest) {
                 OR: [
                   { NOT: { stripePaymentMethodId: null } },
                   { NOT: { nmiCustomerVaultId: null } },
+                  { NOT: { divinityCoinPaymentMethodId: null } },
                 ],
               },
             },
@@ -465,10 +614,21 @@ export async function GET(req: NextRequest) {
           return { total: 0, successful: 0, failed: 0 };
         });
 
+        // Charge any PENDING DivinityCoin saved cards (pm_...). DC AoN
+        // campaigns save the card via SetupIntent at pledge time and
+        // defer the off-session capture to here, mirroring the NMI flow.
+        const dcResults = await captureDcPendingPledges(project.id).catch((err) => {
+          cronProcessFundedCampaignsLogger.error(
+            { err: String(err) },
+            `[Cron] DC capture error for project ${project.id}`
+          );
+          return { total: 0, successful: 0, failed: 0 };
+        });
+
         const pledgeResults = {
-          total: stripeResults.total + nmiResults.total,
-          successful: stripeResults.successful + nmiResults.successful,
-          failed: stripeResults.failed + nmiResults.failed,
+          total: stripeResults.total + nmiResults.total + dcResults.total,
+          successful: stripeResults.successful + nmiResults.successful + dcResults.successful,
+          failed: stripeResults.failed + nmiResults.failed + dcResults.failed,
         };
 
         results.processed.push({
