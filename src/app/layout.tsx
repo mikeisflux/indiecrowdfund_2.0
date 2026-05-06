@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/site-header";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { ScreenReaderAnnouncer } from "@/components/ui/screen-reader-announcer";
 import { ErrorReporter } from "@/components/error-reporter";
+import { SupportChatWidget } from "@/components/support-chat-widget";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -281,6 +282,7 @@ export default async function RootLayout({
             </ScreenReaderAnnouncer>
             <Toaster />
             <ErrorReporter />
+            <SupportChatWidget />
           </ThemeProvider>
         </AuthProvider>
       </body>
