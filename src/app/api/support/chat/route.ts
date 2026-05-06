@@ -117,17 +117,11 @@ ${kbContext}
 
 ${sessionContext}`;
 
-interface ChatTurnContent {
-  type: "text" | "tool_use" | "tool_result";
-  text?: string;
-  // For tool_use:
-  id?: string;
-  name?: string;
-  input?: Record<string, unknown>;
-  // For tool_result:
-  tool_use_id?: string;
-  content?: string;
-}
+// Anthropic SDK input/output type aliases — used to keep
+// apiMessages typed without leaking the SDK's deeply-nested
+// ContentBlockParam union all over the file.
+type AssistantContent = Anthropic.Messages.ContentBlock[];
+type UserContent = Anthropic.Messages.ToolResultBlockParam[];
 
 interface ToolExecutionRecord {
   name: string;
@@ -225,14 +219,21 @@ export async function POST(req: NextRequest) {
       }
 
       // Append assistant turn (text + tool_use) verbatim so Claude sees
-      // its own decision when we feed back the tool_result.
+      // its own decision when we feed back the tool_result. The SDK's
+      // response ContentBlock[] is structurally compatible with the
+      // input ContentBlockParam[] union (text + tool_use shapes), so
+      // we cast through unknown rather than rebuilding each block.
       apiMessages.push({
         role: "assistant",
-        content: resp.content as ChatTurnContent[],
+        content: resp.content as unknown as AssistantContent,
       });
 
-      // Execute each tool call.
-      const toolResults: ChatTurnContent[] = [];
+      // Execute each tool call. Build typed tool_result blocks rather
+      // than the loosely-typed scratch shape we used initially —
+      // Anthropic's union requires `tool_use_id` to be a non-undefined
+      // string, which doesn't match the optional fields we'd otherwise
+      // need for assistant blocks.
+      const toolResults: UserContent = [];
       for (const tu of toolUses) {
         if (tu.type !== "tool_use") continue;
         const input = tu.input as Record<string, unknown>;
@@ -286,7 +287,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      apiMessages.push({ role: "user", content: toolResults as ChatTurnContent[] });
+      apiMessages.push({ role: "user", content: toolResults });
     }
 
     if (!finalText) {
