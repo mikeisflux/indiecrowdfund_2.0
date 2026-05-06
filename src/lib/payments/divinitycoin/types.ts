@@ -79,3 +79,67 @@ export interface PaymentEventResponse {
   message?: string;
   error?: string;
 }
+
+// ============================================================
+// Saved cards / off-session charges (DC partner API 2026-05-05)
+// ============================================================
+
+// One saved card returned by /list-payment-methods. DC's full shape
+// includes more fields (customer, billing details, etc.) — we only
+// type the ones the UI consumes.
+export interface PaymentMethodSummary {
+  id: string;             // pm_... — the value to pass to charge / detach
+  brand: string;          // "visa" | "mastercard" | "amex" | "discover" | …
+  last4: string;
+  expMonth: number;
+  expYear: number;
+}
+
+// /create-setup-intent success payload, normalized for our callers.
+export interface CreateSetupIntentResult {
+  clientSecret: string;   // confirm with stripe.confirmCardSetup() in the browser
+  setupIntentId: string;  // seti_...
+  publishableKey: string; // DC's Stripe pk_live_... — point Stripe Elements at this
+  customerId: string | null;
+}
+
+// /list-payment-methods normalized result. paymentMethods is always an
+// array (empty when the user has no cards on file) so callers can map
+// without null-checking.
+export type ListPaymentMethodsResult =
+  | { success: true; paymentMethods: PaymentMethodSummary[] }
+  | { success: false; paymentMethods: PaymentMethodSummary[]; error?: string };
+
+// /detach-payment-method normalized result.
+export type DetachPaymentMethodResult =
+  | { success: true }
+  | { success: false; error?: string };
+
+// /charge-saved-payment-method input — `pledgeId` doubles as the
+// idempotency key (partner-side stable id), so retries are safe.
+export interface ChargeSavedPaymentMethodInput {
+  platformUserId: string;
+  paymentMethodId: string;     // pm_... from list-payment-methods
+  amount: number;              // cents
+  pledgeId: string;            // local id; idempotency key on DC's side
+  currency?: string;           // default "usd"
+  projectId?: string;          // links the charge to the campaign on DC's reporting
+  description?: string;        // shows up on DC's dashboard
+  statement_descriptor?: string; // ≤22 chars; shows on the cardholder's statement
+}
+
+// /charge-saved-payment-method normalized result. On success, status is
+// typically "succeeded" and `paymentIntentId` is set. On a soft decline
+// (DC returns HTTP 402) `success` is false, `code`/`declineCode` carry
+// the gateway reason, and `clientSecret` lets a frontend retry with
+// 3DS / new card if appropriate.
+export interface ChargeSavedPaymentMethodResult {
+  success: boolean;
+  status: string;             // "succeeded" | "requires_payment_method" | "requires_action" | …
+  paymentIntentId?: string;   // pi_...
+  amount?: number;            // cents charged
+  code?: string;              // e.g. "card_declined"
+  declineCode?: string;       // e.g. "insufficient_funds", "do_not_honor"
+  clientSecret?: string;      // for frontend recovery on 3DS / requires_action
+  error?: string;             // cardholder-friendly message
+}
