@@ -103,6 +103,18 @@ export function ErrorReporter() {
       /TypeError: Failed to fetch/,
       /TypeError: NetworkError/,
       /Load failed/,
+      // Zotero Connector + similar research-tool extensions throw
+      // "Failed to send message X to background page" when their
+      // background service-worker dies and the content-script can't
+      // reach it. Same root cause as the Firefox/Chrome ext noise
+      // above (other people's code, not ours).
+      /Zotero Connector/,
+      /Failed to send message .* to background page/,
+      // MetaMask + other crypto wallet extensions inject providers
+      // that throw on every page load when the wallet is locked or
+      // the user disabled it. Not our bug.
+      /MetaMask/i,
+      /Wallet not initialized/,
     ];
 
     // Paths that automated scanners / ad networks / browser feature-detection
