@@ -77,7 +77,7 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
     title: "Digital rewards & downloads",
     tags: ["digital", "download", "pdf", "ebook", "music", "movie", "stream", "library"],
     content:
-      "Digital rewards (PDFs, music, movies, etc.) are delivered through your Digital Library after a campaign funds and the creator releases the files. You'll receive a notification email when files are ready. Find them at /dashboard/backer?tab=downloads (crowdfunding-reward digital files) or ?tab=digital-library (marketplace-purchased books). Page-flip reader and streaming work directly in the browser — no download required for many file types.",
+      "Digital rewards (PDFs, music, movies, etc.) are delivered through your backer dashboard's Downloads tab after a campaign funds and the creator releases the files. You'll receive a notification email when files are ready. The Downloads tab at /dashboard/backer?tab=downloads is the single canonical destination for ALL digital content — both crowdfunding rewards and marketplace book purchases land there. Page-flip reader and streaming work directly in the browser — no download required for many file types.",
     link: "/dashboard/backer?tab=downloads",
   },
 

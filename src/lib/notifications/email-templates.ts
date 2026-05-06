@@ -280,7 +280,10 @@ export async function sendMarketplacePurchaseEmail(
   paymentMethod: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP",
   coverImageUrl?: string | null
 ) {
-  const libraryUrl = `${APP_URL}/dashboard/backer?tab=digital-library`;
+  // Single canonical destination for ALL digital content (crowdfunding
+  // rewards + marketplace purchases): the Downloads tab. The tab pulls
+  // from /api/backer/digital-library which merges both sources.
+  const libraryUrl = `${APP_URL}/dashboard/backer?tab=downloads`;
 
   const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : "Card";
   const amountFormatted = paymentMethod === "DIVINITYCOIN"

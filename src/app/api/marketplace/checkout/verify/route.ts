@@ -127,7 +127,7 @@ export async function GET(request: Request) {
       success: true,
       bookTitle: purchase.book.title,
       message: "Purchase completed successfully",
-      redirectUrl: "/dashboard/backer?tab=digital-library",
+      redirectUrl: "/dashboard/backer?tab=downloads",
     });
   } catch (error) {
     marketplaceCheckoutVerifyLogger.error({ err: String(error) }, "Error verifying checkout session:");

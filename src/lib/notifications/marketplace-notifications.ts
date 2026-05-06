@@ -48,7 +48,12 @@ export async function notifyMarketplacePurchase(
 
   if (!purchase || !purchase.buyer.email) return;
 
-  const libraryUrl = `/dashboard/backer?tab=digital-library`;
+  // Single canonical destination for ALL digital content (crowdfunding
+  // rewards + marketplace purchases): the Downloads tab. The Downloads
+  // tab fetches from /api/backer/digital-library which unifies both
+  // sources so the buyer sees their book here regardless of how they
+  // acquired it.
+  const libraryUrl = `/dashboard/backer?tab=downloads`;
 
   // Create in-app notification for buyer
   await createNotification({

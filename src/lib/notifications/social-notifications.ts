@@ -29,7 +29,7 @@ export async function notifyMessageReceived(
     type: "MESSAGE_RECEIVED",
     title: "New Message",
     message: `${senderName} sent you a message about "${project.title}": ${subject || "No subject"}`,
-    actionUrl: `/messages`,
+    actionUrl: `/dashboard/messages`,
     projectId,
     senderId,
   });

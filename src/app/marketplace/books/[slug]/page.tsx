@@ -790,7 +790,7 @@ export default function BookDetailPage() {
                           <CheckCircle className="w-5 h-5 text-emerald-400" />
                           <span className="text-sm text-emerald-300">You own this book</span>
                         </div>
-                        <Link href="/dashboard/backer?tab=digital-library">
+                        <Link href="/dashboard/backer?tab=downloads">
                           <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
                             <Library className="w-4 h-4 mr-2" />
                             Read in Digital Library
@@ -1058,7 +1058,7 @@ export default function BookDetailPage() {
             </DialogDescription>
           </div>
           <div className="grid gap-3">
-            <Link href="/dashboard/backer?tab=digital-library">
+            <Link href="/dashboard/backer?tab=downloads">
               <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
                 <Library className="w-4 h-4 mr-2" />
                 Go Read It Now

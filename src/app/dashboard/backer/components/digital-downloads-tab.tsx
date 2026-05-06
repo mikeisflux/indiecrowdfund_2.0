@@ -2,6 +2,8 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,8 +17,22 @@ import {
   FolderOpen,
   ChevronDown,
   ChevronRight,
+  BookOpen,
+  Library,
 } from "lucide-react";
 import { DownloadCard } from "./download-card";
+
+// Marketplace book item shape from /api/backer/digital-library?source=marketplace.
+// Mirrors LibraryItem but typed locally so we don't import from the
+// digital-library tab and pull in its full reader dependencies.
+interface MarketplaceBookItem {
+  id: string;
+  title: string;
+  coverImageUrl: string | null;
+  totalPages: number | null;
+  sourceId: string;
+  createdAt: string;
+}
 
 interface DigitalFile {
   id: string;
@@ -55,6 +71,12 @@ interface DigitalFilesData {
 
 export function DigitalDownloadsTab() {
   const [data, setData] = useState<DigitalFilesData | null>(null);
+  // Marketplace book purchases — rendered as a separate section above
+  // the crowdfunding files list so backers landing here from a
+  // marketplace purchase email actually see their book. The full
+  // book-reader UX still lives on the Digital Library tab; clicking
+  // a cover here jumps there with the book pre-loaded.
+  const [marketplaceBooks, setMarketplaceBooks] = useState<MarketplaceBookItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
@@ -62,10 +84,40 @@ export function DigitalDownloadsTab() {
 
   useEffect(() => {
     fetchDigitalFiles();
+    fetchMarketplaceBooks();
     // Trigger entrance animation
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  const fetchMarketplaceBooks = async () => {
+    try {
+      const response = await fetch("/api/backer/digital-library?source=marketplace");
+      if (!response.ok) return;
+      const payload = await response.json();
+      const items: MarketplaceBookItem[] = (payload.items || []).map(
+        (it: {
+          id: string;
+          title: string;
+          coverImageUrl: string | null;
+          totalPages: number | null;
+          sourceId: string;
+          createdAt: string;
+        }) => ({
+          id: it.id,
+          title: it.title,
+          coverImageUrl: it.coverImageUrl,
+          totalPages: it.totalPages,
+          sourceId: it.sourceId,
+          createdAt: it.createdAt,
+        })
+      );
+      setMarketplaceBooks(items);
+    } catch {
+      // Soft-fail: marketplace section just won't render. The
+      // crowdfunding-rewards section still works on its own.
+    }
+  };
 
   const fetchDigitalFiles = async () => {
     try {
@@ -165,8 +217,13 @@ export function DigitalDownloadsTab() {
     );
   }
 
-  // Empty state
-  if (!data || data.totalFiles === 0) {
+  const hasCrowdfundingFiles = !!data && data.totalFiles > 0;
+  const hasMarketplaceBooks = marketplaceBooks.length > 0;
+
+  // Empty state — only show when BOTH sections are empty. A backer
+  // arriving from a marketplace purchase email shouldn't see the
+  // empty banner just because they have no crowdfunding rewards.
+  if (!hasCrowdfundingFiles && !hasMarketplaceBooks) {
     return (
       <Card className={cn(
         "glass-card transition-all duration-500",
@@ -181,8 +238,8 @@ export function DigitalDownloadsTab() {
           </div>
           <h3 className="text-xl font-semibold mb-2">No digital downloads yet</h3>
           <p className="text-muted-foreground max-w-md mx-auto">
-            When creators share digital rewards like ebooks, music, or exclusive content,
-            they&apos;ll appear here for you to download.
+            When creators share digital rewards (ebooks, music, exclusive content) or you
+            purchase a book from the marketplace, they&apos;ll appear here.
           </p>
         </CardContent>
       </Card>
@@ -194,6 +251,68 @@ export function DigitalDownloadsTab() {
       "space-y-6 transition-all duration-500",
       isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
     )}>
+      {/* Marketplace Books — rendered first so backers arriving from a
+          marketplace purchase email see their book immediately, in a
+          visual book-shelf format. The full reader (with progress
+          tracking, page-flip, offline cache) lives on the Digital
+          Library tab; clicking a cover here jumps there. */}
+      {hasMarketplaceBooks && (
+        <Card className="glass-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Library className="h-5 w-5 text-amber-500" />
+              Marketplace Books
+              <Badge variant="secondary" className="ml-2 text-xs">{marketplaceBooks.length}</Badge>
+            </CardTitle>
+            <Link
+              href="/dashboard/backer?tab=digital-library"
+              className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            >
+              Open in Library
+              <ChevronRight className="h-3 w-3" />
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {marketplaceBooks.map((book) => (
+                <Link
+                  key={book.id}
+                  href="/dashboard/backer?tab=digital-library"
+                  className="group block"
+                  title={book.title}
+                >
+                  <div className="aspect-[2/3] relative rounded-md overflow-hidden bg-muted border shadow-sm group-hover:shadow-md group-hover:scale-[1.02] transition-all">
+                    {book.coverImageUrl ? (
+                      <Image
+                        src={book.coverImageUrl}
+                        alt={book.title}
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-3 text-center">
+                        <BookOpen className="h-8 w-8 text-amber-500 mb-2" />
+                        <p className="text-xs font-medium text-foreground line-clamp-3">{book.title}</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs font-medium line-clamp-2">{book.title}</p>
+                  {book.totalPages != null && (
+                    <p className="text-[10px] text-muted-foreground">{book.totalPages} pages</p>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* If only marketplace books exist (no crowdfunding files), skip
+          the rest of the page. Otherwise render the existing crowdfunding
+          rewards section (stats + per-project file list) below. */}
+      {!hasCrowdfundingFiles ? null : (
+        <>
       {/* Stats Header */}
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <Card className="glass-card glass-card-hover group relative overflow-hidden">
@@ -359,6 +478,8 @@ export function DigitalDownloadsTab() {
               ))}
           </CardContent>
         </Card>
+      )}
+        </>
       )}
     </div>
   );
