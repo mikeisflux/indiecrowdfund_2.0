@@ -513,6 +513,30 @@ export default function EmailPage() {
         </Alert>
       )}
 
+      {/* IndieKit Outbound monitor — every creator-sent email from
+          campaigns, inbox replies, and scheduled sends. Separate from
+          the admin mailboxes below because these aren't admin-owned
+          emails; they're a feed of what creators are sending out. */}
+      <Card className="mb-4 border-emerald-200 dark:border-emerald-900">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3">
+            <Mail className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">IndieKit Outbound</p>
+              <p className="text-xs text-muted-foreground">
+                Monitor every email creators send through the platform — campaigns,
+                inbox replies, scheduled sends.
+              </p>
+            </div>
+            <Link href="/admin/email/creator-sent">
+              <Button size="sm" variant="default">
+                Open monitor
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Mailboxes - Horizontal Row */}
       <Card className="mb-4">
         <CardContent className="p-3">

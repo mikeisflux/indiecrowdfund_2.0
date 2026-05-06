@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
           <h2 style="color: #333; margin-bottom: 20px;">${escapeHtmlForEmail(subject.trim())}</h2>
 
           <div style="padding: 20px 0;">
-            ${escapeHtmlForEmail(content.trim()).replace(/\n/g, '<br>')}
+            ${content.trim()}
           </div>
 
           <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: center; color: #999; font-size: 12px;">

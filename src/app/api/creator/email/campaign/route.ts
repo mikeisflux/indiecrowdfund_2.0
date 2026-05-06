@@ -159,8 +159,15 @@ export async function POST(request: NextRequest) {
       projectUrl = `${appUrl}/projects/${project.creator?.vanityUrl || "creator"}/${project.slug}`;
     }
 
+    // Personalize template variables. The body itself is already
+    // trusted HTML from the IndieKit TipTap editor (sanitized at
+    // editor-time and stored as-is in the DB), so we DON'T escape the
+    // body — doing so renders the recipient's email as visible
+    // <h2>Tag soup</h2> markup. Only the substituted values
+    // (projectName, fromName, projectUrl) come from arbitrary user
+    // input and need escaping before they're spliced into the body.
     const resolveVars = (text: string) =>
-      escapeHtml(text)
+      text
         .replace(/\{\{PROJECT_NAME\}\}/g, escapeHtml(projectName))
         .replace(/\{\{CREATOR_NAME\}\}/g, escapeHtml(fromName))
         .replace(/\{\{PROJECT_URL\}\}/g, escapeHtml(projectUrl));
