@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
+import { SocialShareButtons } from "@/components/social-share-buttons";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -280,6 +281,12 @@ export function SiteHeader() {
             />
             {suggestionsDropdown}
           </form>
+          {/* Social share — opens each platform's share-intent URL in
+              a popup, pre-populated with the canonical site URL. Each
+              platform handles its own auth. Hidden on small screens
+              to keep the header tidy; the burger menu surfaces them
+              on mobile via MobileProfileLinks. */}
+          <SocialShareButtons className="hidden lg:flex" />
           <ThemeToggle />
           <div className="hidden sm:block">
             <UserProfileDropdown />
@@ -327,6 +334,10 @@ export function SiteHeader() {
                 </div>
                 <div className="border-t pt-4 mt-2">
                   <MobileProfileLinks />
+                </div>
+                <div className="border-t pt-4 mt-2">
+                  <p className="text-xs text-muted-foreground mb-2">Share IndieCrowdfund</p>
+                  <SocialShareButtons />
                 </div>
               </nav>
             </SheetContent>
