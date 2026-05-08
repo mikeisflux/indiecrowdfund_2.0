@@ -49,231 +49,231 @@ const tabs = [
 const overviewSteps: Step[] = [
   {
     title: 'What is the Digital Marketplace?',
-    description: 'The Digital Marketplace is IndieCrowdfund\'s storefront for selling completed digital content directly to readers. Unlike crowdfunding where you\'re raising funds for a future project, the marketplace lets you sell finished works immediately with instant delivery to buyers.',
-    tip: 'Perfect for completed books, sequels, one-shots, art collections, and any digital content that\'s ready for purchase.',
+    description: 'A store on IndieCrowdfund where you sell finished digital books straight to readers. No funding goal. No campaign timer. You upload a finished file and people can buy it right now.',
+    tip: 'Best for: completed books, sequels, one-shots, art collections — anything you would not run a Kickstarter for.',
   },
   {
-    title: 'Why Sell on the Marketplace?',
-    description: 'The marketplace provides an additional revenue stream alongside crowdfunding. You can sell backlist titles, release new works between campaigns, or offer digital versions of crowdfunded projects. Your existing IndieCrowdfund audience already trusts the platform.',
-    example: 'A creator might crowdfund Vol. 1, then sell it on the marketplace while running a campaign for Vol. 2.',
+    title: 'Why sell here?',
+    description: 'The Marketplace is extra income on top of your crowdfunding work. Sell your old books while you make new ones. Sell digital versions of campaigns you already shipped. Your existing IndieCrowdfund audience already knows and trusts the site.',
+    example: 'Crowdfund Vol. 2 while Vol. 1 sits on the Marketplace bringing in steady sales.',
   },
   {
-    title: 'What Can You Sell?',
-    description: 'Currently, the marketplace supports digital books in PDF format. This includes graphic novels, comics, art books, illustrated novels, guidebooks, and more. All content must be original work that you have the rights to sell.',
-    tip: 'High-quality PDFs work best. Ensure your files are optimized for both screen viewing and potential printing by readers.',
+    title: 'What can you sell?',
+    description: 'Right now: digital books as PDF files. That covers graphic novels, comics, art books, illustrated novels, guides — anything you can deliver as a single PDF. The work has to be yours; you must own the rights to sell it.',
+    tip: 'A high-quality PDF is everything. Make sure pages display sharp on a phone AND look good on a tablet.',
   },
   {
-    title: 'How Payments Work',
-    description: 'When a customer purchases your book, they pay immediately through PaymentCloud. After the platform fee is deducted, your earnings are available in your creator dashboard. Payouts are processed on PaymentCloud\'s standard merchant schedule.',
-    example: 'Customer pays $9.99 → PaymentCloud takes 4% + $0.38 ($0.78) → Platform takes 3% ($0.28) → You receive $8.93',
+    title: 'How you get paid',
+    description: 'When someone buys your book, Mentom Payments processes their card. The platform takes a 3% fee. Mentom Payments takes their fee (about 4% + $0.38). What\'s left lands in your creator balance and pays out to your bank on Mentom\'s standard schedule.',
+    example: 'Reader pays $9.99 → Mentom takes ~$0.78 → Platform takes ~$0.30 → You get ~$8.91.',
   },
 ];
 
 const setupSteps: Step[] = [
   {
-    title: 'Access the Creator Dashboard',
-    description: 'Log into your IndieCrowdfund account and navigate to Dashboard → Marketplace. If you\'ve run crowdfunding campaigns before, you\'ll already have creator access. New creators can apply through the creator registration process.',
-    tip: 'The Marketplace tab appears in your dashboard once you have creator access enabled.',
+    title: 'Open your creator dashboard',
+    description: 'Sign in and go to Dashboard → Marketplace. If you have run a crowdfunding campaign before, you already have creator access. If you are new, you will need to apply through the creator signup flow first.',
+    tip: 'The Marketplace tab only shows up once you have creator access turned on.',
   },
   {
-    title: 'Set Up Payment Settings',
-    description: 'Before you can sell, configure your payment settings in the Marketplace dashboard. Add your bank details — earnings will be deposited there on PaymentCloud\'s standard merchant schedule.',
-    example: 'Navigate to Dashboard → Marketplace → Payment Settings to connect your payout method.',
+    title: 'Add your bank account',
+    description: 'Before you can sell, you need a way to get paid. In the Marketplace dashboard, open Payment Settings and add your bank routing and account numbers. Mentom Payments deposits your sales there on their standard schedule.',
+    example: 'Dashboard → Marketplace → Payment Settings → enter bank details → save.',
   },
   {
-    title: 'Complete Your Creator Profile',
-    description: 'Your creator profile appears on book pages and helps readers learn about you. Include a bio, profile picture, and links to your social media or website. A complete profile builds trust with potential buyers.',
-    tip: 'Include a link to where readers can find physical editions of your books if available.',
+    title: 'Fill out your creator profile',
+    description: 'Your profile shows up on every book page. Add a profile picture, a short bio, and links to your social or website. A complete profile makes readers trust you and click Buy.',
+    tip: 'Add a link to where readers can buy printed copies if you sell them anywhere — that link will show up on each of your book pages.',
   },
   {
-    title: 'Understand the Review Process',
-    description: 'All books go through a review process before going live. We check that content meets our guidelines, files work correctly, and listings are complete. This typically takes 24-48 hours.',
-    example: 'Submit Monday → Under review Tuesday → Approved/Live by Wednesday',
+    title: 'Know what to expect from review',
+    description: 'Every new book goes through a quick review before it goes live. We check it follows the rules, the file works, and the listing is complete. Most reviews finish in 24-48 hours.',
+    example: 'Submit Monday → reviewed Tuesday → live Wednesday.',
   },
 ];
 
 const creatingSteps: Step[] = [
   {
-    title: 'Start a New Book',
-    description: 'Click "Add New Book" in your Marketplace dashboard to begin. You\'ll be guided through a multi-step form to enter your book\'s details, upload files, and set pricing.',
-    tip: 'Have your PDF file and cover image ready before starting. This makes the process much smoother.',
+    title: 'Click "Add New Book"',
+    description: 'In your Marketplace dashboard, click "Add New Book". A short form walks you step by step: details, files, price.',
+    tip: 'Have your PDF and cover image ready before you start. The form is much faster when you can just upload.',
   },
   {
-    title: 'Enter Basic Information',
-    description: 'Provide your book\'s title, description, and category. The description should be compelling and informative - it\'s what convinces readers to purchase. Choose the most accurate category to help readers find your work.',
-    example: 'Title: "Dragon\'s Legacy Vol. 1" | Category: Fantasy | Description: "When ancient magic awakens in the modern world..."',
+    title: 'Type the basic info',
+    description: 'Title, description, category. The description is what convinces a reader to buy — write it like a back-cover blurb. Pick the most accurate category so the right readers find your book.',
+    example: 'Title: "Dragon\'s Legacy Vol. 1". Category: Fantasy. Description: "When ancient magic wakes up in modern New York, one girl..."',
   },
   {
-    title: 'Upload Your PDF',
-    description: 'Upload your book as a PDF file. Ensure the file is high-quality, properly formatted, and under the size limit (100MB). This is the file customers will receive after purchase.',
-    tip: 'Test your PDF on multiple devices before uploading. Check that pages display correctly and images are crisp.',
+    title: 'Upload your PDF',
+    description: 'Upload your book file. Must be PDF, must be under 100MB. This is the file your customers download.',
+    tip: 'Test your PDF on a phone, a tablet, AND a laptop before you upload. Check that the pages look right and the art is crisp.',
   },
   {
-    title: 'Add Cover Image',
-    description: 'Upload a cover image in portrait orientation (2:3 ratio recommended, such as 600×900px or 800×1200px). This appears in marketplace listings and is crucial for attracting readers. Use a high-resolution, eye-catching design.',
-    example: 'A graphic novel cover showing the main character in an action pose with the title prominently displayed.',
+    title: 'Upload a cover image',
+    description: 'Upload a portrait-orientation cover image. We recommend 2:3 ratio — like 600×900 px or 800×1200 px. The cover is what people see first in the catalog. A great cover sells the book.',
+    example: 'A graphic novel cover with the main character front and center, the title big and clear at the top.',
   },
   {
-    title: 'Optional: Add Promo Video',
-    description: 'You can optionally add a promotional video to showcase your book. This could be a trailer, flip-through, or behind-the-scenes look at your creative process.',
-    tip: 'Videos aren\'t required but can significantly increase interest, especially for visually rich content like comics.',
+    title: 'Add a video (optional)',
+    description: 'You can attach a YouTube or Vimeo trailer, page flip-through, or behind-the-scenes video to your listing. Not required, but listings with video sell better, especially for visual books.',
+    tip: 'Even a 30-second phone video flipping through your art pages helps.',
   },
   {
-    title: 'Set Content Flags',
-    description: 'If your content contains mature themes or NSFW content, mark it appropriately for proper age verification on the listing. PaymentCloud accepts all content types, so flagging won\'t change your processor.',
-    example: 'A horror comic with graphic violence would be flagged as NSFW for the age gate; payment still flows through PaymentCloud.',
+    title: 'Mark mature or NSFW content',
+    description: 'If your book has mature themes or NSFW content, tick the right flag. The flag adds an age check on the listing. Mentom Payments accepts all content types, so flagging does not change anything about your payout.',
+    example: 'A horror comic with graphic violence → flag NSFW → readers see the age check → payment still flows through Mentom Payments.',
   },
   {
-    title: 'Add Tags',
-    description: 'Add relevant tags to help readers find your book. Include genre tags, theme keywords, and descriptive terms. Tags improve discoverability in search results.',
-    example: 'Tags: fantasy, dragons, magic, adventure, illustrated, full-color, complete-story',
+    title: 'Add tags',
+    description: 'Tags help readers find your book in search. Add genre tags, theme tags, descriptive words.',
+    example: 'Tags: fantasy, dragons, magic, adventure, illustrated, full-color, complete-story.',
   },
   {
-    title: 'Review and Submit',
-    description: 'Before submitting, review all your book details. Check the preview to see how your listing will appear to buyers. Once satisfied, submit for review. You can save as draft if you\'re not ready to submit.',
-    tip: 'Double-check your price and PDF file. These are the most common areas where creators make mistakes.',
+    title: 'Review and submit',
+    description: 'Click "Preview" to see how your listing will look. Read every line one more time. Then click Submit for review. Not ready? Save as draft and finish later.',
+    tip: 'Triple-check the price and the PDF file before you submit. Those are the two things creators get wrong most.',
   },
 ];
 
 const pricingSteps: Step[] = [
   {
-    title: 'Setting Your Price',
-    description: 'Choose a price that reflects your content\'s value. Consider the page count, production quality, and what similar works charge. Digital books typically range from $2.99 to $19.99, with longer or premium content going higher.',
-    example: 'A 100-page full-color graphic novel might price at $9.99, while a 24-page comic might be $2.99.',
+    title: 'Pick a price',
+    description: 'Set a price that matches the value of your book. Look at page count, art quality, and what similar books charge. Most digital books fall between $2.99 and $19.99. Premium or longer books can go higher.',
+    example: 'A 100-page full-color graphic novel might be $9.99. A 24-page short comic might be $2.99.',
   },
   {
-    title: 'Understanding Platform Fees',
-    description: 'IndieCrowdfund charges a 3% platform fee on marketplace sales. This is significantly lower than many other platforms and helps keep more money in creators\' pockets.',
-    example: '$9.99 book → 3% platform fee ($0.28) + PaymentCloud processing ($0.65) → You receive $9.06',
+    title: 'Platform fee: 3%',
+    description: 'IndieCrowdfund takes 3% of every sale. That is much lower than the 30% that big platforms charge. The rest goes to you (after card processing).',
+    example: '$9.99 book → 3% to the platform ($0.30) + Mentom Payments fee (~$0.65) → you keep ~$9.04.',
   },
   {
-    title: 'Payment Processing',
-    description: 'All marketplace sales are processed through PaymentCloud (4% + $0.38/txn) — supports all content types including NSFW. Your net earnings (after the 3% platform fee) appear in your dashboard.',
-    tip: 'Factor in all fees when setting your price. Use the fee calculator in the book creation form to see your exact earnings.',
+    title: 'Card processing',
+    description: 'Every Marketplace sale goes through Mentom Payments. Their fee is about 4% + $0.38 per sale. Mentom accepts every content type, so NSFW books pay out the same way as everything else.',
+    tip: 'When you set the price, use the fee calculator on the book form to see exactly what hits your bank.',
   },
   {
-    title: 'Currency Options',
-    description: 'Set your price in USD, EUR, or GBP. Prices are displayed in your chosen currency. Customers may see converted amounts based on their location.',
-    tip: 'USD is the most universal choice if you want to reach the broadest audience.',
+    title: 'Currency',
+    description: 'You can price in USD, EUR, or GBP. The Marketplace shows readers prices in your chosen currency. Some readers see converted amounts based on where they live.',
+    tip: 'USD reaches the most readers. Pick that unless you have a specific reason to use EUR or GBP.',
   },
   {
-    title: 'When You Get Paid',
-    description: 'Earnings accumulate in your creator balance. Payouts are processed according to your payout schedule (weekly, bi-weekly, or monthly). You can view pending and completed payouts in your dashboard.',
-    example: 'Set to monthly payouts → January sales paid out in early February',
+    title: 'When you get paid',
+    description: 'Sales add up in your creator balance. Payouts go to your bank on the schedule you pick (weekly, every two weeks, or monthly). Your dashboard shows what is pending and what has paid out.',
+    example: 'Monthly payouts → January\'s sales hit your bank in early February.',
   },
 ];
 
 const managingSteps: Step[] = [
   {
-    title: 'Your Books Dashboard',
-    description: 'The Books tab in your Marketplace dashboard shows all your books with their status: Draft, Under Review, Live, or Rejected. You can quickly see which books need attention and their current sales.',
-    tip: 'Check your dashboard regularly for review status updates and sales notifications.',
+    title: 'The Books tab',
+    description: 'Open Dashboard → Marketplace → Books. You see every book you have ever uploaded with its current status: Draft, Under Review, Live, or Rejected. Quick way to see what needs your attention.',
+    tip: 'Check this tab a few times a week — review status updates and sales counts show up here.',
   },
   {
-    title: 'Understanding Book Status',
-    description: 'Books go through several stages: Draft (work in progress), Submitted (under review), Live (available for purchase), or Rejected (needs changes). Only Live books appear in the marketplace.',
-    example: 'A rejected book might need a better description or higher-quality cover image before resubmission.',
+    title: 'What each status means',
+    description: 'Draft = you are still working on it, not submitted yet. Submitted = our team is reviewing it. Live = it is in the Marketplace, customers can buy it. Rejected = something needs to change before we can list it.',
+    example: 'Rejected? You\'ll see notes from review explaining what to fix — usually a clearer description or a higher-resolution cover.',
   },
   {
-    title: 'Editing Published Books',
-    description: 'You can update your book\'s description, tags, and cover image after publishing. Price changes take effect immediately. To update the PDF itself, you\'ll need to upload a new version.',
-    tip: 'If you find an error in your PDF, update it promptly. Existing customers can re-download the updated version.',
+    title: 'Edit a published book',
+    description: 'You can update the description, tags, and cover image of a Live book any time. Price changes take effect right away. To replace the PDF itself, upload a new version on the book\'s edit page.',
+    tip: 'Found a typo or a print error in your PDF? Upload a fixed version. Existing customers can re-download the new file.',
   },
   {
-    title: 'Viewing Sales & Analytics',
-    description: 'The Analytics section shows your sales over time, total revenue, and which books perform best. Use this data to understand what resonates with readers and inform future releases.',
-    example: 'Analytics might show that your fantasy titles outsell your sci-fi titles, guiding future content decisions.',
+    title: 'See your sales',
+    description: 'Open the Analytics section to see daily, weekly, and monthly sales for each book. Total revenue. Best-sellers. Which days had spikes (and what marketing you ran on those days).',
+    example: 'Analytics might show your fantasy books outsell your sci-fi books 3 to 1. Useful when planning your next release.',
   },
   {
-    title: 'Managing Reviews',
-    description: 'Readers can leave reviews on your books. Respond professionally to feedback - both positive and constructive. Good reviews help sell more books; addressing concerns shows you care about readers.',
-    tip: 'Encourage happy customers to leave reviews. A polite note in your book or social media can help.',
+    title: 'Read and reply to reviews',
+    description: 'Readers can leave star ratings and written reviews. Respond to them — politely thank good reviews, address concerns in critical ones. How you handle reviews shapes your reputation.',
+    tip: 'Ask happy customers to leave a review. A note inside your PDF or a social post is enough to remind them.',
   },
   {
-    title: 'Unpublishing or Archiving',
-    description: 'You can temporarily unpublish a book (removes from marketplace but retains data) or archive it permanently. Existing customers retain access to books they\'ve purchased even if unpublished.',
-    example: 'Unpublish an older edition when releasing an updated or expanded version.',
+    title: 'Unpublish or archive a book',
+    description: 'Unpublish = take it off the Marketplace but keep its data. Archive = put it away long-term. Both let existing customers keep what they bought; only new customers can no longer buy it.',
+    example: 'Unpublish your old edition when you launch a revised or expanded version.',
   },
 ];
 
 const promotionSteps: Step[] = [
   {
-    title: 'Creating Discount Codes',
-    description: 'Create discount codes to promote your books. Set codes for free books (100% off), percentage discounts, or fixed amount off. Control validity periods and maximum uses per code and per customer.',
-    example: 'Create code "LAUNCH50" for 50% off during your first week, limited to 100 uses.',
+    title: 'Make a discount code',
+    description: 'Open the Discount Codes tab in your Marketplace dashboard. Create a code: pick the percentage off (or 100% for free), how long the code is valid, how many people can use it, and how many times each person can use it.',
+    example: 'Code "LAUNCH50" → 50% off → first week → max 100 uses → 1 per customer.',
   },
   {
-    title: 'Free Book Promotions',
-    description: 'Offering your book for free temporarily or permanently can build your audience. Use free codes to give copies to reviewers, newsletter subscribers, or as part of promotional events.',
-    tip: 'A free first volume can drive sales of subsequent volumes in a series.',
+    title: 'Free copies for promotion',
+    description: 'Free codes are great for getting eyes on your work. Send free copies to reviewers, newsletter subscribers, or as part of giveaways.',
+    tip: 'Make Volume 1 free for a week. Readers who finish it often pay full price for Volume 2.',
   },
   {
-    title: 'Sharing on Social Media',
-    description: 'Each book has a shareable link. Post it on Twitter/X, Facebook, Instagram, and other platforms. Share cover previews, sample pages, and behind-the-scenes content to generate interest.',
-    example: 'Tweet: "My new graphic novel is now available! First 50 readers get 25% off with code EARLY25: [link]"',
+    title: 'Share on social media',
+    description: 'Every book has its own URL. Post it on Twitter/X, Bluesky, Instagram, Facebook. Pair the link with cover art, a sample page, or a short clip. Visual posts get way more clicks than text-only posts.',
+    example: '"New comic out now. First 50 readers get 25% off with code EARLY25: [link]"',
   },
   {
-    title: 'Cross-Promotion with Campaigns',
-    description: 'If you run crowdfunding campaigns, mention your marketplace books. Include links in campaign updates, and offer marketplace buyers exclusive discount codes for your campaigns.',
-    tip: 'Backers who loved your crowdfunded book may want to buy your other works immediately.',
+    title: 'Cross-promote with your campaigns',
+    description: 'Already running a crowdfunding campaign? Mention your Marketplace books inside campaign updates and the project page. Offer Marketplace buyers a discount code for your next campaign.',
+    tip: 'Backers who loved your campaign want to buy your other books too. Make it easy for them.',
   },
   {
-    title: 'Email Your Followers',
-    description: 'If you have followers on IndieCrowdfund or an email newsletter, notify them of new releases. Your existing audience is your most likely buyers.',
-    example: 'Send a launch email: "My new book is live! As a thank you for your support, here\'s 20% off this week."',
+    title: 'Email your followers',
+    description: 'You have followers on IndieCrowdfund and maybe an email list elsewhere. When you launch a new Marketplace book, email them. Existing fans are the most likely buyers.',
+    example: '"New book is live. As a thank-you for following, here\'s 20% off this week with code FOLLOWER."',
   },
   {
-    title: 'Leveraging Reviews',
-    description: 'Good reviews are social proof. Share positive reviews on social media. If you receive constructive criticism, address it - updating your book or responding professionally shows you value readers.',
-    tip: 'Quote reviews in your book description: "\'A masterpiece of indie comics!\' - Reader Review"',
+    title: 'Use reviews as marketing',
+    description: 'Good reviews are free advertising. Quote them on social media and in your book\'s description. Address critical reviews professionally — it shows you care.',
+    tip: 'Stick the best one-line review at the top of your book\'s description: "\'A masterpiece of indie comics!\' — Reader Review."',
   },
   {
-    title: 'Building Your Catalog',
-    description: 'The more books you have, the more chances for readers to discover you. When someone enjoys one book, they often buy more from the same creator. Build a catalog over time.',
-    example: 'One-time buyers become loyal fans who purchase everything you release.',
+    title: 'Build a catalog',
+    description: 'More books = more ways readers find you. When someone enjoys one of your books, they often buy more. Add to your Marketplace shelf over time.',
+    example: 'One-time buyers turn into loyal fans who buy everything you release.',
   },
 ];
 
 const faqs: FAQ[] = [
   {
-    question: 'How long does the review process take?',
-    answer: 'Most books are reviewed within 24-48 hours. Complex cases or books submitted during busy periods may take slightly longer. You\'ll receive email notification when your book is approved or if changes are needed.',
+    question: 'How long does review take?',
+    answer: 'Most books are reviewed in 24-48 hours. If we are extra busy or your book needs a deeper look, it might take longer. You will get an email when it is approved or if we need changes.',
   },
   {
-    question: 'What if my book is rejected?',
-    answer: 'If rejected, you\'ll receive specific feedback about what needs to change. Common issues include incomplete descriptions, low-quality images, or technical problems with the PDF. Make the requested changes and resubmit.',
+    question: 'My book got rejected. What now?',
+    answer: 'You will get specific feedback explaining why. Most common reasons: a thin description, a low-quality cover, or a PDF that does not display correctly. Fix the issue and resubmit.',
   },
   {
-    question: 'Can I sell physical copies through the marketplace?',
-    answer: 'The marketplace is currently digital-only (PDF files). However, you can include a link on your creator profile to where readers can purchase physical editions from your own store or print-on-demand service.',
+    question: 'Can I sell printed copies on the Marketplace?',
+    answer: 'Not yet — the Marketplace is digital-only PDFs. But you can add a link on your creator profile to wherever you sell printed copies (your own store, Amazon, print-on-demand). That link shows up on every book page.',
   },
   {
-    question: 'What file formats are supported?',
-    answer: 'Currently, we support PDF files only. PDFs provide the most consistent reading experience across devices and are widely compatible with e-readers, tablets, and computers.',
+    question: 'What file types can I upload?',
+    answer: 'PDF only, for now. PDFs work everywhere — phones, tablets, laptops, e-readers — and they keep your art, fonts, and layout exactly the way you made them.',
   },
   {
     question: 'Is there a minimum or maximum price?',
-    answer: 'Books must be priced at $0.99 or higher (or use a free discount code for promotional giveaways). There\'s no maximum price, but very high prices should reflect exceptional content and value.',
+    answer: 'Minimum is $0.99 (or use a free discount code for giveaways). No maximum, but a very high price needs to be backed up by very high quality and a lot of pages.',
   },
   {
-    question: 'Can I update my book after publishing?',
-    answer: 'Yes! You can update the PDF file at any time. Existing customers will have access to the updated version. Just upload the new file in your book\'s edit page.',
+    question: 'Can I update my book after it is live?',
+    answer: 'Yes. You can replace the PDF file any time on the book\'s edit page. Existing customers can re-download to get the updated version.',
   },
   {
-    question: 'How do refunds work?',
-    answer: 'Digital purchases are generally non-refundable due to the nature of instant digital delivery. In cases of technical issues or duplicate purchases, customers can contact support within 48 hours.',
+    question: 'Can readers refund a digital book?',
+    answer: 'Digital buys are usually non-refundable because once a file is downloaded it cannot really be returned. If a reader had a real technical issue or bought the same book twice by accident, they can email support within 48 hours and we look at it case by case.',
   },
   {
-    question: 'Can I see who purchased my book?',
-    answer: 'You can see aggregate sales data and review information, but individual customer details are kept private for privacy reasons. You won\'t have direct access to buyer email addresses.',
+    question: 'Can I see exactly who bought my book?',
+    answer: 'You see total sales numbers and reviews, but not each buyer\'s personal info. Buyer privacy is protected — you won\'t have access to their email addresses or names.',
   },
   {
-    question: 'What content isn\'t allowed?',
-    answer: 'Content must not violate our community guidelines. This includes illegal content, stolen/plagiarized work, or misleading listings. NSFW content is allowed but must be properly flagged for age gating; payment is processed through PaymentCloud regardless.',
+    question: 'What content is not allowed?',
+    answer: 'Anything illegal. Anything stolen or plagiarized. Listings that lie about what the book is. NSFW content is fine if it is properly flagged with the age gate. All payment goes through Mentom Payments either way.',
   },
   {
-    question: 'Can I sell books from my crowdfunding campaigns?',
-    answer: 'Absolutely! Many creators sell completed campaign rewards on the marketplace. This is a great way to continue earning from a project after the campaign ends.',
+    question: 'Can I sell books from my old crowdfunding campaigns?',
+    answer: 'Yes, and many creators do. Once a campaign is fulfilled, the digital version is a great fit for the Marketplace. It keeps the project earning money long after the campaign closes.',
   },
 ];
 
@@ -441,7 +441,7 @@ export default function MarketplaceCreatorHandbookPage() {
                         <div>
                           <h4 className="font-medium text-foreground">Payment Setup</h4>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            Add your bank details so PaymentCloud can deposit your earnings from sales.
+                            Add your bank details so Mentom Payments can deposit your earnings from each sale.
                           </p>
                         </div>
                       </div>

@@ -46,223 +46,223 @@ const tabs = [
 const overviewSteps: Step[] = [
   {
     title: 'What is the Digital Marketplace?',
-    description: 'The Digital Marketplace is IndieCrowdfund\'s dedicated storefront for digital content created by indie creators. Unlike our crowdfunding campaigns where you pledge toward a project goal, the marketplace offers completed digital works that are available for immediate purchase and instant download.',
-    tip: 'Think of it as a bookstore for indie digital content - browse, buy, and read in minutes.',
+    description: 'A store that sells finished digital books, comics, and art packs. You buy a book and get the file right away — no waiting.',
+    tip: 'Think of it as a bookstore for indie creators. Click, pay, read.',
   },
   {
-    title: 'How is it Different from Crowdfunding?',
-    description: 'With crowdfunding, you\'re supporting a project before it\'s complete and may wait months for delivery. With the marketplace, creators list finished products that you can purchase and access immediately. Your payment is charged right away, and there\'s no waiting for funding goals or delivery.',
-    example: 'Crowdfunding: "Back my upcoming graphic novel!" → Marketplace: "Buy my completed graphic novel now!"',
+    title: 'How is it different from crowdfunding?',
+    description: 'Crowdfunding is when you help pay for a book that is not made yet. You wait for it to be made and shipped. The Marketplace is for books that are already done. You pay and you get them right now.',
+    example: 'Crowdfunding: "Help me make a comic next year." → Marketplace: "Buy my finished comic today."',
   },
   {
-    title: 'What\'s Available?',
-    description: 'The marketplace currently features digital books including graphic novels, comics, art books, novels, guides, and more. All content is delivered as high-quality PDF files that you can read online or download to your devices.',
-    tip: 'More content types may be added in the future. Follow your favorite creators to be notified of new releases.',
+    title: 'What can you buy?',
+    description: 'Right now: digital books. That means PDF files. Comics, graphic novels, art books, novels, how-to guides — anything a creator wants to sell as a digital file.',
+    tip: 'New types of files may be added later. Follow your favorite creators so you hear when they release something new.',
   },
   {
-    title: 'Who Creates the Content?',
-    description: 'All marketplace content is created by independent creators who have been verified on our platform. Many are the same creators who run successful crowdfunding campaigns. By purchasing from the marketplace, you\'re directly supporting indie creators.',
-    example: 'A creator who crowdfunded their first book might release sequels directly on the marketplace.',
+    title: 'Who makes the books?',
+    description: 'Real indie creators, the same kind of people who run crowdfunding campaigns on this site. They get paid most of the money from each sale, so buying here helps them keep making things.',
+    example: 'A creator might run a Kickstarter for Book 1, then sell Book 1 on the Marketplace once it is finished.',
   },
 ];
 
 const browsingSteps: Step[] = [
   {
-    title: 'Accessing the Marketplace',
-    description: 'Click "Digital Marketplace" in the main navigation or visit /marketplace directly. You\'ll see the marketplace homepage featuring collections, new releases, and popular titles.',
-    tip: 'The marketplace link is available in the main navigation and in the footer under "Discover".',
+    title: 'Open the Marketplace',
+    description: 'Click "Digital Marketplace" in the top menu. Or just type /marketplace in the address bar. The home page shows new releases, staff picks, and the most popular books.',
+    tip: 'You can also reach the Marketplace from the footer of any page on the site.',
   },
   {
-    title: 'Exploring Featured Collections',
-    description: 'The homepage displays curated collections including Staff Picks (hand-selected by our team), New Releases (recently added titles), and Popular titles. Scroll through these to discover quality content.',
-    example: 'Staff Picks might feature a beautifully illustrated art book, while New Releases shows the latest uploads from creators.',
+    title: 'Look at the featured shelves',
+    description: 'The home page has rows of books picked by us: Staff Picks (our favorites), New Releases (just added), and Popular (other people are buying these). Scroll through and see what catches your eye.',
+    example: 'Staff Picks might show a beautiful art book. New Releases might show what dropped this week.',
   },
   {
-    title: 'Browsing All Books',
-    description: 'Click "Browse All Books" to see the complete marketplace catalog. Books are displayed in a grid view showing the cover, title, creator, price, and average rating.',
-    tip: 'Use this view when you want to explore everything available rather than curated selections.',
+    title: 'Browse the full catalog',
+    description: 'Click "Browse All Books" to see every book on the Marketplace. Each book shows the cover, title, who made it, the price, and the star rating.',
+    tip: 'Use this when you are not sure what you want and just want to look around.',
   },
   {
-    title: 'Using Search',
-    description: 'Use the search bar to find specific titles, creators, or topics. Search results show matching books with their covers, prices, and ratings for easy comparison.',
-    example: 'Search for "fantasy" to find fantasy novels and comics, or search an author\'s name to find all their works.',
+    title: 'Search for something specific',
+    description: 'Type a title, a creator name, or a topic into the search bar at the top. The list updates as you type.',
+    example: 'Type "fantasy" to find every fantasy book. Type a creator\'s name to see all of their books.',
   },
   {
-    title: 'Viewing Book Details',
-    description: 'Click on any book to see its full details page. Here you\'ll find the complete description, preview pages, creator information, reviews from other readers, and purchase options.',
-    tip: 'Always read the description and check the preview before purchasing to make sure it\'s what you\'re looking for.',
+    title: 'Open a book\'s page',
+    description: 'Click any book cover. You will see the full description, sample pages, the creator\'s name, reviews from other readers, and the Buy button.',
+    tip: 'Always read the description AND check the sample pages before you buy.',
   },
   {
-    title: 'Checking Previews',
-    description: 'Most books offer a preview so you can see sample pages before buying. Click the "Preview" button on the book detail page to view sample content. This gives you a feel for the art style, writing, and quality.',
-    example: 'A comic might show the first 5 pages, while an art book might display sample artwork from different sections.',
+    title: 'Read a free preview',
+    description: 'Most books let you read a few sample pages without paying. Click the "Preview" button on the book page. This is the best way to make sure the book is what you want before you spend money.',
+    example: 'A comic might let you read the first 5 pages. An art book might show sample pages from each section.',
   },
 ];
 
 const purchasingSteps: Step[] = [
   {
-    title: 'Adding to Cart or Direct Purchase',
-    description: 'On the book detail page, click "Purchase" or "Add to Cart" to begin checkout. Some books offer both options - direct purchase for single-book buying, or cart for multiple purchases.',
-    tip: 'If you\'re buying multiple books, adding to cart lets you check out once for all of them.',
+    title: 'Click Buy',
+    description: 'On the book page, click "Purchase" (or "Add to Cart" if you want to buy more than one book at the same time). Both options work — Cart is best for buying several books in one go.',
+    tip: 'Buying several books? Add them all to the cart, then check out once. One charge instead of many.',
   },
   {
-    title: 'Reviewing Your Purchase',
-    description: 'Before payment, you\'ll see a summary showing the book title, price, and total. Review this to confirm you\'re purchasing the correct item at the expected price.',
-    example: '"Digital Art Techniques Vol. 1" by Jane Creator - $9.99. Subtotal: $9.99',
+    title: 'Check your order',
+    description: 'A summary screen shows the book title, price, and total. Read it carefully and make sure everything is right before you pay.',
+    example: '"Digital Art Techniques Vol. 1" by Jane Creator — $9.99. Total: $9.99.',
   },
   {
-    title: 'Payment Options',
-    description: 'The marketplace accepts credit and debit cards through PaymentCloud, our secure payment processor. Enter your card details to complete the purchase — they\'re tokenized in your browser via Collect.js and never touch our servers.',
-    tip: 'Save your card for faster future purchases. Your card details are tokenized in your browser and stored securely by the payment processor — never on IndieCrowdfund servers.',
+    title: 'Enter your card',
+    description: 'The Marketplace uses Mentom Payments to process card payments. Type your credit or debit card number, expiration, and CVV in the form. Your card details are encrypted in your browser and sent straight to Mentom Payments — they never touch our servers.',
+    tip: 'Save your card to make next time faster. Saved cards are stored on Mentom Payments\' side, never on IndieCrowdfund servers.',
   },
   {
-    title: 'Instant Delivery',
-    description: 'Once your payment is processed, the book is immediately added to your Digital Library. There\'s no waiting - you can start reading within seconds of completing your purchase.',
-    example: 'Complete checkout at 2:00 PM → Book appears in your library at 2:00 PM → Start reading at 2:01 PM',
+    title: 'Get the book right away',
+    description: 'When the payment goes through, the book lands in your account in seconds. No waiting. No shipping. You can start reading immediately.',
+    example: 'Pay at 2:00 PM → book in your library at 2:00 PM → read at 2:01 PM.',
   },
   {
-    title: 'Purchase Confirmation',
-    description: 'You\'ll receive an email confirmation with your purchase details and a link to access your Digital Library. This serves as your receipt and proof of purchase.',
-    tip: 'Check your spam folder if you don\'t see the confirmation email within a few minutes.',
+    title: 'Save your receipt',
+    description: 'You will get a confirmation email with your order details and a link to your library. Keep it — it is your proof of purchase.',
+    tip: 'Don\'t see the email after a few minutes? Check your spam folder.',
   },
   {
-    title: 'Using Discount Codes',
-    description: 'Some creators offer discount codes for free or reduced-price books. Enter the code at checkout in the "Promo Code" field to apply the discount before completing your purchase.',
-    example: 'A creator might share code "THANKYOU" with their newsletter subscribers for a free book.',
+    title: 'Use a discount code',
+    description: 'Some creators give out promo codes for free or cheaper books. Type the code into the "Promo Code" box at checkout before you pay. The price updates right away.',
+    example: 'A creator might share code "THANKYOU" with their newsletter for a free download.',
   },
 ];
 
 const librarySteps: Step[] = [
   {
-    title: 'Accessing Your Digital Library',
-    description: 'Your Digital Library is located in your Backer Dashboard. Go to Dashboard → Digital Library to see all your purchased content. All marketplace purchases appear here automatically.',
-    tip: 'Bookmark your Digital Library page for quick access: /dashboard/backer?tab=library',
+    title: 'Find your books in your dashboard',
+    description: 'Open your Backer Dashboard at /dashboard/backer. Two tabs hold your Marketplace books. The Downloads tab (/dashboard/backer?tab=downloads) shows everything you own — Marketplace books at the top as cover tiles, plus any files from crowdfunding campaigns below. The Digital Library tab (/dashboard/backer?tab=digital-library) is where you actually read books in your browser.',
+    tip: 'Easy way to remember: Downloads = "see all my files." Digital Library = "open and read a book."',
   },
   {
-    title: 'Viewing Your Collection',
-    description: 'Your library displays all purchased books with their covers, titles, and creators. Books are organized with the most recent purchases first. You can see your entire digital collection at a glance.',
-    example: 'If you\'ve purchased 5 books over the past month, they\'ll all appear in your library sorted by purchase date.',
+    title: 'See your whole collection',
+    description: 'In the Downloads tab, every Marketplace book you have ever bought shows up as a cover tile. Newest at the top. You can see your whole digital bookshelf at a glance.',
+    example: 'Bought 5 books in the last month? All 5 show up here in order, newest first.',
   },
   {
-    title: 'Book Status Indicators',
-    description: 'Each book in your library shows its status. "New" indicates recently purchased items you haven\'t read yet. "Downloaded" shows books you\'ve saved to your device.',
-    tip: 'Use these indicators to keep track of what you\'ve read and what\'s waiting in your backlog.',
+    title: 'See what\'s new and what you\'ve read',
+    description: 'Each book has little labels. "New" means you bought it but haven\'t opened it yet. "Downloaded" means you saved a copy to your device. The labels help you keep track of what is waiting on your reading list.',
+    tip: 'Treat the "New" labels like a reminder — they are a list of books you have already paid for and might want to read next.',
   },
   {
-    title: 'Quick Actions',
-    description: 'Each book in your library has quick action buttons: Read (opens in browser), Download (saves PDF to device), and View Details (shows purchase info and creator links).',
-    example: 'Commuting? Hit "Read" to read in your browser. At home? Hit "Download" to save for offline reading on your tablet.',
+    title: 'Read or download with one click',
+    description: 'Each book has buttons. "Read" opens it in your browser. "Download" saves the PDF to your computer or phone. "View Details" shows when you bought it and who made it.',
+    example: 'On the bus? Tap Read. At home with WiFi? Tap Download to save it for offline reading later.',
   },
   {
-    title: 'Purchase History',
-    description: 'Click on any book to see its purchase details including the date, price paid, and order number. This information is useful if you ever need to reference a purchase.',
-    tip: 'Your complete purchase history is available even for books purchased months or years ago.',
+    title: 'Look up a past purchase',
+    description: 'Click a book and you can see when you bought it, what you paid, and the order number. Useful if you ever need to check an old purchase.',
+    tip: 'Even books you bought a year ago are still in your library. Nothing expires.',
   },
   {
-    title: 'Cross-Device Access',
-    description: 'Your library syncs across all devices. Log in on your phone, tablet, laptop, or desktop and you\'ll see the same library. Your purchases follow you everywhere.',
-    example: 'Buy a book on your laptop, start reading on your phone during lunch, continue on your tablet at home.',
+    title: 'Use it on any device',
+    description: 'Sign in on your phone, your tablet, your laptop — your library is the same everywhere. The books follow you.',
+    example: 'Buy on your laptop, start reading on your phone at lunch, finish on your tablet at home.',
   },
 ];
 
 const readingSteps: Step[] = [
   {
-    title: 'Reading in Your Browser',
-    description: 'Click the "Read" button on any book in your library to open it in our web-based reader. The reader is optimized for digital books with features like zoom, page navigation, and fullscreen mode.',
-    tip: 'The web reader works on any device with a modern browser - no app installation required.',
+    title: 'Read in your browser',
+    description: 'Click "Read" on any book in your library and it opens in our built-in reader. The reader has zoom, page-turning, bookmarks, and full-screen mode. It works on any phone, tablet, or computer with a modern browser. No app to download.',
+    tip: 'The browser reader saves your place automatically, so you can pick up where you left off later.',
   },
   {
-    title: 'Downloading for Offline Reading',
-    description: 'Click "Download" to save the PDF file to your device. Downloaded files can be opened with any PDF reader app and don\'t require an internet connection to read.',
-    example: 'Download before a flight, and read offline during your trip. The PDF is yours to keep permanently.',
+    title: 'Download for offline reading',
+    description: 'Click "Download" on any book to save the PDF to your device. Once saved, you can open it without internet — on a plane, in the woods, anywhere.',
+    example: 'Going on a long flight? Download a few books before you go.',
   },
   {
-    title: 'Recommended PDF Readers',
-    description: 'For the best offline reading experience, we recommend Adobe Acrobat Reader (free), Apple Books (Mac/iOS), or any PDF reader on your preferred device. These apps offer bookmarking, annotation, and comfortable reading features.',
-    tip: 'iPad with Apple Books or a tablet with a good PDF reader provides a book-like reading experience.',
+    title: 'Apps that open PDF files',
+    description: 'Free PDF apps that work great: Adobe Acrobat Reader, Apple Books (Mac/iPhone/iPad), or any PDF reader on Android. Most phones already have one built in.',
+    tip: 'A tablet (iPad or Android) with Apple Books or a good PDF reader gives you the closest thing to a real book experience.',
   },
   {
-    title: 'Zoom and Navigation',
-    description: 'In the web reader, use pinch-to-zoom on touch devices or the zoom controls on desktop. Navigate pages using arrow keys, clicking page edges, or the page slider. Jump to any page using the page number input.',
-    example: 'Reading a detailed art book? Zoom in to appreciate the fine details. Reading a comic? Zoom to panel level.',
+    title: 'Zoom and turn pages',
+    description: 'Pinch to zoom on a touch screen. Use the zoom buttons on a desktop. Turn pages with arrow keys, by clicking the edges of the page, or by dragging the page slider. Type a page number to jump straight to it.',
+    example: 'Reading a comic? Zoom in to read individual panels. Reading an art book? Zoom in to look at the brush strokes.',
   },
   {
-    title: 'Reading on Different Devices',
-    description: 'The web reader adapts to your screen size. On phones, pages display in single-page mode. On tablets and desktops, you can choose single or two-page spread view for a book-like experience.',
-    tip: 'Rotate your phone to landscape for wider page views. Use portrait on tablets for full-page reading.',
+    title: 'Reading on any size screen',
+    description: 'On a phone the reader shows one page at a time. On a tablet or laptop you can see two pages side by side, like an open book.',
+    tip: 'Turn your phone sideways for wider pages. Hold a tablet upright (portrait) for tall pages.',
   },
   {
-    title: 'Saving Your Place',
-    description: 'Downloaded PDFs save your reading position in your PDF app. Use bookmarks in your PDF reader to mark important pages or where you stopped reading.',
-    example: 'Reading a 200-page graphic novel over several sessions? Bookmark your current page in your PDF reader.',
+    title: 'Bookmark your spot',
+    description: 'In the browser reader, your reading position saves automatically. In a downloaded PDF, use bookmarks in your PDF app to mark important pages or where you stopped reading.',
+    example: 'Reading a 200-page graphic novel over a few nights? Bookmark each stopping point so you don\'t lose your place.',
   },
 ];
 
 const supportSteps: Step[] = [
   {
-    title: 'Direct Creator Support',
-    description: 'Every marketplace purchase directly supports the creator. Unlike traditional publishing where authors receive a small royalty, indie creators on our marketplace receive the majority of each sale.',
-    tip: 'Buying from the marketplace is one of the best ways to support indie creators financially.',
+    title: 'Buying directly helps the creator',
+    description: 'Most online stores keep a big chunk of every sale. Indie creators on this Marketplace keep most of theirs. When you buy a book here, the creator actually gets paid.',
+    tip: 'Buying from this Marketplace is one of the most direct ways to help an indie creator.',
   },
   {
-    title: 'Leaving Reviews',
-    description: 'After reading a book, leave a review to help other readers discover great content. Rate the book and write a brief review describing what you liked. Honest reviews help creators improve and help readers make informed decisions.',
-    example: '"Loved the artwork and storytelling! The dragon designs were incredibly detailed. 5 stars."',
+    title: 'Leave a review',
+    description: 'After you read a book, give it a star rating and write a few sentences about what you liked. Other readers use reviews to decide what to buy, and creators use them to know what works.',
+    example: '"Loved the artwork and storytelling. The dragon designs were amazing. 5 stars."',
   },
   {
-    title: 'Following Creators',
-    description: 'Click the "Follow" button on a creator\'s profile to get notified when they release new content. Following is free and helps you stay updated on your favorite creators\' latest works.',
-    tip: 'Following creators means you\'ll never miss a new release from someone whose work you enjoy.',
+    title: 'Follow the creator',
+    description: 'Click the "Follow" button on a creator\'s profile. You will get an email when they release something new — Marketplace book or crowdfunding campaign.',
+    tip: 'Following is free. It just means you hear about new stuff first.',
   },
   {
-    title: 'Sharing with Friends',
-    description: 'If you love a book, share it! Use the share buttons on the book page to post to social media, or copy the link to send directly to friends. Word of mouth is incredibly valuable for indie creators.',
-    example: 'Tweet: "Just finished @CreatorName\'s new comic on @IndieCrowdfund - absolutely stunning art! Check it out: [link]"',
+    title: 'Tell your friends',
+    description: 'If you love a book, share it. Use the share buttons on the book page to post on social, or copy the link and send it directly. A recommendation from a friend is the best advertising an indie creator can get.',
+    example: '"Just finished @CreatorName\'s new comic on @IndieCrowdfund — incredible art, check it out: [link]"',
   },
   {
-    title: 'Backing Their Crowdfunding Campaigns',
-    description: 'Many marketplace creators also run crowdfunding campaigns for new projects. If you enjoyed their marketplace content, consider backing their next campaign to get early access to new works and exclusive rewards.',
-    tip: 'Visit a creator\'s profile to see if they have any active or upcoming crowdfunding campaigns.',
+    title: 'Back their next campaign',
+    description: 'Many Marketplace creators also run crowdfunding campaigns. If you loved their book, look at their profile to see if they have a campaign running, and back it.',
+    tip: 'Backing campaigns gets you stuff you can\'t buy in the Marketplace — early-bird tiers, signed copies, exclusive add-ons.',
   },
   {
-    title: 'Finding Physical Editions',
-    description: 'Prefer physical books? Look for the "Order Physical Copy" button on the book detail page - it appears right above the Share button when the publisher has set up a link to order printed editions. This takes you directly to where you can purchase physical versions.',
-    example: 'Viewing "Dragon\'s Legacy Vol. 1" → Click "Order Physical Copy" → Opens the publisher\'s store page where you can buy the printed edition.',
+    title: 'Get a physical copy',
+    description: 'Want a printed book to hold? Look for the "Order Physical Copy" button on the book page (right above the share buttons). It opens the creator\'s store where you can buy a printed version.',
+    example: 'Click "Order Physical Copy" on Dragon\'s Legacy Vol. 1 → opens the creator\'s shop where you can buy the print edition.',
   },
 ];
 
 const faqs: FAQ[] = [
   {
-    question: 'Can I get a refund on a digital purchase?',
-    answer: 'Due to the nature of digital content (which cannot be "returned" once accessed), refunds are evaluated on a case-by-case basis. If you accidentally made a duplicate purchase or encountered a technical issue preventing access, contact support within 48 hours.',
+    question: 'Can I get my money back if I change my mind?',
+    answer: 'Digital files cannot really be returned once you have downloaded them, so refunds are looked at one by one. If you bought the same book twice by accident, or if a file is broken and you cannot open it, contact support within 48 hours and we will help.',
   },
   {
-    question: 'Do my purchases expire?',
-    answer: 'No! Once you purchase a book, it\'s yours forever. Your Digital Library purchases never expire, and downloaded PDFs are permanent files you can keep on your devices indefinitely.',
+    question: 'Will my books expire?',
+    answer: 'No. Once you buy a book, it is yours forever. Your library never expires. Downloaded PDFs are files on your device — they stay there as long as you keep them.',
   },
   {
-    question: 'Can I share my purchased books with others?',
-    answer: 'Purchased books are licensed for personal use only. Each purchase is for a single user. If you want to share a book with someone, encourage them to purchase their own copy to support the creator.',
+    question: 'Can I share a book with a friend?',
+    answer: 'Each purchase is for one person. If you want to share with a friend, the best way is to tell them about it so they can buy their own copy and help support the creator.',
   },
   {
-    question: 'What file format are the books in?',
-    answer: 'All books are delivered as PDF files, which is compatible with virtually every device and PDF reader. PDFs maintain the original layout, formatting, and image quality.',
+    question: 'What kind of file is a book?',
+    answer: 'All Marketplace books are PDF files. PDFs work on almost every device — phone, tablet, laptop, e-reader — with the original layout, fonts, and pictures.',
   },
   {
-    question: 'Can I read on my e-reader like Kindle?',
-    answer: 'You can transfer PDF files to most e-readers, though the reading experience varies by device. E-ink readers work best with text-heavy PDFs. For graphic-heavy content like comics or art books, tablets or computers provide a better experience.',
+    question: 'Can I read on a Kindle?',
+    answer: 'You can copy a PDF to most Kindles and read it. PDFs work best on Kindles for text-only books. For comics or art books with lots of color, a tablet or computer is much better.',
   },
   {
-    question: 'What if I have trouble downloading or accessing a book?',
-    answer: 'First, try refreshing your Digital Library page and attempting the download again. If issues persist, check your internet connection and ensure you\'re logged into the correct account. Still having trouble? Contact our support team with your order details.',
+    question: 'I cannot download a book. What do I do?',
+    answer: 'First try refreshing the Downloads tab and clicking download again. If that does not work, check that you are signed in to the right account and that your internet is working. Still stuck? Email support with your order number.',
   },
   {
-    question: 'Are marketplace purchases separate from crowdfunding pledges?',
-    answer: 'Yes, they\'re completely separate. Marketplace purchases appear in your Digital Library, while crowdfunding pledge rewards are managed through your Backer Dashboard\'s pledge section. You might receive digital content from both sources.',
+    question: 'Are Marketplace books the same as crowdfunding rewards?',
+    answer: 'No, they are separate. Marketplace books appear in your Downloads tab as Marketplace Books at the top. Crowdfunding rewards (digital files from a campaign you backed) appear below in the same tab. Same place, two sources.',
   },
   {
-    question: 'What payment processor does the marketplace use?',
-    answer: 'The marketplace uses PaymentCloud — you enter your credit or debit card at checkout. Your card is tokenized in the browser via Collect.js (PAN never touches our servers) and you\'re charged immediately at purchase. Existing creators with DivinityCoin or other legacy processors continue to be supported on their previous campaigns.',
+    question: 'How is my card processed?',
+    answer: 'The Marketplace uses Mentom Payments to handle card payments. You enter your card on the checkout page, it is encrypted in your browser, and Mentom Payments charges it right away. IndieCrowdfund servers never see your full card number. Older campaigns may show a different processor — that is fine, the experience is the same.',
   },
 ];
 
@@ -443,7 +443,7 @@ export default function MarketplaceBackerHandbookPage() {
                       <div>
                         <h4 className="font-medium text-foreground">Secure & Instant</h4>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          All payments are processed securely through PaymentCloud. Once payment completes, your content is available immediately in your Digital Library.
+                          All payments are processed securely through Mentom Payments. As soon as you pay, your book lands in your Downloads tab — no waiting.
                         </p>
                       </div>
                     </div>
@@ -468,7 +468,7 @@ export default function MarketplaceBackerHandbookPage() {
                       <div>
                         <h4 className="font-medium text-foreground">Your Books, Forever</h4>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Every purchase is added to your Digital Library instantly. Access your entire collection anytime, from any device, with no expiration.
+                          Every book you buy lands in your Downloads tab right away. Your library never expires. Read on any device, any time.
                         </p>
                       </div>
                     </div>
@@ -571,11 +571,11 @@ export default function MarketplaceBackerHandbookPage() {
                   Visit Marketplace
                 </Link>
                 <Link
-                  href="/dashboard/backer"
+                  href="/dashboard/backer?tab=downloads"
                   className="inline-flex items-center gap-2 rounded-lg border-2 border-primary-foreground px-6 py-3 font-medium text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
                 >
                   <Library className="h-5 w-5" />
-                  My Digital Library
+                  My Downloads
                 </Link>
               </div>
             </div>
