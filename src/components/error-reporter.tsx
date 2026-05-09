@@ -115,6 +115,13 @@ export function ErrorReporter() {
       // the user disabled it. Not our bug.
       /MetaMask/i,
       /Wallet not initialized/,
+      // Microsoft Office / Outlook web add-in service throws
+      // "Object Not Found Matching Id:N, MethodName:update, ParamCount:N"
+      // as an unhandled rejection when the add-in loses its host context
+      // (e.g. the user navigates away from the Outlook tab while a
+      // background message-update call is in flight). The error originates
+      // entirely inside Microsoft's office.js, not our code.
+      /Object Not Found Matching Id:\d+, MethodName:/i,
     ];
 
     // Paths that automated scanners / ad networks / browser feature-detection
@@ -267,6 +274,7 @@ export function ErrorReporter() {
       const isExpected401 = response.status === 401 && (
         requestUrl.includes("/api/user/following") ||
         requestUrl.includes("/api/backer/following") ||
+        requestUrl.includes("/api/backer/dashboard") ||
         requestUrl.includes("/api/user/vanity-url") ||
         requestUrl.includes("/api/user/notifications") ||
         requestUrl.includes("/api/messages") ||
@@ -342,7 +350,17 @@ export function ErrorReporter() {
           (requestUrl.includes("/api/projects/") && requestUrl.includes("/comments"))
         );
       const isExpected5xx = response.status >= 500 && response.status < 600 &&
-        (requestUrl.includes("/api/auth/recaptcha") || isStatsPoller5xx || isDashboardPoller5xx || isProjectDetailPoller5xx);
+        (
+          requestUrl.includes("/api/auth/recaptcha") ||
+          // /api/auth/session is fired on every page load by NextAuth. A
+          // 5xx here is the same transient pm2-reload / nginx-upstream
+          // hiccup as /api/auth/recaptcha — the next page load self-heals
+          // because the session cookie is still valid client-side.
+          requestUrl.includes("/api/auth/session") ||
+          isStatsPoller5xx ||
+          isDashboardPoller5xx ||
+          isProjectDetailPoller5xx
+        );
       const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403 || isExpected5xx;
       if (response.status >= 400 && !isInternal) {
         reportError(
