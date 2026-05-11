@@ -517,7 +517,6 @@ export function BackersTab({
                 >
                   <Checkbox
                     checked={selected.includes(option)}
-                    onCheckedChange={() => onToggle(option)}
                   />
                   <span className="text-sm truncate">{option}</span>
                 </div>
@@ -685,9 +684,6 @@ export function BackersTab({
                     >
                       <Checkbox
                         checked={skuFilter.includes(option.id)}
-                        onCheckedChange={() => setSkuFilter(prev =>
-                          prev.includes(option.id) ? prev.filter(v => v !== option.id) : [...prev, option.id]
-                        )}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm truncate">{option.sourceName}</p>
