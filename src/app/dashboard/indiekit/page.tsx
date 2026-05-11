@@ -806,7 +806,12 @@ export default function IndieKitPage() {
       </div>
 
       {/* Dialogs - reused from v1 */}
+      {/* key forces a clean remount whenever the active backer changes so
+          internal state (active tab, pending modifier assignments, edit
+          flags, fetched survey data) can't leak from a previous backer's
+          dialog session into this one. */}
       <BackerDialog
+        key={selectedBacker?.id ?? "empty"}
         open={isBackerDialogOpen}
         onOpenChange={setIsBackerDialogOpen}
         backer={selectedBacker}
