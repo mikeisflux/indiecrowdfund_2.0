@@ -58,6 +58,12 @@ interface Project {
   title: string;
   slug: string;
   status: string;
+  // Creator's vanity URL slug — needed to construct the public
+  // project URL (/projects/<vanityUrl>/<slug>) for pre-resolving
+  // {{PROJECT_URL}} in templates and defaulting the Insert Link
+  // dialog. The IndieKit list endpoint already returns this on
+  // each project via the creator relation.
+  vanityUrl?: string | null;
 }
 
 interface EmailTemplate {
