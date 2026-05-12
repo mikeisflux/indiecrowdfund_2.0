@@ -315,26 +315,26 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Campaign ID required" }, { status: 400 });
     }
 
-    // Verify ownership
-    // Scoped delete via deleteMany — enforces ownership in the WHERE
-    // and resolves concurrent double-clicks as { count: 0 } instead of
-    // P2025.
-    const deleted = await db.emailCampaign.deleteMany({
-      where: {
-        id: campaignId,
-        createdBy: session.user.id,
-        ...(projectId && {
-          filters: {
-            path: ["projectId"],
-            equals: projectId,
-          },
-        }),
-      },
-    });
-
-    if (deleted.count === 0) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    // Authorize via the shared loadCampaignForUser helper so project
+    // collaborators (not just the original campaign creator) can delete
+    // campaigns sent for the shared project. Mirrors the POST action=
+    // delete path which already does this.
+    const existing = await loadCampaignForUser(campaignId, session.user.id);
+    if (!existing) {
+      return NextResponse.json({ error: "Campaign not found or access denied" }, { status: 404 });
     }
+
+    // If the caller specified a projectId, double-check the campaign
+    // actually belongs to that project (UI guard against deleting a
+    // campaign from one project tab while the URL says another).
+    if (projectId) {
+      const f = (existing.filters || {}) as { projectId?: string };
+      if (f.projectId && f.projectId !== projectId) {
+        return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      }
+    }
+
+    await db.emailCampaign.delete({ where: { id: campaignId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
