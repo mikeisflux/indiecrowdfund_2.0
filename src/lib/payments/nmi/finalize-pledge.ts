@@ -39,6 +39,7 @@ export async function finalizeNmiPledge(pledgeId: string): Promise<void> {
       amount: true,
       projectId: true,
       rewardId: true,
+      backerNumber: true,
       user: { select: { name: true } },
       project: { select: { creatorId: true } },
       addons: { select: { addonId: true, quantity: true } },
@@ -47,6 +48,31 @@ export async function finalizeNmiPledge(pledgeId: string): Promise<void> {
 
   if (!pledge) {
     log.warn({ pledgeId }, "finalizeNmiPledge: pledge not found");
+    return;
+  }
+
+  // Idempotency guard. NMI pledges have historically had their counter
+  // bumps applied at pledge-create time (or via admin reconciliation),
+  // not at completion. A non-null backerNumber means the pledge was
+  // already counted toward Project.backerCount / Reward.quantityClaimed
+  // by some other path. Running the bumps again from finalize would
+  // double-count. The marker we use is pledge.backerNumber — if it's
+  // set, we skip the counter side effects entirely. Only the
+  // notification fires (so the creator hears about the actual COMPLETED
+  // transition).
+  if (pledge.backerNumber !== null) {
+    log.info(
+      { pledgeId, backerNumber: pledge.backerNumber },
+      "finalizeNmiPledge: pledge already has backerNumber — counters assumed already bumped, sending notification only"
+    );
+    await notifyPledgeReceived(
+      pledge.projectId,
+      pledge.project.creatorId,
+      pledge.user.name || "A backer",
+      Number(pledge.amount)
+    ).catch((err) =>
+      log.error({ pledgeId, err: String(err) }, "notifyPledgeReceived failed")
+    );
     return;
   }
 

@@ -58,17 +58,24 @@ export async function GET(
         rewards: {
           include: {
             items: true,
+            // Count BOTH completed and pending pledges as "backers" so
+            // the per-reward count matches Project.backerCount, which
+            // also includes pending. AoN campaigns hold pledges in
+            // PENDING (cards in vault) until the goal is hit — they're
+            // real backers from a "people who pledged" standpoint even
+            // before payment fires.
             _count: {
               select: {
                 pledges: {
                   where: {
-                    status: "COMPLETED",
+                    status: { in: ["COMPLETED", "PENDING"] },
+                    deletedAt: null,
                   },
                 },
               },
             },
-            // Get the first 5 backers for avatar display
-            // Only show COMPLETED pledges to match backerCount
+            // Avatar display stays limited to COMPLETED so we don't
+            // surface backers whose pledge could still fail at charge.
             pledges: {
               where: {
                 status: "COMPLETED",

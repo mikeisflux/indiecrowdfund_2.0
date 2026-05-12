@@ -43,17 +43,21 @@ export async function GET(
         rewards: {
           include: {
             items: true,
+            // Count BOTH completed and pending pledges as "backers" so
+            // per-reward counts match Project.backerCount (which also
+            // includes pending). Mirrors the vanity/[name]/[slug] route.
             _count: {
               select: {
                 pledges: {
                   where: {
-                    status: "COMPLETED",
+                    status: { in: ["COMPLETED", "PENDING"] },
+                    deletedAt: null,
                   },
                 },
               },
             },
-            // Get the first 5 backers for avatar display
-            // Only show COMPLETED pledges to match backerCount
+            // Avatar display stays limited to COMPLETED so we don't
+            // surface backers whose pledge could still fail at charge.
             pledges: {
               where: {
                 status: "COMPLETED",
