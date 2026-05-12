@@ -83,7 +83,9 @@ export async function GET(req: NextRequest) {
 
     // Single-campaign fetch (used by /dashboard/indiekit/emails/[id]/edit).
     // Authorize on EITHER createdBy match OR filters.projectId being a
-    // project the caller can edit / collaborate on.
+    // project the caller can edit / collaborate on, OR the caller is
+    // a platform admin (so support / moderation can view any campaign
+    // without being added as a collaborator on the project).
     if (campaignId) {
       const campaign = await db.emailCampaign.findUnique({
         where: { id: campaignId },
@@ -98,7 +100,9 @@ export async function GET(req: NextRequest) {
       const f = (campaign.filters || {}) as { projectId?: string };
       const isProjectCollaborator =
         !!f.projectId && accessibleProjectIds.includes(f.projectId);
-      if (!isOriginalCreator && !isProjectCollaborator) {
+      const isPlatformAdmin =
+        session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN";
+      if (!isOriginalCreator && !isProjectCollaborator && !isPlatformAdmin) {
         return NextResponse.json(
           { error: "Campaign not found or access denied" },
           { status: 404 }
