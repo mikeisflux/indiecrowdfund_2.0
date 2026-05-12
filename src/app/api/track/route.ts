@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import { trackReferrer } from "@/lib/tracking/index";
 
 // Simple in-memory cache to avoid hitting IP-API rate limits (45 req/min)
 const geoCache = new Map<string, { country: string; timestamp: number }>();
@@ -166,6 +167,17 @@ export async function POST(request: Request) {
         metadata: metadata || null,
       },
     });
+
+    // Update the per-day ReferralTracker row on PROJECT_VIEW so the
+    // creator dashboard's Traffic Sources panel gets populated. The
+    // sibling /api/tracking endpoint was already doing this, but the
+    // client-side `tracking.projectView()` helper posts to /api/track,
+    // not /api/tracking — so the referralTracker table was never
+    // touched and Traffic Sources rendered "No traffic data yet" for
+    // every project. Failures here are swallowed inside trackReferrer.
+    if (eventType === "PROJECT_VIEW" && projectId) {
+      await trackReferrer(projectId, referrer || "");
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

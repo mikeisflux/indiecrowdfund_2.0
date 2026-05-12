@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "@/components/providers/auth-provider";
+import { useProjectTracking } from "@/components/tracking-provider";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,12 @@ export default function ProjectPage() {
 
   // Collaborator state (declared early to avoid reference-before-declaration in useEffect)
   const [isCollaborator, setIsCollaborator] = useState(false);
+
+  // Fire PROJECT_VIEW + referrer tracking once the project id is known.
+  // Powers the creator dashboard's Page Views / Conversion Rate /
+  // Traffic Sources panels. Was missing entirely — useProjectTracking
+  // existed in components/tracking-provider but no page mounted it.
+  useProjectTracking(project.id);
 
   const tiers = rewards.filter((r) => r.type === "TIER");
   const fundingPercentage = Number(project.goalAmount) > 0
