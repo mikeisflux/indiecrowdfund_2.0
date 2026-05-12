@@ -22,7 +22,14 @@ import {
   ChevronLeft,
   ChevronRight,
   XCircle,
+  Eye,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
@@ -123,6 +130,41 @@ export default function EmailQueuePage() {
   const [isActioning, setIsActioning] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Preview state — when set, renders the email's bodyHtml inside an
+  // iframe so admins can see exactly what a recipient would receive.
+  // Loaded on-demand from /api/admin/email-queue/[id] because the list
+  // endpoint deliberately omits bodyHtml (potentially huge payload).
+  const [previewEmail, setPreviewEmail] = useState<{
+    id: string;
+    toEmail: string;
+    subject: string;
+    bodyHtml: string;
+    bodyText: string | null;
+    fromEmail: string | null;
+    fromName: string | null;
+    replyTo: string | null;
+    status: string;
+  } | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  const openPreview = useCallback(async (emailId: string) => {
+    setIsLoadingPreview(true);
+    setPreviewEmail(null);
+    try {
+      const res = await apiFetch(`/api/admin/email-queue/${emailId}`);
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to load email");
+        return;
+      }
+      setPreviewEmail(data.email);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load email");
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  }, []);
 
   const fetchQueue = useCallback(async () => {
     try {
@@ -566,6 +608,9 @@ export default function EmailQueuePage() {
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Preview email" onClick={() => openPreview(email.id)} disabled={isLoadingPreview}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
                             {(email.status === "FAILED" || email.status === "PENDING" || email.status === "PROCESSING") && (
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Retry" onClick={() => doAction("retry-one", email.id)} disabled={isActioning}>
                                 <RotateCcw className="h-3.5 w-3.5" />
@@ -595,6 +640,9 @@ export default function EmailQueuePage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openPreview(email.id)} disabled={isLoadingPreview} title="Preview email">
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
                         {(email.status === "FAILED" || email.status === "PENDING" || email.status === "PROCESSING") && (
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => doAction("retry-one", email.id)} disabled={isActioning}>
                             <RotateCcw className="h-3.5 w-3.5" />
@@ -653,6 +701,61 @@ export default function EmailQueuePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Email Preview Dialog */}
+      <Dialog open={!!previewEmail || isLoadingPreview} onOpenChange={(open) => {
+        if (!open) {
+          setPreviewEmail(null);
+          setIsLoadingPreview(false);
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="text-base">
+              {previewEmail?.subject || "Loading email…"}
+            </DialogTitle>
+            {previewEmail && (
+              <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
+                <div>
+                  <span className="font-medium text-foreground">To:</span> {previewEmail.toEmail}
+                </div>
+                <div>
+                  <span className="font-medium text-foreground">From:</span>{" "}
+                  {previewEmail.fromName ? `${previewEmail.fromName} ` : ""}
+                  &lt;{previewEmail.fromEmail || "(default)"}&gt;
+                </div>
+                {previewEmail.replyTo && (
+                  <div>
+                    <span className="font-medium text-foreground">Reply-To:</span> {previewEmail.replyTo}
+                  </div>
+                )}
+                <div>
+                  <span className="font-medium text-foreground">Status:</span> {previewEmail.status}
+                </div>
+              </div>
+            )}
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden bg-muted">
+            {isLoadingPreview && (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {previewEmail && (
+              // Render the email's HTML inside a sandboxed iframe — same
+              // way a mail client would. Sandbox blocks scripts (just
+              // in case a queued email body has any) and prevents the
+              // email's CSS from leaking into the admin page's styles.
+              <iframe
+                title="Email preview"
+                srcDoc={previewEmail.bodyHtml}
+                sandbox="allow-same-origin"
+                className="w-full h-[65vh] bg-white border-0"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
