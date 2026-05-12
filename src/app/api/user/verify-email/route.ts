@@ -170,9 +170,10 @@ export async function POST() {
 </html>
     `;
 
+    const subject = `Verify your email address - ${APP_NAME}`;
     const result = await sendEmail({
       to: user.email,
-      subject: `Verify your email address - ${APP_NAME}`,
+      subject,
       html: emailHtml,
       skipUnsubscribeCheck: true, // Verification is transactional — must bypass unsubscribe list
     });
@@ -185,9 +186,39 @@ export async function POST() {
           message: "Verification email sent! Please check your inbox.",
         });
       }
+      // Surface the underlying provider/blocklist error so the UI can
+      // show the real reason ("address is on our blocklist", "provider
+      // down", "rate limited", etc.) instead of a generic "failed".
+      userVerifyEmailLogger.warn(
+        { userId: user.id, email: user.email, error: result.error },
+        "Verification email send failed"
+      );
       return NextResponse.json(
         { error: result.error || "Failed to send verification email" },
         { status: 500 }
+      );
+    }
+
+    // Record the successful send in EmailLog so admins can audit
+    // delivery attempts. Absence of a row here = the send never made
+    // it to the provider; presence = provider accepted and the
+    // delivery problem is downstream (spam folder, recipient ISP, etc).
+    try {
+      await db.emailLog.create({
+        data: {
+          userId: user.id,
+          type: "EMAIL_VERIFICATION",
+          subject,
+          recipientEmail: user.email,
+          htmlContent: emailHtml,
+        },
+      });
+    } catch (logErr) {
+      // EmailLog is for audit only — never let a logging failure
+      // turn a successful send into a 500 the user can't recover from.
+      userVerifyEmailLogger.warn(
+        { err: String(logErr), userId: user.id },
+        "Failed to write EmailLog row for verification email (send still succeeded)"
       );
     }
 

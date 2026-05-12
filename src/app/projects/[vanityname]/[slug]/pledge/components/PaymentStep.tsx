@@ -61,46 +61,71 @@ const isEmailVerificationError = (error: string | null) =>
 
 function ResendVerificationButton() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleResend = async () => {
     setStatus("sending");
+    setErrorMsg(null);
     try {
       const res = await apiFetch("/api/user/verify-email", { method: "POST" });
       if (res.ok) {
         setStatus("sent");
-      } else {
-        setStatus("error");
+        return;
       }
+      // Pull the real server-side reason ("address is on our blocklist",
+      // "provider down", rate-limit, etc.) so the user knows what to do
+      // — generic "try again" was masking real failures (Jeremy's
+      // verify-email bug, May 2026).
+      let msg = "Failed to send. Please try again.";
+      try {
+        const data = await res.json();
+        if (data?.error && typeof data.error === "string") {
+          msg = data.error;
+        }
+      } catch {
+        // Body wasn't JSON — keep the generic message.
+      }
+      setErrorMsg(msg);
+      setStatus("error");
     } catch {
+      setErrorMsg("Network error. Please try again.");
       setStatus("error");
     }
   };
 
   if (status === "sent") {
     return (
-      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 mt-2">
-        <MailCheck className="h-4 w-4" />
-        Verification email sent! Check your inbox.
+      <div className="flex flex-col gap-1 mt-2">
+        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+          <MailCheck className="h-4 w-4" />
+          Verification email sent! Check your inbox.
+        </div>
+        <div className="text-xs text-muted-foreground pl-6">
+          Don&apos;t see it? Check spam or promotions. Search Gmail for
+          <span className="font-mono"> from:noreply@indiecrowdfund.com</span>.
+        </div>
       </div>
     );
   }
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleResend}
-      disabled={status === "sending"}
-      className="mt-2"
-    >
-      {status === "sending" ? (
-        <><Loader2 className="h-3 w-3 animate-spin mr-1" />Sending...</>
-      ) : status === "error" ? (
-        "Failed to send — try again"
-      ) : (
-        "Resend verification email"
+    <div className="flex flex-col gap-1 mt-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleResend}
+        disabled={status === "sending"}
+      >
+        {status === "sending" ? (
+          <><Loader2 className="h-3 w-3 animate-spin mr-1" />Sending...</>
+        ) : (
+          "Resend verification email"
+        )}
+      </Button>
+      {status === "error" && errorMsg && (
+        <p className="text-xs text-red-600 dark:text-red-400">{errorMsg}</p>
       )}
-    </Button>
+    </div>
   );
 }
 
