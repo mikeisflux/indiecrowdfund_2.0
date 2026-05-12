@@ -260,9 +260,15 @@ export async function POST(request: NextRequest) {
         // Per-recipient FIRST_NAME / NAME substitution. campaignVars
         // are still applied here in case a creator typed e.g.
         // {{PROJECT_NAME}} after the template's first pass — idempotent.
+        //
+        // recipientEmail is passed so extractFirstName can fall through
+        // to the email's local part ("john.smith@…" → "John") when the
+        // subscriber row has no name at all — better than emitting a
+        // bare "Friend, the wait is over!" greeting.
         const personalizedBody = resolveTemplateVars(campaignBodyTemplate, {
-          firstName: extractFirstName(recipient.name),
+          firstName: extractFirstName(recipient.name, recipient.email),
           fullName: recipient.name,
+          recipientEmail: recipient.email,
           ...campaignVars,
         });
         const recipientHtml = buildHtmlBody(personalizedBody);

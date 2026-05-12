@@ -26,14 +26,48 @@
  * safe HTML snippet.
  */
 
-export function extractFirstName(name: string | null | undefined): string {
-  if (!name) return "there";
-  const trimmed = name.trim();
-  if (!trimmed) return "there";
-  // First word before any whitespace. "John Smith" → "John".
-  // "John-Paul" stays "John-Paul" (hyphenated first name).
-  const firstWord = trimmed.split(/\s+/)[0];
-  return firstWord || "there";
+/**
+ * Pick a sensible "first name" for use in {{FIRST_NAME}} substitution.
+ *
+ * Falls through these sources in order so subscribers with imperfect
+ * list data still get something personal-looking:
+ *
+ *   1. First word of the explicit name (e.g. "John Smith" → "John",
+ *      "Mike" → "Mike"). Strips a trailing comma so "Smith, Mike"
+ *      lands on "Smith" rather than "Smith,".
+ *   2. Local part of the email address, prettified. "john.smith@…"
+ *      → "John". "jdoe123@…" → "Jdoe123".
+ *   3. The literal "Friend" as a last resort so we never emit a
+ *      naked greeting like ", the wait is over!"
+ */
+export function extractFirstName(
+  name: string | null | undefined,
+  email?: string | null | undefined
+): string {
+  // 1. Try the name field first.
+  if (name) {
+    const trimmed = name.trim().replace(/,$/, "");
+    if (trimmed) {
+      const firstWord = trimmed.split(/\s+/)[0];
+      if (firstWord) return firstWord;
+    }
+  }
+
+  // 2. Fall back to the email's local part, capitalized. Drop everything
+  // after a dot/underscore/plus so "john.smith+promos@…" still reads
+  // as "John" rather than the whole local part.
+  if (email) {
+    const local = email.split("@")[0];
+    if (local) {
+      const cleaned = local.split(/[._+\-]/)[0];
+      if (cleaned) {
+        return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+    }
+  }
+
+  // 3. Last resort.
+  return "Friend";
 }
 
 function escapeHtml(s: string): string {
@@ -48,6 +82,10 @@ function escapeHtml(s: string): string {
 export interface TemplateVars {
   firstName?: string | null;
   fullName?: string | null;
+  /** Recipient email — used as a fallback source for FIRST_NAME when the
+   * subscriber's name field is empty. The local part before the @ gets
+   * cleaned up and capitalized. */
+  recipientEmail?: string | null;
   projectName?: string;
   projectUrl?: string;
   prelaunchUrl?: string;
@@ -77,7 +115,9 @@ function tokenRegex(token: string): RegExp {
 export function resolveTemplateVars(text: string, vars: TemplateVars): string {
   if (!text) return text;
 
-  const firstName = vars.firstName?.trim() || extractFirstName(vars.fullName ?? null);
+  const firstName =
+    vars.firstName?.trim() ||
+    extractFirstName(vars.fullName ?? null, vars.recipientEmail ?? null);
   const fullName = vars.fullName?.trim() || firstName;
   const projectName = vars.projectName?.trim() || "";
   const projectUrl = vars.projectUrl?.trim() || "";
@@ -113,7 +153,9 @@ export function resolveTemplateVarsForSubject(text: string, vars: TemplateVars):
   if (!text) return text;
   const stripped = text.replace(/[\r\n]/g, "");
 
-  const firstName = vars.firstName?.trim() || extractFirstName(vars.fullName ?? null);
+  const firstName =
+    vars.firstName?.trim() ||
+    extractFirstName(vars.fullName ?? null, vars.recipientEmail ?? null);
   const fullName = vars.fullName?.trim() || firstName;
   const projectName = (vars.projectName || "").replace(/[\r\n]/g, "");
   const projectUrl = (vars.projectUrl || "").replace(/[\r\n]/g, "");
