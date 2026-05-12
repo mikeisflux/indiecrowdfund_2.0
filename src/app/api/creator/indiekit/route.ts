@@ -200,7 +200,7 @@ export async function GET(req: NextRequest) {
       shouldInclude("backers") || shouldInclude("stats") ? db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
           deletedAt: null,
         },
         include: {
@@ -245,11 +245,14 @@ export async function GET(req: NextRequest) {
         take: backersLimit,
       }) : Promise.resolve([]),
 
-      // Count total backers for pagination metadata
+      // Count total backers for pagination metadata. Include PENDING
+      // so the IndieKit dashboard's backer pagination matches the
+      // list above on a live AoN / NMI campaign.
       shouldInclude("backers") ? db.pledge.count({
         where: {
           projectId: selectedProjectId,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
+          deletedAt: null,
         },
       }) : Promise.resolve(0),
 
@@ -279,12 +282,15 @@ export async function GET(req: NextRequest) {
         },
       }) : Promise.resolve([]),
 
-      // Calculate add-on sales total and counts
+      // Calculate add-on sales total and counts. Include PENDING so
+      // add-on stats reflect committed sales during a live AoN / NMI
+      // campaign, not just after the funded-cron fires.
       shouldInclude("stats") ? db.pledgeAddon.aggregate({
         where: {
           pledge: {
             projectId: selectedProjectId,
-            status: "COMPLETED",
+            status: { in: ["COMPLETED", "PENDING"] },
+            deletedAt: null,
           },
         },
         _sum: { amount: true, quantity: true },

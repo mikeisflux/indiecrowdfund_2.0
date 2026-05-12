@@ -281,7 +281,11 @@ export async function notifySurveySent(projectId: string, projectTitle: string) 
     select: {
       slug: true,
       pledges: {
-        where: { status: "COMPLETED" },
+        // Include PENDING so AoN / NMI backers (whose pledge is held
+        // until the funded-cron fires) still receive survey
+        // notifications if a survey lands before the cron converts
+        // all PENDING → COMPLETED.
+        where: { status: { in: ["COMPLETED", "PENDING"] }, deletedAt: null },
         select: { userId: true, id: true },
       },
     },
@@ -312,7 +316,9 @@ export async function notifySurveyUpdateRequested(projectId: string, projectTitl
     select: {
       slug: true,
       pledges: {
-        where: { status: "COMPLETED" },
+        // Include PENDING so AoN / NMI backers receive survey-updated
+        // notifications even if their pledge is still in the vault.
+        where: { status: { in: ["COMPLETED", "PENDING"] }, deletedAt: null },
         select: { userId: true, id: true },
       },
     },
@@ -343,7 +349,13 @@ export async function notifySurveyReminder(projectId: string, projectTitle: stri
     select: {
       slug: true,
       pledges: {
-        where: { status: "COMPLETED", surveyCompleted: false },
+        // Include PENDING so AoN / NMI backers get survey reminders
+        // even if their pledge is still vault-held.
+        where: {
+          status: { in: ["COMPLETED", "PENDING"] },
+          deletedAt: null,
+          surveyCompleted: false,
+        },
         select: { userId: true, id: true },
       },
     },

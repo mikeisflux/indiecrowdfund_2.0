@@ -231,11 +231,14 @@ export async function GET(req: NextRequest) {
         },
       }),
 
-      // Recent backers with user info
+      // Recent backers with user info. Include PENDING so backers
+      // on AoN / NMI campaigns (whose pledges are held in the vault
+      // until the funded-cron fires) show up in the Recent Backers
+      // panel during a live campaign, not just after success.
       db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["COMPLETED", "CANCELLED", "REFUNDED"] },
+          status: { in: ["COMPLETED", "PENDING", "CANCELLED", "REFUNDED"] },
           deletedAt: null,
         },
         orderBy: { createdAt: "desc" },

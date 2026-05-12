@@ -331,13 +331,16 @@ export async function POST(
         const isOriginalCommenter = rootCommentUserId === session.user.id;
 
         if (!isOriginalCommenter) {
-          // Check if they're a backer
+          // Check if they're a backer. Include PENDING so backers on
+          // an active AoN / NMI campaign (whose pledge is held in
+          // the vault until the funded-cron fires) can still join
+          // discussion before the campaign closes.
           const pledge = await db.pledge.findFirst({
             where: {
               userId: session.user.id,
               deletedAt: null,
               projectId,
-              status: "COMPLETED",
+              status: { in: ["COMPLETED", "PENDING"] },
             },
           });
 
@@ -350,14 +353,17 @@ export async function POST(
         }
       }
     } else {
-      // For top-level comments, must be backer, creator, or collaborator
+      // For top-level comments, must be backer, creator, or collaborator.
+      // Include PENDING so AoN / NMI backers (held in the vault until
+      // the campaign succeeds) can post comments during the active
+      // campaign, not just after it funds.
       if (!isCreator && !isCollaborator) {
         const pledge = await db.pledge.findFirst({
           where: {
             userId: session.user.id,
             deletedAt: null,
             projectId,
-            status: "COMPLETED",
+            status: { in: ["COMPLETED", "PENDING"] },
           },
         });
 

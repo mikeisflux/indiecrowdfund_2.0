@@ -45,11 +45,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Get all completed pledges for this project
+    // Get all committed pledges (COMPLETED + PENDING) so transactions
+    // on a live AoN / NMI campaign show in the creator's IndieKit
+    // transactions tab before the funded-cron fires. Display status
+    // is taken from pledge.status (no longer hardcoded "COMPLETED")
+    // so PENDING vault-saved NMI pledges render as PENDING in the UI.
     const pledges = await db.pledge.findMany({
       where: {
         projectId,
-        status: "COMPLETED",
+        status: { in: ["COMPLETED", "PENDING"] },
         deletedAt: null,
       },
       include: {
@@ -103,7 +107,7 @@ export async function GET(req: NextRequest) {
         description,
         paymentProcessor: pledge.paymentProcessor,
         stripePaymentIntentId: pledge.stripePaymentIntentId,
-        status: "COMPLETED",
+        status: pledge.status,
         date: pledge.createdAt.toISOString(),
       });
 

@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const whereClause: any = {
       projectId,
-      status: "COMPLETED",
+      status: { in: ["COMPLETED", "PENDING"] },
       deletedAt: null,
     };
 

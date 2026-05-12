@@ -78,41 +78,60 @@ export async function GET() {
       db.project.count({ where: { deletedAt: null, status: "SUBMITTED" } }),
       db.project.count({ where: { deletedAt: null, createdAt: { gte: thirtyDaysAgo } } }),
 
-      // Pledges - count COMPLETED only
+      // Pledges - count COMPLETED + committed PENDING (Stripe
+      // payment-method-saved or NMI vault-saved). PENDING NMI
+      // pledges are real money commitments that just haven't been
+      // charged yet — they belong on the admin overview.
       db.pledge.count({
         where: {
           deletedAt: null,
-          status: "COMPLETED",
           project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
       }),
-      // Total revenue from COMPLETED pledges
+      // Total revenue including committed PENDING
       db.pledge.aggregate({
         where: {
           deletedAt: null,
-          status: "COMPLETED",
           project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         _sum: { amount: true },
       }),
-      // Revenue this month - COMPLETED pledges only
+      // Revenue this month
       db.pledge.aggregate({
         where: {
           deletedAt: null,
-          status: "COMPLETED",
           createdAt: { gte: thirtyDaysAgo },
           project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         _sum: { amount: true },
         _count: true
       }),
-      // Revenue previous month - COMPLETED pledges only
+      // Revenue previous month
       db.pledge.aggregate({
         where: {
           deletedAt: null,
-          status: "COMPLETED",
           createdAt: { gte: previousThirtyDays, lt: thirtyDaysAgo },
           project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         _sum: { amount: true },
         _count: true

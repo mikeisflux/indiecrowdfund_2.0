@@ -33,13 +33,19 @@ export async function GET(req: NextRequest) {
 
     const isFunded = Number(project.currentAmount) >= Number(project.goalAmount) || project.status === "FUNDED";
 
-    // Find any CONFIRMED pledge for this user/project
-    // Includes COMPLETED pledges and PENDING pledges with Stripe payment method saved
-    // Note: PayPal PENDING pledges are NOT included — paypalOrderId just means checkout
-    // was initiated, not that the user approved payment. Only COMPLETED counts for PayPal.
+    // Find any CONFIRMED pledge for this user/project. Includes:
+    //   - COMPLETED pledges (any processor)
+    //   - PENDING pledges with Stripe payment method saved (AoN Stripe)
+    //   - PENDING pledges with NMI customer-vault id saved (AoN NMI /
+    //     PaymentCloud) — vault id means Collect.js tokenized the card
+    //     and we've added it to the vault, so the pledge is confirmed
+    //     and the user has already "backed" the project.
+    // Note: PayPal PENDING pledges are NOT included — paypalOrderId
+    // just means checkout was initiated, not that the user approved
+    // payment. Only COMPLETED counts for PayPal.
     //
-    // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
-    // runtime — use `NOT: { field: null }` wrapper syntax instead.
+    // Prisma 7 rejects `{ field: { not: null } }` on nullable string
+    // fields at runtime — use `NOT: { field: null }` wrapper syntax.
     const activePledge = await db.pledge.findFirst({
       where: {
         userId: session.user.id,
@@ -50,6 +56,10 @@ export async function GET(req: NextRequest) {
           {
             status: "PENDING",
             NOT: { stripePaymentMethodId: null },
+          },
+          {
+            status: "PENDING",
+            NOT: { nmiCustomerVaultId: null },
           },
         ],
       },

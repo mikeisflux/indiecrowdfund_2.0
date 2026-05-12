@@ -28,13 +28,16 @@ export async function GET() {
       savedProjects,
       monthlyPledges,
     ] = await Promise.all([
-      // Get user's COMPLETED pledges only
-      // Pending pledges are not counted in backer totals
+      // Get user's COMPLETED + PENDING pledges. PENDING is included so
+      // backers on AoN / NMI campaigns (held in the vault until the
+      // funded-cron fires) still see the project they've backed in
+      // their dashboard during the active campaign, not just after it
+      // funds. CANCELLED / FAILED / REFUNDED are still excluded.
       db.pledge.findMany({
         where: {
           userId,
           deletedAt: null,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
         },
         include: {
           project: {
@@ -113,12 +116,14 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
       }),
 
-      // Get monthly spending data (last 6 months) - COMPLETED only
+      // Get monthly spending data (last 6 months). Include PENDING
+      // so AoN / NMI pledges show up in the running spend chart
+      // before the campaign closes.
       db.pledge.findMany({
         where: {
           userId,
           deletedAt: null,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
           createdAt: {
             gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000),
           },

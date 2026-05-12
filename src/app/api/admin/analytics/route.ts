@@ -88,7 +88,10 @@ export async function GET(req: NextRequest) {
             timestamp: { gte: previousStartDate, lt: startDate }
           }
         }),
-        // Pledges current period - include COMPLETED + committed PENDING
+        // Pledges current period - include COMPLETED + committed PENDING.
+        // NMI/PaymentCloud AoN pledges don't set confirmationEmailSent
+        // when the user tokenizes the card, so we also accept
+        // nmiCustomerVaultId being set as the commitment marker.
         db.pledge.aggregate({
           where: {
             deletedAt: null,
@@ -97,6 +100,7 @@ export async function GET(req: NextRequest) {
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
             ],
           },
           _sum: { amount: true },
@@ -111,6 +115,7 @@ export async function GET(req: NextRequest) {
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
             ],
           },
           _sum: { amount: true },
@@ -179,7 +184,10 @@ export async function GET(req: NextRequest) {
     if (tab === "revenue") {
       // Get revenue breakdown
       const [completedPledges, topProjects, completedStats, committedPendingStats] = await Promise.all([
-        // Get committed pledges in the period for grouping by day
+        // Get committed pledges in the period for grouping by day.
+        // Include NMI vault-saved PENDING — Mentom Payments AoN pledges
+        // commit the card via Customer Vault but don't set
+        // confirmationEmailSent until charge-on-success runs.
         db.pledge.findMany({
           where: {
             deletedAt: null,
@@ -188,6 +196,7 @@ export async function GET(req: NextRequest) {
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
             ],
           },
           select: {
@@ -222,13 +231,18 @@ export async function GET(req: NextRequest) {
           _count: true,
           _sum: { amount: true }
         }),
-        // Committed pending pledges aggregate
+        // Committed pending pledges aggregate. NMI vault-saved
+        // PENDING is included via the OR (Mentom doesn't set
+        // confirmationEmailSent on commit).
         db.pledge.aggregate({
           where: {
             deletedAt: null,
             status: "PENDING",
-            confirmationEmailSent: true,
             project: { status: { in: ["LIVE", "FUNDED", "FAILED"] }, deletedAt: null },
+            OR: [
+              { confirmationEmailSent: true },
+              { NOT: { nmiCustomerVaultId: null } },
+            ],
           },
           _count: true,
           _sum: { amount: true }
@@ -449,14 +463,16 @@ export async function GET(req: NextRequest) {
           orderBy: { _count: { location: "desc" } },
           take: 15
         }),
-        // Backer locations (users who have made pledges)
+        // Backer locations (users who have made pledges). Include
+        // PENDING so AoN / NMI backers' locations show on the
+        // analytics map during a live campaign, not just after success.
         db.user.findMany({
           where: {
             deletedAt: null,
             NOT: [{ location: null }, { location: "" }],
             pledges: {
               some: {
-                status: "COMPLETED",
+                status: { in: ["COMPLETED", "PENDING"] },
                 deletedAt: null
               }
             }

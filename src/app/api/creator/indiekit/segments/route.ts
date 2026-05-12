@@ -130,7 +130,8 @@ export async function POST(req: NextRequest) {
       backerCount = await db.pledge.count({
         where: {
           projectId,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
+          deletedAt: null,
         },
       });
     } else if (validatedData.staticBackerIds) {
