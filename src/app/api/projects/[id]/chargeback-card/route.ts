@@ -8,9 +8,8 @@ import { db } from "@/lib/db";
 import { decrypt } from "@/lib/encryption";
 import {
   loadNmiConfig,
-  addCustomerToVault,
+  validateAndAddToVault,
   deleteVaultCustomer,
-  validateVaultCard,
 } from "@/lib/nmi";
 import { isValidNamePart, describeNameError } from "@/lib/validation/name";
 
@@ -227,7 +226,19 @@ export async function POST(
     // so use a 32-char dashless UUID (no prefix — uniqueness alone is
     // what NMI requires).
     const customerVaultId = randomUUID().replace(/-/g, "");
-    const vaultResp = await addCustomerToVault(nmiConfig, {
+
+    // Combined validate-and-add-to-vault call. Validates the card
+    // using the single-use payment_token (which carries CVV) AND
+    // commits the vault entry on success. Replaces the previous
+    // two-step add_customer → validate sequence which lost the CVV
+    // between calls and got rejected by merchant accounts configured
+    // to "Require CVV on validate" with "A card security code has
+    // never been passed for this account REFID:…".
+    //
+    // Gateway only commits the vault entry when the validate auth
+    // succeeds, so a declined card never leaves an orphan in the
+    // vault — no need for the prior delete-on-validate-fail dance.
+    const vaultResp = await validateAndAddToVault(nmiConfig, {
       paymentToken,
       customerVaultId,
       firstName: billingFirstName!.trim(),
@@ -248,7 +259,7 @@ export async function POST(
       if (!looksLikeDuplicateVault) {
         projectsChargebackCardLogger.warn(
           { projectId, response: vaultResp.response, text: vaultResp.responsetext },
-          "PaymentCloud vault add declined for chargeback card"
+          "PaymentCloud validate+vault-add declined for chargeback card"
         );
         return NextResponse.json(
           { error: vaultResp.responsetext || "Card was declined. Please try a different card." },
@@ -257,32 +268,7 @@ export async function POST(
       }
       projectsChargebackCardLogger.warn(
         { projectId, response: vaultResp.response, text: vaultResp.responsetext },
-        "PaymentCloud vault add returned duplicate-id; treating as recovered"
-      );
-    }
-
-    // Auto-validate: a $0/$1 auth-and-void to confirm this is a real
-    // chargeable card. If validate declines, the card was issued but
-    // can't be used for purchases — drop the vault entry and reject.
-    const validateResp = await validateVaultCard(nmiConfig, customerVaultId);
-    if (validateResp.response !== "1") {
-      projectsChargebackCardLogger.warn(
-        {
-          projectId,
-          customerVaultId,
-          response: validateResp.response,
-          text: validateResp.responsetext,
-        },
-        "PaymentCloud validate declined for chargeback card"
-      );
-      await deleteVaultCustomer(nmiConfig, customerVaultId).catch(() => null);
-      return NextResponse.json(
-        {
-          error:
-            validateResp.responsetext ||
-            "Card could not be validated. Please try a different card.",
-        },
-        { status: 400 }
+        "PaymentCloud validate+vault-add returned duplicate-id; treating as recovered"
       );
     }
 

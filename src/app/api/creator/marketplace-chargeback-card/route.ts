@@ -5,9 +5,8 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import {
   loadNmiConfig,
-  addCustomerToVault,
+  validateAndAddToVault,
   deleteVaultCustomer,
-  validateVaultCard,
 } from "@/lib/nmi";
 import { isValidNamePart, describeNameError } from "@/lib/validation/name";
 
@@ -178,7 +177,15 @@ export async function POST(req: NextRequest) {
     // so use a 32-char dashless UUID (no prefix needed — uniqueness
     // alone is what NMI requires).
     const customerVaultId = randomUUID().replace(/-/g, "");
-    const vaultResp = await addCustomerToVault(nmiConfig, {
+
+    // Combined validate-and-add-to-vault. Validates using the
+    // single-use payment_token (which carries CVV) AND commits the
+    // vault entry on success. Replaces the prior two-step
+    // add_customer → validate sequence which lost CVV between calls
+    // and was rejected by merchant accounts configured to
+    // "Require CVV on validate" with "A card security code has never
+    // been passed for this account".
+    const vaultResp = await validateAndAddToVault(nmiConfig, {
       paymentToken,
       customerVaultId,
       firstName: billingFirstName!.trim(),
@@ -199,7 +206,7 @@ export async function POST(req: NextRequest) {
       if (!looksLikeDuplicateVault) {
         log.warn(
           { userId: session.user.id, response: vaultResp.response, text: vaultResp.responsetext },
-          "PaymentCloud vault add declined for marketplace chargeback card"
+          "PaymentCloud validate+vault-add declined for marketplace chargeback card"
         );
         return NextResponse.json(
           { error: vaultResp.responsetext || "Card was declined. Please try a different card." },
@@ -208,20 +215,7 @@ export async function POST(req: NextRequest) {
       }
       log.warn(
         { userId: session.user.id, response: vaultResp.response, text: vaultResp.responsetext },
-        "PaymentCloud vault add returned duplicate-id; treating as recovered"
-      );
-    }
-
-    const validateResp = await validateVaultCard(nmiConfig, customerVaultId);
-    if (validateResp.response !== "1") {
-      await deleteVaultCustomer(nmiConfig, customerVaultId).catch(() => null);
-      return NextResponse.json(
-        {
-          error:
-            validateResp.responsetext ||
-            "Card could not be validated. Please try a different card.",
-        },
-        { status: 400 }
+        "PaymentCloud validate+vault-add returned duplicate-id; treating as recovered"
       );
     }
 

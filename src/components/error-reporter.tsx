@@ -280,6 +280,12 @@ export function ErrorReporter() {
         requestUrl.includes("/api/messages") ||
         requestUrl.includes("/api/creator/dashboard") ||
         requestUrl.includes("/api/creator/email/threads") ||
+        // /api/chat/rooms/resolve is fired by the chat widget on every
+        // project page so it can prefetch the room id when a logged-in
+        // user clicks Message Creator. Visitors who aren't signed in
+        // get 401 here by design; the widget falls back to a "sign in
+        // to message" prompt. Not actionable.
+        requestUrl.includes("/api/chat/rooms/resolve") ||
         isEditPageSubResource401
       );
       // These endpoints never return 403 themselves — a 403 means the bot blocker blocked the IP

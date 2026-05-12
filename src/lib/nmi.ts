@@ -379,6 +379,13 @@ export async function pingNmi(config: NmiConfig): Promise<{
 // real, chargeable card. Used at creator chargeback-card save time so
 // invalid/declined cards are caught up front instead of failing during
 // a real chargeback recoup.
+//
+// NOTE: prefer `validateAndAddToVault` for new code. This helper has a
+// blind spot — the customer_vault doesn't store CVV per PCI rules, so
+// merchant accounts configured to "Require CVV on validate" reject
+// this call with "A card security code has never been passed for this
+// account". `validateAndAddToVault` does the validate using the
+// payment_token (which carries CVV) in a single combined call.
 export async function validateVaultCard(
   config: NmiConfig,
   customerVaultId: string
@@ -386,5 +393,38 @@ export async function validateVaultCard(
   return nmiPost(config, {
     type: "validate",
     customer_vault_id: customerVaultId,
+  });
+}
+
+// Validate a card using its single-use payment_token AND add it to the
+// customer vault in a single gateway call. Replaces the two-step
+// `addCustomerToVault` → `validateVaultCard` sequence so the CVV from
+// the payment_token reaches the gateway during validation (the vault
+// itself can't store CVV per PCI). This matters for merchant accounts
+// configured to "Require CVV on validate" — splitting the operation
+// loses the CVV between calls and the validate rejects with "A card
+// security code has never been passed for this account".
+//
+// Atomic from the creator's perspective: either both happen or neither
+// does (gateway behavior — `customer_vault=add_customer` is only
+// committed when the validate auth succeeds).
+export async function validateAndAddToVault(
+  config: NmiConfig,
+  input: AddCustomerInput
+): Promise<NmiResponse> {
+  return nmiPost(config, {
+    type: "validate",
+    payment_token: input.paymentToken,
+    customer_vault: "add_customer",
+    customer_vault_id: input.customerVaultId,
+    first_name: input.firstName,
+    last_name: input.lastName,
+    email: input.email,
+    address1: input.address1,
+    address2: input.address2,
+    city: input.city,
+    state: input.state,
+    zip: input.zip,
+    country: input.country,
   });
 }
