@@ -105,7 +105,8 @@ export async function GET(
           !!pledge.stripePaymentIntentId ||
           pledge.paymentProcessor === "DIVINITYCOIN" ||
           pledge.paymentProcessor === "PAYPAL" ||
-          pledge.paymentProcessor === "WHOP"
+          pledge.paymentProcessor === "WHOP" ||
+          pledge.paymentProcessor === "NMI"
         ),
         isFunded,
       },

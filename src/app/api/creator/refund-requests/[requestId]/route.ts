@@ -6,6 +6,7 @@ import { getStripeInstance } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { getWhopClient } from "@/lib/payments/whop";
+import { loadNmiConfig, refund as nmiRefund } from "@/lib/nmi";
 import { notifyRefundRequestDecision } from "@/lib/notifications/pledge-notifications";
 
 const refundRequestLogger = logger.child({ module: "creator-refund-request" });
@@ -230,6 +231,31 @@ export async function PATCH(
         }
         const whopClient = await getWhopClient();
         await whopClient.payments.refund(pledge.whopPaymentId);
+      } else if (processor === "NMI") {
+        if (!pledge.nmiTransactionId) {
+          return NextResponse.json(
+            { error: "No Mentom Payments transaction found to refund." },
+            { status: 400 }
+          );
+        }
+        const nmiConfig = await loadNmiConfig();
+        if (!nmiConfig) {
+          return NextResponse.json(
+            { error: "Mentom Payments not configured. Contact support." },
+            { status: 502 }
+          );
+        }
+        const resp = await nmiRefund(nmiConfig, pledge.nmiTransactionId, Number(pledge.amount));
+        if (resp.response !== "1") {
+          refundRequestLogger.warn(
+            { pledgeId: pledge.id, response: resp.response, text: resp.responsetext },
+            "NMI refund declined for refund-request"
+          );
+          return NextResponse.json(
+            { error: resp.responsetext || "Mentom Payments refund declined" },
+            { status: 400 }
+          );
+        }
       }
     } catch (refundError) {
       refundRequestLogger.error({ err: String(refundError), pledgeId: pledge.id }, "Refund processing error");
