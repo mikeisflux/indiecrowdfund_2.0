@@ -373,7 +373,15 @@ export function ErrorReporter() {
           isProjectDetailPoller5xx
         );
       const isInternal = !requestUrl || requestUrl.includes("/api/error-report") || requestUrl.includes("_next/") || requestUrl.includes("_rsc") || isExpected400 || isExpected404 || isExpected401 || isExpected403 || isExpected5xx;
-      if (response.status >= 400 && !isInternal) {
+      // Page-route (non /api/*) fetches caught by this interceptor are
+      // almost always Next.js RSC prefetches or navigation aborts —
+      // hovering a <Link>, closing a tab mid-route-change, or following
+      // a redirect chain that briefly tags as 4xx. Real page navigations
+      // surface their own error UI (the not-found.tsx page) and we
+      // can't do anything actionable with the noise. Only API
+      // responses (which back data fetches) belong in admin logs.
+      const isPageRouteFetch = !requestUrl.startsWith("/api/") && !requestUrl.startsWith("http");
+      if (response.status >= 400 && !isInternal && !isPageRouteFetch) {
         reportError(
           `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,
           undefined,
