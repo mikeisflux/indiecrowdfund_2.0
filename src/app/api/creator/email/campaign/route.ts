@@ -46,12 +46,54 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { subject, content, projectId, senderName, replyTo, scheduledFor } = body;
+    // Resend support: when resendOfCampaignId is supplied, ignore the
+    // explicit subject/content/projectId/sources from the request and
+    // pull them from the original campaign instead. This is what the
+    // "Resend" menu item in IndieKit's Email Marketing tab calls so a
+    // creator can re-send a previously-sent campaign without manually
+    // rebuilding the body in the dialog.
+    const resendOfCampaignId: string | null =
+      typeof body.resendOfCampaignId === "string" && body.resendOfCampaignId.trim()
+        ? body.resendOfCampaignId.trim()
+        : null;
+
+    let subject: string | undefined = body.subject;
+    let content: string | undefined = body.content;
+    let projectId: string | undefined = body.projectId;
+    let senderName: string | undefined = body.senderName;
+    let replyTo: string | undefined = body.replyTo;
+    const scheduledFor: string | undefined = body.scheduledFor;
+
     // Optional list of EmailListSubscriber.source values to filter to.
     // When omitted/empty, send to all subscribed members (back-compat).
-    const sources: string[] | undefined = Array.isArray(body.sources)
+    let sources: string[] | undefined = Array.isArray(body.sources)
       ? body.sources.filter((s: unknown): s is string => typeof s === "string")
       : undefined;
+
+    if (resendOfCampaignId) {
+      const original = await db.emailCampaign.findFirst({
+        where: { id: resendOfCampaignId, createdBy: session.user.id },
+        select: { subject: true, htmlContent: true, filters: true },
+      });
+      if (!original) {
+        return NextResponse.json(
+          { error: "Original campaign not found or access denied" },
+          { status: 404 }
+        );
+      }
+      subject = original.subject;
+      content = original.htmlContent;
+      const f = (original.filters || {}) as {
+        projectId?: string;
+        sources?: string[];
+        senderName?: string;
+        replyTo?: string;
+      };
+      projectId = f.projectId ?? projectId;
+      sources = Array.isArray(f.sources) ? f.sources : sources;
+      senderName = f.senderName ?? senderName;
+      replyTo = f.replyTo ?? replyTo;
+    }
 
     if (!subject?.trim() || !content?.trim()) {
       return NextResponse.json(

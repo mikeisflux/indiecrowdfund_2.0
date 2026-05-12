@@ -362,7 +362,9 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isSending, setIsSending] = useState<string | null>(null);
   const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState<string | null>(null);
   const [confirmSendDialog, setConfirmSendDialog] = useState<EmailCampaign | null>(null);
+  const [confirmResendDialog, setConfirmResendDialog] = useState<EmailCampaign | null>(null);
   const [confirmDeleteDialog, setConfirmDeleteDialog] = useState<EmailCampaign | null>(null);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
 
@@ -400,6 +402,35 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
       toast.error(error instanceof Error ? error.message : "Failed to duplicate campaign");
     } finally {
       setIsDuplicating(null);
+    }
+  };
+
+  const handleResendCampaign = async (campaign: EmailCampaign) => {
+    setIsResending(campaign.id);
+    try {
+      const res = await apiFetch("/api/creator/email/campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // Server pulls subject/htmlContent/filters from the original
+          // campaign so the resend uses the exact saved body — variable
+          // substitution runs fresh per-subscriber.
+          resendOfCampaignId: campaign.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to resend campaign");
+      }
+      toast.success(
+        `Resent "${campaign.title}" to ${data.campaign?.sentCount ?? "all"} subscribers!`
+      );
+      setConfirmResendDialog(null);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to resend campaign");
+    } finally {
+      setIsResending(null);
     }
   };
 
@@ -636,6 +667,21 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
                         {campaign.status === "draft" && (
                           <DropdownMenuItem onClick={() => setConfirmSendDialog(campaign)}>Send Now</DropdownMenuItem>
                         )}
+                        {campaign.status === "sent" && (
+                          <DropdownMenuItem
+                            onClick={() => setConfirmResendDialog(campaign)}
+                            disabled={isResending === campaign.id}
+                          >
+                            {isResending === campaign.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Resending...
+                              </>
+                            ) : (
+                              "Resend to subscribers"
+                            )}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => setConfirmDeleteDialog(campaign)}
@@ -845,6 +891,40 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
                   <Mail className="h-4 w-4 mr-2" />
                   Send Now
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Resend Dialog */}
+      <Dialog open={!!confirmResendDialog} onOpenChange={(open) => !open && setConfirmResendDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resend Campaign?</DialogTitle>
+            <DialogDescription>
+              This will queue a fresh copy of &quot;{confirmResendDialog?.title}&quot; for every
+              eligible subscriber (using the same audience filter as the original send).
+              Personalization variables like {"{{FIRST_NAME}}"} will substitute fresh
+              per-recipient. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmResendDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={() => confirmResendDialog && handleResendCampaign(confirmResendDialog)}
+              disabled={isResending === confirmResendDialog?.id}
+            >
+              {isResending === confirmResendDialog?.id ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Resending...
+                </>
+              ) : (
+                "Resend Now"
               )}
             </Button>
           </DialogFooter>
