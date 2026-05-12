@@ -181,19 +181,27 @@ else
     exit 1
 fi
 
-# Step 7: Reload PM2 (rolling restart for zero-downtime in cluster mode)
+# Step 7: Restart PM2 (full kill + respawn, NOT reload)
+# `pm2 reload` keeps the Node worker process alive and sends SIGUSR2
+# for a graceful reload — but Next.js route handlers can stay cached
+# in memory across the signal, so updated source code in /api routes
+# silently keeps running the old version. `pm2 restart all` fully
+# kills and respawns each worker, guaranteeing fresh code is loaded.
+# Trade-off: ~5s downtime during restart vs zero for reload, which is
+# acceptable for a deploy that's already done its zero-downtime build
+# via the .next/.next-new atomic swap.
 echo ""
-echo "🔄 Step 7: Reloading PM2 (zero-downtime rolling restart)..."
-if pm2 reload all --update-env 2>&1; then
-    echo -e "${GREEN}   PM2 reloaded${NC}"
+echo "🔄 Step 7: Restarting PM2 (full worker respawn)..."
+if pm2 restart all --update-env 2>&1; then
+    echo -e "${GREEN}   PM2 restarted${NC}"
 else
-    echo -e "${RED}❌ ERROR: PM2 reload failed!${NC}"
+    echo -e "${RED}❌ ERROR: PM2 restart failed!${NC}"
     echo "   Attempting rollback..."
     LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
     if [ -n "$LATEST_BACKUP" ]; then
         rm -rf .next
         mv "$LATEST_BACKUP" .next
-        pm2 reload all --update-env
+        pm2 restart all --update-env
         echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
     fi
     exit 1
@@ -252,7 +260,7 @@ else
     if [ -n "$LATEST_BACKUP" ]; then
         rm -rf .next
         mv "$LATEST_BACKUP" .next
-        pm2 reload all --update-env
+        pm2 restart all --update-env
         echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
         echo "   New build crashed on startup. Check logs:"
         echo "   tail -100 /var/log/pm2/indiecrowdfund-error-*.log"
