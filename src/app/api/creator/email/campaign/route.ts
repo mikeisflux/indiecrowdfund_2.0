@@ -10,6 +10,7 @@ import {
   resolveTemplateVarsForSubject,
   extractFirstName,
 } from "@/lib/email/template-vars";
+import { canUserEditProject } from "@/lib/project-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -70,25 +71,71 @@ export async function POST(request: NextRequest) {
       ? body.sources.filter((s: unknown): s is string => typeof s === "string")
       : undefined;
 
+    // Effective creator — defaults to the caller, but switches to the
+    // project creator when a collaborator triggers a resend so the
+    // subscriber list, from-address handle, and EmailCampaign row
+    // ownership all stay anchored to the actual project owner.
+    let effectiveCreatorId = session.user.id;
+
     if (resendOfCampaignId) {
-      const original = await db.emailCampaign.findFirst({
-        where: { id: resendOfCampaignId, createdBy: session.user.id },
-        select: { subject: true, htmlContent: true, filters: true },
+      // Load WITHOUT the createdBy restriction first so we can also
+      // authorize project collaborators, not just the original sender.
+      const original = await db.emailCampaign.findUnique({
+        where: { id: resendOfCampaignId },
+        select: { subject: true, htmlContent: true, filters: true, createdBy: true },
       });
       if (!original) {
         return NextResponse.json(
-          { error: "Original campaign not found or access denied" },
+          { error: "Original campaign not found" },
           { status: 404 }
         );
       }
-      subject = original.subject;
-      content = original.htmlContent;
+
       const f = (original.filters || {}) as {
         projectId?: string;
         sources?: string[];
         senderName?: string;
         replyTo?: string;
       };
+
+      // Authorize: the campaign's original creator can always resend,
+      // OR a project collaborator with edit permission on the project
+      // the campaign was sent for.
+      if (original.createdBy !== session.user.id) {
+        if (!f.projectId) {
+          return NextResponse.json(
+            { error: "You don't have permission to resend this campaign" },
+            { status: 403 }
+          );
+        }
+        const project = await db.project.findFirst({
+          where: { id: f.projectId, deletedAt: null },
+          select: { creatorId: true },
+        });
+        if (!project) {
+          return NextResponse.json(
+            { error: "Original campaign's project not found" },
+            { status: 404 }
+          );
+        }
+        const allowed = await canUserEditProject(
+          f.projectId,
+          session.user.id,
+          project.creatorId
+        );
+        if (!allowed) {
+          return NextResponse.json(
+            { error: "You don't have permission to resend this campaign" },
+            { status: 403 }
+          );
+        }
+        // Collaborator-driven resend: anchor the send to the project
+        // owner so subscribers + handle come from the right account.
+        effectiveCreatorId = project.creatorId;
+      }
+
+      subject = original.subject;
+      content = original.htmlContent;
       projectId = f.projectId ?? projectId;
       sources = Array.isArray(f.sources) ? f.sources : sources;
       senderName = f.senderName ?? senderName;
@@ -123,7 +170,7 @@ export async function POST(request: NextRequest) {
           sentCount: 0,
           openCount: 0,
           clickCount: 0,
-          createdBy: session.user.id,
+          createdBy: effectiveCreatorId,
           filters: {
             projectId: projectId || undefined,
             senderName: senderName || undefined,
@@ -140,9 +187,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get creator info
+    // Get creator info — uses effectiveCreatorId so collaborator-driven
+    // resends pull the project owner's name + handle, not the
+    // collaborator's.
     const creator = await db.user.findFirst({
-      where: { id: session.user.id, deletedAt: null },
+      where: { id: effectiveCreatorId, deletedAt: null },
       select: { id: true, name: true, email: true, creatorEmailHandle: true },
     });
 
@@ -164,7 +213,9 @@ export async function POST(request: NextRequest) {
     // recipients which the no-subscribers check below catches.
     const subscribers = await db.emailListSubscriber.findMany({
       where: {
-        creatorId: session.user.id,
+        // effectiveCreatorId: caller normally, project owner when a
+        // collaborator triggered the resend.
+        creatorId: effectiveCreatorId,
         status: "subscribed",
         ...(Array.isArray(sources) && sources.length > 0
           ? { source: { in: sources } }
@@ -286,7 +337,7 @@ export async function POST(request: NextRequest) {
         sentCount: 0,
         openCount: 0,
         clickCount: 0,
-        createdBy: session.user.id,
+        createdBy: effectiveCreatorId,
         filters: (projectId || (sources && sources.length > 0))
           ? { projectId: projectId || undefined, sources: sources && sources.length > 0 ? sources : undefined }
           : undefined,

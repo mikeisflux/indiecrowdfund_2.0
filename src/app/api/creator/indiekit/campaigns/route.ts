@@ -7,6 +7,42 @@ import { stripBase64FromHtml } from "@/lib/email/strip-base64-html";
 
 const campaignLogger = logger.child({ module: "campaigns" });
 
+/**
+ * Returns the campaign if the caller can act on it (edit, send, delete),
+ * or null if they have no access. A campaign is accessible to:
+ *   1. The user who originally created the row (createdBy match), AND
+ *   2. The creator of the project the campaign was sent for, AND
+ *   3. Any accepted collaborator on that project.
+ *
+ * Used by every per-campaign action below so collaborators can manage
+ * campaigns the project owner sent for the shared project.
+ */
+async function loadCampaignForUser(campaignId: string, userId: string) {
+  const campaign = await db.emailCampaign.findUnique({
+    where: { id: campaignId },
+  });
+  if (!campaign) return null;
+
+  if (campaign.createdBy === userId) return campaign;
+
+  const f = (campaign.filters || {}) as { projectId?: string };
+  if (!f.projectId) return null;
+
+  const project = await db.project.findFirst({
+    where: { id: f.projectId, deletedAt: null },
+    select: { creatorId: true },
+  });
+  if (!project) return null;
+
+  if (project.creatorId === userId) return campaign;
+
+  const collaborator = await db.projectCollaborator.findFirst({
+    where: { projectId: f.projectId, userId, status: "ACCEPTED" },
+    select: { id: true },
+  });
+  return collaborator ? campaign : null;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -22,16 +58,83 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
+    const campaignId = searchParams.get("campaignId");
+
+    // Build the list of project IDs the caller can access (owned + any
+    // they're an accepted collaborator on). Used to widen the
+    // campaign-list visibility so a collaborator can see / edit /
+    // resend campaigns the project owner sent for the shared project,
+    // not just campaigns they personally created.
+    const accessibleProjects = await db.project.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { creatorId: session.user.id },
+          {
+            collaborators: {
+              some: { userId: session.user.id, status: "ACCEPTED" },
+            },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+    const accessibleProjectIds = accessibleProjects.map((p) => p.id);
+
+    // Single-campaign fetch (used by /dashboard/indiekit/emails/[id]/edit).
+    // Authorize on EITHER createdBy match OR filters.projectId being a
+    // project the caller can edit / collaborate on.
+    if (campaignId) {
+      const campaign = await db.emailCampaign.findUnique({
+        where: { id: campaignId },
+      });
+      if (!campaign) {
+        return NextResponse.json(
+          { error: "Campaign not found or access denied" },
+          { status: 404 }
+        );
+      }
+      const isOriginalCreator = campaign.createdBy === session.user.id;
+      const f = (campaign.filters || {}) as { projectId?: string };
+      const isProjectCollaborator =
+        !!f.projectId && accessibleProjectIds.includes(f.projectId);
+      if (!isOriginalCreator && !isProjectCollaborator) {
+        return NextResponse.json(
+          { error: "Campaign not found or access denied" },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({ campaign, campaigns: [campaign] });
+    }
+
+    // List query: include campaigns the caller created PLUS campaigns
+    // for projects they collaborate on. Prisma's JSON path filter
+    // can't do `in`, so we OR one path-equals per accessible project.
+    const visibilityOr = [
+      { createdBy: session.user.id },
+      ...accessibleProjectIds.map((pid) => ({
+        filters: {
+          path: ["projectId"],
+          equals: pid,
+        },
+      })),
+    ];
 
     const campaigns = await db.emailCampaign.findMany({
       where: {
-        createdBy: session.user.id,
-        ...(projectId && {
-          filters: {
-            path: ["projectId"],
-            equals: projectId,
-          },
-        }),
+        AND: [
+          { OR: visibilityOr },
+          ...(projectId
+            ? [
+                {
+                  filters: {
+                    path: ["projectId"],
+                    equals: projectId,
+                  },
+                },
+              ]
+            : []),
+        ],
       },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -112,20 +215,22 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "update" && campaignId) {
-      const updated = await db.emailCampaign.updateMany({
-        where: { id: campaignId, createdBy: session.user.id },
+      // Check accessibility (creator, project owner, or collaborator)
+      // before updating so the existing creator-only scope doesn't
+      // block legitimate edits by a project collaborator.
+      const existing = await loadCampaignForUser(campaignId, session.user.id);
+      if (!existing) {
+        return NextResponse.json({ error: "Campaign not found or access denied" }, { status: 403 });
+      }
+
+      const campaign = await db.emailCampaign.update({
+        where: { id: campaignId },
         data: {
           name: name || title,
           subject,
           htmlContent: htmlContent || undefined,
         },
       });
-
-      if (updated.count === 0) {
-        return NextResponse.json({ error: "Campaign not found or access denied" }, { status: 403 });
-      }
-
-      const campaign = await db.emailCampaign.findFirst({ where: { id: campaignId } });
       return NextResponse.json({ campaign });
     }
 
@@ -178,14 +283,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete" && campaignId) {
-      const deleted = await db.emailCampaign.deleteMany({
-        where: { id: campaignId, createdBy: session.user.id },
-      });
-
-      if (deleted.count === 0) {
+      // Allow project collaborators to delete campaigns on the shared
+      // project, not just the original creator.
+      const existing = await loadCampaignForUser(campaignId, session.user.id);
+      if (!existing) {
         return NextResponse.json({ error: "Campaign not found or access denied" }, { status: 403 });
       }
-
+      await db.emailCampaign.delete({ where: { id: campaignId } });
       return NextResponse.json({ success: true });
     }
 
