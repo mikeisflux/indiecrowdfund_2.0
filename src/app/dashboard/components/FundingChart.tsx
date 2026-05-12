@@ -27,10 +27,21 @@ export function FundingChart({
   // is the "Funding Progress" chart so the line should grow with
   // the campaign over time. On a day with no new pledges the bar
   // still reflects the actual total raised so far, instead of $0.
-  const chartData = fundingData.slice(-10).map(d => ({
-    label: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    value: d.cumulative,
-  }));
+  //
+  // Parse the YYYY-MM-DD key without going through `new Date(str)`,
+  // which interprets the string as UTC midnight. In any timezone
+  // west of UTC that pushes the label back by a day — making today's
+  // bar render as "yesterday" and hiding today entirely from the
+  // chart. Splitting the string and constructing a local Date keeps
+  // the label aligned with the bucket the data actually lives in.
+  const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const chartData = fundingData.slice(-10).map(d => {
+    const [, monthStr, dayStr] = d.date.split("-");
+    return {
+      label: `${MONTH_NAMES[parseInt(monthStr, 10) - 1]} ${parseInt(dayStr, 10)}`,
+      value: d.cumulative,
+    };
+  });
 
   return (
     <Card className="md:col-span-2 bg-card/50 backdrop-blur border-border/50">
