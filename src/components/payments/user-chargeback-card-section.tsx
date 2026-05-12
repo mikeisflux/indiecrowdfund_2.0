@@ -248,7 +248,14 @@ export function UserChargebackCardSection({
           const data = await r.json().catch(() => ({}));
           if (!r.ok) {
             setIsSavingRef.current(false);
-            toast.error(data?.error || "Failed to save chargeback card.");
+            // Persistent toast — gateway responsetext (e.g. "A card
+            // security code has never been passed for this account
+            // REFID:…", "Do not honor", "Insufficient funds") must be
+            // readable; default 4s auto-dismiss was hiding it.
+            toast.error(data?.error || "Failed to save chargeback card.", {
+              duration: Infinity,
+              closeButton: true,
+            });
             return;
           }
           setStatusRef.current({
@@ -265,7 +272,10 @@ export function UserChargebackCardSection({
           toast.success("Chargeback card saved and validated by Mentom Payments.");
         } catch (e) {
           setIsSavingRef.current(false);
-          toast.error(e instanceof Error ? e.message : "Failed to save chargeback card.");
+          toast.error(e instanceof Error ? e.message : "Failed to save chargeback card.", {
+            duration: Infinity,
+            closeButton: true,
+          });
         }
       },
     });
