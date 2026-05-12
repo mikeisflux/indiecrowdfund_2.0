@@ -6,7 +6,7 @@ import {
   resolveTemplateVars,
   resolveTemplateVarsForSubject,
 } from "@/lib/email/template-vars";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -186,6 +186,24 @@ export function EmailDialog({
     });
   };
 
+  // Project URLs for the currently-selected project. Used both as
+  // pre-resolved values when a template loads AND as the default URL
+  // pre-filled in the Insert Link dialog so creators don't have to
+  // type/paste the project URL.
+  const projectUrls = useMemo(() => {
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "");
+    const vanity = currentProject?.vanityUrl || "";
+    const slug = currentProject?.slug || "";
+    const projectUrl =
+      vanity && slug && appUrl ? `${appUrl}/projects/${vanity}/${slug}` : "";
+    return {
+      projectUrl,
+      prelaunchUrl: projectUrl ? `${projectUrl}/prelaunch` : "",
+    };
+  }, [currentProject?.vanityUrl, currentProject?.slug]);
+
   // Initialize/update form when project changes or template is provided
   useEffect(() => {
     if (initialTemplate) {
@@ -195,19 +213,10 @@ export function EmailDialog({
       // verify their links before sending. Leave {{FIRST_NAME}} and
       // {{CREATOR_NAME}} as literal tokens — those substitute at send
       // time per-recipient (FIRST_NAME) or per-handle (CREATOR_NAME).
-      const appUrl =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        (typeof window !== "undefined" ? window.location.origin : "");
-      const vanity = currentProject?.vanityUrl || "";
-      const slug = currentProject?.slug || "";
-      const projectUrl =
-        vanity && slug && appUrl ? `${appUrl}/projects/${vanity}/${slug}` : "";
-      const prelaunchUrl = projectUrl ? `${projectUrl}/prelaunch` : "";
-
       const previewVars = {
         projectName: currentProject?.title || "Your Project",
-        projectUrl,
-        prelaunchUrl,
+        projectUrl: projectUrls.projectUrl,
+        prelaunchUrl: projectUrls.prelaunchUrl,
         // Leave per-recipient + per-handle vars unresolved so they
         // stay visible in the editor as a reminder to the creator
         // that those personalize at send time.
@@ -572,6 +581,11 @@ export function EmailDialog({
                       placeholder="Compose your email..."
                       minHeight="250px"
                       uploadUrl="/api/creator/media/upload"
+                      // Default the Insert Link dialog to the current
+                      // project's public URL so creators can click the
+                      // link icon, see the right URL pre-filled, and
+                      // hit Insert without typing anything.
+                      defaultLinkUrl={projectUrls.projectUrl || undefined}
                     />
                     <div className="text-xs text-muted-foreground space-y-1">
                       <p className="font-medium">Personalization variables:</p>

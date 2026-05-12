@@ -69,6 +69,13 @@ interface EmailEditorProps {
   className?: string;
   minHeight?: string;
   uploadUrl?: string;
+  /**
+   * Default URL pre-filled in the Insert Link dialog when the user
+   * clicks the link icon on unlinked text. Typically the public URL
+   * of the project the email belongs to so creators don't have to
+   * type or paste it.
+   */
+  defaultLinkUrl?: string;
 }
 
 export function EmailEditor({
@@ -78,6 +85,7 @@ export function EmailEditor({
   className,
   minHeight = "300px",
   uploadUrl = "/api/admin/media/upload",
+  defaultLinkUrl,
 }: EmailEditorProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -235,10 +243,14 @@ export function EmailEditor({
 
   const addLink = useCallback(() => {
     if (!editor) return;
-    const previousUrl = editor.getAttributes("link").href || "";
+    // If the selection is already linked, use that href so the user
+    // can edit the existing link. Otherwise default to the parent-
+    // provided project URL so creators don't have to type/paste it
+    // — they just click the link icon and hit Insert.
+    const previousUrl = editor.getAttributes("link").href || defaultLinkUrl || "";
     setLinkUrl(previousUrl);
     setLinkDialogOpen(true);
-  }, [editor]);
+  }, [editor, defaultLinkUrl]);
 
   const submitLink = useCallback(async () => {
     if (!editor) return;
