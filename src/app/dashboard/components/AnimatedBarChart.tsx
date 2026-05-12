@@ -17,6 +17,11 @@ export function AnimatedBarChart({
   const [isVisible, setIsVisible] = useState(false);
   const maxValue = Math.max(...data.map((d) => d.value), 1);
 
+  // Reserve room at the bottom of the chart for the date label so the
+  // tallest bar doesn't overlap the text.
+  const LABEL_RESERVED_PX = 24;
+  const barAreaPx = Math.max(height - LABEL_RESERVED_PX, 0);
+
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 300);
     return () => clearTimeout(timer);
@@ -32,10 +37,18 @@ export function AnimatedBarChart({
   return (
     <div style={{ height }} className="flex items-end gap-2">
       {data.map((item, index) => {
-        const heightPercent = (item.value / maxValue) * 100;
+        // Compute bar height in PIXELS, not percent. Percentage heights
+        // require the bar's parent to have an explicit pixel height —
+        // without that, every bar resolved to 0px and only the minHeight
+        // 4px floor was visible, making the whole "Funding Progress"
+        // chart look like 10 thin lines at the bottom regardless of
+        // pledge totals. Computing px directly side-steps the
+        // percentage-of-nothing problem and the bars now scale properly.
+        const ratio = item.value / maxValue;
+        const targetPx = Math.max(Math.round(ratio * barAreaPx), 4);
         return (
-          <div key={index} className="flex-1 flex flex-col items-center gap-2">
-            <div className="relative w-full group">
+          <div key={index} className="flex-1 flex flex-col items-center justify-end gap-2 h-full">
+            <div className="relative w-full group flex flex-col justify-end" style={{ height: barAreaPx }}>
               <div
                 className={cn(
                   "w-full rounded-t-lg bg-gradient-to-t transition-all duration-1000 ease-out",
@@ -43,12 +56,11 @@ export function AnimatedBarChart({
                   "group-hover:opacity-80"
                 )}
                 style={{
-                  height: isVisible ? `${Math.max(heightPercent, 2)}%` : "0%",
-                  minHeight: isVisible ? "4px" : "0",
+                  height: isVisible ? `${targetPx}px` : "0px",
                   transitionDelay: `${index * 50}ms`,
                 }}
               />
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
                 ${item.value.toLocaleString()}
               </div>
             </div>
