@@ -17,106 +17,53 @@ const PRIVATE_PATHS = [
   "/chat/",
 ];
 
+// Paths under /api/ that ARE public and MUST be crawlable. Without
+// these, social media link unfurlers (Twitter, Facebook, LinkedIn,
+// Slack, Discord, etc.) can't fetch og:image / twitter:image URLs
+// because the whole /api/ tree is disallowed, and project images
+// live under /api/uploads/. Surfaced by the Twitter Card Validator:
+//   "WARN: The image URL ...api/uploads/... may be restricted by
+//    the site's robots.txt file, which will prevent Twitter from
+//    fetching it."
+const PUBLIC_API_PATHS = [
+  "/api/uploads/",  // project hero images + reward images served from disk
+  "/api/og",        // dynamic OG image fallback generator
+];
+
 export default function robots(): MetadataRoute.Robots {
+  // Every userAgent rule needs the same allow + disallow shape, so
+  // build a helper that keeps the per-bot blocks consistent.
+  const standardRule = (userAgent: string) => ({
+    userAgent,
+    allow: ["/", ...PUBLIC_API_PATHS],
+    disallow: PRIVATE_PATHS,
+  });
+
   return {
     rules: [
       // Explicit allow for major search engines
-      {
-        userAgent: "Googlebot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "Googlebot-Image",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "Bingbot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "Slurp", // Yahoo
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "DuckDuckBot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "Baiduspider",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "YandexBot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "facebot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "facebookexternalhit",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "meta-externalagent",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "meta-externalfetcher",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "Twitterbot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "LinkedInBot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "Slackbot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "Discordbot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "WhatsApp",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "TelegramBot",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: "Pinterest",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
+      standardRule("Googlebot"),
+      standardRule("Googlebot-Image"),
+      standardRule("Bingbot"),
+      standardRule("Slurp"), // Yahoo
+      standardRule("DuckDuckBot"),
+      standardRule("Baiduspider"),
+      standardRule("YandexBot"),
+      // Social media link unfurlers — these specifically need access
+      // to /api/uploads/ for og:image fetches
+      standardRule("facebot"),
+      standardRule("facebookexternalhit"),
+      standardRule("meta-externalagent"),
+      standardRule("meta-externalfetcher"),
+      standardRule("Twitterbot"),
+      standardRule("LinkedInBot"),
+      standardRule("Slackbot"),
+      standardRule("Discordbot"),
+      standardRule("WhatsApp"),
+      standardRule("TelegramBot"),
+      standardRule("Pinterest"),
       // Default rule for all other bots
-      {
-        userAgent: "*",
-        allow: "/",
-        disallow: PRIVATE_PATHS,
-      },
+      standardRule("*"),
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
