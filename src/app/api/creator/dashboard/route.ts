@@ -151,6 +151,7 @@ export async function GET(req: NextRequest) {
       rewardStats,
       addonsList,
       dailyFunding,
+      preWindowTotalAgg,
       referrerData,
       fulfillmentData,
       actualPledgeTotals,
@@ -329,20 +330,48 @@ export async function GET(req: NextRequest) {
         orderBy: { amount: "asc" },
       }),
 
-      // Daily funding data for chart — include PENDING so the curve
-      // reflects live pledges during an AoN campaign.
+      // Daily funding data for chart. Mirror the lib/stats widening:
+      // COMPLETED OR (PENDING AND committed) — committed means
+      // confirmationEmailSent (Stripe / PayPal / Whop / DC) OR
+      // nmiCustomerVaultId set (NMI / Mentom Payments AoN). This
+      // excludes abandoned-cart PENDING noise that would otherwise
+      // inflate the chart with $0 / pre-checkout rows.
       db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["COMPLETED", "PENDING"] },
           deletedAt: null,
           createdAt: { gte: startDate },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         select: {
           amount: true,
           createdAt: true,
         },
         orderBy: { createdAt: "asc" },
+      }),
+
+      // Pre-window total — sum of all committed pledges BEFORE the
+      // chart's startDate. Used to seed `cumulative` so the running
+      // line starts at the real campaign total, not 0. Without this,
+      // an old AoN campaign with most pledges outside the visible
+      // window plots a flat line at $0 even though the project has
+      // raised real money.
+      db.pledge.aggregate({
+        where: {
+          projectId: selectedProjectId,
+          deletedAt: null,
+          createdAt: { lt: startDate },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
+        },
+        _sum: { amount: true },
       }),
 
       // Referrer data
@@ -455,9 +484,13 @@ export async function GET(req: NextRequest) {
       ? ((todayAmount - yesterdayAmount) / yesterdayAmount) * 100
       : todayAmount > 0 ? 100 : 0;
 
-    // Process daily funding into chart format
+    // Process daily funding into chart format. `cumulative` is seeded
+    // with the pre-window total so the running line starts at the
+    // real campaign total at startDate, not $0 — important for old
+    // AoN campaigns where most pledges happened before the visible
+    // window.
     const fundingByDate = new Map<string, { amount: number; cumulative: number }>();
-    let cumulative = 0;
+    let cumulative = Number(preWindowTotalAgg._sum.amount ?? 0);
 
     // Initialize all dates in range
     for (let d = new Date(startDate); d <= new Date(); d.setDate(d.getDate() + 1)) {

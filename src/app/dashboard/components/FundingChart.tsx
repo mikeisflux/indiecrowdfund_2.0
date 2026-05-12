@@ -23,9 +23,13 @@ export function FundingChart({
   timeRange,
   onTimeRangeChange,
 }: FundingChartProps) {
+  // Plot running total (cumulative) rather than daily delta — this
+  // is the "Funding Progress" chart so the line should grow with
+  // the campaign over time. On a day with no new pledges the bar
+  // still reflects the actual total raised so far, instead of $0.
   const chartData = fundingData.slice(-10).map(d => ({
     label: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    value: d.amount,
+    value: d.cumulative,
   }));
 
   return (
