@@ -155,11 +155,14 @@ export async function GET(req: NextRequest) {
       fulfillmentData,
       actualPledgeTotals,
     ] = await Promise.all([
-      // Today's pledges amount
+      // Today's pledges amount. Counts both COMPLETED and PENDING so
+      // AoN campaigns (which hold pledges in PENDING until goal) show
+      // real numbers on the creator dashboard instead of $0.
       db.pledge.aggregate({
         where: {
           projectId: selectedProjectId,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
+          deletedAt: null,
           createdAt: { gte: todayStart },
         },
         _sum: { amount: true },
@@ -169,7 +172,8 @@ export async function GET(req: NextRequest) {
       db.pledge.count({
         where: {
           projectId: selectedProjectId,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
+          deletedAt: null,
           createdAt: { gte: todayStart },
         },
       }),
@@ -187,7 +191,8 @@ export async function GET(req: NextRequest) {
       db.pledge.aggregate({
         where: {
           projectId: selectedProjectId,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
+          deletedAt: null,
           createdAt: {
             gte: new Date(todayStart.getTime() - 24 * 60 * 60 * 1000),
             lt: todayStart,
@@ -281,7 +286,14 @@ export async function GET(req: NextRequest) {
           _count: {
             select: {
               pledges: {
-                where: { status: "COMPLETED" },
+                // Count both COMPLETED and PENDING so PENDING NMI / AoN
+                // pledges (held in the vault until campaign success)
+                // show up on per-reward stats during a live campaign,
+                // not just after the funded-cron fires.
+                where: {
+                  status: { in: ["COMPLETED", "PENDING"] },
+                  deletedAt: null,
+                },
               },
             },
           },
@@ -303,7 +315,7 @@ export async function GET(req: NextRequest) {
           quantityClaimed: true,
           selectedAddons: {
             where: {
-              pledge: { status: "COMPLETED", deletedAt: null },
+              pledge: { status: { in: ["COMPLETED", "PENDING"] }, deletedAt: null },
             },
             select: {
               quantity: true,
@@ -314,11 +326,13 @@ export async function GET(req: NextRequest) {
         orderBy: { amount: "asc" },
       }),
 
-      // Daily funding data for chart
+      // Daily funding data for chart — include PENDING so the curve
+      // reflects live pledges during an AoN campaign.
       db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
+          deletedAt: null,
           createdAt: { gte: startDate },
         },
         select: {
@@ -387,11 +401,16 @@ export async function GET(req: NextRequest) {
         },
       }),
 
-      // Actual totals from COMPLETED pledges only (not stored project fields which may include pending)
+      // Actual totals from COMPLETED + PENDING pledges. Was previously
+      // COMPLETED-only, which zeroed out the dashboard headline cards
+      // for AoN/NMI campaigns where every pledge sits in PENDING until
+      // the cron runs at goal — making the dashboard look empty during
+      // live campaigns. Project.currentAmount on the model already
+      // includes PENDING, so this matches what's displayed elsewhere.
       db.pledge.aggregate({
         where: {
           projectId: selectedProjectId,
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PENDING"] },
           deletedAt: null,
         },
         _sum: { amount: true },
