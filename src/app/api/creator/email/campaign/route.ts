@@ -5,6 +5,11 @@ const creatorEmailCampaignLogger = logger.child({ module: "creator-email-campaig
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { queueEmail, EMAIL_PRIORITY, escapeHtmlForEmail as escapeHtml } from "@/lib/email";
+import {
+  resolveTemplateVars,
+  resolveTemplateVarsForSubject,
+  extractFirstName,
+} from "@/lib/email/template-vars";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +141,7 @@ export async function POST(request: NextRequest) {
     // Resolve personalization variables
     let projectName = "";
     let projectUrl = "";
+    let prelaunchUrl = "";
     if (projectId) {
       const project = await db.project.findFirst({
         where: {
@@ -156,27 +162,37 @@ export async function POST(request: NextRequest) {
       }
       projectName = project.title;
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      projectUrl = `${appUrl}/projects/${project.creator?.vanityUrl || "creator"}/${project.slug}`;
+      const vanity = project.creator?.vanityUrl || "creator";
+      projectUrl = `${appUrl}/projects/${vanity}/${project.slug}`;
+      prelaunchUrl = `${appUrl}/projects/${vanity}/${project.slug}/prelaunch`;
     }
 
-    // Personalize template variables. The body itself is already
-    // trusted HTML from the IndieKit TipTap editor (sanitized at
-    // editor-time and stored as-is in the DB), so we DON'T escape the
-    // body — doing so renders the recipient's email as visible
-    // <h2>Tag soup</h2> markup. Only the substituted values
-    // (projectName, fromName, projectUrl) come from arbitrary user
-    // input and need escaping before they're spliced into the body.
-    const resolveVars = (text: string) =>
-      text
-        .replace(/\{\{PROJECT_NAME\}\}/g, escapeHtml(projectName))
-        .replace(/\{\{CREATOR_NAME\}\}/g, escapeHtml(fromName))
-        .replace(/\{\{PROJECT_URL\}\}/g, escapeHtml(projectUrl));
+    // Campaign-level (recipient-independent) vars. FIRST_NAME / NAME
+    // are filled per-recipient inside the send loop below.
+    const campaignVars = {
+      projectName,
+      projectUrl,
+      prelaunchUrl,
+      creatorName: fromName,
+    };
 
-    const resolvedSubject = subject.trim().replace(/[\r\n]/g, "").replace(/\{\{PROJECT_NAME\}\}/g, projectName.replace(/[\r\n]/g, "")).replace(/\{\{CREATOR_NAME\}\}/g, fromName.replace(/[\r\n]/g, ""));
-    const resolvedContent = resolveVars(content.trim());
+    // Subject doesn't need per-recipient personalization (most subjects
+    // don't reference FIRST_NAME, and personalizing the subject hurts
+    // deliverability by making every recipient see a unique subject
+    // line). Resolve campaign-level vars only.
+    const resolvedSubject = resolveTemplateVarsForSubject(subject.trim(), campaignVars);
 
-    // Build email HTML
-    const htmlBody = `
+    // EmailCampaign log row gets the body with campaign-level vars
+    // resolved (FIRST_NAME left as-is). Per-recipient FIRST_NAME
+    // substitution happens just before each send so the log shows
+    // the template, not whichever subscriber's name we happened to
+    // resolve into it first.
+    const campaignBodyTemplate = resolveTemplateVars(content.trim(), campaignVars);
+
+    // Build email HTML for a single recipient. The body is wrapped
+    // once per recipient because {{FIRST_NAME}} substitution happens
+    // before this point.
+    const buildHtmlBody = (bodyHtml: string) => `
       <!DOCTYPE html>
       <html>
         <head>
@@ -197,7 +213,7 @@ export async function POST(request: NextRequest) {
           <h2 style="color: #333; margin-bottom: 20px;">${escapeHtml(resolvedSubject)}</h2>
 
           <div style="padding: 20px 0; white-space: pre-wrap;">
-            ${resolvedContent}
+            ${bodyHtml}
           </div>
 
           <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: center; color: #999; font-size: 12px;">
@@ -207,19 +223,24 @@ export async function POST(request: NextRequest) {
       </html>
     `;
 
-    // Get unique emails
-    const uniqueEmails = Array.from(
-      new Set(subscribers.map((s: { email: string; name: string | null }) => s.email).filter(Boolean))
-    ) as string[];
+    // Dedupe subscribers by email (keep the FIRST occurrence's name so
+    // we have a per-recipient name available for {{FIRST_NAME}}).
+    const seen = new Set<string>();
+    const uniqueRecipients: { email: string; name: string | null }[] = [];
+    for (const s of subscribers as { email: string; name: string | null }[]) {
+      if (!s.email || seen.has(s.email)) continue;
+      seen.add(s.email);
+      uniqueRecipients.push({ email: s.email, name: s.name });
+    }
 
     // Create EmailCampaign record first so we have an ID for tracking pixels
     const campaign = await db.emailCampaign.create({
       data: {
         name: resolvedSubject,
         subject: resolvedSubject,
-        htmlContent: resolvedContent,
+        htmlContent: campaignBodyTemplate,
         status: "SENDING",
-        recipientCount: uniqueEmails.length,
+        recipientCount: uniqueRecipients.length,
         sentCount: 0,
         openCount: 0,
         clickCount: 0,
@@ -234,16 +255,24 @@ export async function POST(request: NextRequest) {
     let queuedCount = 0;
     const errors: string[] = [];
 
-    for (const recipientEmail of uniqueEmails) {
+    for (const recipient of uniqueRecipients) {
       try {
-        // Inject per-recipient tracking pixel and click tracking
-        const trackedHtml = addEmailTracking(htmlBody, campaign.id, recipientEmail);
+        // Per-recipient FIRST_NAME / NAME substitution. campaignVars
+        // are still applied here in case a creator typed e.g.
+        // {{PROJECT_NAME}} after the template's first pass — idempotent.
+        const personalizedBody = resolveTemplateVars(campaignBodyTemplate, {
+          firstName: extractFirstName(recipient.name),
+          fullName: recipient.name,
+          ...campaignVars,
+        });
+        const recipientHtml = buildHtmlBody(personalizedBody);
+        const trackedHtml = addEmailTracking(recipientHtml, campaign.id, recipient.email);
 
         const result = await queueEmail({
-          to: recipientEmail,
+          to: recipient.email,
           subject: resolvedSubject,
           html: trackedHtml,
-          text: resolvedContent,
+          text: personalizedBody,
           fromEmail,
           fromName,
           replyTo: replyToEmail,
@@ -254,11 +283,11 @@ export async function POST(request: NextRequest) {
         if (result.success) {
           queuedCount++;
         } else {
-          errors.push(`${recipientEmail}: ${result.error}`);
+          errors.push(`${recipient.email}: ${result.error}`);
         }
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        errors.push(`${recipientEmail}: ${errMsg}`);
+        errors.push(`${recipient.email}: ${errMsg}`);
       }
     }
 
@@ -293,7 +322,7 @@ export async function POST(request: NextRequest) {
         id: campaign.id,
         subject: subject.trim(),
         status: "sent",
-        recipientCount: uniqueEmails.length,
+        recipientCount: uniqueRecipients.length,
         sentCount: queuedCount,
         errorCount: errors.length,
         sentAt: new Date().toISOString(),

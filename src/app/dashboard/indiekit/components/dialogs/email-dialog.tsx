@@ -240,6 +240,12 @@ export function EmailDialog({
           htmlContent: emailBody,
           senderName: senderName || undefined,
           replyTo: replyToEmail || undefined,
+          // Pass projectId so {{PROJECT_NAME}}, {{PROJECT_URL}},
+          // {{PROJECT_LINK}}, and {{PRELAUNCH_URL}} resolve the same
+          // way they will in the real batch send. FIRST_NAME / NAME
+          // resolve from the creator's own profile since they're
+          // sending the test to themselves.
+          projectId: currentProjectId || undefined,
         }),
       });
 
@@ -542,9 +548,12 @@ export function EmailDialog({
                       <p className="font-medium">Personalization variables:</p>
                       <div className="flex flex-wrap gap-1">
                         {[
+                          { label: "First Name", value: "{{FIRST_NAME}}" },
                           { label: "Project Name", value: "{{PROJECT_NAME}}" },
                           { label: "Creator Name", value: "{{CREATOR_NAME}}" },
                           { label: "Project URL", value: "{{PROJECT_URL}}" },
+                          { label: "Project Link", value: "{{PROJECT_LINK}}" },
+                          { label: "Prelaunch URL", value: "{{PRELAUNCH_URL}}" },
                         ].map((v) => (
                           <button
                             key={v.value}
