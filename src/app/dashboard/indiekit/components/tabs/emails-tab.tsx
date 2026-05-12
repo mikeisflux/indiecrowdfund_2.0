@@ -442,13 +442,17 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
 
     setIsSending(campaign.id);
     try {
-      const res = await apiFetch("/api/creator/indiekit/campaigns", {
+      // The IndieKit campaigns action="send" endpoint only flipped the
+      // DB status to SENDING — nothing watched that status to dispatch
+      // emails, so drafts sat forever. Route through the real batch
+      // send endpoint instead: it pulls subject/body/filters from the
+      // existing campaign row (server-side via resendOfCampaignId) and
+      // queues emails for every subscriber.
+      const res = await apiFetch("/api/creator/email/campaign", {
         method: "POST",
-        headers: { "Content-Type": "application/json", },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectId,
-          action: "send",
-          campaignId: campaign.id,
+          resendOfCampaignId: campaign.id,
         }),
       });
 
@@ -457,7 +461,26 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
         throw new Error(data.error || "Failed to send campaign");
       }
 
-      toast.success(`Campaign "${campaign.title}" is being sent!`);
+      // The send endpoint always creates a NEW EmailCampaign row for
+      // tracking. The original DRAFT row is now redundant — delete it
+      // so the campaigns list shows just the sent copy. Failure here
+      // doesn't roll back the send; worst case the creator sees a
+      // leftover DRAFT and can delete it manually.
+      if (campaign.status === "draft") {
+        await apiFetch("/api/creator/indiekit/campaigns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId,
+            action: "delete",
+            campaignId: campaign.id,
+          }),
+        }).catch(() => null);
+      }
+
+      toast.success(
+        `Campaign "${campaign.title}" sent to ${data.campaign?.sentCount ?? "all"} subscribers!`
+      );
       setConfirmSendDialog(null);
       onRefresh?.();
     } catch (error) {
