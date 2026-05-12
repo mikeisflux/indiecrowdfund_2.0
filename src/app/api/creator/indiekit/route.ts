@@ -196,12 +196,19 @@ export async function GET(req: NextRequest) {
       projectRewards,
       projectAddons,
     ] = await Promise.all([
-      // Get paginated COMPLETED pledges for the project with user info
+      // Get paginated COMPLETED + committed PENDING pledges for the
+      // project with user info. Same commit-marker filter as lib/stats
+      // so IndieKit shows the same backer set as the public total —
+      // no abandoned-cart PENDING noise.
       shouldInclude("backers") || shouldInclude("stats") ? db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["COMPLETED", "PENDING"] },
           deletedAt: null,
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         include: {
           user: {
@@ -245,14 +252,17 @@ export async function GET(req: NextRequest) {
         take: backersLimit,
       }) : Promise.resolve([]),
 
-      // Count total backers for pagination metadata. Include PENDING
-      // so the IndieKit dashboard's backer pagination matches the
-      // list above on a live AoN / NMI campaign.
+      // Count total backers for pagination metadata. Same committed-
+      // PENDING filter as the list above.
       shouldInclude("backers") ? db.pledge.count({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["COMPLETED", "PENDING"] },
           deletedAt: null,
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
       }) : Promise.resolve(0),
 
@@ -282,15 +292,18 @@ export async function GET(req: NextRequest) {
         },
       }) : Promise.resolve([]),
 
-      // Calculate add-on sales total and counts. Include PENDING so
-      // add-on stats reflect committed sales during a live AoN / NMI
-      // campaign, not just after the funded-cron fires.
+      // Calculate add-on sales total and counts. Same committed-
+      // PENDING filter so add-on revenue matches the headline.
       shouldInclude("stats") ? db.pledgeAddon.aggregate({
         where: {
           pledge: {
             projectId: selectedProjectId,
-            status: { in: ["COMPLETED", "PENDING"] },
             deletedAt: null,
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+            ],
           },
         },
         _sum: { amount: true, quantity: true },

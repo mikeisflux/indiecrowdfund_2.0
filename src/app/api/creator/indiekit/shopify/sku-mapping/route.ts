@@ -140,11 +140,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Get pledges with actual orders to find which rewards/addons have been ordered
+    // Get pledges with actual orders to find which rewards/addons have
+    // been ordered. Committed-PENDING filter matches the rest of
+    // IndieKit so SKU mapping covers the same backer set.
     const pledgesWithOrders = await db.pledge.findMany({
       where: {
         projectId,
-        status: { in: ["COMPLETED", "PENDING"] }, // Only count completed/pending pledges
+        deletedAt: null,
+        OR: [
+          { status: "COMPLETED" },
+          { status: "PENDING", confirmationEmailSent: true },
+          { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+        ],
       },
       select: {
         rewardId: true,

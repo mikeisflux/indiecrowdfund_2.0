@@ -463,17 +463,21 @@ export async function GET(req: NextRequest) {
           orderBy: { _count: { location: "desc" } },
           take: 15
         }),
-        // Backer locations (users who have made pledges). Include
-        // PENDING so AoN / NMI backers' locations show on the
-        // analytics map during a live campaign, not just after success.
+        // Backer locations (users who have made pledges). Committed-
+        // PENDING filter so AoN / NMI backers' locations show during
+        // a live campaign without including abandoned-cart users.
         db.user.findMany({
           where: {
             deletedAt: null,
             NOT: [{ location: null }, { location: "" }],
             pledges: {
               some: {
-                status: { in: ["COMPLETED", "PENDING"] },
-                deletedAt: null
+                deletedAt: null,
+                OR: [
+                  { status: "COMPLETED" },
+                  { status: "PENDING", confirmationEmailSent: true },
+                  { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+                ],
               }
             }
           },

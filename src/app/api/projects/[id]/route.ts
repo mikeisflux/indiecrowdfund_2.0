@@ -642,10 +642,10 @@ export async function PATCH(
           data: updateData,
         });
 
-        // Get existing rewards with backer counts. Include PENDING so
-        // AoN / NMI campaigns (where backer pledges sit in the vault
-        // until the funded-cron fires) correctly block destructive
-        // edits / deletes on rewards that already have backers.
+        // Get existing rewards with backer counts. Committed-PENDING
+        // filter so AoN / NMI campaigns correctly block destructive
+        // edits / deletes on rewards with real backers, without
+        // counting abandoned-cart PENDING that would never charge.
         const existingRewards = await tx.reward.findMany({
           where: { projectId: id },
           include: {
@@ -653,8 +653,12 @@ export async function PATCH(
               select: {
                 pledges: {
                   where: {
-                    status: { in: ["COMPLETED", "PENDING"] },
                     deletedAt: null,
+                    OR: [
+                      { status: "COMPLETED" },
+                      { status: "PENDING", confirmationEmailSent: true },
+                      { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+                    ],
                   },
                 },
               },

@@ -87,12 +87,10 @@ export async function GET(
           },
         },
         pledges: {
-          // Include PENDING so AoN / NMI backers' active campaigns
-          // show on the user's public profile during the campaign,
-          // not just after the funded-cron converts pledges to
-          // COMPLETED.
+          // Committed-PENDING filter so AoN / NMI backers' active
+          // campaigns show during the campaign without including
+          // abandoned-cart rows.
           where: {
-            status: { in: ["COMPLETED", "PENDING"] },
             deletedAt: null,
             project: {
               status: {
@@ -100,6 +98,11 @@ export async function GET(
               },
               deletedAt: null,
             },
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+            ],
           },
           orderBy: { createdAt: "desc" },
           take: 50,

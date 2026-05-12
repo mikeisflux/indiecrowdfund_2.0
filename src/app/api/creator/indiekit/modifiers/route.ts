@@ -55,11 +55,13 @@ export async function GET(req: NextRequest) {
     // Get all tier rewards (base rewards that can be modified)
     const tierRewards = project.rewards.filter((r: { type: string }) => r.type === "TIER");
 
-    // Get pledges that have modifier addons
+    // Get pledges that have modifier addons. Committed-PENDING filter
+    // matches the rest of IndieKit so modifier assignments cover the
+    // same backer set as the main backer list.
     const pledgesWithModifiers = await db.pledge.findMany({
       where: {
         projectId,
-        status: { in: ["COMPLETED", "PENDING"] },
+        deletedAt: null,
         addons: {
           some: {
             addon: {
@@ -67,7 +69,11 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        deletedAt: null,
+        OR: [
+          { status: "COMPLETED" },
+          { status: "PENDING", confirmationEmailSent: true },
+          { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+        ],
       },
       include: {
         user: {
@@ -181,17 +187,22 @@ export async function POST(req: NextRequest) {
 
     // AUTO-ASSIGN all simple cases
     if (action === "auto_assign_all") {
-      // Get all pledges with modifier addons that don't have assignments yet
+      // Get all pledges with modifier addons that don't have assignments yet.
+      // Same committed-PENDING filter as the read path.
       const pledges = await db.pledge.findMany({
         where: {
           projectId,
-          status: { in: ["COMPLETED", "PENDING"] },
+          deletedAt: null,
           addons: {
             some: {
               addon: { isModifier: true },
             },
           },
-          deletedAt: null,
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         include: {
           reward: true,

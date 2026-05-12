@@ -33,9 +33,11 @@ export async function GET(
 
     return NextResponse.json(stats, {
       headers: {
-        // 30s cache — collapses aggressive client polling into one
-        // origin hit per half-minute (matches the vanity stats route).
-        "Cache-Control": "public, max-age=30, s-maxage=30, stale-while-revalidate=60",
+        // Real-time — see vanity stats route for the rationale. The
+        // prior 30s cache made the public page visibly lag behind the
+        // creator dashboard. Polling at 15s per tab is fine without a
+        // cache layer.
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
       },
     });
   } catch (error) {

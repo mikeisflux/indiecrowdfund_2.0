@@ -35,14 +35,18 @@ export async function GET(
       goalAmount: project.goalAmount,
     });
 
-    // Stats are public counters with no per-user data, polled aggressively
-    // by the project page. A 30s cache lets the browser + any CDN
-    // collapse the dozens of poll requests per minute into one origin
-    // hit, which both reduces DB load and prevents real visitors from
-    // tripping the 120 req/min general rate limiter (see src/proxy.ts).
+    // Stats must reflect new pledges in real time — backers expect the
+    // page total to bump the moment their pledge clears. The old 30s
+    // CDN/browser cache was visibly lagging behind the creator
+    // dashboard (creator saw $1,494.77 / 18 backers; public was stuck
+    // at $1,285 / 17 for up to 30s because Cloudflare was serving the
+    // cached response). Polling is once per 15s per tab, well under
+    // the 120 req/min per-IP limiter, so an origin hit per poll is
+    // safe — the prior cache was over-engineered for a public stats
+    // endpoint.
     return NextResponse.json(stats, {
       headers: {
-        "Cache-Control": "public, max-age=30, s-maxage=30, stale-while-revalidate=60",
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
       },
     });
   } catch (error) {

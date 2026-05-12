@@ -51,12 +51,18 @@ export async function GET(req: NextRequest) {
 
     switch (exportType) {
       case "backers": {
-        // Get all pledges with user and survey data
+        // Get all pledges with user and survey data. Committed-PENDING
+        // filter so CSV export covers the same backer set as the
+        // IndieKit dashboard.
         const pledges = await db.pledge.findMany({
           where: {
             projectId,
-            status: { in: ["COMPLETED", "PENDING"] },
             deletedAt: null,
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+            ],
           },
           take: 50000,
           include: {

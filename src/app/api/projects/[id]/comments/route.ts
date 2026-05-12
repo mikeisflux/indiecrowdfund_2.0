@@ -331,16 +331,19 @@ export async function POST(
         const isOriginalCommenter = rootCommentUserId === session.user.id;
 
         if (!isOriginalCommenter) {
-          // Check if they're a backer. Include PENDING so backers on
-          // an active AoN / NMI campaign (whose pledge is held in
-          // the vault until the funded-cron fires) can still join
-          // discussion before the campaign closes.
+          // Check if they're a backer. Committed-PENDING filter so
+          // backers on an active AoN / NMI campaign can join discussion
+          // without granting comment access to abandoned-cart users.
           const pledge = await db.pledge.findFirst({
             where: {
               userId: session.user.id,
               deletedAt: null,
               projectId,
-              status: { in: ["COMPLETED", "PENDING"] },
+              OR: [
+                { status: "COMPLETED" },
+                { status: "PENDING", confirmationEmailSent: true },
+                { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+              ],
             },
           });
 
@@ -354,16 +357,19 @@ export async function POST(
       }
     } else {
       // For top-level comments, must be backer, creator, or collaborator.
-      // Include PENDING so AoN / NMI backers (held in the vault until
-      // the campaign succeeds) can post comments during the active
-      // campaign, not just after it funds.
+      // Committed-PENDING filter so AoN / NMI backers can comment during
+      // a live campaign without opening comments to abandoned-cart users.
       if (!isCreator && !isCollaborator) {
         const pledge = await db.pledge.findFirst({
           where: {
             userId: session.user.id,
             deletedAt: null,
             projectId,
-            status: { in: ["COMPLETED", "PENDING"] },
+            OR: [
+              { status: "COMPLETED" },
+              { status: "PENDING", confirmationEmailSent: true },
+              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+            ],
           },
         });
 

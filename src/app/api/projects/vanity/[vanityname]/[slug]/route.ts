@@ -68,8 +68,12 @@ export async function GET(
               select: {
                 pledges: {
                   where: {
-                    status: { in: ["COMPLETED", "PENDING"] },
                     deletedAt: null,
+                    OR: [
+                      { status: "COMPLETED" },
+                      { status: "PENDING", confirmationEmailSent: true },
+                      { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+                    ],
                   },
                 },
               },

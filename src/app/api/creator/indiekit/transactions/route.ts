@@ -45,16 +45,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Get all committed pledges (COMPLETED + PENDING) so transactions
-    // on a live AoN / NMI campaign show in the creator's IndieKit
-    // transactions tab before the funded-cron fires. Display status
-    // is taken from pledge.status (no longer hardcoded "COMPLETED")
-    // so PENDING vault-saved NMI pledges render as PENDING in the UI.
+    // Get all committed pledges (COMPLETED + committed PENDING) so
+    // transactions on a live AoN / NMI campaign show before the
+    // funded-cron fires. Committed-PENDING filter matches lib/stats —
+    // no abandoned-cart PENDING noise. Display status comes from
+    // pledge.status so vault-saved NMI pledges render as PENDING.
     const pledges = await db.pledge.findMany({
       where: {
         projectId,
-        status: { in: ["COMPLETED", "PENDING"] },
         deletedAt: null,
+        OR: [
+          { status: "COMPLETED" },
+          { status: "PENDING", confirmationEmailSent: true },
+          { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+        ],
       },
       include: {
         user: { select: { id: true, name: true, email: true } },

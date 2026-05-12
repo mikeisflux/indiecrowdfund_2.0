@@ -156,26 +156,36 @@ export async function GET(req: NextRequest) {
       fulfillmentData,
       actualPledgeTotals,
     ] = await Promise.all([
-      // Today's pledges amount. Counts both COMPLETED and PENDING so
-      // AoN campaigns (which hold pledges in PENDING until goal) show
-      // real numbers on the creator dashboard instead of $0.
+      // Today's pledges amount. Counts COMPLETED + committed PENDING
+      // (confirmationEmailSent for Stripe/PayPal/Whop/DC, or
+      // nmiCustomerVaultId for NMI vault-saved AoN) — same filter as
+      // lib/stats so the dashboard headline matches the public total.
+      // Abandoned-cart PENDING (no commit marker) is excluded.
       db.pledge.aggregate({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["COMPLETED", "PENDING"] },
           deletedAt: null,
           createdAt: { gte: todayStart },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         _sum: { amount: true },
       }),
 
-      // Today's backer count
+      // Today's backer count — same committed-PENDING filter.
       db.pledge.count({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["COMPLETED", "PENDING"] },
           deletedAt: null,
           createdAt: { gte: todayStart },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
       }),
 
@@ -188,16 +198,20 @@ export async function GET(req: NextRequest) {
         },
       }),
 
-      // Yesterday's pledges (for comparison)
+      // Yesterday's pledges (for comparison) — same committed-PENDING filter.
       db.pledge.aggregate({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["COMPLETED", "PENDING"] },
           deletedAt: null,
           createdAt: {
             gte: new Date(todayStart.getTime() - 24 * 60 * 60 * 1000),
             lt: todayStart,
           },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         _sum: { amount: true },
       }),
@@ -290,13 +304,17 @@ export async function GET(req: NextRequest) {
           _count: {
             select: {
               pledges: {
-                // Count both COMPLETED and PENDING so PENDING NMI / AoN
-                // pledges (held in the vault until campaign success)
-                // show up on per-reward stats during a live campaign,
-                // not just after the funded-cron fires.
+                // Per-reward backer count: COMPLETED + committed
+                // PENDING. Tightened filter matches lib/stats so per-
+                // reward counts add up to the headline backer total
+                // without abandoned-cart noise.
                 where: {
-                  status: { in: ["COMPLETED", "PENDING"] },
                   deletedAt: null,
+                  OR: [
+                    { status: "COMPLETED" },
+                    { status: "PENDING", confirmationEmailSent: true },
+                    { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+                  ],
                 },
               },
             },
@@ -318,8 +336,18 @@ export async function GET(req: NextRequest) {
           quantityAvailable: true,
           quantityClaimed: true,
           selectedAddons: {
+            // Per-addon sales: COMPLETED + committed PENDING. Same
+            // commit-marker filter as the rest of the dashboard so
+            // per-addon totals match the headline revenue.
             where: {
-              pledge: { status: { in: ["COMPLETED", "PENDING"] }, deletedAt: null },
+              pledge: {
+                deletedAt: null,
+                OR: [
+                  { status: "COMPLETED" },
+                  { status: "PENDING", confirmationEmailSent: true },
+                  { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+                ],
+              },
             },
             select: {
               quantity: true,
@@ -433,17 +461,22 @@ export async function GET(req: NextRequest) {
         },
       }),
 
-      // Actual totals from COMPLETED + PENDING pledges. Was previously
-      // COMPLETED-only, which zeroed out the dashboard headline cards
-      // for AoN/NMI campaigns where every pledge sits in PENDING until
-      // the cron runs at goal — making the dashboard look empty during
-      // live campaigns. Project.currentAmount on the model already
-      // includes PENDING, so this matches what's displayed elsewhere.
+      // Actual totals — COMPLETED + committed PENDING. Same filter as
+      // lib/stats getProjectStats so the dashboard headline ALWAYS
+      // matches the public project page total. The previous loose
+      // `status IN [COMPLETED, PENDING]` filter included abandoned-
+      // cart PENDING (no commit marker), over-reporting vs the public
+      // total. Now both surfaces use the identical committed-pledge
+      // definition.
       db.pledge.aggregate({
         where: {
           projectId: selectedProjectId,
-          status: { in: ["COMPLETED", "PENDING"] },
           deletedAt: null,
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         _sum: { amount: true },
         _count: true,

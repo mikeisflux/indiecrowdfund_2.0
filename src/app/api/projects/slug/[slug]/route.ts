@@ -43,15 +43,19 @@ export async function GET(
         rewards: {
           include: {
             items: true,
-            // Count BOTH completed and pending pledges as "backers" so
-            // per-reward counts match Project.backerCount (which also
-            // includes pending). Mirrors the vanity/[name]/[slug] route.
+            // Count COMPLETED + committed PENDING as "backers" so per-
+            // reward counts match the public total from lib/stats.
+            // Abandoned-cart PENDING (no commit marker) is excluded.
             _count: {
               select: {
                 pledges: {
                   where: {
-                    status: { in: ["COMPLETED", "PENDING"] },
                     deletedAt: null,
+                    OR: [
+                      { status: "COMPLETED" },
+                      { status: "PENDING", confirmationEmailSent: true },
+                      { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+                    ],
                   },
                 },
               },

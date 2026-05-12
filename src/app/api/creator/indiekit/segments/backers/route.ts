@@ -64,8 +64,12 @@ export async function GET(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const whereClause: any = {
       projectId,
-      status: { in: ["COMPLETED", "PENDING"] },
       deletedAt: null,
+      OR: [
+        { status: "COMPLETED" },
+        { status: "PENDING", confirmationEmailSent: true },
+        { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+      ],
     };
 
     if (!segment.isDynamic && segment.staticBackerIds.length > 0) {

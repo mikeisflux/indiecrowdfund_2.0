@@ -28,16 +28,21 @@ export async function GET() {
       savedProjects,
       monthlyPledges,
     ] = await Promise.all([
-      // Get user's COMPLETED + PENDING pledges. PENDING is included so
-      // backers on AoN / NMI campaigns (held in the vault until the
-      // funded-cron fires) still see the project they've backed in
-      // their dashboard during the active campaign, not just after it
-      // funds. CANCELLED / FAILED / REFUNDED are still excluded.
+      // Get user's COMPLETED + committed PENDING pledges. Committed
+      // means a payment credential is on file (Stripe payment method,
+      // NMI vault id, etc — confirmationEmailSent OR
+      // nmiCustomerVaultId). Same filter as lib/stats so the backer
+      // dashboard never lists abandoned-cart PENDING rows that won't
+      // ever charge.
       db.pledge.findMany({
         where: {
           userId,
           deletedAt: null,
-          status: { in: ["COMPLETED", "PENDING"] },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         include: {
           project: {
@@ -116,17 +121,20 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
       }),
 
-      // Get monthly spending data (last 6 months). Include PENDING
-      // so AoN / NMI pledges show up in the running spend chart
-      // before the campaign closes.
+      // Get monthly spending data (last 6 months). Same committed-
+      // PENDING filter as the main pledge fetch.
       db.pledge.findMany({
         where: {
           userId,
           deletedAt: null,
-          status: { in: ["COMPLETED", "PENDING"] },
           createdAt: {
             gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000),
           },
+          OR: [
+            { status: "COMPLETED" },
+            { status: "PENDING", confirmationEmailSent: true },
+            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+          ],
         },
         select: {
           amount: true,
