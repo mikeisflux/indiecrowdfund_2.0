@@ -228,6 +228,7 @@ function computeStats(transactions: UnifiedTransaction[]): Record<string, any> {
     paypalTransactions: transactions.filter(t => t.paymentProcessor === "PAYPAL").length,
     dcTransactions: transactions.filter(t => t.paymentProcessor === "DIVINITYCOIN").length,
     whopTransactions: transactions.filter(t => t.paymentProcessor === "WHOP").length,
+    nmiTransactions: transactions.filter(t => t.paymentProcessor === "NMI").length,
 
     todayTransactions: transactions.filter(t => new Date(t.createdAt) >= todayStart).length,
     todayVolume: transactions
@@ -714,6 +715,8 @@ async function queryIndieKitAftersales(
   if (processor === "STRIPE") where.paymentProcessor = "STRIPE";
   if (processor === "PAYPAL") where.paymentProcessor = "PAYPAL";
   if (processor === "DIVINITYCOIN") where.paymentProcessor = "DIVINITYCOIN";
+  if (processor === "WHOP") where.paymentProcessor = "WHOP";
+  if (processor === "NMI") where.paymentProcessor = "NMI";
 
   if (search) {
     where.OR = [
