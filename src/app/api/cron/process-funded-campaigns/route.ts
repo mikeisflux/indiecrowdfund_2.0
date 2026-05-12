@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import { loadNmiConfig, saleByVaultToken } from "@/lib/nmi";
+import { finalizeNmiPledge } from "@/lib/payments/nmi/finalize-pledge";
 import { chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
 import { evaluateAutoTrigger } from "@/lib/payments/rolling-reserve";
 
@@ -155,8 +156,12 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
         initialTransactionId: p.nmiInitialTransactionId || undefined,
       });
       if (sale.response === "1" && sale.transactionid) {
-        await db.pledge.update({
-          where: { id: p.id },
+        // CAS the PENDING→COMPLETED transition so we only run the
+        // post-completion side effects (counter bumps, backer
+        // number, notification) when this worker actually claims
+        // the row. A concurrent cron run can't double-count.
+        const transitioned = await db.pledge.updateMany({
+          where: { id: p.id, status: "PENDING" },
           data: {
             status: "COMPLETED",
             nmiTransactionId: sale.transactionid,
@@ -168,6 +173,9 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
             nextRetryAt: null,
           },
         });
+        if (transitioned.count > 0) {
+          await finalizeNmiPledge(p.id);
+        }
         result.successful++;
       } else {
         // Decline. Within the retry budget, schedule another attempt

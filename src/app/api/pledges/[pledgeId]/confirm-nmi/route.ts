@@ -8,6 +8,7 @@ import {
   addCustomerToVault,
   saleByPaymentToken,
 } from "@/lib/nmi";
+import { finalizeNmiPledge } from "@/lib/payments/nmi/finalize-pledge";
 
 const log = logger.child({ module: "pledges-confirm-nmi" });
 
@@ -239,14 +240,25 @@ export async function POST(
         );
       }
 
-      await db.pledge.update({
-        where: { id: pledge.id },
+      // CAS guard the transition to COMPLETED so a duplicate confirm
+      // (rapid double-click, retry after timeout) can't trigger the
+      // post-completion side effects twice.
+      const transitioned = await db.pledge.updateMany({
+        where: { id: pledge.id, status: "PENDING" },
         data: {
           status: "COMPLETED",
           nmiTransactionId: saleResp.transactionid,
           nmiInitialTransactionId: saleResp.transactionid,
         },
       });
+
+      if (transitioned.count > 0) {
+        // Bump Project.currentAmount + backerCount, claim reward +
+        // addon slots, assign backer number, fire creator notification.
+        // Skipped (intentionally) on a no-op CAS — that means another
+        // request already finalized this pledge.
+        await finalizeNmiPledge(pledge.id);
+      }
 
       return NextResponse.json({
         ok: true,
