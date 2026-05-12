@@ -2,10 +2,53 @@ import { MetadataRoute } from "next";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
 
+// Specific private /api/ subtrees instead of a broad `/api/` disallow.
+// Twitter / Facebook / LinkedIn link unfurlers don't always honor the
+// "longest-prefix wins" robots.txt rule — when they see both
+//   Allow: /api/uploads/
+//   Disallow: /api/
+// some parsers pick the Disallow and refuse to fetch og:image / twitter:
+// image URLs hosted at /api/uploads/. Listing the actually-private sub
+// paths leaves /api/uploads/ + /api/og open without needing the parser
+// to do the right thing.
+const PRIVATE_API_PATHS = [
+  "/api/admin/",
+  "/api/auth/",
+  "/api/backer/",
+  "/api/billing/",
+  "/api/chat/",
+  "/api/checkout/",
+  "/api/creator/",
+  "/api/cron/",
+  "/api/csrf/",
+  "/api/divinitycoin/",
+  "/api/email/",
+  "/api/error-report",
+  "/api/follow/",
+  "/api/marketplace/",
+  "/api/metrics",
+  "/api/nmi/",
+  "/api/notifications/",
+  "/api/pay/",
+  "/api/paypal/",
+  "/api/pledges/",
+  "/api/projects/",
+  "/api/r2/",
+  "/api/reports/",
+  "/api/retailers/",
+  "/api/stripe/",
+  "/api/track",
+  "/api/tracking",
+  "/api/upload/",
+  "/api/user/",
+  "/api/webhooks/",
+  "/api/whop/",
+];
+
 const PRIVATE_PATHS = [
   "/admin/",
   "/dashboard/",
-  "/api/",
+  ...PRIVATE_API_PATHS,
   "/settings/",
   "/pay/",
   "/access-denied",
