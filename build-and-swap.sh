@@ -181,30 +181,60 @@ else
     exit 1
 fi
 
-# Step 7: Restart PM2 (full kill + respawn, NOT reload)
-# `pm2 reload` keeps the Node worker process alive and sends SIGUSR2
-# for a graceful reload — but Next.js route handlers can stay cached
-# in memory across the signal, so updated source code in /api routes
-# silently keeps running the old version. `pm2 restart all` fully
-# kills and respawns each worker, guaranteeing fresh code is loaded.
-# Trade-off: ~5s downtime during restart vs zero for reload, which is
-# acceptable for a deploy that's already done its zero-downtime build
-# via the .next/.next-new atomic swap.
+# Step 7: Rolling restart per worker (full kill + respawn, but staggered)
+# `pm2 reload all` does a graceful SIGUSR2 reload that keeps the Node
+# worker process alive — but Next.js route handlers can stay cached in
+# memory across the signal, so newly-deployed code in /api routes
+# silently keeps running the older version. `pm2 restart all` would
+# fully kill and respawn every worker, guaranteeing fresh code is
+# loaded, but it tears them all down at once → ~5s of full downtime.
+#
+# This loop walks each cluster instance, hard-restarts it, and waits
+# 5s before moving to the next. While one worker is restarting the
+# others keep serving traffic, so the cluster stays online with at
+# most 1/N capacity loss for a few seconds per worker.
 echo ""
-echo "🔄 Step 7: Restarting PM2 (full worker respawn)..."
-if pm2 restart all --update-env 2>&1; then
-    echo -e "${GREEN}   PM2 restarted${NC}"
+echo "🔄 Step 7: Rolling restart (one PM2 worker at a time, 5s between)..."
+INSTANCE_IDS=$(pm2 jlist 2>/dev/null | node -e '
+let raw = "";
+process.stdin.on("data", c => raw += c);
+process.stdin.on("end", () => {
+  try {
+    const apps = JSON.parse(raw);
+    process.stdout.write(apps.map(a => a.pm_id).join(" "));
+  } catch { process.stdout.write(""); }
+}')
+
+if [ -z "$INSTANCE_IDS" ]; then
+    echo -e "${YELLOW}   No PM2 instances found — falling back to pm2 restart all${NC}"
+    pm2 restart all --update-env 2>&1 || true
 else
-    echo -e "${RED}❌ ERROR: PM2 restart failed!${NC}"
-    echo "   Attempting rollback..."
-    LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
-    if [ -n "$LATEST_BACKUP" ]; then
-        rm -rf .next
-        mv "$LATEST_BACKUP" .next
-        pm2 restart all --update-env
-        echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
+    RESTART_FAILED=0
+    for pm_id in $INSTANCE_IDS; do
+        echo "   Restarting instance $pm_id..."
+        if pm2 restart "$pm_id" --update-env 2>&1; then
+            echo -e "${GREEN}   Instance $pm_id back online${NC}"
+            sleep 5
+        else
+            echo -e "${RED}   Instance $pm_id failed to restart${NC}"
+            RESTART_FAILED=1
+            break
+        fi
+    done
+
+    if [ $RESTART_FAILED -eq 1 ]; then
+        echo -e "${RED}❌ ERROR: Rolling restart failed mid-way!${NC}"
+        echo "   Attempting rollback..."
+        LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
+        if [ -n "$LATEST_BACKUP" ]; then
+            rm -rf .next
+            mv "$LATEST_BACKUP" .next
+            pm2 restart all --update-env
+            echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
+        fi
+        exit 1
     fi
-    exit 1
+    echo -e "${GREEN}   All workers restarted with new build${NC}"
 fi
 
 # Step 8: Post-deploy health check.

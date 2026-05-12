@@ -115,10 +115,6 @@ function tokenRegex(token: string): RegExp {
 export function resolveTemplateVars(text: string, vars: TemplateVars): string {
   if (!text) return text;
 
-  const firstName =
-    vars.firstName?.trim() ||
-    extractFirstName(vars.fullName ?? null, vars.recipientEmail ?? null);
-  const fullName = vars.fullName?.trim() || firstName;
   const projectName = vars.projectName?.trim() || "";
   const projectUrl = vars.projectUrl?.trim() || "";
   const prelaunchUrl = vars.prelaunchUrl?.trim() || "";
@@ -132,9 +128,33 @@ export function resolveTemplateVars(text: string, vars: TemplateVars): string {
     ? `<a href="${escapeHtml(prelaunchUrl)}">${escapeHtml(projectName || prelaunchUrl)}</a>`
     : "";
 
-  return text
-    .replace(tokenRegex("FIRST_NAME"), escapeHtml(firstName))
-    .replace(tokenRegex("NAME"), escapeHtml(fullName))
+  let result = text;
+
+  // CRITICAL: only substitute FIRST_NAME / NAME when recipient context
+  // was actually provided. The campaign batch send calls this function
+  // TWICE — once at the campaign level (no recipient) to pre-resolve
+  // project-level vars, then once per recipient with their name. If
+  // we ran the FIRST_NAME path on the campaign-level call, it would
+  // hit the extractFirstName(null,null) → "Friend" fallback and bake
+  // "Friend" into the template, leaving nothing for the per-recipient
+  // pass to substitute. Skip the recipient-level tokens here when no
+  // recipient was passed; the next pass will fill them in.
+  const hasRecipientContext = !!(
+    vars.firstName ||
+    vars.fullName ||
+    vars.recipientEmail
+  );
+  if (hasRecipientContext) {
+    const firstName =
+      vars.firstName?.trim() ||
+      extractFirstName(vars.fullName ?? null, vars.recipientEmail ?? null);
+    const fullName = vars.fullName?.trim() || firstName;
+    result = result
+      .replace(tokenRegex("FIRST_NAME"), escapeHtml(firstName))
+      .replace(tokenRegex("NAME"), escapeHtml(fullName));
+  }
+
+  return result
     .replace(tokenRegex("PROJECT_NAME"), escapeHtml(projectName))
     .replace(tokenRegex("PROJECT_URL"), escapeHtml(projectUrl))
     .replace(tokenRegex("PROJECT_LINK"), projectLink)
