@@ -6,13 +6,21 @@
  *
  * Counting rules (applied consistently everywhere):
  *   - COMPLETED pledges are always counted.
- *   - For LIVE projects that have NOT yet met their goal, confirmed PENDING
- *     pledges are also counted. "Confirmed" means EITHER
- *     confirmationEmailSent = true (Stripe / PayPal / Whop / DC paths set
- *     this on commit) OR nmiCustomerVaultId is non-null (NMI / Mentom
- *     Payments AoN — the card is vaulted and will be charged at success).
- *     These represent backers who completed checkout with a deferred
- *     charge.
+ *   - For LIVE projects, confirmed PENDING pledges are also counted.
+ *     "Confirmed" means EITHER confirmationEmailSent = true (Stripe /
+ *     PayPal / Whop / DC paths set this on commit) OR nmiCustomerVaultId
+ *     is non-null (NMI / Mentom Payments AoN — the card is vaulted and
+ *     will be charged at success). These represent backers who
+ *     completed checkout with a deferred charge.
+ *
+ *     The PENDING widening is NOT gated on currentAmount < goalAmount.
+ *     AoN campaigns don't transition PENDING -> COMPLETED until the
+ *     funded-cron fires at campaign end, so a LIVE AoN at 300% of goal
+ *     still has every NMI pledge sitting in the vault as PENDING. Gating
+ *     on currentAmount < goalAmount made the public total DROP once the
+ *     COMPLETED slice alone crossed the goal, even though committed-but-
+ *     unconverted pledges are still real backers.
+ *
  *   - Platform-wide totals (totalRaised, etc.) count COMPLETED pledges only.
  */
 
@@ -93,7 +101,7 @@ export async function getProjectStats(
   let currentAmount = Number(completed._sum.amount ?? 0);
   let backerCount = completed._count.id ?? 0;
 
-  if (meta.status === "LIVE" && currentAmount < goalAmount) {
+  if (meta.status === "LIVE") {
     const pending = await db.pledge.aggregate({
       where: {
         projectId,
@@ -145,22 +153,21 @@ export async function getBatchProjectStats(
 
   const completedMap = new Map(completedTotals.map((t) => [t.projectId, t]));
 
-  // Only fetch pending for LIVE projects not yet at goal
-  const liveUnfundedIds = projects
-    .filter((p) => {
-      if (p.status !== "LIVE") return false;
-      const completed = Number(completedMap.get(p.id)?._sum.amount ?? 0);
-      return completed < Number(p.goalAmount);
-    })
+  // Fetch committed-PENDING for every LIVE project (no goal-met
+  // gate — see the file-level comment for why). AoN campaigns at
+  // 300% of goal still have unconverted PENDING vault pledges that
+  // are real committed backers and must show in the public total.
+  const liveIds = projects
+    .filter((p) => p.status === "LIVE")
     .map((p) => p.id);
 
   const pendingMap = new Map<string, { _sum: { amount: unknown }; _count: { id: number } }>();
 
-  if (liveUnfundedIds.length > 0) {
+  if (liveIds.length > 0) {
     const pendingTotals = await db.pledge.groupBy({
       by: ["projectId"],
       where: {
-        projectId: { in: liveUnfundedIds },
+        projectId: { in: liveIds },
         status: "PENDING",
         deletedAt: null,
         // See getProjectStats — NMI vault id is an alternative commit
