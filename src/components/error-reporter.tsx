@@ -357,6 +357,11 @@ export function ErrorReporter() {
           // hiccup as /api/auth/recaptcha — the next page load self-heals
           // because the session cookie is still valid client-side.
           requestUrl.includes("/api/auth/session") ||
+          // /api/support/chat calls Anthropic. Transient 5xx / 529
+          // overload from upstream is out of our control; the chat
+          // widget already shows a graceful fallback message and the
+          // next user turn self-heals when Anthropic recovers.
+          requestUrl.includes("/api/support/chat") ||
           isStatsPoller5xx ||
           isDashboardPoller5xx ||
           isProjectDetailPoller5xx
