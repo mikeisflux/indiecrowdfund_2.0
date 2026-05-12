@@ -7,8 +7,12 @@
  * Counting rules (applied consistently everywhere):
  *   - COMPLETED pledges are always counted.
  *   - For LIVE projects that have NOT yet met their goal, confirmed PENDING
- *     pledges (confirmationEmailSent = true) are also counted. These represent
- *     backers who completed checkout with a deferred charge.
+ *     pledges are also counted. "Confirmed" means EITHER
+ *     confirmationEmailSent = true (Stripe / PayPal / Whop / DC paths set
+ *     this on commit) OR nmiCustomerVaultId is non-null (NMI / Mentom
+ *     Payments AoN — the card is vaulted and will be charged at success).
+ *     These represent backers who completed checkout with a deferred
+ *     charge.
  *   - Platform-wide totals (totalRaised, etc.) count COMPLETED pledges only.
  */
 
@@ -95,7 +99,14 @@ export async function getProjectStats(
         projectId,
         status: "PENDING",
         deletedAt: null,
-        confirmationEmailSent: true,
+        // Stripe / PayPal / Whop / DC mark confirmationEmailSent on
+        // commit; NMI / PaymentCloud only sets nmiCustomerVaultId
+        // (the vaulted card id is the commitment marker because the
+        // funded-cron will charge it at success).
+        OR: [
+          { confirmationEmailSent: true },
+          { NOT: { nmiCustomerVaultId: null } },
+        ],
       },
       _sum: { amount: true },
       _count: { id: true },
@@ -152,7 +163,12 @@ export async function getBatchProjectStats(
         projectId: { in: liveUnfundedIds },
         status: "PENDING",
         deletedAt: null,
-        confirmationEmailSent: true,
+        // See getProjectStats — NMI vault id is an alternative commit
+        // marker because PaymentCloud doesn't set confirmationEmailSent.
+        OR: [
+          { confirmationEmailSent: true },
+          { NOT: { nmiCustomerVaultId: null } },
+        ],
       },
       _sum: { amount: true },
       _count: { id: true },
