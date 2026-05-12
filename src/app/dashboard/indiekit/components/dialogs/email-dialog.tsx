@@ -2,6 +2,10 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
+import {
+  resolveTemplateVars,
+  resolveTemplateVarsForSubject,
+} from "@/lib/email/template-vars";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -185,12 +189,37 @@ export function EmailDialog({
   // Initialize/update form when project changes or template is provided
   useEffect(() => {
     if (initialTemplate) {
-      // If a template is provided, use it
+      // Pre-resolve the project-level template variables so the editor
+      // preview shows the actual project URL (which is clickable) instead
+      // of a literal {{PROJECT_URL}} that 404s when the creator tries to
+      // verify their links before sending. Leave {{FIRST_NAME}} and
+      // {{CREATOR_NAME}} as literal tokens — those substitute at send
+      // time per-recipient (FIRST_NAME) or per-handle (CREATOR_NAME).
+      const appUrl =
+        process.env.NEXT_PUBLIC_APP_URL ||
+        (typeof window !== "undefined" ? window.location.origin : "");
+      const vanity = currentProject?.vanityUrl || "";
+      const slug = currentProject?.slug || "";
+      const projectUrl =
+        vanity && slug && appUrl ? `${appUrl}/projects/${vanity}/${slug}` : "";
+      const prelaunchUrl = projectUrl ? `${projectUrl}/prelaunch` : "";
+
+      const previewVars = {
+        projectName: currentProject?.title || "Your Project",
+        projectUrl,
+        prelaunchUrl,
+        // Leave per-recipient + per-handle vars unresolved so they
+        // stay visible in the editor as a reminder to the creator
+        // that those personalize at send time.
+      };
+
       if (initialTemplate.subject) {
-        setEmailTitle(initialTemplate.subject.replace(/{{PROJECT_NAME}}/g, currentProject?.title || "Your Project"));
+        setEmailTitle(
+          resolveTemplateVarsForSubject(initialTemplate.subject, previewVars)
+        );
       }
       if (initialTemplate.body) {
-        setEmailBody(initialTemplate.body.replace(/{{PROJECT_NAME}}/g, currentProject?.title || "Your Project"));
+        setEmailBody(resolveTemplateVars(initialTemplate.body, previewVars));
       }
       // Start on customize step when using a template
       setActiveStep("customize");

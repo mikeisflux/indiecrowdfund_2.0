@@ -6,6 +6,10 @@ export interface Project {
   slug: string;
   status: string;
   prelaunchActive?: boolean;
+  // Creator's vanity URL slug — needed alongside `slug` to construct
+  // the public project URL (/projects/<vanityUrl>/<slug>). Returned
+  // by the IndieKit list endpoint via the project's creator relation.
+  vanityUrl?: string | null;
 }
 
 export interface CountBreakdown {
