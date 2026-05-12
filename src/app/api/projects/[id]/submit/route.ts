@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { moderateContent, analyzeFraud } from "@/lib/ai/anthropic";
 import { canUserEditProject } from "@/lib/project-auth";
+import { projectHasChargebackCard } from "@/lib/chargeback-card";
 
 // POST - Submit project for review
 export async function POST(
@@ -98,12 +99,13 @@ export async function POST(
       validationErrors.push("You must set your vanity URL on your profile before submitting a project");
     }
 
-    // Check chargeback card
-    const chargebackCard = await db.creatorChargebackCard.findUnique({
-      where: { projectId },
-      select: { id: true },
-    });
-    if (!chargebackCard) {
+    // Check chargeback card. Accepts either the legacy per-project row
+    // (CreatorChargebackCard) or the unified user-level row
+    // (CreatorMarketplaceChargebackCard) so NMI/Mentom Payments
+    // projects — whose UI saves to the user-level table — aren't
+    // wrongly blocked with "card required" when one is already on file.
+    const hasChargebackCard = await projectHasChargebackCard(projectId, project.creatorId);
+    if (!hasChargebackCard) {
       validationErrors.push("Chargeback protection card is required");
     }
 

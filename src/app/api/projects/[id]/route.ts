@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { sendCollaboratorInviteEmail, sendProjectSubmittedEmail } from "@/lib/email";
 import { sanitizeHtml } from "@/lib/utils/sanitize";
+import { projectHasChargebackCard } from "@/lib/chargeback-card";
 
 // Helper function to check if a user has had a successful (funded + fulfilled) campaign
 async function hasSuccessfulCampaign(userId: string): Promise<boolean> {
@@ -445,14 +446,13 @@ export async function PATCH(
     // Determine what can be edited based on project status
     const isLaunched = ["LIVE", "FUNDED", "PAUSED"].includes(project.status);
 
-    // For launched projects, require chargeback card before allowing any edits
+    // For launched projects, require chargeback card before allowing any edits.
+    // Accepts either the user-level card (NMI/Mentom Payments) or the legacy
+    // per-project card.
     if (isLaunched) {
-      const chargebackCard = await db.creatorChargebackCard.findUnique({
-        where: { projectId: id },
-        select: { id: true },
-      });
+      const hasChargebackCard = await projectHasChargebackCard(id, project.creatorId);
 
-      if (!chargebackCard) {
+      if (!hasChargebackCard) {
         return NextResponse.json(
           {
             error: "Chargeback protection card required",

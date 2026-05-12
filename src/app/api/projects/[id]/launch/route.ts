@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { notifyProjectLaunched } from "@/lib/notifications";
 import { canUserEditProject } from "@/lib/project-auth";
 import { validateStripeConnectAccount } from "@/lib/payments/stripe";
+import { projectHasChargebackCard } from "@/lib/chargeback-card";
 
 // Helper function to calculate fulfillment percentage for a project
 async function getProjectFulfillmentPercentage(projectId: string): Promise<number> {
@@ -123,13 +124,13 @@ export async function POST(
       }
     }
 
-    // Validate chargeback protection card is on file
-    const chargebackCard = await db.creatorChargebackCard.findUnique({
-      where: { projectId },
-      select: { id: true },
-    });
+    // Validate chargeback protection card is on file. Accepts the
+    // unified user-level card (CreatorMarketplaceChargebackCard) used by
+    // NMI/Mentom Payments projects OR the legacy per-project card used
+    // by older non-NMI projects.
+    const hasChargebackCard = await projectHasChargebackCard(projectId, project.creatorId);
 
-    if (!chargebackCard) {
+    if (!hasChargebackCard) {
       return NextResponse.json(
         {
           error: "Chargeback protection card required",
