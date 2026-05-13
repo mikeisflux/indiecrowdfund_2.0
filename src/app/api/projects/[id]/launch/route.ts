@@ -6,7 +6,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifyProjectLaunched } from "@/lib/notifications";
 import { canUserEditProject } from "@/lib/project-auth";
-import { validateStripeConnectAccount } from "@/lib/payments/stripe";
 import { projectHasChargebackCard } from "@/lib/chargeback-card";
 
 // Helper function to calculate fulfillment percentage for a project
@@ -106,22 +105,6 @@ export async function POST(
         },
         { status: 400 }
       );
-    }
-
-    // Validate Stripe Connect account is fully set up before launching
-    // Skip for non-Stripe processors — they handle payouts independently
-    if (project.paymentProcessor === "STRIPE") {
-      const stripeValidation = await validateStripeConnectAccount(project.creatorId);
-      if (!stripeValidation.isValid) {
-        return NextResponse.json(
-          {
-            error: "Stripe account not ready",
-            message: stripeValidation.error,
-            code: "STRIPE_NOT_READY",
-          },
-          { status: 400 }
-        );
-      }
     }
 
     // Validate chargeback protection card is on file. Accepts the

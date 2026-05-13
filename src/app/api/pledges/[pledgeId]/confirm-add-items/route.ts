@@ -4,7 +4,6 @@ import { logger } from "@/lib/logger";
 const pledgesConfirmAddItemsLogger = logger.child({ module: "pledges-confirm-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getStripeInstance } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 
 /**
@@ -92,50 +91,31 @@ export async function POST(
     const quantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
 
     // Verify payment based on payment method
-    const paymentMethod = pendingItems.paymentMethod || "STRIPE";
+    const paymentMethod = pendingItems.paymentMethod || "DIVINITYCOIN";
 
-    if (paymentMethod === "STRIPE") {
-      const stripe = await getStripeInstance();
-      if (!stripe) {
-        return NextResponse.json(
-          { error: "Payment system unavailable" },
-          { status: 500 }
-        );
-      }
+    if (paymentMethod !== "DIVINITYCOIN") {
+      return NextResponse.json(
+        { error: "Unsupported payment method for additional items" },
+        { status: 400 }
+      );
+    }
 
-      if (!pendingItems.paymentIntentId) {
-        return NextResponse.json(
-          { error: "Missing payment intent ID" },
-          { status: 400 }
-        );
-      }
+    if (!pendingItems.paymentIntentId) {
+      return NextResponse.json(
+        { error: "Missing payment intent ID" },
+        { status: 400 }
+      );
+    }
 
-      const paymentIntent = await stripe.paymentIntents.retrieve(pendingItems.paymentIntentId);
+    const verifyResult = await callDivinityCoinAPI("verify-payment", {
+      paymentIntentId: pendingItems.paymentIntentId,
+    });
 
-      if (paymentIntent.status !== "succeeded") {
-        return NextResponse.json(
-          { error: "Payment not yet completed" },
-          { status: 400 }
-        );
-      }
-    } else if (paymentMethod === "DIVINITYCOIN") {
-      if (!pendingItems.paymentIntentId) {
-        return NextResponse.json(
-          { error: "Missing payment intent ID" },
-          { status: 400 }
-        );
-      }
-
-      const verifyResult = await callDivinityCoinAPI("verify-payment", {
-        paymentIntentId: pendingItems.paymentIntentId,
-      });
-
-      if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
-        return NextResponse.json(
-          { error: "Payment not yet completed" },
-          { status: 400 }
-        );
-      }
+    if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
+      return NextResponse.json(
+        { error: "Payment not yet completed" },
+        { status: 400 }
+      );
     }
 
     // Get the addons, scoped to the pledge's project for defense in depth

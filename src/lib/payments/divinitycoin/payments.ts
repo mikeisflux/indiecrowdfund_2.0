@@ -3,7 +3,7 @@ import {
   notifyPledgeReceived,
   notifyBackerPledgeConfirmed,
 } from "@/lib/notifications";
-import { assignBackerNumber, claimRewardSlot, claimAddonSlots } from "@/lib/payments/stripe";
+import { assignBackerNumber, claimRewardSlot, claimAddonSlots } from "@/lib/payments/rewards";
 import { circuitBreaker } from "@/lib/circuit-breaker";
 import { getDivinityCoinConfig, paymentsDivinitycoinLogger } from "./config";
 import type {

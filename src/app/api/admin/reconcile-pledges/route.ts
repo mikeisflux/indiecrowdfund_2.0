@@ -4,10 +4,6 @@ import { logger } from "@/lib/logger";
 const adminReconcilePledgesLogger = logger.child({ module: "admin-reconcile-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getStripeInstance } from "@/lib/payments/stripe";
-import { notifyBackerPledgeConfirmed } from "@/lib/notifications";
-import Stripe from "stripe";
-
 interface ReconciliationResult {
   projectId: string;
   projectTitle: string;
@@ -117,8 +113,6 @@ async function reconcilePledges(
   projectId?: string,
   applyFixes: boolean = false
 ): Promise<ReconciliationSummary> {
-  const stripeClient = await getStripeInstance();
-
   // Get projects to reconcile
   const projects = await db.project.findMany({
     where: projectId ? { id: projectId, deletedAt: null } : { status: { in: ["LIVE", "FUNDED"] }, deletedAt: null },
@@ -128,24 +122,12 @@ async function reconcilePledges(
       currentAmount: true,
       backerCount: true,
       paymentProcessor: true,
-      creator: {
-        select: {
-          stripeConfig: {
-            select: {
-              stripeAccountId: true,
-            },
-          },
-        },
-      },
       pledges: {
         where: { deletedAt: null },
         select: {
           id: true,
           amount: true,
           status: true,
-          stripePaymentIntentId: true,
-          stripeSetupIntentId: true,
-          stripePaymentMethodId: true,
           divinityCoinPaymentId: true,
           chargedImmediately: true,
           paymentProcessor: true,
@@ -160,19 +142,17 @@ async function reconcilePledges(
   let totalFixesApplied = 0;
 
   for (const project of projects) {
-    // Whop reconciliation isn't implemented yet — Whop stores
-    // transaction state on different fields (whopPaymentId) and
-    // the Stripe reconcile helper would silently fail or, worse,
-    // mis-apply fixes by comparing against missing Stripe fields.
-    // Emit a skip-marker result so the admin sees these projects
-    // in the UI as "needs per-processor reconciler" rather than
-    // letting them silently fall through to the Stripe path and
-    // corrupt data.
-    if (project.paymentProcessor === "WHOP") {
-      results.push({
+    let result: ReconciliationResult;
+    if (project.paymentProcessor === "DIVINITYCOIN") {
+      result = await reconcileDCProject(project, applyFixes);
+    } else if (project.paymentProcessor === "PAYPAL") {
+      result = await reconcilePayPalProject(project, applyFixes);
+    } else {
+      // Stripe and other unsupported processors are not reconciled here
+      result = {
         projectId: project.id,
         projectTitle: project.title,
-        paymentProcessor: project.paymentProcessor,
+        paymentProcessor: project.paymentProcessor || "UNKNOWN",
         database: {
           currentAmount: Number(project.currentAmount),
           backerCount: project.backerCount,
@@ -184,17 +164,10 @@ async function reconcilePledges(
           missingInDb: [],
           statusMismatch: [],
           amountMismatch: [],
-          downgraded: [`SKIPPED — reconciliation for ${project.paymentProcessor} not yet implemented; use per-pledge admin tools instead`],
+          downgraded: [`SKIPPED — reconciliation for ${project.paymentProcessor || "unknown"} is not implemented`],
         },
-      });
-      continue;
+      };
     }
-
-    const result = project.paymentProcessor === "DIVINITYCOIN"
-      ? await reconcileDCProject(project, applyFixes)
-      : project.paymentProcessor === "PAYPAL"
-        ? await reconcilePayPalProject(project, applyFixes)
-        : await reconcileStripeProject(stripeClient, project, applyFixes);
     results.push(result);
     if (applyFixes && result.discrepancy.hasIssues) {
       totalFixesApplied++;
@@ -224,18 +197,10 @@ interface ProjectData {
   currentAmount: unknown;
   backerCount: number;
   paymentProcessor: string;
-  creator: {
-    stripeConfig: {
-      stripeAccountId: string;
-    } | null;
-  };
   pledges: {
     id: string;
     amount: unknown;
     status: string;
-    stripePaymentIntentId: string | null;
-    stripeSetupIntentId: string | null;
-    stripePaymentMethodId: string | null;
     divinityCoinPaymentId: string | null;
     chargedImmediately: boolean;
     paymentProcessor: string;
@@ -437,276 +402,3 @@ async function reconcilePayPalProject(
   };
 }
 
-// ─── Stripe project reconciliation ─────────────────────────────────────────
-
-async function reconcileStripeProject(
-  stripeClient: Stripe,
-  project: ProjectData,
-  applyFixes: boolean
-): Promise<ReconciliationResult> {
-  const details = {
-    missingInDb: [] as string[],
-    statusMismatch: [] as string[],
-    amountMismatch: [] as string[],
-    downgraded: [] as string[],
-  };
-
-  // Collect Stripe data
-  let stripeTotal = 0;
-  let successfulPayments = 0;
-  let pendingSetupIntents = 0;
-
-  // Map of pledge IDs to their Stripe status
-  const stripePledgeStatus = new Map<string, { amount: number; status: string; type: string }>();
-
-  // Fetch PaymentIntents from Stripe for this project
-  try {
-    const paymentIntents = await stripeClient.paymentIntents.list({
-      limit: 100,
-    });
-
-    for (const pi of paymentIntents.data) {
-      if (pi.metadata.projectId === project.id) {
-        const pledgeId = pi.metadata.pledgeId;
-        const amountInDollars = pi.amount / 100;
-
-        if (pi.status === "succeeded") {
-          stripeTotal += amountInDollars;
-          successfulPayments++;
-          stripePledgeStatus.set(pledgeId, {
-            amount: amountInDollars,
-            status: "succeeded",
-            type: "payment_intent",
-          });
-        } else if (pi.status === "processing") {
-          stripePledgeStatus.set(pledgeId, {
-            amount: amountInDollars,
-            status: "processing",
-            type: "payment_intent",
-          });
-        }
-      }
-    }
-
-    // Fetch more if there are more
-    let hasMore = paymentIntents.has_more;
-    let lastId = paymentIntents.data[paymentIntents.data.length - 1]?.id;
-
-    while (hasMore && lastId) {
-      const morePayments = await stripeClient.paymentIntents.list({
-        limit: 100,
-        starting_after: lastId,
-      });
-
-      for (const pi of morePayments.data) {
-        if (pi.metadata.projectId === project.id) {
-          const pledgeId = pi.metadata.pledgeId;
-          const amountInDollars = pi.amount / 100;
-
-          if (pi.status === "succeeded") {
-            stripeTotal += amountInDollars;
-            successfulPayments++;
-            stripePledgeStatus.set(pledgeId, {
-              amount: amountInDollars,
-              status: "succeeded",
-              type: "payment_intent",
-            });
-          }
-        }
-      }
-
-      hasMore = morePayments.has_more;
-      lastId = morePayments.data[morePayments.data.length - 1]?.id;
-    }
-  } catch (error) {
-    adminReconcilePledgesLogger.warn({ data: error }, `Could not fetch PaymentIntents for project ${project.id}:`);
-  }
-
-  // Fetch SetupIntents from Stripe
-  try {
-    const setupIntents = await stripeClient.setupIntents.list({
-      limit: 100,
-    });
-
-    for (const si of setupIntents.data) {
-      if (si.metadata?.projectId === project.id) {
-        const pledgeId = si.metadata.pledgeId;
-        const amountInDollars = parseInt(si.metadata.amount || "0") / 100;
-
-        if (si.status === "succeeded" && si.payment_method) {
-          // SetupIntent succeeded - card saved, pledge should be counted
-          if (!stripePledgeStatus.has(pledgeId)) {
-            // Not yet charged via PaymentIntent
-            stripeTotal += amountInDollars;
-            pendingSetupIntents++;
-            stripePledgeStatus.set(pledgeId, {
-              amount: amountInDollars,
-              status: "card_saved",
-              type: "setup_intent",
-            });
-          }
-        }
-      }
-    }
-
-    // Fetch more SetupIntents if needed
-    let hasMore = setupIntents.has_more;
-    let lastId = setupIntents.data[setupIntents.data.length - 1]?.id;
-
-    while (hasMore && lastId) {
-      const moreSetups = await stripeClient.setupIntents.list({
-        limit: 100,
-        starting_after: lastId,
-      });
-
-      for (const si of moreSetups.data) {
-        if (si.metadata?.projectId === project.id) {
-          const pledgeId = si.metadata.pledgeId;
-          const amountInDollars = parseInt(si.metadata.amount || "0") / 100;
-
-          if (si.status === "succeeded" && si.payment_method) {
-            if (!stripePledgeStatus.has(pledgeId)) {
-              stripeTotal += amountInDollars;
-              pendingSetupIntents++;
-              stripePledgeStatus.set(pledgeId, {
-                amount: amountInDollars,
-                status: "card_saved",
-                type: "setup_intent",
-              });
-            }
-          }
-        }
-      }
-
-      hasMore = moreSetups.has_more;
-      lastId = moreSetups.data[moreSetups.data.length - 1]?.id;
-    }
-  } catch (error) {
-    adminReconcilePledgesLogger.warn({ data: error }, `Could not fetch SetupIntents for project ${project.id}:`);
-  }
-
-  // Compare with database
-  const dbPledges = project.pledges;
-
-  // Check for pledges in Stripe but not properly recorded in DB
-  Array.from(stripePledgeStatus.entries()).forEach(([pledgeId, stripeData]) => {
-    const dbPledge = dbPledges.find((p) => p.id === pledgeId);
-
-    if (!dbPledge) {
-      details.missingInDb.push(`${pledgeId} (${stripeData.type}: $${stripeData.amount})`);
-    } else {
-      // Check status mismatch
-      if (stripeData.status === "succeeded" && dbPledge.status !== "COMPLETED") {
-        details.statusMismatch.push(`${pledgeId}: Stripe=succeeded, DB=${dbPledge.status}`);
-      }
-      if (stripeData.status === "card_saved" && !dbPledge.stripePaymentMethodId) {
-        details.statusMismatch.push(`${pledgeId}: Stripe=card_saved, DB=no payment method`);
-      }
-
-      // Check amount mismatch
-      if (Math.abs(stripeData.amount - Number(dbPledge.amount)) > 0.01) {
-        details.amountMismatch.push(
-          `${pledgeId}: Stripe=$${stripeData.amount}, DB=$${Number(dbPledge.amount)}`
-        );
-      }
-    }
-  });
-
-  const amountDiff = stripeTotal - Number(project.currentAmount);
-  const uniqueBackers = stripePledgeStatus.size;
-  const backerDiff = uniqueBackers - project.backerCount;
-  const hasIssues =
-    Math.abs(amountDiff) > 0.01 ||
-    Math.abs(backerDiff) > 0 ||
-    details.missingInDb.length > 0 ||
-    details.statusMismatch.length > 0;
-
-  // Apply fixes if requested
-  if (applyFixes && hasIssues) {
-    // Update project totals based on Stripe data
-    await db.project.update({
-      where: { id: project.id },
-      data: {
-        currentAmount: stripeTotal,
-        backerCount: uniqueBackers,
-      },
-    });
-
-    // Fix pledge statuses and payment method IDs
-    const entries = Array.from(stripePledgeStatus.entries());
-    for (let i = 0; i < entries.length; i++) {
-      const [pledgeId, stripeData] = entries[i];
-      const dbPledge = dbPledges.find((p) => p.id === pledgeId);
-      if (dbPledge) {
-        // Fix PaymentIntent pledges - mark as COMPLETED
-        if (stripeData.status === "succeeded" && dbPledge.status !== "COMPLETED") {
-          await db.pledge.update({
-            where: { id: pledgeId },
-            data: { status: "COMPLETED" },
-          });
-
-          // Send confirmation email if not already sent
-          if (!dbPledge.confirmationEmailSent) {
-            try {
-              await notifyBackerPledgeConfirmed(pledgeId, true);
-            } catch (e) {
-              adminReconcilePledgesLogger.warn({ data: e }, `Could not send confirmation email for pledge ${pledgeId}:`);
-            }
-          }
-        }
-
-        // Fix SetupIntent pledges - update payment method ID if missing
-        // This ensures pledges with saved cards are properly tracked
-        if (stripeData.status === "card_saved" && stripeData.type === "setup_intent") {
-          // Fetch the actual SetupIntent to get the payment method ID
-          try {
-            if (dbPledge.stripeSetupIntentId) {
-              const setupIntent = await stripeClient.setupIntents.retrieve(dbPledge.stripeSetupIntentId);
-              if (setupIntent.payment_method && !dbPledge.stripePaymentMethodId) {
-                await db.pledge.update({
-                  where: { id: pledgeId },
-                  data: {
-                    stripePaymentMethodId: setupIntent.payment_method as string,
-                  },
-                });
-
-                // Send confirmation email if not already sent
-                if (!dbPledge.confirmationEmailSent) {
-                  try {
-                    await notifyBackerPledgeConfirmed(pledgeId, false);
-                  } catch (e) {
-                    adminReconcilePledgesLogger.warn({ data: e }, `Could not send confirmation email for pledge ${pledgeId}:`);
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            adminReconcilePledgesLogger.warn({ data: e }, `Could not update payment method for pledge ${pledgeId}:`);
-          }
-        }
-      }
-    }
-  }
-
-  return {
-    projectId: project.id,
-    projectTitle: project.title,
-    paymentProcessor: "STRIPE",
-    database: {
-      currentAmount: Number(project.currentAmount),
-      backerCount: project.backerCount,
-      pledgeCount: dbPledges.length,
-    },
-    verified: {
-      totalAmount: stripeTotal,
-      successfulPayments,
-      pendingSetupIntents,
-    },
-    discrepancy: {
-      amountDiff,
-      backerDiff,
-      hasIssues,
-    },
-    details,
-  };
-}

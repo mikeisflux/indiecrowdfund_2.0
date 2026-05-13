@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { getStripeInstance } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { getWhopClient } from "@/lib/payments/whop";
@@ -144,22 +143,7 @@ export async function PATCH(
 
     // Process the refund per processor
     try {
-      if (processor === "STRIPE") {
-        if (!pledge.stripePaymentIntentId) {
-          return NextResponse.json({ error: "No Stripe payment found to refund." }, { status: 400 });
-        }
-        const stripe = await getStripeInstance();
-        await stripe.refunds.create({
-          payment_intent: pledge.stripePaymentIntentId,
-          reason: "requested_by_customer",
-          metadata: {
-            pledgeId: pledge.id,
-            approvedBy: session.user.id,
-            refundRequestId: requestId,
-            reason: refundRequest.reason,
-          },
-        });
-      } else if (processor === "DIVINITYCOIN") {
+      if (processor === "DIVINITYCOIN") {
         const dcResult = await callDivinityCoinAPI("refund", {
           pledgeId: pledge.id,
           paymentId: pledge.divinityCoinPaymentId,

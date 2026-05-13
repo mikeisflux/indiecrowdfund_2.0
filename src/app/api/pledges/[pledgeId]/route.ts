@@ -4,8 +4,6 @@ import { logger } from "@/lib/logger";
 const pledgesLogger = logger.child({ module: "pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import Stripe from "stripe";
-import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI, getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
@@ -396,32 +394,10 @@ export async function PATCH(
             return NextResponse.json({ error: "Failed to process Whop refund." }, { status: 500 });
           }
         } else {
-          // Stripe refund
-          if (!pledge.stripePaymentIntentId) {
-            return NextResponse.json(
-              { error: "No payment found to refund" },
-              { status: 400 }
-            );
-          }
-
-          try {
-            const stripe = await getStripeInstance();
-            await stripe.refunds.create({
-              payment_intent: pledge.stripePaymentIntentId,
-              reason: "requested_by_customer",
-              metadata: {
-                pledgeId: pledge.id,
-                cancelledBy: session.user.id,
-                reason: body.reason || "Cancelled by backer",
-              },
-            });
-          } catch (stripeError) {
-            pledgesLogger.error({ err: String(stripeError) }, "Stripe refund error:");
-            return NextResponse.json(
-              { error: "Failed to process refund" },
-              { status: 400 }
-            );
-          }
+          return NextResponse.json(
+            { error: "No supported refund path for this pledge's payment processor" },
+            { status: 400 }
+          );
         }
 
         // Atomic CAS from COMPLETED → REFUNDED. Without this, a
@@ -501,15 +477,6 @@ export async function PATCH(
         );
       }
 
-      // Cancel any Stripe intents (safely checks status first)
-      const stripe = await getStripeInstance();
-      if (pledge.stripeSetupIntentId) {
-        await safeCancelSetupIntent(stripe, pledge.stripeSetupIntentId);
-      }
-      if (pledge.stripePaymentIntentId) {
-        await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
-      }
-
       // Atomic CAS from PENDING → CANCELLED. Guards against
       // double-clicks and concurrent calls from multiple tabs. If
       // we lose the race the pledge was either already cancelled or
@@ -574,24 +541,14 @@ export async function PATCH(
           paymentMethod?: string;
           paymentIntentId?: string;
         };
-        try {
-          if (prior.paymentMethod === "STRIPE" && prior.paymentIntentId) {
-            const stripe = await getStripeInstance();
-            if (stripe) {
-              await safeCancelPaymentIntent(stripe, prior.paymentIntentId);
-            }
-          }
-          // DC payment intents have no platform-level cancel action — the
-          // underlying Stripe PI auto-expires after ~24h if it stays in
-          // requires_payment_method. Creating a fresh DC intent below
-          // supersedes it; the orphan one never charges anything.
-        } catch (cancelErr) {
-          // Don't let a cancel failure block the new modify — just log it.
-          pledgesLogger.warn(
-            { err: String(cancelErr), pledgeId, priorIntentId: prior.paymentIntentId },
-            "[Modify] Failed to cancel superseded payment intent; proceeding with new attempt"
-          );
-        }
+        // DC payment intents have no platform-level cancel action — the
+        // underlying Stripe PI auto-expires after ~24h if it stays in
+        // requires_payment_method. Creating a fresh DC intent below
+        // supersedes it; the orphan one never charges anything.
+        pledgesLogger.info(
+          { pledgeId, priorIntentId: prior.paymentIntentId, paymentMethod: prior.paymentMethod },
+          "[Modify] Superseding pending modification"
+        );
         await db.pledge.update({
           where: { id: pledgeId },
           data: {
@@ -706,7 +663,6 @@ export async function PATCH(
       // If pledge is already charged (COMPLETED) and price changed, handle payment diff
       if (isAlreadyCharged && amountDiff > 0) {
         // Price went UP - need to collect additional payment
-        const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
 
         if (paymentProcessor === "DIVINITYCOIN") {
           // Call DC's create-payment-intent for the upcharge amount
@@ -786,75 +742,15 @@ export async function PATCH(
           }
         }
 
-        // Stripe: Create PaymentIntent for the difference
-        const stripe = await getStripeInstance();
-        if (!stripe) {
-          return NextResponse.json({ error: "Payment system unavailable" }, { status: 500 });
-        }
-
-        const amountInCents = Math.round(amountDiff * 100);
-        const pledgeModPlatformSettings = await db.platformSettings.findUnique({ where: { id: "default" }, select: { platformFee: true } });
-        const pledgeModFeeRate = pledgeModPlatformSettings?.platformFee ? Number(pledgeModPlatformSettings.platformFee) / 100 : 0.03;
-        const platformFee = Math.round(amountDiff * pledgeModFeeRate * 100);
-
-        const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
-          amount: amountInCents,
-          currency: "usd",
-          metadata: {
-            pledgeId: pledge.id,
-            projectId: pledge.projectId,
-            userId: session.user.id,
-            type: "pledge_modification_upcharge",
-            rewardId: rewardId || "",
-            addons: JSON.stringify(addonsWithQuantity),
-            newAmount: String(newAmount),
-          },
-        };
-
-        if (stripeAccountId) {
-          paymentIntentParams.application_fee_amount = platformFee;
-          paymentIntentParams.transfer_data = { destination: stripeAccountId };
-        }
-
-        const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
-
-        // Store pending modification in metadata
-        const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-          ? pledge.metadata as Record<string, unknown>
-          : {};
-
-        await db.pledge.update({
-          where: { id: pledgeId },
-          data: {
-            metadata: {
-              ...currentMetadata,
-              pendingModification: {
-                paymentMethod: "STRIPE",
-                paymentIntentId: paymentIntent.id,
-                rewardId: rewardId || null,
-                addons: addonsWithQuantity,
-                newAmount,
-                oldAmount,
-                amountDiff,
-                createdAt: new Date().toISOString(),
-              },
-            },
-          },
-        });
-
-        return NextResponse.json({
-          success: true,
-          requiresPayment: true,
-          clientSecret: paymentIntent.client_secret,
-          message: `Additional $${amountDiff.toFixed(2)} payment required`,
-          newAmount: effectiveNewAmount,
-        });
+        return NextResponse.json(
+          { error: "Pledge upcharges are only supported for DivinityCoin pledges." },
+          { status: 400 }
+        );
       }
 
       if (isAlreadyCharged && amountDiff < 0) {
         // Price went DOWN - issue a refund for the difference
         const refundAmount = Math.abs(amountDiff);
-        const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
 
         if (paymentProcessor === "DIVINITYCOIN") {
           if (!pledge.divinityCoinPaymentId) {
@@ -909,33 +805,10 @@ export async function PATCH(
             );
           }
         } else {
-          // Stripe partial refund
-          if (!pledge.stripePaymentIntentId) {
-            return NextResponse.json(
-              { error: "No payment found to refund" },
-              { status: 400 }
-            );
-          }
-
-          try {
-            const stripe = await getStripeInstance();
-            await stripe.refunds.create({
-              payment_intent: pledge.stripePaymentIntentId,
-              amount: Math.round(refundAmount * 100), // Partial refund in cents
-              reason: "requested_by_customer",
-              metadata: {
-                pledgeId: pledge.id,
-                type: "pledge_modification_refund",
-                stripeAccountId: stripeAccountId || "",
-              },
-            });
-          } catch (stripeError) {
-            pledgesLogger.error({ err: String(stripeError) }, "Stripe partial refund error:");
-            return NextResponse.json(
-              { error: "Failed to process refund" },
-              { status: 400 }
-            );
-          }
+          return NextResponse.json(
+            { error: "No supported refund path for this pledge's payment processor" },
+            { status: 400 }
+          );
         }
 
         // Apply the modification changes (addons, rewards, amounts)
@@ -988,87 +861,12 @@ export async function PATCH(
         );
       }
       const newTotal = Number(pledge.amount) + additionalAmount;
-      const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
       const isCharged = pledge.status === "COMPLETED";
 
-      // If pledge is already charged, collect the additional amount
+      // If pledge is already charged, direct user to the modify flow
       if (isCharged) {
-        if (paymentProcessor === "DIVINITYCOIN") {
-          // DC pledges require a payment form for upcharges - the dashboard doesn't have one.
-          // Direct users to "Change Reward or Add-ons" which has full payment support.
-          return NextResponse.json(
-            { error: "To increase your pledge amount, please use 'Change Reward or Add-ons' from your pledge dashboard." },
-            { status: 400 }
-          );
-        }
-
-        // Stripe: charge immediately if creator has Stripe Connect
-        const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
-        if (stripeAccountId) {
-          const amountInCents = Math.round(additionalAmount * 100);
-          const platformSettings = await db.platformSettings.findUnique({ where: { id: "default" }, select: { platformFee: true } });
-          const platformFeeRate = platformSettings?.platformFee ? Number(platformSettings.platformFee) / 100 : 0.03;
-          const platformFee = Math.round(additionalAmount * platformFeeRate * 100);
-
-          try {
-            const stripeClient = await getStripeInstance();
-            const paymentIntent = await stripeClient.paymentIntents.create({
-              amount: amountInCents,
-              currency: "usd",
-              customer: pledge.stripeCustomerId || undefined,
-              payment_method: pledge.stripePaymentMethodId || undefined,
-              confirm: !!pledge.stripePaymentMethodId,
-              application_fee_amount: platformFee,
-              transfer_data: {
-                destination: stripeAccountId,
-              },
-              metadata: {
-                pledgeId: pledge.id,
-                projectId: pledge.projectId,
-                userId: session.user.id,
-                type: "pledge_increase",
-              },
-            });
-
-            if (paymentIntent.status === "succeeded") {
-              // Update pledge amount
-              await db.pledge.update({
-                where: { id: pledgeId },
-                data: { amount: newTotal },
-              });
-
-              // Update project current amount
-              await db.project.update({
-                where: { id: pledge.projectId },
-                data: {
-                  currentAmount: { increment: additionalAmount },
-                },
-              });
-
-              return NextResponse.json({
-                success: true,
-                message: `Pledge increased by $${additionalAmount.toFixed(2)}`,
-                newTotal,
-                charged: true,
-              });
-            } else {
-              return NextResponse.json({
-                success: false,
-                requiresAction: true,
-                clientSecret: paymentIntent.client_secret,
-                message: "Payment requires additional action",
-              });
-            }
-          } catch (stripeError) {
-            pledgesLogger.error({ err: String(stripeError) }, "Stripe error:");
-            return NextResponse.json(
-              { error: "Payment failed" },
-              { status: 400 }
-            );
-          }
-        }
-
-        // No payment method available for upcharge on completed pledges
+        // Upcharges for completed pledges (DC and other processors) go through
+        // "Change Reward or Add-ons" which has full payment support.
         return NextResponse.json(
           { error: "To increase your pledge amount, please use 'Change Reward or Add-ons' from your pledge dashboard." },
           { status: 400 }
@@ -1159,15 +957,6 @@ export async function DELETE(
         { error: "Can only cancel pending pledges" },
         { status: 400 }
       );
-    }
-
-    // Cancel any Stripe intents (safely checks status first)
-    const stripe = await getStripeInstance();
-    if (pledge.stripeSetupIntentId) {
-      await safeCancelSetupIntent(stripe, pledge.stripeSetupIntentId);
-    }
-    if (pledge.stripePaymentIntentId) {
-      await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
     }
 
     // Atomic CAS from PENDING → CANCELLED (same guard as the PATCH

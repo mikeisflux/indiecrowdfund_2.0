@@ -3,7 +3,6 @@ import { logger } from "@/lib/logger";
 
 const payBalanceLogger = logger.child({ module: "pay-balance" });
 import { db } from "@/lib/db";
-import { getStripeInstance } from "@/lib/payments/stripe/config";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 
 // GET - Fetch balance payment details by token
@@ -166,75 +165,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No balance due" }, { status: 400 });
     }
 
-    if (pledge.project.paymentProcessor === "STRIPE") {
-      // Get the creator's Stripe Connect account
-      const stripeConfig = await db.stripeConfig.findFirst({
-        where: { userId: pledge.project.creatorId, isActive: true },
-      });
-
-      if (!stripeConfig) {
-        return NextResponse.json({ error: "Payment processing not available" }, { status: 500 });
-      }
-
-      const stripe = await getStripeInstance();
-      if (!stripe) {
-        return NextResponse.json({ error: "Payment system unavailable" }, { status: 500 });
-      }
-      const platformSettings = await db.platformSettings.findUnique({
-        where: { id: "default" },
-        select: { platformFee: true },
-      });
-      const platformFeeRate = platformSettings?.platformFee
-        ? Number(platformSettings.platformFee) / 100
-        : 0.03;
-      const amountInCents = Math.round(balanceDue * 100);
-      const platformFee = Math.round(balanceDue * platformFeeRate * 100);
-
-      // Create a PaymentIntent for the balance amount
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amountInCents,
-        currency: "usd",
-        automatic_payment_methods: { enabled: true },
-        application_fee_amount: platformFee,
-        transfer_data: {
-          destination: stripeConfig.stripeAccountId,
-        },
-        metadata: {
-          pledgeId: pledge.id,
-          projectId: pledge.project.id,
-          type: "balance_payment",
-          balancePaymentToken: token,
-        },
-      });
-
-      // Store the payment intent ID in pledge metadata. Re-read the
-      // metadata inside a FOR UPDATE row lock so a concurrent order
-      // edit or balance payment initiation doesn't clobber fields
-      // we need to preserve.
-      await db.$transaction(async (tx) => {
-        await tx.$executeRaw`SELECT id FROM "Pledge" WHERE id = ${pledge.id} FOR UPDATE`;
-        const fresh = await tx.pledge.findUnique({
-          where: { id: pledge.id },
-          select: { metadata: true },
-        });
-        const freshMeta = (fresh?.metadata as Record<string, unknown>) || {};
-        await tx.pledge.update({
-          where: { id: pledge.id },
-          data: {
-            metadata: {
-              ...freshMeta,
-              balancePaymentIntentId: paymentIntent.id,
-            },
-          },
-        });
-      });
-
-      return NextResponse.json({
-        clientSecret: paymentIntent.client_secret,
-        paymentProcessor: "STRIPE",
-        amount: balanceDue,
-      });
-    } else if (pledge.project.paymentProcessor === "DIVINITYCOIN") {
+    if (pledge.project.paymentProcessor === "DIVINITYCOIN") {
       // For DivinityCoin, create payment through their API
       let dcConfig;
       try {

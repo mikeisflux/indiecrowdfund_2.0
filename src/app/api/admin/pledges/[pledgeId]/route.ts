@@ -4,7 +4,6 @@ import { logger } from "@/lib/logger";
 const adminPledgesLogger = logger.child({ module: "admin-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { sendPledgeConfirmationEmail } from "@/lib/email";
@@ -234,29 +233,6 @@ export async function PATCH(
           { error: "Can only cancel pending pledges. Use refund for completed pledges." },
           { status: 400 }
         );
-      }
-
-      const stripe = await getStripeInstance();
-
-      // Cancel any Stripe intents (safely checks status first)
-      if (pledge.stripeSetupIntentId) {
-        await safeCancelSetupIntent(stripe, pledge.stripeSetupIntentId);
-      }
-      if (pledge.stripePaymentIntentId) {
-        await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
-      }
-
-      // CRITICAL: Detach the payment method to prevent cron from charging it
-      // This is necessary because SetupIntents that already succeeded can't be "cancelled"
-      // but the payment method remains valid and the cron would charge it
-      if (pledge.stripePaymentMethodId) {
-        try {
-          await stripe.paymentMethods.detach(pledge.stripePaymentMethodId);
-          adminPledgesLogger.info(`[Admin Cancel] Detached payment method ${pledge.stripePaymentMethodId} for pledge ${pledgeId}`);
-        } catch (detachError) {
-          // Log but continue - payment method might already be detached or invalid
-          adminPledgesLogger.warn(`[Admin Cancel] Could not detach payment method: ${detachError}`);
-        }
       }
 
       // Atomic compare-and-swap from PENDING → CANCELLED. Without this,
@@ -545,91 +521,11 @@ export async function PATCH(
         }
       }
 
-      // Stripe refund
-      if (!pledge.stripePaymentIntentId) {
-        return NextResponse.json(
-          { error: "No payment found to refund" },
-          { status: 400 }
-        );
-      }
-
-      // Process refund via Stripe
-      try {
-        const stripeClient = await getStripeInstance();
-
-        // Check for existing refunds to prevent duplicates
-        const existingRefunds = await stripeClient.refunds.list({
-          payment_intent: pledge.stripePaymentIntentId,
-          limit: 1,
-        });
-
-        if (existingRefunds.data.length === 0) {
-          await stripeClient.refunds.create({
-            payment_intent: pledge.stripePaymentIntentId,
-            reason: "requested_by_customer",
-            metadata: {
-              pledgeId: pledge.id,
-              adminUserId: session.user.id,
-              reason: reason || "Refunded by admin",
-            },
-          });
-        } else {
-          const existingRefund = existingRefunds.data[0];
-          if (existingRefund.status !== "succeeded") {
-            return NextResponse.json(
-              { error: `Existing Stripe refund is in status '${existingRefund.status}', not succeeded. Please check the Stripe dashboard.` },
-              { status: 400 }
-            );
-          }
-          adminPledgesLogger.info(`[Admin Refund] Pledge ${pledge.id} already has existing succeeded refund(s) in Stripe`);
-        }
-      } catch (stripeError) {
-        adminPledgesLogger.error({ err: String(stripeError) }, "Stripe refund error:");
-        return NextResponse.json(
-          { error: "Failed to process refund with Stripe" },
-          { status: 400 }
-        );
-      }
-
-      // Atomically update pledge status and project stats with CAS
-      // on status: COMPLETED → REFUNDED. Prevents double-decrement
-      // under concurrent admin clicks or races with the Stripe
-      // charge.refunded webhook.
-      let wonCas = false;
-      await db.$transaction(async (tx) => {
-        const refundCas = await tx.pledge.updateMany({
-          where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
-          data: {
-            status: "REFUNDED",
-            lastFailureReason: reason || "Refunded by admin",
-          },
-        });
-
-        if (refundCas.count === 0) return;
-        wonCas = true;
-
-        if (pledge.confirmationEmailSent) {
-          await tx.project.update({
-            where: { id: pledge.projectId },
-            data: {
-              backerCount: { decrement: 1 },
-              currentAmount: { decrement: Number(pledge.amount) },
-            },
-          });
-        }
-      });
-
-      // Restore reward slot only if we actually flipped the status
-      if (wonCas && pledge.confirmationEmailSent && pledge.reward?.id) {
-        await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${pledge.reward.id}`;
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: wonCas
-          ? "Pledge refunded successfully"
-          : "Pledge was already refunded by a concurrent action (Stripe refund was still processed; please verify via dashboard)",
-      });
+      // Unknown processor — no automated refund path
+      return NextResponse.json(
+        { error: "No supported refund path for this pledge's payment processor" },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({ error: "Invalid action. Use 'cancel', 'refund', or 'resend_receipt'" }, { status: 400 });
@@ -676,31 +572,6 @@ export async function DELETE(
 
     if (!pledge) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
-    }
-
-    const stripeClient = await getStripeInstance();
-
-    // Cancel any Stripe intents for PENDING pledges (safely checks status first)
-    if (pledge.status === "PENDING") {
-      if (pledge.stripeSetupIntentId) {
-        await safeCancelSetupIntent(stripeClient, pledge.stripeSetupIntentId);
-      }
-      if (pledge.stripePaymentIntentId) {
-        await safeCancelPaymentIntent(stripeClient, pledge.stripePaymentIntentId);
-      }
-    }
-
-    // CRITICAL: Always detach the payment method to prevent any future charging
-    // This is necessary because SetupIntents that already succeeded can't be "cancelled"
-    // but the payment method remains valid and could be charged
-    if (pledge.stripePaymentMethodId) {
-      try {
-        await stripeClient.paymentMethods.detach(pledge.stripePaymentMethodId);
-        adminPledgesLogger.info(`[Admin Delete] Detached payment method ${pledge.stripePaymentMethodId} for pledge ${pledgeId}`);
-      } catch (detachError) {
-        // Log but continue - payment method might already be detached or invalid
-        adminPledgesLogger.warn(`[Admin Delete] Could not detach payment method: ${detachError}`);
-      }
     }
 
     // For COMPLETED pledges, we should refund first - warn admin (applies to all payment processors)

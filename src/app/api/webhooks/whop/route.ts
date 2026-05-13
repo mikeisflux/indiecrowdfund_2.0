@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getWhopConfig, verifyWhopWebhookSignature } from "@/lib/payments/whop";
-import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/stripe";
+import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
 import { logger } from "@/lib/logger";
 

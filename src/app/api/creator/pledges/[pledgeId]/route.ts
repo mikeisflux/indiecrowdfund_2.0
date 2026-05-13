@@ -4,7 +4,6 @@ import { logger } from "@/lib/logger";
 const creatorPledgesLogger = logger.child({ module: "creator-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { sendEmail } from "@/lib/email";
 
@@ -180,15 +179,6 @@ export async function PATCH(
           { error: "Can only cancel pending pledges. Use refund for completed pledges." },
           { status: 400 }
         );
-      }
-
-      // Cancel any Stripe intents (safely checks status first)
-      const stripe = await getStripeInstance();
-      if (typedPledge.stripeSetupIntentId) {
-        await safeCancelSetupIntent(stripe, typedPledge.stripeSetupIntentId);
-      }
-      if (typedPledge.stripePaymentIntentId) {
-        await safeCancelPaymentIntent(stripe, typedPledge.stripePaymentIntentId);
       }
 
       // Atomic CAS on status: PENDING → CANCELLED. The check at line
@@ -416,158 +406,10 @@ export async function PATCH(
           );
         }
       } else {
-        // Stripe refund
-        if (!typedPledge.stripePaymentIntentId) {
-          return NextResponse.json(
-            { error: "No Stripe payment found to refund" },
-            { status: 400 }
-          );
-        }
-
-        // Process refund via Stripe
-        try {
-          const stripeClient = await getStripeInstance();
-
-          // Check for existing refunds to prevent duplicates and calculate remaining refundable
-          const existingRefunds = await stripeClient.refunds.list({
-            payment_intent: typedPledge.stripePaymentIntentId,
-            limit: 100,
-          });
-
-          const totalAlreadyRefunded = existingRefunds.data
-            .filter((r) => r.status !== "canceled" && r.status !== "failed")
-            .reduce((sum, r) => sum + r.amount, 0);
-          const maxRefundableCents = Math.round(totalPaid * 100) - totalAlreadyRefunded;
-
-          if (refundAmountCents > maxRefundableCents) {
-            return NextResponse.json(
-              { error: `Cannot refund $${refundAmount.toFixed(2)}. Maximum refundable: $${(maxRefundableCents / 100).toFixed(2)} (already refunded: $${(totalAlreadyRefunded / 100).toFixed(2)})` },
-              { status: 400 }
-            );
-          }
-
-          await stripeClient.refunds.create({
-            payment_intent: typedPledge.stripePaymentIntentId,
-            amount: refundAmountCents, // Stripe accepts amount in cents for partial refunds
-            reason: "requested_by_customer",
-            metadata: {
-              pledgeId: typedPledge.id,
-              creatorUserId: session.user.id,
-              reason: reason || "Refunded by creator",
-              isPartialRefund: isPartialRefund ? "true" : "false",
-            },
-          });
-        } catch (stripeError) {
-          creatorPledgesLogger.error({ err: String(stripeError) }, "Stripe refund error:");
-          return NextResponse.json(
-            { error: "Failed to process refund with Stripe" },
-            { status: 400 }
-          );
-        }
-
-        // Update pledge and log activity in a transaction
-        await db.$transaction(async (tx) => {
-          if (isPartialRefund) {
-            // Partial refund: keep pledge COMPLETED, log activity
-            await tx.fulfillmentActivity.create({
-              data: {
-                projectId: typedPledge.projectId,
-                type: "REFUND_ISSUED",
-                title: "Partial Refund Issued",
-                description: `$${refundAmount.toFixed(2)} refunded to backer via Stripe. Reason: ${reason || "Order adjustment"}`,
-                pledgeId: typedPledge.id,
-                metadata: { refundAmount, totalPaid, isPartialRefund: true, processor: "STRIPE" },
-              },
-            });
-          } else {
-            // Full refund: CAS on status COMPLETED → REFUNDED.
-            // Prevents double-decrement under concurrent refund clicks
-            // or races with charge.refunded webhook. The Stripe refund
-            // itself has already been issued at this point — if we lose
-            // the CAS we throw to roll back the FulfillmentActivity row
-            // (Stripe refund is not rolled back, but Stripe's own
-            // idempotency protects against double-refund at the
-            // provider level).
-            const refundCas = await tx.pledge.updateMany({
-              where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
-              data: {
-                status: "REFUNDED",
-                lastFailureReason: reason || "Refunded by creator",
-              },
-            });
-
-            if (refundCas.count === 0) {
-              throw new Error("Pledge already refunded by concurrent request");
-            }
-
-            if (typedPledge.confirmationEmailSent) {
-              await tx.project.update({
-                where: { id: typedPledge.projectId },
-                data: {
-                  backerCount: { decrement: 1 },
-                  currentAmount: { decrement: Number(typedPledge.amount) },
-                },
-              });
-            }
-
-            await tx.fulfillmentActivity.create({
-              data: {
-                projectId: typedPledge.projectId,
-                type: "REFUND_ISSUED",
-                title: "Full Refund Issued",
-                description: `$${refundAmount.toFixed(2)} refunded to backer via Stripe. Reason: ${reason || "Refunded by creator"}`,
-                pledgeId: typedPledge.id,
-                metadata: { refundAmount, totalPaid, isPartialRefund: false, processor: "STRIPE" },
-              },
-            });
-          }
-        });
-
-        // Restore reward slot if full refund and pledge claimed one
-        if (!isPartialRefund && typedPledge.rewardId) {
-          await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${typedPledge.rewardId}`;
-        }
-
-        // Send refund notification email to backer
-        if (typedPledge.user.email) {
-          try {
-            await sendEmail({
-              to: typedPledge.user.email,
-              subject: `Your refund for "${typedPledge.project.title}" has been processed`,
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                  <h2 style="color: #16a34a;">Refund Processed</h2>
-                  <p>Hi ${typedPledge.user.name || "there"},</p>
-                  <p>Your ${isPartialRefund ? "partial " : ""}refund for <strong>${typedPledge.project.title}</strong> has been successfully processed.</p>
-                  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
-                    <p style="margin: 0 0 8px 0;"><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
-                    <p style="margin: 0;"><strong>Refunded To:</strong> Original payment method</p>
-                  </div>
-                  ${reason ? `<p><strong>Reason:</strong> ${escapeHtml(reason)}</p>` : ""}
-                  <p>Please allow 5-10 business days for the refund to appear on your statement, depending on your bank.</p>
-                  <p style="margin-top: 20px;">
-                    <a href="${APP_URL}/dashboard/backer" style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View Your Dashboard</a>
-                  </p>
-                  <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                    If you have any questions, please contact the project creator or our support team.
-                  </p>
-                </div>
-              `,
-              skipUnsubscribeCheck: true, // Transactional email
-            });
-          } catch (emailError) {
-            creatorPledgesLogger.error({ err: String(emailError) }, "Failed to send refund email:");
-            // Don't fail the refund if email fails
-          }
-        }
-
-        return NextResponse.json({
-          success: true,
-          message: `${isPartialRefund ? "Partial refund" : "Stripe refund"} processed successfully`,
-          refundedTo: "card",
-          amount: refundAmount,
-          isPartialRefund,
-        });
+        return NextResponse.json(
+          { error: "No supported refund path for this pledge's payment processor" },
+          { status: 400 }
+        );
       }
     }
 

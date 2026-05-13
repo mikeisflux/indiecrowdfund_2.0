@@ -4,8 +4,6 @@ import { logger } from "@/lib/logger";
 const adminProjectsProcessPledgesLogger = logger.child({ module: "admin-projects-process-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { processPendingPledgesForProject, chargeSavedPledge, getStripeInstance } from "@/lib/payments/stripe";
-
 /**
  * GET /api/admin/projects/[projectId]/process-pledges
  *
@@ -48,12 +46,6 @@ export async function GET(
           select: {
             id: true,
             name: true,
-            stripeConfig: {
-              select: {
-                stripeAccountId: true,
-                isOnboarded: true,
-              },
-            },
           },
         },
       },
@@ -74,10 +66,6 @@ export async function GET(
         status: true,
         chargedImmediately: true,
         confirmationEmailSent: true,
-        stripePaymentMethodId: true,
-        stripeCustomerId: true,
-        stripePaymentIntentId: true,
-        stripeSetupIntentId: true,
         divinityCoinPaymentId: true,
         paymentProcessor: true,
         retryCount: true,
@@ -96,7 +84,6 @@ export async function GET(
 
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const projectIsFunded = Number(project.currentAmount) >= Number(project.goalAmount);
-    const creatorHasStripe = !!project.creator.stripeConfig?.stripeAccountId;
 
     // For DC projects, check which PENDING pledges have a matching DivinityCoinTransaction
     const pendingPledgeIds = pledges
@@ -119,15 +106,13 @@ export async function GET(
       );
     }
 
-    // Analyze each pledge
+    // Analyze each pledge (DC and other non-Stripe processors only)
     const pledgeAnalysis = pledges.map((pledge) => {
       const issues: string[] = [];
-      let canBeCharged = true;
       let canBeReconciled = false;
 
       if (pledge.status !== "PENDING") {
         issues.push(`Status is ${pledge.status}, not PENDING`);
-        canBeCharged = false;
       }
 
       if (isDivinityCoin) {
@@ -145,45 +130,13 @@ export async function GET(
             issues.push("No DC payment record - likely abandoned cart");
           }
         }
-        canBeCharged = false; // DC pledges can't be "charged" from our side
-      } else {
-        // Stripe projects: original logic
-        if (pledge.chargedImmediately) {
-          issues.push("Was charged immediately (PaymentIntent), not a SetupIntent pledge");
-          canBeCharged = false;
-        }
-
-        if (!pledge.stripePaymentMethodId) {
-          issues.push("Missing stripePaymentMethodId - webhook may not have fired");
-          canBeCharged = false;
-        }
-
-        if (!pledge.stripeCustomerId) {
-          issues.push("Missing stripeCustomerId");
-          canBeCharged = false;
-        }
-
-        if (!pledge.confirmationEmailSent && pledge.createdAt > fiveMinutesAgo) {
-          issues.push("Not confirmed (confirmationEmailSent=false) and created < 5 min ago");
-          canBeCharged = false;
-        }
-
-        if (!projectIsFunded) {
-          issues.push("Project not funded yet");
-          canBeCharged = false;
-        }
-
-        if (!creatorHasStripe) {
-          issues.push("Creator has not connected Stripe account");
-          canBeCharged = false;
-        }
       }
 
       return {
         ...pledge,
         analysis: {
           issues,
-          canBeCharged: canBeCharged && issues.length === 0,
+          canBeCharged: false,
           canBeReconciled,
           isOldPledge: pledge.createdAt < fiveMinutesAgo,
         },
@@ -208,8 +161,8 @@ export async function GET(
       creator: {
         id: project.creator.id,
         name: project.creator.name,
-        hasStripeConnected: creatorHasStripe,
-        isOnboarded: project.creator.stripeConfig?.isOnboarded || false,
+        hasStripeConnected: false,
+        isOnboarded: false,
       },
       pledges: pledgeAnalysis,
       summary: {
@@ -217,7 +170,7 @@ export async function GET(
         pending: pledges.filter((p) => p.status === "PENDING").length,
         completed: pledges.filter((p) => p.status === "COMPLETED").length,
         failed: pledges.filter((p) => p.status === "FAILED").length,
-        chargeableNow: pledgeAnalysis.filter((p) => p.analysis.canBeCharged).length,
+        chargeableNow: 0,
         reconcilableNow: pledgeAnalysis.filter((p) => p.analysis.canBeReconciled).length,
       },
     });
@@ -262,7 +215,7 @@ export async function POST(
 
     const { projectId } = await params;
     const body = await req.json().catch(() => ({}));
-    const { pledgeId, force, action } = body as { pledgeId?: string; force?: boolean; action?: string };
+    const { pledgeId, action } = body as { pledgeId?: string; action?: string };
 
     // Get project info
     const project = await db.project.findFirst({
@@ -273,13 +226,6 @@ export async function POST(
         goalAmount: true,
         currentAmount: true,
         paymentProcessor: true,
-        creator: {
-          select: {
-            stripeConfig: {
-              select: { stripeAccountId: true },
-            },
-          },
-        },
       },
     });
 
@@ -289,12 +235,14 @@ export async function POST(
 
     const isDivinityCoin = project.paymentProcessor === "DIVINITYCOIN";
 
-    // Special action: verify payment statuses
+    // Special action: verify payment statuses (DC only)
     if (action === "verify") {
       if (isDivinityCoin) {
         return await verifyDivinityCoinPledges(projectId);
       }
-      return await verifyPaymentIntents(projectId);
+      return NextResponse.json({
+        error: "Pledge verification is only supported for DivinityCoin projects",
+      }, { status: 400 });
     }
 
     // Special action: delete abandoned carts (soft delete PENDING pledges with no payment)
@@ -307,53 +255,9 @@ export async function POST(
       return await processDivinityCoinPendingPledges(projectId, pledgeId);
     }
 
-    // Stripe projects: original logic
-    const projectIsFunded = Number(project.currentAmount) >= Number(project.goalAmount);
-    const creatorHasStripe = !!project.creator.stripeConfig?.stripeAccountId;
-
-    if (!creatorHasStripe) {
-      return NextResponse.json({
-        error: "Creator has not connected Stripe account - cannot process pledges",
-      }, { status: 400 });
-    }
-
-    if (!projectIsFunded && !force) {
-      return NextResponse.json({
-        error: "Project is not funded yet. Use force=true to process anyway.",
-        currentAmount: project.currentAmount,
-        goalAmount: project.goalAmount,
-      }, { status: 400 });
-    }
-
-    // If a specific pledgeId is provided, charge just that one
-    if (pledgeId) {
-      adminProjectsProcessPledgesLogger.info(`[Admin] Manually charging pledge ${pledgeId}`);
-      try {
-        const success = await chargeSavedPledge(pledgeId);
-        return NextResponse.json({
-          success,
-          message: success ? "Pledge charged successfully" : "Pledge could not be charged (check logs)",
-          pledgeId,
-        });
-      } catch (error) {
-        adminProjectsProcessPledgesLogger.error({ err: String(error) }, `[Admin] Error charging pledge ${pledgeId}:`);
-        return NextResponse.json({
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-          pledgeId,
-        }, { status: 500 });
-      }
-    }
-
-    // Otherwise, process all pending pledges
-    adminProjectsProcessPledgesLogger.info(`[Admin] Manually processing all pledges for project ${projectId}`);
-    const results = await processPendingPledgesForProject(projectId);
-
     return NextResponse.json({
-      success: true,
-      message: `Processed ${results.total} pledges`,
-      results,
-    });
+      error: "Pledge processing is only supported for DivinityCoin projects on this endpoint",
+    }, { status: 400 });
   } catch (error) {
     adminProjectsProcessPledgesLogger.error({ err: String(error) }, "Admin pledge processing error:");
     return NextResponse.json(
@@ -660,150 +564,9 @@ async function verifyDivinityCoinPledges(projectId: string) {
 }
 
 /**
- * Verify PaymentIntent statuses with Stripe and update pledges accordingly.
- * This fixes pledges that were charged immediately but webhook didn't fire.
- */
-async function verifyPaymentIntents(projectId: string) {
-  const stripeClient = await getStripeInstance();
-
-  // Find all PENDING pledges that were charged immediately (have PaymentIntentId).
-  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
-  // runtime — use the `NOT: { field: null }` wrapper syntax instead.
-  const pendingPledges = await db.pledge.findMany({
-    where: {
-      projectId,
-      status: "PENDING",
-      chargedImmediately: true,
-      NOT: { stripePaymentIntentId: null },
-    },
-    select: {
-      id: true,
-      amount: true,
-      stripePaymentIntentId: true,
-      stripePaymentMethodId: true,
-      user: {
-        select: { name: true, email: true },
-      },
-    },
-  });
-
-  const results = {
-    total: pendingPledges.length,
-    verified: 0,
-    alreadySucceeded: 0,
-    stillProcessing: 0,
-    failed: 0,
-    errors: [] as string[],
-    details: [] as Array<{
-      pledgeId: string;
-      user: string;
-      amount: number;
-      paymentIntentId: string;
-      stripeStatus: string;
-      action: string;
-    }>,
-  };
-
-  let totalNewlyCompleted = 0;
-  let totalNewlyCompletedAmount = 0;
-
-  for (const pledge of pendingPledges) {
-    try {
-      // Retrieve PaymentIntent from Stripe
-      const paymentIntent = await stripeClient.paymentIntents.retrieve(
-        pledge.stripePaymentIntentId!
-      );
-
-      const detail = {
-        pledgeId: pledge.id,
-        user: pledge.user.name || pledge.user.email || "Unknown",
-        amount: Number(pledge.amount),
-        paymentIntentId: pledge.stripePaymentIntentId!,
-        stripeStatus: paymentIntent.status,
-        action: "",
-      };
-
-      if (paymentIntent.status === "succeeded") {
-        // Payment succeeded! Update pledge to COMPLETED with CAS on PENDING so
-        // we don't double-count stats if the Stripe webhook transitions this
-        // pledge concurrently. updateMany.count === 0 means someone else won.
-        const casResult = await db.pledge.updateMany({
-          where: { id: pledge.id, status: "PENDING" },
-          data: {
-            status: "COMPLETED",
-            confirmationEmailSent: true,
-            stripePaymentMethodId: typeof paymentIntent.payment_method === "string"
-              ? paymentIntent.payment_method
-              : paymentIntent.payment_method?.id || pledge.stripePaymentMethodId,
-          },
-        });
-        if (casResult.count === 0) {
-          detail.action = "Skipped — already transitioned (concurrent webhook/admin)";
-          results.details.push(detail);
-          results.verified++;
-          continue;
-        }
-        results.alreadySucceeded++;
-        totalNewlyCompleted++;
-        totalNewlyCompletedAmount += Number(pledge.amount);
-        detail.action = "Updated to COMPLETED";
-      } else if (paymentIntent.status === "processing") {
-        results.stillProcessing++;
-        detail.action = "Still processing - no action taken";
-      } else if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "canceled") {
-        // Payment failed - update pledge to FAILED with CAS on PENDING
-        const casResult = await db.pledge.updateMany({
-          where: { id: pledge.id, status: "PENDING" },
-          data: {
-            status: "FAILED",
-            lastFailureReason: `PaymentIntent status: ${paymentIntent.status}`,
-          },
-        });
-        if (casResult.count === 0) {
-          detail.action = "Skipped — already transitioned (concurrent webhook/admin)";
-          results.details.push(detail);
-          results.verified++;
-          continue;
-        }
-        results.failed++;
-        detail.action = `Marked as FAILED (status: ${paymentIntent.status})`;
-      } else {
-        detail.action = `Unknown status: ${paymentIntent.status} - no action taken`;
-      }
-
-      results.details.push(detail);
-      results.verified++;
-    } catch (error) {
-      results.errors.push(
-        `Pledge ${pledge.id}: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
-    }
-  }
-
-  // Update project stats for all newly completed pledges
-  if (totalNewlyCompleted > 0) {
-    await db.project.update({
-      where: { id: projectId },
-      data: {
-        currentAmount: { increment: totalNewlyCompletedAmount },
-        backerCount: { increment: totalNewlyCompleted },
-      },
-    });
-
-    adminProjectsProcessPledgesLogger.info(`[Admin Verify] Updated project stats: +$${totalNewlyCompletedAmount}, +${totalNewlyCompleted} backers`);
-  }
-
-  return NextResponse.json({
-    success: true,
-    message: `Verified ${results.verified} of ${results.total} pledges`,
-    results,
-  });
-}
-
-/**
  * Permanently delete abandoned cart pledges for a project.
- * Abandoned = PENDING status with no payment record (no stripePaymentMethodId,
- * no divinityCoinPaymentId, no DivinityCoinTransaction, and no confirmation email sent).
+ * Abandoned = PENDING status with no payment record (no divinityCoinPaymentId,
+ * no DivinityCoinTransaction, and no confirmation email sent).
  * Pledges with any payment evidence are skipped to prevent data loss.
  */
 async function deleteAbandonedCarts(projectId: string) {
@@ -817,9 +580,6 @@ async function deleteAbandonedCarts(projectId: string) {
     select: {
       id: true,
       amount: true,
-      stripePaymentMethodId: true,
-      stripePaymentIntentId: true,
-      stripeSetupIntentId: true,
       divinityCoinPaymentId: true,
       chargedImmediately: true,
       confirmationEmailSent: true,
@@ -880,7 +640,6 @@ async function deleteAbandonedCarts(projectId: string) {
     // PaymentIntent is created (before user pays). Only DivinityCoinTransaction
     // records prove payment actually went through.
     const hasPaymentEvidence =
-      !!pledge.stripePaymentMethodId ||
       dcPaidPledgeIds.has(pledge.id) ||
       pledge.confirmationEmailSent;
 
@@ -904,17 +663,16 @@ async function deleteAbandonedCarts(projectId: string) {
       where: { pledgeId: { in: toDelete } },
     });
 
-    // TOCTOU guard: re-apply the "still PENDING + no payment method + no
-    // confirmation email" filter so a pledge that completed checkout between
-    // the findMany and here (e.g. user returned seconds before admin clicked
-    // delete) is NOT wrongly deleted. Combining id IN (...) with the filter
-    // ensures only pledges still matching the abandoned criteria get removed.
+    // TOCTOU guard: re-apply the "still PENDING + no confirmation email"
+    // filter so a pledge that completed checkout between the findMany and
+    // here (e.g. user returned seconds before admin clicked delete) is NOT
+    // wrongly deleted. Combining id IN (...) with the filter ensures only
+    // pledges still matching the abandoned criteria get removed.
     await db.pledge.deleteMany({
       where: {
         id: { in: toDelete },
         status: "PENDING",
         deletedAt: null,
-        stripePaymentMethodId: null,
         confirmationEmailSent: false,
       },
     });

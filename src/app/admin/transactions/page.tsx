@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   RefreshCw,
   Download,
-  CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -14,13 +13,11 @@ import {
   type TransactionStats,
   type Pagination,
   type TransactionDetail,
-  type StripeLookupResult,
   exportCSV,
   StatsCards,
   TransactionFilters,
   TransactionTable,
   TransactionDetailDialog,
-  StripeLookupDialog,
   BreakdownCards,
 } from "./components";
 
@@ -48,12 +45,6 @@ export default function TransactionsPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<UnifiedTransaction | null>(null);
   const [transactionDetail, setTransactionDetail] = useState<TransactionDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-
-  // Stripe lookup state
-  const [showStripeLookup, setShowStripeLookup] = useState(false);
-  const [stripeLookupId, setStripeLookupId] = useState("");
-  const [stripeLookupResult, setStripeLookupResult] = useState<StripeLookupResult | null>(null);
-  const [isLoadingStripeLookup, setIsLoadingStripeLookup] = useState(false);
 
   // Fetch transactions
   const fetchTransactions = useCallback(async (page = 1) => {
@@ -113,38 +104,6 @@ export default function TransactionsPage() {
     }
   };
 
-  // Stripe lookup
-  const doStripeLookup = async () => {
-    if (!stripeLookupId.trim()) return;
-    setIsLoadingStripeLookup(true);
-    setStripeLookupResult(null);
-
-    try {
-      const response = await fetchWithRetry(
-        `/api/admin/transactions/stripe-lookup?id=${encodeURIComponent(stripeLookupId.trim())}`
-      );
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Lookup failed");
-      }
-      const data = await response.json();
-      setStripeLookupResult(data);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Lookup failed";
-      toast.error(message);
-    } finally {
-      setIsLoadingStripeLookup(false);
-    }
-  };
-
-  // Handle stripe lookup from detail dialog
-  const handleStripeLookupFromDetail = (id: string) => {
-    setStripeLookupId(id);
-    setShowStripeLookup(true);
-    setSelectedTransaction(null);
-    setTransactionDetail(null);
-  };
-
   // Handle closing detail dialog
   const handleCloseDetail = () => {
     setSelectedTransaction(null);
@@ -162,14 +121,6 @@ export default function TransactionsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowStripeLookup(true)}
-          >
-            <CreditCard className="h-4 w-4 mr-2" />
-            Stripe Lookup
-          </Button>
           <Button variant="outline" size="sm" onClick={() => exportCSV(transactions)}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
@@ -218,22 +169,12 @@ export default function TransactionsPage() {
       {/* Processor & Type Breakdown */}
       {stats && <BreakdownCards stats={stats} />}
 
-      {/* Detail and Lookup Dialogs */}
+      {/* Detail Dialog */}
       <TransactionDetailDialog
         selectedTransaction={selectedTransaction}
         transactionDetail={transactionDetail}
         isLoadingDetail={isLoadingDetail}
         onClose={handleCloseDetail}
-        onStripeLookup={handleStripeLookupFromDetail}
-      />
-      <StripeLookupDialog
-        showStripeLookup={showStripeLookup}
-        setShowStripeLookup={setShowStripeLookup}
-        stripeLookupId={stripeLookupId}
-        setStripeLookupId={setStripeLookupId}
-        stripeLookupResult={stripeLookupResult}
-        isLoadingStripeLookup={isLoadingStripeLookup}
-        doStripeLookup={doStripeLookup}
       />
     </div>
   );

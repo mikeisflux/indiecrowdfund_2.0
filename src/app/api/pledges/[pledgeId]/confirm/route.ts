@@ -10,7 +10,7 @@ import {
   notifyPledgeReceived,
   notifyProjectFunded,
 } from "@/lib/notifications";
-import { processPendingPledgesForProject, getStripeInstance, claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/stripe";
+import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
 import { captureAuthorizedPaypalPledgesAsync } from "@/lib/payments/paypal/capture-authorized";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal/config";
 
@@ -103,11 +103,10 @@ export async function POST(
     }
 
     // ── VERIFY ACTUAL PAYMENT SUCCESS before counting anything ──
-    // For chargedImmediately pledges (PaymentIntent / DC), we MUST verify
-    // with Stripe/DC that the payment actually succeeded. Without this,
+    // For chargedImmediately pledges (DC/PayPal/Whop), we MUST verify
+    // with the processor that the payment actually succeeded. Without this,
     // incomplete/abandoned payments get counted in project totals.
 
-    let paymentMethodId = pledge.stripePaymentMethodId;
     let paymentVerified = false;
 
     if (pledge.chargedImmediately && pledge.paymentProcessor === "PAYPAL") {
@@ -166,75 +165,19 @@ export async function POST(
           error: "Payment not completed. Please try again.",
         }, { status: 400 });
       }
-    } else if (pledge.chargedImmediately && pledge.stripePaymentIntentId) {
-      // Stripe PaymentIntent: verify the actual status with Stripe
-      try {
-        const stripeClient = await getStripeInstance();
-        const paymentIntent = await stripeClient.paymentIntents.retrieve(pledge.stripePaymentIntentId);
-
-        if (paymentIntent.status === "succeeded") {
-          paymentVerified = true;
-          paymentMethodId = typeof paymentIntent.payment_method === "string"
-            ? paymentIntent.payment_method
-            : paymentIntent.payment_method?.id || paymentMethodId;
-          pledgesConfirmLogger.info(`[Confirm] Stripe PaymentIntent verified succeeded for pledge ${pledgeId}`);
-        } else if (paymentIntent.status === "processing") {
-          // Still processing — let the webhook handle it when it completes
-          paymentVerified = true;
-          pledgesConfirmLogger.info(`[Confirm] Stripe PaymentIntent processing for pledge ${pledgeId}, will be finalized by webhook`);
-        } else {
-          // Payment is incomplete, requires_payment_method, canceled, etc.
-          pledgesConfirmLogger.warn(`[Confirm] Stripe PaymentIntent status is '${paymentIntent.status}' for pledge ${pledgeId} — NOT counting`);
-          return NextResponse.json({
-            success: false,
-            error: "Payment not completed. Please try again.",
-          }, { status: 400 });
-        }
-      } catch (err) {
-        pledgesConfirmLogger.error({ err: String(err) }, `[Confirm] Failed to verify PaymentIntent for pledge ${pledgeId}:`);
-        return NextResponse.json({
-          success: false,
-          error: "Could not verify payment status. Please try again.",
-        }, { status: 500 });
-      }
     } else if (pledge.chargedImmediately) {
-      // chargedImmediately but no PaymentIntent ID and no DC payment — incomplete
+      // chargedImmediately but no recognized processor reference — incomplete
       pledgesConfirmLogger.warn(`[Confirm] chargedImmediately pledge ${pledgeId} has no payment reference — NOT counting`);
       return NextResponse.json({
         success: false,
         error: "Payment not completed. Please try again.",
       }, { status: 400 });
     } else {
-      // SetupIntent pledge: verify payment method was saved
-      if (!paymentMethodId && pledge.stripeSetupIntentId) {
-        try {
-          const stripeClient = await getStripeInstance();
-          const setupIntent = await stripeClient.setupIntents.retrieve(pledge.stripeSetupIntentId);
-
-          if (setupIntent.status === "succeeded" && setupIntent.payment_method) {
-            paymentMethodId = typeof setupIntent.payment_method === "string"
-              ? setupIntent.payment_method
-              : setupIntent.payment_method.id;
-
-            // Save the payment method to the pledge
-            await db.pledge.update({
-              where: { id: pledgeId },
-              data: { stripePaymentMethodId: paymentMethodId },
-            });
-
-            pledgesConfirmLogger.info(`[Confirm] Fetched payment method from Stripe for pledge ${pledgeId}`);
-          }
-        } catch (err) {
-          pledgesConfirmLogger.error({ err: String(err) }, `[Confirm] Failed to fetch SetupIntent from Stripe:`);
-        }
-      }
-
-      if (!paymentMethodId) {
-        return NextResponse.json({
-          success: false,
-          error: "Payment method not saved - checkout incomplete. Please try again.",
-        }, { status: 400 });
-      }
+      // Non-chargedImmediately pledges are no longer supported (was Stripe SetupIntent flow)
+      return NextResponse.json({
+        success: false,
+        error: "Payment method not saved - checkout incomplete. Please try again.",
+      }, { status: 400 });
     }
 
     // Atomically mark as confirmed using conditional update to prevent race conditions.
@@ -259,60 +202,8 @@ export async function POST(
     // even if the webhook also tries to update stats concurrently.
     let updatedProject = pledge.project;
 
-    if (!pledge.chargedImmediately) {
-      // SetupIntent pledge - update stats now that checkout is confirmed
-      updatedProject = await db.project.update({
-        where: { id: pledge.projectId },
-        data: {
-          currentAmount: { increment: Number(pledge.amount) },
-          backerCount: { increment: 1 },
-        },
-      });
-
-      // Atomically claim reward slot if pledge has a reward (prevents overselling)
-      if (pledge.reward?.id) {
-        const claimed = await claimRewardSlot(pledge.reward.id);
-        if (!claimed) {
-          pledgesConfirmLogger.warn(`[Confirm] Reward ${pledge.reward.id} sold out for pledge ${pledgeId}`);
-        }
-      }
-
-      if (pledge.addons?.length) {
-        await claimAddonSlots(
-          pledge.addons.map((a: { addonId: string; quantity: number }) => ({ id: a.addonId, quantity: a.quantity }))
-        ).catch(err =>
-          pledgesConfirmLogger.error({ err: String(err) }, "claimAddonSlots failed (SetupIntent)")
-        );
-      }
-
-      // Notify creator of new pledge
-      await notifyPledgeReceived(
-        pledge.projectId,
-        pledge.project.creatorId,
-        pledge.user.name || "A backer",
-        pledge.amount
-      );
-
-      pledgesConfirmLogger.info(`[Confirm] Updated project stats for SetupIntent pledge ${pledgeId}: +$${pledge.amount}`);
-
-      // Check if project just reached funding goal
-      const projectIsFunded = Number(updatedProject.currentAmount) >= Number(updatedProject.goalAmount);
-      const justReachedGoal = projectIsFunded &&
-        Number(updatedProject.currentAmount) - Number(pledge.amount) < Number(updatedProject.goalAmount);
-
-      if (justReachedGoal) {
-        await notifyProjectFunded(pledge.projectId);
-      }
-
-      // Process all pending pledges if project is funded (charge saved cards + authorized PayPal)
-      if (projectIsFunded) {
-        pledgesConfirmLogger.info(`[Confirm] Project ${pledge.projectId} is funded, processing pending pledges...`);
-        const chargeResults = await processPendingPledgesForProject(pledge.projectId);
-        pledgesConfirmLogger.info(`[Confirm] Charged ${chargeResults.successful}/${chargeResults.total} pledges`);
-        captureAuthorizedPaypalPledgesAsync(pledge.projectId);
-      }
-    } else if (paymentVerified) {
-      // PaymentIntent or DC pledge — payment was verified above, update stats now.
+    if (paymentVerified) {
+      // DC/PayPal/Whop pledge — payment was verified above, update stats now.
       // The webhook may also try to update stats, but it will check confirmationEmailSent
       // (which we already set atomically above) and skip if already confirmed.
       updatedProject = await db.project.update({
@@ -323,27 +214,15 @@ export async function POST(
         },
       });
 
-      // Also mark the pledge as COMPLETED if the payment actually succeeded
-      // (not just "processing" — leave processing ones for the webhook to finalize)
-      if (pledge.stripePaymentIntentId) {
-        try {
-          const stripeClient = await getStripeInstance();
-          const pi = await stripeClient.paymentIntents.retrieve(pledge.stripePaymentIntentId);
-          if (pi.status === "succeeded") {
-            await db.pledge.update({
-              where: { id: pledgeId },
-              data: {
-                status: "COMPLETED",
-                stripePaymentMethodId: typeof pi.payment_method === "string"
-                  ? pi.payment_method
-                  : pi.payment_method?.id || paymentMethodId,
-              },
-            });
-            pledgesConfirmLogger.info(`[Confirm] Marked PaymentIntent pledge ${pledgeId} as COMPLETED`);
-          }
-        } catch {
-          // Non-critical — webhook will handle status update
-        }
+      // Notify creator if project just hit goal; trigger PayPal capture for AoN flows
+      const projectIsFundedPp = Number(updatedProject.currentAmount) >= Number(updatedProject.goalAmount);
+      const justReachedGoalPp = projectIsFundedPp &&
+        Number(updatedProject.currentAmount) - Number(pledge.amount) < Number(updatedProject.goalAmount);
+      if (justReachedGoalPp) {
+        await notifyProjectFunded(pledge.projectId).catch(err =>
+          pledgesConfirmLogger.error({ err: String(err) }, "notifyProjectFunded failed")
+        );
+        captureAuthorizedPaypalPledgesAsync(pledge.projectId);
       }
 
       // Atomically claim reward slot if pledge has a reward

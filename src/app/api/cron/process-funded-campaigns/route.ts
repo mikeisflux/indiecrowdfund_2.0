@@ -3,7 +3,6 @@ import { logger } from "@/lib/logger";
 
 const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
 import { db } from "@/lib/db";
-import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import { chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
 
@@ -152,84 +151,6 @@ async function captureDcPendingPledges(projectId: string): Promise<{
   return result;
 }
 
-/**
- * Sync payment methods from Stripe for pledges that have SetupIntents
- * but are missing payment method IDs (e.g., webhook failed)
- *
- * SAFETY: Only syncs for PENDING pledges - cancelled pledges are skipped
- */
-async function syncPaymentMethodsFromStripe(projectId: string) {
-  const stripe = await getStripeInstance();
-
-  // Find pending pledges with SetupIntent but no payment method
-  // CRITICAL: Only sync for PENDING status - never for CANCELLED/FAILED/etc
-  // Prisma 7 rejects `{ field: { not: null } }` on nullable string fields at
-  // runtime — use the `NOT: { field: null }` wrapper syntax instead.
-  const pledgesNeedingSync = await db.pledge.findMany({
-    where: {
-      projectId,
-      status: "PENDING", // SAFETY: Only PENDING pledges
-      deletedAt: null,
-      NOT: { stripeSetupIntentId: null },
-      stripePaymentMethodId: null,
-    },
-    select: {
-      id: true,
-      stripeSetupIntentId: true,
-    },
-  });
-
-  let synced = 0;
-  for (const pledge of pledgesNeedingSync) {
-    try {
-      // SAFETY: Re-verify pledge is still PENDING before syncing
-      const currentPledge = await db.pledge.findFirst({
-        where: { id: pledge.id, deletedAt: null },
-        select: { status: true },
-      });
-
-      if (currentPledge?.status !== "PENDING") {
-        cronProcessFundedCampaignsLogger.info(`[Cron Sync] Skipping pledge ${pledge.id} - status changed to ${currentPledge?.status}`);
-        continue;
-      }
-
-      const setupIntent = await stripe.setupIntents.retrieve(pledge.stripeSetupIntentId!);
-
-      // SAFETY: Only sync if SetupIntent succeeded AND wasn't cancelled
-      if (setupIntent.status === "succeeded" && setupIntent.payment_method) {
-        const paymentMethodId = typeof setupIntent.payment_method === "string"
-          ? setupIntent.payment_method
-          : setupIntent.payment_method.id;
-
-        // SAFETY: Double-check the payment method is still attached/valid
-        try {
-          const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-          if (!pm.customer) {
-            cronProcessFundedCampaignsLogger.info(`[Cron Sync] Skipping pledge ${pledge.id} - payment method ${paymentMethodId} is detached`);
-            continue;
-          }
-        } catch {
-          cronProcessFundedCampaignsLogger.info(`[Cron Sync] Skipping pledge ${pledge.id} - payment method ${paymentMethodId} not found`);
-          continue;
-        }
-
-        await db.pledge.update({
-          where: { id: pledge.id },
-          data: { stripePaymentMethodId: paymentMethodId },
-        });
-        synced++;
-      } else if (setupIntent.status === "canceled") {
-        cronProcessFundedCampaignsLogger.info(`[Cron Sync] SetupIntent ${pledge.stripeSetupIntentId} was cancelled - skipping`);
-      }
-    } catch (error) {
-      cronProcessFundedCampaignsLogger.warn({ data: error }, `[Cron Sync] Error syncing pledge ${pledge.id}:`);
-      // Ignore errors - will be retried next cron run
-    }
-  }
-
-  return synced;
-}
-
 // Cron job endpoint for processing pending pledges on funded campaigns
 //
 // This actively checks for campaigns that have crossed their funding goal
@@ -261,11 +182,8 @@ export async function GET(req: NextRequest) {
     // A project is "funded" when currentAmount >= goalAmount
     const fundedProjectsWithPendingPledges = await db.project.findMany({
       where: {
-        // Only active/published projects (LIVE = running campaign, FUNDED = reached goal)
         status: { in: ["LIVE", "FUNDED"] },
         deletedAt: null,
-        // Campaign must be funded (currentAmount >= goalAmount)
-        // Using raw query comparison since Prisma doesn't support field comparison directly
       },
       select: {
         id: true,
@@ -280,13 +198,7 @@ export async function GET(req: NextRequest) {
               where: {
                 status: "PENDING",
                 chargedImmediately: false,
-                // Either a Stripe payment method (legacy/Stripe campaigns)
-                // or a DC saved pm (DivinityCoin AoN saved-card flow) —
-                // anything we can actually charge.
-                OR: [
-                  { NOT: { stripePaymentMethodId: null } },
-                  { NOT: { divinityCoinPaymentMethodId: null } },
-                ],
+                NOT: { divinityCoinPaymentMethodId: null },
               },
             },
           },
@@ -316,66 +228,16 @@ export async function GET(req: NextRequest) {
       totalFailed: 0,
     };
 
-    // Also find projects that might have pledges needing payment method sync
-    const projectsNeedingSync = fundedProjectsWithPendingPledges.filter(
-      (project) => Number(project.currentAmount) >= Number(project.goalAmount)
+    // All funded projects get PayPal capture + DC saved-card capture.
+    const fundedProjects = fundedProjectsWithPendingPledges.filter(
+      (project) =>
+        project.campaignType === "KEEP_IT_ALL" ||
+        Number(project.currentAmount) >= Number(project.goalAmount)
     );
 
-    // Check if Stripe is enabled before attempting any Stripe operations
-    const stripeSettings = await db.platformSettings.findUnique({
-      where: { id: "default" },
-      select: { stripeEnabled: true },
-    });
-    const stripeEnabled = stripeSettings?.stripeEnabled ?? false;
-
-    let totalSynced = 0;
-
-    // First pass: sync payment methods from Stripe for all funded projects
-    for (const project of projectsNeedingSync) {
-      if (!stripeEnabled) break;
-      const synced = await syncPaymentMethodsFromStripe(project.id);
-      totalSynced += synced;
-      if (synced > 0) {
-        cronProcessFundedCampaignsLogger.info(`[Cron] Synced ${synced} payment methods for "${project.title}"`);
-      }
-    }
-
-    // Re-query to get updated counts after sync
-    const projectsToProcessAfterSync = await db.project.findMany({
-      where: {
-        id: { in: projectsNeedingSync.map(p => p.id) },
-      },
-      select: {
-        id: true,
-        title: true,
-        _count: {
-          select: {
-            pledges: {
-              where: {
-                status: "PENDING",
-                chargedImmediately: false,
-                OR: [
-                  { NOT: { stripePaymentMethodId: null } },
-                  { NOT: { divinityCoinPaymentMethodId: null } },
-                ],
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const projectsReadyToCharge = projectsToProcessAfterSync.filter(p => p._count.pledges > 0);
-
-    // Process pending pledges for each funded project
-    for (const project of projectsReadyToCharge) {
+    for (const project of fundedProjects) {
       try {
-        // Only charge via Stripe if Stripe is enabled
-        const stripeResults = stripeEnabled
-          ? await processPendingPledgesForProject(project.id)
-          : { total: 0, successful: 0, failed: 0 };
-
-        // Always capture authorized PayPal pledges (independent of Stripe)
+        // Always capture authorized PayPal pledges (independent of DC)
         await captureAuthorizedPaypalPledges(project.id).catch(err =>
           cronProcessFundedCampaignsLogger.error({ err: String(err) }, `[Cron] PayPal capture error for project ${project.id}`)
         );
@@ -391,23 +253,17 @@ export async function GET(req: NextRequest) {
           return { total: 0, successful: 0, failed: 0 };
         });
 
-        const pledgeResults = {
-          total: stripeResults.total + dcResults.total,
-          successful: stripeResults.successful + dcResults.successful,
-          failed: stripeResults.failed + dcResults.failed,
-        };
-
         results.processed.push({
           projectId: project.id,
           projectTitle: project.title,
-          ...pledgeResults,
+          ...dcResults,
         });
 
-        results.totalPledgesProcessed += pledgeResults.total;
-        results.totalSuccessful += pledgeResults.successful;
-        results.totalFailed += pledgeResults.failed;
+        results.totalPledgesProcessed += dcResults.total;
+        results.totalSuccessful += dcResults.successful;
+        results.totalFailed += dcResults.failed;
 
-        cronProcessFundedCampaignsLogger.info(`[Cron] Processed funded campaign "${project.title}": ${pledgeResults.successful}/${pledgeResults.total} pledges charged`);
+        cronProcessFundedCampaignsLogger.info(`[Cron] Processed funded campaign "${project.title}": ${dcResults.successful}/${dcResults.total} pledges charged`);
       } catch (error) {
         cronProcessFundedCampaignsLogger.error({ err: error }, `[Cron] Error processing pledges for project ${project.id}:`);
         results.processed.push({
@@ -423,7 +279,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      totalPaymentMethodsSynced: totalSynced,
       ...results,
       timestamp: new Date().toISOString(),
     });

@@ -12,7 +12,6 @@ import {
   Loader2,
   ArrowLeft,
   AlertTriangle,
-  ExternalLink,
   Copy,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -25,7 +24,6 @@ interface TransactionDetailDialogProps {
   transactionDetail: TransactionDetail | null;
   isLoadingDetail: boolean;
   onClose: () => void;
-  onStripeLookup: (id: string) => void;
 }
 
 export function TransactionDetailDialog({
@@ -33,7 +31,6 @@ export function TransactionDetailDialog({
   transactionDetail,
   isLoadingDetail,
   onClose,
-  onStripeLookup,
 }: TransactionDetailDialogProps) {
   if (!selectedTransaction) return null;
 
@@ -196,16 +193,6 @@ export function TransactionDetailDialog({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-5 px-1 ml-1"
-                        onClick={() => {
-                          onStripeLookup(transactionDetail.record.stripePaymentIntentId);
-                        }}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
                         className="h-5 px-1"
                         onClick={() => copyToClipboard(transactionDetail.record.stripePaymentIntentId)}
                       >
@@ -217,16 +204,6 @@ export function TransactionDetailDialog({
                     <div className="col-span-2">
                       <span className="text-muted-foreground">Stripe Setup Intent:</span>{" "}
                       <span className="font-mono text-xs">{transactionDetail.record.stripeSetupIntentId}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 px-1 ml-1"
-                        onClick={() => {
-                          onStripeLookup(transactionDetail.record.stripeSetupIntentId);
-                        }}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"

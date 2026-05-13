@@ -4,57 +4,9 @@ import { logger } from "@/lib/logger";
 const pledgesAddItemsLogger = logger.child({ module: "pledges-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getStripeInstance, assignBackerNumber } from "@/lib/payments/stripe";
 import { getDivinityCoinConfig, chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
 
 export const dynamic = "force-dynamic";
-
-/**
- * Self-healing function to fix pledges stuck in PENDING status
- * This can happen if the Stripe webhook didn't fire or failed
- */
-async function healStuckPendingPledge(pledgeId: string, stripePaymentIntentId: string): Promise<boolean> {
-  try {
-    const stripe = await getStripeInstance();
-    if (!stripe) return false;
-
-    const paymentIntent = await stripe.paymentIntents.retrieve(stripePaymentIntentId);
-
-    if (paymentIntent.status === "succeeded") {
-      // Payment succeeded but webhook didn't update pledge - fix it now
-      const paymentMethodId = typeof paymentIntent.payment_method === "string"
-        ? paymentIntent.payment_method
-        : paymentIntent.payment_method?.id;
-
-      // Get pledge to check if backer number already assigned
-      const pledge = await db.pledge.findFirst({
-        where: { id: pledgeId , deletedAt: null },
-        select: { projectId: true, backerNumber: true },
-      });
-
-      // Assign backer number atomically if not already assigned
-      if (!pledge?.backerNumber && pledge?.projectId) {
-        await assignBackerNumber(pledge.projectId, pledgeId);
-      }
-
-      await db.pledge.update({
-        where: { id: pledgeId },
-        data: {
-          status: "COMPLETED",
-          stripePaymentMethodId: paymentMethodId,
-        },
-      });
-
-      pledgesAddItemsLogger.info(`[AddItems] Self-healed pledge ${pledgeId} - updated to COMPLETED`);
-      return true;
-    }
-
-    return false;
-  } catch (error) {
-    pledgesAddItemsLogger.error({ err: String(error) }, `[AddItems] Failed to heal pledge ${pledgeId}:`);
-    return false;
-  }
-}
 
 // POST - Add additional items to a completed pledge
 export async function POST(
@@ -126,24 +78,11 @@ export async function POST(
     }
 
     // Verify pledge is completed
-    // If PENDING with a PaymentIntent, try to heal it by checking Stripe
     if (pledge.status !== "COMPLETED") {
-      if (pledge.status === "PENDING" && pledge.stripePaymentIntentId) {
-        // Try to heal stuck pledge by checking PaymentIntent status in Stripe
-        const healed = await healStuckPendingPledge(pledgeId, pledge.stripePaymentIntentId);
-        if (!healed) {
-          return NextResponse.json(
-            { error: "Your pledge payment may still be processing. Please try again in a few moments." },
-            { status: 400 }
-          );
-        }
-        // Pledge was healed, continue with adding items
-      } else {
-        return NextResponse.json(
-          { error: "Can only add items to completed pledges" },
-          { status: 400 }
-        );
-      }
+      return NextResponse.json(
+        { error: "Can only add items to completed pledges" },
+        { status: 400 }
+      );
     }
 
     // Verify project is still live and campaign hasn't ended
@@ -455,95 +394,16 @@ export async function POST(
       }
     }
 
-    // Stripe: Create PaymentIntent for immediate charge
-    const stripe = await getStripeInstance();
-    if (!stripe) {
-      return NextResponse.json(
-        { error: "Payment system unavailable" },
-        { status: 500 }
-      );
-    }
-
-    // Create the payment intent
-    const amountInCents = Math.round(amount * 100);
-
-    const paymentIntentParams: {
-      amount: number;
-      currency: string;
-      automatic_payment_methods: { enabled: boolean };
-      metadata: {
-        pledgeId: string;
-        userId: string;
-        projectId: string;
-        type: string;
-        addons: string;
-      };
-      application_fee_amount?: number;
-      transfer_data?: { destination: string };
-    } = {
-      amount: amountInCents,
-      currency: "usd",
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        pledgeId: pledge.id,
-        userId: session.user.id,
-        projectId: pledge.projectId,
-        type: "additional_items",
-        addons: JSON.stringify(addonsWithQuantity),
-      },
-    };
-
-    // Get the creator's Stripe account ID (prefer from stripeConfig, fallback to project field)
-    const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
-
-    // If creator has Stripe Connect, send funds directly to them
-    if (stripeAccountId) {
-      const addItemsPlatformSettings = await db.platformSettings.findUnique({ where: { id: "default" }, select: { platformFee: true } });
-      const feePercent = addItemsPlatformSettings?.platformFee ? Number(addItemsPlatformSettings.platformFee) / 100 : 0.03;
-      const applicationFee = Math.round(amount * 100 * feePercent);
-      paymentIntentParams.application_fee_amount = applicationFee;
-      paymentIntentParams.transfer_data = {
-        destination: stripeAccountId,
-      };
-    }
-
-    let paymentIntent;
-    try {
-      paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
-    } catch (stripeError: unknown) {
-      const message = stripeError instanceof Error ? stripeError.message : "Unknown Stripe error";
-      pledgesAddItemsLogger.error({ err: String(message) }, `[AddItems] Stripe PaymentIntent creation failed for pledge ${pledgeId}:`);
-      return NextResponse.json(
-        { error: `Payment creation failed: ${message}` },
-        { status: 502 }
-      );
-    }
-
-    // Store pending items in metadata for Stripe too (webhook uses PaymentIntent metadata).
-    // Reuses the currentMetadata captured under the FOR UPDATE lock above so
-    // we don't re-race with concurrent add-items calls here.
+    // Roll back the reservation marker so the user can retry through DC.
     await db.pledge.update({
       where: { id: pledgeId },
-      data: {
-        metadata: {
-          ...currentMetadata,
-          pendingAdditionalItems: {
-            paymentMethod: "STRIPE",
-            paymentIntentId: paymentIntent.id,
-            addons: addonsWithQuantity,
-            amount,
-            createdAt: new Date().toISOString(),
-          },
-        },
-      },
-    });
+      data: { metadata: { ...currentMetadata } },
+    }).catch(() => null);
 
-    return NextResponse.json({
-      paymentMethod: "STRIPE",
-      clientSecret: paymentIntent.client_secret,
-      type: "payment_intent",
-      paymentIntentId: paymentIntent.id,
-    });
+    return NextResponse.json(
+      { error: "Adding items is only supported for DivinityCoin pledges on this platform." },
+      { status: 400 }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     pledgesAddItemsLogger.error({ err: `${message}: ${error}` }, "Error adding items to pledge:");

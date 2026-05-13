@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { createStripePayment, checkAndUpdateStripeOnboarding } from "@/lib/payments/stripe";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { createPayPalPayment } from "@/lib/payments/paypal";
 import { createWhopPayment } from "@/lib/payments/whop";
@@ -73,15 +72,7 @@ export async function POST(req: NextRequest) {
       const data = createPledgeSchema.parse(body);
 
       // Get project to determine payment processor
-      const project = await db.project.findFirst({ where: { id: data.projectId, deletedAt: null },
-        include: {
-          creator: {
-            include: {
-              stripeConfig: true,
-            },
-          },
-        },
-      });
+      const project = await db.project.findFirst({ where: { id: data.projectId, deletedAt: null } });
 
       if (!project) {
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -502,53 +493,11 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // For Stripe projects, verify creator has Stripe configured
-      const stripeConfig = project.creator.stripeConfig;
-      if (!stripeConfig?.stripeAccountId) {
-        return NextResponse.json(
-          { error: "Creator payment not configured" },
-          { status: 400 }
-        );
-      }
-
-      // Check onboarding status - query Stripe directly if DB shows not onboarded (webhook might be delayed)
-      const isOnboarded = await checkAndUpdateStripeOnboarding(
-        stripeConfig.id,
-        stripeConfig.stripeAccountId,
-        stripeConfig.isOnboarded
+      // Unsupported payment processor (Stripe is no longer accepted)
+      return NextResponse.json(
+        { error: "This project's payment processor is not supported." },
+        { status: 400 }
       );
-
-      if (!isOnboarded) {
-        return NextResponse.json(
-          { error: "Creator payment not fully configured" },
-          { status: 400 }
-        );
-      }
-
-      const result = await createStripePayment({
-        projectId: data.projectId,
-        rewardId: data.rewardId,
-        addons: addonsWithQuantity,
-        amount: data.amount,
-        userId: session.user.id,
-        sourceCampaignId,
-        shippingAmount: data.shippingAmount || 0,
-        shippingCountry: data.shippingCountry,
-        shippingAddress: resolvedShippingAddress,
-      });
-
-      const durationSec = (Date.now() - startTime) / 1000;
-      metrics.pledgesCreated.inc({ status: "pending", processor: "stripe" });
-      metrics.httpRequestsTotal.inc({ method: "POST", path: "/api/pledges", status: "200" });
-      metrics.httpRequestDuration.observe({ method: "POST", path: "/api/pledges" }, durationSec);
-
-      return NextResponse.json({
-        paymentMethod: "STRIPE",
-        type: result.type,
-        clientSecret: result.clientSecret,
-        pledgeId: result.pledgeId,
-        chargedImmediately: result.chargedImmediately,
-      });
     } catch (error) {
       const durationSec = (Date.now() - startTime) / 1000;
       metrics.httpRequestsTotal.inc({ method: "POST", path: "/api/pledges", status: "500" });

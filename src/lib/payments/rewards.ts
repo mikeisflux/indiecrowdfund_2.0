@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 
 import { logger } from "@/lib/logger";
 
-const paymentsStripeRewardsLogger = logger.child({ module: "payments-stripe-rewards" });
+const paymentsRewardsLogger = logger.child({ module: "payments-rewards" });
 
 
 /**
@@ -50,10 +50,10 @@ export async function trackCampaignConversion(pledgeId: string, sourceCampaignId
       }
     }
 
-    paymentsStripeRewardsLogger.info(`[Conversion] Tracked conversion for campaign ${sourceCampaignId}, pledge ${pledgeId}`);
+    paymentsRewardsLogger.info(`[Conversion] Tracked conversion for campaign ${sourceCampaignId}, pledge ${pledgeId}`);
   } catch (error) {
     // Don't fail the pledge completion if conversion tracking fails
-    paymentsStripeRewardsLogger.error({ err: error }, `[Conversion] Failed to track conversion:`);
+    paymentsRewardsLogger.error({ err: error }, `[Conversion] Failed to track conversion:`);
   }
 }
 
@@ -81,13 +81,13 @@ export async function claimRewardSlot(rewardId: string, quantity: number = 1): P
 
     const reward = rewards[0];
     if (!reward) {
-      paymentsStripeRewardsLogger.warn(`[claimRewardSlot] Reward ${rewardId} not found`);
+      paymentsRewardsLogger.warn(`[claimRewardSlot] Reward ${rewardId} not found`);
       return false;
     }
 
     // Reject if reward was ended between initial check and slot claim
     if (reward.isEnded) {
-      paymentsStripeRewardsLogger.warn(`[claimRewardSlot] Reward ${rewardId} has been ended`);
+      paymentsRewardsLogger.warn(`[claimRewardSlot] Reward ${rewardId} has been ended`);
       return false;
     }
 
@@ -103,7 +103,7 @@ export async function claimRewardSlot(rewardId: string, quantity: number = 1): P
     // Check if enough slots available
     const availableSlots = reward.quantityAvailable - reward.quantityClaimed;
     if (availableSlots < quantity) {
-      paymentsStripeRewardsLogger.warn(`[claimRewardSlot] Reward ${rewardId} sold out: requested ${quantity}, available ${availableSlots}`);
+      paymentsRewardsLogger.warn(`[claimRewardSlot] Reward ${rewardId} sold out: requested ${quantity}, available ${availableSlots}`);
       return false;
     }
 
@@ -140,7 +140,7 @@ export async function claimAddonSlots(addons: Array<{ id: string; quantity: numb
 
       const reward = rewards[0];
       if (!reward) {
-        paymentsStripeRewardsLogger.warn(`[claimAddonSlots] Addon ${addon.id} not found`);
+        paymentsRewardsLogger.warn(`[claimAddonSlots] Addon ${addon.id} not found`);
         return false;
       }
 
@@ -156,7 +156,7 @@ export async function claimAddonSlots(addons: Array<{ id: string; quantity: numb
       // Check availability
       const availableSlots = reward.quantityAvailable - reward.quantityClaimed;
       if (availableSlots < addon.quantity) {
-        paymentsStripeRewardsLogger.warn(`[claimAddonSlots] Addon ${addon.id} sold out: requested ${addon.quantity}, available ${availableSlots}`);
+        paymentsRewardsLogger.warn(`[claimAddonSlots] Addon ${addon.id} sold out: requested ${addon.quantity}, available ${availableSlots}`);
         return false;
       }
 
