@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { NMI_DISABLED, NMI_DISABLED_MESSAGE } from "@/lib/features";
 import {
   loadNmiConfig,
   addCustomerToVault,
@@ -43,6 +44,12 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ pledgeId: string }> }
 ) {
+  // Rail disabled — PaymentCloud merchant account was cancelled.
+  // Refuse all new confirms; existing PENDING vault-saved pledges
+  // can't be charged to a dead merchant.
+  if (NMI_DISABLED) {
+    return NextResponse.json({ error: NMI_DISABLED_MESSAGE }, { status: 503 });
+  }
   try {
     const session = await auth();
     if (!session?.user?.id) {

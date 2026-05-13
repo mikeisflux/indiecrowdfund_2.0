@@ -87,17 +87,16 @@ export function TermsOfServiceContent() {
           <li>Transfer net funds to the creator</li>
         </ul>
 
-        <h4 className="text-lg font-semibold mt-6 mb-2">6a. Mentom Payments Rolling Reserve</h4>
+        <h4 className="text-lg font-semibold mt-6 mb-2">6a. Rolling Reserve</h4>
         <p className="mb-4">
-          Mentom Payments — the merchant processor IndieCrowdfund uses for new
-          campaigns — requires a 180-day rolling reserve on certain projects
-          to protect against chargebacks, refunds, and other disputes. By
-          launching a campaign on Mentom Payments, creators agree to the
-          following:
+          For certain higher-risk campaigns, IndieCrowdfund may hold a
+          180-day rolling reserve to protect against chargebacks, refunds,
+          and other disputes. By launching such a campaign, creators agree
+          to the following:
         </p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>
-            <strong>Amount:</strong> 10% of the gross campaign revenue is
+            <strong>Amount:</strong> Up to 10% of gross campaign revenue is
             placed in escrow. The reserve is calculated before processing and
             platform fees are deducted, not on the creator&apos;s net.
           </li>
@@ -105,10 +104,6 @@ export function TermsOfServiceContent() {
             <strong>Duration:</strong> The reserve is held for 180 days from
             the date the project is funded. Any unused balance is released to
             the creator&apos;s payout account at the end of that window.
-          </li>
-          <li>
-            <strong>Auto-trigger:</strong> Any campaign that raises more than
-            $2,500 is automatically subject to the reserve.
           </li>
           <li>
             <strong>Manual flag:</strong> New creators, creators with limited
@@ -124,47 +119,12 @@ export function TermsOfServiceContent() {
             marketplace sales.
           </li>
           <li>
-            <strong>Cost absorption:</strong> IndieCrowdfund absorbs the
-            reserve cost where commercially feasible on smaller campaigns;
-            the remainder is held by Mentom Payments and released to the
-            creator after the 180-day window.
-          </li>
-          <li>
             <strong>Chargeback offset:</strong> If chargebacks occur during or
-            after the hold period, IndieCrowdfund and Mentom Payments may use
-            the reserve and the creator&apos;s on-file chargeback card to
-            recoup losses before the remaining reserve is released.
+            after the hold period, IndieCrowdfund may use the reserve and the
+            creator&apos;s on-file chargeback card to recoup losses before the
+            remaining reserve is released.
           </li>
         </ul>
-
-        <h4 className="text-lg font-semibold mt-6 mb-2">6b. International Payouts</h4>
-        <p className="mb-4">
-          Mentom Payments settles into a US merchant account. When a creator&apos;s
-          payout bank account is outside the United States, IndieCrowdfund pays
-          out by international wire transfer in the creator&apos;s local currency
-          rather than US ACH. By saving a non-US bank account, creators
-          authorize the following fees to be deducted from the payout in
-          addition to the standard processing and platform fees:
-        </p>
-        <ul className="list-disc pl-6 mb-4 space-y-2">
-          <li>
-            <strong>Wire fee:</strong> $25 USD flat fee per international payout,
-            covering the originating bank&apos;s wire transfer cost.
-          </li>
-          <li>
-            <strong>Currency conversion fee:</strong> 1.50% of the converted
-            payout amount, applied against the spot rate at the time the wire
-            is sent.
-          </li>
-        </ul>
-        <p className="mb-4">
-          US bank accounts settle via standard ACH at no additional cost. The
-          international wire schedule may add 1–3 business days to settlement
-          versus a US ACH payout. Supported destination countries are listed
-          on the bank account setup screen and may expand over time;
-          unsupported countries cannot save a payout account until the
-          relevant rails are added.
-        </p>
 
         <p className="mb-6">
           Creators are responsible for all taxes, shipping costs, duties, and regulatory compliance.
@@ -179,7 +139,7 @@ export function TermsOfServiceContent() {
           <li><strong>Social Media & Online Presence Audit:</strong> We log and verify all social media accounts linked to the creator. Our team searches other crowdfunding platforms (Kickstarter, Indiegogo, GoFundMe, etc.) to review the creator&apos;s previous campaign history.</li>
           <li><strong>Fulfillment History Review:</strong> We review backer comments, reviews, and public feedback on all prior campaigns across all platforms. We contact creators directly when discrepancies or concerns are identified.</li>
           <li><strong>Internal Documentation:</strong> All verification findings, correspondence, and review decisions are documented internally and retained for compliance and audit purposes.</li>
-          <li><strong>Payment Account Verification:</strong> Creators must add a valid PayPal payout email (for standard campaigns), complete bank account setup through Mentom Payments or DivinityCoin (for NSFW/adult content campaigns), or connect a Whop account (for Whop-processed campaigns) to receive payouts.</li>
+          <li><strong>Payment Account Verification:</strong> Creators must add a valid PayPal payout email (for standard campaigns), complete bank account setup through DivinityCoin (for NSFW/adult content campaigns), or connect a Whop account (for Whop-processed campaigns) to receive payouts.</li>
         </ul>
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
           <p className="text-red-800 dark:text-red-200 font-medium mb-2">Automatic Disqualification</p>

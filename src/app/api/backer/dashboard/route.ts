@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const backerDashboardLogger = logger.child({ module: "backer-dashboard" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { NMI_DISABLED } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -303,7 +304,13 @@ export async function GET() {
     // (or 5 cron retries gave up). These need self-service retry from
     // the backer — the dashboard renders a banner with a Retry CTA so
     // it's impossible to miss.
-    const failedNmiPledges = await db.pledge.findMany({
+    //
+    // When the NMI rail itself is disabled, hide the banner entirely:
+    // the retry endpoint refuses, the page refuses, and there's
+    // nothing the backer can do until admin migrates the pledge to
+    // a different processor or refunds it. Surfacing a dead retry CTA
+    // would just confuse people.
+    const failedNmiPledges = NMI_DISABLED ? [] : await db.pledge.findMany({
       where: {
         userId,
         deletedAt: null,

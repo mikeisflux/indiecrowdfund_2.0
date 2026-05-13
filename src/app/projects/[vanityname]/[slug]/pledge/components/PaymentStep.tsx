@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { NMI_DISABLED } from "@/lib/features";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -264,11 +265,23 @@ export function PaymentStep({
             </div>
           )} */}
 
-          {/* Payment Form — NMI (PaymentCloud) is the primary processor for
-              new campaigns; Whop / PayPal / DivinityCoin branches stay for
-              existing campaigns that were created before the swap. */}
+          {/* Payment Form — DivinityCoin is the primary processor for new
+              campaigns. NMI / PaymentCloud is disabled while Mentom
+              Payments merchant is offline (NMI_DISABLED); existing NMI
+              campaigns surface a friendly disabled-state notice instead
+              of the Collect.js form so visitors don't enter card data
+              that would fail. */}
           {project?.paymentProcessor === "NMI" ? (
-            nmiPublicKey && currentPledgeId ? (
+            NMI_DISABLED ? (
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm">
+                <p className="font-medium text-amber-900 dark:text-amber-200 mb-1">
+                  Card payments temporarily unavailable
+                </p>
+                <p className="text-amber-800 dark:text-amber-300">
+                  This project&apos;s card processor is offline while we switch payment providers. Please check back shortly or contact support.
+                </p>
+              </div>
+            ) : nmiPublicKey && currentPledgeId ? (
               <>
                 {paymentError && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-4">

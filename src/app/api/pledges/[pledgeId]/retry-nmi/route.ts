@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { NMI_DISABLED, NMI_DISABLED_MESSAGE } from "@/lib/features";
 import {
   loadNmiConfig,
   saleByPaymentToken,
@@ -41,6 +42,12 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ pledgeId: string }> }
 ) {
+  // Rail disabled — no point pushing the user through a Collect.js
+  // retry when the receiving merchant is dead. Refuse the POST so
+  // the dashboard banner stops surfacing the retry CTA too.
+  if (NMI_DISABLED) {
+    return NextResponse.json({ error: NMI_DISABLED_MESSAGE }, { status: 503 });
+  }
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -280,6 +287,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ pledgeId: string }> }
 ) {
+  if (NMI_DISABLED) {
+    return NextResponse.json({ error: NMI_DISABLED_MESSAGE, canRetry: false }, { status: 503 });
+  }
   try {
     const session = await auth();
     if (!session?.user?.id) {

@@ -85,7 +85,7 @@ const initialState = {
   },
   payment: {
     projectType: "INDIVIDUAL" as const,
-    paymentProcessor: "NMI" as const,
+    paymentProcessor: "DIVINITYCOIN" as const,
     campaignType: "ALL_OR_NOTHING" as const,
     hasAdultContent: false,
     hasRiskyContent: false,

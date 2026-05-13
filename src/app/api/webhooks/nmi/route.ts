@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { logger } from "@/lib/logger";
 import { db } from "@/lib/db";
 import { loadNmiConfig, saleByVaultToken } from "@/lib/nmi";
+import { NMI_DISABLED } from "@/lib/features";
 
 const nmiWebhookLogger = logger.child({ module: "nmi-webhook" });
 
@@ -406,6 +407,16 @@ async function handleChargeback(payload: Record<string, unknown>): Promise<void>
 }
 
 export async function POST(req: NextRequest) {
+  // Rail disabled — PaymentCloud merchant is gone. No real webhooks
+  // should reach us; anything that does is either a stale retry from
+  // the previous merchant config or a malicious probe. Acknowledge
+  // with 410 Gone so PaymentCloud's retry queue stops hammering.
+  if (NMI_DISABLED) {
+    return NextResponse.json(
+      { error: "Mentom Payments rail disabled" },
+      { status: 410 }
+    );
+  }
   const clientIp = getClientIp(req);
   if (clientIp && !ALLOWED_WEBHOOK_IPS.has(clientIp)) {
     nmiWebhookLogger.warn(

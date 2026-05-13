@@ -5,6 +5,7 @@ const payBalanceLogger = logger.child({ module: "pay-balance" });
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe/config";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import { NMI_DISABLED, NMI_DISABLED_MESSAGE } from "@/lib/features";
 
 // GET - Fetch balance payment details by token
 export async function GET(req: NextRequest) {
@@ -174,6 +175,9 @@ export async function POST(req: NextRequest) {
     // received from the creator, so we use the existing CIT
     // (cardholder-initiated) credentials chain stored on the pledge.
     if (pledge.project.paymentProcessor === "NMI") {
+      if (NMI_DISABLED) {
+        return NextResponse.json({ error: NMI_DISABLED_MESSAGE }, { status: 503 });
+      }
       if (!pledge.nmiCustomerVaultId) {
         return NextResponse.json(
           { error: "No saved card found for this pledge — please contact the creator." },

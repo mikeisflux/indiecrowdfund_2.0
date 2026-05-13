@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { NMI_DISABLED } from "@/lib/features";
 import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Separator } from "@/components/ui/separator";
@@ -408,9 +409,22 @@ export function PaymentStep() {
   // selectable card after the legacy ones were commented out).
   // Launched projects keep their original processor — admins can
   // change it via the legacy migration banner if needed.
+  // Force new projects to a default processor on first mount.
+  // Was NMI when Mentom Payments was the primary processor; with
+  // NMI_DISABLED we fall through to DIVINITYCOIN (the rail that
+  // existed before NMI was added and that's now active again).
   useEffect(() => {
     if (isLaunched) return;
     if (!payment.paymentProcessor) return;
+    if (NMI_DISABLED) {
+      if (payment.paymentProcessor === "DIVINITYCOIN") return;
+      if (payment.paymentProcessor === "NMI") {
+        // Migrate the in-memory default if a stale tab still has NMI
+        // selected from before the rail was disabled.
+        updatePayment({ paymentProcessor: "DIVINITYCOIN" });
+      }
+      return;
+    }
     if (payment.paymentProcessor === "NMI") return;
     updatePayment({ paymentProcessor: "NMI" });
   }, [isLaunched, payment.paymentProcessor, updatePayment]);

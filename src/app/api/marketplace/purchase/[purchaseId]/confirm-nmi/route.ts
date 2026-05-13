@@ -9,6 +9,7 @@ import {
   saleByVaultToken,
   deleteVaultCustomer,
 } from "@/lib/nmi";
+import { NMI_DISABLED, NMI_DISABLED_MESSAGE } from "@/lib/features";
 
 const log = logger.child({ module: "marketplace-purchase-confirm-nmi" });
 
@@ -40,6 +41,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ purchaseId: string }> }
 ) {
+  if (NMI_DISABLED) {
+    return NextResponse.json({ error: NMI_DISABLED_MESSAGE }, { status: 503 });
+  }
   try {
     const session = await auth();
     if (!session?.user?.id) {

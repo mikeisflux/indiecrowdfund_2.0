@@ -103,14 +103,14 @@ export const whopFeeBreakdown = [
 
 export const comparisonData = [
   {
-    platform: "IndieCrowdfund (Mentom Payments)",
+    platform: "IndieCrowdfund (DivinityCoin)",
     platformFee: "3%",
-    paymentFee: "4% + $0.38/txn",
-    total: "~7.5%",
+    paymentFee: "3% + $0.30/txn",
+    total: "~6%",
     highlight: true,
   },
-  // Legacy processor rows hidden — Mentom Payments is the only option for new
-  // campaigns. Existing PayPal/DivinityCoin/Whop campaigns continue to run.
+  // Legacy processor rows hidden — DivinityCoin is the active processor
+  // for new campaigns while Mentom Payments is offline.
   // {
   //   platform: "IndieCrowdfund (PayPal)",
   //   platformFee: "3%",

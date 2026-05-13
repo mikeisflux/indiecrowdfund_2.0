@@ -8,6 +8,7 @@ import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import { loadNmiConfig, saleByVaultToken } from "@/lib/nmi";
 import { finalizeNmiPledge } from "@/lib/payments/nmi/finalize-pledge";
 import { notifyNmiChargeFailed } from "@/lib/notifications";
+import { NMI_DISABLED } from "@/lib/features";
 import { chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
 import { evaluateAutoTrigger } from "@/lib/payments/rolling-reserve";
 
@@ -79,6 +80,11 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
   failed: number;
 }> {
   const result = { total: 0, successful: 0, failed: 0 };
+  // Rail disabled — PaymentCloud merchant was cancelled. Skip the
+  // cron's NMI charge loop entirely; PENDING NMI pledges stay
+  // PENDING until either the merchant is restored or an admin
+  // migrates them to another processor.
+  if (NMI_DISABLED) return result;
   const config = await loadNmiConfig();
   if (!config) return result;
 

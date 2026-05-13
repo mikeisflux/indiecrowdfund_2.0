@@ -283,7 +283,7 @@ const tabContent: Record<string, TabContent> = {
     howTo: [
       { step: 'See the queue', detail: 'Each request shows: backer name + email, pledge amount, requested refund amount (full or partial), reason the backer wrote, the date submitted, and an approve / deny / message button.' },
       { step: 'Review the request', detail: 'Click the row to expand. You see the full pledge history, original payment method, processor, and any prior messages with this backer.' },
-      { step: 'Approve, deny, or ask for more info', detail: 'Approve refunds the requested amount through the original processor (PayPal, Mentom Payments, DivinityCoin, Whop). Deny closes the request with an optional reason. "Message" opens an inbox thread to ask the backer questions before deciding.' },
+      { step: 'Approve, deny, or ask for more info', detail: 'Approve refunds the requested amount through the original processor (PayPal, DivinityCoin, Whop). Deny closes the request with an optional reason. "Message" opens an inbox thread to ask the backer questions before deciding.' },
       { step: 'Track the refund status', detail: 'Approved refunds move to a "Processing" state until the processor confirms. Most processors complete in 5–10 business days. The request card shows the actual refund timestamp once done.' },
     ],
     tips: [
@@ -292,7 +292,7 @@ const tabContent: Record<string, TabContent> = {
       'A high refund rate (>5%) is a signal that fulfillment communication is missing the mark — review your update cadence.',
     ],
     gotchas: [
-      'Refunds via Mentom Payments / DivinityCoin / Whop go through their dispute infrastructure — read each processor\'s refund window before approving an old pledge.',
+      'Refunds via DivinityCoin / PayPal / Whop go through their dispute infrastructure — read each processor\'s refund window before approving an old pledge.',
       'Refund requests are independent of chargebacks — if a backer files a chargeback with their bank, that flows through your Refund Requests too but with a "Chargeback" tag.',
     ],
   },
@@ -394,7 +394,7 @@ const tabContent: Record<string, TabContent> = {
     ],
     gotchas: [
       'You cannot charge a card that\'s been refunded or charged-back. The row will be locked.',
-      'Manual charges still go through the processor\'s rolling reserve (Mentom Payments) — they don\'t pay out instantly.',
+      'Manual charges still go through the processor\'s normal settlement window — they don\'t pay out instantly.',
     ],
   },
   'digital-delivery': {
@@ -481,7 +481,7 @@ const tabContent: Record<string, TabContent> = {
     title: 'Settings Tab',
     description: 'Project-level configuration that persists across phases: payment processor account, payout bank, chargeback protection card, fulfillment integrations, SKU mapping, creator email handle, notification preferences.',
     howTo: [
-      { step: 'Payments section', detail: 'Verify your payment processor is connected and your payout bank account is on file. For Mentom Payments projects, also check your chargeback protection card. Without these, fulfillment charges will fail.' },
+      { step: 'Payments section', detail: 'Verify your payment processor is connected and your payout bank account is on file. Without these, fulfillment charges will fail.' },
       { step: 'Creator Email section', detail: 'Set your creator email handle (yourname@indiecrowdfund.com). All Email Marketing campaigns and Inbox replies send from this address. Configure sender display name + reply-to here too.' },
       { step: 'Fulfillment integrations', detail: 'Connect or re-authorize Shopify, ShipStation, Shippo, EasyPost. Each takes an API key from the service\'s admin. Once connected, the Backers tab can push orders directly.' },
       { step: 'SKU mapping', detail: 'For each reward tier and add-on, tell IndieKit what SKU it corresponds to in your fulfillment service. Required before any push. Use the bulk-edit if you have many tiers.' },

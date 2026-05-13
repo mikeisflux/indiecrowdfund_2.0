@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { NMI_DISABLED } from "@/lib/features";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DollarSign, CheckCircle, ArrowRight, HelpCircle, Calculator,
-  Gift, CreditCard, Coins, ExternalLink, ArrowLeft, ShoppingBag, Cloud,
+  Gift, CreditCard, Coins, ExternalLink, ArrowLeft, ShoppingBag, Cloud, Banknote,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 import {
@@ -84,7 +85,7 @@ export default function FeesPage() {
   // $0.30/txn for Stripe/DC, $0.49/txn for PayPal). Default 1000 backers
   // = $50/backer at $50k raised, which matches the historical default.
   const [backerSliderValue, setBackerSliderValue] = useState([1000]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("paymentcloud");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("divinitycoin");
   const amount = sliderValue[0];
   const numBackers = Math.max(1, backerSliderValue[0]);
   const avgPledge = amount / numBackers;
@@ -168,14 +169,21 @@ export default function FeesPage() {
           </div>
 
           <Tabs
-            defaultValue="paymentcloud"
+            defaultValue={NMI_DISABLED ? "divinitycoin" : "paymentcloud"}
             className="w-full"
             onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
           >
             <TabsList className="grid w-full sm:max-w-md mx-auto grid-cols-1 mb-8">
-              <TabsTrigger value="paymentcloud" className="flex items-center gap-2">
-                <Cloud className="h-4 w-4" /> Mentom Payments
-              </TabsTrigger>
+              {!NMI_DISABLED && (
+                <TabsTrigger value="paymentcloud" className="flex items-center gap-2">
+                  <Cloud className="h-4 w-4" /> Mentom Payments
+                </TabsTrigger>
+              )}
+              {NMI_DISABLED && (
+                <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
+                  <Banknote className="h-4 w-4" /> DivinityCoin
+                </TabsTrigger>
+              )}
               {/* Legacy processor tabs hidden — Mentom Payments is the only processor
                   offered for new campaigns. Backend continues to honor existing
                   Whop/PayPal/DivinityCoin campaigns.

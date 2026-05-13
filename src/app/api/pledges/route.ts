@@ -6,6 +6,7 @@ import { createStripePayment, checkAndUpdateStripeOnboarding } from "@/lib/payme
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { createPayPalPayment } from "@/lib/payments/paypal";
 import { createWhopPayment } from "@/lib/payments/whop";
+import { NMI_DISABLED, NMI_DISABLED_MESSAGE } from "@/lib/features";
 import { isEmailVerificationRequired } from "@/lib/email";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
@@ -497,6 +498,12 @@ export async function POST(req: NextRequest) {
       // cleanup) happen AFTER commit so we don't hold the lock across
       // a network round-trip.
       if (project.paymentProcessor === "NMI") {
+        // Rail disabled — PaymentCloud merchant account was cancelled.
+        // Refuse new pledges instead of routing into a dead processor.
+        // Existing NMI pledge data is untouched.
+        if (NMI_DISABLED) {
+          return NextResponse.json({ error: NMI_DISABLED_MESSAGE }, { status: 503 });
+        }
         // Load NMI config OUTSIDE the lock — it only reads
         // platformSettings and doesn't need transactional consistency
         // with the pledge create. Fail fast if not configured.

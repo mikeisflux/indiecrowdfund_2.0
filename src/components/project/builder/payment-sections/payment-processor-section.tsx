@@ -1,5 +1,6 @@
 "use client";
 
+import { NMI_DISABLED } from "@/lib/features";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
@@ -108,8 +109,10 @@ export function PaymentProcessorSection({
         </Card>
         */}
 
-        {/* PaymentCloud Option — NMI white-label, NSFW-friendly, supports AoN + KIA.
-            Currently the only processor offered for new campaigns. */}
+        {/* PaymentCloud (NMI / Mentom Payments) — entire card hidden
+            while the merchant account is offline. Gated by NMI_DISABLED
+            so this comes back instantly if we restore the rail. */}
+        {!NMI_DISABLED && (
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "NMI" ? "border-2 border-primary" : "border"
@@ -177,9 +180,11 @@ export function PaymentProcessorSection({
             </div>
           </CardContent>
         </Card>
+        )}
 
-        {/* DivinityCoin disabled — kept selectable only by existing DC
-            projects via DB; new campaigns route to PaymentCloud.
+        {/* DivinityCoin — re-enabled as the primary processor for new
+            campaigns while Mentom Payments is offline. Supports all
+            content types. */}
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "DIVINITYCOIN" ? "border-2 border-primary" : "border"
@@ -193,9 +198,7 @@ export function PaymentProcessorSection({
                   <Banknote className="h-5 w-5 text-white" />
                 </div>
                 DivinityCoin
-                {mustUseAltProcessor && (
-                  <Badge variant="default" className="ml-2 bg-[#0066FF]">Required</Badge>
-                )}
+                <Badge variant="default" className="ml-2 bg-[#0066FF]">Recommended</Badge>
               </CardTitle>
               {payment.paymentProcessor === "DIVINITYCOIN" && (
                 <CheckCircle className="h-5 w-5 text-primary" />
@@ -222,7 +225,6 @@ export function PaymentProcessorSection({
             </div>
           </CardContent>
         </Card>
-        */}
 
         {/* Whop disabled — PaymentCloud is the only processor for new campaigns.
         <Card
@@ -395,7 +397,7 @@ export function PaymentProcessorSection({
         </div>
       )}
 
-      {payment.paymentProcessor === "NMI" && (
+      {!NMI_DISABLED && payment.paymentProcessor === "NMI" && (
         <div className="rounded-lg bg-muted/50 p-4 border">
           <h4 className="font-medium mb-3">
             Mentom Payments Fee Breakdown for {formatCurrency(goalAmount)} Goal

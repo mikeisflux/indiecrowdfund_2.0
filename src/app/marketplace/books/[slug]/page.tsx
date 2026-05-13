@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { NMI_DISABLED } from "@/lib/features";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -977,6 +978,19 @@ export default function BookDetailPage() {
             ) : (
               <>
                 {book?.paymentProcessor === "NMI" ? (
+                  NMI_DISABLED ? (
+                    <div className="h-16 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 flex items-center px-4 text-sm">
+                      <CreditCard className="w-5 h-5 mr-3 text-amber-700 dark:text-amber-300" />
+                      <div className="flex-1">
+                        <div className="font-semibold text-amber-900 dark:text-amber-100">
+                          Card payments temporarily unavailable
+                        </div>
+                        <div className="text-xs text-amber-800 dark:text-amber-300">
+                          We&apos;re switching payment processors. Check back soon.
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                   <Button
                     className="h-16 bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 justify-start"
                     onClick={() => handlePurchase("nmi")}
@@ -992,6 +1006,7 @@ export default function BookDetailPage() {
                       <div className="text-sm opacity-80 text-white">Pay with credit or debit card</div>
                     </div>
                   </Button>
+                  )
                 ) : book?.paymentProcessor === "PAYPAL" ? (
                   <Button
                     className="h-16 bg-[#003087] hover:bg-[#002070] justify-start"

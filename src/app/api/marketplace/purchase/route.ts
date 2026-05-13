@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
+import { NMI_DISABLED, NMI_DISABLED_MESSAGE } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,12 @@ export async function POST(request: Request) {
         { error: "This book requires Mentom Payments payment" },
         { status: 400 }
       );
+    }
+    // Rail disabled — refuse any NMI marketplace purchase regardless
+    // of which payment method the client picked. PaymentCloud merchant
+    // is gone; no charge would ever succeed.
+    if (NMI_DISABLED && (book.paymentProcessor === "NMI" || paymentMethod === "nmi")) {
+      return NextResponse.json({ error: NMI_DISABLED_MESSAGE }, { status: 503 });
     }
 
     // Create purchase record in PENDING state
