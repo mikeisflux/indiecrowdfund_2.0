@@ -16,6 +16,7 @@ interface PledgeForProcessing {
   fulfillmentStatus: string | null;
   paymentProcessor: string | null;
   chargeStatus?: string;
+  confirmationEmailSent?: boolean;
   isPreOrder: boolean;
   createdAt: Date;
   metadata: unknown;
@@ -165,6 +166,19 @@ export function processBackers(
     // Check if address is complete
     const addressComplete = !!(shippingAddress?.line1 && shippingAddress?.city && shippingAddress?.country && shippingAddress?.postalCode);
 
+    // True for pledges that were migrated from Mentom Payments to
+    // DivinityCoin via the admin migrate-to-dc tool and are still
+    // awaiting the backer to re-enter their card. The migration sets
+    // confirmationEmailSent=true on already-counted pledges (so the
+    // DC webhook skips the increment when the backer re-pays), then
+    // flips status PENDING. The combination is unique — normal new
+    // DC pledges have confirmationEmailSent=false until DC's webhook
+    // fires.
+    const needsMigrationPayment =
+      pledge.paymentProcessor === "DIVINITYCOIN" &&
+      pledge.status === "PENDING" &&
+      pledge.confirmationEmailSent === true;
+
     return {
       id: pledge.id,
       projectId: pledge.projectId,
@@ -179,6 +193,7 @@ export function processBackers(
       status,
       chargeStatus,
       paymentProcessor: pledge.paymentProcessor,
+      needsMigrationPayment,
       surveyCompleted: surveyResponse?.isComplete || false,
       addressComplete,
       pledgeDate: pledge.createdAt.toISOString(),

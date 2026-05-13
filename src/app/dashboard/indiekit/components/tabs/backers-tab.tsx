@@ -1040,13 +1040,24 @@ export function BackersTab({
                         <AvatarFallback>{backer.name?.[0] ?? "?"}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{backer.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{backer.name}</p>
+                          {backer.needsMigrationPayment && (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">
+                              Payment required
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{backer.email}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell onClick={() => onOpenBackerDetail(backer)}>{backer.reward}</TableCell>
-                  <TableCell onClick={() => onOpenBackerDetail(backer)}>${Number(backer.pledgeAmount).toFixed(2)}</TableCell>
+                  <TableCell onClick={() => onOpenBackerDetail(backer)}>
+                    <span className={backer.needsMigrationPayment ? "text-red-600 font-medium" : undefined}>
+                      ${Number(backer.pledgeAmount).toFixed(2)}
+                    </span>
+                  </TableCell>
                   <TableCell onClick={() => onOpenBackerDetail(backer)}>
                     {backer.surveyCompleted ? (
                       <Badge variant="outline" className="text-green-600 border-green-200">

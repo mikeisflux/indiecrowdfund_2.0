@@ -77,6 +77,11 @@ export interface Backer {
   status: "not_pushed" | "push_errored" | "pushed" | "shipped";
   chargeStatus: "not_charged" | "errored" | "charged" | "paypal_collected";
   paymentProcessor?: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
+  // True for pledges that were migrated from Mentom Payments to
+  // DivinityCoin and are still awaiting the backer to re-enter their
+  // card on the /dashboard/pledges/<id>/complete-with-dc page. Flips
+  // back to false the moment DC's payment.succeeded webhook fires.
+  needsMigrationPayment?: boolean;
   surveyCompleted: boolean;
   addressComplete: boolean;
   pledgeDate?: string;
