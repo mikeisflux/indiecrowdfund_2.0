@@ -904,7 +904,15 @@ export default function ProjectPage() {
         )}
 
         {activeTab === "updates" && (
-          <UpdatesTab updates={project.updates} similarProjects={similarProjects} />
+          <UpdatesTab
+            updates={project.updates}
+            similarProjects={similarProjects}
+            canComment={
+              isLoggedIn && (isBacker || isFollowing || isCreator || isCollaborator)
+            }
+            currentUserName={currentUser?.name}
+            currentUserAvatar={currentUser?.image}
+          />
         )}
 
         {activeTab === "comments" && (
