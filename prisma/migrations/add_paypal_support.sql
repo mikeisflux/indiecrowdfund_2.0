@@ -1,5 +1,5 @@
 -- Migration: Add PayPal payment processor support
--- Run with: PGPASSWORD='01JSN9vhvVTiMEU7odCpF6L3' psql -h localhost -U indieuser -d indiecrowdfund -f prisma/migrations/add_paypal_support.sql
+-- Run with: PGPASSWORD='AH2hqkufqtrp9BmdRkAsdU83N9fW4Q6w' psql -h localhost -U indieuser -d indiecrowdfund -f prisma/migrations/add_paypal_support.sql
 
 -- 1. Add PAYPAL to PaymentProcessor enum
 ALTER TYPE "PaymentProcessor" ADD VALUE IF NOT EXISTS 'PAYPAL';
