@@ -555,23 +555,75 @@ export async function POST(req: NextRequest) {
           initiatedBy: session.user.id,
         }, "Bulk card charge initiated");
 
-        // Process each pledge individually with per-pledge error handling
+        // Server-side guard: refuse to push any pledge through
+        // chargeSavedPledge unless it actually has an outstanding
+        // balance due. The client filter is the primary defense, but
+        // a stale tab / replayed request / future bug shouldn't be
+        // able to brick rows by sending arbitrary pledge IDs. We
+        // compute balanceDue from the on-disk pledge + reward +
+        // addons + shipping the same way the UI does, and skip any
+        // pledge with a non-positive delta (already paid in full at
+        // original pledge time).
+        const eligiblePledges = await db.pledge.findMany({
+          where: { id: { in: pledgeIds }, projectId, deletedAt: null },
+          select: {
+            id: true,
+            status: true,
+            amount: true,
+            shippingAmount: true,
+            reward: { select: { amount: true } },
+            addons: { select: { amount: true, quantity: true } },
+          },
+        });
+
+        type EligiblePledgeRow = typeof eligiblePledges[number];
+        const computeBalanceDue = (p: EligiblePledgeRow): number => {
+          const rewardAmt = p.reward ? Number(p.reward.amount) : 0;
+          const addonAmt = (p.addons || []).reduce(
+            (s: number, a: { amount: unknown; quantity: number | null }) =>
+              s + Number(a.amount) * Number(a.quantity || 1),
+            0
+          );
+          const shipping = Number(p.shippingAmount || 0);
+          const charged = Number(p.amount || 0);
+          return Math.round((rewardAmt + addonAmt + shipping - charged) * 100) / 100;
+        };
+
         const chargeErrors: string[] = [];
-        for (const pid of pledgeIds) {
+        const skippedForNoBalance: string[] = [];
+        for (const pledge of eligiblePledges) {
+          const balanceDue = computeBalanceDue(pledge);
+          if (balanceDue <= 0) {
+            // No outstanding balance — never call chargeSavedPledge
+            // on these. chargeSavedPledge would either no-op (if
+            // COMPLETED) or mark-as-FAILED (if PENDING without a
+            // saved payment method, which is the abandoned-cart
+            // signature). Both branches are wrong for "no money is
+            // owed in the first place".
+            skippedForNoBalance.push(pledge.id);
+            continue;
+          }
           try {
-            const success = await chargeSavedPledge(pid);
+            const success = await chargeSavedPledge(pledge.id);
             if (success) {
               results.success++;
             } else {
               results.failed++;
-              chargeErrors.push(`Pledge ${pid}: charge returned false`);
+              chargeErrors.push(`Pledge ${pledge.id}: charge returned false`);
             }
           } catch (chargeErr) {
             results.failed++;
             const errMsg = chargeErr instanceof Error ? chargeErr.message : "Unknown error";
-            chargeErrors.push(`Pledge ${pid}: ${errMsg}`);
-            backersLogger.error({ pledgeId: pid, err: errMsg }, "Individual pledge charge failed");
+            chargeErrors.push(`Pledge ${pledge.id}: ${errMsg}`);
+            backersLogger.error({ pledgeId: pledge.id, err: errMsg }, "Individual pledge charge failed");
           }
+        }
+
+        if (skippedForNoBalance.length > 0) {
+          backersLogger.warn(
+            { projectId, count: skippedForNoBalance.length, skippedForNoBalance },
+            "charge_cards: skipped pledges with no balance due — client filter may be stale"
+          );
         }
 
         // Update the activity record with final results

@@ -896,11 +896,27 @@ export default function IndieKitPage() {
           </DialogHeader>
 
           {(() => {
-            const backersToCharge = backers.filter(b =>
-              b.addons && b.addons.length > 0 && b.chargeStatus !== "charged"
+            // Filter to backers who actually owe more than was already
+            // collected — survey-time add-ons / shipping upgrades.
+            // The old filter (`addons.length > 0 && chargeStatus !==
+            // "charged"`) was way too loose — every backer who had
+            // ever ordered an add-on matched, including the ones who
+            // paid for those add-ons at original pledge time. On the
+            // Mandawhorian campaign this turned a "Charge 2 Cards"
+            // button into a 28-backer / $3325 confirmation dialog,
+            // and clicking it would have routed 51 abandoned-cart
+            // PENDING DC pledges through chargeSavedPledge, which
+            // marks rows with no saved payment method as FAILED,
+            // decrements project totals, and emails backers.
+            // Now we mirror chargeStats.notCharged exactly: filter
+            // strictly on balanceDue > 0 (the same value the
+            // "Charge N Cards" button label is computed from).
+            const backersToCharge = backers.filter(
+              (b) => b.chargeStatus !== "charged" && b.balance.balanceDue > 0
             );
-            const totalAddonsAmount = backersToCharge.reduce((sum, b) =>
-              sum + (b.addons?.reduce((s, a) => s + (a.amount * a.quantity), 0) || 0), 0
+            const totalAddonsAmount = backersToCharge.reduce(
+              (sum, b) => sum + b.balance.balanceDue,
+              0
             );
 
             if (backersToCharge.length === 0) {
@@ -950,7 +966,6 @@ export default function IndieKitPage() {
                     </TableHeader>
                     <TableBody>
                       {backersToCharge.slice(0, 10).map((backer) => {
-                        const addonTotal = backer.addons?.reduce((s, a) => s + (a.amount * a.quantity), 0) || 0;
                         return (
                           <TableRow key={backer.id}>
                             <TableCell>
@@ -968,7 +983,9 @@ export default function IndieKitPage() {
                                 ))}
                               </div>
                             </TableCell>
-                            <TableCell className="text-right font-medium">${addonTotal.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              ${backer.balance.balanceDue.toFixed(2)}
+                            </TableCell>
                           </TableRow>
                         );
                       })}
@@ -989,8 +1006,12 @@ export default function IndieKitPage() {
             <Button
               className="bg-teal-600 hover:bg-teal-700"
               onClick={async () => {
-                const backersToCharge = backers.filter(b =>
-                  b.addons && b.addons.length > 0 && b.chargeStatus !== "charged"
+                // Use the SAME filter as the preview popup so the
+                // confirm action can never charge more pledges than
+                // the dialog promised. balanceDue > 0 is the only
+                // valid signal that a backer actually owes more.
+                const backersToCharge = backers.filter(
+                  (b) => b.chargeStatus !== "charged" && b.balance.balanceDue > 0
                 );
                 if (backersToCharge.length === 0) {
                   setIsChargePreviewOpen(false);
@@ -1022,7 +1043,10 @@ export default function IndieKitPage() {
                   setIsChargePreviewOpen(false);
                 }
               }}
-              disabled={workflowActionLoading === "charge_cards" || backers.filter(b => b.addons && b.addons.length > 0 && b.chargeStatus !== "charged").length === 0}
+              disabled={
+                workflowActionLoading === "charge_cards" ||
+                backers.filter((b) => b.chargeStatus !== "charged" && b.balance.balanceDue > 0).length === 0
+              }
             >
               {workflowActionLoading === "charge_cards" ? (
                 <>
