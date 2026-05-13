@@ -149,14 +149,32 @@ export async function GET() {
           createdAt: true
         }
       }),
+      // Projects requiring admin action. Includes:
+      //   - SUBMITTED:   campaign awaiting approval review
+      //   - prelaunchStatus SUBMITTED: prelaunch page awaiting review
+      // Deliberately EXCLUDES status = APPROVED — those already
+      // cleared review and are just waiting for the creator to hit
+      // Launch, which is on the creator, not on us. Including them
+      // left old approved projects pinned to the dashboard for
+      // months ("Chains of Fate" was stuck from Mar 11) while newer
+      // SUBMITTED ones got pushed off the take:10 list. Order
+      // newest-first so freshly submitted projects surface
+      // immediately instead of disappearing behind backlog.
       db.project.findMany({
-        where: { deletedAt: null, status: { in: ["SUBMITTED", "APPROVED"] } },
+        where: {
+          deletedAt: null,
+          OR: [
+            { status: "SUBMITTED" },
+            { prelaunchStatus: "SUBMITTED" },
+          ],
+        },
         take: 10,
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
         select: {
           id: true,
           title: true,
           status: true,
+          prelaunchStatus: true,
           category: true,
           goalAmount: true,
           currentAmount: true,
