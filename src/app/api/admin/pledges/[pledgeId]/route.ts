@@ -105,8 +105,7 @@ export async function GET(
           !!pledge.stripePaymentIntentId ||
           pledge.paymentProcessor === "DIVINITYCOIN" ||
           pledge.paymentProcessor === "PAYPAL" ||
-          pledge.paymentProcessor === "WHOP" ||
-          pledge.paymentProcessor === "NMI"
+          pledge.paymentProcessor === "WHOP"
         ),
         isFunded,
       },
@@ -541,76 +540,6 @@ export async function PATCH(
           adminPledgesLogger.error({ err: String(whopError) }, "Whop admin refund error:");
           return NextResponse.json(
             { error: "Failed to process Whop refund" },
-            { status: 500 }
-          );
-        }
-      }
-
-      // PaymentCloud (NMI) refund
-      if (pledge.paymentProcessor === "NMI") {
-        if (!pledge.nmiTransactionId) {
-          return NextResponse.json(
-            { error: "Pledge has no Mentom Payments transaction to refund (was the campaign successfully funded?)" },
-            { status: 400 }
-          );
-        }
-        try {
-          const { loadNmiConfig, refund: nmiRefund, deleteVaultCustomer } = await import("@/lib/nmi");
-          const nmiConfig = await loadNmiConfig();
-          if (!nmiConfig) {
-            return NextResponse.json(
-              { error: "Mentom Payments not configured" },
-              { status: 502 }
-            );
-          }
-
-          // Full refund only — matches the DC/Stripe branches. Partial
-          // refunds aren't part of the existing admin refund schema.
-          const refundAmt = Number(pledge.amount);
-          const resp = await nmiRefund(nmiConfig, pledge.nmiTransactionId, refundAmt);
-          if (resp.response !== "1") {
-            adminPledgesLogger.warn(
-              { pledgeId, response: resp.response, text: resp.responsetext },
-              "PaymentCloud refund declined"
-            );
-            return NextResponse.json(
-              { error: resp.responsetext || "Mentom Payments refused the refund." },
-              { status: 502 }
-            );
-          }
-
-          // CAS to prevent double-refund races.
-          const cas = await db.pledge.updateMany({
-            where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
-            data: {
-              status: "REFUNDED",
-              lastFailureReason: reason || "Refunded by admin",
-            },
-          });
-          if (cas.count === 0) {
-            return NextResponse.json(
-              { error: "Pledge status changed during refund" },
-              { status: 409 }
-            );
-          }
-          // Best-effort vault cleanup so we don't keep the saved card
-          // around after a full refund.
-          if (pledge.nmiCustomerVaultId) {
-            await deleteVaultCustomer(nmiConfig, pledge.nmiCustomerVaultId).catch(() => null);
-          }
-
-          return NextResponse.json({
-            success: true,
-            paymentProcessor: "NMI",
-            transactionId: resp.transactionid,
-          });
-        } catch (nmiErr) {
-          adminPledgesLogger.error(
-            { err: nmiErr instanceof Error ? nmiErr.message : String(nmiErr) },
-            "PaymentCloud admin refund error"
-          );
-          return NextResponse.json(
-            { error: "Failed to process Mentom Payments refund" },
             { status: 500 }
           );
         }

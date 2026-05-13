@@ -79,9 +79,9 @@ export async function GET() {
       db.project.count({ where: { deletedAt: null, createdAt: { gte: thirtyDaysAgo } } }),
 
       // Pledges - count COMPLETED + committed PENDING (Stripe
-      // payment-method-saved or NMI vault-saved). PENDING NMI
-      // pledges are real money commitments that just haven't been
-      // charged yet — they belong on the admin overview.
+      // payment-method-saved). Committed PENDING pledges are real
+      // money commitments that just haven't been charged yet — they
+      // belong on the admin overview.
       db.pledge.count({
         where: {
           deletedAt: null,
@@ -89,7 +89,6 @@ export async function GET() {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
       }),
@@ -101,7 +100,6 @@ export async function GET() {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         _sum: { amount: true },
@@ -115,7 +113,6 @@ export async function GET() {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         _sum: { amount: true },
@@ -130,7 +127,6 @@ export async function GET() {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         _sum: { amount: true },

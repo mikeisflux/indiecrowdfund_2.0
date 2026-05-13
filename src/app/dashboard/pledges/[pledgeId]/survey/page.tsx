@@ -55,10 +55,6 @@ export default function BackerSurveyPage() {
   // Payment state
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  // PaymentCloud (NMI) flow uses Collect.js instead of Stripe Elements;
-  // when add-items returns paymentMethod=NMI we render NmiPaymentForm
-  // and POST the resulting payment_token to /confirm-add-items.
-  const [nmiPublicKey, setNmiPublicKey] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const creatingPaymentRef = useRef(false);
@@ -344,17 +340,6 @@ export default function BackerSurveyPage() {
         throw new Error(result.error || "Failed to create payment");
       }
 
-      // PaymentCloud (NMI) — Collect.js flow, no Stripe instance needed.
-      if (result.paymentMethod === "NMI") {
-        if (!result.nmiPublicKey) {
-          throw new Error("Mentom Payments public key missing from response. Please contact support.");
-        }
-        setNmiPublicKey(result.nmiPublicKey);
-        setIsProcessingPayment(false);
-        creatingPaymentRef.current = false;
-        return;
-      }
-
       // Load appropriate Stripe instance
       let stripeLoaded = !!stripePromise;
       if (result.paymentMethod === "DIVINITYCOIN") {
@@ -401,28 +386,22 @@ export default function BackerSurveyPage() {
 
   // Handle successful addon payment
   const handlePaymentSuccess = async () => {
-    // For NMI the form already POSTed paymentToken to confirm-add-items
-    // and the server ran the sale + applied items in one go. Skip the
-    // second POST to avoid a redundant round-trip (it would idempotently
-    // no-op because pendingAdditionalItems was already cleared).
-    if (!nmiPublicKey) {
-      try {
-        const response = await apiFetch(`/api/pledges/${pledgeId}/confirm-add-items`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
+    try {
+      const response = await apiFetch(`/api/pledges/${pledgeId}/confirm-add-items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
 
-        if (!response.ok) {
-          const err = await response.json();
-          console.error("Failed to confirm add-items:", err);
-          toast.error(err.error || "Payment recorded but confirmation failed. Please contact support.");
-          return;
-        }
-      } catch (err) {
-        console.error("Error confirming add-items:", err);
-        toast.error("Payment recorded but confirmation failed. Please contact support.");
+      if (!response.ok) {
+        const err = await response.json();
+        console.error("Failed to confirm add-items:", err);
+        toast.error(err.error || "Payment recorded but confirmation failed. Please contact support.");
         return;
       }
+    } catch (err) {
+      console.error("Error confirming add-items:", err);
+      toast.error("Payment recorded but confirmation failed. Please contact support.");
+      return;
     }
 
     // Redirect to dashboard
@@ -587,12 +566,10 @@ export default function BackerSurveyPage() {
       {currentStep === "payment" && (
         <SurveyPaymentStep
           data={data}
-          pledgeId={pledgeId}
           selectedAddons={selectedAddons}
           addonsTotal={addonsTotal}
           clientSecret={clientSecret}
           stripePromise={stripePromise}
-          nmiPublicKey={nmiPublicKey}
           isProcessingPayment={isProcessingPayment}
           setIsProcessingPayment={setIsProcessingPayment}
           paymentError={paymentError}

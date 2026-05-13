@@ -243,22 +243,11 @@ export function ErrorReporter() {
         // active book record. The edit UI surfaces the message inline;
         // admin-logging it is the same kind of user-input noise.
         requestUrl.includes("/api/creator/marketplace/files") ||
-        // PaymentCloud confirm-nmi: 400 means the card was declined,
-        // the pledge has already moved on (back/forward retry hits an
-        // already-completed/cancelled pledge), or the card form was
-        // submitted with stale state. The pledge UI surfaces the gateway
-        // error message ("Card was declined", "Insufficient funds", etc.)
-        // inline as a toast and lets the user try a different card.
-        // Admin-logging every decline is noise — real backend regressions
-        // here surface as 5xx, not 4xx.
-        /\/api\/pledges\/[^/]+\/confirm-nmi$/.test(requestUrl) ||
-        /\/api\/marketplace\/purchase\/[^/]+\/confirm-nmi$/.test(requestUrl) ||
         // Marketplace + per-project chargeback card POST: 400 means the
-        // card was declined by PaymentCloud during vault add / validate,
-        // a billing field was empty, or the name failed our validation.
-        // The edit page surfaces the gateway / validation message as a
-        // toast and lets the creator try a different card. Same user-input
-        // noise pattern as confirm-nmi above.
+        // card was declined during vault add / validate, a billing field
+        // was empty, or the name failed our validation. The edit page
+        // surfaces the gateway / validation message as a toast and lets
+        // the creator try a different card.
         requestUrl.includes("/api/creator/marketplace-chargeback-card") ||
         /\/api\/projects\/[^/]+\/chargeback-card$/.test(requestUrl) ||
         isStatsPollerPath

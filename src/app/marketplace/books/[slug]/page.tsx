@@ -419,7 +419,6 @@ export default function BookDetailPage() {
   // Show DC payment form if clientSecret is ready
   const showDcPaymentForm = dcClientSecret && dcStripePromise;
   const showPaypalForm = !!(paypalOrderId && paypalClientId);
-  const showNmiForm = !!(nmiPublicKey && nmiPurchaseId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -636,39 +635,7 @@ export default function BookDetailPage() {
                   </div>
                 )}
 
-                {/* PaymentCloud (NMI) Collect.js form */}
-                {showNmiForm ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-foreground">Complete Payment</h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs text-muted-foreground"
-                        onClick={() => {
-                          setNmiPublicKey(null);
-                          setNmiPurchaseId(null);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                    <NmiMarketplacePaymentForm
-                      publicKey={nmiPublicKey!}
-                      purchaseId={nmiPurchaseId!}
-                      amount={Number(book.price)}
-                      currency={book.currency || "usd"}
-                      onSuccess={() => {
-                        setNmiPublicKey(null);
-                        setNmiPurchaseId(null);
-                        toast.success("Purchase complete!");
-                        // Refresh book data to flip purchased state
-                        fetchBook();
-                      }}
-                      onError={(msg) => toast.error(msg)}
-                    />
-                  </div>
-                ) : showPaypalForm ? (
+                {showPaypalForm ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-foreground">Complete Payment</h3>
@@ -948,37 +915,7 @@ export default function BookDetailPage() {
               </Button>
             ) : (
               <>
-                {book?.paymentProcessor === "NMI" ? (
-                  NMI_DISABLED ? (
-                    <div className="h-16 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 flex items-center px-4 text-sm">
-                      <CreditCard className="w-5 h-5 mr-3 text-amber-700 dark:text-amber-300" />
-                      <div className="flex-1">
-                        <div className="font-semibold text-amber-900 dark:text-amber-100">
-                          Card payments temporarily unavailable
-                        </div>
-                        <div className="text-xs text-amber-800 dark:text-amber-300">
-                          We&apos;re switching payment processors. Check back soon.
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                  <Button
-                    className="h-16 bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 justify-start"
-                    onClick={() => handlePurchase("nmi")}
-                    disabled={purchasing}
-                  >
-                    {purchasing ? (
-                      <Loader2 className="w-6 h-6 mr-4 animate-spin" />
-                    ) : (
-                      <CreditCard className="w-6 h-6 mr-4" />
-                    )}
-                    <div className="text-left">
-                      <div className="font-semibold text-white">Mentom Payments</div>
-                      <div className="text-sm opacity-80 text-white">Pay with credit or debit card</div>
-                    </div>
-                  </Button>
-                  )
-                ) : book?.paymentProcessor === "PAYPAL" ? (
+                {book?.paymentProcessor === "PAYPAL" ? (
                   <Button
                     className="h-16 bg-[#003087] hover:bg-[#002070] justify-start"
                     onClick={() => handlePurchase("paypal")}

@@ -203,20 +203,17 @@ export async function POST(request: NextRequest) {
 
     // Use processor-specific rates
     //   PayPal Advanced Checkout: 3.49% + $0.49/tx
-    //   PaymentCloud (NMI white-label): 4% + $0.38/tx ($0.25 NMI + $0.13 Customer Vault per-txn)
     //   DivinityCoin: 3% + $0.30/tx
     //   Whop: ~3% (no per-transaction fee)
     //   Stripe (legacy): 2.9% + $0.30/tx
     const proc = project.paymentProcessor;
     const processorPercentRate =
       proc === "PAYPAL" ? 0.0349
-      : proc === "NMI" ? 0.04
       : proc === "DIVINITYCOIN" ? 0.03
       : proc === "WHOP" ? 0.03
       : 0.029; // Stripe / unknown legacy
     const processorFixedFee =
       proc === "PAYPAL" ? 0.49
-      : proc === "NMI" ? 0.38
       : proc === "DIVINITYCOIN" ? 0.30
       : proc === "WHOP" ? 0
       : 0.30;

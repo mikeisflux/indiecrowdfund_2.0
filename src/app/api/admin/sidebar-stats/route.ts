@@ -46,9 +46,9 @@ async function calculateUnreadNotifications(adminId: string): Promise<number> {
       }),
 
       // Large pledges ($100+). Include committed PENDING (Stripe
-      // payment-method-saved or NMI vault-saved) so admin gets the
-      // notification ping when a big NMI AoN pledge lands, not just
-      // after the funded-cron converts it.
+      // payment-method-saved) so admin gets the notification ping
+      // when a big AoN pledge lands, not just after the funded-cron
+      // converts it.
       db.pledge.count({
         where: {
           amount: { gte: 10000 },
@@ -57,7 +57,6 @@ async function calculateUnreadNotifications(adminId: string): Promise<number> {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
       }),

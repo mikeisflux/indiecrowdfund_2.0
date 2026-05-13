@@ -26,6 +26,7 @@ import {
   Link2,
   CalendarClock,
   Trash2,
+  ArrowRightLeft,
 } from "lucide-react";
 import { Project } from "./types";
 import { formatDuration } from "./utils";
@@ -56,6 +57,8 @@ export function ActiveProjectPanel({
   const [reconcileMessage, setReconcileMessage] = useState<string | null>(null);
   const [isDeletingAbandoned, setIsDeletingAbandoned] = useState(false);
   const [deleteAbandonedMessage, setDeleteAbandonedMessage] = useState<string | null>(null);
+  const [isMigratingToDc, setIsMigratingToDc] = useState(false);
+  const [migrateDcMessage, setMigrateDcMessage] = useState<string | null>(null);
   const [showVanityUrlDialog, setShowVanityUrlDialog] = useState(false);
   const [showEndDateDialog, setShowEndDateDialog] = useState(false);
   const [currentVanityUrl, setCurrentVanityUrl] = useState<string | null>(null);
@@ -69,9 +72,53 @@ export function ActiveProjectPanel({
     setBackfillMessage(null);
     setReconcileMessage(null);
     setDeleteAbandonedMessage(null);
+    setMigrateDcMessage(null);
     setCurrentVanityUrl(project?.creator?.vanityUrl || null);
     setCurrentEndDate(project?.endDate || null);
   }, [project?.id, project?.creator?.vanityUrl, project?.endDate]);
+
+  const handleMigrateToDc = async (dryRun: boolean) => {
+    if (!project) return;
+    if (!dryRun) {
+      const ok = window.confirm(
+        `Permanently migrate "${project.title}" from Mentom Payments to DivinityCoin?\n\n` +
+          `• Flips Project.paymentProcessor to DIVINITYCOIN\n` +
+          `• Flips every PENDING/FAILED NMI pledge to DIVINITYCOIN + status PENDING\n` +
+          `• Clears NMI-specific fields on those pledges\n` +
+          `• Emails each backer a link to re-enter their card on DC\n\n` +
+          `Idempotent — running twice does nothing the second time. Continue?`
+      );
+      if (!ok) return;
+    }
+    setIsMigratingToDc(true);
+    setMigrateDcMessage(null);
+    try {
+      const url = `/api/admin/projects/${project.id}/migrate-to-dc${dryRun ? "?dryRun=true" : ""}`;
+      const response = await apiFetch(url, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) {
+        setMigrateDcMessage(`Error: ${data.error || "Migration failed"}`);
+        return;
+      }
+      if (dryRun) {
+        setMigrateDcMessage(
+          `Dry run — would migrate ${data.pledgesToMigrate} pledges` +
+            (data.projectWillFlip ? " and flip the project to DC" : " (project already DC)") +
+            `. Emails would go to ${data.emails?.length || 0} backers.`
+        );
+      } else {
+        setMigrateDcMessage(
+          `Migrated ${data.pledgesMigrated} pledges` +
+            (data.projectFlipped ? ", flipped project to DC" : "") +
+            `. Emails sent: ${data.emailResults?.sent || 0}, failed: ${data.emailResults?.failed || 0}.`
+        );
+      }
+    } catch (e) {
+      setMigrateDcMessage(`Error: ${e instanceof Error ? e.message : "Migration request failed"}`);
+    } finally {
+      setIsMigratingToDc(false);
+    }
+  };
 
   const handleProcessPledges = async () => {
     if (!project) return;
@@ -506,6 +553,51 @@ export function ActiveProjectPanel({
               {processMessage && (
                 <p className={`text-sm mt-2 ${processMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
                   {processMessage}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Migrate to DivinityCoin — only shows for projects still on
+              Mentom Payments (NMI). Idempotent; running twice is safe. */}
+          {project.paymentProcessor === "NMI" && (
+            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800 p-3">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200 mb-1">
+                On Mentom Payments — needs migration
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-300 mb-3">
+                Flips the project + every PENDING/FAILED pledge to DivinityCoin and emails each backer a link to re-enter their card. Always test with Dry Run first.
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleMigrateToDc(true)}
+                  disabled={isMigratingToDc}
+                  className="flex-1"
+                >
+                  {isMigratingToDc ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileSearch className="mr-2 h-4 w-4" />
+                  )}
+                  Dry Run
+                </Button>
+                <Button
+                  onClick={() => handleMigrateToDc(false)}
+                  disabled={isMigratingToDc}
+                  className="flex-1 bg-amber-600 hover:bg-amber-700"
+                >
+                  {isMigratingToDc ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRightLeft className="mr-2 h-4 w-4" />
+                  )}
+                  Migrate to DivinityCoin
+                </Button>
+              </div>
+              {migrateDcMessage && (
+                <p className={`text-sm mt-2 ${migrateDcMessage.startsWith("Error") ? "text-red-600" : "text-emerald-700 dark:text-emerald-400"}`}>
+                  {migrateDcMessage}
                 </p>
               )}
             </div>

@@ -160,15 +160,15 @@ async function reconcilePledges(
   let totalFixesApplied = 0;
 
   for (const project of projects) {
-    // NMI / Mentom Payments and Whop reconciliation isn't implemented
-    // yet — those processors store transaction state on different
-    // fields (nmiTransactionId, whopPaymentId) and the Stripe
-    // reconcile helper would silently fail or, worse, mis-apply
-    // fixes by comparing against missing Stripe fields. Emit a
-    // skip-marker result so the admin sees these projects in the
-    // UI as "needs per-processor reconciler" rather than letting
-    // them silently fall through to the Stripe path and corrupt data.
-    if (project.paymentProcessor === "NMI" || project.paymentProcessor === "WHOP") {
+    // Whop reconciliation isn't implemented yet — Whop stores
+    // transaction state on different fields (whopPaymentId) and
+    // the Stripe reconcile helper would silently fail or, worse,
+    // mis-apply fixes by comparing against missing Stripe fields.
+    // Emit a skip-marker result so the admin sees these projects
+    // in the UI as "needs per-processor reconciler" rather than
+    // letting them silently fall through to the Stripe path and
+    // corrupt data.
+    if (project.paymentProcessor === "WHOP") {
       results.push({
         projectId: project.id,
         projectTitle: project.title,

@@ -41,15 +41,15 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const status = searchParams.get("status"); // pending, settled, processing, all
 
-    // Build where clause for manually-settled processors (DivinityCoin +
-    // PaymentCloud). PayPal/Whop have their own dedicated tabs/endpoints
-    // because they have different settlement flows. Stripe-Connect-based
-    // legacy projects pay out automatically and don't appear here.
+    // Build where clause for manually-settled DivinityCoin projects.
+    // PayPal/Whop have their own dedicated tabs/endpoints because they
+    // have different settlement flows. Stripe-Connect-based legacy
+    // projects pay out automatically and don't appear here.
     // Include FUNDED/FAILED projects AND LIVE projects that ended with
     // goal met (safety net for before the cron transitions status).
     const now = new Date();
     const where: Record<string, unknown> = {
-      paymentProcessor: { in: ["DIVINITYCOIN", "NMI"] },
+      paymentProcessor: "DIVINITYCOIN",
       deletedAt: null,
       OR: [
         { status: { in: ["FUNDED", "FAILED"] } },
@@ -271,11 +271,9 @@ export async function GET(request: NextRequest) {
 
       // Processor-specific fees:
       //   DivinityCoin: 3% partner + $0.30/txn
-      //   PaymentCloud (NMI white-label): 4% + $0.38/tx ($0.25 NMI + $0.13 Customer Vault per-txn)
       // IndieCrowdfund Platform Fee: from platformSettings (default 3%)
-      const isNmi = project.paymentProcessor === "NMI";
-      const partnerFeeRate = isNmi ? 0.04 : 0.03;
-      const perTransactionRate = isNmi ? 0.38 : 0.30;
+      const partnerFeeRate = 0.03;
+      const perTransactionRate = 0.30;
       const platformFeeRate = configuredPlatformFeeRate;
       const backerCount = project.pledges.length;
       const processorFee = Math.round(effectiveRevenue * partnerFeeRate * 100) / 100;
@@ -284,18 +282,8 @@ export async function GET(request: NextRequest) {
       const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
       const totalFees = Math.round((partnerFee + platformFee) * 100) / 100;
 
-      // PaymentCloud rolling reserve. 10% of effective revenue is held
-      // for 180 days; only deducted from the payable amount while still
-      // in the hold window. Once released (rollingReserveReleased=true),
-      // the held amount is added back into amountOwed for payout.
-      const isReserveActive =
-        isNmi &&
-        (project.rollingReserveSubject || project.rollingReserveAuto) &&
-        !project.rollingReserveReleased;
-      const rollingReserveHeld = isReserveActive
-        ? Math.round(effectiveRevenue * 0.10 * 100) / 100
-        : 0;
-      const amountOwed = Math.round((effectiveRevenue - totalFees - rollingReserveHeld) * 100) / 100;
+      const rollingReserveHeld = 0;
+      const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
 
       const settlements = project.divinityCoinSettlements || [];
 
@@ -338,8 +326,8 @@ export async function GET(request: NextRequest) {
         amountSettled,
         remainingAmount,
         backerCount,
-        // Rolling reserve display fields
-        rollingReserveActive: isReserveActive,
+        // Rolling reserve display fields (legacy — always false for DC)
+        rollingReserveActive: false,
         rollingReserveSubject: project.rollingReserveSubject,
         rollingReserveAuto: project.rollingReserveAuto,
         rollingReserveHeld,
@@ -597,9 +585,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (project.paymentProcessor !== "DIVINITYCOIN" && project.paymentProcessor !== "NMI") {
+    if (project.paymentProcessor !== "DIVINITYCOIN") {
       return NextResponse.json(
-        { error: "This endpoint only handles DivinityCoin and Mentom Payments project payouts." },
+        { error: "This endpoint only handles DivinityCoin project payouts." },
         { status: 400 }
       );
     }
@@ -629,11 +617,10 @@ export async function POST(request: NextRequest) {
       select: { platformFee: true },
     });
     const payoutPlatformFeeRate = payoutPlatformSettings?.platformFee ? Number(payoutPlatformSettings.platformFee) / 100 : 0.03;
-    // Processor-specific partner/processing rate. DC = 3% flat; PaymentCloud = 4% flat.
+    // DC processor partner rate = 3% flat.
     // (per-transaction fees are not duplicated into the settlement-record breakdown
     // here — that's already netted into amountOwed by the GET projection above.)
-    const isNmiPayout = project.paymentProcessor === "NMI";
-    const partnerFee = Math.round(grossAmount * (isNmiPayout ? 0.04 : 0.03) * 100) / 100;
+    const partnerFee = Math.round(grossAmount * 0.03 * 100) / 100;
     const platformFee = Math.round(grossAmount * payoutPlatformFeeRate * 100) / 100;
 
     // Create the DivinityCoin settlement record as COMPLETED.

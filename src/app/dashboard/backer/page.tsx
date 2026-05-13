@@ -138,16 +138,6 @@ interface DashboardAnalytics {
   monthlySpending: { month: string; amount: number }[];
 }
 
-interface PledgeNeedingRetry {
-  id: string;
-  amount: number;
-  status: string;
-  lastFailureReason: string | null;
-  projectTitle: string;
-  projectUrl: string;
-  retryUrl: string;
-}
-
 interface DashboardData {
   user: {
     name: string | null;
@@ -156,7 +146,6 @@ interface DashboardData {
   savedProjects: SavedProject[];
   stats: DashboardStats;
   analytics: DashboardAnalytics;
-  pledgesNeedingRetry?: PledgeNeedingRetry[];
 }
 
 interface ReviewData {
@@ -556,7 +545,6 @@ export default function BackerDashboard() {
   // Initialize empty data if not available
   const backedProjects = data?.backedProjects || [];
   const savedProjects = data?.savedProjects || [];
-  const pledgesNeedingRetry = data?.pledgesNeedingRetry || [];
   const stats = data?.stats || {
     totalBacked: 0,
     totalPledged: 0,
@@ -633,59 +621,6 @@ export default function BackerDashboard() {
       </header>
 
       <div className="container relative py-8">
-        {/*
-          Payment-retry banner. Surfaced at the very top of the
-          dashboard whenever the user has one or more NMI pledges
-          where the funded-campaign charge failed and they need to
-          re-tokenize a card via the self-service retry flow. The
-          banner is unmissable — amber border, prominent CTA per row,
-          and stays mounted until every failed pledge clears.
-        */}
-        {pledgesNeedingRetry.length > 0 && (
-          <div className="mb-6 rounded-2xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-4 sm:p-5">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <h2 className="text-base sm:text-lg font-semibold text-amber-900 dark:text-amber-100">
-                  {pledgesNeedingRetry.length === 1
-                    ? "A pledge payment needs your attention"
-                    : `${pledgesNeedingRetry.length} pledge payments need your attention`}
-                </h2>
-                <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
-                  Your card was declined when the campaign hit its goal. Update your card to complete your pledge — your reward selection, add-ons, and backer number are preserved.
-                </p>
-                <div className="mt-3 space-y-2">
-                  {pledgesNeedingRetry.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg bg-white dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 p-3"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-amber-950 dark:text-amber-50">
-                          {p.projectTitle} · ${p.amount.toFixed(2)}
-                        </p>
-                        {p.lastFailureReason && (
-                          <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5 truncate">
-                            {p.lastFailureReason}
-                          </p>
-                        )}
-                      </div>
-                      <Link href={p.retryUrl}>
-                        <Button
-                          size="sm"
-                          className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white"
-                        >
-                          Update Card
-                        </Button>
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Hero Section with Explore CTA */}
         <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 border border-border/50 p-4 sm:p-6 md:p-8">
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
