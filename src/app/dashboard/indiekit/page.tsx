@@ -940,7 +940,21 @@ export default function IndieKitPage() {
                       <p className="text-xs text-muted-foreground">Backers to Charge</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">{backersToCharge.reduce((sum, b) => sum + (b.addons?.length || 0), 0)}</p>
+                      <p className="text-2xl font-bold">
+                        {/*
+                          Sum addon QUANTITIES, not entry count. "2x Upgrade
+                          to Foil" should count as 2 items, not 1.
+                        */}
+                        {backersToCharge.reduce(
+                          (sum, b) =>
+                            sum +
+                            (b.addons?.reduce(
+                              (s, a) => s + (Number(a.quantity) || 0),
+                              0
+                            ) || 0),
+                          0
+                        )}
+                      </p>
                       <p className="text-xs text-muted-foreground">Total Add-ons</p>
                     </div>
                     <div>
@@ -966,6 +980,19 @@ export default function IndieKitPage() {
                     </TableHeader>
                     <TableBody>
                       {backersToCharge.slice(0, 10).map((backer) => {
+                        // Surface a line for every contributor to the
+                        // balance, not just addons. If the balance is
+                        // sourced from a shipping upgrade or a reward-
+                        // tier change (legitimate IndieKit edit), show
+                        // it so the creator isn't staring at a blank
+                        // "Add-ons" column wondering where the dollar
+                        // amount came from.
+                        const addonsTotal = (backer.addons || []).reduce(
+                          (s, a) => s + Number(a.amount) * Number(a.quantity || 1),
+                          0
+                        );
+                        const nonAddonBalance =
+                          Math.round((backer.balance.balanceDue - addonsTotal) * 100) / 100;
                         return (
                           <TableRow key={backer.id}>
                             <TableCell>
@@ -981,6 +1008,17 @@ export default function IndieKitPage() {
                                     {addon.quantity}x {addon.name}
                                   </div>
                                 ))}
+                                {nonAddonBalance > 0.005 && (
+                                  <div className="text-muted-foreground italic">
+                                    Other charges (reward / shipping): ${nonAddonBalance.toFixed(2)}
+                                  </div>
+                                )}
+                                {(backer.addons || []).length === 0 &&
+                                  nonAddonBalance <= 0.005 && (
+                                    <div className="text-muted-foreground italic">
+                                      (No itemized detail)
+                                    </div>
+                                  )}
                               </div>
                             </TableCell>
                             <TableCell className="text-right font-medium">

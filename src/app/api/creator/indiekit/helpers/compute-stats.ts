@@ -92,21 +92,31 @@ export function computeStats({
   // Pre-order count
   const preOrderBackers = pledges.filter((p: any) => p.isPreOrder).length;
 
-  // Calculate balance due per pledge for post-campaign charge tracking
-  // Balance due is stored in metadata.balanceDue when orders are edited via IndieKit
-  // Falls back to computed values from related reward/addon data
+  // Calculate balance due per pledge for post-campaign charge tracking.
+  // Balance due is stored in metadata.balanceDue when orders are edited
+  // via IndieKit. Falls back to computed values from the per-pledge
+  // SNAPSHOTS captured at pledge time (Pledge.rewardAmount and
+  // Pledge.addonsAmount) — NOT the live Reward.amount or PledgeAddon
+  // rows, which can change post-pledge (creator edits the tier price,
+  // adds/removes addons, etc.) and would otherwise make every backer
+  // on an edited tier appear to "owe more" through no fault of theirs.
+  //
+  // The snapshot is the contract — what each backer agreed to and paid
+  // for. Charge Cards is for backers who genuinely added something
+  // post-pledge (via the survey order-edit flow), in which case
+  // metadata.balanceDue is set explicitly by that flow.
   const pledgesWithBalance = pledges.map((p: any) => {
     const meta = (p.metadata as Record<string, unknown>) || {};
     const storedBalanceDue = meta.balanceDue != null ? Number(meta.balanceDue) : null;
     if (storedBalanceDue !== null) {
       return { ...p, balanceDue: Math.round(storedBalanceDue * 100) / 100 };
     }
-    // Compute from actual related data
+    // Compute from the per-pledge snapshot fields, NOT live join data.
     const pledgeTotal = Number(p.amount);
-    const computedRewardAmt = p.reward ? Number(p.reward.amount) : 0;
-    const computedAddonsAmt = p.addons.reduce((sum: number, a: { amount: unknown }) => sum + Number(a.amount || 0), 0);
-    const computedShipping = Number(p.shippingAmount) || 0;
-    const expectedTotal = computedRewardAmt + computedAddonsAmt + computedShipping;
+    const snapshotReward = Number(p.rewardAmount || 0);
+    const snapshotAddons = Number(p.addonsAmount || 0);
+    const snapshotShipping = Number(p.shippingAmount || 0);
+    const expectedTotal = snapshotReward + snapshotAddons + snapshotShipping;
     const balanceDue = Math.round((expectedTotal - pledgeTotal) * 100) / 100;
     return { ...p, balanceDue };
   });

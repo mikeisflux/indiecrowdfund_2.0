@@ -6,6 +6,12 @@ interface PledgeForProcessing {
   backerNumber: number | null;
   status: string;
   amount: unknown;
+  // Per-pledge price snapshots captured at pledge creation. We
+  // intentionally use these over the live reward / pledgeAddon
+  // joins when computing balance due — see balance-fields block
+  // below for the reasoning.
+  rewardAmount?: unknown;
+  addonsAmount?: unknown;
   shippingAmount: unknown;
   fulfillmentStatus: string | null;
   paymentProcessor: string | null;
@@ -114,13 +120,32 @@ export function processBackers(
     });
     const needsModifierAssignment = hasModifierAddons && modifierAssignments.length < pledge.addons.filter((a: any) => a.addon.isModifier).length;
 
-    // Balance fields - compute from related records (stored pledge fields may be 0 for older pledges)
+    // Balance fields. Use the per-pledge SNAPSHOTS (Pledge.rewardAmount,
+    // Pledge.addonsAmount) NOT the live Reward / PledgeAddon joins. The
+    // snapshot is what the backer agreed to and paid for at pledge time;
+    // the live join can drift (creator edits the tier price, adds/removes
+    // addons) and would otherwise make every backer on an edited tier
+    // appear to "owe more" through no fault of theirs.
+    //
+    // Fall back to the live join only when the snapshot field is 0/null,
+    // which is the legacy-data case for very old pledges that pre-date
+    // these snapshot columns.
     const pledgeTotal = Number(pledge.amount);
-    const rewardAmt = pledge.reward ? Number(pledge.reward.amount) : 0;
-    const addonsAmt = pledge.addons.reduce((sum: number, a: any) => sum + Number(a.amount || 0), 0);
+    const snapshotReward = Number(pledge.rewardAmount || 0);
+    const snapshotAddons = Number(pledge.addonsAmount || 0);
+    const rewardAmt = snapshotReward > 0
+      ? snapshotReward
+      : pledge.reward
+        ? Number(pledge.reward.amount)
+        : 0;
+    const addonsAmt = snapshotAddons > 0
+      ? snapshotAddons
+      : pledge.addons.reduce((sum: number, a: any) => sum + Number(a.amount || 0), 0);
     const shippingAmt = Number(pledge.shippingAmount) || 0;
 
-    // Use stored balanceDue from metadata if available (set by order edits)
+    // Use stored balanceDue from metadata if available (set by order edits
+    // through the IndieKit survey flow — that's the only legitimate source
+    // of a post-pledge balance).
     const pledgeMeta = (pledge.metadata as Record<string, unknown>) || {};
     const storedBalance = pledgeMeta.balanceDue != null ? Number(pledgeMeta.balanceDue) : null;
     const balanceDue = storedBalance !== null
