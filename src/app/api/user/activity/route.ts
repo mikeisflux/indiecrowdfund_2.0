@@ -88,13 +88,6 @@ export async function GET() {
             status: "PENDING",
             NOT: { divinityCoinPaymentId: null },
           },
-          // AoN NMI / PaymentCloud: vault id present means Collect.js
-          // tokenized the card and we added it to the customer vault,
-          // so the user has confirmed their pledge (charged at success).
-          {
-            status: "PENDING",
-            NOT: { nmiCustomerVaultId: null },
-          },
         ],
       },
       select: {

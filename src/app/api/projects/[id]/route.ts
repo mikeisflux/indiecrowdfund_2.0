@@ -447,8 +447,7 @@ export async function PATCH(
     const isLaunched = ["LIVE", "FUNDED", "PAUSED"].includes(project.status);
 
     // For launched projects, require chargeback card before allowing any edits.
-    // Accepts either the user-level card (NMI/Mentom Payments) or the legacy
-    // per-project card.
+    // Accepts either the user-level card or the legacy per-project card.
     if (isLaunched) {
       const hasChargebackCard = await projectHasChargebackCard(id, project.creatorId);
 
@@ -643,9 +642,9 @@ export async function PATCH(
         });
 
         // Get existing rewards with backer counts. Committed-PENDING
-        // filter so AoN / NMI campaigns correctly block destructive
-        // edits / deletes on rewards with real backers, without
-        // counting abandoned-cart PENDING that would never charge.
+        // filter so AoN campaigns correctly block destructive edits /
+        // deletes on rewards with real backers, without counting
+        // abandoned-cart PENDING that would never charge.
         const existingRewards = await tx.reward.findMany({
           where: { projectId: id },
           include: {
@@ -657,7 +656,6 @@ export async function PATCH(
                     OR: [
                       { status: "COMPLETED" },
                       { status: "PENDING", confirmationEmailSent: true },
-                      { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
                     ],
                   },
                 },

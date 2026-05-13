@@ -87,7 +87,7 @@ export async function GET(
           },
         },
         pledges: {
-          // Committed-PENDING filter so AoN / NMI backers' active
+          // Committed-PENDING filter so AoN backers' active
           // campaigns show during the campaign without including
           // abandoned-cart rows.
           where: {
@@ -101,7 +101,6 @@ export async function GET(
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
-              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
             ],
           },
           orderBy: { createdAt: "desc" },
