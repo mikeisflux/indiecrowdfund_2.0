@@ -6,12 +6,11 @@ import { db } from "@/lib/db";
  *
  * Two storage paths exist because of how the chargeback card UI evolved:
  *
- *  - NMI / Mentom Payments projects use the unified user-level card
- *    (CreatorMarketplaceChargebackCard, keyed by userId). One save
- *    covers every project the creator owns plus marketplace sales.
+ *  - The unified user-level card (CreatorMarketplaceChargebackCard,
+ *    keyed by userId). One save covers every project the creator owns
+ *    plus marketplace sales.
  *
- *  - Legacy non-NMI projects (DivinityCoin, Whop, older PayPal flows)
- *    use the per-project card (CreatorChargebackCard, keyed by
+ *  - Legacy per-project cards (CreatorChargebackCard, keyed by
  *    projectId). The old project-builder form wrote here.
  *
  * Submit / launch / edit-launched validators all need to accept either

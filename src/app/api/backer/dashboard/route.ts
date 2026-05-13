@@ -4,7 +4,6 @@ import { logger } from "@/lib/logger";
 const backerDashboardLogger = logger.child({ module: "backer-dashboard" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { NMI_DISABLED } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +30,7 @@ export async function GET() {
     ] = await Promise.all([
       // Get user's COMPLETED + committed PENDING pledges. Committed
       // means a payment credential is on file (Stripe payment method,
-      // NMI vault id, etc — confirmationEmailSent OR
-      // nmiCustomerVaultId). Same filter as lib/stats so the backer
+      // confirmationEmailSent). Same filter as lib/stats so the backer
       // dashboard never lists abandoned-cart PENDING rows that won't
       // ever charge.
       db.pledge.findMany({
@@ -42,7 +40,6 @@ export async function GET() {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         include: {
@@ -134,7 +131,6 @@ export async function GET() {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         select: {
@@ -300,54 +296,19 @@ export async function GET() {
         };
       });
 
-    // Surface any NMI pledges where the funded-campaign charge failed
-    // (or 5 cron retries gave up). These need self-service retry from
-    // the backer — the dashboard renders a banner with a Retry CTA so
-    // it's impossible to miss.
-    //
-    // When the NMI rail itself is disabled, hide the banner entirely:
-    // the retry endpoint refuses, the page refuses, and there's
-    // nothing the backer can do until admin migrates the pledge to
-    // a different processor or refunds it. Surfacing a dead retry CTA
-    // would just confuse people.
-    const failedNmiPledges = NMI_DISABLED ? [] : await db.pledge.findMany({
-      where: {
-        userId,
-        deletedAt: null,
-        paymentProcessor: "NMI",
-        OR: [
-          { status: "FAILED" },
-          { status: "PENDING", lastFailureReason: { not: null }, retryCount: { gt: 0 } },
-        ],
-      },
-      select: {
-        id: true,
-        amount: true,
-        status: true,
-        lastFailureReason: true,
-        project: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            creator: { select: { vanityUrl: true } },
-          },
-        },
-      },
-      orderBy: { updatedAt: "desc" },
-    });
-
-    const pledgesNeedingRetry = failedNmiPledges.map((p) => ({
-      id: p.id,
-      amount: Number(p.amount),
-      status: p.status,
-      lastFailureReason: p.lastFailureReason,
-      projectTitle: p.project.title,
-      projectUrl: p.project.creator?.vanityUrl
-        ? `/projects/${p.project.creator.vanityUrl}/${p.project.slug}`
-        : `/projects/${p.project.slug}`,
-      retryUrl: `/dashboard/pledges/${p.id}/retry-payment`,
-    }));
+    // Failed-pledge retry banner is no longer surfaced. Keep
+    // pledgesNeedingRetry as an empty array for frontend
+    // back-compat — the dashboard widget renders nothing when
+    // the array is empty.
+    const pledgesNeedingRetry: Array<{
+      id: string;
+      amount: number;
+      status: string;
+      lastFailureReason: string | null;
+      projectTitle: string;
+      projectUrl: string;
+      retryUrl: string;
+    }> = [];
 
     return NextResponse.json({
       user: {

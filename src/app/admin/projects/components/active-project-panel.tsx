@@ -559,8 +559,11 @@ export function ActiveProjectPanel({
           )}
 
           {/* Migrate to DivinityCoin — only shows for projects still on
-              Mentom Payments (NMI). Idempotent; running twice is safe. */}
-          {project.paymentProcessor === "NMI" && (
+              Mentom Payments (NMI). Idempotent; running twice is safe.
+              String-cast the enum check so the local Project type can
+              drop NMI from its union (Prisma still has it for legacy
+              DB rows). */}
+          {String(project.paymentProcessor) === "NMI" && (
             <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800 p-3">
               <p className="text-sm font-medium text-amber-900 dark:text-amber-200 mb-1">
                 On Mentom Payments — needs migration

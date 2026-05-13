@@ -7,19 +7,17 @@
  * Counting rules (applied consistently everywhere):
  *   - COMPLETED pledges are always counted.
  *   - For LIVE projects, confirmed PENDING pledges are also counted.
- *     "Confirmed" means EITHER confirmationEmailSent = true (Stripe /
- *     PayPal / Whop / DC paths set this on commit) OR nmiCustomerVaultId
- *     is non-null (NMI / Mentom Payments AoN — the card is vaulted and
- *     will be charged at success). These represent backers who
+ *     "Confirmed" means confirmationEmailSent = true (Stripe / PayPal /
+ *     Whop / DC paths set this on commit). These represent backers who
  *     completed checkout with a deferred charge.
  *
  *     The PENDING widening is NOT gated on currentAmount < goalAmount.
  *     AoN campaigns don't transition PENDING -> COMPLETED until the
  *     funded-cron fires at campaign end, so a LIVE AoN at 300% of goal
- *     still has every NMI pledge sitting in the vault as PENDING. Gating
- *     on currentAmount < goalAmount made the public total DROP once the
- *     COMPLETED slice alone crossed the goal, even though committed-but-
- *     unconverted pledges are still real backers.
+ *     still has committed-but-unconverted pledges that are real backers
+ *     and must show in the public total. Gating on currentAmount <
+ *     goalAmount made the public total DROP once the COMPLETED slice
+ *     alone crossed the goal.
  *
  *   - Platform-wide totals (totalRaised, etc.) count COMPLETED pledges only.
  */
@@ -108,13 +106,9 @@ export async function getProjectStats(
         status: "PENDING",
         deletedAt: null,
         // Stripe / PayPal / Whop / DC mark confirmationEmailSent on
-        // commit; NMI / PaymentCloud only sets nmiCustomerVaultId
-        // (the vaulted card id is the commitment marker because the
-        // funded-cron will charge it at success).
-        OR: [
-          { confirmationEmailSent: true },
-          { NOT: { nmiCustomerVaultId: null } },
-        ],
+        // commit. The vaulted card is the commitment marker because
+        // the funded-cron will charge it at success.
+        confirmationEmailSent: true,
       },
       _sum: { amount: true },
       _count: { id: true },
@@ -170,12 +164,7 @@ export async function getBatchProjectStats(
         projectId: { in: liveIds },
         status: "PENDING",
         deletedAt: null,
-        // See getProjectStats — NMI vault id is an alternative commit
-        // marker because PaymentCloud doesn't set confirmationEmailSent.
-        OR: [
-          { confirmationEmailSent: true },
-          { NOT: { nmiCustomerVaultId: null } },
-        ],
+        confirmationEmailSent: true,
       },
       _sum: { amount: true },
       _count: { id: true },
