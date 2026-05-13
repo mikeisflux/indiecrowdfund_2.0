@@ -1,7 +1,6 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { NMI_DISABLED } from "@/lib/features";
 import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Separator } from "@/components/ui/separator";
@@ -19,13 +18,7 @@ import {
   WhopBankPayoutSection,
   RetailerAccessSection,
   ChargebackCardSection,
-  PaymentCloudBankSection,
 } from "./payment-sections";
-import type {
-  PaymentCloudBankAccountState,
-  PaymentCloudBankAccountStatus,
-} from "./payment-sections";
-import { UserChargebackCardSection } from "@/components/payments/user-chargeback-card-section";
 
 export function PaymentStep() {
   const { payment, updatePayment, basics, projectId, projectStatus } = useProjectStore();
@@ -109,34 +102,6 @@ export function PaymentStep() {
   }>({ saved: false, loading: true, lastFour: null, brand: null, expMonth: null, expYear: null });
   const [isSavingCard, setIsSavingCard] = useState(false);
 
-  // PaymentCloud-specific: public tokenization key for Collect.js +
-  // creator's payout bank account state. Loaded lazily so the legacy
-  // (DivinityCoin/PayPal/Whop) flows aren't affected.
-  const [nmiPublicKey, setNmiPublicKey] = useState<string | null>(null);
-  const [nmiPublicKeyLoading, setNmiPublicKeyLoading] = useState(false);
-  const [pcBankAccount, setPcBankAccount] = useState<PaymentCloudBankAccountState>({
-    bankName: "",
-    firstName: "",
-    lastName: "",
-    accountNumber: "",
-    routingNumber: "",
-    accountType: "checking",
-    billingLine1: "",
-    billingLine2: "",
-    billingCity: "",
-    billingState: "",
-    billingZip: "",
-    billingCountry: "US",
-    bankCountry: "US",
-    payoutPhone: "",
-  });
-  const [pcBankAccountStatus, setPcBankAccountStatus] = useState<PaymentCloudBankAccountStatus>({
-    saved: false,
-    loading: true,
-    lastFour: null,
-    canEdit: true,
-  });
-
   // Save DivinityCoin bank account
   const handleSaveBankAccount = async () => {
     if (!bankAccount.bankName || !bankAccount.accountHolder ||
@@ -219,66 +184,6 @@ export function PaymentStep() {
     }
     checkBankAccountStatus();
   }, []);
-
-  // PaymentCloud loaders. We only fetch when the project is on NMI to
-  // avoid hitting a 404 from /api/payments/nmi/public-key on legacy
-  // (PayPal/DivinityCoin/Whop) projects whose admin keys aren't set.
-  useEffect(() => {
-    if (payment.paymentProcessor !== "NMI") return;
-    let cancelled = false;
-    (async () => {
-      // Public tokenization key
-      if (!nmiPublicKey && !nmiPublicKeyLoading) {
-        setNmiPublicKeyLoading(true);
-        try {
-          const r = await fetch("/api/payments/nmi/public-key");
-          if (r.ok) {
-            const data = await r.json();
-            if (!cancelled && data?.publicKey) setNmiPublicKey(data.publicKey);
-          }
-        } catch {
-          /* swallow — form will show "not configured" */
-        } finally {
-          if (!cancelled) setNmiPublicKeyLoading(false);
-        }
-      }
-
-      // Existing PaymentCloud bank account. Pass projectId so collaborators
-      // see the project creator's saved bank, not their own.
-      try {
-        const url = projectId
-          ? `/api/creator/paymentcloud-bank-account?projectId=${encodeURIComponent(projectId)}`
-          : "/api/creator/paymentcloud-bank-account";
-        const r = await fetch(url);
-        if (cancelled) return;
-        if (r.ok) {
-          const data = await r.json();
-          setPcBankAccountStatus({
-            saved: !!data.exists,
-            loading: false,
-            lastFour: data.lastFour ?? null,
-            canEdit: data.canEdit !== false,
-          });
-          if (data.exists) {
-            setPcBankAccount((prev) => ({
-              ...prev,
-              bankName: data.bankName || "",
-              accountType: data.accountType || "checking",
-              bankCountry: data.bankCountry === "GB" ? "GB" : "US",
-            }));
-          }
-        } else {
-          setPcBankAccountStatus({ saved: false, loading: false, lastFour: null, canEdit: true });
-        }
-      } catch {
-        if (!cancelled)
-          setPcBankAccountStatus({ saved: false, loading: false, lastFour: null, canEdit: true });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [payment.paymentProcessor, nmiPublicKey, nmiPublicKeyLoading]);
 
   // Check chargeback card status on mount
   useEffect(() => {
@@ -387,57 +292,20 @@ export function PaymentStep() {
   const goalAmount = Number(basics.goalAmount) || 10000;
   const hasAdultContent = payment.hasAdultContent || payment.hasRiskyContent;
 
-  // If adult/risky content is selected, PayPal is NOT allowed (DivinityCoin,
-  // Whop, and PaymentCloud are all fine). PayPal flags adult content during
-  // their KYC review, so we steer creators away from it up front.
+  // If adult/risky content is selected, PayPal is NOT allowed (DivinityCoin
+  // and Whop are both fine). PayPal flags adult content during their KYC
+  // review, so we steer creators away from it up front.
   const mustUseAltProcessor = payment.hasAdultContent || payment.hasRiskyContent;
 
   const campaignType = payment.campaignType || "ALL_OR_NOTHING";
   const isLaunched = ["LIVE", "FUNDED", "FAILED", "CANCELLED"].includes(projectStatus || "");
 
-  // PaymentCloud is the only processor for new campaigns. The auto-switch
-  // effects that previously routed projects between PayPal/DivinityCoin/
-  // Whop are no longer needed because there's nothing to switch between.
-  // Existing projects already on those processors keep their selection
-  // (the field is locked once a project goes LIVE/FUNDED/FAILED), and
-  // their backend payout/webhook flows continue to work.
-
-  // Auto-migrate legacy non-launched drafts to NMI on load. Without
-  // this, a draft created before the PaymentCloud rollout still has
-  // paymentProcessor="PAYPAL" stored, which renders the wrong fee
-  // breakdown panel beneath the PaymentCloud card (the only
-  // selectable card after the legacy ones were commented out).
-  // Launched projects keep their original processor — admins can
-  // change it via the legacy migration banner if needed.
-  // Force new projects to a default processor on first mount.
-  // Was NMI when Mentom Payments was the primary processor; with
-  // NMI_DISABLED we fall through to DIVINITYCOIN (the rail that
-  // existed before NMI was added and that's now active again).
-  useEffect(() => {
-    if (isLaunched) return;
-    if (!payment.paymentProcessor) return;
-    if (NMI_DISABLED) {
-      if (payment.paymentProcessor === "DIVINITYCOIN") return;
-      if (payment.paymentProcessor === "NMI") {
-        // Migrate the in-memory default if a stale tab still has NMI
-        // selected from before the rail was disabled.
-        updatePayment({ paymentProcessor: "DIVINITYCOIN" });
-      }
-      return;
-    }
-    if (payment.paymentProcessor === "NMI") return;
-    updatePayment({ paymentProcessor: "NMI" });
-  }, [isLaunched, payment.paymentProcessor, updatePayment]);
-
   // Fee calculations
   const avgPledgeSize = 50; // Assume average pledge
   const numTransactions = goalAmount / avgPledgeSize;
 
-  // Stripe: 2.9% + $0.30 per transaction
-  const stripeFee = goalAmount * 0.029 + numTransactions * 0.30;
+  // Platform fee (used by all processors)
   const platformFee = goalAmount * 0.03;
-  const totalFees = stripeFee + platformFee;
-  const netAmount = goalAmount - totalFees;
 
   // PayPal Advanced Checkout: 3.49% + $0.49 per transaction
   const paypalFee = goalAmount * 0.0349 + numTransactions * 0.49;
@@ -448,17 +316,6 @@ export function PaymentStep() {
   const whopFee = goalAmount * 0.03;
   const whopTotalFees = whopFee + platformFee;
   const whopNetAmount = goalAmount - whopTotalFees;
-
-  // PaymentCloud (NMI white-label): 4% + $0.38 per transaction
-  // ($0.25 NMI gateway + $0.13 Customer Vault per-txn fee, since
-  // every pledge tokenizes through the vault). Platform fee is taken
-  // on the remainder after processor fees.
-  const paymentCloudFee = goalAmount * 0.04;
-  const paymentCloudPerTxnFee = numTransactions * 0.38;
-  const paymentCloudPlatformFee = (goalAmount - paymentCloudFee - paymentCloudPerTxnFee) * 0.03;
-  const paymentCloudTotalFees =
-    paymentCloudFee + paymentCloudPerTxnFee + paymentCloudPlatformFee;
-  const paymentCloudNetAmount = goalAmount - paymentCloudTotalFees;
 
   // Stripe Connect handlers - DISABLED: Stripe replaced by PayPal
   // const handleConnectStripe = async () => { ... };
@@ -533,20 +390,13 @@ export function PaymentStep() {
         campaignType={campaignType}
         isLaunched={isLaunched}
         goalAmount={goalAmount}
-        stripeFee={stripeFee}
         platformFee={platformFee}
-        totalFees={totalFees}
-        netAmount={netAmount}
         paypalFee={paypalFee}
         paypalTotalFees={paypalTotalFees}
         paypalNetAmount={paypalNetAmount}
         whopFee={whopFee}
         whopTotalFees={whopTotalFees}
         whopNetAmount={whopNetAmount}
-        paymentCloudFee={paymentCloudFee}
-        paymentCloudPerTxnFee={paymentCloudPerTxnFee}
-        paymentCloudTotalFees={paymentCloudTotalFees}
-        paymentCloudNetAmount={paymentCloudNetAmount}
       />
 
       <Separator />
@@ -564,41 +414,17 @@ export function PaymentStep() {
       )} */}
 
       {/* Chargeback Protection Card — placed before the payout bank
-          section so creators set up their recoup card first. PaymentCloud
-          projects use Collect.js (PAN never touches our servers); legacy
-          projects keep the old AES-encrypted form so existing rows still work. */}
+          section so creators set up their recoup card first. */}
       <Separator />
-      {payment.paymentProcessor === "NMI" ? (
-        // User-level chargeback card (shared with IndieKit Payments tab
-        // and marketplace settings). Saving here unlocks the same card
-        // everywhere; pass projectId so accepted collaborators see the
-        // same "saved" indicator the creator does.
-        <UserChargebackCardSection idPrefix="builder-cb" projectId={projectId} />
-      ) : (
-        <ChargebackCardSection
-          chargebackCard={chargebackCard}
-          setChargebackCard={setChargebackCard}
-          chargebackCardStatus={chargebackCardStatus}
-          setChargebackCardStatus={setChargebackCardStatus}
-          isSavingCard={isSavingCard}
-          handleSaveChargebackCard={handleSaveChargebackCard}
-          projectId={projectId}
-        />
-      )}
-
-      {/* PaymentCloud (NMI) creator payout bank account */}
-      {payment.paymentProcessor === "NMI" && (
-        <>
-          <Separator />
-          <PaymentCloudBankSection
-            bankAccount={pcBankAccount}
-            setBankAccount={setPcBankAccount}
-            status={pcBankAccountStatus}
-            setStatus={setPcBankAccountStatus}
-            projectId={projectId}
-          />
-        </>
-      )}
+      <ChargebackCardSection
+        chargebackCard={chargebackCard}
+        setChargebackCard={setChargebackCard}
+        chargebackCardStatus={chargebackCardStatus}
+        setChargebackCardStatus={setChargebackCardStatus}
+        isSavingCard={isSavingCard}
+        handleSaveChargebackCard={handleSaveChargebackCard}
+        projectId={projectId}
+      />
 
       {/* DivinityCoin Bank Account for Settlements - Only show when DivinityCoin is selected */}
       {payment.paymentProcessor === "DIVINITYCOIN" && (

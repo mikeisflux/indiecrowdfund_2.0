@@ -115,15 +115,6 @@ interface PlatformSettings {
   whopCompanyId: string | null;
   whopWebhookSecret: string | null;
   whopEnvironment: string;
-  // PaymentCloud settings (NMI white-label, direct-post gateway)
-  nmiEnabled: boolean;
-  nmiSecurityKey: string | null;
-  nmiPublicKey: string | null;
-  nmiWebhookSecret: string | null;
-  nmiEnvironment: string;
-  nmiGatewayUrlOverride: string | null;
-  nmiPerTransactionFee: number;
-  nmiPercentageFee: number;
   // Printing Comics fulfillment integration (provider docs pending)
   printingComicsApiKey: string | null;
   printingComicsWebhookSecret: string | null;
@@ -245,15 +236,6 @@ export default function SettingsPage() {
     whopCompanyId: "",
     whopWebhookSecret: "",
     whopEnvironment: "production",
-    // PaymentCloud settings (NMI white-label, direct-post gateway)
-    nmiEnabled: false,
-    nmiSecurityKey: "",
-    nmiPublicKey: "",
-    nmiWebhookSecret: "",
-    nmiEnvironment: "production",
-    nmiGatewayUrlOverride: "",
-    nmiPerTransactionFee: "0.13",
-    nmiPercentageFee: "4.5",
     // Printing Comics fulfillment integration
     printingComicsApiKey: "",
     printingComicsWebhookSecret: "",
@@ -453,23 +435,9 @@ export default function SettingsPage() {
         whopCompanyId: settings.whopCompanyId || "",
         whopWebhookSecret: settings.whopWebhookSecret || "",
         whopEnvironment: settings.whopEnvironment || "production",
-        nmiEnabled: settings.nmiEnabled || false,
-        nmiSecurityKey: settings.nmiSecurityKey || "",
-        nmiPublicKey: settings.nmiPublicKey || "",
-        nmiWebhookSecret: settings.nmiWebhookSecret || "",
-        nmiEnvironment: settings.nmiEnvironment || "production",
-        nmiGatewayUrlOverride: settings.nmiGatewayUrlOverride || "",
         printingComicsApiKey: (settings as unknown as Record<string, unknown>).printingComicsApiKey as string || "",
         printingComicsWebhookSecret: (settings as unknown as Record<string, unknown>).printingComicsWebhookSecret as string || "",
         printingComicsEnvironment: (settings as unknown as Record<string, unknown>).printingComicsEnvironment as string || "production",
-        nmiPerTransactionFee:
-          settings.nmiPerTransactionFee !== undefined && settings.nmiPerTransactionFee !== null
-            ? String(settings.nmiPerTransactionFee)
-            : "0.13",
-        nmiPercentageFee:
-          settings.nmiPercentageFee !== undefined && settings.nmiPercentageFee !== null
-            ? String(settings.nmiPercentageFee * 100)
-            : "4.5",
         recaptchaEnabled: settings.recaptchaEnabled || false,
         recaptchaSiteKey: settings.recaptchaSiteKey || "",
         recaptchaSecretKey: settings.recaptchaSecretKey || "",
@@ -737,14 +705,6 @@ export default function SettingsPage() {
             whopCompanyId: currentPaymentSettings.whopCompanyId,
             whopWebhookSecret: currentPaymentSettings.whopWebhookSecret,
             whopEnvironment: currentPaymentSettings.whopEnvironment,
-            nmiEnabled: currentPaymentSettings.nmiEnabled,
-            nmiSecurityKey: currentPaymentSettings.nmiSecurityKey,
-            nmiPublicKey: currentPaymentSettings.nmiPublicKey,
-            nmiWebhookSecret: currentPaymentSettings.nmiWebhookSecret,
-            nmiEnvironment: currentPaymentSettings.nmiEnvironment,
-            nmiGatewayUrlOverride: currentPaymentSettings.nmiGatewayUrlOverride,
-            nmiPerTransactionFee: parseFloat(currentPaymentSettings.nmiPerTransactionFee) || 0,
-            nmiPercentageFee: (parseFloat(currentPaymentSettings.nmiPercentageFee) || 0) / 100,
             printingComicsApiKey: currentPaymentSettings.printingComicsApiKey,
             printingComicsWebhookSecret: currentPaymentSettings.printingComicsWebhookSecret,
             printingComicsEnvironment: currentPaymentSettings.printingComicsEnvironment,

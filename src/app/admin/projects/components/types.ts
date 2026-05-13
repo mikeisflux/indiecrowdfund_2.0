@@ -30,15 +30,8 @@ export interface Project {
   risks: string | null;
   status: string;
   prelaunchActive: boolean;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP" | "NMI" | null;
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP" | null;
   hasAdultContent: boolean;
-  // PaymentCloud rolling reserve fields (only meaningful for NMI projects)
-  rollingReserveSubject: boolean;
-  rollingReserveAuto: boolean;
-  rollingReserveAmount: number;
-  rollingReserveHeldAt: string | null;
-  rollingReserveReleaseAt: string | null;
-  rollingReserveReleased: boolean;
   hasRiskyContent: boolean;
   promoContentSfw: boolean;
   createdAt: string;

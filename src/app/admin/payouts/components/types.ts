@@ -40,13 +40,6 @@ export interface CreatorProject {
   partialRefundCount: number;
   refunds: RefundEntry[];
   settlementStatus: "pending" | "processing" | "settled" | "overpaid";
-  // PaymentCloud rolling reserve display fields
-  rollingReserveActive?: boolean;
-  rollingReserveSubject?: boolean;
-  rollingReserveAuto?: boolean;
-  rollingReserveHeld?: number;
-  rollingReserveReleaseAt?: string | null;
-  rollingReserveReleased?: boolean;
   creator: {
     id: string;
     name: string | null;

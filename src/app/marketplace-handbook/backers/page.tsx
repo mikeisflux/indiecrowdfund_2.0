@@ -112,8 +112,8 @@ const purchasingSteps: Step[] = [
   },
   {
     title: 'Enter your card',
-    description: 'The Marketplace uses Mentom Payments to process card payments. Type your credit or debit card number, expiration, and CVV in the form. Your card details are encrypted in your browser and sent straight to Mentom Payments — they never touch our servers.',
-    tip: 'Save your card to make next time faster. Saved cards are stored on Mentom Payments\' side, never on IndieCrowdfund servers.',
+    description: 'The Marketplace processes card payments through DivinityCoin, PayPal, or Whop depending on the creator\'s setup. Type your credit or debit card number, expiration, and CVV in the form. Your card details are encrypted in your browser and sent straight to the processor — they never touch IndieCrowdfund servers.',
+    tip: 'Save your card to make next time faster. Saved cards are stored on the processor\'s side, never on IndieCrowdfund servers.',
   },
   {
     title: 'Get the book right away',
@@ -262,7 +262,7 @@ const faqs: FAQ[] = [
   },
   {
     question: 'How is my card processed?',
-    answer: 'The Marketplace uses Mentom Payments to handle card payments. You enter your card on the checkout page, it is encrypted in your browser, and Mentom Payments charges it right away. IndieCrowdfund servers never see your full card number. Older campaigns may show a different processor — that is fine, the experience is the same.',
+    answer: 'The Marketplace processes card payments through DivinityCoin, PayPal, or Whop, depending on which one the creator selected. You enter your card on the checkout page, it is encrypted in your browser, and the processor charges it right away. IndieCrowdfund servers never see your full card number. The checkout experience looks slightly different for each processor, but the result is the same — book in your library, receipt in your inbox.',
   },
 ];
 
@@ -443,7 +443,7 @@ export default function MarketplaceBackerHandbookPage() {
                       <div>
                         <h4 className="font-medium text-foreground">Secure & Instant</h4>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          All payments are processed securely through Mentom Payments. As soon as you pay, your book lands in your Downloads tab — no waiting.
+                          All payments are processed securely through DivinityCoin, PayPal, or Whop. As soon as you pay, your book lands in your Downloads tab — no waiting.
                         </p>
                       </div>
                     </div>

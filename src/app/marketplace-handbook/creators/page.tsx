@@ -64,8 +64,8 @@ const overviewSteps: Step[] = [
   },
   {
     title: 'How you get paid',
-    description: 'When someone buys your book, Mentom Payments processes their card. The platform takes a 3% fee. Mentom Payments takes their fee (about 4% + $0.38). What\'s left lands in your creator balance and pays out to your bank on Mentom\'s standard schedule.',
-    example: 'Reader pays $9.99 → Mentom takes ~$0.78 → Platform takes ~$0.30 → You get ~$8.91.',
+    description: 'When someone buys your book, the processor you picked (DivinityCoin, PayPal, or Whop) handles the card. The platform takes a 3% fee. The processor takes their fee (~3% + a small flat amount). What\'s left lands in your creator balance and pays out to your bank on the standard schedule for that processor.',
+    example: 'Reader pays $9.99 → processor takes ~$0.60 → Platform takes ~$0.30 → You get ~$9.09.',
   },
 ];
 
@@ -77,8 +77,8 @@ const setupSteps: Step[] = [
   },
   {
     title: 'Add your bank account',
-    description: 'Before you can sell, you need a way to get paid. In the Marketplace dashboard, open Payment Settings and add your bank routing and account numbers. Mentom Payments deposits your sales there on their standard schedule.',
-    example: 'Dashboard → Marketplace → Payment Settings → enter bank details → save.',
+    description: 'Before you can sell, you need a way to get paid. In the Marketplace dashboard, open Payment Settings, pick your processor (DivinityCoin, PayPal, or Whop), and add your bank routing and account numbers. The processor deposits your sales there on its standard schedule.',
+    example: 'Dashboard → Marketplace → Payment Settings → choose processor → enter bank details → save.',
   },
   {
     title: 'Fill out your creator profile',
@@ -120,8 +120,8 @@ const creatingSteps: Step[] = [
   },
   {
     title: 'Mark mature or NSFW content',
-    description: 'If your book has mature themes or NSFW content, tick the right flag. The flag adds an age check on the listing. Mentom Payments accepts all content types, so flagging does not change anything about your payout.',
-    example: 'A horror comic with graphic violence → flag NSFW → readers see the age check → payment still flows through Mentom Payments.',
+    description: 'If your book has mature themes or NSFW content, tick the right flag. The flag adds an age check on the listing. DivinityCoin and Whop accept all content types including NSFW; PayPal does not, so NSFW listings should pick DivinityCoin or Whop as their processor.',
+    example: 'A horror comic with graphic violence → flag NSFW + pick DivinityCoin or Whop → readers see the age check → payment flows normally.',
   },
   {
     title: 'Add tags',
@@ -144,11 +144,11 @@ const pricingSteps: Step[] = [
   {
     title: 'Platform fee: 3%',
     description: 'IndieCrowdfund takes 3% of every sale. That is much lower than the 30% that big platforms charge. The rest goes to you (after card processing).',
-    example: '$9.99 book → 3% to the platform ($0.30) + Mentom Payments fee (~$0.65) → you keep ~$9.04.',
+    example: '$9.99 book → 3% to the platform ($0.30) + processor fee (~$0.60) → you keep ~$9.09.',
   },
   {
     title: 'Card processing',
-    description: 'Every Marketplace sale goes through Mentom Payments. Their fee is about 4% + $0.38 per sale. Mentom accepts every content type, so NSFW books pay out the same way as everything else.',
+    description: 'Marketplace sales go through DivinityCoin, PayPal, or Whop — whichever processor you set up. Each has a fee of about 3% + $0.30 per sale. DivinityCoin and Whop accept every content type (including NSFW); PayPal does not allow NSFW.',
     tip: 'When you set the price, use the fee calculator on the book form to see exactly what hits your bank.',
   },
   {
@@ -269,7 +269,7 @@ const faqs: FAQ[] = [
   },
   {
     question: 'What content is not allowed?',
-    answer: 'Anything illegal. Anything stolen or plagiarized. Listings that lie about what the book is. NSFW content is fine if it is properly flagged with the age gate. All payment goes through Mentom Payments either way.',
+    answer: 'Anything illegal. Anything stolen or plagiarized. Listings that lie about what the book is. NSFW content is fine if it is properly flagged with the age gate — just pick DivinityCoin or Whop as your processor, since PayPal does not allow NSFW.',
   },
   {
     question: 'Can I sell books from my old crowdfunding campaigns?',
@@ -441,7 +441,7 @@ export default function MarketplaceCreatorHandbookPage() {
                         <div>
                           <h4 className="font-medium text-foreground">Payment Setup</h4>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            Add your bank details so Mentom Payments can deposit your earnings from each sale.
+                            Pick a processor (DivinityCoin, PayPal, or Whop) and add your bank details so your earnings deposit from each sale.
                           </p>
                         </div>
                       </div>
@@ -526,8 +526,8 @@ export default function MarketplaceCreatorHandbookPage() {
                         <p className="text-2xl font-bold text-foreground">$9.99</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">
-                        <p className="text-sm text-muted-foreground">Mentom Payments (4% + $0.38)</p>
-                        <p className="text-2xl font-bold text-destructive">-$0.65</p>
+                        <p className="text-sm text-muted-foreground">Processor (~3% + $0.30)</p>
+                        <p className="text-2xl font-bold text-destructive">-$0.60</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">
                         <p className="text-sm text-muted-foreground">Platform Fee (3%)</p>
@@ -535,7 +535,7 @@ export default function MarketplaceCreatorHandbookPage() {
                       </div>
                       <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
                         <p className="text-sm text-primary">You Receive</p>
-                        <p className="text-2xl font-bold text-primary">$9.10</p>
+                        <p className="text-2xl font-bold text-primary">$9.09</p>
                       </div>
                     </div>
                   </div>

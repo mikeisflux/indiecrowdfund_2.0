@@ -1,17 +1,26 @@
 "use client";
 
-import { NMI_DISABLED } from "@/lib/features";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Check, ExternalLink, AlertTriangle, CheckCircle, Banknote, Cloud } from "lucide-react";
+import {
+  Check,
+  ExternalLink,
+  AlertTriangle,
+  CheckCircle,
+  Banknote,
+  Wallet,
+  ShoppingBag,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { PaymentProcessorSectionProps } from "./types";
 
 export function PaymentProcessorSection({
   payment,
   updatePayment,
+  mustUseAltProcessor,
+  campaignType,
   isLaunched,
   goalAmount,
   platformFee,
@@ -21,10 +30,6 @@ export function PaymentProcessorSection({
   whopFee,
   whopTotalFees,
   whopNetAmount,
-  paymentCloudFee,
-  paymentCloudPerTxnFee,
-  paymentCloudTotalFees,
-  paymentCloudNetAmount,
 }: PaymentProcessorSectionProps) {
   return (
     <div className="space-y-4">
@@ -45,146 +50,18 @@ export function PaymentProcessorSection({
         </Alert>
       )}
 
-      {/* NSFW alert disabled — PaymentCloud is the only processor for new
-          campaigns and supports all content types.
       {mustUseAltProcessor && (
         <Alert className="bg-blue-50/50 dark:bg-blue-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
           <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
           <AlertTitle>NSFW-Friendly Processor Required</AlertTitle>
           <AlertDescription>
-            Projects with adult or controversial content must use Mentom Payments, DivinityCoin, or Whop.
+            Projects with adult or controversial content must use DivinityCoin or Whop.
             PayPal does not process payments for this type of content.
           </AlertDescription>
         </Alert>
       )}
-      */}
 
       <div className="grid gap-4 md:grid-cols-1 lg:max-w-2xl lg:mx-auto">
-        {/* PayPal disabled — PaymentCloud is the only processor for new
-            campaigns. Existing PAYPAL projects continue to function via
-            their original webhooks/payouts.
-        <Card
-          className={`cursor-pointer transition-all ${
-            payment.paymentProcessor === "PAYPAL" ? "border-2 border-primary" : "border"
-          } ${mustUseAltProcessor || isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => !mustUseAltProcessor && !isLaunched && updatePayment({ paymentProcessor: "PAYPAL" })}
-        >
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-[#003087] flex items-center justify-center">
-                  <Wallet className="h-5 w-5 text-white" />
-                </div>
-                PayPal
-                {!mustUseAltProcessor && (
-                  <Badge variant="secondary" className="ml-2">Recommended</Badge>
-                )}
-              </CardTitle>
-              {payment.paymentProcessor === "PAYPAL" && (
-                <CheckCircle className="h-5 w-5 text-primary" />
-              )}
-            </div>
-            <CardDescription>
-              {mustUseAltProcessor
-                ? "Not available for adult/controversial content"
-                : "PayPal & card payments"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>~6.5% total fees (3.49% + $0.49 + 3% platform)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Credit/debit cards + PayPal wallet</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Inline Advanced Checkout form</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        */}
-
-        {/* PaymentCloud (NMI / Mentom Payments) — entire card hidden
-            while the merchant account is offline. Gated by NMI_DISABLED
-            so this comes back instantly if we restore the rail. */}
-        {!NMI_DISABLED && (
-        <Card
-          className={`cursor-pointer transition-all ${
-            payment.paymentProcessor === "NMI" ? "border-2 border-primary" : "border"
-          } ${isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => !isLaunched && updatePayment({ paymentProcessor: "NMI" })}
-        >
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center">
-                  <Cloud className="h-5 w-5 text-white" />
-                </div>
-                Mentom Payments
-                <Badge variant="default" className="ml-2 bg-sky-600">Recommended</Badge>
-              </CardTitle>
-              {payment.paymentProcessor === "NMI" && (
-                <CheckCircle className="h-5 w-5 text-primary" />
-              )}
-            </div>
-            <CardDescription>
-              High-risk friendly merchant — supports all content types and both campaign styles
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>~7.5% total fees (4% + $0.38/txn + 3% platform)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Cards tokenized in browser via Collect.js</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>100% guaranteed NSFW friendly</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span>Both All or Nothing & Keep It All</span>
-              </div>
-            </div>
-
-            {/* Rolling reserve disclosure. PaymentCloud requires this on
-                campaigns that raise over $2,500 (auto-flagged) and on
-                new / high-risk creators (admin-flagged during review). */}
-            <div className="mt-4 rounded-md border border-amber-300 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-950/30 p-3 text-xs space-y-1">
-              <p className="font-semibold text-amber-900 dark:text-amber-200">
-                180-day rolling reserve
-              </p>
-              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
-                Mentom Payments holds <strong>10% of gross funds</strong> in escrow
-                for 180 days as chargeback protection. The hold is calculated
-                <em> before</em> processor + platform fees are deducted.
-              </p>
-              <ul className="text-amber-800 dark:text-amber-300 space-y-0.5 list-disc list-inside">
-                <li>Automatic for any campaign that raises over $2,500.</li>
-                <li>Applied to new or high-risk creators regardless of amount, decided case-by-case during review.</li>
-                <li>The full reserve is released to your payout balance after the 180-day window if no chargebacks remain.</li>
-              </ul>
-              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
-                We absorb what we can on smaller campaigns; what we can&apos;t
-                absorb is held by the processor.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        )}
-
-        {/* DivinityCoin — re-enabled as the primary processor for new
-            campaigns while Mentom Payments is offline. Supports all
-            content types. */}
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "DIVINITYCOIN" ? "border-2 border-primary" : "border"
@@ -226,7 +103,51 @@ export function PaymentProcessorSection({
           </CardContent>
         </Card>
 
-        {/* Whop disabled — PaymentCloud is the only processor for new campaigns.
+        <Card
+          className={`cursor-pointer transition-all ${
+            payment.paymentProcessor === "PAYPAL" ? "border-2 border-primary" : "border"
+          } ${mustUseAltProcessor || isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={() => !mustUseAltProcessor && !isLaunched && updatePayment({ paymentProcessor: "PAYPAL" })}
+        >
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-[#003087] flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-white" />
+                </div>
+                PayPal
+                {mustUseAltProcessor && (
+                  <Badge variant="outline" className="ml-2 text-amber-600 border-amber-400">SFW only</Badge>
+                )}
+              </CardTitle>
+              {payment.paymentProcessor === "PAYPAL" && (
+                <CheckCircle className="h-5 w-5 text-primary" />
+              )}
+            </div>
+            <CardDescription>
+              {mustUseAltProcessor
+                ? "Not available for adult/controversial content"
+                : "PayPal & card payments"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
+                <span>~6.5% total fees (3.49% + $0.49 + 3% platform)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
+                <span>Credit/debit cards + PayPal wallet</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
+                <span>Inline Advanced Checkout form</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "WHOP" ? "border-2 border-primary" : "border"
@@ -273,100 +194,67 @@ export function PaymentProcessorSection({
             </div>
           </CardContent>
         </Card>
-        */}
-
-        {/* Stripe Option - DISABLED: Replaced by PayPal */}
-        {/* <Card> ... </Card> */}
-
       </div>
-
-      {/* Stripe Fee Calculator - DISABLED: Replaced by PayPal */}
-      {/* {payment.paymentProcessor === "STRIPE" && (
-        <div className="rounded-lg bg-muted/50 p-4 border">
-          <h4 className="font-medium mb-3">
-            Stripe Fee Breakdown for {formatCurrency(goalAmount)} Goal
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Stripe processing fee (~2.9% + $0.30/txn)</span>
-              <span className="font-medium">{formatCurrency(stripeFee)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Platform fee (3%)</span>
-              <span className="font-medium">{formatCurrency(platformFee)}</span>
-            </div>
-            <Separator className="my-2" />
-            <div className="flex justify-between font-semibold">
-              <span>Total fees</span>
-              <span className="text-amber-600">{formatCurrency(totalFees)}</span>
-            </div>
-            <div className="flex justify-between font-semibold text-lg">
-              <span>You receive</span>
-              <span className="text-green-600">{formatCurrency(netAmount)}</span>
-            </div>
-          </div>
-        </div>
-      )} */}
 
       {payment.paymentProcessor === "DIVINITYCOIN" && (
         <>
-        <Alert className="bg-gradient-to-r from-blue-50/80 to-sky-50/80 dark:from-blue-900/20 dark:to-sky-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
-          <Banknote className="h-4 w-4 text-[#0066FF]" />
-          <AlertTitle>Why Choose DivinityCoin?</AlertTitle>
-          <AlertDescription className="mt-2 space-y-2 text-sm">
-            <p>
-              <strong>Content Freedom:</strong> Unlike traditional payment processors, DivinityCoin has no content restrictions.
-              Your campaign cannot be taken down or have payments frozen due to adult, mature, or controversial content in your project.
-            </p>
-            <p>
-              <strong>Protection from Processor Policies:</strong> Stripe and other traditional processors can refuse service
-              or freeze funds at any time based on their content policies. With DivinityCoin, your funds are secure and protected
-              from arbitrary policy changes.
-            </p>
-            <p>
-              <strong>Pre-funded Payments:</strong> Backers purchase DivinityCoin credits in advance, meaning when they pledge
-              to your campaign, the funds are already secured. This eliminates failed payment issues common with traditional
-              card processing.
-            </p>
-            <a
-              href="https://divinitycoin.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[#0066FF] hover:text-[#0052CC] hover:underline font-medium"
-            >
-              Learn more about DivinityCoin <ExternalLink className="h-3 w-3" />
-            </a>
-          </AlertDescription>
-        </Alert>
+          <Alert className="bg-gradient-to-r from-blue-50/80 to-sky-50/80 dark:from-blue-900/20 dark:to-sky-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
+            <Banknote className="h-4 w-4 text-[#0066FF]" />
+            <AlertTitle>Why Choose DivinityCoin?</AlertTitle>
+            <AlertDescription className="mt-2 space-y-2 text-sm">
+              <p>
+                <strong>Content Freedom:</strong> Unlike traditional payment processors, DivinityCoin has no content restrictions.
+                Your campaign cannot be taken down or have payments frozen due to adult, mature, or controversial content in your project.
+              </p>
+              <p>
+                <strong>Protection from Processor Policies:</strong> Traditional processors can refuse service
+                or freeze funds at any time based on their content policies. With DivinityCoin, your funds are secure and protected
+                from arbitrary policy changes.
+              </p>
+              <p>
+                <strong>Pre-funded Payments:</strong> Backers purchase DivinityCoin credits in advance, meaning when they pledge
+                to your campaign, the funds are already secured. This eliminates failed payment issues common with traditional
+                card processing.
+              </p>
+              <a
+                href="https://divinitycoin.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[#0066FF] hover:text-[#0052CC] hover:underline font-medium"
+              >
+                Learn more about DivinityCoin <ExternalLink className="h-3 w-3" />
+              </a>
+            </AlertDescription>
+          </Alert>
 
-        <div className="rounded-lg bg-muted/50 p-4 border">
-          <h4 className="font-medium mb-3">
-            DivinityCoin Fee Breakdown for {formatCurrency(goalAmount)} Goal
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>DivinityCoin partner fee (3%)</span>
-              <span className="font-medium">{formatCurrency(goalAmount * 0.03)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Platform fee (3%)</span>
-              <span className="font-medium">{formatCurrency((goalAmount - goalAmount * 0.03) * 0.03)}</span>
-            </div>
-            <Separator className="my-2" />
-            <div className="flex justify-between font-semibold">
-              <span>Total fees</span>
-              <span className="text-[#0066FF]">
-                {formatCurrency(goalAmount * 0.03 + (goalAmount - goalAmount * 0.03) * 0.03)}
-              </span>
-            </div>
-            <div className="flex justify-between font-semibold text-lg">
-              <span>You receive</span>
-              <span className="text-green-600">
-                {formatCurrency(goalAmount - goalAmount * 0.03 - (goalAmount - goalAmount * 0.03) * 0.03)}
-              </span>
+          <div className="rounded-lg bg-muted/50 p-4 border">
+            <h4 className="font-medium mb-3">
+              DivinityCoin Fee Breakdown for {formatCurrency(goalAmount)} Goal
+            </h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>DivinityCoin partner fee (3%)</span>
+                <span className="font-medium">{formatCurrency(goalAmount * 0.03)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Platform fee (3%)</span>
+                <span className="font-medium">{formatCurrency((goalAmount - goalAmount * 0.03) * 0.03)}</span>
+              </div>
+              <Separator className="my-2" />
+              <div className="flex justify-between font-semibold">
+                <span>Total fees</span>
+                <span className="text-[#0066FF]">
+                  {formatCurrency(goalAmount * 0.03 + (goalAmount - goalAmount * 0.03) * 0.03)}
+                </span>
+              </div>
+              <div className="flex justify-between font-semibold text-lg">
+                <span>You receive</span>
+                <span className="text-green-600">
+                  {formatCurrency(goalAmount - goalAmount * 0.03 - (goalAmount - goalAmount * 0.03) * 0.03)}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
         </>
       )}
 
@@ -392,39 +280,6 @@ export function PaymentProcessorSection({
             <div className="flex justify-between font-semibold text-lg">
               <span>You receive</span>
               <span className="text-green-600">{formatCurrency(paypalNetAmount)}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!NMI_DISABLED && payment.paymentProcessor === "NMI" && (
-        <div className="rounded-lg bg-muted/50 p-4 border">
-          <h4 className="font-medium mb-3">
-            Mentom Payments Fee Breakdown for {formatCurrency(goalAmount)} Goal
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Mentom Payments processing (4%)</span>
-              <span className="font-medium">{formatCurrency(paymentCloudFee)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Per-transaction fee ($0.38/txn)</span>
-              <span className="font-medium">{formatCurrency(paymentCloudPerTxnFee)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Platform fee (3% of net)</span>
-              <span className="font-medium">
-                {formatCurrency(paymentCloudTotalFees - paymentCloudFee - paymentCloudPerTxnFee)}
-              </span>
-            </div>
-            <Separator className="my-2" />
-            <div className="flex justify-between font-semibold">
-              <span>Total fees</span>
-              <span className="text-amber-600">{formatCurrency(paymentCloudTotalFees)}</span>
-            </div>
-            <div className="flex justify-between font-semibold text-lg">
-              <span>You receive</span>
-              <span className="text-green-600">{formatCurrency(paymentCloudNetAmount)}</span>
             </div>
           </div>
         </div>
@@ -456,7 +311,6 @@ export function PaymentProcessorSection({
           </div>
         </div>
       )}
-
     </div>
   );
 }

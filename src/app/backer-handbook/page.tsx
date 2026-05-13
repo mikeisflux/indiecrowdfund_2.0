@@ -15,7 +15,6 @@ import {
   HelpCircle,
   LayoutDashboard,
   ShoppingBag,
-  Cloud,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from "@/components/footer";
@@ -23,9 +22,8 @@ import { Footer } from "@/components/footer";
 const tabs = [
   { id: 'discover', label: 'Finding Projects', icon: Search },
   { id: 'backing', label: 'Making a Pledge', icon: Heart },
-  { id: 'paymentcloud', label: 'Paying with Mentom Payments', icon: Cloud },
-  { id: 'paypal', label: 'Paying with PayPal', icon: CreditCard },
   { id: 'divinitycoin', label: 'DivinityCoin', icon: Coins },
+  { id: 'paypal', label: 'Paying with PayPal', icon: CreditCard },
   { id: 'whop', label: 'Paying with Whop', icon: ShoppingBag },
   { id: 'rewards', label: 'Rewards & Add-ons', icon: Gift },
   { id: 'after', label: 'After You Pledge', icon: Package },
@@ -78,24 +76,10 @@ const tabContent: Record<string, TabContent> = {
       { title: 'Review Your Pledge', description: 'See the complete breakdown before payment. Make sure everything looks correct.', tip: 'Take a screenshot for your records.' },
     ]
   },
-  'paymentcloud': {
-    title: 'Paying with Mentom Payments',
-    description: 'Mentom Payments is a high-risk friendly card processor on the NMI gateway. Pay with any major credit/debit card — your card is tokenized in your browser and only charged on campaign success.',
-    alert: { icon: Cloud, title: 'Card Tokenized in Your Browser', text: 'Mentom Payments uses Collect.js to tokenize your card directly in your browser. Your full card number is sent straight to Mentom Payments\'s vault — IndieCrowdfund servers never see or store your PAN. Supports all content types including NSFW/adult.', color: 'sky' },
-    steps: [
-      { title: 'What is Mentom Payments?', description: 'Mentom Payments is a high-risk friendly merchant account on the NMI payment gateway. Some creators choose it for projects that other processors won\'t accept (NSFW/adult, certain digital goods, etc.). For you as a backer, the experience is the same as any normal card checkout.', tip: 'You\'ll see the Mentom Payments branding or just a standard card form at checkout.' },
-      { title: 'How Checkout Works', description: 'At pledge time, click "Back this project" → choose your reward → continue to checkout. The card form (powered by Collect.js) appears inline. Enter your card number, expiration, CVV, and billing zip — then click Pledge.', tip: 'The form supports Visa, Mastercard, American Express, and Discover.' },
-      { title: 'When You\'re Charged', description: 'For All or Nothing campaigns, your card is tokenized at pledge time but NOT charged. The card is only charged when the campaign reaches its funding goal. If the campaign fails, no charge is ever made and the saved card is deleted from Mentom Payments\'s vault.', tip: 'Make sure your card stays valid through the end of the campaign — expired cards can\'t be charged at success.' },
-      { title: 'Keep It All Campaigns', description: 'For Keep It All campaigns, Mentom Payments charges your card immediately at pledge time and the creator keeps the funds regardless of goal status.', tip: 'The campaign type is shown clearly on the project page before you confirm.' },
-      { title: 'Refunds', description: 'Refunds for failed All-or-Nothing campaigns are automatic — your card was never charged in the first place. For other refund cases (creator-approved post-campaign refunds), Mentom Payments returns the money to your original card. Bank processing typically takes 5–10 business days.', tip: 'If a refund hasn\'t arrived after 10 business days, contact support with your pledge ID.' },
-      { title: 'Security', description: 'Mentom Payments is PCI-DSS compliant. Card data is tokenized at the browser, sent directly to Mentom Payments\'s vault, and never touches IndieCrowdfund servers. The lock icon and "Secure Payment" header on the form confirm this.', tip: 'Never enter card details on a page that doesn\'t show the processor name and a lock icon in the URL bar.' },
-      { title: 'Why Some Campaigns Take Longer to Ship', description: 'Mentom Payments holds 10% of the creator\'s gross campaign revenue in escrow for 180 days as protection against chargebacks. This applies to most funded campaigns. For you as a backer this changes nothing — your card is charged the full pledge amount as agreed — but it means the creator may have less working capital for fulfillment in the first six months. If a chargeback or dispute arises during this window, Mentom Payments can use the reserve to refund affected backers without going after the creator first.', tip: 'This is a creator-side protection. Your pledge experience and refund rights are unaffected.' },
-    ]
-  },
   'paypal': {
     title: 'Paying with PayPal',
     description: 'Everything about PayPal payments on IndieCrowdfund, including when you\'re charged.',
-    alert: { icon: Shield, title: 'Secure Payment Processing', text: 'Campaign payments are processed securely through PayPal, Mentom Payments, DivinityCoin, or Whop — depending on the creator\'s chosen processor. You can pay with your credit or debit card at checkout regardless of which processor is used. Your card details are encrypted and never stored on our servers.', color: 'emerald' },
+    alert: { icon: Shield, title: 'Secure Payment Processing', text: 'Campaign payments are processed securely through DivinityCoin, PayPal, or Whop — depending on the creator\'s chosen processor. You can pay with your credit or debit card at checkout regardless of which processor is used. Your card details are encrypted and never stored on our servers.', color: 'emerald' },
     steps: [
       { title: 'Select Your Payment Method', description: 'At checkout you\'ll see the PayPal Advanced Checkout form — use your PayPal wallet, or enter a credit/debit card directly. No PayPal account required to pay by card.', tip: 'PayPal is trusted by hundreds of millions worldwide.' },
       { title: 'Enter Card or Use PayPal Wallet', description: 'Fill in your card details (Visa, Mastercard, Amex, Discover) or log into your PayPal account to use your saved payment method.', tip: 'Make sure your card won\'t expire before the campaign ends.' },
@@ -223,7 +207,7 @@ const tabContent: Record<string, TabContent> = {
       { title: 'What is the Marketplace?', description: 'A storefront for completed digital works that creators have published — books, comics, art packs, music. Unlike crowdfunding pledges (which can take months to deliver), marketplace purchases are delivered instantly to your account.', tip: 'Use the Marketplace when you want something right now. Use crowdfunding when you want to support a creator making something new.' },
       { title: 'Browsing the store', description: 'Open /marketplace to see Featured titles, Staff Picks, and the full catalog. Filter by category (Comics, Books, Art, Music) or use the search bar to look up a specific title.', tip: 'Staff Picks are hand-chosen by IndieCrowdfund — usually a great starting point.' },
       { title: 'Understanding pricing', description: 'Each item has a fixed price in US dollars set by the creator. The price you see is the price you pay — no shipping, no extra fees.', tip: 'Digital usually costs less than physical because there\'s no printing or shipping cost.' },
-      { title: 'Making a purchase', description: 'Click "Purchase" → enter your card details → confirm. Your card is charged immediately. The processor used (PayPal, Mentom Payments, DivinityCoin, or Whop) depends on the creator\'s setup, but the experience is the same: a secure card form, then a confirmation page.', tip: 'You\'ll get an email receipt right away, plus an in-app notification.' },
+      { title: 'Making a purchase', description: 'Click "Purchase" → enter your card details → confirm. Your card is charged immediately. The processor used (DivinityCoin, PayPal, or Whop) depends on the creator\'s setup, but the experience is the same: a secure card form, then a confirmation page.', tip: 'You\'ll get an email receipt right away, plus an in-app notification.' },
       { title: 'Where your purchase appears', description: 'Marketplace purchases land in TWO places in your backer dashboard. (1) Downloads tab (/dashboard/backer?tab=downloads) shows them as cover-art tiles alongside any crowdfunding files you\'ve received — this is the easy "all my files in one spot" view. (2) Digital Library tab (/dashboard/backer?tab=digital-library) is the in-browser reader: open a book here to read with bookmarks, zoom, and reading-progress tracking.', tip: 'Use Downloads to see everything. Use Digital Library when you actually want to read.' },
       { title: 'Reading and downloading', description: 'In the Digital Library, click a book cover to open the reader. To save the PDF locally, use the Download button — the file is yours forever, even if the creator removes the title later.', tip: 'Always download a backup copy of anything important. Cloud copies can vanish.' },
     ]
@@ -233,9 +217,9 @@ const tabContent: Record<string, TabContent> = {
     description: 'Common questions about backing projects.',
     steps: [
       { title: 'What are the two campaign types?', description: '"All or Nothing" campaigns are only funded if the goal is reached — if not, no money changes hands. "Keep It All" campaigns let the creator keep all pledges regardless of the goal, and backers are charged immediately when pledging.', tip: 'The campaign type is shown on the project page before you pledge.' },
-      { title: 'What if an All or Nothing project doesn\'t reach its goal?', description: 'No money changes hands. Your payment is never captured, regardless of whether the project uses PayPal, Mentom Payments, DivinityCoin, or Whop.', tip: 'All-or-nothing funding protects you if the goal isn\'t reached.' },
+      { title: 'What if an All or Nothing project doesn\'t reach its goal?', description: 'No money changes hands. Your payment is never captured, regardless of whether the project uses DivinityCoin, PayPal, or Whop.', tip: 'All-or-nothing funding protects you if the goal isn\'t reached.' },
       { title: 'Can I get a refund after pledging?', description: 'Before campaign ends, cancel anytime in your dashboard. After the campaign closes, you can submit a refund request through the platform — the creator must approve it. Contact the creator directly if needed.', tip: 'Refund policies are set by each creator.' },
-      { title: 'Is my payment information secure?', description: 'Yes! PayPal processes standard payments with PCI-DSS Level 1 certification. Mentom Payments, DivinityCoin, and Whop also use PCI-compliant processing — card data is tokenized in your browser and never touches IndieCrowdfund servers.', tip: 'Look for the secure checkout indicator at checkout.' },
+      { title: 'Is my payment information secure?', description: 'Yes! PayPal processes standard payments with PCI-DSS Level 1 certification. DivinityCoin and Whop also use PCI-compliant processing — card data is tokenized in your browser and never touches IndieCrowdfund servers.', tip: 'Look for the secure checkout indicator at checkout.' },
       { title: 'What if my card is declined?', description: 'We retry automatically 3 times over 9 days. You\'ll get emails to update your card details.', tip: 'Keep card info updated to avoid failed payments.' },
       { title: 'How do I contact a creator?', description: 'Use "Contact" or "Ask a question" on the project page. Backers often have priority response.', tip: 'Always mention your backer email for pledge-specific issues.' },
       { title: 'What if a creator never delivers?', description: 'Crowdfunding carries risk. Creators are legally obligated to fulfill or refund. Report concerns to our support team.', tip: 'Our verification process helps, but due diligence is important.' },

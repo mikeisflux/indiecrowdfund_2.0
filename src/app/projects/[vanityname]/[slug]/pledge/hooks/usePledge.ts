@@ -83,16 +83,6 @@ export function usePledge() {
   const [whopSessionId, setWhopSessionId] = useState<string | null>(null);
   const [whopPlanId, setWhopPlanId] = useState<string | null>(null);
   const [whopEnvironment, setWhopEnvironment] = useState<"production" | "sandbox">("production");
-  // PaymentCloud (NMI) state — public tokenization key for Collect.js
-  // and the campaign type so the form knows whether to charge now (KIA)
-  // or just save the card (AoN).
-  const [nmiPublicKey, setNmiPublicKey] = useState<string | null>(null);
-  const [nmiIsKeepItAll, setNmiIsKeepItAll] = useState<boolean>(false);
-  // For NMI modify-upcharge: server stamps a modificationId on
-  // pendingModification when this PATCH wins. The form echoes it back
-  // on confirm-modify so a superseded modify can't charge against the
-  // displayed amountDiff.
-  const [nmiModificationId, setNmiModificationId] = useState<string | null>(null);
 
   const creatingPaymentRef = useRef(false);
 
@@ -239,8 +229,8 @@ export function usePledge() {
 
   // Reset guard on state clear
   useEffect(() => {
-    if (!clientSecret && !paypalOrderId && !whopSessionId && !nmiPublicKey && !paymentError && !isProcessing) creatingPaymentRef.current = false;
-  }, [clientSecret, paypalOrderId, whopSessionId, nmiPublicKey, paymentError, isProcessing]);
+    if (!clientSecret && !paypalOrderId && !whopSessionId && !paymentError && !isProcessing) creatingPaymentRef.current = false;
+  }, [clientSecret, paypalOrderId, whopSessionId, paymentError, isProcessing]);
 
   const createAdditionalItemsPurchase = async () => {
     if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;
@@ -274,19 +264,7 @@ export function usePledge() {
     try {
       const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({ id, quantity }));
       const result = await modifyPledgeAPI(modifyPledgeId, selectedReward?.id || "no-reward", addonsWithQuantity, total, totalShipping, shippingCountry);
-      if (result.requiresPayment && result.paymentMethod === "NMI" && result.nmiPublicKey) {
-        // PaymentCloud upcharge: server stashed pendingModification and
-        // returned the Collect.js public key. Render NmiPaymentForm in
-        // modify mode and POST the resulting payment_token to
-        // /confirm-modify to charge the delta and apply changes.
-        const chargeAmount = result.amountDiff ?? (total - originalPledgeAmount);
-        setModifyChargeAmount(chargeAmount > 0 ? chargeAmount : null);
-        setNmiPublicKey(result.nmiPublicKey);
-        setNmiIsKeepItAll(true);
-        setNmiModificationId(result.modificationId ?? null);
-        setCurrentPledgeId(modifyPledgeId);
-        setIsProcessing(false);
-      } else if (result.requiresPayment && result.clientSecret) {
+      if (result.requiresPayment && result.clientSecret) {
         const chargeAmount = total - originalPledgeAmount;
         setModifyChargeAmount(chargeAmount > 0 ? chargeAmount : null);
         setClientSecret(result.clientSecret);
@@ -308,7 +286,7 @@ export function usePledge() {
 
   const createPledgeForPayment = async () => {
     if (!project || (!selectedReward && !pledgeWithoutReward)) return;
-    if (clientSecret || paypalOrderId || whopSessionId || nmiPublicKey) return;
+    if (clientSecret || paypalOrderId || whopSessionId) return;
     if (currentPledgeId) return;
     if (creatingPaymentRef.current) return;
     // Block pledge creation when the cart contains shippable items and
@@ -336,13 +314,7 @@ export function usePledge() {
     try {
       const result = await createPledgeAPI(project.id, selectedReward?.id || null, selectedAddons, total, totalShipping, shippingCountry);
       setCurrentPledgeId(result.pledgeId);
-      if (result.paymentMethod === "NMI" || result.publicKey) {
-        // PaymentCloud (NMI) flow: server returned the public key for
-        // Collect.js. The actual tokenize + vault-add happens via
-        // POST /api/pledges/[id]/confirm-nmi after the user fills the card.
-        setNmiPublicKey(result.publicKey ?? null);
-        setNmiIsKeepItAll(!!result.isKeepItAll);
-      } else if (result.paypalOrderId) {
+      if (result.paypalOrderId) {
         // PayPal flow: no clientSecret, use paypalOrderId directly
         setPaypalOrderId(result.paypalOrderId);
       } else if (result.whopSessionId) {
@@ -369,7 +341,7 @@ export function usePledge() {
     } else if (isAddItemsMode) {
       if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && Object.keys(selectedAddons).length > 0) createAdditionalItemsPurchase();
     } else {
-      if (step === "payment" && !clientSecret && !paypalOrderId && !whopSessionId && !nmiPublicKey && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) createPledgeForPayment();
+      if (step === "payment" && !clientSecret && !paypalOrderId && !whopSessionId && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) createPledgeForPayment();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, currentPledgeId, isProcessing, paymentError, isAddItemsMode, isModifyMode, selectedAddons]);
@@ -565,8 +537,6 @@ export function usePledge() {
     paypalOrderId, paypalClientId, paypalMode,
     // Whop
     whopSessionId, whopPlanId, whopEnvironment,
-    // PaymentCloud (NMI)
-    nmiPublicKey, nmiIsKeepItAll, nmiModificationId,
     // Totals
     totalShipping, addonsShipping, total, addItemsTotal,
     // Handlers

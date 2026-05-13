@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { NMI_DISABLED } from "@/lib/features";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +9,6 @@ import type { Stripe } from "@stripe/stripe-js";
 import { ProjectData } from "../types";
 import { PayPalPaymentForm } from "./PayPalPaymentForm";
 import { WhopPaymentForm } from "./WhopPaymentForm";
-import { NmiPaymentForm } from "./NmiPaymentForm";
 import { apiFetch } from "@/lib/fetch-utils";
 
 // Dynamically import the DC/Stripe wrapper so Stripe.js only loads when payment is initiated
@@ -48,9 +46,6 @@ interface PaymentStepProps {
   whopSessionId: string | null;
   whopPlanId: string | null;
   whopEnvironment: "production" | "sandbox";
-  nmiPublicKey: string | null;
-  nmiIsKeepItAll: boolean;
-  nmiModificationId?: string | null;
   // Drives Stripe-based forms (DC) — "setup_intent" for AoN-unfunded
   // DC pledges that save the card now and defer the charge to the
   // success cron, "payment_intent" for KIA / already-funded AoN.
@@ -154,9 +149,6 @@ export function PaymentStep({
   whopSessionId,
   whopPlanId,
   whopEnvironment,
-  nmiPublicKey,
-  nmiIsKeepItAll,
-  nmiModificationId,
   intentType,
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
@@ -265,82 +257,10 @@ export function PaymentStep({
             </div>
           )} */}
 
-          {/* Payment Form — DivinityCoin is the primary processor for new
-              campaigns. NMI / PaymentCloud is disabled while Mentom
-              Payments merchant is offline (NMI_DISABLED); existing NMI
-              campaigns surface a friendly disabled-state notice instead
-              of the Collect.js form so visitors don't enter card data
-              that would fail. */}
-          {project?.paymentProcessor === "NMI" ? (
-            NMI_DISABLED ? (
-              <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm">
-                <p className="font-medium text-amber-900 dark:text-amber-200 mb-1">
-                  Card payments temporarily unavailable
-                </p>
-                <p className="text-amber-800 dark:text-amber-300">
-                  This project&apos;s card processor is offline while we switch payment providers. Please check back shortly or contact support.
-                </p>
-              </div>
-            ) : nmiPublicKey && currentPledgeId ? (
-              <>
-                {paymentError && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-4">
-                    <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
-                  </div>
-                )}
-                <NmiPaymentForm
-                  publicKey={nmiPublicKey}
-                  pledgeId={currentPledgeId}
-                  isKeepItAll={nmiIsKeepItAll}
-                  total={displayTotal}
-                  agreedToTerms={agreedToTerms}
-                  isProcessing={isProcessing}
-                  setIsProcessing={setIsProcessing}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                  endpoint={
-                    isModifyMode
-                      ? `/api/pledges/${encodeURIComponent(currentPledgeId)}/confirm-modify`
-                      : isAddItemsMode
-                      ? `/api/pledges/${encodeURIComponent(currentPledgeId)}/confirm-add-items`
-                      : undefined
-                  }
-                  submitLabel={
-                    isModifyMode
-                      ? `Pay $${displayTotal.toFixed(2)} & update pledge`
-                      : isAddItemsMode
-                      ? `Pay $${displayTotal.toFixed(2)} & add items`
-                      : undefined
-                  }
-                  extraBody={
-                    isModifyMode && nmiModificationId
-                      ? { modificationId: nmiModificationId }
-                      : undefined
-                  }
-                />
-              </>
-            ) : paymentError ? (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => {
-                    setPaymentError(null);
-                    setIsProcessing(false);
-                  }}
-                >
-                  Try Again
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">Loading Mentom Payments...</p>
-              </div>
-            )
-          ) : project?.paymentProcessor === "WHOP" ? (
+          {/* Payment Form — DivinityCoin / PayPal / Whop are the supported
+              processors. Stripe path remains commented out below for the
+              legacy campaigns that still have it stored. */}
+          {project?.paymentProcessor === "WHOP" ? (
             /* Whop Embedded Checkout */
             whopSessionId && whopPlanId && currentPledgeId ? (
               <WhopPaymentForm

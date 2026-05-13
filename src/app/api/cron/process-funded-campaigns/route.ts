@@ -5,260 +5,7 @@ const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-fu
 import { db } from "@/lib/db";
 import { processPendingPledgesForProject, getStripeInstance } from "@/lib/payments/stripe";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
-import { loadNmiConfig, saleByVaultToken } from "@/lib/nmi";
-import { finalizeNmiPledge } from "@/lib/payments/nmi/finalize-pledge";
-import { notifyNmiChargeFailed } from "@/lib/notifications";
-import { NMI_DISABLED } from "@/lib/features";
 import { chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
-import { evaluateAutoTrigger } from "@/lib/payments/rolling-reserve";
-
-// After NMI pledges have been charged for a funded project, evaluate
-// whether the project should be flagged for the PaymentCloud rolling
-// reserve. Auto-fires when effective revenue >= $2,500. Idempotent:
-// re-running on an already-flagged project preserves heldAt/releaseAt.
-async function evaluateProjectRollingReserve(projectId: string): Promise<void> {
-  const project = await db.project.findFirst({
-    where: { id: projectId, deletedAt: null },
-    select: {
-      paymentProcessor: true,
-      currentAmount: true,
-      rollingReserveSubject: true,
-      rollingReserveAuto: true,
-      rollingReserveAmount: true,
-      rollingReserveHeldAt: true,
-      rollingReserveReleaseAt: true,
-      rollingReserveReleased: true,
-    },
-  });
-  if (!project || project.paymentProcessor !== "NMI") return;
-  if (project.rollingReserveReleased) return;
-  const effectiveRevenue = Number(project.currentAmount);
-  const next = evaluateAutoTrigger(
-    {
-      paymentProcessor: project.paymentProcessor,
-      rollingReserveSubject: project.rollingReserveSubject,
-      rollingReserveAuto: project.rollingReserveAuto,
-      rollingReserveAmount: Number(project.rollingReserveAmount),
-      rollingReserveHeldAt: project.rollingReserveHeldAt,
-      rollingReserveReleaseAt: project.rollingReserveReleaseAt,
-    },
-    effectiveRevenue
-  );
-  // Only write if something changed.
-  if (
-    next.rollingReserveAuto === project.rollingReserveAuto &&
-    Math.abs(next.rollingReserveAmount - Number(project.rollingReserveAmount)) < 0.005 &&
-    next.rollingReserveHeldAt?.getTime() === project.rollingReserveHeldAt?.getTime()
-  ) {
-    return;
-  }
-  await db.project.update({
-    where: { id: projectId },
-    data: {
-      rollingReserveAuto: next.rollingReserveAuto,
-      rollingReserveAmount: next.rollingReserveAmount,
-      rollingReserveHeldAt: next.rollingReserveHeldAt ?? undefined,
-      rollingReserveReleaseAt: next.rollingReserveReleaseAt ?? undefined,
-    },
-  });
-}
-
-// Charge all PENDING NMI pledges for a project that has hit its goal.
-// Pattern is claim-then-process to avoid double-charges if two cron
-// runs overlap (the schedule is every 5 minutes; one slow run can
-// still be in flight when the next fires):
-//   1. CAS-flip chargedImmediately false→true while still PENDING.
-//      Only the request that wins the CAS owns this pledge for this
-//      cycle; concurrent runs see chargedImmediately=true and skip.
-//   2. Run the sale with the won pledge.
-//   3. On success → mark COMPLETED with the transaction id.
-//      On decline → mark FAILED + restore chargedImmediately=false so
-//      a future cron / admin retry can try again with a different card.
-async function captureNmiPendingPledges(projectId: string): Promise<{
-  total: number;
-  successful: number;
-  failed: number;
-}> {
-  const result = { total: 0, successful: 0, failed: 0 };
-  // Rail disabled — PaymentCloud merchant was cancelled. Skip the
-  // cron's NMI charge loop entirely; PENDING NMI pledges stay
-  // PENDING until either the merchant is restored or an admin
-  // migrates them to another processor.
-  if (NMI_DISABLED) return result;
-  const config = await loadNmiConfig();
-  if (!config) return result;
-
-  const pledges = await db.pledge.findMany({
-    where: {
-      projectId,
-      status: "PENDING",
-      paymentProcessor: "NMI",
-      chargedImmediately: false,
-      deletedAt: null,
-      NOT: { nmiCustomerVaultId: null },
-      // Honour the retry schedule: skip any pledge that's been put
-      // on a backoff window by a prior failure.
-      OR: [
-        { nextRetryAt: null },
-        { nextRetryAt: { lte: new Date() } },
-      ],
-    },
-    select: {
-      id: true,
-      amount: true,
-      nmiCustomerVaultId: true,
-      nmiInitialTransactionId: true,
-      retryCount: true,
-      project: { select: { title: true } },
-      user: { select: { email: true } },
-    },
-  });
-
-  // Cap auto-retries at 5 with exponential-ish backoff (1h, 6h, 24h,
-  // 72h, 168h). Past the cap a pledge is marked FAILED for an admin
-  // to look at — better than retrying a perma-declining card forever.
-  const MAX_NMI_RETRIES = 5;
-  const BACKOFF_HOURS = [1, 6, 24, 72, 168];
-
-  result.total = pledges.length;
-  for (const p of pledges) {
-    if (!p.nmiCustomerVaultId) continue;
-
-    // Atomic claim. If a concurrent worker already flipped
-    // chargedImmediately to true (or the pledge already has a
-    // transaction id), we skip — they own the charge.
-    const claimed = await db.pledge.updateMany({
-      where: {
-        id: p.id,
-        status: "PENDING",
-        chargedImmediately: false,
-        nmiTransactionId: null,
-        deletedAt: null,
-      },
-      data: { chargedImmediately: true },
-    });
-    if (claimed.count === 0) {
-      cronProcessFundedCampaignsLogger.info(
-        { pledgeId: p.id },
-        "[Cron] NMI pledge already claimed by a concurrent worker; skipping"
-      );
-      continue;
-    }
-
-    try {
-      // Tag this as MIT (merchant-initiated) — the cardholder isn't
-      // present at the time of charge. If we already have an
-      // initial_transaction_id from a prior charge on this vault
-      // entry, mark stored_credential_indicator="used"; otherwise
-      // this IS the first charge so it's "stored".
-      const hasInitial = !!p.nmiInitialTransactionId;
-      const sale = await saleByVaultToken(config, {
-        amount: Number(p.amount),
-        customerVaultId: p.nmiCustomerVaultId,
-        orderid: p.id,
-        orderdescription: `Pledge to ${p.project.title}`,
-        email: p.user.email || undefined,
-        initiatedBy: "merchant",
-        storedCredentialIndicator: hasInitial ? "used" : "stored",
-        initialTransactionId: p.nmiInitialTransactionId || undefined,
-      });
-      if (sale.response === "1" && sale.transactionid) {
-        // CAS the PENDING→COMPLETED transition so we only run the
-        // post-completion side effects (counter bumps, backer
-        // number, notification) when this worker actually claims
-        // the row. A concurrent cron run can't double-count.
-        const transitioned = await db.pledge.updateMany({
-          where: { id: p.id, status: "PENDING" },
-          data: {
-            status: "COMPLETED",
-            nmiTransactionId: sale.transactionid,
-            // Only persist the initial transaction id on the first
-            // successful sale. Subsequent retries already have it
-            // set and shouldn't overwrite.
-            ...(hasInitial ? {} : { nmiInitialTransactionId: sale.transactionid }),
-            retryCount: 0,
-            nextRetryAt: null,
-          },
-        });
-        if (transitioned.count > 0) {
-          await finalizeNmiPledge(p.id);
-        }
-        result.successful++;
-      } else {
-        // Decline. Within the retry budget, schedule another attempt
-        // and roll back the claim. Past the cap, mark FAILED so an
-        // admin notices.
-        const newRetryCount = (p.retryCount || 0) + 1;
-        if (newRetryCount >= MAX_NMI_RETRIES) {
-          await db.pledge.update({
-            where: { id: p.id },
-            data: {
-              status: "FAILED",
-              chargedImmediately: false,
-              retryCount: newRetryCount,
-              nextRetryAt: null,
-              lastFailureReason: `${sale.responsetext || "Mentom Payments declined"} (after ${newRetryCount} attempts)`,
-            },
-          });
-        } else {
-          const backoffHours = BACKOFF_HOURS[Math.min(newRetryCount - 1, BACKOFF_HOURS.length - 1)];
-          const nextRetryAt = new Date(Date.now() + backoffHours * 60 * 60 * 1000);
-          await db.pledge.update({
-            where: { id: p.id },
-            data: {
-              chargedImmediately: false,
-              retryCount: newRetryCount,
-              nextRetryAt,
-              lastFailureReason: sale.responsetext || "Mentom Payments declined",
-            },
-          });
-        }
-        // Notify the backer on the FIRST failure (retryCount was 0 →
-        // newRetryCount = 1) so they can self-service retry via the
-        // /dashboard/pledges/[id]/retry-payment page. Subsequent
-        // cron backoff retries don't re-notify — the backer already
-        // knows and the cron will keep trying its 5-attempt budget
-        // in the background. If they retry manually and succeed,
-        // the pledge moves to COMPLETED and the cron stops touching
-        // it. Fire-and-forget; do NOT block the cron loop on email
-        // delivery.
-        if (newRetryCount === 1) {
-          notifyNmiChargeFailed(p.id).catch((err) =>
-            cronProcessFundedCampaignsLogger.error(
-              { pledgeId: p.id, err: err instanceof Error ? err.message : String(err) },
-              "[Cron] Failed to notify backer of NMI charge failure"
-            )
-          );
-        }
-        result.failed++;
-      }
-    } catch (err) {
-      cronProcessFundedCampaignsLogger.error(
-        { err: err instanceof Error ? err.message : String(err), pledgeId: p.id },
-        "[Cron] NMI charge error"
-      );
-      // Network/HTTP error — uncertain whether NMI captured. Don't
-      // mark FAILED (they might have actually charged); roll back the
-      // claim and schedule a retry on the next backoff window.
-      const newRetryCount = (p.retryCount || 0) + 1;
-      const backoffHours =
-        BACKOFF_HOURS[Math.min(newRetryCount - 1, BACKOFF_HOURS.length - 1)];
-      const nextRetryAt = new Date(Date.now() + backoffHours * 60 * 60 * 1000);
-      await db.pledge
-        .updateMany({
-          where: { id: p.id, status: "PENDING", nmiTransactionId: null },
-          data: {
-            chargedImmediately: false,
-            retryCount: newRetryCount,
-            nextRetryAt,
-          },
-        })
-        .catch(() => null);
-      result.failed++;
-    }
-  }
-  return result;
-}
 
 // Charge all PENDING DivinityCoin pledges with a saved card (pm_...)
 // for a project that has hit its goal. Mirrors captureNmiPendingPledges:
@@ -533,13 +280,11 @@ export async function GET(req: NextRequest) {
               where: {
                 status: "PENDING",
                 chargedImmediately: false,
-                // Either a Stripe payment method (legacy/Stripe campaigns),
-                // a PaymentCloud vault id (NMI campaigns), or a DC saved
-                // pm (DivinityCoin AoN saved-card flow) — anything we
-                // can actually charge.
+                // Either a Stripe payment method (legacy/Stripe campaigns)
+                // or a DC saved pm (DivinityCoin AoN saved-card flow) —
+                // anything we can actually charge.
                 OR: [
                   { NOT: { stripePaymentMethodId: null } },
-                  { NOT: { nmiCustomerVaultId: null } },
                   { NOT: { divinityCoinPaymentMethodId: null } },
                 ],
               },
@@ -611,7 +356,6 @@ export async function GET(req: NextRequest) {
                 chargedImmediately: false,
                 OR: [
                   { NOT: { stripePaymentMethodId: null } },
-                  { NOT: { nmiCustomerVaultId: null } },
                   { NOT: { divinityCoinPaymentMethodId: null } },
                 ],
               },
@@ -636,19 +380,9 @@ export async function GET(req: NextRequest) {
           cronProcessFundedCampaignsLogger.error({ err: String(err) }, `[Cron] PayPal capture error for project ${project.id}`)
         );
 
-        // Charge any PENDING PaymentCloud (NMI) vault tokens. AoN campaigns
-        // tokenize at pledge time and defer the actual sale to here.
-        const nmiResults = await captureNmiPendingPledges(project.id).catch((err) => {
-          cronProcessFundedCampaignsLogger.error(
-            { err: String(err) },
-            `[Cron] NMI capture error for project ${project.id}`
-          );
-          return { total: 0, successful: 0, failed: 0 };
-        });
-
         // Charge any PENDING DivinityCoin saved cards (pm_...). DC AoN
         // campaigns save the card via SetupIntent at pledge time and
-        // defer the off-session capture to here, mirroring the NMI flow.
+        // defer the off-session capture to here.
         const dcResults = await captureDcPendingPledges(project.id).catch((err) => {
           cronProcessFundedCampaignsLogger.error(
             { err: String(err) },
@@ -658,9 +392,9 @@ export async function GET(req: NextRequest) {
         });
 
         const pledgeResults = {
-          total: stripeResults.total + nmiResults.total + dcResults.total,
-          successful: stripeResults.successful + nmiResults.successful + dcResults.successful,
-          failed: stripeResults.failed + nmiResults.failed + dcResults.failed,
+          total: stripeResults.total + dcResults.total,
+          successful: stripeResults.successful + dcResults.successful,
+          failed: stripeResults.failed + dcResults.failed,
         };
 
         results.processed.push({
@@ -674,16 +408,6 @@ export async function GET(req: NextRequest) {
         results.totalFailed += pledgeResults.failed;
 
         cronProcessFundedCampaignsLogger.info(`[Cron] Processed funded campaign "${project.title}": ${pledgeResults.successful}/${pledgeResults.total} pledges charged`);
-
-        // PaymentCloud rolling reserve auto-trigger. Best-effort — a
-        // failure to flag here doesn't block the payout calculation,
-        // which also re-checks the trigger at GET time.
-        await evaluateProjectRollingReserve(project.id).catch((err) =>
-          cronProcessFundedCampaignsLogger.error(
-            { err: String(err), projectId: project.id },
-            "[Cron] Rolling reserve auto-trigger error"
-          )
-        );
       } catch (error) {
         cronProcessFundedCampaignsLogger.error({ err: error }, `[Cron] Error processing pledges for project ${project.id}:`);
         results.processed.push({

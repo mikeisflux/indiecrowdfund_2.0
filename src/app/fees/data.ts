@@ -1,6 +1,6 @@
 import { Shield, CheckCircle, Zap, Globe } from "lucide-react";
 
-export type PaymentMethod = "stripe" | "paypal" | "divinitycoin" | "whop" | "paymentcloud";
+export type PaymentMethod = "stripe" | "paypal" | "divinitycoin" | "whop";
 
 export const stripeFeeBreakdown = [
   {
@@ -53,37 +53,6 @@ export const paypalFeeBreakdown = [
   },
 ];
 
-export const paymentCloudFeeBreakdown = [
-  {
-    title: "Mentom Payments Processing Fee",
-    rate: "4% + $0.38",
-    description: "Per-transaction merchant account rate (incl. Customer Vault)",
-    details:
-      "Standard credit/debit card processing fee on the IndieCrowdfund Mentom Payments merchant account ($0.25 gateway + $0.13 Customer Vault per-transaction). Cards are tokenized at pledge time via Collect.js (PAN never touches our servers) and only charged when a campaign hits its goal.",
-  },
-  {
-    title: "180-Day Rolling Reserve",
-    rate: "10%",
-    description: "Held in escrow for 180 days as chargeback protection",
-    details:
-      "Mentom Payments holds 10% of gross funds (calculated before processing + platform fees) for 180 days on campaigns that raise over $2,500, plus on new or high-risk creators evaluated case-by-case during review. The full reserve is released to your payout balance after the 180-day window if no chargebacks remain. We absorb what we can on smaller campaigns; the rest is held by the processor and released back to you.",
-  },
-  {
-    title: "IndieCrowdfund Platform Fee",
-    rate: "3%",
-    description: "Charged on successfully funded campaigns only",
-    details:
-      "Applied on the remainder after Mentom Payments processing fees are deducted. Covers hosting, tools, and customer support.",
-  },
-  {
-    title: "International Wire Payout (non-US bank only)",
-    rate: "$25 + 1.50%",
-    description: "Flat wire fee plus currency conversion — only applies if your payout bank is outside the US",
-    details:
-      "Mentom Payments settles into a US merchant account. When the payout destination bank is outside the US (e.g. United Kingdom), the funds are sent by international wire transfer in the local currency, which adds a $25 flat wire fee plus a 1.50% currency conversion fee on the converted amount. US bank accounts pay $0 — they're settled via standard ACH at no additional cost.",
-  },
-];
-
 export const whopFeeBreakdown = [
   {
     title: "Whop Processing Fee",
@@ -109,29 +78,20 @@ export const comparisonData = [
     total: "~6%",
     highlight: true,
   },
-  // Legacy processor rows hidden — DivinityCoin is the active processor
-  // for new campaigns while Mentom Payments is offline.
-  // {
-  //   platform: "IndieCrowdfund (PayPal)",
-  //   platformFee: "3%",
-  //   paymentFee: "3.49% + $0.49",
-  //   total: "~6.5%",
-  //   highlight: false,
-  // },
-  // {
-  //   platform: "IndieCrowdfund (DivinityCoin)",
-  //   platformFee: "3%",
-  //   paymentFee: "3% + $0.30/txn",
-  //   total: "~6.5%",
-  //   highlight: false,
-  // },
-  // {
-  //   platform: "IndieCrowdfund (Whop)",
-  //   platformFee: "3%",
-  //   paymentFee: "3% Whop",
-  //   total: "~6%",
-  //   highlight: false,
-  // },
+  {
+    platform: "IndieCrowdfund (PayPal)",
+    platformFee: "3%",
+    paymentFee: "3.49% + $0.49",
+    total: "~6.5%",
+    highlight: false,
+  },
+  {
+    platform: "IndieCrowdfund (Whop)",
+    platformFee: "3%",
+    paymentFee: "~3% Whop",
+    total: "~6%",
+    highlight: false,
+  },
   // Stripe (Legacy) - hidden for now
   // {
   //   platform: "IndieCrowdfund (Stripe – Legacy)",

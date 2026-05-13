@@ -24,25 +24,13 @@ export interface PaymentProcessorSectionProps {
   campaignType: "ALL_OR_NOTHING" | "KEEP_IT_ALL";
   isLaunched?: boolean;
   goalAmount: number;
-  stripeFee: number;
   platformFee: number;
-  totalFees: number;
-  netAmount: number;
-  // PayPal-specific (3.49% + $0.49/txn)
   paypalFee: number;
   paypalTotalFees: number;
   paypalNetAmount: number;
-  // Whop-specific (3% Whop + 2.9% card processing)
   whopFee: number;
   whopTotalFees: number;
   whopNetAmount: number;
-  // PaymentCloud-specific (4% + $0.38/txn — NMI white-label, NSFW friendly,
-  // supports both AoN and KIA via vault tokenize/charge-on-success;
-  // per-txn includes the $0.13 Customer Vault fee)
-  paymentCloudFee: number;
-  paymentCloudPerTxnFee: number;
-  paymentCloudTotalFees: number;
-  paymentCloudNetAmount: number;
 }
 
 export interface StripeConnectSectionProps {

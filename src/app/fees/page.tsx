@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { NMI_DISABLED } from "@/lib/features";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,15 +9,15 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DollarSign, CheckCircle, ArrowRight, HelpCircle, Calculator,
-  Gift, CreditCard, Coins, ExternalLink, ArrowLeft, ShoppingBag, Cloud, Banknote,
+  Gift, CreditCard, Coins, ExternalLink, ArrowLeft, ShoppingBag, Banknote,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
 import {
   divinityCoinFeeBreakdown, paypalFeeBreakdown,
-  whopFeeBreakdown, paymentCloudFeeBreakdown, comparisonData, features, type PaymentMethod,
+  whopFeeBreakdown, comparisonData, features, type PaymentMethod,
 } from "./data";
 import {
-  calculatePayPalFees, calculateDivinityCoinFees, calculateWhopFees, calculatePaymentCloudFees,
+  calculatePayPalFees, calculateDivinityCoinFees, calculateWhopFees,
 } from "./calculations";
 
 // ─── Sub-components ────────────────────────────────────────────────────────
@@ -81,9 +80,9 @@ function TotalBadge({ color, text }: { color: string; text: string }) {
 
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]);
-  // Backer count drives per-transaction fees ($0.38/txn for Mentom Payments,
-  // $0.30/txn for Stripe/DC, $0.49/txn for PayPal). Default 1000 backers
-  // = $50/backer at $50k raised, which matches the historical default.
+  // Backer count drives per-transaction fees ($0.30/txn for DivinityCoin,
+  // $0.49/txn for PayPal). Default 1000 backers = $50/backer at $50k raised,
+  // which matches the historical default.
   const [backerSliderValue, setBackerSliderValue] = useState([1000]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("divinitycoin");
   const amount = sliderValue[0];
@@ -93,18 +92,15 @@ export default function FeesPage() {
   const divinityFees = calculateDivinityCoinFees(amount, avgPledge, numBackers);
   const paypalFees = calculatePayPalFees(amount, avgPledge, numBackers);
   const whopFees = calculateWhopFees(amount);
-  const paymentCloudFees = calculatePaymentCloudFees(amount, avgPledge, numBackers);
 
   const fees =
     paymentMethod === "paypal" ? paypalFees
     : paymentMethod === "whop" ? whopFees
-    : paymentMethod === "paymentcloud" ? paymentCloudFees
     : divinityFees;
 
   const methodLabel =
     paymentMethod === "paypal" ? "PayPal"
     : paymentMethod === "whop" ? "Whop"
-    : paymentMethod === "paymentcloud" ? "Mentom Payments"
     : "DivinityCoin";
 
   const methodColor = ({
@@ -112,7 +108,6 @@ export default function FeesPage() {
     stripe: { bg: "bg-emerald-50 dark:bg-emerald-900/20", text: "text-emerald-600 dark:text-emerald-400" },
     whop: { bg: "bg-muted/50 dark:bg-zinc-900/20", text: "text-zinc-700 dark:text-muted-foreground" },
     divinitycoin: { bg: "bg-purple-50 dark:bg-purple-900/20", text: "text-purple-600 dark:text-purple-400" },
-    paymentcloud: { bg: "bg-sky-50 dark:bg-sky-900/20", text: "text-sky-600 dark:text-sky-400" },
   } as const)[paymentMethod] ?? { bg: "bg-muted", text: "text-foreground" };
 
   return (
@@ -169,78 +164,21 @@ export default function FeesPage() {
           </div>
 
           <Tabs
-            defaultValue={NMI_DISABLED ? "divinitycoin" : "paymentcloud"}
+            defaultValue="divinitycoin"
             className="w-full"
             onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
           >
-            <TabsList className="grid w-full sm:max-w-md mx-auto grid-cols-1 mb-8">
-              {!NMI_DISABLED && (
-                <TabsTrigger value="paymentcloud" className="flex items-center gap-2">
-                  <Cloud className="h-4 w-4" /> Mentom Payments
-                </TabsTrigger>
-              )}
-              {NMI_DISABLED && (
-                <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
-                  <Banknote className="h-4 w-4" /> DivinityCoin
-                </TabsTrigger>
-              )}
-              {/* Legacy processor tabs hidden — Mentom Payments is the only processor
-                  offered for new campaigns. Backend continues to honor existing
-                  Whop/PayPal/DivinityCoin campaigns.
-              <TabsTrigger value="whop" className="flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4" /> Whop
+            <TabsList className="grid w-full sm:max-w-2xl mx-auto mb-8 grid-cols-3">
+              <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
+                <Banknote className="h-4 w-4" /> DivinityCoin
               </TabsTrigger>
               <TabsTrigger value="paypal" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" /> PayPal
               </TabsTrigger>
-              <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
-                <Coins className="h-4 w-4" /> DivinityCoin
+              <TabsTrigger value="whop" className="flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" /> Whop
               </TabsTrigger>
-              <TabsTrigger value="stripe" className="flex items-center gap-2 opacity-50">
-                <CreditCard className="h-4 w-4" /> Stripe (Legacy)
-              </TabsTrigger>
-              */}
             </TabsList>
-
-            {/* Mentom Payments */}
-            <TabsContent value="paymentcloud">
-              <div className="lg:max-w-4xl lg:mx-auto mb-8 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-6 py-12 sm:py-16 md:py-20 shadow-2xl ring-4 ring-red-500/40 animate-in fade-in zoom-in duration-500">
-                <p className="text-center text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] leading-none">
-                  100% Guaranteed
-                </p>
-                <p className="mt-3 sm:mt-4 text-center text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] leading-none">
-                  NSFW Friendly
-                </p>
-              </div>
-              <FeeBreakdownCards fees={paymentCloudFeeBreakdown} iconBg="bg-gradient-to-br from-sky-500 to-cyan-500" rateClass="bg-gradient-to-r from-sky-600 to-cyan-600 bg-clip-text text-transparent" Icon={Cloud} />
-              <Card className="mt-8 lg:max-w-4xl lg:mx-auto border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-900/10">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/30">
-                      <Cloud className="h-6 w-6 text-sky-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is Mentom Payments?</h3>
-                      <p className="text-sm text-zinc-600 dark:text-muted-foreground mb-3">
-                        Mentom Payments is a high-risk friendly merchant account on the NMI gateway. Backers enter their card directly on your campaign page — the card is securely tokenized in the browser via Collect.js (PAN never touches our servers) and only charged when your campaign hits its funding goal.
-                      </p>
-                      <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows (example: $100 pledge):</h4>
-                      <ol className="text-sm text-zinc-600 dark:text-muted-foreground space-y-1 list-decimal list-inside mb-4">
-                        <li>Backer enters their card at checkout — instantly tokenized via Collect.js</li>
-                        <li>Card is stored in Mentom Payments&apos;s vault, no charge yet</li>
-                        <li>When your campaign funds, we charge the saved card</li>
-                        <li>Mentom Payments processing (4% of $100 = $4.00) deducted at settlement</li>
-                        <li>Per-transaction fee ($0.38 × 1 txn = $0.38) deducted at settlement</li>
-                        <li>Platform fee (3% of $95.62 = $2.87) deducted at settlement</li>
-                        <li>You receive <strong>$92.88</strong> deposited to your bank account</li>
-                      </ol>
-                      <p className="text-xs text-muted-foreground">Mentom Payments supports both <strong>All-or-Nothing</strong> and <strong>Keep-It-All</strong> campaigns. Cards are only charged on campaign success — failed campaigns trigger zero fees and zero charges.</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <TotalBadge color="bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400" text="Total fees with Mentom Payments: approximately 7.5% of funds raised" />
-            </TabsContent>
 
             {/* Whop */}
             <TabsContent value="whop">
@@ -367,25 +305,6 @@ export default function FeesPage() {
 
           <Card className="mt-12 glass-card border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: "100ms" }}>
             <CardContent className="p-8">
-              {/* Payment method toggle */}
-              <div className="flex justify-center mb-6">
-                <div className="inline-flex rounded-lg border p-1 bg-white dark:bg-zinc-800 flex-wrap gap-1">
-                  {(["paymentcloud"] as PaymentMethod[]).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setPaymentMethod(m)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                        paymentMethod === m
-                          ? "bg-muted text-zinc-700 dark:bg-zinc-700 dark:text-muted-foreground"
-                          : "text-zinc-600 hover:text-zinc-900 dark:text-muted-foreground"
-                      }`}
-                    >
-                      {m === "divinitycoin" ? "DivinityCoin" : m === "paymentcloud" ? "Mentom Payments" : m.charAt(0).toUpperCase() + m.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Amount slider */}
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-4">
@@ -441,21 +360,6 @@ export default function FeesPage() {
                         <span className="text-red-500">-${paypalFees.processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </>
-                  ) : paymentMethod === "paymentcloud" ? (
-                    <>
-                      <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">Mentom Payments processing (4%)</span>
-                        <span className="text-red-500">-${paymentCloudFees.paymentCloudFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">Per-transaction fee ($0.38/txn)</span>
-                        <span className="text-red-500">-${paymentCloudFees.perTransactionFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">Platform fee (3% of net)</span>
-                        <span className="text-red-500">-${paymentCloudFees.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    </>
                   ) : paymentMethod === "whop" ? (
                     <>
                       <div className="flex justify-between py-2 border-b">
@@ -508,21 +412,18 @@ export default function FeesPage() {
               <div className="mt-8 pt-8 border-t">
                 <h4 className="text-sm font-medium text-muted-foreground mb-4">Compare with other platforms at ${amount.toLocaleString()}</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  <div className={`text-center p-3 rounded-lg transition-all ring-2 ring-sky-400 bg-sky-50 dark:bg-sky-900/30`}>
-                    <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (Mentom Payments)</div>
-                    <div className="font-bold text-sky-600">${paymentCloudFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                  </div>
-                  {/* Legacy processor comparison cells hidden — Mentom Payments is the
-                      only processor offered for new campaigns.
-                  <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "whop" ? "ring-2 ring-zinc-400 bg-muted dark:bg-zinc-700" : "bg-muted dark:bg-zinc-800"}`}>
-                    <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (Whop)</div>
-                    <div className="font-bold text-zinc-700 dark:text-muted-foreground">${whopFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "divinitycoin" ? "ring-2 ring-purple-400 bg-purple-50 dark:bg-purple-900/30" : "bg-purple-50 dark:bg-purple-900/20"}`}>
+                    <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (DivinityCoin)</div>
+                    <div className="font-bold text-purple-600">${divinityFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
                   <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "paypal" ? "ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-900/30" : "bg-blue-50 dark:bg-blue-900/20"}`}>
                     <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (PayPal)</div>
                     <div className="font-bold text-blue-600">${paypalFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
-                  */}
+                  <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "whop" ? "ring-2 ring-zinc-400 bg-muted dark:bg-zinc-700" : "bg-muted dark:bg-zinc-800"}`}>
+                    <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (Whop)</div>
+                    <div className="font-bold text-zinc-700 dark:text-muted-foreground">${whopFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  </div>
                   <div className="text-center p-3 bg-muted dark:bg-zinc-800 rounded-lg">
                     <div className="text-xs text-muted-foreground mb-1">Kickstarter</div>
                     <div className="font-bold text-zinc-600 dark:text-muted-foreground">${(amount * 0.92).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
@@ -626,13 +527,13 @@ export default function FeesPage() {
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold">What payment processor does IndieCrowdfund use?</h3>
               <p className="mt-2 text-zinc-600 dark:text-muted-foreground">
-                All new campaigns are processed through Mentom Payments (~7.5% total: 4% + $0.38/txn processing + 3% platform fee). Mentom Payments supports all content types including NSFW/adult projects, both All-or-Nothing and Keep-It-All campaign styles, and tokenizes cards in your browser via Collect.js so card data never touches our servers.
+                DivinityCoin is the recommended processor; PayPal and Whop are also supported. DivinityCoin and Whop both accept all content types including NSFW/adult projects, while PayPal Advanced Checkout offers the broadest backer reach via wallet and inline card payments. Choose the processor that best fits your campaign during setup.
               </p>
             </div>
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold">How quickly will I receive my funds?</h3>
               <p className="mt-2 text-zinc-600 dark:text-muted-foreground">
-                Funds settle to your bank account on Mentom Payments&apos;s standard merchant schedule (typically within 1–2 business days of capture for funded campaigns).
+                Funds settle to your bank account on your chosen processor&apos;s standard payout schedule once your campaign has been successfully funded — typically within a few business days of capture.
               </p>
             </div>
           </div>

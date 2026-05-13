@@ -6,7 +6,6 @@ import { auth } from "@/lib/auth";
 import { db as prisma } from "@/lib/db";
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
-import { NMI_DISABLED, NMI_DISABLED_MESSAGE } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 

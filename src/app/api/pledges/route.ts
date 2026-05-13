@@ -6,7 +6,6 @@ import { createStripePayment, checkAndUpdateStripeOnboarding } from "@/lib/payme
 import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
 import { createPayPalPayment } from "@/lib/payments/paypal";
 import { createWhopPayment } from "@/lib/payments/whop";
-import { NMI_DISABLED, NMI_DISABLED_MESSAGE } from "@/lib/features";
 import { isEmailVerificationRequired } from "@/lib/email";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
@@ -43,11 +42,6 @@ const createPledgeSchema = z.object({
     country: z.string().max(10),
     phone: z.string().max(30).optional(),
   }).optional(),
-  // PaymentCloud-only: Collect.js payment_token from the browser. The
-  // PAN never touches our server — we exchange the single-use token
-  // for a stable Customer Vault id server-side, then either save it
-  // for charge-on-success (AoN) or sell against it immediately (KIA).
-  paymentToken: z.string().min(1).max(200).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -146,11 +140,9 @@ export async function POST(req: NextRequest) {
 
       // Address-required gate. If anything in this cart ships, the
       // backer must have a saved address. Shipping cost is calculated
-      // against the saved profile address; the resulting Pledge row
-      // also needs shippingAddress so confirm-nmi can run AVS for
-      // PaymentCloud sales. We auto-attach the user's default address
-      // to the pledge when they have one — clients don't need to
-      // re-send it.
+      // against the saved profile address. We auto-attach the user's
+      // default address to the pledge when they have one — clients
+      // don't need to re-send it.
       const cartHasShipping =
         (reward && reward.shippingType !== "NO_SHIPPING") ||
         addonShippingTypes.some((t) => t !== "NO_SHIPPING");
@@ -477,194 +469,6 @@ export async function POST(req: NextRequest) {
             { status: 502 }
           );
         }
-      }
-
-      // PaymentCloud (NMI white-label) payment processor.
-      //
-      // Two-phase to match the other processors:
-      //   1. Here: create the PENDING pledge row, return the public
-      //      tokenization key + pledgeId so the browser can load
-      //      Collect.js and tokenize the card.
-      //   2. POST /api/pledges/[pledgeId]/confirm-nmi: client posts the
-      //      payment_token from Collect.js → server adds to Customer
-      //      Vault, optionally charges (KIA), updates pledge.
-      // No card data ever touches our server — the PAN goes straight
-      // from Collect.js into PaymentCloud's vault.
-      //
-      // Concurrency: the read-modify-write below is wrapped in a Postgres
-      // transaction with a (userId, projectId)-keyed advisory lock so
-      // concurrent "Back this project" double-clicks serialize and
-      // produce exactly one PENDING pledge. External calls (NMI vault
-      // cleanup) happen AFTER commit so we don't hold the lock across
-      // a network round-trip.
-      if (project.paymentProcessor === "NMI") {
-        // Rail disabled — PaymentCloud merchant account was cancelled.
-        // Refuse new pledges instead of routing into a dead processor.
-        // Existing NMI pledge data is untouched.
-        if (NMI_DISABLED) {
-          return NextResponse.json({ error: NMI_DISABLED_MESSAGE }, { status: 503 });
-        }
-        // Load NMI config OUTSIDE the lock — it only reads
-        // platformSettings and doesn't need transactional consistency
-        // with the pledge create. Fail fast if not configured.
-        const { loadNmiConfig, deleteVaultCustomer } = await import("@/lib/nmi");
-        const nmiConfig = await loadNmiConfig();
-        if (!nmiConfig?.publicKey) {
-          pledgeLogger.error(
-            { correlationId, projectId: data.projectId },
-            "PaymentCloud not configured (no public key) but project is NMI"
-          );
-          return NextResponse.json(
-            { error: "Payment processor not configured. Please contact support." },
-            { status: 502 }
-          );
-        }
-
-        // Pre-compute reward + addon amounts (read-only, no races).
-        const rewardAmountValue = reward ? Number(reward.amount) : 0;
-        const rewardAmount = isNaN(rewardAmountValue) ? 0 : rewardAmountValue;
-        const addonIds = addonsWithQuantity.map((a) => a.id);
-        const addonRecords = addonIds.length > 0
-          ? await db.reward.findMany({
-              where: { id: { in: addonIds } },
-              select: { id: true, amount: true },
-            })
-          : [];
-        const addonAmountMap = new Map(addonRecords.map((a) => [a.id, Number(a.amount)]));
-        const addonsAmountValue = addonsWithQuantity.reduce(
-          (sum, a) => sum + (addonAmountMap.get(a.id) || 0) * a.quantity,
-          0
-        );
-        const addonsAmount = isNaN(addonsAmountValue) ? 0 : addonsAmountValue;
-        const shippingAmount = data.shippingAmount || 0;
-
-        // Sentinel error type so the transaction can short-circuit with
-        // a typed message that we surface to the client. Throwing any
-        // other error type rolls the transaction back as a 500.
-        type NmiCreateOutcome =
-          | { kind: "completed_already" }
-          | {
-              kind: "ok";
-              pledgeId: string;
-              orphanedVaultIds: string[];
-            };
-
-        let outcome: NmiCreateOutcome;
-        try {
-          outcome = await db.$transaction<NmiCreateOutcome>(async (tx) => {
-            // Serialize concurrent NMI pledge creates from the same
-            // (userId, projectId). Lock is auto-released on commit/rollback.
-            const lockKey = `nmi-pledge-${session.user.id}-${data.projectId}`;
-            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
-
-            const completed = await tx.pledge.findFirst({
-              where: {
-                userId: session.user.id,
-                deletedAt: null,
-                projectId: data.projectId,
-                paymentProcessor: "NMI",
-                status: "COMPLETED",
-              },
-              select: { id: true },
-            });
-            if (completed) return { kind: "completed_already" };
-
-            // Atomically delete any PENDING rows for this user/project
-            // and capture their vault ids for cleanup-after-commit.
-            const pendingRows = await tx.pledge.findMany({
-              where: {
-                userId: session.user.id,
-                deletedAt: null,
-                projectId: data.projectId,
-                paymentProcessor: "NMI",
-                status: "PENDING",
-              },
-              select: { id: true, nmiCustomerVaultId: true },
-            });
-            const orphanedVaultIds = pendingRows
-              .map((p) => p.nmiCustomerVaultId)
-              .filter((v): v is string => !!v);
-            if (pendingRows.length > 0) {
-              const pendingIds = pendingRows.map((p) => p.id);
-              await tx.pledgeAddon.deleteMany({ where: { pledgeId: { in: pendingIds } } });
-              await tx.pledge.deleteMany({ where: { id: { in: pendingIds } } });
-            }
-
-            const created = await tx.pledge.create({
-              data: {
-                userId: session.user.id,
-                projectId: data.projectId,
-                rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
-                amount: data.amount,
-                rewardAmount,
-                addonsAmount,
-                shippingAmount,
-                status: "PENDING",
-                paymentProcessor: "NMI",
-                chargedImmediately: false,
-                shippingAddress: resolvedShippingAddress
-                  ? (resolvedShippingAddress as unknown as Record<string, unknown>)
-                  : undefined,
-                ...(sourceCampaignId ? { sourceCampaignId } : {}),
-              },
-              select: { id: true },
-            });
-
-            if (addonsWithQuantity.length > 0) {
-              await tx.pledgeAddon.createMany({
-                data: addonsWithQuantity.map((a) => ({
-                  pledgeId: created.id,
-                  addonId: a.id,
-                  quantity: a.quantity,
-                  amount: (addonAmountMap.get(a.id) || 0) * a.quantity,
-                })),
-              });
-            }
-
-            return { kind: "ok", pledgeId: created.id, orphanedVaultIds };
-          });
-        } catch (err) {
-          pledgeLogger.error(
-            { correlationId, err: err instanceof Error ? err.message : String(err) },
-            "NMI pledge create transaction error"
-          );
-          return NextResponse.json(
-            { error: "Failed to create pledge. Please try again." },
-            { status: 500 }
-          );
-        }
-
-        if (outcome.kind === "completed_already") {
-          return NextResponse.json(
-            { error: "You have already backed this project" },
-            { status: 400 }
-          );
-        }
-
-        // Fire-and-forget vault cleanup for any orphaned PENDING vault
-        // entries we just deleted. Failures here only leak entries
-        // inside PaymentCloud's vault — no creator/backer impact.
-        if (outcome.orphanedVaultIds.length > 0) {
-          pledgeLogger.info(
-            { correlationId, orphanedVaultIds: outcome.orphanedVaultIds },
-            "Cleaning up orphaned PENDING NMI vault entries"
-          );
-          void Promise.allSettled(
-            outcome.orphanedVaultIds.map((id) =>
-              deleteVaultCustomer(nmiConfig, id).catch(() => null)
-            )
-          );
-        }
-
-        metrics.pledgesCreated.inc({ status: "pending", processor: "nmi" });
-        return NextResponse.json({
-          paymentMethod: "NMI",
-          type: "nmi_tokenize",
-          pledgeId: outcome.pledgeId,
-          publicKey: nmiConfig.publicKey,
-          isKeepItAll: project.campaignType === "KEEP_IT_ALL",
-          chargedImmediately: false,
-        });
       }
 
       // Whop payment processor

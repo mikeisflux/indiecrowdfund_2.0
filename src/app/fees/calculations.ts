@@ -25,12 +25,6 @@ export interface WhopFeeResult extends FeeResult {
   platformFee: number;
 }
 
-export interface PaymentCloudFeeResult extends FeeResult {
-  paymentCloudFee: number;
-  perTransactionFee: number;
-  platformFee: number;
-}
-
 // 3% platform + 2.9% + $0.30 per transaction
 export function calculateStripeFees(
   amount: number,
@@ -82,29 +76,4 @@ export function calculateWhopFees(amount: number): WhopFeeResult {
   const totalFees = whopFee + platformFee;
   const youReceive = amount - totalFees;
   return { whopFee, platformFee, totalFees, youReceive, feePercentage: (totalFees / amount) * 100 };
-}
-
-// 4% PaymentCloud + $0.38 per transaction ($0.25 NMI gateway + $0.13 Customer Vault),
-// then 3% platform fee on the remainder
-export function calculatePaymentCloudFees(
-  amount: number,
-  averagePledge = 50,
-  numTransactions?: number
-): PaymentCloudFeeResult {
-  const paymentCloudFee = amount * 0.04;
-  const txns = numTransactions ?? Math.ceil(amount / averagePledge);
-  // $0.25 NMI gateway + $0.13 Customer Vault per-txn (tokenizes every card).
-  const perTransactionFee = txns * 0.38;
-  const afterProcessor = amount - paymentCloudFee - perTransactionFee;
-  const platformFee = afterProcessor * 0.03;
-  const totalFees = paymentCloudFee + perTransactionFee + platformFee;
-  const youReceive = amount - totalFees;
-  return {
-    paymentCloudFee,
-    perTransactionFee,
-    platformFee,
-    totalFees,
-    youReceive,
-    feePercentage: (totalFees / amount) * 100,
-  };
 }

@@ -108,13 +108,6 @@ export function ProjectsTable({
         </Badge>
       );
     }
-    if (project.paymentProcessor === "NMI") {
-      return (
-        <Badge variant="outline" className="text-xs text-sky-600 border-sky-600">
-          PaymentCloud
-        </Badge>
-      );
-    }
     if (project.paymentProcessor === "PAYPAL") {
       return (
         <Badge variant="outline" className="text-xs text-[#003087] border-[#003087]">
