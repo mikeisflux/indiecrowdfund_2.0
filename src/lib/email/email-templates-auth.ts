@@ -135,7 +135,12 @@ export async function sendVerificationEmail(
   userName: string,
   verificationToken: string
 ) {
-  const verifyUrl = `${APP_URL}/verify-email?token=${verificationToken}`;
+  // Include both token AND email in the URL so the verify-email page
+  // can validate without an extra DB round-trip. The page used to
+  // hard-error with "Token or email is missing" for any link that
+  // omitted email — this email template was the only sender that
+  // dropped it, leaving every brand-new signup unable to verify.
+  const verifyUrl = `${APP_URL}/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
   const html = `
     <!DOCTYPE html>

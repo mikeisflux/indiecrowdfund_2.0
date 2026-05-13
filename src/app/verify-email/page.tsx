@@ -18,16 +18,19 @@ function VerifyEmailContent() {
 
   useEffect(() => {
     async function verifyEmail() {
-      if (!token || !email) {
+      // Token alone is sufficient — older signup emails only included
+      // ?token=... and the API now derives the email from the row.
+      // We still pass email when present to skip the lookup.
+      if (!token) {
         setStatus("error");
-        setMessage("Invalid verification link. Token or email is missing.");
+        setMessage("Invalid verification link. Token is missing.");
         return;
       }
 
       try {
-        const response = await fetch(
-          `/api/user/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`
-        );
+        const params = new URLSearchParams({ token });
+        if (email) params.set("email", email);
+        const response = await fetch(`/api/user/verify-email?${params}`);
         const data = await response.json();
 
         if (response.ok && data.success) {

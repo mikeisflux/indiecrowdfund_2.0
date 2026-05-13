@@ -166,6 +166,36 @@ export default function PrelaunchPage() {
     fetchProject();
   }, [vanityname, slug, sessionStatus, session?.user?.id, session?.user?.role, projectPath]);
 
+  // While a visitor is sitting on the prelaunch page, poll the project
+  // status every 30s and bounce them to the live campaign URL the
+  // moment status flips to LIVE / FUNDED. The initial fetchProject
+  // redirect handles arrivals on an already-live URL; this handles
+  // the in-page transition (creator hits Launch while subscribers are
+  // still on the prelaunch landing page).
+  useEffect(() => {
+    if (!project || project.status === "LIVE" || project.status === "FUNDED") return;
+
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/projects/vanity/${vanityname}/${slug}/stats`);
+        if (!r.ok) return;
+        const stats = await r.json();
+        if (cancelled) return;
+        if (stats.status === "LIVE" || stats.status === "FUNDED") {
+          window.location.href = projectPath;
+        }
+      } catch {
+        // Transient network errors are fine — next poll will retry.
+      }
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [project, vanityname, slug, projectPath]);
+
   const handleSubscribe = async () => {
     if (!session?.user) {
       // Redirect to login page with return URL

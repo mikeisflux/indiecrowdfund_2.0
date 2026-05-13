@@ -240,13 +240,32 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("token");
-    const email = searchParams.get("email");
+    let email = searchParams.get("email");
 
-    if (!token || !email) {
+    if (!token) {
       return NextResponse.json(
-        { error: "Token and email are required" },
+        { error: "Verification token is required" },
         { status: 400 }
       );
+    }
+
+    // Backwards compatibility: older signup verification emails went
+    // out with only ?token=... and no &email=... So if email is
+    // missing, look it up by the token alone — verificationToken.token
+    // is a random 32-byte hex string, unique by construction. Once we
+    // know the row, we know the identifier (email).
+    if (!email) {
+      const tokenRow = await db.verificationToken.findFirst({
+        where: { token },
+        select: { identifier: true },
+      });
+      if (!tokenRow) {
+        return NextResponse.json(
+          { error: "Invalid or expired verification link" },
+          { status: 400 }
+        );
+      }
+      email = tokenRow.identifier;
     }
 
     // Find the verification token

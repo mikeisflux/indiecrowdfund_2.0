@@ -137,119 +137,160 @@ export function ConsentBanner() {
 
   if (!isVisible || !content) return null;
 
-  return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-500">
-      <div className="mx-auto max-w-7xl px-4 pb-4">
-        <div className="rounded-xl border border-border bg-background/95 backdrop-blur-lg shadow-2xl p-4 sm:p-6">
-          <div className="flex flex-col gap-3">
-            {/* Main message */}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm mb-1">{content.heading}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {content.message}
+  // First link in admin-config is treated as the primary "Learn more"
+  // target. Falls back to /privacy-policy if nothing is configured so
+  // the link isn't broken on a clean install.
+  const primaryLink = content.links?.[0];
+  const learnMoreHref = primaryLink?.url || "/privacy-policy";
+  const learnMoreLabel = primaryLink?.label || "Learn more";
+
+  // Compact mode (default): single-line bar with OK + Learn more.
+  // Mobile users were getting buried under the old multi-paragraph
+  // banner — the previous version stacked 4 paragraphs of policy
+  // text + 3 inline links + 3 buttons + a 4-toggle preferences grid,
+  // which on a 360px-wide screen filled half the viewport and made
+  // the "Accept All" button fall below the fold. The redesign pushes
+  // all of that detail behind a single tap on "Manage" so the default
+  // tap target (Accept) is always reachable in one thumb stroke.
+  if (!showPreferences) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-500">
+        <div className="mx-auto max-w-3xl px-2 pb-2 sm:px-4 sm:pb-4">
+          <div className="rounded-lg border border-border bg-background/95 backdrop-blur-lg shadow-lg px-3 py-2 sm:px-4 sm:py-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <p className="flex-1 min-w-0 text-xs sm:text-sm text-muted-foreground leading-snug">
+                We use cookies to improve your experience.{" "}
+                <Link
+                  href={learnMoreHref}
+                  className="text-primary hover:underline whitespace-nowrap"
+                  target={learnMoreHref.startsWith("http") ? "_blank" : undefined}
+                  rel={learnMoreHref.startsWith("http") ? "noopener noreferrer" : undefined}
+                >
+                  {learnMoreLabel}
+                </Link>
               </p>
-              {content.links && content.links.length > 0 && (
-                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                  {content.links.map((link, i) => (
-                    <Link
-                      key={i}
-                      href={link.url}
-                      className="text-xs text-primary hover:underline"
-                      target={link.url.startsWith("http") ? "_blank" : undefined}
-                      rel={link.url.startsWith("http") ? "noopener noreferrer" : undefined}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Expandable preferences */}
-            {showPreferences && (
-              <div className="border-t border-border pt-3 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Essential - always on */}
-                  <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50">
-                    <div>
-                      <p className="text-xs font-medium">Essential</p>
-                      <p className="text-[11px] text-muted-foreground">Session, security, authentication</p>
-                    </div>
-                    <Switch checked disabled className="opacity-60" />
-                  </div>
-
-                  {/* Analytics */}
-                  <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50">
-                    <div>
-                      <p className="text-xs font-medium">Analytics</p>
-                      <p className="text-[11px] text-muted-foreground">Page views, scroll depth, usage stats</p>
-                    </div>
-                    <Switch
-                      checked={preferences.analytics}
-                      onCheckedChange={(checked) =>
-                        setPreferences({ ...preferences, analytics: checked })
-                      }
-                    />
-                  </div>
-
-                  {/* AI Tracking */}
-                  <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50">
-                    <div>
-                      <p className="text-xs font-medium">AI & Personalization</p>
-                      <p className="text-[11px] text-muted-foreground">Recommendations, AI-powered features</p>
-                    </div>
-                    <Switch
-                      checked={preferences.aiTracking}
-                      onCheckedChange={(checked) =>
-                        setPreferences({ ...preferences, aiTracking: checked })
-                      }
-                    />
-                  </div>
-
-                  {/* Marketing */}
-                  <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50">
-                    <div>
-                      <p className="text-xs font-medium">Marketing</p>
-                      <p className="text-[11px] text-muted-foreground">Promotional communications, retargeting</p>
-                    </div>
-                    <Switch
-                      checked={preferences.marketing}
-                      onCheckedChange={(checked) =>
-                        setPreferences({ ...preferences, marketing: checked })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Buttons */}
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowPreferences(!showPreferences)}
-                className="text-xs"
+                onClick={() => setShowPreferences(true)}
+                className="hidden sm:inline-flex text-xs h-8 px-2"
               >
-                {showPreferences ? "Hide Preferences" : "Manage Preferences"}
+                Manage
               </Button>
-              {showPreferences && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSavePreferences}
-                >
-                  Save Preferences
-                </Button>
-              )}
               <Button
                 onClick={handleAcceptAll}
                 size="sm"
-                className="shrink-0 whitespace-nowrap"
+                className="shrink-0 whitespace-nowrap h-8"
               >
-                {content.acceptButtonText || "Accept All"}
+                OK
               </Button>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded mode: full preferences panel reachable from the "Manage"
+  // button on desktop. Still mounted at the bottom but with a backdrop
+  // so it's clearly modal — easier to dismiss than the prior inline
+  // version that just kept growing the bar in place.
+  return (
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-2xl rounded-xl border border-border bg-background shadow-2xl p-4 sm:p-6 animate-in slide-in-from-bottom duration-300">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h3 className="font-semibold text-base mb-1">{content.heading}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {content.message}
+            </p>
+            {content.links && content.links.length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                {content.links.map((link, i) => (
+                  <Link
+                    key={i}
+                    href={link.url}
+                    className="text-xs text-primary hover:underline"
+                    target={link.url.startsWith("http") ? "_blank" : undefined}
+                    rel={link.url.startsWith("http") ? "noopener noreferrer" : undefined}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-border pt-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50">
+                <div>
+                  <p className="text-xs font-medium">Essential</p>
+                  <p className="text-[11px] text-muted-foreground">Session, security, authentication</p>
+                </div>
+                <Switch checked disabled className="opacity-60" />
+              </div>
+              <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50">
+                <div>
+                  <p className="text-xs font-medium">Analytics</p>
+                  <p className="text-[11px] text-muted-foreground">Page views, scroll depth, usage stats</p>
+                </div>
+                <Switch
+                  checked={preferences.analytics}
+                  onCheckedChange={(checked) =>
+                    setPreferences({ ...preferences, analytics: checked })
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50">
+                <div>
+                  <p className="text-xs font-medium">AI &amp; Personalization</p>
+                  <p className="text-[11px] text-muted-foreground">Recommendations, AI-powered features</p>
+                </div>
+                <Switch
+                  checked={preferences.aiTracking}
+                  onCheckedChange={(checked) =>
+                    setPreferences({ ...preferences, aiTracking: checked })
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50">
+                <div>
+                  <p className="text-xs font-medium">Marketing</p>
+                  <p className="text-[11px] text-muted-foreground">Promotional communications, retargeting</p>
+                </div>
+                <Switch
+                  checked={preferences.marketing}
+                  onCheckedChange={(checked) =>
+                    setPreferences({ ...preferences, marketing: checked })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPreferences(false)}
+            >
+              Back
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSavePreferences}
+            >
+              Save Preferences
+            </Button>
+            <Button
+              onClick={handleAcceptAll}
+              size="sm"
+              className="shrink-0 whitespace-nowrap"
+            >
+              {content.acceptButtonText || "Accept All"}
+            </Button>
           </div>
         </div>
       </div>
