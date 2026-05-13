@@ -299,12 +299,56 @@ export async function GET() {
         };
       });
 
+    // Surface any NMI pledges where the funded-campaign charge failed
+    // (or 5 cron retries gave up). These need self-service retry from
+    // the backer — the dashboard renders a banner with a Retry CTA so
+    // it's impossible to miss.
+    const failedNmiPledges = await db.pledge.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        paymentProcessor: "NMI",
+        OR: [
+          { status: "FAILED" },
+          { status: "PENDING", lastFailureReason: { not: null }, retryCount: { gt: 0 } },
+        ],
+      },
+      select: {
+        id: true,
+        amount: true,
+        status: true,
+        lastFailureReason: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            creator: { select: { vanityUrl: true } },
+          },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const pledgesNeedingRetry = failedNmiPledges.map((p) => ({
+      id: p.id,
+      amount: Number(p.amount),
+      status: p.status,
+      lastFailureReason: p.lastFailureReason,
+      projectTitle: p.project.title,
+      projectUrl: p.project.creator?.vanityUrl
+        ? `/projects/${p.project.creator.vanityUrl}/${p.project.slug}`
+        : `/projects/${p.project.slug}`,
+      retryUrl: `/dashboard/pledges/${p.id}/retry-payment`,
+    }));
+
     return NextResponse.json({
       user: {
         name: user?.name || null,
       },
       backedProjects,
       savedProjects: processedSavedProjects,
+      pledgesNeedingRetry,
       stats: {
         totalBacked,
         totalPledged: Math.round(totalPledged * 100) / 100,

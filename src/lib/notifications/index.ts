@@ -23,6 +23,7 @@ export {
 export {
   notifyPledgeReceived,
   notifyPledgeFailed,
+  notifyNmiChargeFailed,
   notifyPledgeShipped,
   notifyPledgeDelivered,
   notifyBackerPledgeConfirmed,

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { sendPledgeConfirmationEmail, sendPledgeModificationEmail, sendPledgeCancellationEmail } from "@/lib/email";
 import { sendRefundRequestDecisionEmail } from "@/lib/email/email-templates-pledge";
+import { sendPledgeChargeFailedEmail } from "./email-templates";
 import { createNotification } from "./core";
 import type { NotificationType } from "./types";
 
@@ -67,6 +68,69 @@ export async function notifyPledgeFailed(
     actionUrl: pledgeUrl,
     projectId,
   });
+}
+
+/**
+ * Notify a backer that their NMI charge attempt failed and they can
+ * self-service retry via the dashboard. Sends an in-app notification
+ * AND the transactional email with the retry link.
+ *
+ * The cron calls this on the FIRST decline only (when retryCount
+ * transitions from 0 → 1). Subsequent backoff retries don't re-notify
+ * — the backer already knows. We rely on retryCount to dedupe so we
+ * don't need a separate schema field.
+ */
+export async function notifyNmiChargeFailed(pledgeId: string) {
+  const pledge = await db.pledge.findFirst({
+    where: { id: pledgeId, deletedAt: null },
+    select: {
+      id: true,
+      userId: true,
+      amount: true,
+      lastFailureReason: true,
+      project: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          creator: { select: { vanityUrl: true } },
+        },
+      },
+      user: { select: { email: true, name: true } },
+    },
+  });
+  if (!pledge) return;
+
+  const retryUrl = `/dashboard/pledges/${pledge.id}/retry-payment`;
+
+  // In-app notification (always)
+  await createNotification({
+    userId: pledge.userId,
+    type: "PLEDGE_FAILED",
+    title: "Payment failed",
+    message: `Your pledge for "${pledge.project.title}" could not be charged. Tap here to update your card.`,
+    actionUrl: retryUrl,
+    projectId: pledge.project.id,
+  });
+
+  // Email with retry link
+  if (pledge.user.email) {
+    try {
+      await sendPledgeChargeFailedEmail(
+        pledge.user.email,
+        pledge.user.name || "Backer",
+        pledge.project.title,
+        pledge.id,
+        Number(pledge.amount),
+        pledge.lastFailureReason
+      );
+    } catch (err) {
+      notificationsPledgeNotificationsLogger.error(
+        { err: String(err), pledgeId: pledge.id },
+        "Failed to send NMI charge-failed email"
+      );
+    }
+  }
 }
 
 /**

@@ -7,6 +7,7 @@ import { processPendingPledgesForProject, getStripeInstance } from "@/lib/paymen
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import { loadNmiConfig, saleByVaultToken } from "@/lib/nmi";
 import { finalizeNmiPledge } from "@/lib/payments/nmi/finalize-pledge";
+import { notifyNmiChargeFailed } from "@/lib/notifications";
 import { chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
 import { evaluateAutoTrigger } from "@/lib/payments/rolling-reserve";
 
@@ -205,6 +206,23 @@ async function captureNmiPendingPledges(projectId: string): Promise<{
               lastFailureReason: sale.responsetext || "Mentom Payments declined",
             },
           });
+        }
+        // Notify the backer on the FIRST failure (retryCount was 0 →
+        // newRetryCount = 1) so they can self-service retry via the
+        // /dashboard/pledges/[id]/retry-payment page. Subsequent
+        // cron backoff retries don't re-notify — the backer already
+        // knows and the cron will keep trying its 5-attempt budget
+        // in the background. If they retry manually and succeed,
+        // the pledge moves to COMPLETED and the cron stops touching
+        // it. Fire-and-forget; do NOT block the cron loop on email
+        // delivery.
+        if (newRetryCount === 1) {
+          notifyNmiChargeFailed(p.id).catch((err) =>
+            cronProcessFundedCampaignsLogger.error(
+              { pledgeId: p.id, err: err instanceof Error ? err.message : String(err) },
+              "[Cron] Failed to notify backer of NMI charge failure"
+            )
+          );
         }
         result.failed++;
       }

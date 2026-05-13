@@ -331,6 +331,79 @@ export async function sendNewCommentEmail(
 }
 
 /**
+ * Notify a backer that their NMI charge failed at funded-campaign
+ * time and surface the self-service retry link. Hits the
+ * /dashboard/pledges/[pledgeId]/retry-payment page where they can
+ * tokenize a new card via Collect.js and complete their pledge
+ * without losing any of their reward / addon / survey progress.
+ */
+export async function sendPledgeChargeFailedEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  pledgeId: string,
+  amount: number,
+  failureReason: string | null
+) {
+  const retryUrl = `${APP_URL}/dashboard/pledges/${pledgeId}/retry-payment`;
+  const reasonLine = failureReason
+    ? `<p style="margin: 0 0 12px 0; color: #b45309;">Reason from your bank: ${escapeHtml(failureReason)}</p>`
+    : "";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pledge payment needs attention</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #92400e;">Your pledge payment didn&apos;t go through</h2>
+          <p>Hi ${escapeHtml(backerName)},</p>
+          <p>
+            Your pledge to <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong> for
+            <strong>$${amount.toFixed(2)}</strong> couldn&apos;t be charged when the campaign hit its goal.
+          </p>
+          ${reasonLine}
+          <p>
+            Click below to update your card and complete your pledge.
+            <strong>Your reward selection, add-ons, shipping address, and backer number are
+            all preserved</strong> — you only need to enter new card details.
+          </p>
+
+          <div style="text-align: center; margin: 28px 0 8px 0;">
+            <a href="${retryUrl}" style="display: inline-block; background: #b45309; color: #fff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+              Update Card &amp; Complete Pledge
+            </a>
+          </div>
+          <p style="color: #92400e; font-size: 13px; text-align: center; margin-top: 0;">
+            Direct link: <a href="${retryUrl}" style="color: #b45309;">${retryUrl}</a>
+          </p>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because you backed this project on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Action needed: complete your pledge for "${projectTitle}"`,
+    html,
+    skipUnsubscribeCheck: true, // Transactional — backer needs to act on this
+  });
+}
+
+/**
  * Send marketplace purchase confirmation email to buyer
  */
 export async function sendMarketplacePurchaseEmail(
