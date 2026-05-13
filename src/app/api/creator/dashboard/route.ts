@@ -262,6 +262,8 @@ export async function GET(req: NextRequest) {
           shippingAmount: true,
           createdAt: true,
           fulfillmentStatus: true,
+          paymentProcessor: true,
+          confirmationEmailSent: true,
           shippingAddress: true, // JSON field containing { name, line1, city, state, postalCode, country }
           user: {
             select: {
@@ -736,6 +738,17 @@ export async function GET(req: NextRequest) {
         id: pledge.id,
         status: pledge.status,
         fulfillmentStatus: pledge.fulfillmentStatus || "NOT_STARTED",
+        // True for migrated NMI → DC pledges that are still awaiting
+        // the backer to re-enter their card on the
+        // /dashboard/pledges/<id>/complete-with-dc page. The migrate
+        // tool sets confirmationEmailSent=true on already-counted
+        // pledges (so the DC webhook skips the increment when the
+        // backer re-pays). Status flips to COMPLETED on payment and
+        // the badge disappears.
+        needsMigrationPayment:
+          pledge.paymentProcessor === "DIVINITYCOIN" &&
+          pledge.status === "PENDING" &&
+          pledge.confirmationEmailSent === true,
         userId: pledge.user.id,
         name: pledge.user.name || "Anonymous",
         email: pledge.user.email,

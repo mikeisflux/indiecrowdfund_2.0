@@ -44,6 +44,7 @@ export interface Backer {
   id: string;
   status: string;
   fulfillmentStatus: string;
+  needsMigrationPayment?: boolean;
   userId: string;
   name: string;
   email: string | null;

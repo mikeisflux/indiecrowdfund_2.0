@@ -475,14 +475,23 @@ export function BackersList({
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <div className="truncate">{backer.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="truncate">{backer.name}</span>
+                        {backer.needsMigrationPayment && (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                            Payment required
+                          </Badge>
+                        )}
+                      </div>
                       {backer.email && (
                         <div className="text-xs text-muted-foreground truncate">{backer.email}</div>
                       )}
                     </div>
                   </div>
                   <div className="truncate">{backer.reward}</div>
-                  <div className="font-bold text-primary">${Number(backer.amount).toFixed(2)}</div>
+                  <div className={cn("font-bold", backer.needsMigrationPayment ? "text-red-600" : "text-primary")}>
+                    ${Number(backer.amount).toFixed(2)}
+                  </div>
                   <div>
                     <Badge
                       className={cn(
