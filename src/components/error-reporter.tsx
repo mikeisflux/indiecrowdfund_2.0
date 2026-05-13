@@ -122,6 +122,16 @@ export function ErrorReporter() {
       // background message-update call is in flight). The error originates
       // entirely inside Microsoft's office.js, not our code.
       /Object Not Found Matching Id:\d+, MethodName:/i,
+      // DuckDuckGo Privacy Browser (UA contains "Ddg/") injects a
+      // content script that talks to its background extension via
+      // `runtime.sendMessage()`. When the iOS tab context becomes
+      // invalid mid-navigation (page hidden, BFCache restore, app
+      // backgrounded), their own script throws
+      // "Invalid call to runtime.sendMessage(). Tab not found." as
+      // an unhandled rejection. Not our code, not actionable, but
+      // very loud on iPhone DDG sessions.
+      /Invalid call to runtime\.sendMessage/i,
+      /runtime\.sendMessage.*Tab not found/i,
     ];
 
     // Paths that automated scanners / ad networks / browser feature-detection

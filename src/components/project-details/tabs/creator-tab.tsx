@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MessageSquare, Star } from "lucide-react";
 import { AggregateRating } from "@/components/ui/star-rating";
 import { ProjectCreator } from "../types";
 
@@ -41,6 +42,30 @@ export function CreatorTab({ creator }: CreatorTabProps) {
                 </div>
               )}
             </div>
+            {/*
+              Message Creator action: open in /dashboard/messages with the
+              creator pre-filled as recipient. The /api/messages POST
+              endpoint accepts any authenticated user as sender (no
+              backer-only gate), so backers AND non-backers can use this.
+              Unauthenticated visitors get bounced to /login by the
+              dashboard route and come back to this compose state after
+              signing in.
+            */}
+            {creator.id && (
+              <Link
+                href={`/dashboard/messages?recipientId=${creator.id}`}
+                className="w-full sm:w-auto"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Message Creator
+                </Button>
+              </Link>
+            )}
           </div>
           {creator.bio && <p className="text-muted-foreground">{creator.bio}</p>}
           {creator.vanityUrl && (
