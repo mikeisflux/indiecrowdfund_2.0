@@ -350,6 +350,22 @@ export default function PayoutsPage() {
         </div>
       </div>
 
+      {/* International wire fee reminder — applies to non-US bank
+          accounts on the Mentom Payments processor. Surfaces the
+          fee here so admins reconcile correctly when a UK / non-US
+          creator's payout is short by the wire + conversion charge. */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-sm leading-relaxed text-amber-900 dark:text-amber-200">
+        <p className="font-semibold mb-0.5">International wire payouts</p>
+        <p>
+          Payouts to non-US bank accounts on Mentom Payments are sent by
+          international wire in the local currency. The destination
+          creator&apos;s net is reduced by a <strong>$25 wire fee + 1.50%
+          currency conversion fee</strong> on top of the standard
+          processing + platform fees. US bank accounts settle via ACH
+          at no additional cost.
+        </p>
+      </div>
+
       {/* Stats Cards */}
       <PayoutStatsCards stats={stats} formatCurrency={formatCurrency} />
 

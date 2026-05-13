@@ -412,6 +412,27 @@ export function PaymentCloudBankSection({
             </div>
           </div>
 
+          {/*
+            UK / international payout notice. Mentom Payments settles
+            into a US merchant account, so non-US payouts are sent by
+            international wire — that carries a $25 flat wire fee +
+            1.50% currency conversion on the converted amount. Shown
+            here only when the creator picks UK so it's impossible to
+            save the form without seeing the cost. Mirrors the row on
+            the public Fees page.
+          */}
+          {isUK && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+              <p className="font-semibold mb-1">International payment fee</p>
+              <p>
+                Payouts to non-US bank accounts are sent by international
+                wire in your local currency. A <strong>$25 wire fee + 1.50% currency conversion fee</strong>{" "}
+                will be added on top of the standard Mentom Payments
+                processing + platform fees.
+              </p>
+            </div>
+          )}
+
           <Button type="submit" disabled={isSaving || !projectId} className="w-full">
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSaving ? "Saving..." : status.saved ? "Replace Bank Account" : "Save Bank Account"}

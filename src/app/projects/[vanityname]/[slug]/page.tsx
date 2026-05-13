@@ -410,9 +410,18 @@ export default function ProjectPage() {
     fetchSimilarProjects();
   }, [project.id, project.category]);
 
-  // Derived states for comments
+  // Derived states for comments.
+  //
+  // existingPledge is hydrated from /api/pledges/check which already
+  // applies the committed-pledge filter (COMPLETED OR PENDING with a
+  // commit marker like nmiCustomerVaultId / stripePaymentMethodId).
+  // Any pledge it returns is a real commitment — gating on
+  // `=== "COMPLETED"` here locked every NMI / AoN backer out of the
+  // comments because their vault-saved pledge sits in PENDING until
+  // the funded-cron fires. Treating ANY present pledge as backer
+  // matches the server-side comment gate.
   const isLoggedIn = currentUser !== null;
-  const isBacker = existingPledge?.status === "COMPLETED";
+  const isBacker = !!existingPledge;
   const isCreator = currentUser?.id === project.creatorId;
 
   const handleCommentAdded = (newComment: CommentData) => {
@@ -906,6 +915,7 @@ export default function ProjectPage() {
             onTabChange={handleTabClick}
             isLoggedIn={isLoggedIn}
             isBacker={isBacker}
+            isFollower={isFollowing}
             isCreator={isCreator}
             isCollaborator={isCollaborator}
             currentUserId={currentUser?.id}

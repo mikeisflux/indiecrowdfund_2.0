@@ -75,6 +75,13 @@ export const paymentCloudFeeBreakdown = [
     details:
       "Applied on the remainder after Mentom Payments processing fees are deducted. Covers hosting, tools, and customer support.",
   },
+  {
+    title: "International Wire Payout (non-US bank only)",
+    rate: "$25 + 1.50%",
+    description: "Flat wire fee plus currency conversion — only applies if your payout bank is outside the US",
+    details:
+      "Mentom Payments settles into a US merchant account. When the payout destination bank is outside the US (e.g. United Kingdom), the funds are sent by international wire transfer in the local currency, which adds a $25 flat wire fee plus a 1.50% currency conversion fee on the converted amount. US bank accounts pay $0 — they're settled via standard ACH at no additional cost.",
+  },
 ];
 
 export const whopFeeBreakdown = [

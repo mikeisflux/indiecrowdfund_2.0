@@ -7,6 +7,36 @@ import { validateSession } from "@/lib/auth/session";
 import { notifyCommentReply, notifyNewProjectComment } from "@/lib/notifications";
 import { stripHtml } from "@/lib/utils/sanitize";
 
+/**
+ * Returns true if `userId` has a committed pledge on `projectId`
+ * (COMPLETED, or PENDING with a commit marker like confirmationEmailSent
+ * or nmiCustomerVaultId) OR is following the project. Both gate the
+ * comment / reply endpoints below: anyone who paid into the campaign
+ * or opted in to its updates can join the conversation.
+ */
+async function isBackerOrFollower(userId: string, projectId: string): Promise<boolean> {
+  const [pledge, follower] = await Promise.all([
+    db.pledge.findFirst({
+      where: {
+        userId,
+        deletedAt: null,
+        projectId,
+        OR: [
+          { status: "COMPLETED" },
+          { status: "PENDING", confirmationEmailSent: true },
+          { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
+        ],
+      },
+      select: { id: true },
+    }),
+    db.projectFollower.findFirst({
+      where: { userId, projectId },
+      select: { id: true },
+    }),
+  ]);
+  return !!pledge || !!follower;
+}
+
 type CommentWithUser = {
   id: string;
   userId: string;
@@ -323,59 +353,33 @@ export async function POST(
       rootCommentUserId = rootComment.userId;
 
       // Permission check for replies:
-      // - Creators can reply to any comment
-      // - Collaborators can reply to any comment
-      // - Backers can reply if they are the original commenter (continuing conversation)
-      // - Backers can reply if they have backed the project (joining discussion)
+      // - Creators / collaborators can reply to any comment
+      // - The original commenter can continue their own thread
+      // - Anyone with a committed pledge (backer) can join
+      // - Anyone following the project can join (followers are first-
+      //   class participants — they get update emails and should be
+      //   able to ask questions / leave feedback)
       if (!isCreator && !isCollaborator) {
         const isOriginalCommenter = rootCommentUserId === session.user.id;
-
         if (!isOriginalCommenter) {
-          // Check if they're a backer. Committed-PENDING filter so
-          // backers on an active AoN / NMI campaign can join discussion
-          // without granting comment access to abandoned-cart users.
-          const pledge = await db.pledge.findFirst({
-            where: {
-              userId: session.user.id,
-              deletedAt: null,
-              projectId,
-              OR: [
-                { status: "COMPLETED" },
-                { status: "PENDING", confirmationEmailSent: true },
-                { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
-              ],
-            },
-          });
-
-          if (!pledge) {
+          const allowed = await isBackerOrFollower(session.user.id, projectId);
+          if (!allowed) {
             return NextResponse.json(
-              { error: "Only backers can reply to comments" },
+              { error: "Back or follow this project to reply to comments" },
               { status: 403 }
             );
           }
         }
       }
     } else {
-      // For top-level comments, must be backer, creator, or collaborator.
-      // Committed-PENDING filter so AoN / NMI backers can comment during
-      // a live campaign without opening comments to abandoned-cart users.
+      // Top-level comments: creator, collaborator, committed backer,
+      // or follower. Anyone with a real interest in the campaign
+      // (paid into it OR opted-in to its updates) can participate.
       if (!isCreator && !isCollaborator) {
-        const pledge = await db.pledge.findFirst({
-          where: {
-            userId: session.user.id,
-            deletedAt: null,
-            projectId,
-            OR: [
-              { status: "COMPLETED" },
-              { status: "PENDING", confirmationEmailSent: true },
-              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
-            ],
-          },
-        });
-
-        if (!pledge) {
+        const allowed = await isBackerOrFollower(session.user.id, projectId);
+        if (!allowed) {
           return NextResponse.json(
-            { error: "Only backers can comment on this project" },
+            { error: "Back or follow this project to comment" },
             { status: 403 }
           );
         }

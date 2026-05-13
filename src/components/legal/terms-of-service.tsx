@@ -137,6 +137,35 @@ export function TermsOfServiceContent() {
           </li>
         </ul>
 
+        <h4 className="text-lg font-semibold mt-6 mb-2">6b. International Payouts</h4>
+        <p className="mb-4">
+          Mentom Payments settles into a US merchant account. When a creator&apos;s
+          payout bank account is outside the United States, IndieCrowdfund pays
+          out by international wire transfer in the creator&apos;s local currency
+          rather than US ACH. By saving a non-US bank account, creators
+          authorize the following fees to be deducted from the payout in
+          addition to the standard processing and platform fees:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>
+            <strong>Wire fee:</strong> $25 USD flat fee per international payout,
+            covering the originating bank&apos;s wire transfer cost.
+          </li>
+          <li>
+            <strong>Currency conversion fee:</strong> 1.50% of the converted
+            payout amount, applied against the spot rate at the time the wire
+            is sent.
+          </li>
+        </ul>
+        <p className="mb-4">
+          US bank accounts settle via standard ACH at no additional cost. The
+          international wire schedule may add 1–3 business days to settlement
+          versus a US ACH payout. Supported destination countries are listed
+          on the bank account setup screen and may expand over time;
+          unsupported countries cannot save a payout account until the
+          relevant rails are added.
+        </p>
+
         <p className="mb-6">
           Creators are responsible for all taxes, shipping costs, duties, and regulatory compliance.
         </p>

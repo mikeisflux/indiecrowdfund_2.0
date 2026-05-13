@@ -19,6 +19,11 @@ interface CommentsTabProps {
   onTabChange: (tab: TabValue) => void;
   isLoggedIn: boolean;
   isBacker: boolean;
+  // Followers are first-class participants on a campaign even before
+  // they back — they get update emails and should be able to ask
+  // questions / leave feedback in comments. Treated alongside backers
+  // for the canComment gate.
+  isFollower?: boolean;
   isCreator: boolean;
   isCollaborator: boolean;
   currentUserId?: string;
@@ -35,6 +40,7 @@ export function CommentsTab({
   onTabChange,
   isLoggedIn,
   isBacker,
+  isFollower,
   isCreator,
   isCollaborator,
   currentUserId,
@@ -51,7 +57,7 @@ export function CommentsTab({
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
 
-  const canComment = isLoggedIn && (isBacker || isCreator || isCollaborator);
+  const canComment = isLoggedIn && (isBacker || isFollower || isCreator || isCollaborator);
   const canReplyToAll = isCreator || isCollaborator;
 
   const handleSubmitComment = async () => {
@@ -163,8 +169,8 @@ export function CommentsTab({
           ) : (
             <p className="text-center text-muted-foreground text-sm mb-6">
               {isLoggedIn
-                ? "Only backers can post comments. Back this project to join the conversation."
-                : "Sign in and back this project to post comments."}
+                ? "Back or follow this project to join the conversation."
+                : "Sign in to follow or back this project and post comments."}
             </p>
           )}
 
