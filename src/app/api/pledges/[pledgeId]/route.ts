@@ -10,7 +10,6 @@ import { callDivinityCoinAPI, getDivinityCoinConfig } from "@/lib/payments/divin
 import { notifyPledgeModified, notifyPledgeCancelled } from "@/lib/notifications/pledge-notifications";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { getWhopClient } from "@/lib/payments/whop";
-import { loadNmiConfig, refund as nmiRefund, deleteVaultCustomer } from "@/lib/nmi";
 
 export const dynamic = "force-dynamic";
 
@@ -266,10 +265,6 @@ export async function PATCH(
     const campaignClosed = ["FUNDED", "FAILED", "CANCELLED"].includes(pledge.project.status) || campaignEnded;
     if (action === "cancel") {
       const paymentProcessor = pledge.project.paymentProcessor || "STRIPE";
-      // NMI pre-CASes COMPLETED → REFUNDED before issuing refund to
-      // serialize concurrent cancels. When set, skip the post-refund
-      // CAS below since we already did it.
-      let nmiCancelClaimed = false;
 
       // COMPLETED pledges: for closed campaigns, create a refund request (requires creator approval)
       // For live campaigns, process the refund immediately
@@ -400,78 +395,6 @@ export async function PATCH(
             pledgesLogger.error({ err: String(whopError) }, "Whop refund error");
             return NextResponse.json({ error: "Failed to process Whop refund." }, { status: 500 });
           }
-        } else if (paymentProcessor === "NMI") {
-          // PaymentCloud (NMI): KIA pledges have nmiTransactionId set by
-          // confirm-nmi; AoN pledges have nmiCustomerVaultId only (no
-          // sale yet — but COMPLETED + AoN means the charge-on-success
-          // cron already ran a sale, so nmiTransactionId should be set).
-          if (!pledge.nmiTransactionId) {
-            return NextResponse.json(
-              { error: "No Mentom Payments transaction found to refund. Please contact support." },
-              { status: 400 }
-            );
-          }
-
-          // Pre-CAS COMPLETED → REFUNDED to serialize concurrent cancel
-          // requests BEFORE we call NMI. Without this both racers would
-          // call nmiRefund(txn) and the loser would surface NMI's
-          // "already refunded" error to the user as a 400 — confusing
-          // since the refund actually went through. Roll back to
-          // COMPLETED on refund failure so the user can retry.
-          const nmiClaim = await db.pledge.updateMany({
-            where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
-            data: { status: "REFUNDED", lastFailureReason: body.reason || "Cancelled by backer" },
-          });
-          if (nmiClaim.count === 0) {
-            return NextResponse.json({
-              success: true,
-              refunded: true,
-              message: "Pledge was already refunded by a concurrent request",
-              alreadyRefunded: true,
-            });
-          }
-          nmiCancelClaimed = true;
-
-          try {
-            const nmiConfig = await loadNmiConfig();
-            if (!nmiConfig) {
-              await db.pledge.updateMany({
-                where: { id: pledgeId, status: "REFUNDED" },
-                data: { status: "COMPLETED", lastFailureReason: null },
-              }).catch(() => null);
-              nmiCancelClaimed = false;
-              return NextResponse.json({ error: "Mentom Payments not configured" }, { status: 502 });
-            }
-            const refundResp = await nmiRefund(nmiConfig, pledge.nmiTransactionId);
-            if (refundResp.response !== "1") {
-              pledgesLogger.error(
-                { pledgeId: pledge.id, response: refundResp.response, text: refundResp.responsetext },
-                "PaymentCloud refund declined"
-              );
-              await db.pledge.updateMany({
-                where: { id: pledgeId, status: "REFUNDED" },
-                data: { status: "COMPLETED", lastFailureReason: null },
-              }).catch(() => null);
-              nmiCancelClaimed = false;
-              return NextResponse.json(
-                { error: refundResp.responsetext || "Refund failed" },
-                { status: 400 }
-              );
-            }
-            // Best-effort: delete the vault entry too (AoN only — KIA
-            // never created one). Ignore failures, refund already ran.
-            if (pledge.nmiCustomerVaultId) {
-              await deleteVaultCustomer(nmiConfig, pledge.nmiCustomerVaultId).catch(() => null);
-            }
-          } catch (nmiError) {
-            pledgesLogger.error({ err: String(nmiError) }, "PaymentCloud refund error");
-            await db.pledge.updateMany({
-              where: { id: pledgeId, status: "REFUNDED" },
-              data: { status: "COMPLETED", lastFailureReason: null },
-            }).catch(() => null);
-            nmiCancelClaimed = false;
-            return NextResponse.json({ error: "Failed to process Mentom Payments refund." }, { status: 500 });
-          }
         } else {
           // Stripe refund
           if (!pledge.stripePaymentIntentId) {
@@ -516,19 +439,13 @@ export async function PATCH(
         // a lost CAS just means we skip the decrement — the provider
         // refund itself isn't double-applied.
         //
-        // For NMI we already pre-CAS'd to serialize concurrent
-        // cancels (NMI's refund() is NOT idempotent — duplicate calls
-        // surface confusing "already refunded" errors), so this CAS
-        // would always lose-race against our own claim. Skip it.
-        const refundCas = nmiCancelClaimed
-          ? { count: 1 }
-          : await db.pledge.updateMany({
-              where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
-              data: {
-                status: "REFUNDED",
-                lastFailureReason: body.reason || "Cancelled by backer",
-              },
-            });
+        const refundCas = await db.pledge.updateMany({
+          where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
+          data: {
+            status: "REFUNDED",
+            lastFailureReason: body.reason || "Cancelled by backer",
+          },
+        });
 
         if (refundCas.count === 0) {
           return NextResponse.json({
@@ -591,15 +508,6 @@ export async function PATCH(
       }
       if (pledge.stripePaymentIntentId) {
         await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
-      }
-
-      // Tear down any PaymentCloud vault entry left over from an AoN
-      // pledge so we don't leak stored cards on cancel.
-      if (pledge.nmiCustomerVaultId) {
-        const nmiConfig = await loadNmiConfig();
-        if (nmiConfig) {
-          await deleteVaultCustomer(nmiConfig, pledge.nmiCustomerVaultId).catch(() => null);
-        }
       }
 
       // Atomic CAS from PENDING → CANCELLED. Guards against
@@ -799,65 +707,6 @@ export async function PATCH(
       if (isAlreadyCharged && amountDiff > 0) {
         // Price went UP - need to collect additional payment
         const stripeAccountId = pledge.project.creator?.stripeConfig?.stripeAccountId || pledge.project.stripeAccountId;
-
-        if (paymentProcessor === "NMI") {
-          // PaymentCloud upcharge: KIA pledges have no vault entry
-          // (skipped at original pledge time to avoid the per-txn
-          // Vault fee), so we re-prompt the user for their card via
-          // Collect.js and run a fresh saleByPaymentToken for the
-          // delta. We stash the pending modification on the pledge
-          // and let confirm-modify finish the work once the client
-          // POSTs back with a payment_token.
-          const nmiConfigCheck = await loadNmiConfig();
-          if (!nmiConfigCheck) {
-            return NextResponse.json({ error: "Mentom Payments not configured" }, { status: 502 });
-          }
-
-          const currentMetadata = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-            ? pledge.metadata as Record<string, unknown>
-            : {};
-
-          // Mismatched-cart guard: the supersede logic above unconditionally
-          // overwrites a prior pendingModification when a new modify call
-          // comes in. For NMI we hand the user back to Collect.js with the
-          // amountDiff displayed on their form — if a second tab supersedes
-          // before the first submits its paymentToken, confirm-modify would
-          // otherwise charge the SECOND tab's amountDiff against the first
-          // tab's card data. Stamp a unique modificationId here, return it
-          // to the client, and require the form to echo it on submit so
-          // confirm-modify can reject stale submissions.
-          const modificationId = `mod_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-
-          await db.pledge.update({
-            where: { id: pledgeId },
-            data: {
-              metadata: {
-                ...currentMetadata,
-                pendingModification: {
-                  paymentMethod: "NMI",
-                  modificationId,
-                  rewardId: rewardId || null,
-                  addons: addonsWithQuantity,
-                  newAmount,
-                  oldAmount,
-                  amountDiff,
-                  createdAt: new Date().toISOString(),
-                },
-              },
-            },
-          });
-
-          return NextResponse.json({
-            success: true,
-            requiresPayment: true,
-            paymentMethod: "NMI",
-            nmiPublicKey: nmiConfigCheck.publicKey,
-            modificationId,
-            amountDiff,
-            message: `Additional $${amountDiff.toFixed(2)} payment required`,
-            newAmount: effectiveNewAmount,
-          });
-        }
 
         if (paymentProcessor === "DIVINITYCOIN") {
           // Call DC's create-payment-intent for the upcharge amount
@@ -1059,84 +908,6 @@ export async function PATCH(
               { status: 500 }
             );
           }
-        } else if (paymentProcessor === "NMI") {
-          // PaymentCloud partial refund against the original sale.
-          //
-          // Concurrent-downgrade race: two PATCH modify-refund calls
-          // would both call nmiRefund(txnId, refundAmount) and the
-          // loser would surface NMI's "amount exceeds available" or
-          // "already refunded" error to the user even though the
-          // refund actually went through earlier in the race.
-          // Serialize via a per-pledge advisory_xact_lock + amount
-          // re-check inside the tx. The first call refunds and stamps
-          // pledge.amount = effectiveNewAmount; the second wakes up,
-          // sees pledge.amount no longer matches its oldAmount, aborts
-          // with a 409 telling the user to refresh.
-          if (!pledge.nmiTransactionId) {
-            return NextResponse.json(
-              { error: "No Mentom Payments transaction found to refund. Please contact support." },
-              { status: 400 }
-            );
-          }
-
-          let aborted = false;
-          let abortReason: string | null = null;
-          let abortStatus = 400;
-
-          try {
-            await db.$transaction(async (tx) => {
-              await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`partial-refund-${pledgeId}`}))`;
-
-              const fresh = await tx.pledge.findFirst({
-                where: { id: pledgeId, deletedAt: null },
-                select: { amount: true, nmiTransactionId: true },
-              });
-              if (!fresh) {
-                aborted = true; abortReason = "Pledge not found"; abortStatus = 404; return;
-              }
-              if (Number(fresh.amount) !== oldAmount) {
-                aborted = true;
-                abortReason = "Pledge amount changed since this modification was started. Please refresh and try again.";
-                abortStatus = 409;
-                return;
-              }
-              if (!fresh.nmiTransactionId) {
-                aborted = true; abortReason = "No PaymentCloud transaction found to refund."; return;
-              }
-
-              const nmiConfig = await loadNmiConfig();
-              if (!nmiConfig) {
-                aborted = true; abortReason = "Mentom Payments not configured"; abortStatus = 502; return;
-              }
-              const refundResp = await nmiRefund(nmiConfig, fresh.nmiTransactionId, refundAmount);
-              if (refundResp.response !== "1") {
-                pledgesLogger.error(
-                  { pledgeId: pledge.id, response: refundResp.response, text: refundResp.responsetext },
-                  "PaymentCloud partial refund declined"
-                );
-                aborted = true;
-                abortReason = refundResp.responsetext || "Refund failed";
-                return;
-              }
-
-              // Stamp pledge.amount inside the lock so a concurrent
-              // request waiting on this lock sees the new value and
-              // bails. applyModificationChanges below idempotently
-              // re-sets the same value alongside the addon/reward
-              // swaps so this is safe.
-              await tx.pledge.update({
-                where: { id: pledgeId },
-                data: { amount: effectiveNewAmount },
-              });
-            });
-          } catch (nmiError) {
-            pledgesLogger.error({ err: String(nmiError) }, "PaymentCloud partial refund tx error");
-            return NextResponse.json({ error: "Failed to process refund" }, { status: 500 });
-          }
-
-          if (aborted) {
-            return NextResponse.json({ error: abortReason || "Refund failed" }, { status: abortStatus });
-          }
         } else {
           // Stripe partial refund
           if (!pledge.stripePaymentIntentId) {
@@ -1225,18 +996,6 @@ export async function PATCH(
         if (paymentProcessor === "DIVINITYCOIN") {
           // DC pledges require a payment form for upcharges - the dashboard doesn't have one.
           // Direct users to "Change Reward or Add-ons" which has full payment support.
-          return NextResponse.json(
-            { error: "To increase your pledge amount, please use 'Change Reward or Add-ons' from your pledge dashboard." },
-            { status: 400 }
-          );
-        }
-
-        if (paymentProcessor === "NMI") {
-          // Same reasoning as DC: KIA NMI pledges have no vault entry,
-          // so increasing the amount requires re-prompting for a card
-          // via Collect.js. The dashboard quick-increase form doesn't
-          // host that flow; route the user through Change Reward or
-          // Add-ons instead.
           return NextResponse.json(
             { error: "To increase your pledge amount, please use 'Change Reward or Add-ons' from your pledge dashboard." },
             { status: 400 }
@@ -1409,16 +1168,6 @@ export async function DELETE(
     }
     if (pledge.stripePaymentIntentId) {
       await safeCancelPaymentIntent(stripe, pledge.stripePaymentIntentId);
-    }
-
-    // Tear down any PaymentCloud vault entry left over from an AoN
-    // pledge so we don't leak stored cards on cancel. KIA pledges
-    // never get a vault entry; this is a no-op for them.
-    if (pledge.nmiCustomerVaultId) {
-      const nmiConfig = await loadNmiConfig();
-      if (nmiConfig) {
-        await deleteVaultCustomer(nmiConfig, pledge.nmiCustomerVaultId).catch(() => null);
-      }
     }
 
     // Atomic CAS from PENDING → CANCELLED (same guard as the PATCH

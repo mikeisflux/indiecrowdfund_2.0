@@ -6,7 +6,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance, safeCancelSetupIntent, safeCancelPaymentIntent } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
-import { loadNmiConfig, refund as nmiRefund } from "@/lib/nmi";
 import { sendEmail } from "@/lib/email";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -90,12 +89,10 @@ export async function GET(
       amount: number;
       status: string;
       createdAt: Date;
-      paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP" | "NMI";
+      paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP";
       stripePaymentIntentId: string | null;
       stripeSetupIntentId: string | null;
       divinityCoinPaymentId: string | null;
-      nmiTransactionId: string | null;
-      nmiCustomerVaultId: string | null;
       project: { currentAmount: number; goalAmount: number; status: string };
       user: { id: string; name: string | null; email: string | null };
     };
@@ -109,8 +106,7 @@ export async function GET(
       !!typedPledge.stripePaymentIntentId ||
       typedPledge.paymentProcessor === "DIVINITYCOIN" ||
       typedPledge.paymentProcessor === "PAYPAL" ||
-      typedPledge.paymentProcessor === "WHOP" ||
-      typedPledge.paymentProcessor === "NMI"
+      typedPledge.paymentProcessor === "WHOP"
     );
 
     return NextResponse.json({
@@ -163,12 +159,10 @@ export async function PATCH(
       projectId: string;
       rewardId: string | null;
       confirmationEmailSent: boolean;
-      paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP" | "NMI";
+      paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP";
       stripePaymentIntentId: string | null;
       stripeSetupIntentId: string | null;
       divinityCoinPaymentId: string | null;
-      nmiTransactionId: string | null;
-      nmiCustomerVaultId: string | null;
       project: {
         id: string;
         title: string;
@@ -421,130 +415,6 @@ export async function PATCH(
             { status: 500 }
           );
         }
-      } else if (typedPledge.paymentProcessor === "NMI") {
-        // NMI / Mentom Payments refund. Symmetric to the Stripe block
-        // below — call the gateway refund, then run the same DB
-        // bookkeeping (CAS to REFUNDED on full, project counter
-        // decrement, reward slot restore, activity log, backer email).
-        if (!typedPledge.nmiTransactionId) {
-          return NextResponse.json(
-            { error: "No Mentom Payments transaction found to refund" },
-            { status: 400 }
-          );
-        }
-        const nmiConfig = await loadNmiConfig();
-        if (!nmiConfig) {
-          return NextResponse.json(
-            { error: "Mentom Payments not configured. Contact support." },
-            { status: 502 }
-          );
-        }
-        try {
-          const resp = await nmiRefund(nmiConfig, typedPledge.nmiTransactionId, refundAmount);
-          if (resp.response !== "1") {
-            creatorPledgesLogger.warn(
-              { pledgeId, response: resp.response, text: resp.responsetext },
-              "NMI refund declined"
-            );
-            return NextResponse.json(
-              { error: resp.responsetext || "Mentom Payments refund declined" },
-              { status: 400 }
-            );
-          }
-        } catch (nmiError) {
-          creatorPledgesLogger.error({ err: String(nmiError) }, "NMI refund error:");
-          return NextResponse.json(
-            { error: "Failed to process refund with Mentom Payments" },
-            { status: 500 }
-          );
-        }
-
-        // Update pledge + log activity in a transaction
-        await db.$transaction(async (tx) => {
-          if (isPartialRefund) {
-            await tx.fulfillmentActivity.create({
-              data: {
-                projectId: typedPledge.projectId,
-                type: "REFUND_ISSUED",
-                title: "Partial Refund Issued",
-                description: `$${refundAmount.toFixed(2)} refunded to backer via Mentom Payments. Reason: ${reason || "Order adjustment"}`,
-                pledgeId: typedPledge.id,
-                metadata: { refundAmount, totalPaid, isPartialRefund: true, processor: "NMI" },
-              },
-            });
-          } else {
-            const refundCas = await tx.pledge.updateMany({
-              where: { id: pledgeId, status: "COMPLETED", deletedAt: null },
-              data: {
-                status: "REFUNDED",
-                lastFailureReason: reason || "Refunded by creator",
-              },
-            });
-            if (refundCas.count === 0) {
-              throw new Error("Pledge already refunded by concurrent request");
-            }
-
-            if (typedPledge.confirmationEmailSent) {
-              await tx.project.update({
-                where: { id: typedPledge.projectId },
-                data: {
-                  backerCount: { decrement: 1 },
-                  currentAmount: { decrement: Number(typedPledge.amount) },
-                },
-              });
-            }
-
-            await tx.fulfillmentActivity.create({
-              data: {
-                projectId: typedPledge.projectId,
-                type: "REFUND_ISSUED",
-                title: "Full Refund Issued",
-                description: `$${refundAmount.toFixed(2)} refunded to backer via Mentom Payments. Reason: ${reason || "Refunded by creator"}`,
-                pledgeId: typedPledge.id,
-                metadata: { refundAmount, totalPaid, isPartialRefund: false, processor: "NMI" },
-              },
-            });
-          }
-        });
-
-        // Restore reward slot on full refund
-        if (!isPartialRefund && typedPledge.rewardId) {
-          await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${typedPledge.rewardId}`;
-        }
-
-        // Notify backer
-        if (typedPledge.user.email) {
-          try {
-            await sendEmail({
-              to: typedPledge.user.email,
-              subject: `Your refund for "${typedPledge.project.title}" has been processed`,
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                  <h2 style="color: #16a34a;">Refund Processed</h2>
-                  <p>Hi ${typedPledge.user.name || "there"},</p>
-                  <p>Your ${isPartialRefund ? "partial " : ""}refund for <strong>${typedPledge.project.title}</strong> has been successfully processed.</p>
-                  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
-                    <p style="margin: 0 0 8px 0;"><strong>Refund Amount:</strong> $${refundAmount.toFixed(2)}</p>
-                    <p style="margin: 0;"><strong>Refunded To:</strong> Original payment method</p>
-                  </div>
-                  <p>Mentom Payments typically takes 5–10 business days to deposit the refund back to your card.</p>
-                  <p style="color: #6b7280; font-size: 14px;">Reason: ${reason || "Refunded by creator"}</p>
-                </div>
-              `,
-              skipUnsubscribeCheck: true,
-            });
-          } catch (emailError) {
-            creatorPledgesLogger.error({ err: String(emailError) }, "Refund email send failed (NMI):");
-          }
-        }
-
-        return NextResponse.json({
-          success: true,
-          message: `${isPartialRefund ? "Partial refund" : "Refund"} processed successfully via Mentom Payments`,
-          refundedTo: "card",
-          amount: refundAmount,
-          isPartialRefund,
-        });
       } else {
         // Stripe refund
         if (!typedPledge.stripePaymentIntentId) {

@@ -101,9 +101,8 @@ export async function POST(
 
     // Check chargeback card. Accepts either the legacy per-project row
     // (CreatorChargebackCard) or the unified user-level row
-    // (CreatorMarketplaceChargebackCard) so NMI/Mentom Payments
-    // projects — whose UI saves to the user-level table — aren't
-    // wrongly blocked with "card required" when one is already on file.
+    // (CreatorMarketplaceChargebackCard) so creators with one on
+    // file aren't wrongly blocked with "card required".
     const hasChargebackCard = await projectHasChargebackCard(projectId, project.creatorId);
     if (!hasChargebackCard) {
       validationErrors.push("Chargeback protection card is required");

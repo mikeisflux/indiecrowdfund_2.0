@@ -36,10 +36,6 @@ export async function GET(req: NextRequest) {
     // Find any CONFIRMED pledge for this user/project. Includes:
     //   - COMPLETED pledges (any processor)
     //   - PENDING pledges with Stripe payment method saved (AoN Stripe)
-    //   - PENDING pledges with NMI customer-vault id saved (AoN NMI /
-    //     PaymentCloud) — vault id means Collect.js tokenized the card
-    //     and we've added it to the vault, so the pledge is confirmed
-    //     and the user has already "backed" the project.
     // Note: PayPal PENDING pledges are NOT included — paypalOrderId
     // just means checkout was initiated, not that the user approved
     // payment. Only COMPLETED counts for PayPal.
@@ -56,10 +52,6 @@ export async function GET(req: NextRequest) {
           {
             status: "PENDING",
             NOT: { stripePaymentMethodId: null },
-          },
-          {
-            status: "PENDING",
-            NOT: { nmiCustomerVaultId: null },
           },
         ],
       },

@@ -9,8 +9,8 @@ import { stripHtml } from "@/lib/utils/sanitize";
 
 /**
  * Returns true if `userId` has a committed pledge on `projectId`
- * (COMPLETED, or PENDING with a commit marker like confirmationEmailSent
- * or nmiCustomerVaultId) OR is following the project. Both gate the
+ * (COMPLETED, or PENDING with a commit marker like
+ * confirmationEmailSent) OR is following the project. Both gate the
  * comment / reply endpoints below: anyone who paid into the campaign
  * or opted in to its updates can join the conversation.
  */
@@ -24,7 +24,6 @@ async function isBackerOrFollower(userId: string, projectId: string): Promise<bo
         OR: [
           { status: "COMPLETED" },
           { status: "PENDING", confirmationEmailSent: true },
-          { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
         ],
       },
       select: { id: true },

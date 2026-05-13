@@ -72,7 +72,6 @@ export async function GET(
                     OR: [
                       { status: "COMPLETED" },
                       { status: "PENDING", confirmationEmailSent: true },
-                      { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
                     ],
                   },
                 },

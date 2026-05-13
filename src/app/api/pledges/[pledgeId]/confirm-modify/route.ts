@@ -7,7 +7,6 @@ import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
 import { notifyPledgeModified } from "@/lib/notifications/pledge-notifications";
-import { loadNmiConfig, saleByPaymentToken } from "@/lib/nmi";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm-modify
@@ -26,14 +25,7 @@ export async function POST(
     }
 
     const { pledgeId } = await params;
-    const body = await req.json().catch(() => ({}));
-    const paymentToken: string | undefined = typeof body?.paymentToken === "string" ? body.paymentToken : undefined;
-    // Echo of pendingModification.modificationId from the PATCH response.
-    // Used for NMI to reject submissions whose pendingModification was
-    // superseded by a later modify call (different cart, different
-    // amountDiff). Stripe/DC don't need this because the clientSecret
-    // is itself cart-specific and a superseded PI fails at the gateway.
-    const submittedModificationId: string | undefined = typeof body?.modificationId === "string" ? body.modificationId : undefined;
+    await req.json().catch(() => ({}));
 
     const pledge = await db.pledge.findFirst({
       where: { id: pledgeId, deletedAt: null },
@@ -61,17 +53,6 @@ export async function POST(
       pendingModification?: {
         paymentMethod?: string;
         paymentIntentId?: string;
-        // For NMI: stamped after the saleByPaymentToken sale completes
-        // so a retry that fails inside the apply transaction doesn't
-        // re-charge the user. Presence here means "money was already
-        // taken; just retry the apply, do not re-tokenize".
-        nmiTransactionId?: string;
-        // Stamped on the PATCH that created this pendingModification,
-        // returned to the client, and required to be echoed back on
-        // the confirm-modify submission. A mismatch means the cart
-        // was superseded by another modify call — reject so we don't
-        // charge the wrong amountDiff.
-        modificationId?: string;
         rewardId?: string | null;
         addons?: { id: string; quantity: number }[];
         newAmount: number;
@@ -131,152 +112,6 @@ export async function POST(
           { error: "Payment not yet completed" },
           { status: 400 }
         );
-      }
-    } else if (pending.paymentMethod === "NMI") {
-      // Cart-mismatch guard: ensure the pendingModification we're about
-      // to charge against is the same one the client's form was built
-      // for. If a later modify call superseded this one, the form's
-      // displayed amountDiff is stale and we must NOT charge silently.
-      if (
-        pending.modificationId &&
-        submittedModificationId &&
-        pending.modificationId !== submittedModificationId
-      ) {
-        pledgesConfirmModifyLogger.warn(
-          { pledgeId, expected: pending.modificationId, got: submittedModificationId },
-          "[ConfirmModify NMI] modificationId mismatch — pending was superseded"
-        );
-        return NextResponse.json(
-          { error: "Your modification was superseded by a more recent change. Refresh and try again." },
-          { status: 409 }
-        );
-      }
-      // PaymentCloud modify-upcharge: charge the delta against a fresh
-      // Collect.js payment_token. CRITICAL: we may be retrying a
-      // previous attempt that ran the sale but crashed before the
-      // apply transaction committed. In that case pending.nmiTransactionId
-      // is already set — DO NOT re-charge; just retry the apply below.
-      if (pending.nmiTransactionId) {
-        // Sale already completed on a prior attempt. Treat the txn id
-        // as the dedup key for the advisory lock + completedModifications
-        // audit row, and skip the sale entirely.
-        pending.paymentIntentId = pending.nmiTransactionId;
-        pledgesConfirmModifyLogger.info(
-          { pledgeId, nmiTransactionId: pending.nmiTransactionId },
-          "[ConfirmModify NMI] Sale already ran on prior attempt; retrying apply only"
-        );
-      } else {
-        if (!paymentToken) {
-          return NextResponse.json(
-            { error: "Missing payment token" },
-            { status: 400 }
-          );
-        }
-
-        // Concurrent-tabs guard: same race as confirm-add-items. Two
-        // tabs reading pledge.metadata before either stamps would both
-        // run the upcharge sale and double-charge. Atomically stamp a
-        // 60s claimedAt; loser 409s.
-        const claimRows = await db.$queryRaw<Array<{ id: string }>>`
-          UPDATE "Pledge"
-          SET metadata = jsonb_set(
-            metadata,
-            '{pendingModification,claimedAt}',
-            to_jsonb(NOW()::text),
-            true
-          )
-          WHERE id = ${pledgeId}
-            AND metadata ? 'pendingModification'
-            AND (
-              metadata->'pendingModification'->>'nmiTransactionId' IS NULL
-            )
-            AND (
-              metadata->'pendingModification'->>'claimedAt' IS NULL
-              OR (metadata->'pendingModification'->>'claimedAt')::timestamp < NOW() - interval '60 seconds'
-            )
-          RETURNING id
-        `;
-        if (claimRows.length === 0) {
-          return NextResponse.json(
-            { error: "Another payment is in progress for this modification. Please wait a moment and try again." },
-            { status: 409 }
-          );
-        }
-
-        const nmiConfig = await loadNmiConfig();
-        if (!nmiConfig) {
-          await db.$executeRaw`
-            UPDATE "Pledge"
-            SET metadata = metadata #- '{pendingModification,claimedAt}'
-            WHERE id = ${pledgeId}
-          `.catch(() => null);
-          return NextResponse.json({ error: "Mentom Payments not configured" }, { status: 502 });
-        }
-
-        const userRecord = await db.user.findFirst({
-          where: { id: session.user.id, deletedAt: null },
-          select: { email: true, name: true },
-        });
-
-        let saleResp;
-        try {
-          saleResp = await saleByPaymentToken(nmiConfig, {
-            amount: pending.amountDiff,
-            paymentToken,
-            orderid: `${pledgeId}-modify-${Date.now()}`,
-            orderdescription: `Pledge modification upcharge for ${pledge.project.title}`,
-            email: userRecord?.email || undefined,
-          });
-        } catch (err) {
-          pledgesConfirmModifyLogger.error(
-            { pledgeId, err: err instanceof Error ? err.message : String(err) },
-            "[ConfirmModify NMI] Sale error"
-          );
-          await db.$executeRaw`
-            UPDATE "Pledge"
-            SET metadata = metadata #- '{pendingModification,claimedAt}'
-            WHERE id = ${pledgeId}
-          `.catch(() => null);
-          return NextResponse.json(
-            { error: "Failed to charge card. Please try again or contact support." },
-            { status: 502 }
-          );
-        }
-
-        if (saleResp.response !== "1" || !saleResp.transactionid) {
-          pledgesConfirmModifyLogger.warn(
-            { pledgeId, response: saleResp.response, text: saleResp.responsetext },
-            "[ConfirmModify NMI] Sale declined"
-          );
-          await db.$executeRaw`
-            UPDATE "Pledge"
-            SET metadata = metadata #- '{pendingModification,claimedAt}'
-            WHERE id = ${pledgeId}
-          `.catch(() => null);
-          return NextResponse.json(
-            { error: saleResp.responsetext || "Card was declined. Please try a different card." },
-            { status: 400 }
-          );
-        }
-
-        // Persist the txn id IMMEDIATELY so a crash before the apply
-        // transaction commits doesn't lose it. Without this the next
-        // request would re-tokenize and re-charge the user.
-        const metadataForStamp = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-          ? pledge.metadata as Record<string, unknown>
-          : {};
-        const stampedPending = { ...pending, nmiTransactionId: saleResp.transactionid, paymentIntentId: saleResp.transactionid };
-        await db.pledge.update({
-          where: { id: pledgeId },
-          data: {
-            metadata: {
-              ...metadataForStamp,
-              pendingModification: stampedPending,
-            },
-          },
-        });
-        pending.nmiTransactionId = saleResp.transactionid;
-        pending.paymentIntentId = saleResp.transactionid;
       }
     }
 

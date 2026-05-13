@@ -125,9 +125,8 @@ export async function POST(
     }
 
     // Validate chargeback protection card is on file. Accepts the
-    // unified user-level card (CreatorMarketplaceChargebackCard) used by
-    // NMI/Mentom Payments projects OR the legacy per-project card used
-    // by older non-NMI projects.
+    // unified user-level card (CreatorMarketplaceChargebackCard) OR
+    // the legacy per-project card.
     const hasChargebackCard = await projectHasChargebackCard(projectId, project.creatorId);
 
     if (!hasChargebackCard) {

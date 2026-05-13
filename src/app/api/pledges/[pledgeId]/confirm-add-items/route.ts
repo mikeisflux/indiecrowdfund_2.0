@@ -6,7 +6,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getStripeInstance } from "@/lib/payments/stripe";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
-import { loadNmiConfig, saleByPaymentToken } from "@/lib/nmi";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm-add-items
@@ -30,8 +29,7 @@ export async function POST(
     }
 
     const { pledgeId } = await params;
-    const body = await req.json().catch(() => ({}));
-    const paymentToken: string | undefined = typeof body?.paymentToken === "string" ? body.paymentToken : undefined;
+    await req.json().catch(() => ({}));
 
     // Get the pledge with metadata
     const pledge = await db.pledge.findFirst({
@@ -61,11 +59,6 @@ export async function POST(
       pendingAdditionalItems?: {
         paymentMethod?: string;
         paymentIntentId?: string;
-        // For NMI: stamped after the saleByPaymentToken sale completes
-        // so a retry that fails inside the apply transaction doesn't
-        // re-charge the user. Presence here means "money was already
-        // taken; just retry the apply, do not re-tokenize".
-        nmiTransactionId?: string;
         addons?: { id: string; quantity: number }[]; // New format with quantities
         addonIds?: string[]; // Legacy format
         amount: number;
@@ -142,137 +135,6 @@ export async function POST(
           { error: "Payment not yet completed" },
           { status: 400 }
         );
-      }
-    } else if (paymentMethod === "NMI") {
-      // PaymentCloud add-items: charge the upcharge sale here using
-      // the Collect.js payment_token. CRITICAL retry handling: if a
-      // previous attempt ran the sale but crashed before the apply
-      // transaction committed, pendingItems.nmiTransactionId is set
-      // — DO NOT re-charge; just retry the apply.
-      if (pendingItems.nmiTransactionId) {
-        pendingItems.paymentIntentId = pendingItems.nmiTransactionId;
-        pledgesConfirmAddItemsLogger.info(
-          { pledgeId, nmiTransactionId: pendingItems.nmiTransactionId },
-          "[ConfirmAddItems NMI] Sale already ran on prior attempt; retrying apply only"
-        );
-      } else {
-        if (!paymentToken) {
-          return NextResponse.json(
-            { error: "Missing payment token" },
-            { status: 400 }
-          );
-        }
-
-        // Concurrent-tabs guard: the retry check above (nmiTransactionId
-        // already stamped) protects against retry-after-crash, but two
-        // tabs that both read pledge.metadata BEFORE either stamps would
-        // both fall through to here and run separate sales — double-
-        // charging the cardholder. Atomically stamp a 60s-fresh
-        // claimedAt marker; the loser sees the fresh claim and 409s.
-        const claimRows = await db.$queryRaw<Array<{ id: string }>>`
-          UPDATE "Pledge"
-          SET metadata = jsonb_set(
-            metadata,
-            '{pendingAdditionalItems,claimedAt}',
-            to_jsonb(NOW()::text),
-            true
-          )
-          WHERE id = ${pledgeId}
-            AND metadata ? 'pendingAdditionalItems'
-            AND (
-              metadata->'pendingAdditionalItems'->>'nmiTransactionId' IS NULL
-            )
-            AND (
-              metadata->'pendingAdditionalItems'->>'claimedAt' IS NULL
-              OR (metadata->'pendingAdditionalItems'->>'claimedAt')::timestamp < NOW() - interval '60 seconds'
-            )
-          RETURNING id
-        `;
-        if (claimRows.length === 0) {
-          // Either another tab is mid-sale (fresh claim) or the sale
-          // already ran and stamped nmiTransactionId — re-read and let
-          // the function dispatch on the new state.
-          return NextResponse.json(
-            { error: "Another payment is in progress for these items. Please wait a moment and try again." },
-            { status: 409 }
-          );
-        }
-
-        const nmiConfig = await loadNmiConfig();
-        if (!nmiConfig) {
-          // Clear the claim so user can retry once config is fixed.
-          await db.$executeRaw`
-            UPDATE "Pledge"
-            SET metadata = metadata #- '{pendingAdditionalItems,claimedAt}'
-            WHERE id = ${pledgeId}
-          `.catch(() => null);
-          return NextResponse.json({ error: "Mentom Payments not configured" }, { status: 502 });
-        }
-
-        const userRecord = await db.user.findFirst({
-          where: { id: session.user.id, deletedAt: null },
-          select: { email: true, name: true },
-        });
-
-        let saleResp;
-        try {
-          saleResp = await saleByPaymentToken(nmiConfig, {
-            amount: pendingItems.amount,
-            paymentToken,
-            orderid: `${pledgeId}-additems-${Date.now()}`,
-            orderdescription: `Additional items for pledge to ${pledge.project.title}`,
-            email: userRecord?.email || undefined,
-          });
-        } catch (err) {
-          pledgesConfirmAddItemsLogger.error(
-            { pledgeId, err: err instanceof Error ? err.message : String(err) },
-            "[ConfirmAddItems NMI] Sale error"
-          );
-          await db.$executeRaw`
-            UPDATE "Pledge"
-            SET metadata = metadata #- '{pendingAdditionalItems,claimedAt}'
-            WHERE id = ${pledgeId}
-          `.catch(() => null);
-          return NextResponse.json(
-            { error: "Failed to charge card. Please try again or contact support." },
-            { status: 502 }
-          );
-        }
-
-        if (saleResp.response !== "1" || !saleResp.transactionid) {
-          pledgesConfirmAddItemsLogger.warn(
-            { pledgeId, response: saleResp.response, text: saleResp.responsetext },
-            "[ConfirmAddItems NMI] Sale declined"
-          );
-          await db.$executeRaw`
-            UPDATE "Pledge"
-            SET metadata = metadata #- '{pendingAdditionalItems,claimedAt}'
-            WHERE id = ${pledgeId}
-          `.catch(() => null);
-          return NextResponse.json(
-            { error: saleResp.responsetext || "Card was declined. Please try a different card." },
-            { status: 400 }
-          );
-        }
-
-        // Persist the txn id IMMEDIATELY so a crash before the apply
-        // transaction commits doesn't lose it. Without this the next
-        // request would re-tokenize and re-charge the user.
-        const metadataForStamp = (typeof pledge.metadata === "object" && pledge.metadata !== null)
-          ? pledge.metadata as Record<string, unknown>
-          : {};
-        const stampedPending = { ...pendingItems, nmiTransactionId: saleResp.transactionid, paymentIntentId: saleResp.transactionid };
-        await db.pledge.update({
-          where: { id: pledgeId },
-          data: {
-            metadata: {
-              ...metadataForStamp,
-              pendingAdditionalItems: stampedPending,
-            },
-          },
-        });
-        pendingItems.nmiTransactionId = saleResp.transactionid;
-        pendingItems.paymentIntentId = saleResp.transactionid;
       }
     }
 
