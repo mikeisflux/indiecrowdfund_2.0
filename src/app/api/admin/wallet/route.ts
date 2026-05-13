@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// POST - Zero out a user's DivinityCoin wallet balance (admin only)
+// POST - Zero out a user's Divinity Payments wallet balance (admin only)
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();

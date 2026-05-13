@@ -55,7 +55,7 @@ export function PaymentProcessorSection({
           <AlertTriangle className="h-4 w-4 text-[#0066FF]" />
           <AlertTitle>NSFW-Friendly Processor Required</AlertTitle>
           <AlertDescription>
-            Projects with adult or controversial content must use DivinityCoin or Whop.
+            Projects with adult or controversial content must use Divinity Payments or Whop.
             PayPal does not process payments for this type of content.
           </AlertDescription>
         </Alert>
@@ -74,7 +74,7 @@ export function PaymentProcessorSection({
                 <div className="h-8 w-8 rounded-lg bg-[#0066FF] flex items-center justify-center">
                   <Banknote className="h-5 w-5 text-white" />
                 </div>
-                DivinityCoin
+                Divinity Payments
                 <Badge variant="default" className="ml-2 bg-[#0066FF]">Recommended</Badge>
               </CardTitle>
               {payment.paymentProcessor === "DIVINITYCOIN" && (
@@ -200,19 +200,19 @@ export function PaymentProcessorSection({
         <>
           <Alert className="bg-gradient-to-r from-blue-50/80 to-sky-50/80 dark:from-blue-900/20 dark:to-sky-900/20 border-[#0066FF]/30 dark:border-[#0066FF]/40">
             <Banknote className="h-4 w-4 text-[#0066FF]" />
-            <AlertTitle>Why Choose DivinityCoin?</AlertTitle>
+            <AlertTitle>Why Choose Divinity Payments?</AlertTitle>
             <AlertDescription className="mt-2 space-y-2 text-sm">
               <p>
-                <strong>Content Freedom:</strong> Unlike traditional payment processors, DivinityCoin has no content restrictions.
+                <strong>Content Freedom:</strong> Unlike traditional payment processors, Divinity Payments has no content restrictions.
                 Your campaign cannot be taken down or have payments frozen due to adult, mature, or controversial content in your project.
               </p>
               <p>
                 <strong>Protection from Processor Policies:</strong> Traditional processors can refuse service
-                or freeze funds at any time based on their content policies. With DivinityCoin, your funds are secure and protected
+                or freeze funds at any time based on their content policies. With Divinity Payments, your funds are secure and protected
                 from arbitrary policy changes.
               </p>
               <p>
-                <strong>Pre-funded Payments:</strong> Backers purchase DivinityCoin credits in advance, meaning when they pledge
+                <strong>Pre-funded Payments:</strong> Backers purchase Divinity Payments credits in advance, meaning when they pledge
                 to your campaign, the funds are already secured. This eliminates failed payment issues common with traditional
                 card processing.
               </p>
@@ -222,18 +222,18 @@ export function PaymentProcessorSection({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-[#0066FF] hover:text-[#0052CC] hover:underline font-medium"
               >
-                Learn more about DivinityCoin <ExternalLink className="h-3 w-3" />
+                Learn more about Divinity Payments <ExternalLink className="h-3 w-3" />
               </a>
             </AlertDescription>
           </Alert>
 
           <div className="rounded-lg bg-muted/50 p-4 border">
             <h4 className="font-medium mb-3">
-              DivinityCoin Fee Breakdown for {formatCurrency(goalAmount)} Goal
+              Divinity Payments Fee Breakdown for {formatCurrency(goalAmount)} Goal
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span>DivinityCoin partner fee (3%)</span>
+                <span>Divinity Payments partner fee (3%)</span>
                 <span className="font-medium">{formatCurrency(goalAmount * 0.03)}</span>
               </div>
               <div className="flex justify-between">

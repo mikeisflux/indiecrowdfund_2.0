@@ -97,7 +97,7 @@ export function ProjectsTable({
     if (project.paymentProcessor === "DIVINITYCOIN") {
       return (
         <Badge variant="outline" className="text-xs text-purple-600 border-purple-600">
-          DivinityCoin
+          Divinity Payments
         </Badge>
       );
     }

@@ -29,10 +29,10 @@ export function DivinityCoinBankSection({
       <div>
         <h3 className="font-semibold flex items-center gap-2">
           <Banknote className="h-5 w-5" />
-          DivinityCoin Settlement Account
+          Divinity Payments Settlement Account
         </h3>
         <p className="text-sm text-muted-foreground">
-          Enter your bank account details for DivinityCoin settlements. All data is encrypted and stored securely.
+          Enter your bank account details for Divinity Payments settlements. All data is encrypted and stored securely.
         </p>
       </div>
 
@@ -182,14 +182,14 @@ export function DivinityCoinBankSection({
               </div>
 
               <p className="text-xs text-muted-foreground">
-                DivinityCoin settlements are processed within 14 business days after your campaign ends.{" "}
+                Divinity Payments settlements are processed within 14 business days after your campaign ends.{" "}
                 <a
                   href="https://divinitycoin.com/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary underline"
                 >
-                  Learn more about DivinityCoin
+                  Learn more about Divinity Payments
                 </a>
               </p>
             </div>

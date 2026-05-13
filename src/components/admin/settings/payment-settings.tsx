@@ -25,7 +25,7 @@ interface PaymentSettingsProps {
     stripeSecretKey: string;
     stripeWebhookSecret: string;
     stripeConnectWebhookSecret: string;
-    // DivinityCoin - Credit redemption payment solution
+    // Divinity Payments - Credit redemption payment solution
     divinityCoinEnabled: boolean;
     divinityCoinApiKey: string;
     divinityCoinWebhookSecret: string;
@@ -176,7 +176,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>DivinityCoin Configuration</CardTitle>
+              <CardTitle>Divinity Payments Configuration</CardTitle>
               <CardDescription>Universal credit redemption system for supporting creators</CardDescription>
             </div>
             <Badge variant={settings.divinityCoinEnabled ? "default" : "secondary"}>
@@ -187,8 +187,8 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label>Enable DivinityCoin</Label>
-              <p className="text-sm text-muted-foreground">Accept payments via DivinityCoin credits (3% partner fee + 3% platform = ~6% total)</p>
+              <Label>Enable Divinity Payments</Label>
+              <p className="text-sm text-muted-foreground">Accept payments via Divinity Payments credits (3% partner fee + 3% platform = ~6% total)</p>
             </div>
             <Switch
               checked={settings.divinityCoinEnabled}
@@ -206,7 +206,7 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
                 onChange={(value) => onSettingsChange({ ...settings, divinityCoinApiKey: value })}
                 onSave={onSave}
                 hasExistingValue={settings.divinityCoinApiKey === "••••••••"}
-                placeholder="Your DivinityCoin API key..."
+                placeholder="Your Divinity Payments API key..."
                 forceShowValue={showAllKeys}
               />
             </div>
@@ -258,21 +258,21 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               onChange={(value) => onSettingsChange({ ...settings, divinityCoinStripePublishableKey: value })}
               onSave={onSave}
               hasExistingValue={settings.divinityCoinStripePublishableKey === "••••••••"}
-              placeholder="pk_live_... (DivinityCoin's Stripe key for card form)"
+              placeholder="pk_live_... (Divinity Payments's Stripe key for card form)"
               forceShowValue={showAllKeys}
             />
-            <p className="text-xs text-muted-foreground">DivinityCoin&apos;s Stripe publishable key used to render the card form on the pledge page. Card data goes directly to Stripe on DC&apos;s account.</p>
+            <p className="text-xs text-muted-foreground">Divinity Payments&apos;s Stripe publishable key used to render the card form on the pledge page. Card data goes directly to Stripe on DC&apos;s account.</p>
           </div>
 
           <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
-            <p className="font-medium">DivinityCoin Fee Structure:</p>
+            <p className="font-medium">Divinity Payments Fee Structure:</p>
             <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
-              <li>3% partner fee (DivinityCoin processing)</li>
+              <li>3% partner fee (Divinity Payments processing)</li>
               <li>Platform fee to creator: 3% (configurable) = ~6% total</li>
               <li>Settlements processed via wire transfer to your bank</li>
             </ul>
             <a href="https://divinitycoin.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              Learn more about DivinityCoin →
+              Learn more about Divinity Payments →
             </a>
           </div>
         </CardContent>

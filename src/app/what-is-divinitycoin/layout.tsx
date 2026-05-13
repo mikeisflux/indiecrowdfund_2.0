@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "What is DivinityCoin? - Platform Rewards Currency",
+  title: "What is Divinity Payments? - Alternative Payment Processor",
   description:
-    "Learn about DivinityCoin, IndieCrowdfund's rewards currency. Earn and redeem DivinityCoins for discounts, exclusive perks, and more on the crowdfunding platform.",
+    "Learn about Divinity Payments, an alternative payment sub-processor on IndieCrowdfund. Pay with your credit or debit card on projects and marketplace listings — no crypto, no wallet, no setup required.",
   openGraph: {
-    title: "DivinityCoin Explained - IndieCrowdfund",
+    title: "Divinity Payments Explained - IndieCrowdfund",
     description:
-      "Everything you need to know about DivinityCoin, the rewards currency on IndieCrowdfund.",
+      "Everything you need to know about Divinity Payments, the alternative payment processor available on IndieCrowdfund.",
   },
 };
 

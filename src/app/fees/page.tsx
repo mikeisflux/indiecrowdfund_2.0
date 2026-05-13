@@ -80,7 +80,7 @@ function TotalBadge({ color, text }: { color: string; text: string }) {
 
 export default function FeesPage() {
   const [sliderValue, setSliderValue] = useState([50000]);
-  // Backer count drives per-transaction fees ($0.30/txn for DivinityCoin,
+  // Backer count drives per-transaction fees ($0.30/txn for Divinity Payments,
   // $0.49/txn for PayPal). Default 1000 backers = $50/backer at $50k raised,
   // which matches the historical default.
   const [backerSliderValue, setBackerSliderValue] = useState([1000]);
@@ -101,7 +101,7 @@ export default function FeesPage() {
   const methodLabel =
     paymentMethod === "paypal" ? "PayPal"
     : paymentMethod === "whop" ? "Whop"
-    : "DivinityCoin";
+    : "Divinity Payments";
 
   const methodColor = ({
     paypal: { bg: "bg-blue-50 dark:bg-blue-900/20", text: "text-[#003087] dark:text-blue-400" },
@@ -170,7 +170,7 @@ export default function FeesPage() {
           >
             <TabsList className="grid w-full sm:max-w-2xl mx-auto mb-8 grid-cols-3">
               <TabsTrigger value="divinitycoin" className="flex items-center gap-2">
-                <Banknote className="h-4 w-4" /> DivinityCoin
+                <Banknote className="h-4 w-4" /> Divinity Payments
               </TabsTrigger>
               <TabsTrigger value="paypal" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" /> PayPal
@@ -241,7 +241,7 @@ export default function FeesPage() {
               <TotalBadge color="bg-blue-50 dark:bg-blue-900/20 text-[#003087] dark:text-blue-400" text="Total fees with PayPal: approximately 6.5% of funds raised" />
             </TabsContent>
 
-            {/* DivinityCoin */}
+            {/* Divinity Payments */}
             <TabsContent value="divinitycoin">
               <FeeBreakdownCards fees={divinityCoinFeeBreakdown} iconBg="bg-gradient-to-br from-purple-500 to-pink-500" rateClass="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent" Icon={Coins} />
               <Card className="mt-8 lg:max-w-4xl lg:mx-auto border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10">
@@ -251,17 +251,17 @@ export default function FeesPage() {
                       <Coins className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is DivinityCoin?</h3>
+                      <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">What is Divinity Payments?</h3>
                       <p className="text-sm text-zinc-600 dark:text-muted-foreground mb-3">
-                        DivinityCoin is an alternative payment sub-processor that supports all content types including NSFW/adult projects.
+                        Divinity Payments is an alternative payment sub-processor that supports all content types including NSFW/adult projects.
                         Backers enter their credit or debit card at checkout — the experience is seamless.
                       </p>
                       <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">How the money flows (example: $100 pledge):</h4>
                       <ol className="text-sm text-zinc-600 dark:text-muted-foreground space-y-1 list-decimal list-inside mb-4">
                         <li>Backer enters their card at checkout on your campaign</li>
-                        <li>DivinityCoin securely processes the $100 payment</li>
+                        <li>Divinity Payments securely processes the $100 payment</li>
                         <li>When your project funds, payment is captured</li>
-                        <li>DivinityCoin partner fee (3% = $3.00) deducted at settlement</li>
+                        <li>Divinity Payments partner fee (3% = $3.00) deducted at settlement</li>
                         <li>Per-transaction fee ($0.30 × 1 txn = $0.30) deducted at settlement</li>
                         <li>Platform fee (3% of $96.70 = $2.90) deducted at settlement</li>
                         <li>You receive <strong>$93.80</strong> deposited to your account</li>
@@ -272,14 +272,14 @@ export default function FeesPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center text-sm text-purple-600 hover:text-purple-700 font-medium"
                       >
-                        Learn more about DivinityCoin
+                        Learn more about Divinity Payments
                         <ExternalLink className="ml-1 h-3 w-3" />
                       </a>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <TotalBadge color="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400" text="Total fees with DivinityCoin: approximately 6.5% of funds raised (varies with avg. pledge size)" />
+              <TotalBadge color="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400" text="Total fees with Divinity Payments: approximately 6.5% of funds raised (varies with avg. pledge size)" />
             </TabsContent>
 
             {/* Stripe (Legacy) - hidden for now
@@ -374,7 +374,7 @@ export default function FeesPage() {
                   ) : (
                     <>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">DivinityCoin partner fee (3%)</span>
+                        <span className="text-zinc-600 dark:text-muted-foreground">Divinity Payments partner fee (3%)</span>
                         <span className="text-red-500">-${divinityFees.divinityPartnerFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
@@ -413,7 +413,7 @@ export default function FeesPage() {
                 <h4 className="text-sm font-medium text-muted-foreground mb-4">Compare with other platforms at ${amount.toLocaleString()}</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "divinitycoin" ? "ring-2 ring-purple-400 bg-purple-50 dark:bg-purple-900/30" : "bg-purple-50 dark:bg-purple-900/20"}`}>
-                    <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (DivinityCoin)</div>
+                    <div className="text-xs text-muted-foreground mb-1">IndieCrowdfund (Divinity Payments)</div>
                     <div className="font-bold text-purple-600">${divinityFees.youReceive.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
                   <div className={`text-center p-3 rounded-lg transition-all ${paymentMethod === "paypal" ? "ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-900/30" : "bg-blue-50 dark:bg-blue-900/20"}`}>
@@ -527,7 +527,7 @@ export default function FeesPage() {
             <div className="rounded-lg border p-6">
               <h3 className="font-semibold">What payment processor does IndieCrowdfund use?</h3>
               <p className="mt-2 text-zinc-600 dark:text-muted-foreground">
-                DivinityCoin is the recommended processor; PayPal and Whop are also supported. DivinityCoin and Whop both accept all content types including NSFW/adult projects, while PayPal Advanced Checkout offers the broadest backer reach via wallet and inline card payments. Choose the processor that best fits your campaign during setup.
+                Divinity Payments is the recommended processor; PayPal and Whop are also supported. Divinity Payments and Whop both accept all content types including NSFW/adult projects, while PayPal Advanced Checkout offers the broadest backer reach via wallet and inline card payments. Choose the processor that best fits your campaign during setup.
               </p>
             </div>
             <div className="rounded-lg border p-6">

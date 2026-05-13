@@ -286,7 +286,7 @@ export default function BookDetailPage() {
           return;
         }
       } else {
-        // DivinityCoin seamless payment - get clientSecret + publishableKey
+        // Divinity Payments seamless payment - get clientSecret + publishableKey
         const res = await apiFetch("/api/marketplace/purchase", {
           method: "POST",
           headers: {
@@ -630,7 +630,7 @@ export default function BookDetailPage() {
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700">
                     <Coins className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                      DivinityCoin payment only
+                      Divinity Payments payment only
                     </span>
                   </div>
                 )}
@@ -954,7 +954,7 @@ export default function BookDetailPage() {
                     >
                       <Coins className="w-6 h-6 mr-4" />
                       <div className="text-left">
-                        <div className="font-semibold">DivinityCoin</div>
+                        <div className="font-semibold">Divinity Payments</div>
                         <div className="text-sm opacity-80">
                           Pay with credit or debit card
                         </div>

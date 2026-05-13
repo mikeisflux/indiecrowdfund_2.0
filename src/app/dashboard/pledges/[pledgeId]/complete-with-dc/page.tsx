@@ -163,7 +163,7 @@ export default function CompleteWithDcPage() {
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Complete your pledge with DivinityCoin</CardTitle>
+          <CardTitle>Complete your pledge with Divinity Payments</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-sm">
@@ -172,7 +172,7 @@ export default function CompleteWithDcPage() {
             </p>
             <p className="text-emerald-800 dark:text-emerald-300 mt-1">
               The original processor for this campaign shut down before your
-              card was charged. We&apos;ve moved this project to DivinityCoin
+              card was charged. We&apos;ve moved this project to Divinity Payments
               so you can complete your pledge. Re-enter your card below — your
               reward, add-ons, shipping address, and backer number are all
               preserved.

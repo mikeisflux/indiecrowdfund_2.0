@@ -81,7 +81,7 @@ export function ActiveProjectPanel({
     if (!project) return;
     if (!dryRun) {
       const ok = window.confirm(
-        `Permanently migrate "${project.title}" from Mentom Payments to DivinityCoin?\n\n` +
+        `Permanently migrate "${project.title}" from Mentom Payments to Divinity Payments?\n\n` +
           `• Flips Project.paymentProcessor to DIVINITYCOIN\n` +
           `• Flips every PENDING/FAILED NMI pledge to DIVINITYCOIN + status PENDING\n` +
           `• Clears NMI-specific fields on those pledges\n` +

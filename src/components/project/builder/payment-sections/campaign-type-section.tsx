@@ -55,7 +55,7 @@ export function CampaignTypeSection({
             <ul className="space-y-1 text-xs text-muted-foreground">
               <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Builds backer trust — zero risk to them</li>
               <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Creates urgency and momentum</li>
-              <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Compatible with PayPal, DivinityCoin & Whop</li>
+              <li className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Compatible with PayPal, Divinity Payments & Whop</li>
               <li className="flex items-center gap-1.5"><span className="text-amber-500">!</span> Funds held until goal is reached</li>
             </ul>
           </CardContent>

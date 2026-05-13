@@ -447,7 +447,7 @@ export async function sendProcessorMigratedEmail(
             moved.
           </p>
           <p>
-            We&apos;ve migrated this campaign to <strong>DivinityCoin</strong>, a
+            We&apos;ve migrated this campaign to <strong>Divinity Payments</strong>, a
             different payment processor. To complete your pledge, please click
             below and re-enter your card details on the new secure checkout.
             <strong>Your reward, add-ons, shipping address, and backer number
@@ -456,7 +456,7 @@ export async function sendProcessorMigratedEmail(
 
           <div style="text-align: center; margin: 28px 0 8px 0;">
             <a href="${completeUrl}" style="display: inline-block; background: #166534; color: #fff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-              Complete Pledge with DivinityCoin
+              Complete Pledge with Divinity Payments
             </a>
           </div>
           <p style="color: #166534; font-size: 13px; text-align: center; margin-top: 0;">
@@ -505,7 +505,7 @@ export async function sendMarketplacePurchaseEmail(
   // from /api/backer/digital-library which merges both sources.
   const libraryUrl = `${APP_URL}/dashboard/backer?tab=downloads`;
 
-  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : "Card";
+  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "Divinity Payments" : "Card";
   const amountFormatted = paymentMethod === "DIVINITYCOIN"
     ? `${amount.toFixed(2)} DC`
     : `$${amount.toFixed(2)} ${currency}`;
@@ -590,9 +590,9 @@ export async function sendMarketplaceSaleEmail(
 ) {
   const dashboardUrl = `${APP_URL}/dashboard/marketplace`;
 
-  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : "Stripe";
+  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "Divinity Payments" : "Stripe";
   const formatAmount = (amt: number) => paymentMethod === "DIVINITYCOIN"
-    ? `${amt.toFixed(2)} DC`
+    ? `${amt.toFixed(2)} credits`
     : `$${amt.toFixed(2)} ${currency}`;
 
   const html = `
@@ -647,7 +647,7 @@ export async function sendMarketplaceSaleEmail(
         <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
           <p style="margin: 0; color: #666;">
             ${paymentMethod === "DIVINITYCOIN"
-              ? "Your DivinityCoin balance has been credited automatically."
+              ? "Your Divinity Payments balance has been credited automatically."
               : "Your payout will be processed according to your Stripe Connect settings."}
           </p>
         </div>
@@ -713,7 +713,7 @@ export async function sendPayoutCreatedEmail(
                 <td style="text-align: right; padding: 5px 0;">${formatAmount(totalRaised)}</td>
               </tr>
               <tr>
-                <td style="padding: 5px 0;">DivinityCoin Partner Fee:</td>
+                <td style="padding: 5px 0;">Divinity Payments Partner Fee:</td>
                 <td style="text-align: right; padding: 5px 0;">-${formatAmount(partnerFee)}</td>
               </tr>
               <tr>

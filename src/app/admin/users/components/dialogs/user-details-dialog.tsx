@@ -135,11 +135,11 @@ export function UserDetailsDialog({
               </Card>
             </div>
 
-            {/* DivinityCoin Wallet */}
+            {/* Divinity Payments Wallet */}
             {user.divinityCoinBalance > 0 && (
               <div className="mt-6 flex items-center justify-between rounded-lg border p-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">DivinityCoin Wallet Balance</p>
+                  <p className="text-sm text-muted-foreground">Divinity Payments Wallet Balance</p>
                   <p className="text-lg font-bold text-emerald-600">
                     ${Number(user.divinityCoinBalance).toFixed(2)}
                   </p>

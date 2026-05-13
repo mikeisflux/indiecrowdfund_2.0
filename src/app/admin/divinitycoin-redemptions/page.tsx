@@ -168,7 +168,7 @@ export default function DivinityCoinRedemptionsPage() {
       });
     } catch (error) {
       console.error("Error fetching DC transactions:", error);
-      toast.error("Failed to load DivinityCoin transactions");
+      toast.error("Failed to load Divinity Payments transactions");
     } finally {
       setLoading(false);
     }
@@ -371,7 +371,7 @@ export default function DivinityCoinRedemptionsPage() {
             DC Transactions
           </h1>
           <p className="text-muted-foreground dark:text-muted-foreground mt-1">
-            DivinityCoin transaction history and audit log
+            Divinity Payments transaction history and audit log
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -486,7 +486,7 @@ export default function DivinityCoinRedemptionsPage() {
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Coins className="w-12 h-12 mb-4 text-muted-foreground" />
               <p className="text-lg font-medium">No transactions found</p>
-              <p className="text-sm">DivinityCoin transactions will appear here</p>
+              <p className="text-sm">Divinity Payments transactions will appear here</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -778,7 +778,7 @@ export default function DivinityCoinRedemptionsPage() {
             <DialogDescription>
               {editingTransaction
                 ? "Modify the transaction details below."
-                : "Manually add a new DivinityCoin transaction record."}
+                : "Manually add a new Divinity Payments transaction record."}
             </DialogDescription>
           </DialogHeader>
 

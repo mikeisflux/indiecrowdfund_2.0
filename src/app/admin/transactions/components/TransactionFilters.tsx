@@ -81,7 +81,7 @@ export function TransactionFilters({
                 <SelectItem value="all">All Processors</SelectItem>
                 <SelectItem value="STRIPE">Stripe</SelectItem>
                 <SelectItem value="PAYPAL">PayPal</SelectItem>
-                <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
+                <SelectItem value="DIVINITYCOIN">Divinity Payments</SelectItem>
                 <SelectItem value="WHOP">Whop</SelectItem>
               </SelectContent>
             </Select>

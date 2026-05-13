@@ -157,7 +157,7 @@ export function ProjectDetailDialog({
                   {(() => {
                     const proc = selectedProject.paymentProcessor;
                     const label =
-                      proc === "DIVINITYCOIN" ? "DivinityCoin Partner Fee (3%)"
+                      proc === "DIVINITYCOIN" ? "Divinity Payments Partner Fee (3%)"
                       : proc === "WHOP" ? "Whop Processing Fee (~3%)"
                       : proc === "PAYPAL" ? "PayPal Processing Fee (3.49%)"
                       : "Processor Fee";

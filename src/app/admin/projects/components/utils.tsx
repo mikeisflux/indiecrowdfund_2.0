@@ -36,7 +36,7 @@ export const getFlagBadge = (flag: string) => {
     unverified_creator: { label: "Unverified", variant: "destructive" },
     high_goal: { label: "High Goal", variant: "outline" },
     no_video: { label: "No Video", variant: "outline" },
-    divinitycoin: { label: "DivinityCoin", variant: "secondary" },
+    divinitycoin: { label: "Divinity Payments", variant: "secondary" },
     adult_content: { label: "Adult Content", variant: "destructive" },
     risky_content: { label: "Risky Content", variant: "destructive" },
     promo_not_sfw: { label: "Promo Not SFW", variant: "destructive" },

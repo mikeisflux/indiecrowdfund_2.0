@@ -581,7 +581,7 @@ export function OrderSummary({
               {" "}and{" "}
               <Link href="/privacy" className="underline">Privacy Policy</Link>
               {project?.paymentProcessor === "DIVINITYCOIN"
-                ? ", and for DivinityCoin to process your payment."
+                ? ", and for Divinity Payments to process your payment."
                 : project?.paymentProcessor === "WHOP"
                 ? ", and for Whop to process your payment."
                 : ", and for PayPal to process your payment."

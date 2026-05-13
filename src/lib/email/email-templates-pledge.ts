@@ -73,7 +73,7 @@ export async function sendPledgeConfirmationEmail(
   `).join("") : "";
 
   // Payment method label
-  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "DivinityCoin" : paymentMethod === "PAYPAL" ? "PayPal" : "Card";
+  const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "Divinity Payments" : paymentMethod === "PAYPAL" ? "PayPal" : "Card";
 
   // Build shipping HTML
   const hasShipping = shippingInfo && (shippingInfo.address || shippingInfo.city || shippingInfo.country);

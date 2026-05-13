@@ -53,7 +53,7 @@ export function calculatePayPalFees(
   return { platformFee, processingFee, totalFees, youReceive, feePercentage: (totalFees / amount) * 100 };
 }
 
-// 3% DivinityCoin partner fee + $0.30 per transaction, then 3% platform fee on the remainder
+// 3% Divinity Payments partner fee + $0.30 per transaction, then 3% platform fee on the remainder
 export function calculateDivinityCoinFees(
   amount: number,
   averagePledge = 50,

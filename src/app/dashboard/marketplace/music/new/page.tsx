@@ -825,7 +825,7 @@ export default function NewMusicPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PAYPAL">PayPal</SelectItem>
-                    <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
+                    <SelectItem value="DIVINITYCOIN">Divinity Payments</SelectItem>
                     <SelectItem value="WHOP">Whop</SelectItem>
                   </SelectContent>
                 </Select>
@@ -837,7 +837,7 @@ export default function NewMusicPage() {
                   <div>
                     <p className="font-medium text-foreground">Contains Explicit Content</p>
                     <p className="text-sm text-muted-foreground">
-                      If enabled, payments will be processed via DivinityCoin only
+                      If enabled, payments will be processed via Divinity Payments only
                     </p>
                   </div>
                 </div>

@@ -37,14 +37,14 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
     title: "Payment processors",
     tags: ["mentom payments", "paypal", "divinitycoin", "whop", "processor", "card", "checkout"],
     content:
-      "Creators choose one of four payment processors when setting up a campaign: PayPal (default for standard campaigns), Mentom Payments (formerly PaymentCloud — high-risk friendly, supports NSFW/adult content), DivinityCoin (independent processor for NSFW/adult content campaigns), and Whop. As a backer you pay with a normal credit/debit card on the project's checkout page regardless of which processor the creator chose. Card data is tokenized in your browser and never touches IndieCrowdfund servers.",
+      "Creators choose one of four payment processors when setting up a campaign: PayPal (default for standard campaigns), Mentom Payments (formerly PaymentCloud — high-risk friendly, supports NSFW/adult content), Divinity Payments (independent processor for NSFW/adult content campaigns), and Whop. As a backer you pay with a normal credit/debit card on the project's checkout page regardless of which processor the creator chose. Card data is tokenized in your browser and never touches IndieCrowdfund servers.",
   },
   {
     id: "fees",
     title: "Platform fees",
     tags: ["fees", "platform fee", "processing fee", "rolling reserve", "payout"],
     content:
-      "IndieCrowdfund's platform fee is 3% of successfully funded projects. Total fees vary by processor: ~7.5% with Mentom Payments (4% + $0.38/txn + 3% platform), ~6.5% with PayPal (3.49% + $0.49/txn + 3% platform), ~6.5% with DivinityCoin, ~6% with Whop. Mentom Payments holds 10% of gross funds in escrow for 180 days as chargeback protection on campaigns that raise over $2,500.",
+      "IndieCrowdfund's platform fee is 3% of successfully funded projects. Total fees vary by processor: ~7.5% with Mentom Payments (4% + $0.38/txn + 3% platform), ~6.5% with PayPal (3.49% + $0.49/txn + 3% platform), ~6.5% with Divinity Payments, ~6% with Whop. Mentom Payments holds 10% of gross funds in escrow for 180 days as chargeback protection on campaigns that raise over $2,500.",
     link: "/fees",
   },
   {
@@ -161,7 +161,7 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
     title: "NSFW / adult content",
     tags: ["nsfw", "adult", "18+", "explicit", "mature content"],
     content:
-      "NSFW or adult-content campaigns must use Mentom Payments, DivinityCoin, or Whop as their processor — PayPal does not process payments for adult content. Adult campaigns are flagged at submission and gated behind an age confirmation prompt for backers. Backers can opt in/out of seeing NSFW content in account settings.",
+      "NSFW or adult-content campaigns must use Mentom Payments, Divinity Payments, or Whop as their processor — PayPal does not process payments for adult content. Adult campaigns are flagged at submission and gated behind an age confirmation prompt for backers. Backers can opt in/out of seeing NSFW content in account settings.",
   },
 
   // ============== Legal / policy pages ==============
@@ -178,7 +178,7 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
     title: "Privacy policy",
     tags: ["privacy", "data", "personal information", "tracking", "cookies", "gdpr"],
     content:
-      "Our privacy policy details what we collect (account info, pledge data, shipping addresses, browser metadata), how we use it (account servicing, fulfillment, fraud prevention), what we share with processors (PayPal, Mentom Payments, DivinityCoin, Whop — each handles card data on their own PCI-compliant infrastructure; we never see card numbers), and your rights (access, deletion, opt-out of marketing). Account deletion can be requested from settings; full data is removed after a 30-day grace window.",
+      "Our privacy policy details what we collect (account info, pledge data, shipping addresses, browser metadata), how we use it (account servicing, fulfillment, fraud prevention), what we share with processors (PayPal, Mentom Payments, Divinity Payments, Whop — each handles card data on their own PCI-compliant infrastructure; we never see card numbers), and your rights (access, deletion, opt-out of marketing). Account deletion can be requested from settings; full data is removed after a 30-day grace window.",
     link: "/privacy",
   },
   {
@@ -194,7 +194,7 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
     title: "PCI compliance",
     tags: ["pci", "compliance", "card security", "payment security", "tokenization"],
     content:
-      "IndieCrowdfund maintains PCI DSS compliance across all payment processors. We never store, process, or transmit credit card data on our servers. Cards are tokenized in the buyer's browser by the processor (Mentom Payments via Collect.js, PayPal via Advanced Checkout, DivinityCoin via Stripe Elements, Whop via their hosted checkout). The full PCI write-up is at /privacy under the PCI section.",
+      "IndieCrowdfund maintains PCI DSS compliance across all payment processors. We never store, process, or transmit credit card data on our servers. Cards are tokenized in the buyer's browser by the processor (Mentom Payments via Collect.js, PayPal via Advanced Checkout, Divinity Payments via Stripe Elements, Whop via their hosted checkout). The full PCI write-up is at /privacy under the PCI section.",
     link: "/privacy",
   },
   {
@@ -248,10 +248,10 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
   },
   {
     id: "what-is-divinitycoin",
-    title: "What is DivinityCoin?",
+    title: "What is Divinity Payments?",
     tags: ["divinitycoin", "dc", "what is", "explainer"],
     content:
-      "DivinityCoin is an independent payment processor we partner with primarily for NSFW/adult content campaigns. Cards are tokenized in the buyer's browser via Stripe Elements pointed at DivinityCoin's account, so card data never touches IndieCrowdfund. The full explainer is at /what-is-divinitycoin.",
+      "Divinity Payments is an independent payment processor we partner with primarily for NSFW/adult content campaigns. Cards are tokenized in the buyer's browser via Stripe Elements pointed at Divinity Payments's account, so card data never touches IndieCrowdfund. The full explainer is at /what-is-divinitycoin.",
     link: "/what-is-divinitycoin",
   },
 

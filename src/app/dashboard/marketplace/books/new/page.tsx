@@ -917,7 +917,7 @@ function NewBookForm() {
                   <div>
                     <p className="font-medium text-foreground">Contains NSFW Content</p>
                     <p className="text-sm text-muted-foreground">
-                      If enabled, payments will be processed via DivinityCoin only
+                      If enabled, payments will be processed via Divinity Payments only
                     </p>
                   </div>
                 </div>
@@ -1053,13 +1053,13 @@ function NewBookForm() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PAYPAL">PayPal (Card + PayPal Wallet)</SelectItem>
-                    <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
+                    <SelectItem value="DIVINITYCOIN">Divinity Payments</SelectItem>
                     <SelectItem value="WHOP">Whop</SelectItem>
                   </SelectContent>
                 </Select>
                 {formData.isNsfw && (
                   <p className="text-xs text-amber-500 dark:text-amber-400">
-                    NSFW content requires DivinityCoin payment
+                    NSFW content requires Divinity Payments payment
                   </p>
                 )}
               </div>
@@ -1134,7 +1134,7 @@ function NewBookForm() {
                         ? "bg-blue-900/20 text-blue-700 dark:text-blue-300"
                         : "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300"
                     }>
-                      {formData.paymentProcessor === "DIVINITYCOIN" ? "DivinityCoin" : formData.paymentProcessor === "PAYPAL" ? "PayPal" : "Whop"}
+                      {formData.paymentProcessor === "DIVINITYCOIN" ? "Divinity Payments" : formData.paymentProcessor === "PAYPAL" ? "PayPal" : "Whop"}
                     </Badge>
                   </div>
                 </div>

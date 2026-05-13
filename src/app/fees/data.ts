@@ -21,18 +21,18 @@ export const stripeFeeBreakdown = [
 
 export const divinityCoinFeeBreakdown = [
   {
-    title: "DivinityCoin Partner Fee",
+    title: "Divinity Payments Partner Fee",
     rate: "3% + $0.30",
-    description: "Per-transaction fee charged by DivinityCoin",
+    description: "Per-transaction fee charged by Divinity Payments",
     details:
-      "3% of total pledges plus $0.30 per individual transaction. Covers secure card processing and compliance infrastructure handled by DivinityCoin.",
+      "3% of total pledges plus $0.30 per individual transaction. Covers secure card processing and compliance infrastructure handled by Divinity Payments.",
   },
   {
     title: "IndieCrowdfund Platform Fee",
     rate: "3%",
     description: "Deducted from creator payouts",
     details:
-      "Applied on the remainder after DivinityCoin partner fees are deducted. Covers hosting, tools, and customer support.",
+      "Applied on the remainder after Divinity Payments partner fees are deducted. Covers hosting, tools, and customer support.",
   },
 ];
 
@@ -72,7 +72,7 @@ export const whopFeeBreakdown = [
 
 export const comparisonData = [
   {
-    platform: "IndieCrowdfund (DivinityCoin)",
+    platform: "IndieCrowdfund (Divinity Payments)",
     platformFee: "3%",
     paymentFee: "3% + $0.30/txn",
     total: "~6%",

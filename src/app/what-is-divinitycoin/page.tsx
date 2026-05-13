@@ -28,48 +28,48 @@ interface FAQ {
 
 const faqs: FAQ[] = [
   {
-    question: 'Is DivinityCoin a cryptocurrency?',
-    answer: 'No! DivinityCoin is NOT a cryptocurrency. It is a payment processing service that allows you to pay with your regular credit or debit card. There is no blockchain, no crypto wallet, and no volatile exchange rates. Think of it as an alternative payment processor, similar to how other payment services process card payments.',
+    question: 'Is Divinity Payments a cryptocurrency?',
+    answer: 'No! Divinity Payments is NOT a cryptocurrency. It is a payment processing service that allows you to pay with your regular credit or debit card. There is no blockchain, no crypto wallet, and no volatile exchange rates. Think of it as an alternative payment processor, similar to how other payment services process card payments.',
   },
   {
-    question: 'How do I pay with DivinityCoin?',
-    answer: 'When a project or marketplace listing uses DivinityCoin as its payment processor, you simply enter your credit or debit card details at checkout. The payment form accepts Visa, Mastercard, American Express, and Discover. Your card is charged securely through DivinityCoin\'s certified payment system.',
+    question: 'How do I pay with Divinity Payments?',
+    answer: 'When a project or marketplace listing uses Divinity Payments as its payment processor, you simply enter your credit or debit card details at checkout. The payment form accepts Visa, Mastercard, American Express, and Discover. Your card is charged securely through Divinity Payments\'s certified payment system.',
   },
   {
-    question: 'Do I need to create a DivinityCoin account or buy credits first?',
-    answer: 'No! There is nothing to set up in advance. When you back a project or make a marketplace purchase that uses DivinityCoin, you simply enter your card details at checkout — just like any other online purchase.',
+    question: 'Do I need to create a Divinity Payments account or buy credits first?',
+    answer: 'No! There is nothing to set up in advance. When you back a project or make a marketplace purchase that uses Divinity Payments, you simply enter your card details at checkout — just like any other online purchase.',
   },
   {
-    question: 'Why do some creators use DivinityCoin instead of other processors?',
-    answer: 'Creators choose DivinityCoin because it supports all content types, including NSFW and adult content, which some standard payment processors may not support. DivinityCoin provides creators with a compliant way to accept card payments for any type of creative work.',
+    question: 'Why do some creators use Divinity Payments instead of other processors?',
+    answer: 'Creators choose Divinity Payments because it supports all content types, including NSFW and adult content, which some standard payment processors may not support. Divinity Payments provides creators with a compliant way to accept card payments for any type of creative work.',
   },
   {
-    question: 'Is my card information safe with DivinityCoin?',
-    answer: 'Yes! DivinityCoin uses industry-standard PCI-compliant payment processing. Your card details are entered into a secure, encrypted payment form and are never stored by IndieCrowdfund. All payment data is encrypted end-to-end.',
+    question: 'Is my card information safe with Divinity Payments?',
+    answer: 'Yes! Divinity Payments uses industry-standard PCI-compliant payment processing. Your card details are entered into a secure, encrypted payment form and are never stored by IndieCrowdfund. All payment data is encrypted end-to-end.',
   },
   {
-    question: 'Are the fees different with DivinityCoin?',
+    question: 'Are the fees different with Divinity Payments?',
     answer: 'As a backer, you pay the same price regardless of which payment processor the creator uses. Fees (typically ~6–6.5% depending on the processor) are handled on the creator side and do not affect what you pay.',
   },
   {
-    question: 'Can I use DivinityCoin in the digital marketplace too?',
-    answer: 'Yes! If a creator has set DivinityCoin as their payment processor for their marketplace listings, you\'ll see the DivinityCoin payment option at checkout. The experience is the same — enter your card details and complete your purchase.',
+    question: 'Can I use Divinity Payments in the digital marketplace too?',
+    answer: 'Yes! If a creator has set Divinity Payments as their payment processor for their marketplace listings, you\'ll see the Divinity Payments payment option at checkout. The experience is the same — enter your card details and complete your purchase.',
   },
   {
     question: 'What cards are accepted?',
-    answer: 'DivinityCoin accepts all major card networks: Visa, Mastercard, American Express, and Discover. You can also use bank payments where available.',
+    answer: 'Divinity Payments accepts all major card networks: Visa, Mastercard, American Express, and Discover. You can also use bank payments where available.',
   },
   {
-    question: 'What happens if a project I backed with DivinityCoin fails?',
-    answer: 'If a project doesn\'t reach its funding goal, no money changes hands — the same as with any other payment method. If a refund is needed after a successful charge, it is processed back to your original payment card through DivinityCoin.',
+    question: 'What happens if a project I backed with Divinity Payments fails?',
+    answer: 'If a project doesn\'t reach its funding goal, no money changes hands — the same as with any other payment method. If a refund is needed after a successful charge, it is processed back to your original payment card through Divinity Payments.',
   },
   {
-    question: 'How long do DivinityCoin refunds take?',
+    question: 'How long do Divinity Payments refunds take?',
     answer: 'Refunds are processed back to your original payment method. Processing times depend on your card issuer, but typically take 5-10 business days to appear on your statement.',
   },
   {
-    question: 'Can I tell which projects use DivinityCoin before I pledge?',
-    answer: 'Yes! Projects that use DivinityCoin as their payment processor will show a DivinityCoin indicator on their project page. You\'ll also see the DivinityCoin payment form at checkout.',
+    question: 'Can I tell which projects use Divinity Payments before I pledge?',
+    answer: 'Yes! Projects that use Divinity Payments as their payment processor will show a Divinity Payments indicator on their project page. You\'ll also see the Divinity Payments payment form at checkout.',
   },
 ];
 
@@ -120,7 +120,7 @@ export default function WhatIsDivinityCoinPage() {
               <Coins className="h-12 w-12" />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-bold">What is DivinityCoin?</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold">What is Divinity Payments?</h1>
           <p className="mt-2 text-amber-100 text-lg">
             A seamless payment processor for creators — pay with your card, not crypto
           </p>
@@ -140,24 +140,24 @@ export default function WhatIsDivinityCoinPage() {
             </div>
             <div className="text-center md:text-left">
               <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-                DivinityCoin is a Payment Processor
+                Divinity Payments is a Payment Processor
               </h2>
               <p className="text-zinc-700 dark:text-muted-foreground text-lg">
-                DivinityCoin is an <strong>alternative payment sub-processor</strong> used by some creators on IndieCrowdfund.
-                When you back a project that uses DivinityCoin, you simply enter your <strong>credit or debit card</strong> at checkout.
+                Divinity Payments is an <strong>alternative payment sub-processor</strong> used by some creators on IndieCrowdfund.
+                When you back a project that uses Divinity Payments, you simply enter your <strong>credit or debit card</strong> at checkout.
                 It is <strong>NOT</strong> a cryptocurrency, token, or wallet system — just a secure way to pay with your card.
               </p>
             </div>
           </div>
         </div>
 
-        {/* What DivinityCoin IS vs IS NOT */}
+        {/* What Divinity Payments IS vs IS NOT */}
         <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 mb-12">
           {/* IS */}
           <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 p-6">
             <div className="flex items-center gap-3 mb-4">
               <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-              <h3 className="text-xl font-bold text-emerald-800 dark:text-emerald-200">DivinityCoin IS:</h3>
+              <h3 className="text-xl font-bold text-emerald-800 dark:text-emerald-200">Divinity Payments IS:</h3>
             </div>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
@@ -191,7 +191,7 @@ export default function WhatIsDivinityCoinPage() {
           <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 p-6">
             <div className="flex items-center gap-3 mb-4">
               <XCircle className="h-6 w-6 text-red-600" />
-              <h3 className="text-xl font-bold text-red-800 dark:text-red-200">DivinityCoin is NOT:</h3>
+              <h3 className="text-xl font-bold text-red-800 dark:text-red-200">Divinity Payments is NOT:</h3>
             </div>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
@@ -224,7 +224,7 @@ export default function WhatIsDivinityCoinPage() {
 
         {/* How It Works Section */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 text-center">How DivinityCoin Works</h2>
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 text-center">How Divinity Payments Works</h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div className="rounded-xl border border-border bg-card/80 backdrop-blur-sm p-5 text-center">
               <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center mb-3">
@@ -232,7 +232,7 @@ export default function WhatIsDivinityCoinPage() {
               </div>
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">1. Find a Project</h4>
               <p className="text-sm text-zinc-600 dark:text-muted-foreground">
-                Browse projects on IndieCrowdfund or the digital marketplace. Some creators use DivinityCoin as their payment processor.
+                Browse projects on IndieCrowdfund or the digital marketplace. Some creators use Divinity Payments as their payment processor.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card/80 backdrop-blur-sm p-5 text-center">
@@ -250,7 +250,7 @@ export default function WhatIsDivinityCoinPage() {
               </div>
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">3. Secure Processing</h4>
               <p className="text-sm text-zinc-600 dark:text-muted-foreground">
-                DivinityCoin securely processes your payment through their PCI-compliant system. Your card details are encrypted end-to-end.
+                Divinity Payments securely processes your payment through their PCI-compliant system. Your card details are encrypted end-to-end.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card/80 backdrop-blur-sm p-5 text-center">
@@ -265,11 +265,11 @@ export default function WhatIsDivinityCoinPage() {
           </div>
         </div>
 
-        {/* Comparison: Standard vs DivinityCoin */}
+        {/* Comparison: Standard vs Divinity Payments */}
         <div className="mb-12 rounded-xl border border-border bg-card/80 backdrop-blur-sm p-6">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 text-center">
             <CreditCard className="h-6 w-6 inline-block mr-2 text-amber-500" />
-            Standard Checkout vs DivinityCoin: What&apos;s the Difference?
+            Standard Checkout vs Divinity Payments: What&apos;s the Difference?
           </h2>
           <p className="text-center text-zinc-600 dark:text-muted-foreground mb-6 max-w-3xl mx-auto">
             Both are secure payment processors. The main difference is which content types they support.
@@ -293,11 +293,11 @@ export default function WhatIsDivinityCoinPage() {
             <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Coins className="h-5 w-5 text-amber-600" />
-                <h4 className="font-semibold text-amber-800 dark:text-amber-200">DivinityCoin</h4>
+                <h4 className="font-semibold text-amber-800 dark:text-amber-200">Divinity Payments</h4>
               </div>
               <ul className="space-y-2 text-sm text-zinc-700 dark:text-muted-foreground">
                 <li>• Enter your card at checkout</li>
-                <li>• Payment processed through DivinityCoin</li>
+                <li>• Payment processed through Divinity Payments</li>
                 <li>• Supports Visa, Mastercard, Amex, Discover</li>
                 <li>• ~6.5% total fees (paid by creator)</li>
                 <li>• Supports ALL content types including NSFW</li>
@@ -307,9 +307,9 @@ export default function WhatIsDivinityCoinPage() {
           </div>
         </div>
 
-        {/* Why Creators Choose DivinityCoin */}
+        {/* Why Creators Choose Divinity Payments */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 text-center">Why Some Creators Use DivinityCoin</h2>
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 text-center">Why Some Creators Use Divinity Payments</h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div className="rounded-xl border border-border bg-card/80 backdrop-blur-sm p-5">
               <div className="flex items-center gap-3 mb-3">
@@ -317,7 +317,7 @@ export default function WhatIsDivinityCoinPage() {
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">All Content Types</h4>
               </div>
               <p className="text-sm text-zinc-600 dark:text-muted-foreground">
-                DivinityCoin supports all creative content including NSFW and adult-oriented projects that standard payment processors may not allow.
+                Divinity Payments supports all creative content including NSFW and adult-oriented projects that standard payment processors may not allow.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card/80 backdrop-blur-sm p-5">
@@ -326,7 +326,7 @@ export default function WhatIsDivinityCoinPage() {
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Compliance Built-in</h4>
               </div>
               <p className="text-sm text-zinc-600 dark:text-muted-foreground">
-                DivinityCoin handles regulatory compliance behind the scenes, providing creators with a worry-free payment acceptance solution.
+                Divinity Payments handles regulatory compliance behind the scenes, providing creators with a worry-free payment acceptance solution.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card/80 backdrop-blur-sm p-5">
@@ -335,7 +335,7 @@ export default function WhatIsDivinityCoinPage() {
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Seamless Experience</h4>
               </div>
               <p className="text-sm text-zinc-600 dark:text-muted-foreground">
-                Backers experience the same simple card-entry checkout flow regardless of whether the project uses the standard processor or DivinityCoin.
+                Backers experience the same simple card-entry checkout flow regardless of whether the project uses the standard processor or Divinity Payments.
               </p>
             </div>
           </div>
@@ -343,8 +343,8 @@ export default function WhatIsDivinityCoinPage() {
 
         {/* The Checkout Experience */}
         <div className="mb-12 rounded-xl border border-border bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-6">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">The DivinityCoin Checkout Experience</h2>
-          <p className="text-zinc-600 dark:text-muted-foreground mb-6">Here&apos;s exactly what happens when you back a project or buy from the marketplace using DivinityCoin:</p>
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">The Divinity Payments Checkout Experience</h2>
+          <p className="text-zinc-600 dark:text-muted-foreground mb-6">Here&apos;s exactly what happens when you back a project or buy from the marketplace using Divinity Payments:</p>
           <div className="space-y-4">
             <div className="flex items-start gap-4">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-600 text-white font-bold text-sm">
@@ -364,7 +364,7 @@ export default function WhatIsDivinityCoinPage() {
               <div>
                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">See the Secure Payment Form</h4>
                 <p className="text-sm text-zinc-600 dark:text-muted-foreground">
-                  At checkout, you&apos;ll see a &quot;Secure Payment&quot; header with card brand logos (Visa, Mastercard, Amex, Discover) and a lock icon. This is DivinityCoin&apos;s secure payment form.
+                  At checkout, you&apos;ll see a &quot;Secure Payment&quot; header with card brand logos (Visa, Mastercard, Amex, Discover) and a lock icon. This is Divinity Payments&apos;s secure payment form.
                 </p>
               </div>
             </div>
@@ -397,10 +397,10 @@ export default function WhatIsDivinityCoinPage() {
         <div className="mb-12 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 p-6">
           <div className="flex items-center gap-3 mb-4">
             <Store className="h-6 w-6 text-purple-600" />
-            <h2 className="text-xl font-bold text-purple-800 dark:text-purple-200">For Creators: Using DivinityCoin</h2>
+            <h2 className="text-xl font-bold text-purple-800 dark:text-purple-200">For Creators: Using Divinity Payments</h2>
           </div>
           <p className="text-zinc-700 dark:text-muted-foreground mb-4">
-            As a creator, you can choose DivinityCoin as your payment processor. Here&apos;s what you need to know:
+            As a creator, you can choose Divinity Payments as your payment processor. Here&apos;s what you need to know:
           </p>
           <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="rounded-lg bg-white dark:bg-zinc-800/50 p-4">
@@ -415,16 +415,16 @@ export default function WhatIsDivinityCoinPage() {
             <div className="rounded-lg bg-white dark:bg-zinc-800/50 p-4">
               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">How It Works</h4>
               <ul className="space-y-1 text-sm text-zinc-600 dark:text-muted-foreground">
-                <li>• Select DivinityCoin in your project or IndieKit settings</li>
+                <li>• Select Divinity Payments in your project or IndieKit settings</li>
                 <li>• Backers enter their card at checkout seamlessly</li>
-                <li>• DivinityCoin processes the payment securely</li>
+                <li>• Divinity Payments processes the payment securely</li>
                 <li>• You receive funds via settlement to your bank account</li>
               </ul>
             </div>
           </div>
           <div className="mt-4 rounded-lg bg-purple-100 dark:bg-purple-900/30 p-3">
             <p className="text-sm text-purple-800 dark:text-purple-200">
-              <strong>Fees:</strong> 3% DivinityCoin partner fee + $0.30/txn + 3% IndieCrowdfund platform fee = ~6.5% total.
+              <strong>Fees:</strong> 3% Divinity Payments partner fee + $0.30/txn + 3% IndieCrowdfund platform fee = ~6.5% total.
               Settlement to your bank account within 14 business days.
             </p>
           </div>
@@ -486,7 +486,7 @@ export default function WhatIsDivinityCoinPage() {
           <Coins className="h-12 w-12 mx-auto mb-4" />
           <h3 className="text-2xl font-bold">Ready to Back a Project?</h3>
           <p className="mt-2 text-amber-100 max-w-xl mx-auto">
-            Discover amazing projects and support creators. Whether they use standard checkout or DivinityCoin, paying is simple.
+            Discover amazing projects and support creators. Whether they use standard checkout or Divinity Payments, paying is simple.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4">
             <Link

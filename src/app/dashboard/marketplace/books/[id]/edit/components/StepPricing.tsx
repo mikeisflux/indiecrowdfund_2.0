@@ -79,13 +79,13 @@ export function StepPricing({ formData, canEdit, isLive, updateForm }: StepPrici
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="PAYPAL">PayPal (Card + PayPal Wallet)</SelectItem>
-              <SelectItem value="DIVINITYCOIN">DivinityCoin</SelectItem>
+              <SelectItem value="DIVINITYCOIN">Divinity Payments</SelectItem>
               <SelectItem value="WHOP">Whop</SelectItem>
             </SelectContent>
           </Select>
           {formData.isNsfw && (
             <p className="text-xs text-amber-500 dark:text-amber-400">
-              NSFW content requires DivinityCoin payment
+              NSFW content requires Divinity Payments payment
             </p>
           )}
         </div>

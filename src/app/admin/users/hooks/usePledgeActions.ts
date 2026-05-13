@@ -190,7 +190,7 @@ export function usePledgeActions(
   const handleZeroWalletBalance = async (userId: string, users: User[]) => {
     const user = users.find(u => u.id === userId);
     const confirmed = window.confirm(
-      `Are you sure you want to zero out the DivinityCoin wallet balance for ${user?.name || user?.email || "this user"}? This action cannot be undone.`
+      `Are you sure you want to zero out the Divinity Payments wallet balance for ${user?.name || user?.email || "this user"}? This action cannot be undone.`
     );
     if (!confirmed) return;
 

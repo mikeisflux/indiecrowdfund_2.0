@@ -8,7 +8,7 @@ import { Lock, Wallet, Banknote, ShoppingBag, Loader2 } from "lucide-react";
 
 // Marketplace creator payment settings.
 //
-// Active processors: DivinityCoin, PayPal, and Whop. Each creator's
+// Active processors: Divinity Payments, PayPal, and Whop. Each creator's
 // payout bank account lives at the user level, so saving it in project
 // creation, IndieKit Payments tab, or here all flows to the same record.
 
@@ -89,7 +89,7 @@ export function MarketplacePaymentSettings() {
       <div>
         <h3 className="font-semibold">Marketplace Payment Processor</h3>
         <p className="text-sm text-muted-foreground">
-          DivinityCoin, PayPal, and Whop handle marketplace transactions.
+          Divinity Payments, PayPal, and Whop handle marketplace transactions.
           Set up your payout bank account in IndieKit Payments — the same
           bank record is shared across projects and the marketplace.
         </p>
@@ -103,7 +103,7 @@ export function MarketplacePaymentSettings() {
                 <Banknote className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm">DivinityCoin</p>
+                <p className="font-semibold text-sm">Divinity Payments</p>
                 <p className="text-xs text-muted-foreground">~6% total fees</p>
                 <p className="text-[11px] text-muted-foreground mt-1">
                   NSFW-friendly card processing via DC wallet/gift card.
@@ -165,7 +165,7 @@ export function MarketplacePaymentSettings() {
                   <Banknote className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">DivinityCoin — Bank Account Connected</p>
+                  <p className="text-sm font-medium">Divinity Payments — Bank Account Connected</p>
                   <p className="text-xs text-muted-foreground">
                     {legacyDc.data.bankName || "Saved"} • Account ending in {legacyDc.data.lastFour || "????"}
                   </p>

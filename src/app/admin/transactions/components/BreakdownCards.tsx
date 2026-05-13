@@ -39,7 +39,7 @@ export function BreakdownCards({ stats }: BreakdownCardsProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Coins className="h-4 w-4 text-amber-600" />
-                <span className="text-sm">DivinityCoin</span>
+                <span className="text-sm">Divinity Payments</span>
               </div>
               <Badge variant="secondary">{stats.dcTransactions}</Badge>
             </div>

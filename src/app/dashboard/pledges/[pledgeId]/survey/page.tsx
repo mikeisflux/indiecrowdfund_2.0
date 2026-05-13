@@ -343,12 +343,12 @@ export default function BackerSurveyPage() {
       // Load appropriate Stripe instance
       let stripeLoaded = !!stripePromise;
       if (result.paymentMethod === "DIVINITYCOIN") {
-        // DivinityCoin: must use DC's own publishable key
+        // Divinity Payments: must use DC's own publishable key
         if (result.publishableKey) {
           setStripePromise(loadStripe(result.publishableKey));
           stripeLoaded = true;
         } else {
-          throw new Error("DivinityCoin payment configuration is missing. Please contact support.");
+          throw new Error("Divinity Payments payment configuration is missing. Please contact support.");
         }
       } else if (!stripePromise) {
         // Stripe: load platform Stripe key

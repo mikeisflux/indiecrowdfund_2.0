@@ -64,7 +64,7 @@ const overviewSteps: Step[] = [
   },
   {
     title: 'How you get paid',
-    description: 'When someone buys your book, the processor you picked (DivinityCoin, PayPal, or Whop) handles the card. The platform takes a 3% fee. The processor takes their fee (~3% + a small flat amount). What\'s left lands in your creator balance and pays out to your bank on the standard schedule for that processor.',
+    description: 'When someone buys your book, the processor you picked (Divinity Payments, PayPal, or Whop) handles the card. The platform takes a 3% fee. The processor takes their fee (~3% + a small flat amount). What\'s left lands in your creator balance and pays out to your bank on the standard schedule for that processor.',
     example: 'Reader pays $9.99 → processor takes ~$0.60 → Platform takes ~$0.30 → You get ~$9.09.',
   },
 ];
@@ -77,7 +77,7 @@ const setupSteps: Step[] = [
   },
   {
     title: 'Add your bank account',
-    description: 'Before you can sell, you need a way to get paid. In the Marketplace dashboard, open Payment Settings, pick your processor (DivinityCoin, PayPal, or Whop), and add your bank routing and account numbers. The processor deposits your sales there on its standard schedule.',
+    description: 'Before you can sell, you need a way to get paid. In the Marketplace dashboard, open Payment Settings, pick your processor (Divinity Payments, PayPal, or Whop), and add your bank routing and account numbers. The processor deposits your sales there on its standard schedule.',
     example: 'Dashboard → Marketplace → Payment Settings → choose processor → enter bank details → save.',
   },
   {
@@ -120,8 +120,8 @@ const creatingSteps: Step[] = [
   },
   {
     title: 'Mark mature or NSFW content',
-    description: 'If your book has mature themes or NSFW content, tick the right flag. The flag adds an age check on the listing. DivinityCoin and Whop accept all content types including NSFW; PayPal does not, so NSFW listings should pick DivinityCoin or Whop as their processor.',
-    example: 'A horror comic with graphic violence → flag NSFW + pick DivinityCoin or Whop → readers see the age check → payment flows normally.',
+    description: 'If your book has mature themes or NSFW content, tick the right flag. The flag adds an age check on the listing. Divinity Payments and Whop accept all content types including NSFW; PayPal does not, so NSFW listings should pick Divinity Payments or Whop as their processor.',
+    example: 'A horror comic with graphic violence → flag NSFW + pick Divinity Payments or Whop → readers see the age check → payment flows normally.',
   },
   {
     title: 'Add tags',
@@ -148,7 +148,7 @@ const pricingSteps: Step[] = [
   },
   {
     title: 'Card processing',
-    description: 'Marketplace sales go through DivinityCoin, PayPal, or Whop — whichever processor you set up. Each has a fee of about 3% + $0.30 per sale. DivinityCoin and Whop accept every content type (including NSFW); PayPal does not allow NSFW.',
+    description: 'Marketplace sales go through Divinity Payments, PayPal, or Whop — whichever processor you set up. Each has a fee of about 3% + $0.30 per sale. Divinity Payments and Whop accept every content type (including NSFW); PayPal does not allow NSFW.',
     tip: 'When you set the price, use the fee calculator on the book form to see exactly what hits your bank.',
   },
   {
@@ -269,7 +269,7 @@ const faqs: FAQ[] = [
   },
   {
     question: 'What content is not allowed?',
-    answer: 'Anything illegal. Anything stolen or plagiarized. Listings that lie about what the book is. NSFW content is fine if it is properly flagged with the age gate — just pick DivinityCoin or Whop as your processor, since PayPal does not allow NSFW.',
+    answer: 'Anything illegal. Anything stolen or plagiarized. Listings that lie about what the book is. NSFW content is fine if it is properly flagged with the age gate — just pick Divinity Payments or Whop as your processor, since PayPal does not allow NSFW.',
   },
   {
     question: 'Can I sell books from my old crowdfunding campaigns?',
@@ -441,7 +441,7 @@ export default function MarketplaceCreatorHandbookPage() {
                         <div>
                           <h4 className="font-medium text-foreground">Payment Setup</h4>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            Pick a processor (DivinityCoin, PayPal, or Whop) and add your bank details so your earnings deposit from each sale.
+                            Pick a processor (Divinity Payments, PayPal, or Whop) and add your bank details so your earnings deposit from each sale.
                           </p>
                         </div>
                       </div>

@@ -69,12 +69,12 @@ const PROCESSOR_META: Record<string, {
     accentColor: "",
   },
   DIVINITYCOIN: {
-    label: "DivinityCoin",
+    label: "Divinity Payments",
     icon: <Banknote className="h-5 w-5 text-white" />,
     iconBg: "bg-[#0066FF]",
     apiGet: "/api/creator/bank-account",
     apiPost: "/api/creator/bank-account",
-    settlementNote: "DivinityCoin settlements are processed within 14 business days after your campaign ends.",
+    settlementNote: "Divinity Payments settlements are processed within 14 business days after your campaign ends.",
     accentColor: "bg-[#0066FF] hover:bg-[#0052CC]",
   },
   WHOP: {

@@ -283,7 +283,7 @@ const tabContent: Record<string, TabContent> = {
     howTo: [
       { step: 'See the queue', detail: 'Each request shows: backer name + email, pledge amount, requested refund amount (full or partial), reason the backer wrote, the date submitted, and an approve / deny / message button.' },
       { step: 'Review the request', detail: 'Click the row to expand. You see the full pledge history, original payment method, processor, and any prior messages with this backer.' },
-      { step: 'Approve, deny, or ask for more info', detail: 'Approve refunds the requested amount through the original processor (PayPal, DivinityCoin, Whop). Deny closes the request with an optional reason. "Message" opens an inbox thread to ask the backer questions before deciding.' },
+      { step: 'Approve, deny, or ask for more info', detail: 'Approve refunds the requested amount through the original processor (PayPal, Divinity Payments, Whop). Deny closes the request with an optional reason. "Message" opens an inbox thread to ask the backer questions before deciding.' },
       { step: 'Track the refund status', detail: 'Approved refunds move to a "Processing" state until the processor confirms. Most processors complete in 5–10 business days. The request card shows the actual refund timestamp once done.' },
     ],
     tips: [
@@ -292,7 +292,7 @@ const tabContent: Record<string, TabContent> = {
       'A high refund rate (>5%) is a signal that fulfillment communication is missing the mark — review your update cadence.',
     ],
     gotchas: [
-      'Refunds via DivinityCoin / PayPal / Whop go through their dispute infrastructure — read each processor\'s refund window before approving an old pledge.',
+      'Refunds via Divinity Payments / PayPal / Whop go through their dispute infrastructure — read each processor\'s refund window before approving an old pledge.',
       'Refund requests are independent of chargebacks — if a backer files a chargeback with their bank, that flows through your Refund Requests too but with a "Chargeback" tag.',
     ],
   },
