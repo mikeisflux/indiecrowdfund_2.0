@@ -359,7 +359,7 @@ export function OrderSummary({
             </div>
 
             {/* Status message */}
-            {!clientSecret && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" && project?.paymentProcessor !== "NMI" ? (
+            {!clientSecret && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>
@@ -469,7 +469,7 @@ export function OrderSummary({
               </Label>
             </div>
 
-            {!clientSecret && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" && project?.paymentProcessor !== "NMI" ? (
+            {!clientSecret && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>
@@ -564,7 +564,7 @@ export function OrderSummary({
             </div>
 
             {/* Status message - show spinner while payment is being set up */}
-            {!clientSecret && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" && project?.paymentProcessor !== "NMI" ? (
+            {!clientSecret && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>
@@ -584,8 +584,6 @@ export function OrderSummary({
                 ? ", and for DivinityCoin to process your payment."
                 : project?.paymentProcessor === "WHOP"
                 ? ", and for Whop to process your payment."
-                : project?.paymentProcessor === "NMI"
-                ? ", and for Mentom Payments to process your payment."
                 : ", and for PayPal to process your payment."
               }
             </p>

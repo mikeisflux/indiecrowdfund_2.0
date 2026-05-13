@@ -9,17 +9,14 @@ const log = logger.child({ module: "pledges-migrate-to-dc" });
 /**
  * Per-pledge migration endpoint. Used by the
  * /dashboard/pledges/[pledgeId]/complete-with-dc page to spin up a
- * fresh DivinityCoin PaymentIntent for a pledge that was originally
- * created on Mentom Payments (NMI) but has been switched over via
- * the admin migration tool.
+ * fresh DivinityCoin PaymentIntent for a pledge that was switched
+ * over to DC via the admin migration tool.
  *
  * Auth: pledge owner only.
  *
- * Preconditions (set by /api/admin/projects/[projectId]/migrate-to-dc):
+ * Preconditions:
  *   - Pledge.paymentProcessor === "DIVINITYCOIN"
  *   - Pledge.status === "PENDING"
- *   - NMI-specific fields (nmiCustomerVaultId, nmiTransactionId, etc.)
- *     were cleared so no stale references remain
  *
  * We always charge immediately here (PaymentIntent, not SetupIntent)
  * because the campaign has already hit its funding goal — there's no

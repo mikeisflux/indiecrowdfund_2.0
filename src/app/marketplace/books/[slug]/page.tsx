@@ -1,7 +1,6 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { NMI_DISABLED } from "@/lib/features";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -46,7 +45,6 @@ import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { StripePaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/StripePaymentForm";
 import { MarketplacePayPalForm } from "@/app/marketplace/components/MarketplacePayPalForm";
-import { NmiMarketplacePaymentForm } from "@/components/marketplace/nmi-marketplace-payment-form";
 
 interface Book {
   id: string;
@@ -67,7 +65,7 @@ interface Book {
   publishedAt: string | null;
   hasAdultContent: boolean;
   hasRiskyContent: boolean;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "NMI";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL";
   creator: {
     id: string;
     name: string | null;
@@ -114,9 +112,6 @@ export default function BookDetailPage() {
   // PayPal state
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
   const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
-  // PaymentCloud (NMI) state
-  const [nmiPublicKey, setNmiPublicKey] = useState<string | null>(null);
-  const [nmiPurchaseId, setNmiPurchaseId] = useState<string | null>(null);
 
   const fetchBook = useCallback(async () => {
     try {
@@ -199,11 +194,9 @@ export default function BookDetailPage() {
 
   const resetPaypalPayment = () => {
     setPaypalOrderId(null);
-    setNmiPublicKey(null);
-    setNmiPurchaseId(null);
   };
 
-  const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin" | "paypal" | "nmi") => {
+  const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin" | "paypal") => {
     if (!book) return;
 
     // Redirect unauthenticated users to login before attempting purchase
@@ -292,28 +285,6 @@ export default function BookDetailPage() {
           setShowPaymentModal(false);
           return;
         }
-      } else if (paymentMethod === "nmi") {
-        // PaymentCloud Collect.js flow — server returns the public
-        // tokenization key + purchaseId; the form does the rest.
-        const res = await apiFetch("/api/marketplace/purchase", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookId: book.id,
-            paymentMethod: "nmi",
-            promoCode: appliedPromo?.code,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to initialize Mentom Payments");
-        if (!data.publicKey || !data.purchaseId) {
-          throw new Error("Mentom Payments configuration is missing — contact support.");
-        }
-        setNmiPublicKey(data.publicKey);
-        setNmiPurchaseId(data.purchaseId);
-        setShowPaymentModal(false);
-        setPurchasing(false);
-        return;
       } else {
         // DivinityCoin seamless payment - get clientSecret + publishableKey
         const res = await apiFetch("/api/marketplace/purchase", {

@@ -81,19 +81,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (book.paymentProcessor === "NMI" && paymentMethod !== "nmi") {
-      return NextResponse.json(
-        { error: "This book requires Mentom Payments payment" },
-        { status: 400 }
-      );
-    }
-    // Rail disabled — refuse any NMI marketplace purchase regardless
-    // of which payment method the client picked. PaymentCloud merchant
-    // is gone; no charge would ever succeed.
-    if (NMI_DISABLED && (book.paymentProcessor === "NMI" || paymentMethod === "nmi")) {
-      return NextResponse.json({ error: NMI_DISABLED_MESSAGE }, { status: 503 });
-    }
-
     // Create purchase record in PENDING state
     const purchase = await prisma.marketplacePurchase.create({
       data: {
@@ -251,39 +238,6 @@ export async function POST(request: Request) {
         await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
         return NextResponse.json(
           { error: "Failed to connect to payment processor" },
-          { status: 502 }
-        );
-      }
-    }
-
-    // PaymentCloud (NMI) flow — return the public tokenization key so
-    // the browser can load Collect.js, then confirm-nmi finishes the
-    // sale once the user has tokenized their card.
-    if (book.paymentProcessor === "NMI" && paymentMethod === "nmi") {
-      try {
-        const { loadNmiConfig } = await import("@/lib/nmi");
-        const nmiConfig = await loadNmiConfig();
-        if (!nmiConfig?.publicKey) {
-          await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
-          return NextResponse.json(
-            { error: "Payment processor not configured. Please contact support." },
-            { status: 502 }
-          );
-        }
-        return NextResponse.json({
-          success: true,
-          purchaseId: purchase.id,
-          paymentRequired: true,
-          paymentProcessor: "NMI",
-          publicKey: nmiConfig.publicKey,
-          amount: Number(book.price),
-          currency: book.currency,
-        });
-      } catch (err) {
-        marketplacePurchaseLogger.error({ err: String(err) }, "[Marketplace NMI] init error");
-        await prisma.marketplacePurchase.deleteMany({ where: { id: purchase.id } });
-        return NextResponse.json(
-          { error: "Failed to initialize Mentom Payments payment" },
           { status: 502 }
         );
       }
