@@ -404,6 +404,90 @@ export async function sendPledgeChargeFailedEmail(
 }
 
 /**
+ * Notify a backer that their campaign's payment processor has been
+ * migrated from Mentom Payments to DivinityCoin. Their original card
+ * never charged (the cancelled merchant rejected every sale), so
+ * they need to re-enter card details on the DC checkout page to
+ * complete their pledge. Their reward, add-ons, shipping, and
+ * backer number are all preserved.
+ */
+export async function sendProcessorMigratedEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  pledgeId: string,
+  amount: number
+) {
+  const completeUrl = `${APP_URL}/dashboard/pledges/${pledgeId}/complete-with-dc`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Complete your pledge — new payment processor</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #166534;">We&apos;ve switched payment processors — please complete your pledge</h2>
+          <p>Hi ${escapeHtml(backerName)},</p>
+          <p>
+            Quick update on your pledge to <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong>
+            for <strong>$${amount.toFixed(2)}</strong>.
+          </p>
+          <p>
+            The card payment processor this campaign was using has shut down their
+            service. <strong>No charge was taken from your card</strong> — the
+            attempted charges were all declined at the processor before any money
+            moved.
+          </p>
+          <p>
+            We&apos;ve migrated this campaign to <strong>DivinityCoin</strong>, a
+            different payment processor. To complete your pledge, please click
+            below and re-enter your card details on the new secure checkout.
+            <strong>Your reward, add-ons, shipping address, and backer number
+            are preserved</strong> — only the payment step needs to happen again.
+          </p>
+
+          <div style="text-align: center; margin: 28px 0 8px 0;">
+            <a href="${completeUrl}" style="display: inline-block; background: #166534; color: #fff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+              Complete Pledge with DivinityCoin
+            </a>
+          </div>
+          <p style="color: #166534; font-size: 13px; text-align: center; margin-top: 0;">
+            Direct link: <a href="${completeUrl}" style="color: #166534;">${completeUrl}</a>
+          </p>
+
+          <p style="color: #166534; font-size: 13px; margin-top: 24px;">
+            We&apos;re sorry for the inconvenience — the processor change is on us,
+            not you, and we wanted to get you a fast path to finish your pledge
+            without losing your spot or your reward selection. Reach out if
+            anything is unclear.
+          </p>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because you backed this project on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Action needed: complete your pledge for "${projectTitle}" on the new processor`,
+    html,
+    skipUnsubscribeCheck: true,
+  });
+}
+
+/**
  * Send marketplace purchase confirmation email to buyer
  */
 export async function sendMarketplacePurchaseEmail(
