@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { encrypt, decrypt, getLastDigits } from "@/lib/encryption";
-import { getStripeInstance } from "@/lib/payments/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +13,23 @@ function detectCardBrand(cardNumber: string): string {
   if (/^3[47]/.test(num)) return "Amex";
   if (/^6(?:011|5)/.test(num)) return "Discover";
   return "Unknown";
+}
+
+// Luhn algorithm to validate card number
+function isValidLuhn(cardNumber: string): boolean {
+  const digits = cardNumber.replace(/\D/g, "");
+  let sum = 0;
+  let alternate = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let n = parseInt(digits[i], 10);
+    if (alternate) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+    alternate = !alternate;
+  }
+  return sum % 10 === 0;
 }
 
 // GET - Check if project has a chargeback card on file
@@ -136,6 +152,14 @@ export async function POST(
       );
     }
 
+    // Luhn check to validate card number format
+    if (!isValidLuhn(cleanCardNumber)) {
+      return NextResponse.json(
+        { error: "Invalid card number" },
+        { status: 400 }
+      );
+    }
+
     const expMonthNum = parseInt(expMonth);
     const expYearNum = parseInt(expYear);
     if (!expMonthNum || expMonthNum < 1 || expMonthNum > 12) {
@@ -166,42 +190,6 @@ export async function POST(
       );
     }
 
-    // Verify card authenticity via Stripe (create a temporary PaymentMethod, then detach)
-    try {
-      const stripe = await getStripeInstance();
-      const paymentMethod = await stripe.paymentMethods.create({
-        type: "card",
-        card: {
-          number: cleanCardNumber,
-          exp_month: expMonthNum,
-          exp_year: expYearNum,
-          cvc: cvc,
-        },
-        billing_details: {
-          name: billingName,
-          address: {
-            line1: billingLine1,
-            line2: billingLine2 || undefined,
-            city: billingCity,
-            state: billingState,
-            postal_code: billingZip,
-            country: billingCountry,
-          },
-        },
-      });
-
-      // Card verified successfully — detach/clean up (it's not attached to a customer, so just log success)
-      console.log(`[Chargeback Card] Card verified via Stripe for project ${projectId}: ${paymentMethod.card?.brand} ****${paymentMethod.card?.last4}`);
-    } catch (stripeError) {
-      console.error(`[Chargeback Card] Stripe verification failed for project ${projectId}:`, stripeError);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const msg = (stripeError as any)?.message || "Card verification failed";
-      return NextResponse.json(
-        { error: `Card verification failed: ${msg}` },
-        { status: 400 }
-      );
-    }
-
     // Encrypt all sensitive data
     const encryptedCardNumber = encrypt(cleanCardNumber);
     const encryptedExpMonth = encrypt(String(expMonthNum));
@@ -218,6 +206,8 @@ export async function POST(
     // Display data
     const lastFour = getLastDigits(cleanCardNumber, 4);
     const brand = detectCardBrand(cleanCardNumber);
+
+    console.log(`[Chargeback Card] Card saved for project ${projectId}: ${brand} ****${lastFour}`);
 
     // Upsert card for this project
     await db.creatorChargebackCard.upsert({
