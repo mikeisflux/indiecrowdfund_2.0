@@ -22,7 +22,17 @@ interface PaymentCloudBankAccountState {
   billingState: string;
   billingZip: string;
   billingCountry: string;
+  // ISO 3166-1 alpha-2 of the BANK's country. Drives routing-format
+  // labels + validation (US 9-digit ABA vs UK 6-digit Sort Code) and
+  // whether the phone field is required. Defaults to "US".
+  bankCountry: "US" | "GB";
+  payoutPhone: string;
 }
+
+const COUNTRY_OPTIONS: { value: "US" | "GB"; label: string }[] = [
+  { value: "US", label: "United States" },
+  { value: "GB", label: "United Kingdom" },
+];
 
 interface PaymentCloudBankAccountStatus {
   saved: boolean;
@@ -67,6 +77,9 @@ export function PaymentCloudBankSection({
   // on every reload.
   const [showForm, setShowForm] = useState(false);
 
+  const country = bankAccount.bankCountry || "US";
+  const isUK = country === "GB";
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -79,22 +92,40 @@ export function PaymentCloudBankSection({
       toast.error("Please fill in all bank account fields.");
       return;
     }
-    if (!/^\d{9}$/.test(bankAccount.routingNumber)) {
-      toast.error("Routing number must be exactly 9 digits.");
-      return;
-    }
-    if (!/^\d{4,17}$/.test(bankAccount.accountNumber)) {
-      toast.error("Account number must be 4–17 digits.");
-      return;
+    if (isUK) {
+      if (!/^\d{6}$/.test(bankAccount.routingNumber)) {
+        toast.error("UK sort code must be 6 digits (e.g. 60-06-39).");
+        return;
+      }
+      if (!/^\d{8}$/.test(bankAccount.accountNumber)) {
+        toast.error("UK account number must be 8 digits.");
+        return;
+      }
+      if (!bankAccount.payoutPhone || bankAccount.payoutPhone.trim().length < 7) {
+        toast.error("Phone number is required for UK bank accounts.");
+        return;
+      }
+    } else {
+      if (!/^\d{9}$/.test(bankAccount.routingNumber)) {
+        toast.error("Routing number must be exactly 9 digits.");
+        return;
+      }
+      if (!/^\d{4,17}$/.test(bankAccount.accountNumber)) {
+        toast.error("Account number must be 4–17 digits.");
+        return;
+      }
     }
     if (
       !bankAccount.billingLine1 ||
       !bankAccount.billingCity ||
-      !bankAccount.billingState ||
       !bankAccount.billingZip ||
       !bankAccount.billingCountry
     ) {
       toast.error("Please enter the full billing address.");
+      return;
+    }
+    if (!isUK && !bankAccount.billingState) {
+      toast.error("State is required for US accounts.");
       return;
     }
 
@@ -113,9 +144,11 @@ export function PaymentCloudBankSection({
           billingLine1: bankAccount.billingLine1,
           billingLine2: bankAccount.billingLine2 || undefined,
           billingCity: bankAccount.billingCity,
-          billingState: bankAccount.billingState,
+          billingState: bankAccount.billingState || undefined,
           billingZip: bankAccount.billingZip,
           billingCountry: bankAccount.billingCountry,
+          bankCountry: country,
+          payoutPhone: bankAccount.payoutPhone || undefined,
           projectId,
         }),
       });
@@ -124,7 +157,7 @@ export function PaymentCloudBankSection({
       setStatus({ saved: true, loading: false, lastFour: data.lastFour ?? null, canEdit: true });
       setShowForm(false);
       // Wipe sensitive fields from local state so they don't sit in memory.
-      setBankAccount((prev) => ({ ...prev, accountNumber: "", routingNumber: "" }));
+      setBankAccount((prev) => ({ ...prev, accountNumber: "", routingNumber: "", payoutPhone: "" }));
       toast.success("Bank account saved securely.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save bank account");
@@ -189,6 +222,49 @@ export function PaymentCloudBankSection({
       {!status.loading && status.canEdit !== false && (!status.saved || showForm) && (
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/*
+              Bank country selector at the top of the form drives the
+              labels + validation for routing/account, whether the
+              phone field is required (UK banks need it on the payee
+              record), and whether state is mandatory. Keeping it
+              first means creators set country once and the rest of
+              the form reshapes around the choice instead of fighting
+              US-only validation when entering a UK Sort Code.
+            */}
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="pc-bankCountry">Bank country</Label>
+              <select
+                id="pc-bankCountry"
+                value={country}
+                onChange={(e) => {
+                  const next = e.target.value as "US" | "GB";
+                  setBankAccount((p) => ({
+                    ...p,
+                    bankCountry: next,
+                    // Reset the country-specific routing + account
+                    // values when the country changes so a US
+                    // routing number doesn't sit stale in the field
+                    // labeled "Sort code".
+                    routingNumber: "",
+                    accountNumber: "",
+                    // Auto-fill the address country code so the
+                    // billing-country field doesn't disagree with
+                    // the bank country in the common case.
+                    billingCountry:
+                      p.billingCountry && p.billingCountry !== "US" && p.billingCountry !== "GB"
+                        ? p.billingCountry
+                        : next,
+                  }));
+                }}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {COUNTRY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="space-y-1">
               <Label htmlFor="pc-firstName">Account holder first name</Label>
               <Input
@@ -215,19 +291,21 @@ export function PaymentCloudBankSection({
                 id="pc-bankName"
                 value={bankAccount.bankName}
                 onChange={(e) => setBankAccount((p) => ({ ...p, bankName: e.target.value }))}
-                placeholder="e.g. Chase Bank"
+                placeholder={isUK ? "e.g. Barclays" : "e.g. Chase Bank"}
                 required
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="pc-routingNumber">Routing number</Label>
+              <Label htmlFor="pc-routingNumber">
+                {isUK ? "Sort code" : "Routing number"}
+              </Label>
               <Input
                 id="pc-routingNumber"
                 value={bankAccount.routingNumber}
                 onChange={(e) => setBankAccount((p) => ({ ...p, routingNumber: e.target.value.replace(/\D/g, "") }))}
                 inputMode="numeric"
-                maxLength={9}
-                placeholder="9 digits"
+                maxLength={isUK ? 6 : 9}
+                placeholder={isUK ? "6 digits (e.g. 600639)" : "9 digits"}
                 required
               />
             </div>
@@ -238,30 +316,48 @@ export function PaymentCloudBankSection({
                 value={bankAccount.accountNumber}
                 onChange={(e) => setBankAccount((p) => ({ ...p, accountNumber: e.target.value.replace(/\D/g, "") }))}
                 inputMode="numeric"
-                maxLength={17}
-                placeholder="4–17 digits"
+                maxLength={isUK ? 8 : 17}
+                placeholder={isUK ? "8 digits" : "4–17 digits"}
                 required
               />
             </div>
-            <div className="space-y-1 sm:col-span-2">
-              <Label htmlFor="pc-accountType">Account type</Label>
-              <select
-                id="pc-accountType"
-                value={bankAccount.accountType}
-                onChange={(e) => setBankAccount((p) => ({ ...p, accountType: e.target.value as "checking" | "savings" }))}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="checking">Checking</option>
-                <option value="savings">Savings</option>
-              </select>
-            </div>
+            {!isUK && (
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor="pc-accountType">Account type</Label>
+                <select
+                  id="pc-accountType"
+                  value={bankAccount.accountType}
+                  onChange={(e) => setBankAccount((p) => ({ ...p, accountType: e.target.value as "checking" | "savings" }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="checking">Checking</option>
+                  <option value="savings">Savings</option>
+                </select>
+              </div>
+            )}
+            {isUK && (
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor="pc-payoutPhone">Phone number</Label>
+                <Input
+                  id="pc-payoutPhone"
+                  type="tel"
+                  value={bankAccount.payoutPhone}
+                  onChange={(e) => setBankAccount((p) => ({ ...p, payoutPhone: e.target.value }))}
+                  placeholder="e.g. 07951937383"
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Required by UK banks on the payee record.
+                </p>
+              </div>
+            )}
             <div className="space-y-1 sm:col-span-2">
               <Label htmlFor="pc-line1">Billing address</Label>
               <Input
                 id="pc-line1"
                 value={bankAccount.billingLine1}
                 onChange={(e) => setBankAccount((p) => ({ ...p, billingLine1: e.target.value }))}
-                placeholder="123 Main St"
+                placeholder={isUK ? "32 Woodfield Way" : "123 Main St"}
                 required
               />
             </div>
@@ -283,21 +379,24 @@ export function PaymentCloudBankSection({
                 required
               />
             </div>
+            {!isUK && (
+              <div className="space-y-1">
+                <Label htmlFor="pc-state">State</Label>
+                <Input
+                  id="pc-state"
+                  value={bankAccount.billingState}
+                  onChange={(e) => setBankAccount((p) => ({ ...p, billingState: e.target.value }))}
+                  required
+                />
+              </div>
+            )}
             <div className="space-y-1">
-              <Label htmlFor="pc-state">State / region</Label>
-              <Input
-                id="pc-state"
-                value={bankAccount.billingState}
-                onChange={(e) => setBankAccount((p) => ({ ...p, billingState: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="pc-zip">ZIP / postal code</Label>
+              <Label htmlFor="pc-zip">{isUK ? "Postcode" : "ZIP / postal code"}</Label>
               <Input
                 id="pc-zip"
                 value={bankAccount.billingZip}
                 onChange={(e) => setBankAccount((p) => ({ ...p, billingZip: e.target.value }))}
+                placeholder={isUK ? "DN4 8FE" : ""}
                 required
               />
             </div>
@@ -307,7 +406,7 @@ export function PaymentCloudBankSection({
                 id="pc-country"
                 value={bankAccount.billingCountry}
                 onChange={(e) => setBankAccount((p) => ({ ...p, billingCountry: e.target.value }))}
-                placeholder="US"
+                placeholder={isUK ? "GB" : "US"}
                 required
               />
             </div>

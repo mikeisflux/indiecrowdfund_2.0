@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
         bankNameDisplay: true,
         accountLastFour: true,
         accountType: true,
+        bankCountry: true,
         isVerified: true,
         createdAt: true,
         updatedAt: true,
@@ -74,6 +75,7 @@ export async function GET(req: NextRequest) {
       bankName: acct.bankNameDisplay,
       lastFour: acct.accountLastFour,
       accountType: acct.accountType,
+      bankCountry: acct.bankCountry,
       isVerified: acct.isVerified,
       // Surface to the UI whether the caller can edit this record (only
       // the owner, never collaborators). Collaborators see read-only.
@@ -118,6 +120,8 @@ export async function POST(req: NextRequest) {
       billingState,
       billingZip,
       billingCountry,
+      bankCountry,
+      payoutPhone,
       projectId,
     } = body as Record<string, string | undefined>;
 
@@ -137,6 +141,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Default to US for backwards compatibility — every account that
+    // pre-dates international support is a US ACH account. New form
+    // submits include this explicitly.
+    const country = (bankCountry || "US").toUpperCase();
+    const SUPPORTED_COUNTRIES = new Set(["US", "GB"]);
+    if (!SUPPORTED_COUNTRIES.has(country)) {
+      return NextResponse.json(
+        { error: "Unsupported bank country. Currently supported: US, GB (UK)." },
+        { status: 400 }
+      );
+    }
+
     if (!bankName || !accountNumber || !routingNumber) {
       return NextResponse.json({ error: "All bank fields are required" }, { status: 400 });
     }
@@ -146,17 +162,47 @@ export async function POST(req: NextRequest) {
     if (!isValidNamePart(accountHolderLastName)) {
       return NextResponse.json({ error: describeNameError("account holder last name") }, { status: 400 });
     }
-    if (!/^\d{9}$/.test(routingNumber)) {
-      return NextResponse.json({ error: "Routing number must be 9 digits" }, { status: 400 });
-    }
-    if (!/^\d{4,17}$/.test(accountNumber)) {
-      return NextResponse.json({ error: "Invalid account number" }, { status: 400 });
-    }
-    if (!billingLine1 || !billingCity || !billingState || !billingZip || !billingCountry) {
-      return NextResponse.json({ error: "All billing address fields are required" }, { status: 400 });
+
+    // Routing-format validation is country-specific:
+    //   US ACH:    9 digits (ABA routing transit number)
+    //   UK Sort:   6 digits (visually formatted as XX-XX-XX in the UI,
+    //              stored as digits-only — same as how we strip
+    //              hyphens from the US routing field).
+    // Account number length also differs (US: 4–17, UK: 8 standard).
+    const routingDigits = routingNumber.replace(/\D/g, "");
+    const accountDigits = accountNumber.replace(/\D/g, "");
+    if (country === "US") {
+      if (!/^\d{9}$/.test(routingDigits)) {
+        return NextResponse.json({ error: "Routing number must be 9 digits" }, { status: 400 });
+      }
+      if (!/^\d{4,17}$/.test(accountDigits)) {
+        return NextResponse.json({ error: "Invalid account number" }, { status: 400 });
+      }
+    } else if (country === "GB") {
+      if (!/^\d{6}$/.test(routingDigits)) {
+        return NextResponse.json({ error: "UK sort code must be 6 digits (e.g. 60-06-39)" }, { status: 400 });
+      }
+      if (!/^\d{8}$/.test(accountDigits)) {
+        return NextResponse.json({ error: "UK account number must be 8 digits" }, { status: 400 });
+      }
+      if (!payoutPhone || payoutPhone.trim().length < 7) {
+        return NextResponse.json(
+          { error: "Phone number is required for UK bank accounts (your bank requires it on the payee record)" },
+          { status: 400 }
+        );
+      }
     }
 
-    const lastFour = getLastDigits(accountNumber, 4);
+    // State/region is required for US, optional elsewhere — UK bank
+    // records don't include a state/province.
+    if (!billingLine1 || !billingCity || !billingZip || !billingCountry) {
+      return NextResponse.json({ error: "All billing address fields are required" }, { status: 400 });
+    }
+    if (country === "US" && !billingState) {
+      return NextResponse.json({ error: "Billing state is required for US accounts" }, { status: 400 });
+    }
+
+    const lastFour = getLastDigits(accountDigits, 4);
 
     await db.paymentCloudBankAccount.upsert({
       where: { userId: session.user.id },
@@ -164,14 +210,16 @@ export async function POST(req: NextRequest) {
         bankNameEncrypted: encrypt(bankName),
         accountHolderFirstNameEncrypted: encrypt(accountHolderFirstName!.trim()),
         accountHolderLastNameEncrypted: encrypt(accountHolderLastName!.trim()),
-        accountNumberEncrypted: encrypt(accountNumber),
-        routingNumberEncrypted: encrypt(routingNumber),
+        accountNumberEncrypted: encrypt(accountDigits),
+        routingNumberEncrypted: encrypt(routingDigits),
         billingLine1Encrypted: encrypt(billingLine1!.trim()),
         billingLine2Encrypted: billingLine2 ? encrypt(billingLine2.trim()) : null,
         billingCityEncrypted: encrypt(billingCity!.trim()),
-        billingStateEncrypted: encrypt(billingState!.trim()),
+        billingStateEncrypted: billingState ? encrypt(billingState.trim()) : null,
         billingZipEncrypted: encrypt(billingZip!.trim()),
         billingCountryEncrypted: encrypt(billingCountry!.trim()),
+        bankCountry: country,
+        payoutPhoneEncrypted: payoutPhone ? encrypt(payoutPhone.trim()) : null,
         bankNameDisplay: bankName,
         accountLastFour: lastFour,
         accountType: accountType || "checking",
@@ -183,14 +231,16 @@ export async function POST(req: NextRequest) {
         bankNameEncrypted: encrypt(bankName),
         accountHolderFirstNameEncrypted: encrypt(accountHolderFirstName!.trim()),
         accountHolderLastNameEncrypted: encrypt(accountHolderLastName!.trim()),
-        accountNumberEncrypted: encrypt(accountNumber),
-        routingNumberEncrypted: encrypt(routingNumber),
+        accountNumberEncrypted: encrypt(accountDigits),
+        routingNumberEncrypted: encrypt(routingDigits),
         billingLine1Encrypted: encrypt(billingLine1!.trim()),
         billingLine2Encrypted: billingLine2 ? encrypt(billingLine2.trim()) : null,
         billingCityEncrypted: encrypt(billingCity!.trim()),
-        billingStateEncrypted: encrypt(billingState!.trim()),
+        billingStateEncrypted: billingState ? encrypt(billingState.trim()) : null,
         billingZipEncrypted: encrypt(billingZip!.trim()),
         billingCountryEncrypted: encrypt(billingCountry!.trim()),
+        bankCountry: country,
+        payoutPhoneEncrypted: payoutPhone ? encrypt(payoutPhone.trim()) : null,
         bankNameDisplay: bankName,
         accountLastFour: lastFour,
         accountType: accountType || "checking",

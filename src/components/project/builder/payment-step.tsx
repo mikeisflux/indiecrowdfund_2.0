@@ -126,6 +126,8 @@ export function PaymentStep() {
     billingState: "",
     billingZip: "",
     billingCountry: "US",
+    bankCountry: "US",
+    payoutPhone: "",
   });
   const [pcBankAccountStatus, setPcBankAccountStatus] = useState<PaymentCloudBankAccountStatus>({
     saved: false,
@@ -261,6 +263,7 @@ export function PaymentStep() {
               ...prev,
               bankName: data.bankName || "",
               accountType: data.accountType || "checking",
+              bankCountry: data.bankCountry === "GB" ? "GB" : "US",
             }));
           }
         } else {

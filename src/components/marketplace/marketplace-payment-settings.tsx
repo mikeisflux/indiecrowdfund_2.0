@@ -58,6 +58,8 @@ export function MarketplacePaymentSettings() {
     billingState: "",
     billingZip: "",
     billingCountry: "US",
+    bankCountry: "US",
+    payoutPhone: "",
   });
   const [pcBankStatus, setPcBankStatus] = useState<PaymentCloudBankAccountStatus>({
     saved: false, loading: true, lastFour: null,
@@ -83,6 +85,7 @@ export function MarketplacePaymentSettings() {
               ...p,
               bankName: data.bankName || "",
               accountType: data.accountType || "checking",
+              bankCountry: data.bankCountry === "GB" ? "GB" : "US",
             }));
           }
         } else {

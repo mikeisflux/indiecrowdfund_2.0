@@ -131,6 +131,8 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     billingState: "",
     billingZip: "",
     billingCountry: "US",
+    bankCountry: "US",
+    payoutPhone: "",
   });
   const [pcBankStatus, setPcBankStatus] = useState<PaymentCloudBankAccountStatus>({
     saved: false,
@@ -184,6 +186,7 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
               ...p,
               bankName: data.bankName || "",
               accountType: data.accountType || "checking",
+              bankCountry: data.bankCountry === "GB" ? "GB" : "US",
             }));
           }
         } else {

@@ -163,6 +163,10 @@ model PaymentCloudBankAccount {
   accountHolderFirstNameEncrypted String @db.Text
   accountHolderLastNameEncrypted  String @db.Text
   accountNumberEncrypted String  @db.Text
+  // For US accounts this stores the 9-digit ABA routing number. For
+  // non-US (e.g. UK) it stores the local-format routing identifier —
+  // for UK it's the 6-digit Sort Code (e.g. 60-06-39 → 600639).
+  // Country-specific labels + validation are driven by bankCountry.
   routingNumberEncrypted String  @db.Text
 
   // Billing address (encrypted — captured on the same payments screen
@@ -170,9 +174,24 @@ model PaymentCloudBankAccount {
   billingLine1Encrypted   String  @db.Text
   billingLine2Encrypted   String? @db.Text
   billingCityEncrypted    String  @db.Text
-  billingStateEncrypted   String  @db.Text
+  // Optional for non-US accounts (UK has no state/province on a bank
+  // record; county is informal). US accounts still require this.
+  billingStateEncrypted   String? @db.Text
   billingZipEncrypted     String  @db.Text
   billingCountryEncrypted String  @db.Text
+
+  // ISO 3166-1 alpha-2 country code that drives the payout flow:
+  // routing-format selection (US ABA vs UK Sort Code), validation,
+  // currency the bank settles in, and the destination ACH/SEPA rail.
+  // Defaults to "US" — every pre-international row predates this
+  // column and was a US ACH account by definition.
+  bankCountry           String   @default("US")
+
+  // Optional payout-contact phone. UK banks require a phone number on
+  // the payee record before they'll add it as a recipient (Barclays /
+  // HSBC / Lloyds all enforce this); US ACH doesn't. Encrypted at
+  // rest like the rest of the payee identity fields.
+  payoutPhoneEncrypted  String?  @db.Text
 
   bankNameDisplay       String?
   accountLastFour       String?
