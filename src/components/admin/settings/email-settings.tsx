@@ -12,6 +12,26 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Copy, CheckCircle, ExternalLink, Shield, Webhook } from "lucide-react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
+
+async function revealSecret(field: string): Promise<string | null> {
+  try {
+    const res = await apiFetch("/api/admin/settings/reveal-secret", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data?.error || "Failed to reveal key");
+      return null;
+    }
+    return typeof data.value === "string" ? data.value : null;
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : "Failed to reveal key");
+    return null;
+  }
+}
 import {
   Select,
   SelectContent,
@@ -93,6 +113,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
                   onSave={onSave}
                   hasExistingValue={settings.sendgridApiKey === "••••••••"}
                   placeholder="SG.xxx..."
+                  onReveal={() => revealSecret("sendgridApiKey")}
                 />
               </div>
             )}
@@ -107,6 +128,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
                     onSave={onSave}
                     hasExistingValue={settings.mailgunApiKey === "••••••••"}
                     placeholder="key-xxx..."
+                    onReveal={() => revealSecret("mailgunApiKey")}
                   />
                 </div>
               </>
@@ -198,6 +220,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
                 onSave={onSave}
                 hasExistingValue={settings.mailgunWebhookSigningKey === "••••••••"}
                 placeholder="key-xxx..."
+                onReveal={() => revealSecret("mailgunWebhookSigningKey")}
               />
               <p className="text-xs text-muted-foreground">
                 Find this in Mailgun → Settings → API Keys → HTTP Webhook Signing Key (starts with &quot;key-&quot;)
@@ -283,6 +306,7 @@ export function EmailSettings({ settings, onSettingsChange, onSave }: EmailSetti
                 onSave={onSave}
                 hasExistingValue={settings.sendgridWebhookVerificationKey === "••••••••"}
                 placeholder="MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE..."
+                onReveal={() => revealSecret("sendgridWebhookVerificationKey")}
               />
               <p className="text-xs text-muted-foreground">
                 Find this in SendGrid → Settings → Mail Settings → Event Webhook → Edit → Show Verification Key

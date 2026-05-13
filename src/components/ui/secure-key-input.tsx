@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, X, Check } from "lucide-react";
+import { Eye, EyeOff, X, Check, Loader2 } from "lucide-react";
 
 interface SecureKeyInputProps {
   value: string;
@@ -12,6 +12,11 @@ interface SecureKeyInputProps {
   placeholder?: string;
   hasExistingValue?: boolean;
   forceShowValue?: boolean; // When true, shows the value without entering edit mode
+  // Optional reveal hook — when provided, a "View" button appears next
+  // to "Update" while a configured value is stored. Clicking it calls
+  // onReveal, expects the decrypted plaintext value back, and shows it
+  // inline for the configured time. Pass null to opt out.
+  onReveal?: () => Promise<string | null>;
 }
 
 /**
@@ -27,15 +32,36 @@ export function SecureKeyInput({
   placeholder = "Enter new key...",
   hasExistingValue = false,
   forceShowValue = false,
+  onReveal,
 }: SecureKeyInputProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showValue, setShowValue] = useState(false);
+  const [revealedValue, setRevealedValue] = useState<string | null>(null);
+  const [isRevealing, setIsRevealing] = useState(false);
 
   // Check if there's an existing value (masked from server) or new value being set
   const isConfigured = hasExistingValue || (value && value !== "" && value !== "••••••••");
 
   // Determine if we should show the actual value (not "Configured" placeholder)
-  const shouldShowActualValue = forceShowValue && isConfigured && value && value !== "••••••••";
+  const shouldShowActualValue =
+    revealedValue !== null ||
+    (forceShowValue && isConfigured && value && value !== "••••••••");
+
+  const handleRevealClick = async () => {
+    if (revealedValue !== null) {
+      // Already shown — toggle off
+      setRevealedValue(null);
+      return;
+    }
+    if (!onReveal) return;
+    setIsRevealing(true);
+    try {
+      const v = await onReveal();
+      if (v !== null) setRevealedValue(v);
+    } finally {
+      setIsRevealing(false);
+    }
+  };
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -113,13 +139,37 @@ export function SecureKeyInput({
     <div className="flex items-center gap-2">
       <div className="flex-1 rounded-md border bg-muted/50 px-3 py-2 text-sm">
         {shouldShowActualValue ? (
-          <span className="font-mono text-xs break-all">{value}</span>
+          <span className="font-mono text-xs break-all">{revealedValue ?? value}</span>
         ) : isConfigured ? (
           <span className="text-green-600 font-medium">Configured</span>
         ) : (
           <span className="text-muted-foreground">Not configured</span>
         )}
       </div>
+      {isConfigured && onReveal && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleRevealClick}
+          disabled={isRevealing}
+          aria-label={revealedValue !== null ? "Hide key" : "View key"}
+        >
+          {isRevealing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : revealedValue !== null ? (
+            <>
+              <EyeOff className="h-4 w-4 mr-1" />
+              Hide
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </>
+          )}
+        </Button>
+      )}
       <Button type="button" variant="outline" size="sm" onClick={handleEdit}>
         {isConfigured ? "Update" : "Set Key"}
       </Button>
