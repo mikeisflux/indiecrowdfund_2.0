@@ -207,7 +207,6 @@ export async function GET(req: NextRequest) {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         include: {
@@ -261,7 +260,6 @@ export async function GET(req: NextRequest) {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
       }) : Promise.resolve(0),
@@ -302,8 +300,7 @@ export async function GET(req: NextRequest) {
             OR: [
               { status: "COMPLETED" },
               { status: "PENDING", confirmationEmailSent: true },
-              { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
-            ],
+              ],
           },
         },
         _sum: { amount: true, quantity: true },

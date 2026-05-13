@@ -85,8 +85,9 @@ export function ActiveProjectPanel({
           `• Flips Project.paymentProcessor to DIVINITYCOIN\n` +
           `• Flips every PENDING/FAILED NMI pledge to DIVINITYCOIN + status PENDING\n` +
           `• Clears NMI-specific fields on those pledges\n` +
+          `• Marks already-counted pledges so the DC webhook doesn't re-bump backerCount, currentAmount, or reward slots\n` +
           `• Emails each backer a link to re-enter their card on DC\n\n` +
-          `Idempotent — running twice does nothing the second time. Continue?`
+          `Campaign totals stay where they are — no double-count, no down-count. Idempotent. Continue?`
       );
       if (!ok) return;
     }
@@ -101,16 +102,22 @@ export function ActiveProjectPanel({
         return;
       }
       if (dryRun) {
+        const alreadyInTotals = data.alreadyInTotals ?? 0;
+        const notYetInTotals = data.notYetInTotals ?? 0;
         setMigrateDcMessage(
           `Dry run — would migrate ${data.pledgesToMigrate} pledges` +
             (data.projectWillFlip ? " and flip the project to DC" : " (project already DC)") +
-            `. Emails would go to ${data.emails?.length || 0} backers.`
+            `. ${alreadyInTotals} already counted in campaign totals (no change on DC payment), ` +
+            `${notYetInTotals} not yet counted (will add to totals when paid). Emails would go to ${data.emails?.length || 0} backers.`
         );
       } else {
+        const alreadyInTotals = data.alreadyInTotals ?? 0;
+        const notYetInTotals = data.notYetInTotals ?? 0;
         setMigrateDcMessage(
           `Migrated ${data.pledgesMigrated} pledges` +
             (data.projectFlipped ? ", flipped project to DC" : "") +
-            `. Emails sent: ${data.emailResults?.sent || 0}, failed: ${data.emailResults?.failed || 0}.`
+            `. ${alreadyInTotals} preserved in campaign totals, ${notYetInTotals} will join totals when paid. ` +
+            `Emails sent: ${data.emailResults?.sent || 0}, failed: ${data.emailResults?.failed || 0}.`
         );
       }
     } catch (e) {

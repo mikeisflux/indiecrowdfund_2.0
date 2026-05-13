@@ -8,10 +8,10 @@ import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
 import { chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
 
 // Charge all PENDING DivinityCoin pledges with a saved card (pm_...)
-// for a project that has hit its goal. Mirrors captureNmiPendingPledges:
-// CAS-claim chargedImmediately false→true while still PENDING, run
-// /charge-saved-payment-method off-session, then COMPLETE on success
-// or roll back the claim + schedule a backoff retry on decline.
+// for a project that has hit its goal. CAS-claim chargedImmediately
+// false→true while still PENDING, run /charge-saved-payment-method
+// off-session, then COMPLETE on success or roll back the claim +
+// schedule a backoff retry on decline.
 //
 // Idempotency is keyed on pledge.id (also passed to DC as `pledgeId`),
 // so a duplicate run for the same pledge returns the original

@@ -157,10 +157,10 @@ export async function GET(req: NextRequest) {
       actualPledgeTotals,
     ] = await Promise.all([
       // Today's pledges amount. Counts COMPLETED + committed PENDING
-      // (confirmationEmailSent for Stripe/PayPal/Whop/DC, or
-      // nmiCustomerVaultId for NMI vault-saved AoN) — same filter as
-      // lib/stats so the dashboard headline matches the public total.
-      // Abandoned-cart PENDING (no commit marker) is excluded.
+      // (confirmationEmailSent for Stripe/PayPal/Whop/DC) — same
+      // filter as lib/stats so the dashboard headline matches the
+      // public total. Abandoned-cart PENDING (no commit marker) is
+      // excluded.
       db.pledge.aggregate({
         where: {
           projectId: selectedProjectId,
@@ -169,7 +169,6 @@ export async function GET(req: NextRequest) {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         _sum: { amount: true },
@@ -184,7 +183,6 @@ export async function GET(req: NextRequest) {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
       }),
@@ -210,7 +208,6 @@ export async function GET(req: NextRequest) {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         _sum: { amount: true },
@@ -247,9 +244,9 @@ export async function GET(req: NextRequest) {
       }),
 
       // Recent backers with user info. Include PENDING so backers
-      // on AoN / NMI campaigns (whose pledges are held in the vault
-      // until the funded-cron fires) show up in the Recent Backers
-      // panel during a live campaign, not just after success.
+      // on AoN campaigns (held until the funded-cron fires) show up
+      // in the Recent Backers panel during a live campaign, not
+      // just after success.
       db.pledge.findMany({
         where: {
           projectId: selectedProjectId,
@@ -313,8 +310,7 @@ export async function GET(req: NextRequest) {
                   OR: [
                     { status: "COMPLETED" },
                     { status: "PENDING", confirmationEmailSent: true },
-                    { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
-                  ],
+                          ],
                 },
               },
             },
@@ -345,8 +341,7 @@ export async function GET(req: NextRequest) {
                 OR: [
                   { status: "COMPLETED" },
                   { status: "PENDING", confirmationEmailSent: true },
-                  { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
-                ],
+                      ],
               },
             },
             select: {
@@ -360,8 +355,7 @@ export async function GET(req: NextRequest) {
 
       // Daily funding data for chart. Mirror the lib/stats widening:
       // COMPLETED OR (PENDING AND committed) — committed means
-      // confirmationEmailSent (Stripe / PayPal / Whop / DC) OR
-      // nmiCustomerVaultId set (NMI / Mentom Payments AoN). This
+      // confirmationEmailSent (Stripe / PayPal / Whop / DC). This
       // excludes abandoned-cart PENDING noise that would otherwise
       // inflate the chart with $0 / pre-checkout rows.
       db.pledge.findMany({
@@ -372,7 +366,6 @@ export async function GET(req: NextRequest) {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         select: {
@@ -396,7 +389,6 @@ export async function GET(req: NextRequest) {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         _sum: { amount: true },
@@ -475,7 +467,6 @@ export async function GET(req: NextRequest) {
           OR: [
             { status: "COMPLETED" },
             { status: "PENDING", confirmationEmailSent: true },
-            { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
           ],
         },
         _sum: { amount: true },

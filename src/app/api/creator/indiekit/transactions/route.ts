@@ -46,10 +46,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all committed pledges (COMPLETED + committed PENDING) so
-    // transactions on a live AoN / NMI campaign show before the
-    // funded-cron fires. Committed-PENDING filter matches lib/stats —
-    // no abandoned-cart PENDING noise. Display status comes from
-    // pledge.status so vault-saved NMI pledges render as PENDING.
+    // transactions on a live AoN campaign show before the funded-cron
+    // fires. Committed-PENDING filter matches lib/stats — no
+    // abandoned-cart PENDING noise.
     const pledges = await db.pledge.findMany({
       where: {
         projectId,
@@ -57,7 +56,6 @@ export async function GET(req: NextRequest) {
         OR: [
           { status: "COMPLETED" },
           { status: "PENDING", confirmationEmailSent: true },
-          { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
         ],
       },
       include: {

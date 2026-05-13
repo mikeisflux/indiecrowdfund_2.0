@@ -69,6 +69,22 @@ export async function POST(
     // already COMPLETED. PENDING + FAILED are the two states that
     // benefit from re-collection on the new processor. CANCELLED /
     // REFUNDED are terminal and untouched.
+    //
+    // We pull backerNumber so we can bridge NMI's "already counted"
+    // marker to DC's marker. NMI historically pre-counted
+    // currentAmount + backerCount + reward slots + addon slots at
+    // PENDING creation time, then assigned backerNumber to mark "this
+    // pledge is in the project totals." DC's webhook uses
+    // confirmationEmailSent as its already-counted guard (it skips
+    // the increment + reward/addon claims when the flag is true).
+    //
+    // Without this bridge, when the migrated backer pays via DC, the
+    // DC webhook would re-increment currentAmount + backerCount and
+    // re-claim reward + addon slots — every migrated pledge would be
+    // counted twice and reward inventory would shrink phantomly. So
+    // when we flip a pledge with backerNumber != null over to DC, we
+    // also set confirmationEmailSent = true so the DC webhook treats
+    // it as already-counted and just marks it COMPLETED.
     const pledgesToMigrate = await db.pledge.findMany({
       where: {
         projectId,
@@ -79,16 +95,22 @@ export async function POST(
       select: {
         id: true,
         amount: true,
+        backerNumber: true,
+        confirmationEmailSent: true,
         user: { select: { id: true, email: true, name: true } },
       },
     });
 
     if (dryRun) {
+      const alreadyCountedCount = pledgesToMigrate.filter((p) => p.backerNumber !== null).length;
+      const neverCountedCount = pledgesToMigrate.length - alreadyCountedCount;
       return NextResponse.json({
         dryRun: true,
         projectTitle: project.title,
         projectWillFlip: project.paymentProcessor === "NMI",
         pledgesToMigrate: pledgesToMigrate.length,
+        alreadyInTotals: alreadyCountedCount,
+        notYetInTotals: neverCountedCount,
         emails: pledgesToMigrate.map((p) => p.user.email).filter(Boolean),
       });
     }
@@ -101,26 +123,45 @@ export async function POST(
       });
     }
 
-    // Flip every NMI pledge in one transaction. Clear NMI-side state
-    // so the migrate-to-dc + complete-with-dc paths start from a
-    // clean slate — no stale vault id or retry counter polluting the
-    // DC flow.
-    if (pledgesToMigrate.length > 0) {
+    // Flip every NMI pledge to DC. Clear NMI-side state so the
+    // migrate-to-dc + complete-with-dc paths start from a clean
+    // slate. Two sub-batches:
+    //   1. backerNumber != null  → was pre-counted into project
+    //      totals by the NMI flow. Set confirmationEmailSent = true
+    //      so DC payment.succeeded webhook skips its
+    //      increment/reward-claim path. The pledge is already in the
+    //      backerCount/currentAmount/reward-quantityClaimed counts
+    //      and stays there through the migration.
+    //   2. backerNumber == null  → was NEVER counted (rare, but
+    //      possible on FAILED-at-create pledges). Leave
+    //      confirmationEmailSent = false so DC will count it for the
+    //      first time when the backer pays.
+    const alreadyCounted = pledgesToMigrate.filter((p) => p.backerNumber !== null);
+    const neverCounted = pledgesToMigrate.filter((p) => p.backerNumber === null);
+
+    const sharedReset = {
+      paymentProcessor: "DIVINITYCOIN" as const,
+      status: "PENDING" as const,
+      nmiCustomerVaultId: null,
+      nmiTransactionId: null,
+      nmiInitialTransactionId: null,
+      chargedImmediately: false,
+      retryCount: 0,
+      nextRetryAt: null,
+      lastFailureReason: null,
+    };
+
+    if (alreadyCounted.length > 0) {
       await db.pledge.updateMany({
-        where: {
-          id: { in: pledgesToMigrate.map((p) => p.id) },
-        },
-        data: {
-          paymentProcessor: "DIVINITYCOIN",
-          status: "PENDING",
-          nmiCustomerVaultId: null,
-          nmiTransactionId: null,
-          nmiInitialTransactionId: null,
-          chargedImmediately: false,
-          retryCount: 0,
-          nextRetryAt: null,
-          lastFailureReason: null,
-        },
+        where: { id: { in: alreadyCounted.map((p) => p.id) } },
+        data: { ...sharedReset, confirmationEmailSent: true },
+      });
+    }
+
+    if (neverCounted.length > 0) {
+      await db.pledge.updateMany({
+        where: { id: { in: neverCounted.map((p) => p.id) } },
+        data: { ...sharedReset, confirmationEmailSent: false },
       });
     }
 
@@ -168,6 +209,8 @@ export async function POST(
       projectTitle: project.title,
       projectFlipped: project.paymentProcessor === "NMI",
       pledgesMigrated: pledgesToMigrate.length,
+      alreadyInTotals: alreadyCounted.length,
+      notYetInTotals: neverCounted.length,
       emailResults,
     });
   } catch (err) {

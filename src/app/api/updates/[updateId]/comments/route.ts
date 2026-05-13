@@ -16,8 +16,8 @@ const log = logger.child({ module: "update-comments" });
  *   - GET is public
  *   - POST allows the project creator, accepted collaborators,
  *     any committed backer (COMPLETED or PENDING with a commit
- *     marker like nmiCustomerVaultId / confirmationEmailSent /
- *     stripePaymentMethodId), and any project follower
+ *     marker like confirmationEmailSent / stripePaymentMethodId),
+ *     and any project follower
  */
 
 async function isBackerOrFollower(userId: string, projectId: string): Promise<boolean> {
@@ -30,7 +30,6 @@ async function isBackerOrFollower(userId: string, projectId: string): Promise<bo
         OR: [
           { status: "COMPLETED" },
           { status: "PENDING", confirmationEmailSent: true },
-          { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
         ],
       },
       select: { id: true },

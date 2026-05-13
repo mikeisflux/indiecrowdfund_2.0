@@ -150,7 +150,6 @@ export async function GET(req: NextRequest) {
         OR: [
           { status: "COMPLETED" },
           { status: "PENDING", confirmationEmailSent: true },
-          { status: "PENDING", NOT: { nmiCustomerVaultId: null } },
         ],
       },
       select: {
