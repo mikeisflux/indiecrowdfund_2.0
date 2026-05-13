@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 const projectsCommentsLogger = logger.child({ module: "projects-comments" });
 import { db } from "@/lib/db";
 import { validateSession } from "@/lib/auth/session";
-import { notifyCommentReply } from "@/lib/notifications";
+import { notifyCommentReply, notifyNewProjectComment } from "@/lib/notifications";
 import { stripHtml } from "@/lib/utils/sanitize";
 
 type CommentWithUser = {
@@ -417,6 +417,31 @@ export async function POST(
         status: "COMPLETED",
       },
     });
+
+    // Top-level comment: fan out an in-app notification + email to the
+    // creator, every accepted-pledge backer, and every project follower.
+    // Reply comments take the separate notifyCommentReply path below
+    // (only the parent commenter gets pinged) — replies are a sub-
+    // conversation and shouldn't trigger another full broadcast.
+    if (!parentComment) {
+      const projectDetails = await db.project.findFirst({
+        where: { id: projectId, deletedAt: null },
+        select: { title: true },
+      });
+      if (projectDetails) {
+        notifyNewProjectComment({
+          projectId,
+          commenterId: session.user.id,
+          commenterName: session.user.name || "A backer",
+          commentContent: content.trim(),
+        }).catch((err) => {
+          projectsCommentsLogger.error(
+            { err: String(err) },
+            "Failed to send new-comment notifications"
+          );
+        });
+      }
+    }
 
     // Send notification to the original commenter if this is a reply
     if (parentComment && parentComment.userId !== session.user.id) {

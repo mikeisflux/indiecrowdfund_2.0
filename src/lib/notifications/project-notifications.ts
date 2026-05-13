@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { isEmailTypeEnabled } from "@/lib/email";
 import { createNotification } from "./core";
 import {
+  sendNewCommentEmail,
   sendProjectFundedEmail,
   sendProjectLaunchEmail,
   sendProjectUpdateEmail,
@@ -308,6 +309,145 @@ export async function notifyProjectUpdate(
 
   if (uniqueEmails.length > 0) {
     notificationsProjectNotificationsLogger.info(`Sent project update emails to ${uniqueEmails.length} users for project: ${project.title}`);
+  }
+}
+
+/**
+ * Notify the creator + every backer + every follower when a new top-
+ * level comment is posted on a project. Mirrors notifyProjectUpdate
+ * so the campaign owner and their audience get the same kind of email
+ * for new discussion as they do for new updates. Replies are handled
+ * separately by notifyCommentReply (parent-commenter only).
+ *
+ * The commenter themselves is excluded from the recipient set so they
+ * don't get an email about their own comment.
+ */
+export async function notifyNewProjectComment(params: {
+  projectId: string;
+  commenterId: string;
+  commenterName: string;
+  commentContent: string;
+}) {
+  const { projectId, commenterId, commenterName, commentContent } = params;
+
+  const project = await db.project.findFirst({
+    where: { id: projectId, deletedAt: null },
+    select: {
+      title: true,
+      slug: true,
+      creatorId: true,
+      creator: {
+        select: { name: true, vanityUrl: true },
+      },
+      pledges: {
+        select: { userId: true },
+        distinct: ["userId"],
+      },
+      followers: {
+        select: { userId: true, email: true },
+      },
+    },
+  });
+
+  if (!project) return;
+
+  const projectUrlPath = project.creator?.vanityUrl
+    ? `/projects/${project.creator.vanityUrl}/${project.slug}`
+    : `/projects/${project.slug}`;
+
+  // Union backers + followers, drop the commenter themselves so they
+  // don't get an email about their own comment.
+  const userIds = new Set<string>();
+  project.pledges.forEach((p: { userId: string }) => userIds.add(p.userId));
+  project.followers.forEach((f: { userId: string | null }) => {
+    if (f.userId) userIds.add(f.userId);
+  });
+  // Creator should get notified too unless they wrote the comment.
+  if (project.creatorId && project.creatorId !== commenterId) {
+    userIds.add(project.creatorId);
+  }
+  userIds.delete(commenterId);
+
+  // In-app notifications for every recipient with a user account.
+  const notifications = Array.from(userIds).map((userId) => ({
+    userId,
+    type: (userId === project.creatorId
+      ? "COMMENT_NEW"
+      : "PROJECT_UPDATE") as NotificationType,
+    title: userId === project.creatorId ? "New Comment" : "New Discussion",
+    message:
+      userId === project.creatorId
+        ? `${commenterName} commented on "${project.title}"`
+        : `${commenterName} commented on "${project.title}"`,
+    actionUrl: `${projectUrlPath}?tab=comments`,
+    projectId,
+    senderId: commenterId,
+  }));
+
+  if (notifications.length > 0) {
+    await db.notification.createMany({ data: notifications });
+  }
+
+  // Reuse the projectUpdate email-type toggle — both are creator-to-
+  // audience broadcast emails, so admins should manage them with the
+  // same on/off switch rather than introducing a separate setting.
+  const projectUpdateEnabled = await isEmailTypeEnabled("projectUpdate");
+  if (!projectUpdateEnabled) {
+    notificationsProjectNotificationsLogger.info(
+      "Project update notifications disabled; skipping new-comment fanout"
+    );
+    return;
+  }
+
+  // Resolve emails: user accounts in the set + email-only followers.
+  const emailsToSend: string[] = [];
+  const allUserIds = Array.from(userIds);
+  if (allUserIds.length > 0) {
+    const users = await db.user.findMany({
+      where: { id: { in: allUserIds }, deletedAt: null },
+      select: { email: true },
+    });
+    users.forEach((u) => emailsToSend.push(u.email));
+  }
+  project.followers
+    .filter(
+      (f: { userId: string | null; email: string | null }) =>
+        !f.userId && f.email
+    )
+    .forEach((f: { email: string | null }) => {
+      if (f.email) emailsToSend.push(f.email);
+    });
+
+  const uniqueEmails = Array.from(new Set(emailsToSend));
+
+  const batchSize = 10;
+  for (let i = 0; i < uniqueEmails.length; i += batchSize) {
+    const batch = uniqueEmails.slice(i, i + batchSize);
+    const results = await Promise.allSettled(
+      batch.map((email) =>
+        sendNewCommentEmail(
+          email,
+          project.title,
+          projectUrlPath,
+          commenterName,
+          commentContent
+        )
+      )
+    );
+    results.forEach((r, idx) => {
+      if (r.status === "rejected") {
+        notificationsProjectNotificationsLogger.error(
+          { err: String(r.reason), email: batch[idx] },
+          "Failed to send new-comment email"
+        );
+      }
+    });
+  }
+
+  if (uniqueEmails.length > 0) {
+    notificationsProjectNotificationsLogger.info(
+      `Sent new-comment emails to ${uniqueEmails.length} users for project: ${project.title}`
+    );
   }
 }
 

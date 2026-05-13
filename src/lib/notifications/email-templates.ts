@@ -268,6 +268,69 @@ export async function sendCommentReplyEmail(
 }
 
 /**
+ * Send "new comment on a project" email to a follower / backer.
+ * Mirrors sendProjectUpdateEmail in structure so the email looks
+ * consistent with the existing campaign update emails.
+ */
+export async function sendNewCommentEmail(
+  email: string,
+  projectTitle: string,
+  projectUrlPath: string,
+  commenterName: string,
+  commentContent: string
+) {
+  const commentsUrl = `${APP_URL}${projectUrlPath}?tab=comments`;
+
+  const plainText = commentContent.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+  const contentPreview = plainText.length > 500
+    ? plainText.substring(0, 500) + "..."
+    : plainText;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Comment on Project</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+          <h2 style="margin-top: 0; color: #333;">New comment on &ldquo;${escapeHtml(projectTitle)}&rdquo;</h2>
+
+          <p style="color: #555;"><strong>${escapeHtml(commenterName)}</strong> just left a comment:</p>
+
+          <div style="background: #fff; border-left: 4px solid #05ce78; padding: 15px 20px; margin: 20px 0; border-radius: 0 6px 6px 0;">
+            <p style="margin: 0; color: #333; white-space: pre-wrap;">${escapeHtml(contentPreview)}</p>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${commentsUrl}" style="display: inline-block; background: #05ce78; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+              View Discussion
+            </a>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px;">
+          <p>You received this email because you're following or have backed this project.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `New comment on "${projectTitle}"`,
+    html,
+  });
+}
+
+/**
  * Send marketplace purchase confirmation email to buyer
  */
 export async function sendMarketplacePurchaseEmail(

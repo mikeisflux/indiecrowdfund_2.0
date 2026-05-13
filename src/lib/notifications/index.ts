@@ -15,6 +15,7 @@ export {
   notifyProjectFunded,
   notifyProjectLaunched,
   notifyProjectUpdate,
+  notifyNewProjectComment,
   notifyProjectEnded,
 } from "./project-notifications";
 
