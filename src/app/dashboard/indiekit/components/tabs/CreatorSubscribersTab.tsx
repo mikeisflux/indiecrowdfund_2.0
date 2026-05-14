@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Trash2, Loader2, Users, Mail } from "lucide-react";
+import { Search, Trash2, Loader2, Users, Mail, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
+import { ImportEmailDialog } from "../dialogs";
 
 // Creator-wide email subscriber list view (the actual EmailListSubscriber
 // table that powers campaign sends — imported CSVs, teaser signups,
@@ -44,6 +45,7 @@ export function CreatorSubscribersTab() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
@@ -116,6 +118,10 @@ export function CreatorSubscribersTab() {
             className="pl-9"
           />
         </div>
+        <Button variant="outline" onClick={() => setIsImportOpen(true)} className="shrink-0">
+          <Upload className="h-4 w-4 mr-2" />
+          Import CSV
+        </Button>
         <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
           <Users className="h-4 w-4" />
           {isLoading ? "…" : `${total.toLocaleString()} ${debouncedSearch ? "matching" : "subscribers"}`}
@@ -176,6 +182,12 @@ export function CreatorSubscribersTab() {
           )}
         </CardContent>
       </Card>
+
+      <ImportEmailDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onImport={() => fetchSubscribers()}
+      />
     </div>
   );
 }
