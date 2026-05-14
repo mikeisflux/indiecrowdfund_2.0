@@ -517,9 +517,9 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
                   <p className="text-xs text-muted-foreground">by <span className="text-foreground/70">{project.creator}</span></p>
                 </CardContent>
                 <CardFooter className="flex-col items-start gap-3 border-t border-border/50 pt-4">
-                  <div className="relative w-full h-2 rounded-full bg-muted overflow-hidden">
+                  <div className="progress-glow-bar relative w-full h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-emerald-500 rounded-full progress-glow-bar"
+                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-emerald-500 rounded-full"
                       style={{ width: `${Math.min((Number(project.currentAmount) / Number(project.goalAmount)) * 100, 100)}%` }}
                     />
                   </div>
