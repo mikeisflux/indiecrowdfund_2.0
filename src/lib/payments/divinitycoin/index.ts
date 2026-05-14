@@ -51,4 +51,5 @@ export {
   listDcPaymentMethods,
   detachDcPaymentMethod,
   chargeDcSavedPaymentMethod,
+  verifyDcPayment,
 } from "./saved-cards";

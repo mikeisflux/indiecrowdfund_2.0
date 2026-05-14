@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
 import { db } from "@/lib/db";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
-import { chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
+import { chargeDcSavedPaymentMethod, verifyDcPayment, handlePaymentSucceeded } from "@/lib/payments/divinitycoin";
 
 // Charge all PENDING DivinityCoin pledges with a saved card (pm_...)
 // for a project that has hit its goal. CAS-claim chargedImmediately
@@ -151,6 +151,71 @@ async function captureDcPendingPledges(projectId: string): Promise<{
   return result;
 }
 
+// Safety net for the immediate-charge flow. When an AoN campaign is
+// funded (or KIA), new pledges charge at checkout and DC fires a
+// payment.succeeded webhook that flips the pledge PENDING -> COMPLETED.
+// If that webhook is ever missed or delayed, the pledge is stuck PENDING
+// — already charged and counted by /confirm, but never COMPLETED and
+// with no transaction record. This verifies such pledges directly
+// against DC and finishes the ones that actually settled, reusing the
+// exact webhook completion path so it stays idempotent.
+async function verifyStuckDcImmediateCharges(
+  projectId: string
+): Promise<{ checked: number; completed: number }> {
+  const result = { checked: 0, completed: 0 };
+  const cutoff = new Date(Date.now() - 10 * 60 * 1000); // 10-min webhook grace
+  const stuck = await db.pledge.findMany({
+    where: {
+      projectId,
+      status: "PENDING",
+      paymentProcessor: "DIVINITYCOIN",
+      chargedImmediately: true,
+      deletedAt: null,
+      NOT: { divinityCoinPaymentId: null },
+      createdAt: { lt: cutoff },
+    },
+    select: { id: true, divinityCoinPaymentId: true },
+    take: 100, // bound DC API calls per tick; the rest get the next tick
+  });
+  result.checked = stuck.length;
+  for (const p of stuck) {
+    if (!p.divinityCoinPaymentId) continue;
+    try {
+      const verified = await verifyDcPayment(p.divinityCoinPaymentId);
+      if (!verified.success) continue; // transient — re-checked next tick
+      if (verified.status === "succeeded") {
+        // Reuse the webhook's completion path — idempotent + CAS-guarded,
+        // so it's safe even if the real webhook lands moments later.
+        await handlePaymentSucceeded({
+          pledgeId: p.id,
+          paymentId: p.divinityCoinPaymentId,
+        });
+        result.completed++;
+        cronProcessFundedCampaignsLogger.info(
+          { pledgeId: p.id },
+          "[Cron] Completed a stuck immediate-charge DC pledge via verify-payment"
+        );
+      } else if (verified.status === "failed") {
+        // A genuinely-failed charge stuck PENDING is rare here (it needs
+        // both a missed payment.failed webhook and a /confirm that
+        // optimistically counted it). Don't mutate from the cron — the
+        // stats rollback is delicate; surface it loudly for manual review.
+        cronProcessFundedCampaignsLogger.warn(
+          { pledgeId: p.id, paymentIntentId: p.divinityCoinPaymentId },
+          "[Cron] DC verify-payment reports FAILED for a stuck immediate-charge pledge — needs manual review"
+        );
+      }
+      // "pending" — leave it; the cron re-checks next tick.
+    } catch (err) {
+      cronProcessFundedCampaignsLogger.error(
+        { err: err instanceof Error ? err.message : String(err), pledgeId: p.id },
+        "[Cron] DC payment verification error"
+      );
+    }
+  }
+  return result;
+}
+
 // Cron job endpoint for processing pending pledges on funded campaigns
 //
 // This actively checks for campaigns that have crossed their funding goal
@@ -222,6 +287,8 @@ export async function GET(req: NextRequest) {
         total: number;
         successful: number;
         failed: number;
+        verifiedStuck?: number;
+        verifiedCompleted?: number;
       }[],
       totalPledgesProcessed: 0,
       totalSuccessful: 0,
@@ -253,17 +320,30 @@ export async function GET(req: NextRequest) {
           return { total: 0, successful: 0, failed: 0 };
         });
 
+        // Safety net: finish any immediate-charge pledges that charged at
+        // checkout but got stuck PENDING because their payment.succeeded
+        // webhook was missed or delayed.
+        const dcVerifyResults = await verifyStuckDcImmediateCharges(project.id).catch((err) => {
+          cronProcessFundedCampaignsLogger.error(
+            { err: String(err) },
+            `[Cron] DC verify-stuck error for project ${project.id}`
+          );
+          return { checked: 0, completed: 0 };
+        });
+
         results.processed.push({
           projectId: project.id,
           projectTitle: project.title,
           ...dcResults,
+          verifiedStuck: dcVerifyResults.checked,
+          verifiedCompleted: dcVerifyResults.completed,
         });
 
         results.totalPledgesProcessed += dcResults.total;
-        results.totalSuccessful += dcResults.successful;
+        results.totalSuccessful += dcResults.successful + dcVerifyResults.completed;
         results.totalFailed += dcResults.failed;
 
-        cronProcessFundedCampaignsLogger.info(`[Cron] Processed funded campaign "${project.title}": ${dcResults.successful}/${dcResults.total} pledges charged`);
+        cronProcessFundedCampaignsLogger.info(`[Cron] Processed funded campaign "${project.title}": ${dcResults.successful}/${dcResults.total} saved-card charged, ${dcVerifyResults.completed}/${dcVerifyResults.checked} stuck immediate-charge completed`);
       } catch (error) {
         cronProcessFundedCampaignsLogger.error({ err: error }, `[Cron] Error processing pledges for project ${project.id}:`);
         results.processed.push({

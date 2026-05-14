@@ -157,3 +157,43 @@ export async function chargeDcSavedPaymentMethod(
     error: data.error as string | undefined,
   };
 }
+
+/**
+ * Verify a PaymentIntent's outcome server-side. DC checks the charge
+ * against Stripe and its own record and returns the settled status.
+ * Use this as a safety net when a payment.succeeded / payment.failed
+ * webhook may have been missed — e.g. an immediate-charge pledge stuck
+ * in PENDING after a funded-campaign checkout.
+ */
+export async function verifyDcPayment(
+  paymentIntentId: string
+): Promise<
+  | { success: false; error: string }
+  | {
+      success: true;
+      status: "succeeded" | "pending" | "failed";
+      amount?: number;
+      dcStatus?: string;
+    }
+> {
+  const result = await callDivinityCoinAPI("verify-payment", { paymentIntentId });
+  if (!result.success || !result.data) {
+    return { success: false, error: result.error || "Failed to verify payment" };
+  }
+  const data = result.data as Record<string, unknown>;
+  // Anything DC doesn't explicitly report as succeeded/failed is treated
+  // as still pending — the conservative choice, so we never complete or
+  // fail a pledge on an ambiguous response.
+  const status: "succeeded" | "pending" | "failed" =
+    data.status === "succeeded"
+      ? "succeeded"
+      : data.status === "failed"
+        ? "failed"
+        : "pending";
+  return {
+    success: true,
+    status,
+    amount: typeof data.amount === "number" ? data.amount : undefined,
+    dcStatus: typeof data.dcStatus === "string" ? data.dcStatus : undefined,
+  };
+}
