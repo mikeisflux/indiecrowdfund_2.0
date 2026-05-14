@@ -24,6 +24,16 @@ import { Switch } from "@/components/ui/switch";
 import { slugify } from "@/lib/utils";
 import { toast } from "sonner";
 
+// A type="date" input needs "YYYY-MM-DD" or "". Clearing the field
+// yields new Date("") (Invalid Date); calling .toISOString() on that
+// throws "RangeError: Invalid time value" — and since it runs during
+// render, it takes the whole edit page down via the error boundary.
+function toDateInputValue(value: Date | string | null | undefined): string {
+  if (!value) return "";
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? "" : d.toISOString().split("T")[0];
+}
+
 // Helper to extract video embed URL from YouTube or Vimeo links
 function getVideoEmbedUrl(url: string): string | null {
   if (!url) return null;
@@ -702,13 +712,11 @@ export function BasicsStep() {
               <Input
                 id="endDate"
                 type="date"
-                value={
-                  basics.endDate
-                    ? new Date(basics.endDate).toISOString().split("T")[0]
-                    : ""
-                }
+                value={toDateInputValue(basics.endDate)}
                 onChange={(e) =>
-                  updateBasics({ endDate: new Date(e.target.value) })
+                  updateBasics({
+                    endDate: e.target.value ? new Date(e.target.value) : undefined,
+                  })
                 }
               />
               <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -723,13 +731,11 @@ export function BasicsStep() {
         <Input
           id="launchDate"
           type="date"
-          value={
-            basics.launchDate
-              ? new Date(basics.launchDate).toISOString().split("T")[0]
-              : ""
-          }
+          value={toDateInputValue(basics.launchDate)}
           onChange={(e) =>
-            updateBasics({ launchDate: new Date(e.target.value) })
+            updateBasics({
+              launchDate: e.target.value ? new Date(e.target.value) : undefined,
+            })
           }
         />
         <p className="text-xs text-muted-foreground">
