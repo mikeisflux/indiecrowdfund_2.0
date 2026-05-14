@@ -7,38 +7,31 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// Helper to get creator tag
-async function getCreatorTag(userId: string) {
-  const creator = await db.user.findFirst({
-    where: { id: userId, deletedAt: null },
-    select: { name: true, vanityUrl: true },
-  });
-  return creator?.vanityUrl || creator?.name || userId;
-}
-
-// Helper to verify subscriber belongs to creator
+// Helper to verify a newsletterSubscriber row belongs to this creator.
+//
+// newsletterSubscriber has no creatorId column, so ownership can't be
+// read off the row directly. It used to be inferred from the free-text
+// creator tag in `tags[]` — but that tag falls back to a non-unique
+// display name, so two creators sharing a name could pass each other's
+// check. Instead, derive ownership from the creator-scoped
+// emailListSubscriber table: a creator owns a newsletter row only if the
+// same email is on their own email list (emailListSubscriber has a real
+// creatorId FK). Every current creator write path that touches
+// newsletterSubscriber also writes the email to emailListSubscriber, so
+// this is equivalent — and immune to name collisions.
 async function verifySubscriberOwnership(subscriberId: string, userId: string) {
-  const creatorTag = await getCreatorTag(userId);
-
   const subscriber = await db.newsletterSubscriber.findUnique({
     where: { id: subscriberId },
   });
 
   if (!subscriber) return null;
 
-  // newsletterSubscriber has no creatorId column — a creator's rows are
-  // identified by their creator tag in `tags[]`. The old check looked at
-  // `source` for a "creator_import:<tag>" format that no write path ever
-  // produces (source is the bare "creator_import"; the tag lives in
-  // tags[]), so it matched nothing. The two write paths also differ:
-  // the CSV import stores the tag bare ("mike"), the manual single-add
-  // prefixes it ("creator:mike"). Accept either form.
-  const tags = subscriber.tags || [];
-  if (tags.includes(creatorTag) || tags.includes(`creator:${creatorTag}`)) {
-    return subscriber;
-  }
+  const ownsEmail = await db.emailListSubscriber.findFirst({
+    where: { creatorId: userId, email: subscriber.email },
+    select: { id: true },
+  });
 
-  return null;
+  return ownsEmail ? subscriber : null;
 }
 
 // GET - Get single subscriber
