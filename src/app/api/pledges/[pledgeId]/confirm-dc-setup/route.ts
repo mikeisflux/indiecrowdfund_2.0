@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { sendPledgeConfirmationEmail, isEmailTypeEnabled } from "@/lib/email";
 import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
 import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
+import { getDcSetupIntent } from "@/lib/payments/divinitycoin";
 
 const log = logger.child({ module: "pledges-confirm-dc-setup" });
 
@@ -14,10 +15,15 @@ const log = logger.child({ module: "pledges-confirm-dc-setup" });
 // /api/pledges (POST) created the pledge in PENDING state and returned a
 // SetupIntent clientSecret. The browser confirmed the SetupIntent via
 // stripe.confirmSetup() pointed at DC's publishable key; that succeeded
-// and produced a payment_method id (pm_...). The browser now POSTs that
-// pm id back here so we can persist it on the pledge — the AoN
+// and produced a payment_method id (pm_...). The browser POSTs that pm
+// id back here so we can persist it on the pledge — the AoN
 // charge-on-success cron will later call DC's
 // /charge-saved-payment-method with this pm to capture the funds.
+//
+// 3DS-redirect recovery: if confirmSetup() needed a full-page redirect
+// (3DS challenge) the browser never gets the pm_... back, so
+// handleSuccessRedirect POSTs here with only the setupIntentId and the
+// server resolves the pm via DC's get-setup-intent.
 //
 // We never see card data; only the durable pm_... handle.
 //
@@ -38,7 +44,10 @@ const log = logger.child({ module: "pledges-confirm-dc-setup" });
 
 const bodySchema = z.object({
   setupIntentId: z.string().min(1).max(200),
-  paymentMethodId: z.string().min(1).max(200),
+  // Optional: the in-browser flow hands this back directly. The
+  // 3DS-redirect recovery path omits it and the server resolves it from
+  // the SetupIntent via DC's get-setup-intent (see header comment).
+  paymentMethodId: z.string().min(1).max(200).optional(),
 });
 
 export async function POST(
@@ -55,7 +64,7 @@ export async function POST(
     const body = await req.json();
     const parse = bodySchema.safeParse(body);
     if (!parse.success) {
-      return NextResponse.json({ error: "Missing setupIntentId or paymentMethodId" }, { status: 400 });
+      return NextResponse.json({ error: "Missing or invalid setupIntentId" }, { status: 400 });
     }
     const { setupIntentId, paymentMethodId } = parse.data;
 
@@ -120,6 +129,36 @@ export async function POST(
       );
     }
 
+    // Resolve the saved-card token. The in-browser flow POSTs
+    // paymentMethodId directly. The 3DS-redirect recovery path omits it
+    // — Stripe did a full-page redirect mid-confirmSetup so the browser
+    // never received the pm_... — so resolve it from DC using the
+    // SetupIntent id on the pledge (prefer the one we stored at pledge
+    // creation over the client-supplied value). get-setup-intent returns
+    // the paymentMethodId once the SetupIntent has succeeded.
+    const effectiveSetupIntentId = pledge.divinityCoinSetupIntentId || setupIntentId;
+    let resolvedPaymentMethodId = paymentMethodId;
+    if (!resolvedPaymentMethodId) {
+      const si = await getDcSetupIntent(effectiveSetupIntentId);
+      if (!si.success) {
+        log.error(
+          { pledgeId: pledge.id, setupIntentId: effectiveSetupIntentId, err: si.error },
+          "[Confirm DC Setup] get-setup-intent lookup failed"
+        );
+        return NextResponse.json(
+          { error: "Could not verify the saved card. Please try again." },
+          { status: 502 }
+        );
+      }
+      if (si.status !== "succeeded" || !si.paymentMethodId) {
+        return NextResponse.json(
+          { error: `Card setup is not complete (status: ${si.status}). Please try again.` },
+          { status: 400 }
+        );
+      }
+      resolvedPaymentMethodId = si.paymentMethodId;
+    }
+
     // Persist the saved card. Idempotent — re-saving the same pm/intent
     // is a no-op write; a DIFFERENT pm replaces the prior one (the cron
     // charges whatever is on file when it runs). We deliberately do NOT
@@ -127,18 +166,18 @@ export async function POST(
     // keyed off confirmationEmailSent, not the card, so a pledge with a
     // card on file but the flag still false self-heals on the next call.
     if (
-      pledge.divinityCoinPaymentMethodId !== paymentMethodId ||
-      pledge.divinityCoinSetupIntentId !== setupIntentId
+      pledge.divinityCoinPaymentMethodId !== resolvedPaymentMethodId ||
+      pledge.divinityCoinSetupIntentId !== effectiveSetupIntentId
     ) {
       await db.pledge.update({
         where: { id: pledge.id },
         data: {
-          divinityCoinSetupIntentId: setupIntentId,
-          divinityCoinPaymentMethodId: paymentMethodId,
+          divinityCoinSetupIntentId: effectiveSetupIntentId,
+          divinityCoinPaymentMethodId: resolvedPaymentMethodId,
         },
       });
       log.info(
-        { pledgeId: pledge.id, setupIntentId },
+        { pledgeId: pledge.id, setupIntentId: effectiveSetupIntentId },
         "[Confirm DC Setup] Card saved on pledge for AoN charge-on-success"
       );
     }
@@ -312,7 +351,7 @@ export async function POST(
     }
 
     log.info(
-      { pledgeId: pledge.id, setupIntentId },
+      { pledgeId: pledge.id, setupIntentId: effectiveSetupIntentId },
       "[Confirm DC Setup] Pledge committed for AoN charge-on-success"
     );
 

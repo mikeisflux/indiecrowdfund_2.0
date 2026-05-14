@@ -32,6 +32,10 @@ export function usePledge() {
   const addItemsParam = searchParams?.get("addItems") ?? null;
   const modifyParam = searchParams?.get("modify") ?? null;
   const pledgeIdParam = searchParams?.get("pledgeId") ?? null;
+  // Stripe appends `setup_intent` to the return_url when a SetupIntent
+  // confirmation needed a full-page redirect (3DS) — its presence tells
+  // handleSuccessRedirect to finish via the DC saved-card flow.
+  const setupIntentParam = searchParams?.get("setup_intent") ?? null;
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -143,10 +147,21 @@ export function usePledge() {
       if (successParam === "true") {
         if (pledgeIdParam) {
           try {
-            const res = await apiFetch(`/api/pledges/${pledgeIdParam}/confirm`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-            });
+            // A `setup_intent` param means Stripe did a full-page 3DS
+            // redirect during the DC saved-card flow — finish it via
+            // confirm-dc-setup (which resolves the saved card from the
+            // SetupIntent), NOT /confirm (that rejects
+            // non-chargedImmediately pledges with a 400).
+            const res = setupIntentParam
+              ? await apiFetch(`/api/pledges/${pledgeIdParam}/confirm-dc-setup`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ setupIntentId: setupIntentParam }),
+                })
+              : await apiFetch(`/api/pledges/${pledgeIdParam}/confirm`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                });
             if (!res.ok) console.error("Failed to confirm pledge after redirect");
           } catch (error) {
             console.error("Error confirming pledge after redirect:", error);
@@ -156,7 +171,7 @@ export function usePledge() {
       }
     }
     handleSuccessRedirect();
-  }, [successParam, pledgeIdParam]);
+  }, [successParam, pledgeIdParam, setupIntentParam]);
 
   // Initialize Stripe - DISABLED: Replaced by PayPal
   // useEffect(() => {

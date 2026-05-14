@@ -52,4 +52,5 @@ export {
   detachDcPaymentMethod,
   chargeDcSavedPaymentMethod,
   verifyDcPayment,
+  getDcSetupIntent,
 } from "./saved-cards";

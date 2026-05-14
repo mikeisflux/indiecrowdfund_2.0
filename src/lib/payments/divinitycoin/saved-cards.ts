@@ -197,3 +197,29 @@ export async function verifyDcPayment(
     dcStatus: typeof data.dcStatus === "string" ? data.dcStatus : undefined,
   };
 }
+
+/**
+ * Retrieve a SetupIntent's live status from DC. Once the SetupIntent has
+ * succeeded the response includes the resulting paymentMethodId — use
+ * this to recover the saved-card token when the browser flow couldn't
+ * hand it back directly (e.g. a 3DS challenge that did a full-page
+ * redirect away from checkout).
+ */
+export async function getDcSetupIntent(
+  setupIntentId: string
+): Promise<
+  | { success: false; error: string }
+  | { success: true; status: string; paymentMethodId: string | null }
+> {
+  const result = await callDivinityCoinAPI("get-setup-intent", { setupIntentId });
+  if (!result.success || !result.data) {
+    return { success: false, error: result.error || "Failed to retrieve SetupIntent" };
+  }
+  const data = result.data as Record<string, unknown>;
+  return {
+    success: true,
+    status: typeof data.status === "string" ? data.status : "unknown",
+    paymentMethodId:
+      typeof data.paymentMethodId === "string" ? data.paymentMethodId : null,
+  };
+}
