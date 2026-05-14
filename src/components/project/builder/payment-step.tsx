@@ -69,6 +69,8 @@ export function PaymentStep() {
     accountNumber: "",
     routingNumber: "",
     accountType: "checking" as "checking" | "savings",
+    bankCountry: "US" as "US" | "GB",
+    payoutPhone: "",
   });
   const [bankAccountStatus, setBankAccountStatus] = useState<{
     saved: boolean;
@@ -110,15 +112,31 @@ export function PaymentStep() {
       return;
     }
 
-    // Basic validation
-    if (bankAccount.routingNumber.length !== 9) {
-      toast.error("Routing number must be 9 digits");
-      return;
-    }
-
-    if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
-      toast.error("Please enter a valid account number");
-      return;
+    // Country-specific validation — US 9-digit ABA routing number vs
+    // UK 6-digit Sort Code, and UK requires a payout phone on file.
+    const isUK = bankAccount.bankCountry === "GB";
+    if (isUK) {
+      if (!/^\d{6}$/.test(bankAccount.routingNumber)) {
+        toast.error("UK sort code must be 6 digits (e.g. 60-06-39)");
+        return;
+      }
+      if (!/^\d{8}$/.test(bankAccount.accountNumber)) {
+        toast.error("UK account number must be 8 digits");
+        return;
+      }
+      if (!bankAccount.payoutPhone || bankAccount.payoutPhone.trim().length < 7) {
+        toast.error("Phone number is required for UK bank accounts");
+        return;
+      }
+    } else {
+      if (bankAccount.routingNumber.length !== 9) {
+        toast.error("Routing number must be 9 digits");
+        return;
+      }
+      if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
+        toast.error("Please enter a valid account number");
+        return;
+      }
     }
 
     setIsSavingBank(true);
@@ -145,6 +163,7 @@ export function PaymentStep() {
         ...prev,
         accountNumber: "",
         routingNumber: "",
+        payoutPhone: "",
       }));
       toast.success("Bank account saved securely!");
     } catch (error) {
@@ -173,6 +192,7 @@ export function PaymentStep() {
               bankName: data.bankName || "",
               accountHolder: data.accountHolder || "",
               accountType: data.accountType || "checking",
+              bankCountry: data.bankCountry === "GB" ? "GB" : "US",
             }));
           }
         } else {

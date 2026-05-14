@@ -99,6 +99,8 @@ export function PaymentSettings({
     accountNumber: "",
     routingNumber: "",
     accountType: "checking" as "checking" | "savings",
+    bankCountry: "US" as "US" | "GB",
+    payoutPhone: "",
   });
   const [bankAccountStatus, setBankAccountStatus] = useState<BankAccountStatus>({
     saved: false,
@@ -173,6 +175,7 @@ export function PaymentSettings({
             bankName: data.bankName || "",
             accountHolder: data.accountHolder || "",
             accountType: data.accountType || "checking",
+            bankCountry: data.bankCountry === "GB" ? "GB" : "US",
           }));
         }
       } else {
@@ -261,14 +264,31 @@ export function PaymentSettings({
       return;
     }
 
-    if (bankAccount.routingNumber.length !== 9) {
-      toast.error("Routing number must be 9 digits");
-      return;
-    }
-
-    if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
-      toast.error("Please enter a valid account number");
-      return;
+    // Country-specific validation — US 9-digit ABA routing number vs
+    // UK 6-digit Sort Code, and UK requires a payout phone on file.
+    const isUK = bankAccount.bankCountry === "GB";
+    if (isUK) {
+      if (!/^\d{6}$/.test(bankAccount.routingNumber)) {
+        toast.error("UK sort code must be 6 digits (e.g. 60-06-39)");
+        return;
+      }
+      if (!/^\d{8}$/.test(bankAccount.accountNumber)) {
+        toast.error("UK account number must be 8 digits");
+        return;
+      }
+      if (!bankAccount.payoutPhone || bankAccount.payoutPhone.trim().length < 7) {
+        toast.error("Phone number is required for UK bank accounts");
+        return;
+      }
+    } else {
+      if (bankAccount.routingNumber.length !== 9) {
+        toast.error("Routing number must be 9 digits");
+        return;
+      }
+      if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
+        toast.error("Please enter a valid account number");
+        return;
+      }
     }
 
     setIsSavingBank(true);
@@ -297,6 +317,7 @@ export function PaymentSettings({
         ...prev,
         accountNumber: "",
         routingNumber: "",
+        payoutPhone: "",
       }));
       toast.success("Bank account saved securely!");
     } catch (error) {
@@ -306,6 +327,8 @@ export function PaymentSettings({
       setIsSavingBank(false);
     }
   };
+
+  const isUK = bankAccount.bankCountry === "GB";
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -534,6 +557,34 @@ export function PaymentSettings({
                   </AlertDescription>
                 </Alert>
 
+                <div className="space-y-2">
+                  <Label htmlFor="bank-country" className={compact ? "text-white" : ""}>
+                    Bank Country
+                  </Label>
+                  <Select
+                    value={bankAccount.bankCountry}
+                    onValueChange={(value: "US" | "GB") =>
+                      setBankAccount((prev) => ({
+                        ...prev,
+                        bankCountry: value,
+                        // Clear the country-specific routing + account
+                        // values when the country changes so a US routing
+                        // number doesn't sit stale in a "Sort Code" field.
+                        routingNumber: "",
+                        accountNumber: "",
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="bank-country" className={cn("w-full sm:w-[280px]", compact && "bg-white/10 border-white/20 text-white")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="US">United States</SelectItem>
+                      <SelectItem value="GB">United Kingdom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="bank-name" className={compact ? "text-white" : ""}>
@@ -543,7 +594,7 @@ export function PaymentSettings({
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="bank-name"
-                        placeholder="e.g., Chase Bank"
+                        placeholder={isUK ? "e.g., Barclays" : "e.g., Chase Bank"}
                         value={bankAccount.bankName}
                         onChange={(e) => setBankAccount((prev) => ({ ...prev, bankName: e.target.value }))}
                         className={cn("pl-10", compact && "bg-white/10 border-white/20 text-white placeholder:text-white/40")}
@@ -568,23 +619,25 @@ export function PaymentSettings({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="routing-number" className={compact ? "text-white" : ""}>
-                      Routing Number
+                      {isUK ? "Sort Code" : "Routing Number"}
                     </Label>
                     <Input
                       id="routing-number"
                       type="text"
                       inputMode="numeric"
-                      maxLength={9}
-                      placeholder="9-digit routing number"
+                      maxLength={isUK ? 6 : 9}
+                      placeholder={isUK ? "6 digits (e.g. 600639)" : "9-digit routing number"}
                       value={bankAccount.routingNumber}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 9);
+                        const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 6 : 9);
                         setBankAccount((prev) => ({ ...prev, routingNumber: value }));
                       }}
                       className={compact ? "bg-white/10 border-white/20 text-white placeholder:text-white/40" : ""}
                     />
                     <p className={cn("text-xs", compact ? "text-white/40" : "text-muted-foreground")}>
-                      9 digits, found on the bottom left of your checks
+                      {isUK
+                        ? "6 digits — your bank's sort code"
+                        : "9 digits, found on the bottom left of your checks"}
                     </p>
                   </div>
 
@@ -596,11 +649,11 @@ export function PaymentSettings({
                       id="account-number"
                       type="password"
                       inputMode="numeric"
-                      maxLength={17}
-                      placeholder="Your account number"
+                      maxLength={isUK ? 8 : 17}
+                      placeholder={isUK ? "8 digits" : "Your account number"}
                       value={bankAccount.accountNumber}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 17);
+                        const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 8 : 17);
                         setBankAccount((prev) => ({ ...prev, accountNumber: value }));
                       }}
                       className={compact ? "bg-white/10 border-white/20 text-white placeholder:text-white/40" : ""}
@@ -608,23 +661,42 @@ export function PaymentSettings({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className={compact ? "text-white" : ""}>Account Type</Label>
-                  <Select
-                    value={bankAccount.accountType}
-                    onValueChange={(value: "checking" | "savings") =>
-                      setBankAccount((prev) => ({ ...prev, accountType: value }))
-                    }
-                  >
-                    <SelectTrigger className={cn("w-full sm:w-[200px]", compact && "bg-white/10 border-white/20 text-white")}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="checking">Checking</SelectItem>
-                      <SelectItem value="savings">Savings</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {isUK ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="payout-phone" className={compact ? "text-white" : ""}>
+                      Phone Number
+                    </Label>
+                    <Input
+                      id="payout-phone"
+                      type="tel"
+                      placeholder="e.g. 07951 937383"
+                      value={bankAccount.payoutPhone}
+                      onChange={(e) => setBankAccount((prev) => ({ ...prev, payoutPhone: e.target.value }))}
+                      className={compact ? "bg-white/10 border-white/20 text-white placeholder:text-white/40" : ""}
+                    />
+                    <p className={cn("text-xs", compact ? "text-white/40" : "text-muted-foreground")}>
+                      Required by UK banks on the payee record.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className={compact ? "text-white" : ""}>Account Type</Label>
+                    <Select
+                      value={bankAccount.accountType}
+                      onValueChange={(value: "checking" | "savings") =>
+                        setBankAccount((prev) => ({ ...prev, accountType: value }))
+                      }
+                    >
+                      <SelectTrigger className={cn("w-full sm:w-[200px]", compact && "bg-white/10 border-white/20 text-white")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="checking">Checking</SelectItem>
+                        <SelectItem value="savings">Savings</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-3 pt-2">
                   <Button onClick={handleSaveBankAccount} disabled={isSavingBank} className="bg-[#0066FF] hover:bg-[#0052CC]">

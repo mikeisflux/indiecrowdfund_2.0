@@ -132,6 +132,18 @@ model DivinityCoinBankAccount {
   billingZipEncrypted     String? @db.Text
   billingCountryEncrypted String? @db.Text
 
+  // ISO 3166-1 alpha-2 country code that drives the payout flow:
+  // routing-format selection (US 9-digit ABA vs UK 6-digit Sort Code),
+  // validation, and the destination ACH/Faster Payments rail. Defaults
+  // to "US" — every pre-international row predates this column and was
+  // a US ACH account by definition.
+  bankCountry           String   @default("US")
+
+  // Optional payout-contact phone. UK banks require a phone number on
+  // the payee record before they'll add it as a recipient; US ACH
+  // doesn't. Encrypted at rest like the rest of the payee identity.
+  payoutPhoneEncrypted  String?  @db.Text
+
   // Non-sensitive display data
   bankNameDisplay       String?  // e.g., "Chase Bank"
   accountLastFour       String?  // e.g., "4567"
@@ -244,7 +256,21 @@ model PayPalBankAccount {
   bankNameEncrypted     String   @db.Text
   accountHolderEncrypted String  @db.Text
   accountNumberEncrypted String  @db.Text
+  // US accounts: 9-digit ABA routing number. UK accounts: 6-digit Sort
+  // Code. Country-specific labels + validation are driven by bankCountry.
   routingNumberEncrypted String  @db.Text
+
+  // ISO 3166-1 alpha-2 country code that drives the payout flow:
+  // routing-format selection (US 9-digit ABA vs UK 6-digit Sort Code),
+  // validation, and the destination ACH/Faster Payments rail. Defaults
+  // to "US" — every pre-international row predates this column and was
+  // a US ACH account by definition.
+  bankCountry           String   @default("US")
+
+  // Optional payout-contact phone. UK banks require a phone number on
+  // the payee record before they'll add it as a recipient; US ACH
+  // doesn't. Encrypted at rest like the rest of the payee identity.
+  payoutPhoneEncrypted  String?  @db.Text
 
   // Non-sensitive display data
   bankNameDisplay       String?  // e.g., "Chase Bank"
@@ -389,7 +415,21 @@ model WhopBankAccount {
   bankNameEncrypted     String   @db.Text
   accountHolderEncrypted String  @db.Text
   accountNumberEncrypted String  @db.Text
+  // US accounts: 9-digit ABA routing number. UK accounts: 6-digit Sort
+  // Code. Country-specific labels + validation are driven by bankCountry.
   routingNumberEncrypted String  @db.Text
+
+  // ISO 3166-1 alpha-2 country code that drives the payout flow:
+  // routing-format selection (US 9-digit ABA vs UK 6-digit Sort Code),
+  // validation, and the destination ACH/Faster Payments rail. Defaults
+  // to "US" — every pre-international row predates this column and was
+  // a US ACH account by definition.
+  bankCountry           String   @default("US")
+
+  // Optional payout-contact phone. UK banks require a phone number on
+  // the payee record before they'll add it as a recipient; US ACH
+  // doesn't. Encrypted at rest like the rest of the payee identity.
+  payoutPhoneEncrypted  String?  @db.Text
 
   // Non-sensitive display data
   bankNameDisplay       String?  // e.g., "Chase Bank"

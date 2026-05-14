@@ -21,6 +21,7 @@ export async function GET() {
         bankNameDisplay: true,
         accountLastFour: true,
         accountType: true,
+        bankCountry: true,
         isVerified: true,
         createdAt: true,
         updatedAt: true,
@@ -36,6 +37,7 @@ export async function GET() {
       bankName: bankAccount.bankNameDisplay,
       lastFour: bankAccount.accountLastFour,
       accountType: bankAccount.accountType,
+      bankCountry: bankAccount.bankCountry,
       isVerified: bankAccount.isVerified,
     });
   } catch (error) {
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { bankName, accountHolder, accountNumber, routingNumber, accountType, projectId } = body;
+    const { bankName, accountHolder, accountNumber, routingNumber, accountType, bankCountry, payoutPhone, projectId } = body;
 
     // If projectId is provided, verify the user is the project owner (not just a collaborator)
     if (projectId) {
@@ -77,6 +79,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Default to US for backwards compatibility — every account that
+    // pre-dates international support is a US ACH account. New form
+    // submits include this explicitly.
+    const country = String(bankCountry || "US").toUpperCase();
+    const SUPPORTED_COUNTRIES = new Set(["US", "GB"]);
+    if (!SUPPORTED_COUNTRIES.has(country)) {
+      return NextResponse.json(
+        { error: "Unsupported bank country. Currently supported: US, GB (UK)." },
+        { status: 400 }
+      );
+    }
+
     // Validation
     if (!bankName || !accountHolder || !accountNumber || !routingNumber) {
       return NextResponse.json(
@@ -85,28 +99,57 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (routingNumber.length !== 9) {
-      return NextResponse.json(
-        { error: "Routing number must be 9 digits" },
-        { status: 400 }
-      );
-    }
-
-    if (accountNumber.length < 4 || accountNumber.length > 17) {
-      return NextResponse.json(
-        { error: "Invalid account number length" },
-        { status: 400 }
-      );
+    // Routing-format validation is country-specific:
+    //   US ACH: 9-digit ABA routing number, 4–17 digit account number
+    //   UK:     6-digit Sort Code, 8-digit account number, plus a
+    //           payout phone (UK banks require it on the payee record).
+    // Digits-only is stored either way — the UI may format a UK Sort
+    // Code as XX-XX-XX so we strip separators before validating.
+    const routingDigits = String(routingNumber).replace(/\D/g, "");
+    const accountDigits = String(accountNumber).replace(/\D/g, "");
+    if (country === "US") {
+      if (!/^\d{9}$/.test(routingDigits)) {
+        return NextResponse.json(
+          { error: "Routing number must be 9 digits" },
+          { status: 400 }
+        );
+      }
+      if (!/^\d{4,17}$/.test(accountDigits)) {
+        return NextResponse.json(
+          { error: "Invalid account number length" },
+          { status: 400 }
+        );
+      }
+    } else if (country === "GB") {
+      if (!/^\d{6}$/.test(routingDigits)) {
+        return NextResponse.json(
+          { error: "UK sort code must be 6 digits (e.g. 60-06-39)" },
+          { status: 400 }
+        );
+      }
+      if (!/^\d{8}$/.test(accountDigits)) {
+        return NextResponse.json(
+          { error: "UK account number must be 8 digits" },
+          { status: 400 }
+        );
+      }
+      if (!payoutPhone || String(payoutPhone).trim().length < 7) {
+        return NextResponse.json(
+          { error: "Phone number is required for UK bank accounts (your bank requires it on the payee record)" },
+          { status: 400 }
+        );
+      }
     }
 
     // Encrypt sensitive data
     const encryptedBankName = encrypt(bankName);
     const encryptedAccountHolder = encrypt(accountHolder);
-    const encryptedAccountNumber = encrypt(accountNumber);
-    const encryptedRoutingNumber = encrypt(routingNumber);
+    const encryptedAccountNumber = encrypt(accountDigits);
+    const encryptedRoutingNumber = encrypt(routingDigits);
+    const encryptedPayoutPhone = payoutPhone ? encrypt(String(payoutPhone).trim()) : null;
 
     // Get last 4 digits for display
-    const lastFour = getLastDigits(accountNumber, 4);
+    const lastFour = getLastDigits(accountDigits, 4);
 
     // Upsert bank account
     const bankAccount = await db.divinityCoinBankAccount.upsert({
@@ -116,6 +159,8 @@ export async function POST(req: NextRequest) {
         accountHolderEncrypted: encryptedAccountHolder,
         accountNumberEncrypted: encryptedAccountNumber,
         routingNumberEncrypted: encryptedRoutingNumber,
+        bankCountry: country,
+        payoutPhoneEncrypted: encryptedPayoutPhone,
         bankNameDisplay: bankName,
         accountLastFour: lastFour,
         accountType: accountType || "checking",
@@ -128,6 +173,8 @@ export async function POST(req: NextRequest) {
         accountHolderEncrypted: encryptedAccountHolder,
         accountNumberEncrypted: encryptedAccountNumber,
         routingNumberEncrypted: encryptedRoutingNumber,
+        bankCountry: country,
+        payoutPhoneEncrypted: encryptedPayoutPhone,
         bankNameDisplay: bankName,
         accountLastFour: lastFour,
         accountType: accountType || "checking",

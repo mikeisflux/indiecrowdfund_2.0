@@ -24,7 +24,17 @@ interface BankAccountState {
   accountNumber: string;
   routingNumber: string;
   accountType: "checking" | "savings";
+  // ISO 3166-1 alpha-2 of the bank's country. Drives routing-format
+  // labels + validation (US 9-digit routing vs UK 6-digit Sort Code)
+  // and whether the payout phone field is required. Defaults to "US".
+  bankCountry: "US" | "GB";
+  payoutPhone: string;
 }
+
+const COUNTRY_OPTIONS: { value: "US" | "GB"; label: string }[] = [
+  { value: "US", label: "United States" },
+  { value: "GB", label: "United Kingdom" },
+];
 
 export function PayPalBankPayoutSection() {
   const [bankAccount, setBankAccount] = useState<BankAccountState>({
@@ -33,11 +43,15 @@ export function PayPalBankPayoutSection() {
     accountNumber: "",
     routingNumber: "",
     accountType: "checking",
+    bankCountry: "US",
+    payoutPhone: "",
   });
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [lastFour, setLastFour] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  const isUK = bankAccount.bankCountry === "GB";
 
   useEffect(() => {
     async function fetchBankAccount() {
@@ -53,6 +67,7 @@ export function PayPalBankPayoutSection() {
               bankName: data.bankName || "",
               accountHolder: data.accountHolder || "",
               accountType: data.accountType || "checking",
+              bankCountry: data.bankCountry === "GB" ? "GB" : "US",
             }));
           }
         }
@@ -71,13 +86,28 @@ export function PayPalBankPayoutSection() {
       toast.error("Please fill in all bank account fields");
       return;
     }
-    if (bankAccount.routingNumber.length !== 9) {
-      toast.error("Routing number must be 9 digits");
-      return;
-    }
-    if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
-      toast.error("Please enter a valid account number");
-      return;
+    if (isUK) {
+      if (!/^\d{6}$/.test(bankAccount.routingNumber)) {
+        toast.error("UK sort code must be 6 digits (e.g. 60-06-39)");
+        return;
+      }
+      if (!/^\d{8}$/.test(bankAccount.accountNumber)) {
+        toast.error("UK account number must be 8 digits");
+        return;
+      }
+      if (!bankAccount.payoutPhone || bankAccount.payoutPhone.trim().length < 7) {
+        toast.error("Phone number is required for UK bank accounts");
+        return;
+      }
+    } else {
+      if (bankAccount.routingNumber.length !== 9) {
+        toast.error("Routing number must be 9 digits");
+        return;
+      }
+      if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
+        toast.error("Please enter a valid account number");
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -94,7 +124,7 @@ export function PayPalBankPayoutSection() {
       const data = await res.json();
       setSaved(true);
       setLastFour(data.lastFour);
-      setBankAccount((prev) => ({ ...prev, accountNumber: "", routingNumber: "" }));
+      setBankAccount((prev) => ({ ...prev, accountNumber: "", routingNumber: "", payoutPhone: "" }));
       toast.success("Bank account saved securely!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save bank account");
@@ -158,6 +188,35 @@ export function PayPalBankPayoutSection() {
                 </AlertDescription>
               </Alert>
 
+              <div className="space-y-2">
+                <Label htmlFor="pp-bank-country">Bank Country</Label>
+                <Select
+                  value={bankAccount.bankCountry}
+                  onValueChange={(v: "US" | "GB") =>
+                    setBankAccount((prev) => ({
+                      ...prev,
+                      bankCountry: v,
+                      // Clear the country-specific routing + account
+                      // values when the country changes so a US routing
+                      // number doesn't sit stale in a "Sort Code" field.
+                      routingNumber: "",
+                      accountNumber: "",
+                    }))
+                  }
+                >
+                  <SelectTrigger id="pp-bank-country" className="w-full sm:w-[280px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="pp-bank-name">Bank Name</Label>
@@ -165,7 +224,7 @@ export function PayPalBankPayoutSection() {
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="pp-bank-name"
-                      placeholder="e.g., Chase Bank, Bank of America"
+                      placeholder={isUK ? "e.g., Barclays, HSBC, Lloyds" : "e.g., Chase Bank, Bank of America"}
                       value={bankAccount.bankName}
                       onChange={(e) => setBankAccount((prev) => ({ ...prev, bankName: e.target.value }))}
                       className="pl-10"
@@ -185,20 +244,22 @@ export function PayPalBankPayoutSection() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="pp-routing">Routing Number</Label>
+                  <Label htmlFor="pp-routing">{isUK ? "Sort Code" : "Routing Number"}</Label>
                   <Input
                     id="pp-routing"
                     type="text"
                     inputMode="numeric"
-                    maxLength={9}
-                    placeholder="9-digit routing number"
+                    maxLength={isUK ? 6 : 9}
+                    placeholder={isUK ? "6 digits (e.g. 600639)" : "9-digit routing number"}
                     value={bankAccount.routingNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 9);
+                      const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 6 : 9);
                       setBankAccount((prev) => ({ ...prev, routingNumber: value }));
                     }}
                   />
-                  <p className="text-xs text-muted-foreground">9 digits — bottom left of your checks</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isUK ? "6 digits — your bank's sort code" : "9 digits — bottom left of your checks"}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="pp-account-number">Account Number</Label>
@@ -206,34 +267,50 @@ export function PayPalBankPayoutSection() {
                     id="pp-account-number"
                     type="password"
                     inputMode="numeric"
-                    maxLength={17}
-                    placeholder="Your account number"
+                    maxLength={isUK ? 8 : 17}
+                    placeholder={isUK ? "8 digits" : "Your account number"}
                     value={bankAccount.accountNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 17);
+                      const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 8 : 17);
                       setBankAccount((prev) => ({ ...prev, accountNumber: value }));
                     }}
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Account Type</Label>
-                <Select
-                  value={bankAccount.accountType}
-                  onValueChange={(v: "checking" | "savings") =>
-                    setBankAccount((prev) => ({ ...prev, accountType: v }))
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="checking">Checking</SelectItem>
-                    <SelectItem value="savings">Savings</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {isUK ? (
+                <div className="space-y-2">
+                  <Label htmlFor="pp-payout-phone">Phone Number</Label>
+                  <Input
+                    id="pp-payout-phone"
+                    type="tel"
+                    placeholder="e.g. 07951 937383"
+                    value={bankAccount.payoutPhone}
+                    onChange={(e) => setBankAccount((prev) => ({ ...prev, payoutPhone: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required by UK banks on the payee record.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Account Type</Label>
+                  <Select
+                    value={bankAccount.accountType}
+                    onValueChange={(v: "checking" | "savings") =>
+                      setBankAccount((prev) => ({ ...prev, accountType: v }))
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="checking">Checking</SelectItem>
+                      <SelectItem value="savings">Savings</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (

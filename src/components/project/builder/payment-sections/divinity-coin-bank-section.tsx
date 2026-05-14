@@ -16,6 +16,11 @@ import {
 import { Banknote, CheckCircle, Loader2, Lock, Building2 } from "lucide-react";
 import { DivinityCoinBankSectionProps } from "./types";
 
+const COUNTRY_OPTIONS: { value: "US" | "GB"; label: string }[] = [
+  { value: "US", label: "United States" },
+  { value: "GB", label: "United Kingdom" },
+];
+
 export function DivinityCoinBankSection({
   bankAccount,
   setBankAccount,
@@ -24,6 +29,8 @@ export function DivinityCoinBankSection({
   isSavingBank,
   handleSaveBankAccount,
 }: DivinityCoinBankSectionProps) {
+  const isUK = bankAccount.bankCountry === "GB";
+
   return (
     <div className="space-y-4">
       <div>
@@ -80,6 +87,35 @@ export function DivinityCoinBankSection({
                 </AlertDescription>
               </Alert>
 
+              <div className="space-y-2">
+                <Label htmlFor="bank-country">Bank Country</Label>
+                <Select
+                  value={bankAccount.bankCountry}
+                  onValueChange={(value: "US" | "GB") =>
+                    setBankAccount(prev => ({
+                      ...prev,
+                      bankCountry: value,
+                      // Clear the country-specific routing + account
+                      // values when the country changes so a US routing
+                      // number doesn't sit stale in a "Sort Code" field.
+                      routingNumber: "",
+                      accountNumber: "",
+                    }))
+                  }
+                >
+                  <SelectTrigger id="bank-country" className="w-full sm:w-[280px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="bank-name">Bank Name</Label>
@@ -87,7 +123,7 @@ export function DivinityCoinBankSection({
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="bank-name"
-                      placeholder="e.g., Chase Bank, Bank of America"
+                      placeholder={isUK ? "e.g., Barclays, HSBC, Lloyds" : "e.g., Chase Bank, Bank of America"}
                       value={bankAccount.bankName}
                       onChange={(e) => setBankAccount(prev => ({ ...prev, bankName: e.target.value }))}
                       className="pl-10"
@@ -108,22 +144,24 @@ export function DivinityCoinBankSection({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="routing-number">Routing Number</Label>
+                  <Label htmlFor="routing-number">{isUK ? "Sort Code" : "Routing Number"}</Label>
                   <Input
                     id="routing-number"
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    maxLength={9}
-                    placeholder="9-digit routing number"
+                    maxLength={isUK ? 6 : 9}
+                    placeholder={isUK ? "6 digits (e.g. 600639)" : "9-digit routing number"}
                     value={bankAccount.routingNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 9);
+                      const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 6 : 9);
                       setBankAccount(prev => ({ ...prev, routingNumber: value }));
                     }}
                   />
                   <p className="text-xs text-muted-foreground">
-                    9 digits, found on the bottom left of your checks
+                    {isUK
+                      ? "6 digits — your bank's sort code"
+                      : "9 digits, found on the bottom left of your checks"}
                   </p>
                 </div>
 
@@ -133,34 +171,50 @@ export function DivinityCoinBankSection({
                     id="account-number"
                     type="password"
                     inputMode="numeric"
-                    maxLength={17}
-                    placeholder="Your account number"
+                    maxLength={isUK ? 8 : 17}
+                    placeholder={isUK ? "8 digits" : "Your account number"}
                     value={bankAccount.accountNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 17);
+                      const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 8 : 17);
                       setBankAccount(prev => ({ ...prev, accountNumber: value }));
                     }}
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Account Type</Label>
-                <Select
-                  value={bankAccount.accountType}
-                  onValueChange={(value: "checking" | "savings") =>
-                    setBankAccount(prev => ({ ...prev, accountType: value }))
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="checking">Checking</SelectItem>
-                    <SelectItem value="savings">Savings</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {isUK ? (
+                <div className="space-y-2">
+                  <Label htmlFor="payout-phone">Phone Number</Label>
+                  <Input
+                    id="payout-phone"
+                    type="tel"
+                    placeholder="e.g. 07951 937383"
+                    value={bankAccount.payoutPhone}
+                    onChange={(e) => setBankAccount(prev => ({ ...prev, payoutPhone: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required by UK banks on the payee record.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Account Type</Label>
+                  <Select
+                    value={bankAccount.accountType}
+                    onValueChange={(value: "checking" | "savings") =>
+                      setBankAccount(prev => ({ ...prev, accountType: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="checking">Checking</SelectItem>
+                      <SelectItem value="savings">Savings</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="flex items-center gap-3 pt-2">
                 <Button
