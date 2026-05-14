@@ -18,26 +18,53 @@ echo "=================================="
 START_TIME=$(date +%s)
 
 # Step 1: Pull latest changes
-echo ""
-echo "📥 Step 1: Pull latest changes..."
-
-CURRENT_BRANCH=$(git branch --show-current)
-echo ""
-echo "   Current branch: ${CURRENT_BRANCH}"
-echo ""
-echo "Available remote branches:"
-git branch -r | grep -v "HEAD" | head -20
-echo ""
-read -p "Enter branch to pull from [${CURRENT_BRANCH}]: " PULL_BRANCH
-PULL_BRANCH="${PULL_BRANCH:-$CURRENT_BRANCH}"
-
-echo ""
-echo "   Pulling from: ${PULL_BRANCH}"
-
-if git fetch origin "$PULL_BRANCH" 2>&1 && git pull origin "$PULL_BRANCH" 2>&1; then
-    echo -e "${GREEN}   Git pull successful${NC}"
+#
+# This script git-pulls itself here. If that pull updates build-and-swap.sh,
+# bash keeps executing the stale in-memory copy — it reads the script by
+# byte offset, so a changed file mid-run runs old or corrupted content.
+# (That's exactly why a fixed Step 7 still ran broken until the *next*
+# deploy.) After the pull we hash-compare this script and re-exec the
+# fresh copy if it changed. BUILD_SWAP_REEXECED guards the second pass so
+# it doesn't re-prompt or re-pull.
+if [ "${BUILD_SWAP_REEXECED:-}" = "1" ]; then
+    echo ""
+    echo "📥 Step 1: Pull latest changes... (already pulled — now on the updated build-and-swap.sh)"
 else
-    echo -e "${YELLOW}   Could not pull (continuing with local code)${NC}"
+    echo ""
+    echo "📥 Step 1: Pull latest changes..."
+
+    CURRENT_BRANCH=$(git branch --show-current)
+    echo ""
+    echo "   Current branch: ${CURRENT_BRANCH}"
+    echo ""
+    echo "Available remote branches:"
+    git branch -r | grep -v "HEAD" | head -20
+    echo ""
+    read -p "Enter branch to pull from [${CURRENT_BRANCH}]: " PULL_BRANCH
+    PULL_BRANCH="${PULL_BRANCH:-$CURRENT_BRANCH}"
+
+    echo ""
+    echo "   Pulling from: ${PULL_BRANCH}"
+
+    SELF_PATH="$REPO_DIR/$(basename "$0")"
+    SELF_HASH_BEFORE=$(md5sum "$SELF_PATH" 2>/dev/null | cut -d' ' -f1)
+
+    if git fetch origin "$PULL_BRANCH" 2>&1 && git pull origin "$PULL_BRANCH" 2>&1; then
+        echo -e "${GREEN}   Git pull successful${NC}"
+    else
+        echo -e "${YELLOW}   Could not pull (continuing with local code)${NC}"
+    fi
+
+    # If the pull changed this script, hand off to the updated copy so the
+    # rest of the deploy runs current code rather than the stale in-memory
+    # version. exec replaces the process, so there's no loop — the new run
+    # sets BUILD_SWAP_REEXECED and skips straight past this block.
+    SELF_HASH_AFTER=$(md5sum "$SELF_PATH" 2>/dev/null | cut -d' ' -f1)
+    if [ -n "$SELF_HASH_AFTER" ] && [ "$SELF_HASH_BEFORE" != "$SELF_HASH_AFTER" ]; then
+        echo -e "${YELLOW}   build-and-swap.sh changed in that pull — re-executing the updated version...${NC}"
+        export BUILD_SWAP_REEXECED=1
+        exec bash "$SELF_PATH" "$@"
+    fi
 fi
 
 # Step 2: Install dependencies
