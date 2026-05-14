@@ -698,6 +698,18 @@ export function PaymentSettings({
                   </div>
                 )}
 
+                {isUK && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+                    <p className="font-semibold mb-1">International payment fee</p>
+                    <p>
+                      Payouts to non-US bank accounts are sent by international
+                      wire in your local currency. A <strong>$25 wire fee + 1.50% currency conversion fee</strong>{" "}
+                      will be added on top of the standard Divinity Payments
+                      processing + platform fees.
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-3 pt-2">
                   <Button onClick={handleSaveBankAccount} disabled={isSavingBank} className="bg-[#0066FF] hover:bg-[#0052CC]">
                     {isSavingBank ? (
