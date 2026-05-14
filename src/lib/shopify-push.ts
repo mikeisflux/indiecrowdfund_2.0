@@ -16,6 +16,46 @@ interface ShopifyOrder {
 // Cache for SKU to variant ID lookups
 const skuToVariantCache = new Map<string, number>();
 
+// Shopify's REST Admin API rate limit for standard apps is ~2 requests/
+// second (leaky bucket of 40, refilling 2/sec). A push fires 4-6 calls
+// per pledge, so without pacing a 100-backer batch 429s almost
+// immediately. Every Shopify HTTP call goes through shopifyRequest(),
+// which serializes calls onto a single queue, holds a minimum gap
+// between them, and on a 429 honours Retry-After and retries.
+const SHOPIFY_MIN_REQUEST_GAP_MS = 600; // ~1.6 req/sec — safely under the 2/sec ceiling
+const SHOPIFY_MAX_429_RETRIES = 4;
+
+let shopifyRequestQueue: Promise<unknown> = Promise.resolve();
+let lastShopifyRequestAt = 0;
+
+async function shopifyRequest(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const run = shopifyRequestQueue.then(async () => {
+    for (let attempt = 0; ; attempt++) {
+      const gap = SHOPIFY_MIN_REQUEST_GAP_MS - (Date.now() - lastShopifyRequestAt);
+      if (gap > 0) await new Promise((r) => setTimeout(r, gap));
+      lastShopifyRequestAt = Date.now();
+
+      const response = await fetch(url, options);
+      if (response.status !== 429 || attempt >= SHOPIFY_MAX_429_RETRIES) {
+        return response;
+      }
+
+      // Rate limited — wait out Retry-After (seconds; default 2) and retry.
+      const retryAfter = Number(response.headers.get("Retry-After")) || 2;
+      shopifyPushLogger.warn(
+        `[shopifyRequest] 429 from Shopify, retrying in ${retryAfter}s (attempt ${attempt + 1}/${SHOPIFY_MAX_429_RETRIES})`
+      );
+      await new Promise((r) => setTimeout(r, retryAfter * 1000));
+    }
+  });
+  // Keep the queue chained even if this request throws/rejects.
+  shopifyRequestQueue = run.then(() => {}, () => {});
+  return run;
+}
+
 // Find or create customer in Shopify by email
 async function findOrCreateCustomer(
   shopDomain: string,
@@ -28,7 +68,7 @@ async function findOrCreateCustomer(
   try {
     // Search for existing customer by email
     const searchUrl = `https://${shopDomain}/admin/api/2026-01/customers/search.json?query=email:${encodeURIComponent(email)}`;
-    const searchResponse = await fetch(searchUrl, {
+    const searchResponse = await shopifyRequest(searchUrl, {
       headers: {
         "X-Shopify-Access-Token": accessToken,
       },
@@ -45,7 +85,7 @@ async function findOrCreateCustomer(
 
     // Customer not found, create new one
     const createUrl = `https://${shopDomain}/admin/api/2026-01/customers.json`;
-    const createResponse = await fetch(createUrl, {
+    const createResponse = await shopifyRequest(createUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -111,7 +151,7 @@ async function lookupVariantBySku(
     };
 
     const url = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
-    const response = await fetch(url, {
+    const response = await shopifyRequest(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -153,7 +193,7 @@ async function shopifyFetch<T>(
 ): Promise<T> {
   const url = `https://${shopDomain}/admin/api/2026-01/${endpoint}`;
 
-  const response = await fetch(url, {
+  const response = await shopifyRequest(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
