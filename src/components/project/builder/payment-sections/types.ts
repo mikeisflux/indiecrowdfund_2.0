@@ -1,4 +1,5 @@
 import { ProjectPaymentData } from "@/types";
+import { BankCountry } from "@/lib/bank-countries";
 
 export interface ContactEmailSectionProps {
   payment: Partial<ProjectPaymentData>;
@@ -54,10 +55,10 @@ export interface DivinityCoinBankSectionProps {
     accountNumber: string;
     routingNumber: string;
     accountType: "checking" | "savings";
-    // ISO 3166-1 alpha-2 of the bank's country. Drives routing-format
-    // labels + validation (US 9-digit routing vs UK 6-digit Sort Code)
-    // and whether the payout phone field is required. Defaults to "US".
-    bankCountry: "US" | "GB";
+    // ISO 3166-1 alpha-2 of the bank's country (US / GB / IT). Drives
+    // routing-format labels + validation and whether the payout phone
+    // field shows. Defaults to "US". See @/lib/bank-countries.
+    bankCountry: BankCountry;
     payoutPhone: string;
   };
   setBankAccount: React.Dispatch<React.SetStateAction<{
@@ -66,7 +67,7 @@ export interface DivinityCoinBankSectionProps {
     accountNumber: string;
     routingNumber: string;
     accountType: "checking" | "savings";
-    bankCountry: "US" | "GB";
+    bankCountry: BankCountry;
     payoutPhone: string;
   }>>;
   bankAccountStatus: {

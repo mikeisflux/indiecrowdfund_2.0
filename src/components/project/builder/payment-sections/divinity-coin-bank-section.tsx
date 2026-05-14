@@ -15,11 +15,12 @@ import {
 } from "@/components/ui/select";
 import { Banknote, CheckCircle, Loader2, Lock, Building2 } from "lucide-react";
 import { DivinityCoinBankSectionProps } from "./types";
-
-const COUNTRY_OPTIONS: { value: "US" | "GB"; label: string }[] = [
-  { value: "US", label: "United States" },
-  { value: "GB", label: "United Kingdom" },
-];
+import {
+  BANK_COUNTRY_OPTIONS,
+  BANK_COUNTRY_FIELDS,
+  sanitizeBankField,
+  type BankCountry,
+} from "@/lib/bank-countries";
 
 export function DivinityCoinBankSection({
   bankAccount,
@@ -29,7 +30,9 @@ export function DivinityCoinBankSection({
   isSavingBank,
   handleSaveBankAccount,
 }: DivinityCoinBankSectionProps) {
-  const isUK = bankAccount.bankCountry === "GB";
+  const country = bankAccount.bankCountry;
+  const isUS = country === "US";
+  const fields = BANK_COUNTRY_FIELDS[country];
 
   return (
     <div className="space-y-4">
@@ -91,7 +94,7 @@ export function DivinityCoinBankSection({
                 <Label htmlFor="bank-country">Bank Country</Label>
                 <Select
                   value={bankAccount.bankCountry}
-                  onValueChange={(value: "US" | "GB") =>
+                  onValueChange={(value: BankCountry) =>
                     setBankAccount(prev => ({
                       ...prev,
                       bankCountry: value,
@@ -107,7 +110,7 @@ export function DivinityCoinBankSection({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRY_OPTIONS.map((opt) => (
+                    {BANK_COUNTRY_OPTIONS.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>
@@ -123,7 +126,7 @@ export function DivinityCoinBankSection({
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="bank-name"
-                      placeholder={isUK ? "e.g., Barclays, HSBC, Lloyds" : "e.g., Chase Bank, Bank of America"}
+                      placeholder={fields.bankNamePlaceholder}
                       value={bankAccount.bankName}
                       onChange={(e) => setBankAccount(prev => ({ ...prev, bankName: e.target.value }))}
                       className="pl-10"
@@ -144,59 +147,40 @@ export function DivinityCoinBankSection({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="routing-number">{isUK ? "Sort Code" : "Routing Number"}</Label>
+                  <Label htmlFor="routing-number">{fields.routingLabel}</Label>
                   <Input
                     id="routing-number"
                     type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={isUK ? 6 : 9}
-                    placeholder={isUK ? "6 digits (e.g. 600639)" : "9-digit routing number"}
+                    inputMode={fields.inputMode}
+                    maxLength={fields.routingMaxLength}
+                    placeholder={fields.routingPlaceholder}
                     value={bankAccount.routingNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 6 : 9);
+                      const value = sanitizeBankField(country, e.target.value, fields.routingMaxLength);
                       setBankAccount(prev => ({ ...prev, routingNumber: value }));
                     }}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {isUK
-                      ? "6 digits — your bank's sort code"
-                      : "9 digits, found on the bottom left of your checks"}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{fields.routingHelp}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="account-number">Account Number</Label>
+                  <Label htmlFor="account-number">{fields.accountLabel}</Label>
                   <Input
                     id="account-number"
                     type="password"
-                    inputMode="numeric"
-                    maxLength={isUK ? 8 : 17}
-                    placeholder={isUK ? "8 digits" : "Your account number"}
+                    inputMode={fields.inputMode}
+                    maxLength={fields.accountMaxLength}
+                    placeholder={fields.accountPlaceholder}
                     value={bankAccount.accountNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 8 : 17);
+                      const value = sanitizeBankField(country, e.target.value, fields.accountSliceLength);
                       setBankAccount(prev => ({ ...prev, accountNumber: value }));
                     }}
                   />
                 </div>
               </div>
 
-              {isUK ? (
-                <div className="space-y-2">
-                  <Label htmlFor="payout-phone">Phone Number</Label>
-                  <Input
-                    id="payout-phone"
-                    type="tel"
-                    placeholder="e.g. 07951 937383"
-                    value={bankAccount.payoutPhone}
-                    onChange={(e) => setBankAccount(prev => ({ ...prev, payoutPhone: e.target.value }))}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Required by UK banks on the payee record.
-                  </p>
-                </div>
-              ) : (
+              {country === "US" ? (
                 <div className="space-y-2">
                   <Label>Account Type</Label>
                   <Select
@@ -214,9 +198,23 @@ export function DivinityCoinBankSection({
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+              ) : country === "GB" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="payout-phone">Phone Number</Label>
+                  <Input
+                    id="payout-phone"
+                    type="tel"
+                    placeholder="e.g. 07951 937383"
+                    value={bankAccount.payoutPhone}
+                    onChange={(e) => setBankAccount(prev => ({ ...prev, payoutPhone: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required by UK banks on the payee record.
+                  </p>
+                </div>
+              ) : null}
 
-              {isUK && (
+              {!isUS && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">
                   <p className="font-semibold mb-1">International payment fee</p>
                   <p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { validateBankFields, parseBankCountry, type BankCountry } from "@/lib/bank-countries";
 import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Separator } from "@/components/ui/separator";
@@ -69,7 +70,7 @@ export function PaymentStep() {
     accountNumber: "",
     routingNumber: "",
     accountType: "checking" as "checking" | "savings",
-    bankCountry: "US" as "US" | "GB",
+    bankCountry: "US" as BankCountry,
     payoutPhone: "",
   });
   const [bankAccountStatus, setBankAccountStatus] = useState<{
@@ -112,31 +113,12 @@ export function PaymentStep() {
       return;
     }
 
-    // Country-specific validation — US 9-digit ABA routing number vs
-    // UK 6-digit Sort Code, and UK requires a payout phone on file.
-    const isUK = bankAccount.bankCountry === "GB";
-    if (isUK) {
-      if (!/^\d{6}$/.test(bankAccount.routingNumber)) {
-        toast.error("UK sort code must be 6 digits (e.g. 60-06-39)");
-        return;
-      }
-      if (!/^\d{8}$/.test(bankAccount.accountNumber)) {
-        toast.error("UK account number must be 8 digits");
-        return;
-      }
-      if (!bankAccount.payoutPhone || bankAccount.payoutPhone.trim().length < 7) {
-        toast.error("Phone number is required for UK bank accounts");
-        return;
-      }
-    } else {
-      if (bankAccount.routingNumber.length !== 9) {
-        toast.error("Routing number must be 9 digits");
-        return;
-      }
-      if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
-        toast.error("Please enter a valid account number");
-        return;
-      }
+    // Country-specific format validation (US ABA / UK Sort Code / IT
+    // IBAN + BIC) — shared with the API route and the other processors.
+    const validationError = validateBankFields(bankAccount.bankCountry, bankAccount);
+    if (validationError) {
+      toast.error(validationError);
+      return;
     }
 
     setIsSavingBank(true);
@@ -192,7 +174,7 @@ export function PaymentStep() {
               bankName: data.bankName || "",
               accountHolder: data.accountHolder || "",
               accountType: data.accountType || "checking",
-              bankCountry: data.bankCountry === "GB" ? "GB" : "US",
+              bankCountry: parseBankCountry(data.bankCountry),
             }));
           }
         } else {

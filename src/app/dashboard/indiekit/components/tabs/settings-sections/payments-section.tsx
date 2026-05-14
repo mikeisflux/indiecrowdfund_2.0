@@ -1,6 +1,14 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import {
+  BANK_COUNTRY_OPTIONS,
+  BANK_COUNTRY_FIELDS,
+  sanitizeBankField,
+  validateBankFields,
+  parseBankCountry,
+  type BankCountry,
+} from "@/lib/bank-countries";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,10 +49,10 @@ interface BankAccountState {
   accountNumber: string;
   routingNumber: string;
   accountType: "checking" | "savings";
-  // ISO 3166-1 alpha-2 of the bank's country. Drives routing-format
-  // labels + validation (US 9-digit routing vs UK 6-digit Sort Code)
-  // and whether the payout phone field is required. Defaults to "US".
-  bankCountry: "US" | "GB";
+  // ISO 3166-1 alpha-2 of the bank's country (US / GB / IT). Drives
+  // routing-format labels + validation and whether the payout phone
+  // field shows. Defaults to "US". See @/lib/bank-countries.
+  bankCountry: BankCountry;
   payoutPhone: string;
 }
 
@@ -162,7 +170,7 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
               bankName: data.bankName || "",
               accountHolder: data.accountHolder || "",
               accountType: data.accountType || "checking",
-              bankCountry: data.bankCountry === "GB" ? "GB" : "US",
+              bankCountry: parseBankCountry(data.bankCountry),
             }));
           } else {
             setBankStatus({ saved: false, loading: false, lastFour: null });
@@ -210,31 +218,12 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
       return;
     }
 
-    // Country-specific validation — US 9-digit ABA routing number vs
-    // UK 6-digit Sort Code, and UK requires a payout phone on file.
-    const isUKSubmit = bankAccount.bankCountry === "GB";
-    if (isUKSubmit) {
-      if (!/^\d{6}$/.test(bankAccount.routingNumber)) {
-        toast.error("UK sort code must be 6 digits (e.g. 60-06-39)");
-        return;
-      }
-      if (!/^\d{8}$/.test(bankAccount.accountNumber)) {
-        toast.error("UK account number must be 8 digits");
-        return;
-      }
-      if (!bankAccount.payoutPhone || bankAccount.payoutPhone.trim().length < 7) {
-        toast.error("Phone number is required for UK bank accounts");
-        return;
-      }
-    } else {
-      if (bankAccount.routingNumber.length !== 9) {
-        toast.error("Routing number must be 9 digits");
-        return;
-      }
-      if (bankAccount.accountNumber.length < 4 || bankAccount.accountNumber.length > 17) {
-        toast.error("Please enter a valid account number");
-        return;
-      }
+    // Country-specific format validation (US ABA / UK Sort Code / IT
+    // IBAN + BIC) — shared with the API route and the other processors.
+    const validationError = validateBankFields(bankAccount.bankCountry, bankAccount);
+    if (validationError) {
+      toast.error(validationError);
+      return;
     }
 
     setIsSavingBank(true);
@@ -291,7 +280,9 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
 
   const procMeta = projectProcessor ? PROCESSOR_META[projectProcessor] : null;
   const showForm = isEditing || !bankStatus.saved;
-  const isUK = bankAccount.bankCountry === "GB";
+  const country = bankAccount.bankCountry;
+  const isUS = country === "US";
+  const fields = BANK_COUNTRY_FIELDS[country];
 
   return (
     <div className="space-y-6">
@@ -399,7 +390,7 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
                   <Label htmlFor="ik-bank-country">Bank Country</Label>
                   <Select
                     value={bankAccount.bankCountry}
-                    onValueChange={(v: "US" | "GB") =>
+                    onValueChange={(v: BankCountry) =>
                       setBankAccount((prev) => ({
                         ...prev,
                         bankCountry: v,
@@ -415,8 +406,11 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="US">United States</SelectItem>
-                      <SelectItem value="GB">United Kingdom</SelectItem>
+                      {BANK_COUNTRY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -428,7 +422,7 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="ik-bank-name"
-                        placeholder={isUK ? "e.g., Barclays, HSBC, Lloyds" : "e.g., Chase Bank, Bank of America"}
+                        placeholder={fields.bankNamePlaceholder}
                         value={bankAccount.bankName}
                         onChange={(e) => setBankAccount((prev) => ({ ...prev, bankName: e.target.value }))}
                         className="pl-10"
@@ -448,55 +442,39 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="ik-routing">{isUK ? "Sort Code" : "Routing Number"}</Label>
+                    <Label htmlFor="ik-routing">{fields.routingLabel}</Label>
                     <Input
                       id="ik-routing"
                       type="text"
-                      inputMode="numeric"
-                      maxLength={isUK ? 6 : 9}
-                      placeholder={isUK ? "6 digits (e.g. 600639)" : "9-digit routing number"}
+                      inputMode={fields.inputMode}
+                      maxLength={fields.routingMaxLength}
+                      placeholder={fields.routingPlaceholder}
                       value={bankAccount.routingNumber}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 6 : 9);
+                        const value = sanitizeBankField(country, e.target.value, fields.routingMaxLength);
                         setBankAccount((prev) => ({ ...prev, routingNumber: value }));
                       }}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {isUK ? "6 digits — your bank's sort code" : "9 digits — bottom left of your checks"}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{fields.routingHelp}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="ik-account-number">Account Number</Label>
+                    <Label htmlFor="ik-account-number">{fields.accountLabel}</Label>
                     <Input
                       id="ik-account-number"
                       type="password"
-                      inputMode="numeric"
-                      maxLength={isUK ? 8 : 17}
-                      placeholder={isUK ? "8 digits" : "Your account number"}
+                      inputMode={fields.inputMode}
+                      maxLength={fields.accountMaxLength}
+                      placeholder={fields.accountPlaceholder}
                       value={bankAccount.accountNumber}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, isUK ? 8 : 17);
+                        const value = sanitizeBankField(country, e.target.value, fields.accountSliceLength);
                         setBankAccount((prev) => ({ ...prev, accountNumber: value }));
                       }}
                     />
                   </div>
                 </div>
 
-                {isUK ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="ik-payout-phone">Phone Number</Label>
-                    <Input
-                      id="ik-payout-phone"
-                      type="tel"
-                      placeholder="e.g. 07951 937383"
-                      value={bankAccount.payoutPhone}
-                      onChange={(e) => setBankAccount((prev) => ({ ...prev, payoutPhone: e.target.value }))}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Required by UK banks on the payee record.
-                    </p>
-                  </div>
-                ) : (
+                {country === "US" ? (
                   <div className="space-y-2">
                     <Label>Account Type</Label>
                     <Select
@@ -514,9 +492,23 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
                       </SelectContent>
                     </Select>
                   </div>
-                )}
+                ) : country === "GB" ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="ik-payout-phone">Phone Number</Label>
+                    <Input
+                      id="ik-payout-phone"
+                      type="tel"
+                      placeholder="e.g. 07951 937383"
+                      value={bankAccount.payoutPhone}
+                      onChange={(e) => setBankAccount((prev) => ({ ...prev, payoutPhone: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Required by UK banks on the payee record.
+                    </p>
+                  </div>
+                ) : null}
 
-                {isUK && (
+                {!isUS && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">
                     <p className="font-semibold mb-1">International payment fee</p>
                     <p>
