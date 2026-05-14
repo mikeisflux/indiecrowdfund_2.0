@@ -340,9 +340,31 @@ async function sendViaMailgun(
   domain: string,
   replyTo?: string,
   unsubscribeUrl?: string,
-  attachments?: EmailAttachment[]
+  attachments?: EmailAttachment[],
+  isTransactional?: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // For transactional sends (verify-email, pledge confirmations,
+    // password resets, etc.), proactively scrub the recipient from
+    // Mailgun's unsubscribe suppression list. Without this, a single
+    // historical unsubscribe click silently mutes every future
+    // transactional message to that user (this is what happened to
+    // Anthony Baratta — he unsubscribed Jan 18, then never received
+    // any account email after). The DELETE call returns 404 if the
+    // address isn't suppressed; either way is fine.
+    if (isTransactional) {
+      try {
+        const mgScrubUrl = `https://api.mailgun.net/v3/${domain}/unsubscribes/${encodeURIComponent(to)}`;
+        await fetch(mgScrubUrl, {
+          method: "DELETE",
+          headers: { Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString("base64")}` },
+          signal: AbortSignal.timeout(5000),
+        });
+      } catch {
+        // Best-effort scrub — never block a transactional send on this.
+      }
+    }
+
     const mailgun = new Mailgun(formData);
     const mg = mailgun.client({
       username: "api",
@@ -358,6 +380,18 @@ async function sendViaMailgun(
       html,
       "h:Reply-To": replyTo || fromEmail,
     };
+
+    // Transactional emails opt out of Mailgun's link tracking + auto-
+    // injected unsubscribe footer. Without this, Mailgun rewrites
+    // every link to route through its CNAME and injects its own
+    // unsubscribe block — when that block is clicked the user lands
+    // on Mailgun's suppression list, which then blocks every future
+    // mail to them including the next verify-email retry.
+    if (isTransactional) {
+      messageData["o:tracking"] = "no";
+      messageData["o:tracking-clicks"] = "no";
+      messageData["o:tracking-opens"] = "no";
+    }
 
     // Add List-Unsubscribe headers for one-click unsubscribe support
     if (unsubscribeUrl) {
@@ -455,7 +489,7 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
       return { success: false, error: "Mailgun selected but API key or domain is missing" };
     }
     emailLogger.info(`[Email] Sending email via Mailgun to: ${to}, from: ${fromEmail} (${fromName}), replyTo: ${replyTo || fromEmail}, domain: ${mailgunDomain}, attachments: ${attachments?.length || 0}`);
-    result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo, unsubscribeUrl, attachments);
+    result = await sendViaMailgun(to, subject, finalHtml, plainText, fromEmail, fromName, mailgunApiKey, mailgunDomain, replyTo, unsubscribeUrl, attachments, skipUnsubscribeCheck);
     emailLogger.info({ data: result }, `[Email] Mailgun result:`);
   } else if (emailProvider === "sendgrid") {
     // SendGrid is explicitly selected
