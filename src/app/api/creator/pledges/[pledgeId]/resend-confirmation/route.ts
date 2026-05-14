@@ -17,13 +17,10 @@ export const dynamic = "force-dynamic";
  * the pledge's project (or an accepted collaborator) may call this.
  *
  * Why this endpoint exists: pledge confirmation emails can silently
- * fail to deliver — the confirm route atomically sets
- * `confirmationEmailSent: true` BEFORE actually calling sendEmail
- * (to prevent double-counting project stats under concurrent webhooks),
- * so if the email provider call itself fails, the flag is already set
- * and no retry ever happens. The `notifyBackerPledgeConfirmed()`
- * helper also short-circuits when the flag is true. This endpoint
- * resets the flag and forces a re-send.
+ * fail to deliver. notifyBackerPledgeConfirmed() guards on the
+ * PLEDGE_CONFIRMATION EmailLog (the source of truth for "actually
+ * delivered"), so calling it here re-sends only when the email never
+ * went out and is a harmless no-op when it did.
  */
 export async function POST(
   _req: NextRequest,
@@ -46,8 +43,8 @@ export async function POST(
         id: true,
         status: true,
         chargedImmediately: true,
-        confirmationEmailSent: true,
         stripePaymentMethodId: true,
+        divinityCoinPaymentMethodId: true,
         user: { select: { email: true } },
         project: {
           select: {
@@ -79,9 +76,15 @@ export async function POST(
     }
 
     // Only COMPLETED pledges, or PENDING pledges with a saved payment
-    // method (chargedImmediately deferred-charge pledges), are eligible
-    // for a confirmation email. Same gate as the admin resend endpoint.
-    if (pledge.status !== "COMPLETED" && !pledge.stripePaymentMethodId) {
+    // method, are eligible for a confirmation email. The saved card
+    // lives in stripePaymentMethodId (legacy Stripe SetupIntent flow) or
+    // divinityCoinPaymentMethodId (the DivinityCoin AoN saved-card flow,
+    // which stays PENDING until the funded-campaign cron charges it).
+    if (
+      pledge.status !== "COMPLETED" &&
+      !pledge.stripePaymentMethodId &&
+      !pledge.divinityCoinPaymentMethodId
+    ) {
       return NextResponse.json(
         {
           error:
@@ -91,16 +94,12 @@ export async function POST(
       );
     }
 
-    // Reset the flag so notifyBackerPledgeConfirmed actually sends.
-    // The flag will be re-set to true by notifyBackerPledgeConfirmed
-    // after a successful send.
-    if (pledge.confirmationEmailSent) {
-      await db.pledge.update({
-        where: { id: pledgeId },
-        data: { confirmationEmailSent: false },
-      });
-    }
-
+    // notifyBackerPledgeConfirmed guards on the PLEDGE_CONFIRMATION
+    // EmailLog, not the confirmationEmailSent flag — it re-sends only
+    // when the email genuinely never went out. We must NOT clear the
+    // flag here: for DC saved-card pledges it doubles as the
+    // counts-toward-goal marker, and clearing it on a send that then
+    // fails would drop the pledge from the project total.
     await notifyBackerPledgeConfirmed(pledgeId, pledge.chargedImmediately);
 
     resendLogger.info(

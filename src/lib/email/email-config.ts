@@ -933,10 +933,11 @@ export async function reconcileMissedPledgeConfirmationEmails(): Promise<{
       now - RECONCILE_RECENT_UPDATE_COOLDOWN_MS
     );
 
-    // Find COMPLETED pledges in the reconciliation window that have no
-    // PLEDGE_CONFIRMATION EmailLog entry. Uses Prisma's `none` relation
-    // filter which generates a NOT EXISTS subquery — efficient even
-    // with thousands of pledges.
+    // Find committed pledges in the reconciliation window that have no
+    // PLEDGE_CONFIRMATION EmailLog entry — COMPLETED pledges, plus
+    // DivinityCoin saved-card pledges that are still PENDING (see the
+    // OR below). Uses Prisma's `none` relation filter which generates a
+    // NOT EXISTS subquery — efficient even with thousands of pledges.
     //
     // Filters:
     //   - createdAt within the last 14 days but at least 5 minutes old
@@ -954,7 +955,14 @@ export async function reconcileMissedPledgeConfirmationEmails(): Promise<{
     // whose user has no email, so including those rows here is a no-op.
     const missedPledges = await db.pledge.findMany({
       where: {
-        status: "COMPLETED",
+        OR: [
+          { status: "COMPLETED" },
+          // DivinityCoin AoN saved-card pledges stay PENDING until the
+          // funded-campaign cron charges them, but they're committed the
+          // moment the card is saved and should have a confirmation
+          // email — catch the ones whose send was missed too.
+          { status: "PENDING", NOT: { divinityCoinPaymentMethodId: null } },
+        ],
         deletedAt: null,
         createdAt: { gte: windowStart, lte: latestAllowed },
         updatedAt: { lt: recentUpdateCutoff },
