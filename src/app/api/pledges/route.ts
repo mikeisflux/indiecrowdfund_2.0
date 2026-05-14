@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // Delete any existing PENDING pledges for this user/project
+        // Existing PENDING DC pledges for this user/project, newest first.
         const pendingPledges = await db.pledge.findMany({
           where: {
             userId: session.user.id,
@@ -242,20 +242,46 @@ export async function POST(req: NextRequest) {
             paymentProcessor: "DIVINITYCOIN",
             status: "PENDING",
           },
-          select: { id: true },
+          select: {
+            id: true,
+            confirmationEmailSent: true,
+            divinityCoinPaymentMethodId: true,
+          },
+          orderBy: { createdAt: "desc" },
         });
 
+        // A PENDING pledge that's been committed (counted toward the
+        // goal) or already has a saved card on file is NOT an abandoned
+        // cart. Hard-deleting it — as this branch used to — strands the
+        // saved card at DivinityCoin and leaves project.currentAmount
+        // over-counted, which is how an AoN campaign ends up showing
+        // $0 / 0 backers despite real pledges. The backer has
+        // effectively already pledged; treat it like a completed one.
+        const committedPending = pendingPledges.find(
+          p => p.confirmationEmailSent || p.divinityCoinPaymentMethodId
+        );
+        if (committedPending) {
+          return NextResponse.json(
+            { error: "You have already backed this project" },
+            { status: 400 }
+          );
+        }
+
+        // The rest are genuinely abandoned carts (no card, not counted).
+        // Reuse the newest one in place so the pledge id we hand back
+        // stays stable across checkout retries; hard-delete older dupes.
+        let reusablePledgeId: string | null = null;
         if (pendingPledges.length > 0) {
-          const pendingIds = pendingPledges.map(p => p.id);
-          pledgeLogger.info({ correlationId, pendingIds }, "Cleaning up old PENDING DivinityCoin pledges");
-
-          await db.pledgeAddon.deleteMany({
-            where: { pledgeId: { in: pendingIds } },
-          });
-
-          await db.pledge.deleteMany({
-            where: { id: { in: pendingIds } },
-          });
+          reusablePledgeId = pendingPledges[0].id;
+          const staleIds = pendingPledges.slice(1).map(p => p.id);
+          if (staleIds.length > 0) {
+            pledgeLogger.info({ correlationId, staleIds }, "Cleaning up duplicate PENDING DivinityCoin pledges");
+            await db.pledgeAddon.deleteMany({ where: { pledgeId: { in: staleIds } } });
+            await db.pledge.deleteMany({ where: { id: { in: staleIds } } });
+          }
+          // The reused cart's old addons may no longer match — clear
+          // them; the new set is created below.
+          await db.pledgeAddon.deleteMany({ where: { pledgeId: reusablePledgeId } });
         }
 
         // Calculate reward amount - ensure it's a valid number
@@ -297,27 +323,43 @@ export async function POST(req: NextRequest) {
         const isAlreadyFunded = Number(project.currentAmount) >= Number(project.goalAmount);
         const useSavedCardFlow = !isKeepItAll && !isAlreadyFunded;
 
-        const pledge = await db.pledge.create({
-          data: {
-            userId: session.user.id,
-            projectId: data.projectId,
-            rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
-            amount: data.amount,
-            rewardAmount,
-            addonsAmount,
-            shippingAmount,
-            status: "PENDING",
-            paymentProcessor: "DIVINITYCOIN",
-            // chargedImmediately reflects whether this pledge will charge
-            // at confirm time (KIA / already-funded AoN) or wait for the
-            // success cron (AoN saved-card flow).
-            chargedImmediately: !useSavedCardFlow,
-            shippingAddress: resolvedShippingAddress
-              ? (resolvedShippingAddress as unknown as Record<string, unknown>)
-              : undefined,
-            ...(sourceCampaignId ? { sourceCampaignId } : {}),
-          },
-        });
+        // Shared field set for create (fresh cart) and update (reused
+        // abandoned cart). chargedImmediately reflects whether this
+        // pledge will charge at confirm time (KIA / already-funded AoN)
+        // or wait for the success cron (AoN saved-card flow).
+        const pledgeData = {
+          rewardId: data.rewardId && data.rewardId !== "no-reward" ? data.rewardId : null,
+          amount: data.amount,
+          rewardAmount,
+          addonsAmount,
+          shippingAmount,
+          status: "PENDING" as const,
+          paymentProcessor: "DIVINITYCOIN" as const,
+          chargedImmediately: !useSavedCardFlow,
+          shippingAddress: resolvedShippingAddress
+            ? (resolvedShippingAddress as unknown as Record<string, unknown>)
+            : undefined,
+          ...(sourceCampaignId ? { sourceCampaignId } : {}),
+        };
+
+        const pledge = reusablePledgeId
+          ? await db.pledge.update({
+              where: { id: reusablePledgeId },
+              data: {
+                ...pledgeData,
+                // Drop any intent ids from the prior attempt; fresh ones
+                // are set after the DC API call below.
+                divinityCoinSetupIntentId: null,
+                divinityCoinPaymentId: null,
+              },
+            })
+          : await db.pledge.create({
+              data: {
+                userId: session.user.id,
+                projectId: data.projectId,
+                ...pledgeData,
+              },
+            });
 
         if (addonsWithQuantity.length > 0) {
           await db.pledgeAddon.createMany({

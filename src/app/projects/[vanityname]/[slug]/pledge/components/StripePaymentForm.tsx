@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Lock, ShieldCheck } from "lucide-react";
@@ -91,6 +91,8 @@ export function StripePaymentForm({
 }: StripePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
+  // Re-entrancy guard for handleSubmit — see the guard at its top.
+  const submittingRef = useRef(false);
 
   // Report Stripe initialization status to server (PM2 logs)
   useEffect(() => {
@@ -124,6 +126,14 @@ export function StripePaymentForm({
       });
       return;
     }
+
+    // Synchronous re-entrancy guard. isProcessing is parent-owned state,
+    // so the submit button's disabled prop only updates on the parent's
+    // next render — a fast double-click (or a stray re-invoke) can slip
+    // a second call through before that. stripe.confirmSetup() /
+    // confirmPayment() must run exactly once per intent.
+    if (submittingRef.current || isProcessing) return;
+    submittingRef.current = true;
 
     setIsProcessing(true);
     reportDiag("confirm_started", { pledgeId, intentType, total });
@@ -165,6 +175,7 @@ export function StripePaymentForm({
           errorMessage: error.message,
         });
         onError(error.message || "Payment failed");
+        submittingRef.current = false;
         setIsProcessing(false);
       } else {
         // SetupIntent flow (DC AoN saved-card): persist the pm_... back
@@ -179,6 +190,7 @@ export function StripePaymentForm({
           if (!paymentMethodId) {
             reportDiag("setup_no_pm", { pledgeId, setupIntentId: setupIntent.id });
             onError("Card was authorized but the saved-card token was missing. Please try again.");
+            submittingRef.current = false;
             setIsProcessing(false);
             return;
           }
@@ -200,6 +212,7 @@ export function StripePaymentForm({
                 error: data?.error,
               });
               onError(data?.error || "Failed to save card. Please try again.");
+              submittingRef.current = false;
               setIsProcessing(false);
               return;
             }
@@ -210,6 +223,7 @@ export function StripePaymentForm({
               error: persistErr instanceof Error ? persistErr.message : String(persistErr),
             });
             onError("Network error saving card. Please try again.");
+            submittingRef.current = false;
             setIsProcessing(false);
             return;
           }
@@ -224,6 +238,7 @@ export function StripePaymentForm({
         error: err instanceof Error ? err.message : String(err),
       });
       onError("An unexpected error occurred");
+      submittingRef.current = false;
       setIsProcessing(false);
     }
   };

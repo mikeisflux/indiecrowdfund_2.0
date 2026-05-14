@@ -17,6 +17,7 @@ interface PledgeForProcessing {
   paymentProcessor: string | null;
   chargeStatus?: string;
   confirmationEmailSent?: boolean;
+  divinityCoinPaymentMethodId?: string | null;
   isPreOrder: boolean;
   createdAt: Date;
   metadata: unknown;
@@ -166,18 +167,20 @@ export function processBackers(
     // Check if address is complete
     const addressComplete = !!(shippingAddress?.line1 && shippingAddress?.city && shippingAddress?.country && shippingAddress?.postalCode);
 
-    // True for pledges that were migrated from Mentom Payments to
-    // DivinityCoin via the admin migrate-to-dc tool and are still
-    // awaiting the backer to re-enter their card. The migration sets
-    // confirmationEmailSent=true on already-counted pledges (so the
-    // DC webhook skips the increment when the backer re-pays), then
-    // flips status PENDING. The combination is unique — normal new
-    // DC pledges have confirmationEmailSent=false until DC's webhook
-    // fires.
+    // True for a DivinityCoin pledge that's committed (counts toward the
+    // goal) but has NO card on file, so the backer must (re-)enter
+    // payment. Two ways to land here: an NMI->DC migrated pledge (the
+    // migrate-to-dc tool sets confirmationEmailSent=true + status
+    // PENDING), or a pledge whose saved card got stranded by a
+    // duplicate checkout. An AoN saved-card pledge is ALSO
+    // confirmationEmailSent=true + PENDING but HAS a
+    // divinityCoinPaymentMethodId — it auto-charges at campaign end and
+    // must NOT show the badge, hence the null-card check.
     const needsMigrationPayment =
       pledge.paymentProcessor === "DIVINITYCOIN" &&
       pledge.status === "PENDING" &&
-      pledge.confirmationEmailSent === true;
+      pledge.confirmationEmailSent === true &&
+      !pledge.divinityCoinPaymentMethodId;
 
     return {
       id: pledge.id,

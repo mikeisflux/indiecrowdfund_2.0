@@ -239,10 +239,23 @@ async function reconcileDCProject(
 
   let verifiedTotal = 0;
   let verifiedCount = 0;
+  let committedSavedCardCount = 0;
 
   for (const pledge of project.pledges) {
     const hasTransaction = verifiedPledgeIds.has(pledge.id);
     const pledgeAmount = Number(pledge.amount);
+
+    // A committed AoN saved-card pledge: the card is on file and the
+    // pledge counts toward the goal NOW, but the actual charge (and the
+    // DivinityCoinTransaction) only happens when the success cron runs
+    // at campaign end. It is correctly PENDING with confirmationEmailSent
+    // true — NOT an abandoned cart. Without this branch, applyFixes
+    // would recompute currentAmount without these pledges and wipe a
+    // live AoN campaign down to $0.
+    const isCommittedSavedCard =
+      pledge.status === "PENDING" &&
+      pledge.confirmationEmailSent &&
+      !pledge.chargedImmediately;
 
     if (hasTransaction) {
       // Verified payment — should be COMPLETED
@@ -265,6 +278,12 @@ async function reconcileDCProject(
           });
         }
       }
+    } else if (isCommittedSavedCard) {
+      // Committed saved-card pledge — counts toward the goal; the cron
+      // will charge it (and create the transaction) at campaign end.
+      verifiedTotal += pledgeAmount;
+      verifiedCount++;
+      committedSavedCardCount++;
     } else if (pledge.status === "COMPLETED") {
       // COMPLETED in DB but NO verified transaction — this is the Matt T bug
       // divinityCoinPaymentId alone is NOT proof of payment
@@ -286,7 +305,8 @@ async function reconcileDCProject(
         adminReconcilePledgesLogger.info(`[Reconcile] Downgraded DC pledge ${pledge.id} from COMPLETED to PENDING (no transaction record)`);
       }
     }
-    // PENDING pledges without transactions are fine — they're just incomplete/abandoned
+    // Remaining PENDING pledges (no transaction, not a committed
+    // saved-card pledge) are genuinely incomplete/abandoned — not counted.
   }
 
   const dbCurrentAmount = Number(project.currentAmount);
@@ -322,7 +342,7 @@ async function reconcileDCProject(
     verified: {
       totalAmount: verifiedTotal,
       successfulPayments: verifiedCount,
-      pendingSetupIntents: 0,
+      pendingSetupIntents: committedSavedCardCount,
     },
     discrepancy: {
       amountDiff,

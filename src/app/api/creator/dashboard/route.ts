@@ -264,6 +264,7 @@ export async function GET(req: NextRequest) {
           fulfillmentStatus: true,
           paymentProcessor: true,
           confirmationEmailSent: true,
+          divinityCoinPaymentMethodId: true,
           shippingAddress: true, // JSON field containing { name, line1, city, state, postalCode, country }
           user: {
             select: {
@@ -738,17 +739,18 @@ export async function GET(req: NextRequest) {
         id: pledge.id,
         status: pledge.status,
         fulfillmentStatus: pledge.fulfillmentStatus || "NOT_STARTED",
-        // True for migrated NMI → DC pledges that are still awaiting
-        // the backer to re-enter their card on the
-        // /dashboard/pledges/<id>/complete-with-dc page. The migrate
-        // tool sets confirmationEmailSent=true on already-counted
-        // pledges (so the DC webhook skips the increment when the
-        // backer re-pays). Status flips to COMPLETED on payment and
-        // the badge disappears.
+        // True for a committed DivinityCoin pledge with NO card on file,
+        // so the backer must (re-)enter payment — either a migrated
+        // NMI → DC pledge, or one whose saved card got stranded by a
+        // duplicate checkout. AoN saved-card pledges are also
+        // confirmationEmailSent=true + PENDING but HAVE a
+        // divinityCoinPaymentMethodId (they auto-charge at campaign end)
+        // so the null-card check keeps the badge off them.
         needsMigrationPayment:
           pledge.paymentProcessor === "DIVINITYCOIN" &&
           pledge.status === "PENDING" &&
-          pledge.confirmationEmailSent === true,
+          pledge.confirmationEmailSent === true &&
+          !pledge.divinityCoinPaymentMethodId,
         userId: pledge.user.id,
         name: pledge.user.name || "Anonymous",
         email: pledge.user.email,
