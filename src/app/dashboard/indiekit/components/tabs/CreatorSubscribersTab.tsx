@@ -46,11 +46,33 @@ export function CreatorSubscribersTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  // null = still checking; false = no sending address set up yet.
+  // CSV import is gated on the creator having an email address — a list
+  // you can't email is a dead end, and the server enforces the same.
+  const [emailReady, setEmailReady] = useState<boolean | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
     return () => clearTimeout(t);
   }, [searchQuery]);
+
+  // Check whether the creator has set up their sending email address.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await apiFetch("/api/creator/email/setup");
+        if (cancelled) return;
+        const data = r.ok ? await r.json() : null;
+        setEmailReady(!!data?.hasEmailSetup);
+      } catch {
+        if (!cancelled) setEmailReady(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchSubscribers = useCallback(async () => {
     setIsLoading(true);
@@ -104,6 +126,17 @@ export function CreatorSubscribersTab() {
     }
   };
 
+  const handleImportClick = () => {
+    if (emailReady === null) return; // still checking — ignore the click
+    if (!emailReady) {
+      toast.error(
+        "Set up your sending email address first. Open the Email tab on your dashboard and create your address before importing a list."
+      );
+      return;
+    }
+    setIsImportOpen(true);
+  };
+
   const total = subscribers.length;
 
   return (
@@ -118,7 +151,12 @@ export function CreatorSubscribersTab() {
             className="pl-9"
           />
         </div>
-        <Button variant="outline" onClick={() => setIsImportOpen(true)} className="shrink-0">
+        <Button
+          variant="outline"
+          onClick={handleImportClick}
+          disabled={emailReady === null}
+          className="shrink-0"
+        >
           <Upload className="h-4 w-4 mr-2" />
           Import CSV
         </Button>

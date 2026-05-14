@@ -65,13 +65,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get creator's name for tagging
+    // Get creator's name for tagging + confirm their sending address is
+    // set up. Importing a list you can't email is a dead end — campaign
+    // sends are already gated on creatorEmailHandle, so gate the import
+    // up front too.
     const creator = await db.user.findFirst({
       where: { id: session.user.id, deletedAt: null },
-      select: { name: true, vanityUrl: true },
+      select: { name: true, vanityUrl: true, creatorEmailHandle: true },
     });
 
-    const creatorTag = creator?.vanityUrl || creator?.name || session.user.id;
+    if (!creator?.creatorEmailHandle) {
+      return NextResponse.json(
+        {
+          error:
+            "Set up your sending email address before importing subscribers. Open the Email tab on your dashboard and create your address first.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const creatorTag = creator.vanityUrl || creator.name || session.user.id;
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
