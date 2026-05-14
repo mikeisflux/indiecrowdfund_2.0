@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
 
     let imported = 0;
     let skippedBlocked = 0;
+    let skippedDuplicate = 0;
     let failed = 0;
     const errors: string[] = [];
 
@@ -135,38 +136,79 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Check if subscriber already exists
-        const existing = await db.newsletterSubscriber.findUnique({
-          where: { email: row.email },
-        });
+        // Primary write: the creator's own email list. This is the
+        // table campaign sends, the Subscribers tab, and the IndieKit
+        // dashboard count all read from — writing only to
+        // newsletterSubscriber (the old behavior) left imported
+        // contacts invisible to every creator-facing surface.
+        // create + catch P2002 on @@unique([creatorId, email]) is
+        // TOCTOU-safe, matching the manual single-add path.
+        try {
+          await db.emailListSubscriber.create({
+            data: {
+              creatorId: session.user.id,
+              email: row.email,
+              name: row.name || null,
+              source: "csv_import",
+              status: "subscribed",
+            },
+          });
+          imported++;
+        } catch (createErr) {
+          const isUniqueViolation =
+            createErr &&
+            typeof createErr === "object" &&
+            "code" in createErr &&
+            (createErr as { code?: string }).code === "P2002";
+          if (isUniqueViolation) {
+            // Already on this creator's list — not new, not a failure.
+            skippedDuplicate++;
+          } else {
+            throw createErr;
+          }
+        }
 
-        if (existing) {
-          // Email exists - add this creator's tag if not already present
-          const existingTags = existing.tags || [];
-          if (!existingTags.includes(creatorTag)) {
-            await db.newsletterSubscriber.update({
-              where: { email: row.email },
+        // Secondary, best-effort: mirror into the admin-wide newsletter
+        // so global newsletter sends + admin tooling see the contact
+        // too. Mirrors the manual single-add path. A failure here does
+        // not fail the row — the creator-list write above is what the
+        // creator's campaigns actually depend on.
+        try {
+          const existing = await db.newsletterSubscriber.findUnique({
+            where: { email: row.email },
+          });
+          if (existing) {
+            const existingTags = existing.tags || [];
+            if (!existingTags.includes(creatorTag)) {
+              await db.newsletterSubscriber.update({
+                where: { email: row.email },
+                data: { tags: [...existingTags, creatorTag] },
+              });
+            }
+          } else {
+            await db.newsletterSubscriber.create({
               data: {
-                tags: [...existingTags, creatorTag],
+                email: row.email,
+                name: row.name || null,
+                source: "creator_import",
+                tags: [creatorTag],
+                isActive: true,
               },
             });
           }
-          // Skip counting as new import but tag was added
-          continue;
+        } catch (syncErr) {
+          const isUniqueViolation =
+            syncErr &&
+            typeof syncErr === "object" &&
+            "code" in syncErr &&
+            (syncErr as { code?: string }).code === "P2002";
+          if (!isUniqueViolation) {
+            creatorEmailMarketingSubscribersImportLogger.error(
+              { err: String(syncErr) },
+              "Failed to sync imported subscriber to admin newsletter:"
+            );
+          }
         }
-
-        // Create new subscriber with creator tag
-        await db.newsletterSubscriber.create({
-          data: {
-            email: row.email,
-            name: row.name || null,
-            source: "creator_import",
-            tags: [creatorTag], // Tag with the creator account who uploaded
-            isActive: true,
-          },
-        });
-
-        imported++;
       } catch (err) {
         failed++;
         if (errors.length < 5) {
@@ -179,6 +221,7 @@ export async function POST(request: NextRequest) {
       imported,
       failed,
       skippedBlocked,
+      skippedDuplicate,
       total: rows.length,
       errors,
     });
