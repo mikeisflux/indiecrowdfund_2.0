@@ -108,6 +108,7 @@ export async function GET(req: NextRequest) {
         title: true,
         slug: true,
         status: true,
+        campaignType: true,
         currentAmount: true,
         backerCount: true,
         prelaunchActive: true,
@@ -134,6 +135,7 @@ export async function GET(req: NextRequest) {
             title: true,
             slug: true,
             status: true,
+            campaignType: true,
             currentAmount: true,
             backerCount: true,
             imageUrl: true,
@@ -413,7 +415,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Process backers for display
-    const processedBackers = processBackers(pledges, surveyResponseMap);
+    const processedBackers = processBackers(pledges, surveyResponseMap, selectedProject.campaignType);
 
     // Build package groups
     const packageGroups = buildPackageGroups(processedBackers);

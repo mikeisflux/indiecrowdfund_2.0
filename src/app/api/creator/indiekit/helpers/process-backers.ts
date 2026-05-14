@@ -61,6 +61,7 @@ interface SurveyResponseForProcessing {
 export function processBackers(
   pledges: PledgeForProcessing[],
   surveyResponseMap: Map<string, SurveyResponseForProcessing>,
+  projectCampaignType?: string,
 ) {
   // Deduplicate pledges by ID (in case of data issues)
   const seenPledgeIds = new Set<string>();
@@ -168,19 +169,19 @@ export function processBackers(
     const addressComplete = !!(shippingAddress?.line1 && shippingAddress?.city && shippingAddress?.country && shippingAddress?.postalCode);
 
     // True for a DivinityCoin pledge that's committed (counts toward the
-    // goal) but has NO card on file, so the backer must (re-)enter
-    // payment. Two ways to land here: an NMI->DC migrated pledge (the
-    // migrate-to-dc tool sets confirmationEmailSent=true + status
-    // PENDING), or a pledge whose saved card got stranded by a
-    // duplicate checkout. An AoN saved-card pledge is ALSO
-    // confirmationEmailSent=true + PENDING but HAS a
-    // divinityCoinPaymentMethodId — it auto-charges at campaign end and
-    // must NOT show the badge, hence the null-card check.
+    // goal) but has NO card on file — e.g. an NMI->DC migrated pledge.
+    // A real AoN saved-card pledge is also confirmationEmailSent=true +
+    // PENDING but HAS a divinityCoinPaymentMethodId, hence the null
+    // check. Suppressed entirely on ALL_OR_NOTHING campaigns: that flow
+    // legitimately leaves committed PENDING pledges, and the rare
+    // no-card case is handled by the backer re-pledge flow rather than a
+    // creator-facing badge.
     const needsMigrationPayment =
       pledge.paymentProcessor === "DIVINITYCOIN" &&
       pledge.status === "PENDING" &&
       pledge.confirmationEmailSent === true &&
-      !pledge.divinityCoinPaymentMethodId;
+      !pledge.divinityCoinPaymentMethodId &&
+      projectCampaignType !== "ALL_OR_NOTHING";
 
     return {
       id: pledge.id,

@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
         title: true,
         slug: true,
         status: true,
+        campaignType: true,
         imageUrl: true,
         goalAmount: true,
         currentAmount: true,
@@ -73,6 +74,7 @@ export async function GET(req: NextRequest) {
             title: true,
             slug: true,
             status: true,
+            campaignType: true,
             imageUrl: true,
             goalAmount: true,
             currentAmount: true,
@@ -739,18 +741,18 @@ export async function GET(req: NextRequest) {
         id: pledge.id,
         status: pledge.status,
         fulfillmentStatus: pledge.fulfillmentStatus || "NOT_STARTED",
-        // True for a committed DivinityCoin pledge with NO card on file,
-        // so the backer must (re-)enter payment — either a migrated
-        // NMI → DC pledge, or one whose saved card got stranded by a
-        // duplicate checkout. AoN saved-card pledges are also
-        // confirmationEmailSent=true + PENDING but HAVE a
-        // divinityCoinPaymentMethodId (they auto-charge at campaign end)
-        // so the null-card check keeps the badge off them.
+        // True for a committed DivinityCoin pledge with NO card on file
+        // — e.g. a migrated NMI → DC pledge. Suppressed on ALL_OR_NOTHING
+        // campaigns: the AoN saved-card flow legitimately leaves
+        // committed PENDING pledges, and the rare no-card case there is
+        // handled by the backer re-pledge flow, not a creator-facing
+        // badge. Charge-now DC pledges (KIA / already-funded) still get it.
         needsMigrationPayment:
           pledge.paymentProcessor === "DIVINITYCOIN" &&
           pledge.status === "PENDING" &&
           pledge.confirmationEmailSent === true &&
-          !pledge.divinityCoinPaymentMethodId,
+          !pledge.divinityCoinPaymentMethodId &&
+          selectedProject.campaignType !== "ALL_OR_NOTHING",
         userId: pledge.user.id,
         name: pledge.user.name || "Anonymous",
         email: pledge.user.email,
