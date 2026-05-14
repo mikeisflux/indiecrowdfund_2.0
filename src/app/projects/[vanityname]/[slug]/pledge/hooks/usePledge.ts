@@ -499,8 +499,17 @@ export function usePledge() {
       try {
         if (isModifyMode) {
           await confirmPayment(currentPledgeId, false, true);
+        } else if (isAddItemsMode) {
+          await confirmPayment(currentPledgeId, true);
+        } else if (intentType === "setup_intent" && clientSecret) {
+          // DivinityCoin AoN saved-card flow: StripePaymentForm has
+          // already POSTed to /confirm-dc-setup, which commits the
+          // pledge. There is NO /confirm step for this flow —
+          // /api/pledges/[id]/confirm rejects non-chargedImmediately
+          // pledges with a 400, which surfaced as a scary "confirmation
+          // failed" error on a pledge that actually went through fine.
         } else {
-          await confirmPayment(currentPledgeId, isAddItemsMode);
+          await confirmPayment(currentPledgeId, false);
         }
         setStep("success");
       } catch (err) {
