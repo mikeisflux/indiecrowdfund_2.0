@@ -203,7 +203,7 @@ process.stdin.on("end", () => {
     const apps = JSON.parse(raw);
     process.stdout.write(apps.map(a => a.pm_id).join(" "));
   } catch { process.stdout.write(""); }
-}')
+})')
 
 if [ -z "$INSTANCE_IDS" ]; then
     echo -e "${YELLOW}   No PM2 instances found — falling back to pm2 restart all${NC}"
