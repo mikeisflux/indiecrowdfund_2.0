@@ -26,9 +26,15 @@ async function verifySubscriberOwnership(subscriberId: string, userId: string) {
 
   if (!subscriber) return null;
 
-  // Check if this subscriber was imported by this creator
-  if (subscriber.source?.startsWith(`creator_import:${creatorTag}`) ||
-      subscriber.source?.startsWith(`creator_manual:${creatorTag}`)) {
+  // newsletterSubscriber has no creatorId column — a creator's rows are
+  // identified by their creator tag in `tags[]`. The old check looked at
+  // `source` for a "creator_import:<tag>" format that no write path ever
+  // produces (source is the bare "creator_import"; the tag lives in
+  // tags[]), so it matched nothing. The two write paths also differ:
+  // the CSV import stores the tag bare ("mike"), the manual single-add
+  // prefixes it ("creator:mike"). Accept either form.
+  const tags = subscriber.tags || [];
+  if (tags.includes(creatorTag) || tags.includes(`creator:${creatorTag}`)) {
     return subscriber;
   }
 
