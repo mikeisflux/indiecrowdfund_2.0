@@ -19,6 +19,7 @@ export function Footer() {
               <li><Link href="/discover?category=games" className="hover:text-foreground">Games</Link></li>
               <li><Link href="/discover?category=technology" className="hover:text-foreground">Technology</Link></li>
               <li><Link href="/discover?category=art" className="hover:text-foreground">Art</Link></li>
+              <li><Link href="/press" className="hover:text-foreground">Press</Link></li>
             </ul>
           </div>
           <div>
