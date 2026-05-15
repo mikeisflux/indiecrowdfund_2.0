@@ -105,19 +105,28 @@ export function ActiveProjectPanel({
       if (dryRun) {
         const alreadyInTotals = data.alreadyInTotals ?? 0;
         const notYetInTotals = data.notYetInTotals ?? 0;
+        const alreadyMigratedNeedingEmail = data.alreadyMigratedNeedingEmail ?? 0;
         setMigrateDcMessage(
           `Dry run — would migrate ${data.pledgesToMigrate} pledges` +
             (data.projectWillFlip ? " and flip the project to DC" : " (project already DC)") +
             `. ${alreadyInTotals} already counted in campaign totals (no change on DC payment), ` +
-            `${notYetInTotals} not yet counted (will add to totals when paid). Emails would go to ${data.emails?.length || 0} backers.`
+            `${notYetInTotals} not yet counted (will add to totals when paid). ` +
+            (alreadyMigratedNeedingEmail > 0
+              ? `${alreadyMigratedNeedingEmail} previously-migrated pledge${alreadyMigratedNeedingEmail === 1 ? "" : "s"} would be re-emailed. `
+              : "") +
+            `Emails would go to ${data.emails?.length || 0} backers.`
         );
       } else {
         const alreadyInTotals = data.alreadyInTotals ?? 0;
         const notYetInTotals = data.notYetInTotals ?? 0;
+        const alreadyMigratedEmailed = data.alreadyMigratedEmailed ?? 0;
         setMigrateDcMessage(
           `Migrated ${data.pledgesMigrated} pledges` +
             (data.projectFlipped ? ", flipped project to DC" : "") +
             `. ${alreadyInTotals} preserved in campaign totals, ${notYetInTotals} will join totals when paid. ` +
+            (alreadyMigratedEmailed > 0
+              ? `${alreadyMigratedEmailed} previously-migrated pledge${alreadyMigratedEmailed === 1 ? "" : "s"} re-emailed. `
+              : "") +
             `Emails sent: ${data.emailResults?.sent || 0}, failed: ${data.emailResults?.failed || 0}.`
         );
       }

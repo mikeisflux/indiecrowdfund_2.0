@@ -10,25 +10,33 @@ const log = logger.child({ module: "admin-migrate-to-dc" });
  * Force-migrate a project (and every open pledge on it) from
  * Mentom Payments (NMI) to DivinityCoin. Used after PaymentCloud
  * cancelled the merchant account — Mentom can no longer charge any
- * vault-saved cards, so every PENDING / FAILED NMI pledge needs a
- * fresh DivinityCoin payment from the backer.
+ * vault-saved cards, so every PENDING / FAILED / COMPLETED NMI
+ * pledge needs a fresh DivinityCoin payment from the backer.
  *
  * SUPER_ADMIN only.
  *
  * What this does (transactional, in order):
  *   1. Flips Project.paymentProcessor from "NMI" to "DIVINITYCOIN"
  *      (no-op if already DC).
- *   2. For every PENDING or FAILED pledge on the project whose
- *      paymentProcessor is still "NMI":
+ *   2. For every PENDING / FAILED / COMPLETED pledge on the project
+ *      whose paymentProcessor is still "NMI":
  *        - Sets paymentProcessor = "DIVINITYCOIN"
  *        - Resets status to "PENDING"
  *        - Clears every NMI-specific field so no stale token sticks
  *          around (nmiCustomerVaultId, nmiTransactionId,
  *          nmiInitialTransactionId, chargedImmediately, retryCount,
  *          nextRetryAt, lastFailureReason)
- *   3. Emails each affected backer with a link to
+ *   3. Emails each freshly-flipped backer with a link to
  *      /dashboard/pledges/[pledgeId]/complete-with-dc where they
  *      re-enter their card on the DC Stripe Elements form.
+ *   4. Also re-sends the migration email to any DC pledge that was
+ *      ALREADY flipped to DC out-of-band (raw SQL, an earlier run
+ *      of this endpoint, etc.) but whose backer hasn't completed
+ *      re-payment yet. The discriminator is DIVINITYCOIN + PENDING
+ *      + !chargedImmediately + no card on file
+ *      + confirmationEmailSent=true. Lets the admin click the
+ *      button after a manual SQL flip and still notify the
+ *      affected backers.
  *
  * NMI customer vault tokens cannot be transferred to DivinityCoin
  * (different processors, different vaults, PCI rules forbid token
@@ -36,10 +44,12 @@ const log = logger.child({ module: "admin-migrate-to-dc" });
  * either direction. The backer has to re-enter the card. That's
  * what the email + complete-with-dc page are for.
  *
- * Idempotent: running twice on the same project flips no Project
- * row (already DC), flips no Pledge rows (already DC), and sends
- * no emails (no NMI rows left to migrate). Returns the same
- * counts on every run.
+ * The core migration (project flip + pledge flips) is idempotent:
+ * running twice on the same project flips no Project row and no
+ * Pledge rows the second time. The email sweep is intentionally
+ * NOT idempotent — every click re-emails every pledge still
+ * matching the "migrated but not yet re-paid" profile, so an
+ * admin can nudge backers who ignored the first notice.
  *
  * Pass ?dryRun=true to preview the migration without actually
  * touching the database or sending emails.
@@ -110,6 +120,38 @@ export async function POST(
       },
     });
 
+    // Also identify pledges already flipped to DC out-of-band (raw
+    // SQL, an earlier run of this endpoint, etc.) that still need
+    // the migration email. Profile:
+    //   DIVINITYCOIN + PENDING + !chargedImmediately
+    //   + divinityCoinPaymentMethodId IS NULL
+    //   + confirmationEmailSent = true
+    //
+    // That combo is unique to a manually-migrated-but-not-yet-re-paid
+    // pledge: the row counts toward project totals
+    // (confirmationEmailSent=true) but has no DC payment evidence. A
+    // fresh saved-card DC pledge would have divinityCoinPaymentMethodId
+    // set after confirm-dc-setup, and a not-yet-committed one would
+    // have confirmationEmailSent=false. This sweep lets the admin
+    // click the button after a manual SQL flip and still nudge the
+    // affected backers (re-clicking re-emails them — see JSDoc).
+    const alreadyMigratedNeedingEmail = await db.pledge.findMany({
+      where: {
+        projectId,
+        deletedAt: null,
+        paymentProcessor: "DIVINITYCOIN",
+        status: "PENDING",
+        chargedImmediately: false,
+        divinityCoinPaymentMethodId: null,
+        confirmationEmailSent: true,
+      },
+      select: {
+        id: true,
+        amount: true,
+        user: { select: { id: true, email: true, name: true } },
+      },
+    });
+
     if (dryRun) {
       const alreadyCountedCount = pledgesToMigrate.filter((p) => p.backerNumber !== null).length;
       const neverCountedCount = pledgesToMigrate.length - alreadyCountedCount;
@@ -120,7 +162,11 @@ export async function POST(
         pledgesToMigrate: pledgesToMigrate.length,
         alreadyInTotals: alreadyCountedCount,
         notYetInTotals: neverCountedCount,
-        emails: pledgesToMigrate.map((p) => p.user.email).filter(Boolean),
+        alreadyMigratedNeedingEmail: alreadyMigratedNeedingEmail.length,
+        emails: [
+          ...pledgesToMigrate.map((p) => p.user.email),
+          ...alreadyMigratedNeedingEmail.map((p) => p.user.email),
+        ].filter(Boolean),
       });
     }
 
@@ -174,14 +220,17 @@ export async function POST(
       });
     }
 
-    // Fan-out the notification emails. Batch + Promise.allSettled so
-    // one bad email address can't abort the batch. Failures are
-    // logged but don't fail the migration response — the migration
-    // itself already committed.
+    // Fan-out the notification emails to both groups: the
+    // freshly-flipped NMI pledges above AND the DC pledges that
+    // were already migrated out-of-band but never re-paid. Batch
+    // + Promise.allSettled so one bad email address can't abort
+    // the batch. Failures are logged but don't fail the migration
+    // response — the migration itself already committed.
+    const emailTargets = [...pledgesToMigrate, ...alreadyMigratedNeedingEmail];
     const emailResults = { sent: 0, failed: 0 };
     const batchSize = 10;
-    for (let i = 0; i < pledgesToMigrate.length; i += batchSize) {
-      const batch = pledgesToMigrate.slice(i, i + batchSize);
+    for (let i = 0; i < emailTargets.length; i += batchSize) {
+      const batch = emailTargets.slice(i, i + batchSize);
       const results = await Promise.allSettled(
         batch.map((p) => {
           if (!p.user.email) {
@@ -210,7 +259,12 @@ export async function POST(
     }
 
     log.info(
-      { projectId, pledgesMigrated: pledgesToMigrate.length, emailResults },
+      {
+        projectId,
+        pledgesMigrated: pledgesToMigrate.length,
+        alreadyMigratedEmailed: alreadyMigratedNeedingEmail.length,
+        emailResults,
+      },
       "NMI → DivinityCoin migration complete"
     );
 
@@ -220,6 +274,7 @@ export async function POST(
       pledgesMigrated: pledgesToMigrate.length,
       alreadyInTotals: alreadyCounted.length,
       notYetInTotals: neverCounted.length,
+      alreadyMigratedEmailed: alreadyMigratedNeedingEmail.length,
       emailResults,
     });
   } catch (err) {
