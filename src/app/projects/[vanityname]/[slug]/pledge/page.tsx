@@ -196,6 +196,7 @@ export default function PledgePage() {
                 setAgreedToTerms={pledge.setAgreedToTerms}
                 clientSecret={pledge.clientSecret}
                 project={pledge.project}
+                paymentError={pledge.paymentError}
               />
 
               {/* Rewards Warning */}

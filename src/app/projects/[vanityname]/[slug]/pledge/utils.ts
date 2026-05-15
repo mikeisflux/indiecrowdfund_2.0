@@ -137,18 +137,39 @@ export async function createPledgeForPayment(
     quantity,
   }));
 
-  const response = await apiFetch("/api/pledges", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", },
-    body: JSON.stringify({
-      projectId,
-      rewardId,
-      addons: addonsWithQuantity,
-      amount: total,
-      shippingAmount: totalShipping,
-      shippingCountry,
-    }),
-  });
+  // 30s client-side safety timeout. The route's outbound DC call already
+  // has its own 15s abort, but the fetch itself can hang for reasons
+  // outside that (browser extension intercepting, ISP-level stalls,
+  // mid-flight response loss) — without this, the OrderSummary spinner
+  // sits at "Setting up payment…" forever with no error, no retry path,
+  // and no entry in our server logs. After 30s we bail with a clean
+  // retryable message the backer can act on.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  let response: Response;
+  try {
+    response = await apiFetch("/api/pledges", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", },
+      body: JSON.stringify({
+        projectId,
+        rewardId,
+        addons: addonsWithQuantity,
+        amount: total,
+        shippingAmount: totalShipping,
+        shippingCountry,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("Connection timed out. Please check your network and try again.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const data = await response.json();
 
