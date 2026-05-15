@@ -82,11 +82,12 @@ export function ActiveProjectPanel({
     if (!dryRun) {
       const ok = window.confirm(
         `Permanently migrate "${project.title}" from Mentom Payments to Divinity Payments?\n\n` +
-          `• Flips Project.paymentProcessor to DIVINITYCOIN\n` +
-          `• Flips every PENDING/FAILED NMI pledge to DIVINITYCOIN + status PENDING\n` +
+          `• Flips Project.paymentProcessor to DIVINITYCOIN (if not already)\n` +
+          `• Flips every PENDING / FAILED / COMPLETED NMI pledge to DIVINITYCOIN + status PENDING\n` +
           `• Clears NMI-specific fields on those pledges\n` +
           `• Marks already-counted pledges so the DC webhook doesn't re-bump backerCount, currentAmount, or reward slots\n` +
           `• Emails each backer a link to re-enter their card on DC\n\n` +
+          `Note: COMPLETED NMI pledges are included because PaymentCloud was decommissioned — those charges were reversed back to the backer's card even though our DB marked them COMPLETED.\n\n` +
           `Campaign totals stay where they are — no double-count, no down-count. Idempotent. Continue?`
       );
       if (!ok) return;
@@ -565,18 +566,24 @@ export function ActiveProjectPanel({
             </div>
           )}
 
-          {/* Migrate to DivinityCoin — only shows for projects still on
-              Mentom Payments (NMI). Idempotent; running twice is safe.
+          {/* Migrate to DivinityCoin — shows for projects on Mentom
+              (NMI, primary case) AND for projects already flipped to
+              DC (so leftover NMI pledges can still be migrated after
+              the project record itself has moved). Idempotent; the
+              dry-run path makes it safe to surface broadly — if there
+              are no NMI pledges left, it just reports 0 migrated.
               String-cast the enum check so the local Project type can
               drop NMI from its union (Prisma still has it for legacy
               DB rows). */}
-          {String(project.paymentProcessor) === "NMI" && (
+          {(String(project.paymentProcessor) === "NMI" || String(project.paymentProcessor) === "DIVINITYCOIN") && (
             <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800 p-3">
               <p className="text-sm font-medium text-amber-900 dark:text-amber-200 mb-1">
-                On Mentom Payments — needs migration
+                {String(project.paymentProcessor) === "NMI"
+                  ? "On Mentom Payments — needs migration"
+                  : "Migrate leftover Mentom (NMI) pledges"}
               </p>
               <p className="text-xs text-amber-800 dark:text-amber-300 mb-3">
-                Flips the project + every PENDING/FAILED pledge to DivinityCoin and emails each backer a link to re-enter their card. Always test with Dry Run first.
+                Re-stages every NMI pledge (PENDING / FAILED / COMPLETED) on DivinityCoin and emails each backer a link to re-enter their card. PaymentCloud was decommissioned, so even &quot;COMPLETED&quot; NMI charges were reversed back to the backer. Always test with Dry Run first.
               </p>
               <div className="flex items-center gap-2">
                 <Button

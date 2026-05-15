@@ -65,10 +65,19 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Find every pledge on the project that's still on NMI and not
-    // already COMPLETED. PENDING + FAILED are the two states that
-    // benefit from re-collection on the new processor. CANCELLED /
-    // REFUNDED are terminal and untouched.
+    // Find every NMI pledge in a state where re-collection on DC
+    // makes sense:
+    //   - PENDING / FAILED: charge never went through cleanly on NMI;
+    //     backer needs to re-pay on DC.
+    //   - COMPLETED: NMI marked the charge succeeded, but PaymentCloud
+    //     cancelled the merchant account before funds disbursed, so
+    //     the money was reversed back to the backer's card. From the
+    //     creator's ledger these are phantom — the backer needs to
+    //     re-pay on DC for the pledge to actually settle. We only
+    //     include them here because the entire NMI processor was
+    //     decommissioned; in a healthy processor we'd leave COMPLETED
+    //     pledges alone.
+    //   - CANCELLED / REFUNDED: terminal, untouched.
     //
     // We pull backerNumber so we can bridge NMI's "already counted"
     // marker to DC's marker. NMI historically pre-counted
@@ -90,7 +99,7 @@ export async function POST(
         projectId,
         deletedAt: null,
         paymentProcessor: "NMI",
-        status: { in: ["PENDING", "FAILED"] },
+        status: { in: ["PENDING", "FAILED", "COMPLETED"] },
       },
       select: {
         id: true,
