@@ -163,7 +163,16 @@ async function verifyStuckDcImmediateCharges(
   projectId: string
 ): Promise<{ checked: number; completed: number }> {
   const result = { checked: 0, completed: 0 };
-  const cutoff = new Date(Date.now() - 10 * 60 * 1000); // 10-min webhook grace
+  // Lower bound: at least 10 minutes old, so the webhook has had a fair
+  // shot at flipping the pledge first.
+  // Upper bound: at most 24 hours old. A pledge whose PaymentIntent has
+  // sat in DC's `pending` for a full day isn't a missed webhook —
+  // it's an abandoned/in-limbo intent that will never resolve. Polling
+  // it every 5 minutes forever pegs DC's verify-payment endpoint for
+  // nothing (DC flagged ~40 calls/tick from this loop before this
+  // bound). After 24h we let it go; manual reconcile picks it up.
+  const newerThan = new Date(Date.now() - 10 * 60 * 1000);
+  const olderThan = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const stuck = await db.pledge.findMany({
     where: {
       projectId,
@@ -172,7 +181,7 @@ async function verifyStuckDcImmediateCharges(
       chargedImmediately: true,
       deletedAt: null,
       NOT: { divinityCoinPaymentId: null },
-      createdAt: { lt: cutoff },
+      createdAt: { lt: newerThan, gte: olderThan },
     },
     select: { id: true, divinityCoinPaymentId: true },
     take: 100, // bound DC API calls per tick; the rest get the next tick
