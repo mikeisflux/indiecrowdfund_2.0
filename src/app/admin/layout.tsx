@@ -57,6 +57,7 @@ import {
   ListOrdered,
   Clock,
   AlertCircle,
+  Newspaper,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -150,6 +151,7 @@ const navigation: NavSection[] = [
       { name: "Announcement Bar", href: "/admin/announcement-bar", icon: Megaphone },
       { name: "Promo Popup", href: "/admin/promo-popup", icon: Sparkles },
       { name: "Consent Banner", href: "/admin/consent-banner", icon: Shield },
+      { name: "Press", href: "/admin/press", icon: Newspaper },
       { name: "Media Library", href: "/admin/media", icon: Image, badgeKey: "media" },
     ],
   },
