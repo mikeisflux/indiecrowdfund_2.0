@@ -415,7 +415,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Process backers for display
-    const processedBackers = processBackers(pledges, surveyResponseMap, selectedProject.campaignType);
+    const processedBackers = processBackers(pledges, surveyResponseMap);
 
     // Build package groups
     const packageGroups = buildPackageGroups(processedBackers);

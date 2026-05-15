@@ -17,6 +17,7 @@ interface PledgeForProcessing {
   paymentProcessor: string | null;
   chargeStatus?: string;
   confirmationEmailSent?: boolean;
+  chargedImmediately?: boolean;
   divinityCoinPaymentMethodId?: string | null;
   isPreOrder: boolean;
   createdAt: Date;
@@ -61,7 +62,6 @@ interface SurveyResponseForProcessing {
 export function processBackers(
   pledges: PledgeForProcessing[],
   surveyResponseMap: Map<string, SurveyResponseForProcessing>,
-  projectCampaignType?: string,
 ) {
   // Deduplicate pledges by ID (in case of data issues)
   const seenPledgeIds = new Set<string>();
@@ -172,16 +172,19 @@ export function processBackers(
     // goal) but has NO card on file — e.g. an NMI->DC migrated pledge.
     // A real AoN saved-card pledge is also confirmationEmailSent=true +
     // PENDING but HAS a divinityCoinPaymentMethodId, hence the null
-    // check. Suppressed entirely on ALL_OR_NOTHING campaigns: that flow
-    // legitimately leaves committed PENDING pledges, and the rare
-    // no-card case is handled by the backer re-pledge flow rather than a
-    // creator-facing badge.
+    // check. The chargedImmediately check then suppresses transient
+    // false positives: immediate-charge pledges (KIA + AoN-funded) sit
+    // in PENDING for a few minutes after checkout while the
+    // payment.succeeded webhook is in flight — the safety-net cron
+    // resolves them automatically, so flashing "Payment required" there
+    // is misleading. The badge now only fires on the saved-card flow
+    // (chargedImmediately false) where no card is on file.
     const needsMigrationPayment =
       pledge.paymentProcessor === "DIVINITYCOIN" &&
       pledge.status === "PENDING" &&
       pledge.confirmationEmailSent === true &&
       !pledge.divinityCoinPaymentMethodId &&
-      projectCampaignType !== "ALL_OR_NOTHING";
+      !pledge.chargedImmediately;
 
     return {
       id: pledge.id,

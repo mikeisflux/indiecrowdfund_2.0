@@ -266,6 +266,7 @@ export async function GET(req: NextRequest) {
           fulfillmentStatus: true,
           paymentProcessor: true,
           confirmationEmailSent: true,
+          chargedImmediately: true,
           divinityCoinPaymentMethodId: true,
           shippingAddress: true, // JSON field containing { name, line1, city, state, postalCode, country }
           user: {
@@ -741,18 +742,22 @@ export async function GET(req: NextRequest) {
         id: pledge.id,
         status: pledge.status,
         fulfillmentStatus: pledge.fulfillmentStatus || "NOT_STARTED",
-        // True for a committed DivinityCoin pledge with NO card on file
-        // — e.g. a migrated NMI → DC pledge. Suppressed on ALL_OR_NOTHING
-        // campaigns: the AoN saved-card flow legitimately leaves
-        // committed PENDING pledges, and the rare no-card case there is
-        // handled by the backer re-pledge flow, not a creator-facing
-        // badge. Charge-now DC pledges (KIA / already-funded) still get it.
+        // True for a committed DivinityCoin pledge with NO card on file.
+        // Discriminator is per-pledge chargedImmediately rather than
+        // per-project campaignType: immediate-charge pledges (KIA +
+        // AoN-funded) routinely sit in PENDING for a few minutes after
+        // checkout while the payment.succeeded webhook is in flight, and
+        // a brief "Payment required" badge there is a false positive —
+        // the safety-net cron / webhook resolves them automatically. The
+        // badge now fires only on the saved-card flow (chargedImmediately
+        // false) where no card is on file: the genuine legacy
+        // stranded-card / migrated NMI case.
         needsMigrationPayment:
           pledge.paymentProcessor === "DIVINITYCOIN" &&
           pledge.status === "PENDING" &&
           pledge.confirmationEmailSent === true &&
           !pledge.divinityCoinPaymentMethodId &&
-          selectedProject.campaignType !== "ALL_OR_NOTHING",
+          !pledge.chargedImmediately,
         userId: pledge.user.id,
         name: pledge.user.name || "Anonymous",
         email: pledge.user.email,
