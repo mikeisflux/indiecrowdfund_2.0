@@ -59,6 +59,7 @@ export default function EditMoviePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingProcessor, setSavingProcessor] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
   const [bookStatus, setBookStatus] = useState("");
@@ -159,6 +160,30 @@ export default function EditMoviePage() {
       toast.success("Poster updated!");
     } catch { toast.error("Failed to upload poster"); }
     finally { setCoverUploading(false); }
+  };
+
+  const handleSaveProcessor = async () => {
+    setSavingProcessor(true);
+    try {
+      const res = await apiFetch(
+        `/api/creator/marketplace/books/${bookId}/payment-processor`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentProcessor }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update payment processor");
+        return;
+      }
+      toast.success(data.unchanged ? "Payment processor already set" : "Payment processor updated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setSavingProcessor(false);
+    }
   };
 
   const handleSave = async () => {
@@ -349,7 +374,17 @@ export default function EditMoviePage() {
             </div>
             <div className="space-y-2">
               <Label>Payment Processor</Label>
-              <Select value={paymentProcessor} onValueChange={setPaymentProcessor} disabled={isNsfw}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PAYPAL">PayPal</SelectItem><SelectItem value="DIVINITYCOIN">Divinity Payments</SelectItem><SelectItem value="WHOP">Whop</SelectItem></SelectContent></Select>
+              <div className="flex gap-2">
+                <Select value={paymentProcessor} onValueChange={setPaymentProcessor} disabled={isNsfw}>
+                  <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="PAYPAL">PayPal</SelectItem><SelectItem value="DIVINITYCOIN">Divinity Payments</SelectItem><SelectItem value="WHOP">Whop</SelectItem></SelectContent>
+                </Select>
+                <Button type="button" variant="outline" onClick={handleSaveProcessor} disabled={savingProcessor || isNsfw} className="shrink-0">
+                  {savingProcessor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span className="ml-2">Save</span>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Switch processors anytime — saved immediately, no re-review needed.</p>
             </div>
             <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
               <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" /><div><p className="font-medium text-sm">NSFW Content</p><p className="text-xs text-muted-foreground">Divinity Payments only</p></div></div>

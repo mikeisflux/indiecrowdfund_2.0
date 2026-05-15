@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,17 +12,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DollarSign } from "lucide-react";
+import { DollarSign, Loader2, Save } from "lucide-react";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import { BookFormData } from "./types";
 
 interface StepPricingProps {
   formData: BookFormData;
   canEdit: boolean;
   isLive: boolean;
+  bookId: string;
   updateForm: (field: keyof BookFormData, value: string | boolean | string[] | number | null) => void;
 }
 
-export function StepPricing({ formData, canEdit, isLive, updateForm }: StepPricingProps) {
+export function StepPricing({ formData, canEdit, isLive, bookId, updateForm }: StepPricingProps) {
+  const [savingProcessor, setSavingProcessor] = useState(false);
+
+  const handleSaveProcessor = async () => {
+    setSavingProcessor(true);
+    try {
+      const res = await apiFetch(
+        `/api/creator/marketplace/books/${bookId}/payment-processor`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentProcessor: formData.paymentProcessor }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update payment processor");
+        return;
+      }
+      toast.success(
+        data.unchanged
+          ? "Payment processor already set"
+          : "Payment processor updated"
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setSavingProcessor(false);
+    }
+  };
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
@@ -69,23 +104,42 @@ export function StepPricing({ formData, canEdit, isLive, updateForm }: StepPrici
 
         <div className="space-y-2">
           <Label>Payment Processor</Label>
-          <Select
-            value={formData.paymentProcessor}
-            onValueChange={(value: "PAYPAL" | "DIVINITYCOIN" | "WHOP") => updateForm("paymentProcessor", value)}
-            disabled={formData.isNsfw || (!canEdit && !isLive)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="PAYPAL">PayPal (Card + PayPal Wallet)</SelectItem>
-              <SelectItem value="DIVINITYCOIN">Divinity Payments</SelectItem>
-              <SelectItem value="WHOP">Whop</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select
+              value={formData.paymentProcessor}
+              onValueChange={(value: "PAYPAL" | "DIVINITYCOIN" | "WHOP") => updateForm("paymentProcessor", value)}
+              disabled={formData.isNsfw}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PAYPAL">PayPal (Card + PayPal Wallet)</SelectItem>
+                <SelectItem value="DIVINITYCOIN">Divinity Payments</SelectItem>
+                <SelectItem value="WHOP">Whop</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveProcessor}
+              disabled={savingProcessor || formData.isNsfw}
+              className="shrink-0"
+            >
+              {savingProcessor ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span className="ml-2">Save</span>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Switch processors anytime — saved immediately, no re-review needed.
+          </p>
           {formData.isNsfw && (
             <p className="text-xs text-amber-500 dark:text-amber-400">
-              NSFW content requires Divinity Payments payment
+              NSFW content requires Divinity Payments
             </p>
           )}
         </div>

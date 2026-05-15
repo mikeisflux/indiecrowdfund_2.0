@@ -309,6 +309,7 @@ export default function EditBookPage() {
             formData={formData}
             canEdit={canEdit}
             isLive={isLive}
+            bookId={bookId}
             updateForm={updateForm}
           />
         )}
