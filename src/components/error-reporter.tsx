@@ -279,6 +279,13 @@ export function ErrorReporter() {
         requestUrl.includes("/api/messages") ||
         requestUrl.includes("/api/creator/dashboard") ||
         requestUrl.includes("/api/creator/email/threads") ||
+        // /api/collaborations is fired by the dashboard's
+        // CollaborationsTab on mount. When a user lands on /dashboard
+        // straight from /choose-role (signin / role selection flow),
+        // the session cookie may not be fully hydrated by the time
+        // the tab mounts, so the first fetch 401s. Self-healing on
+        // next render. Not actionable.
+        requestUrl.includes("/api/collaborations") ||
         // /api/chat/rooms/resolve is fired by the chat widget on every
         // project page so it can prefetch the room id when a logged-in
         // user clicks Message Creator. Visitors who aren't signed in
@@ -295,6 +302,13 @@ export function ErrorReporter() {
         (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/stats")) ||
         requestUrl.includes("/api/auth/session") ||
         requestUrl.includes("/api/auth/recaptcha") ||
+        // /api/user/notifications PATCH/DELETE 403 = CSRF cookie
+        // expired between page load and the click that fired the
+        // mark-as-read. The proxy now rolls the cookie forward on
+        // every request (30d maxAge) but pre-existing tabs still
+        // hold the old short-lived cookie. Self-healing on next
+        // page load. Not actionable.
+        requestUrl.includes("/api/user/notifications") ||
         (requestUrl.includes("/api/projects/") && requestUrl.endsWith("/comments")) ||
         // Survey respond 403: user logged into a different account than
         // the one that owns the pledge (or pledge is not COMPLETED).

@@ -845,15 +845,24 @@ export async function proxy(req: NextRequest) {
   response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
-  // Set CSRF cookie if not present (for all requests to enable form submission)
-  if (securitySettings.csrfProtection && !req.cookies.get(CSRF_COOKIE_NAME)) {
-    const csrfToken = generateCSRFToken();
-    response.cookies.set(CSRF_COOKIE_NAME, csrfToken, {
+  // CSRF cookie: set on every request (not just when missing) so the
+  // maxAge window rolls forward while the user is active. The earlier
+  // "set only when missing" path left long-lived tabs in a window
+  // where the cookie expired in the browser before the next page load
+  // — the very next state-changing fetch would 403 on the proxy's
+  // double-submit check. Rolling refresh keeps the token alive for as
+  // long as the user is making requests. Token value is preserved if
+  // an existing cookie is present (rotation isn't needed for
+  // double-submit; we just need cookie==header).
+  if (securitySettings.csrfProtection) {
+    const existingToken = req.cookies.get(CSRF_COOKIE_NAME)?.value;
+    const tokenToSet = existingToken || generateCSRFToken();
+    response.cookies.set(CSRF_COOKIE_NAME, tokenToSet, {
       httpOnly: false, // Client needs to read this for form submission
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24 * 30, // 30 days rolling
     });
   }
 
