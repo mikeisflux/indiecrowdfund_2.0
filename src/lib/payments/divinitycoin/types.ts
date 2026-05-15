@@ -26,6 +26,10 @@ export interface DivinityCoinWebhookRequest {
     refundId?: string;
     amount?: number;
     reason?: string;
+    // DC's current `payment.failed` schema sends the decline message in
+    // `error`; older payloads (and our own outbound `refund.request`)
+    // used `reason`. Read both for resilience.
+    error?: string;
     originalTransactionId?: string; // DivinityCoin's transaction ID from when the card was redeemed
     originalCardCode?: string; // The card code that was redeemed
     // Payment event fields (new seamless flow)

@@ -213,6 +213,27 @@ export async function POST(req: NextRequest) {
         pledgeLogger.warn({ correlationId, err: e instanceof Error ? e.message : String(e) }, "Failed to parse campaign attribution cookie");
       }
 
+      // Drop stale campaign attribution before it FK-violates pledge.create.
+      // Email campaigns get deleted / hard-cleaned, but the `ec_source`
+      // cookie sits in backers' browsers for a year. When the cookie
+      // references a campaign that no longer exists, pledge.create fails
+      // on Pledge.sourceCampaignId_fkey and the whole checkout 500s — for
+      // an analytics-only field. Verify-then-stamp keeps the attribution
+      // when valid and silently drops it when not.
+      if (sourceCampaignId) {
+        const campaignExists = await db.emailCampaign.findFirst({
+          where: { id: sourceCampaignId },
+          select: { id: true },
+        });
+        if (!campaignExists) {
+          pledgeLogger.warn(
+            { correlationId, campaignId: sourceCampaignId },
+            "Campaign attribution cookie references a missing campaign; ignoring"
+          );
+          sourceCampaignId = undefined;
+        }
+      }
+
       // Check payment processor and route accordingly
       if (project.paymentProcessor === "DIVINITYCOIN") {
         // Check for existing COMPLETED pledge (user already backed this project)

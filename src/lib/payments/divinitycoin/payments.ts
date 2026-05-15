@@ -723,7 +723,11 @@ export async function handlePaymentSucceeded(
 export async function handlePaymentFailed(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
-  const { pledgeId, paymentId, reason } = data;
+  const { pledgeId, paymentId } = data;
+  // DC's current schema sends the decline message in `error`; the older
+  // payload (and our own webhook docs) used `reason`. Accept either so
+  // we don't silently lose the failure reason.
+  const reason = data.error || data.reason;
   const purchaseId = data.purchaseId as string | undefined;
 
   // Handle marketplace purchase failure
