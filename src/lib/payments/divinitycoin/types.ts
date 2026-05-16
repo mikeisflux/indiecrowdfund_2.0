@@ -14,7 +14,21 @@ export type DivinityCoinEventType =
   | "refund.request"
   | "payment.succeeded"
   | "payment.failed"
-  | "refund.completed";
+  // SCA / 3DS backstop (DC partner API 2026-05-15). Fires when DC's
+  // synchronous response to charge-saved-payment-method got lost (server
+  // crash, network blip) and the PaymentIntent enters requires_action
+  // server-side. Includes the clientSecret so we can drive the challenge
+  // from a recovery surface if needed.
+  | "payment.requires_action"
+  | "refund.completed"
+  // White-label hosted checkout session events (DC partner API 2026-05-15).
+  // At-most-once on DC's side so they're safe to dedupe against the
+  // existing payment.* events for PAYMENT-mode sessions, and they are
+  // the ONLY signal for SETUP-mode sessions (no payment.* fires there).
+  | "checkout.completed"
+  | "checkout.failed"
+  | "checkout.expired"
+  | "checkout.canceled";
 
 // Webhook request structure from DivinityCoin
 export interface DivinityCoinWebhookRequest {
@@ -40,6 +54,15 @@ export interface DivinityCoinWebhookRequest {
     stripePaymentIntentId?: string; // DC's Stripe PI ID
     giftCardCode?: string; // Auto-generated gift card (for compliance)
     email?: string;
+    // Hosted checkout + requires_action backstop (DC partner API 2026-05-15)
+    sessionId?: string;          // cs_... for checkout.* events
+    mode?: "payment" | "setup";  // checkout.* session mode
+    paymentIntentId?: string;    // pi_... — set on requires_action + checkout.completed (PAYMENT mode)
+    setupIntentId?: string;      // seti_... — set on checkout.completed (SETUP mode)
+    paymentMethodId?: string;    // pm_... — set on checkout.completed when status=complete
+    clientSecret?: string;       // present on payment.requires_action for recovery
+    nextActionType?: "use_stripe_sdk" | "redirect_to_url" | null;
+    type?: "initial" | "upcharge"; // present on payment.requires_action
     [key: string]: unknown;
   };
 }
@@ -146,4 +169,75 @@ export interface ChargeSavedPaymentMethodResult {
   declineCode?: string;       // e.g. "insufficient_funds", "do_not_honor"
   clientSecret?: string;      // for frontend recovery on 3DS / requires_action
   error?: string;             // cardholder-friendly message
+}
+
+// ============================================================
+// White-label hosted checkout (DC partner API 2026-05-15)
+// ============================================================
+//
+// DC hosts the card capture surface at divinitycoin.com/checkout/cs_...
+// We create a session, redirect the user, they complete (or save) a
+// card on DC's branded page, and DC redirects them back to our
+// returnUrl with ?session_id=... — then we call get-checkout-session
+// to learn the outcome. SETUP mode also yields a paymentMethodId we
+// can later off-session-charge.
+//
+// PAYMENT-mode sessions still fire the existing payment.succeeded /
+// payment.failed webhooks (the underlying PaymentIntent is created
+// up-front), so refund + bookkeeping behave identically. SETUP-mode
+// sessions only fire the new checkout.* events.
+
+export type DcCheckoutMode = "payment" | "setup";
+
+export type DcCheckoutStatus =
+  | "pending"
+  | "complete"
+  | "failed"
+  | "expired"
+  | "canceled";
+
+export interface CreateCheckoutSessionInput {
+  mode?: DcCheckoutMode;            // default "payment"
+  platformUserId: string;
+  email: string;
+  returnUrl: string;
+  cancelUrl?: string;
+  partnerLogoUrl?: string;
+  description?: string;
+  expiresInMinutes?: number;        // 1-1440, default 30
+  // PAYMENT-mode only:
+  amount?: number;                  // cents, >0
+  currency?: string;                // default "usd"
+  pledgeId?: string;
+  projectId?: string;
+}
+
+export interface CreateCheckoutSessionResult {
+  success: true;
+  sessionId: string;                // cs_...
+  checkoutUrl: string;              // https://divinitycoin.com/checkout/cs_...
+  expiresAt: string;                // ISO
+}
+
+export interface CheckoutSessionDetails {
+  sessionId: string;
+  status: DcCheckoutStatus;
+  mode: DcCheckoutMode;
+  amount: number | null;            // null in setup mode
+  currency: string;
+  pledgeId: string | null;          // null in setup mode
+  projectId: string | null;         // null in setup mode
+  paymentIntentId: string | null;   // set in payment mode
+  setupIntentId: string | null;     // set in setup mode
+  paymentMethodId: string | null;   // set once status=complete
+  platformUserId: string;
+  email: string;
+  expiresAt: string;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface GetCheckoutSessionResult {
+  success: true;
+  session: CheckoutSessionDetails;
 }

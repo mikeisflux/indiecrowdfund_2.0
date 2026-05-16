@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { metrics } from "@/lib/metrics";
 import { getDivinityCoinConfig, getDivinityCoinWebhookSecret, paymentsDivinitycoinLogger } from "./config";
 import type {
   DivinityCoinWebhookRequest,
@@ -13,7 +14,12 @@ import {
   handleRefundRequest,
   handlePaymentSucceeded,
   handlePaymentFailed,
+  handlePaymentRequiresAction,
   handleRefundCompleted,
+  handleCheckoutCompleted,
+  handleCheckoutFailed,
+  handleCheckoutExpired,
+  handleCheckoutCanceled,
 } from "./payments";
 
 /**
@@ -119,6 +125,11 @@ export async function handleDivinityCoinWebhook(
 ): Promise<TestPingResponse | CardValidateResponse | CardRedeemResponse | RefundRequestResponse | PaymentEventResponse> {
   // Note: event is already logged in the route handler — no duplicate log here
 
+  // Tally every event by name so the dashboard can see hosted-checkout
+  // adoption ramp + flag any sudden drop-off in payment.succeeded
+  // during the rollout.
+  metrics.dcWebhookEvents.inc({ event: request.event });
+
   switch (request.event) {
     case "test.ping":
       return handleTestPing();
@@ -190,11 +201,41 @@ export async function handleDivinityCoinWebhook(
       }
       return handlePaymentFailed(request.data);
 
+    case "payment.requires_action":
+      if (!request.data) {
+        return { success: false, error: "Payment data is required" };
+      }
+      return handlePaymentRequiresAction(request.data);
+
     case "refund.completed":
       if (!request.data) {
         return { success: false, error: "Refund data is required" };
       }
       return handleRefundCompleted(request.data);
+
+    case "checkout.completed":
+      if (!request.data) {
+        return { success: false, error: "Checkout data is required" };
+      }
+      return handleCheckoutCompleted(request.data);
+
+    case "checkout.failed":
+      if (!request.data) {
+        return { success: false, error: "Checkout data is required" };
+      }
+      return handleCheckoutFailed(request.data);
+
+    case "checkout.expired":
+      if (!request.data) {
+        return { success: false, error: "Checkout data is required" };
+      }
+      return handleCheckoutExpired(request.data);
+
+    case "checkout.canceled":
+      if (!request.data) {
+        return { success: false, error: "Checkout data is required" };
+      }
+      return handleCheckoutCanceled(request.data);
 
     default:
       paymentsDivinitycoinLogger.warn(`[DivinityCoin Webhook] Unknown event type: ${request.event}`);

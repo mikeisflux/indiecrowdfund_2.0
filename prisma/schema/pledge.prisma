@@ -38,6 +38,14 @@ model Pledge {
   // and on non-DC pledges.
   divinityCoinSetupIntentId    String?  @unique
   divinityCoinPaymentMethodId  String?
+  // White-label hosted checkout (DC partner API 2026-05-15): when set,
+  // this pledge was created through DC's hosted card-capture page at
+  // divinitycoin.com/checkout/cs_... instead of inline Stripe Elements
+  // on our domain. Populated by /api/pledges when the
+  // DIVINITYCOIN_HOSTED_CHECKOUT flag is on (Phase 2+). The
+  // checkout.completed webhook + the user's return-from-DC callback
+  // both look up the pledge by this id.
+  divinityCoinCheckoutSessionId String?  @unique
 
   // PayPal fields
   paypalOrderId            String?      @unique

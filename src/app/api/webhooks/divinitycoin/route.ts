@@ -158,6 +158,57 @@ export async function GET() {
             amount: "number",
           },
         },
+        {
+          event: "payment.requires_action",
+          description: "SCA / 3DS backstop. Fires when a charge-saved-payment-method PaymentIntent enters requires_action and we may have missed the synchronous response. Includes the clientSecret for recovery.",
+          payloadRequired: true,
+          payloadFormat: {
+            pledgeId: "string (recommended)",
+            paymentIntentId: "string (Stripe PI id)",
+            amount: "number (cents)",
+            type: "string ('initial' | 'upcharge')",
+            clientSecret: "string",
+            nextActionType: "string ('use_stripe_sdk' | 'redirect_to_url' | null)",
+          },
+        },
+        {
+          event: "checkout.completed",
+          description: "White-label hosted checkout session reached terminal success. PAYMENT mode also fires payment.succeeded; SETUP mode only fires this event.",
+          payloadRequired: true,
+          payloadFormat: {
+            sessionId: "string (cs_... — required)",
+            mode: "string ('payment' | 'setup')",
+            paymentIntentId: "string (PAYMENT mode)",
+            setupIntentId: "string (SETUP mode)",
+            paymentMethodId: "string (pm_... once status=complete)",
+            pledgeId: "string (PAYMENT mode)",
+          },
+        },
+        {
+          event: "checkout.failed",
+          description: "Hosted checkout session ended in permanent failure (card declined and DC gave up). Marks the linked pledge as FAILED.",
+          payloadRequired: true,
+          payloadFormat: {
+            sessionId: "string (cs_... — required)",
+            error: "string (failure reason)",
+          },
+        },
+        {
+          event: "checkout.expired",
+          description: "Hosted checkout session passed its expiresAt without completion. Logged for visibility; abandoned-cart cron handles cleanup.",
+          payloadRequired: true,
+          payloadFormat: {
+            sessionId: "string (cs_... — required)",
+          },
+        },
+        {
+          event: "checkout.canceled",
+          description: "User cancelled the hosted checkout session. Logged for visibility; abandoned-cart cron handles cleanup.",
+          payloadRequired: true,
+          payloadFormat: {
+            sessionId: "string (cs_... — required)",
+          },
+        },
       ],
       signatureHeader: "X-Webhook-Signature",
       signatureFormat: "t=timestamp,v1=hmac_sha256_signature",

@@ -800,6 +800,280 @@ export async function handlePaymentFailed(
 }
 
 /**
+ * Handle payment.requires_action webhook event.
+ *
+ * SCA / 3DS backstop. DC fires this when an off-session
+ * charge-saved-payment-method PaymentIntent enters requires_action
+ * server-side AND we may have missed the synchronous response (server
+ * crash, network blip, etc.). Includes the clientSecret so we could
+ * mount a recovery surface — but in Phase 1 we just persist the
+ * recovery context on the pledge so an admin / future recovery flow
+ * can pick it up. Phase 4 hooks this into a hosted-checkout
+ * recovery redirect.
+ *
+ * Idempotent: dedupes on pledge.metadata.dcRequiresAction. Multiple
+ * deliveries of the same event don't re-stamp the field or re-email
+ * the backer.
+ */
+export async function handlePaymentRequiresAction(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>
+): Promise<PaymentEventResponse> {
+  const pledgeId = data.pledgeId || (data.pledge_id as string | undefined);
+  const paymentIntentId = data.paymentIntentId
+    || (data.stripePaymentIntentId as string | undefined)
+    || (data.paymentId as string | undefined);
+  const clientSecret = data.clientSecret;
+  const nextActionType = (data.nextActionType ?? null) as string | null;
+  const upchargeOrInitial = (data.type ?? "initial") as string;
+
+  paymentsDivinitycoinLogger.warn(
+    {
+      pledgeId,
+      paymentIntentId,
+      nextActionType,
+      type: upchargeOrInitial,
+      hasClientSecret: !!clientSecret,
+    },
+    "[DivinityCoin] payment.requires_action received — SCA challenge needed"
+  );
+
+  // Find the pledge. The event carries pledgeId on charge-saved-payment-method
+  // calls (we set it as the idempotency key); fall back to lookup-by-pi
+  // for hosted-checkout sessions or any payload that omits pledgeId.
+  let pledge: { id: string; status: string; metadata: unknown } | null = null;
+  if (pledgeId) {
+    pledge = await db.pledge.findFirst({
+      where: { id: pledgeId, deletedAt: null },
+      select: { id: true, status: true, metadata: true },
+    });
+  }
+  if (!pledge && paymentIntentId) {
+    pledge = await db.pledge.findFirst({
+      where: { divinityCoinPaymentId: paymentIntentId, deletedAt: null },
+      select: { id: true, status: true, metadata: true },
+    });
+  }
+
+  if (!pledge) {
+    paymentsDivinitycoinLogger.info(
+      { pledgeId, paymentIntentId },
+      "[DivinityCoin] payment.requires_action for unknown pledge — acknowledged, no-op"
+    );
+    return { success: true, message: "No pledge matched; acknowledged" };
+  }
+
+  // Idempotent no-op on terminal states. A requires_action that arrives
+  // after the pledge has already completed (e.g. challenge was resolved
+  // in-band before the webhook landed) is informational only.
+  if (pledge.status !== "PENDING") {
+    paymentsDivinitycoinLogger.info(
+      { pledgeId: pledge.id, status: pledge.status },
+      "[DivinityCoin] payment.requires_action on non-PENDING pledge — no-op"
+    );
+    return { success: true, message: `Pledge already ${pledge.status}` };
+  }
+
+  // Dedupe: if we've already stamped this on the pledge, skip the
+  // (idempotent) metadata write and avoid log spam. Tracks the most
+  // recent payment intent so a fresh requires_action on a retry
+  // re-stamps with the new intent's recovery info.
+  const existingMeta = (typeof pledge.metadata === "object" && pledge.metadata !== null)
+    ? pledge.metadata as Record<string, unknown>
+    : {};
+  const existingRequiresAction = existingMeta.dcRequiresAction as Record<string, unknown> | undefined;
+  if (existingRequiresAction && existingRequiresAction.paymentIntentId === paymentIntentId) {
+    paymentsDivinitycoinLogger.info(
+      { pledgeId: pledge.id, paymentIntentId },
+      "[DivinityCoin] payment.requires_action already recorded — skipping"
+    );
+    return { success: true, message: "Already recorded" };
+  }
+
+  await db.pledge.update({
+    where: { id: pledge.id },
+    data: {
+      metadata: {
+        ...existingMeta,
+        dcRequiresAction: {
+          paymentIntentId: paymentIntentId || null,
+          clientSecret: clientSecret || null,
+          nextActionType,
+          type: upchargeOrInitial,
+          detectedAt: new Date().toISOString(),
+          source: "divinitycoin_webhook",
+        },
+      },
+    },
+  });
+
+  paymentsDivinitycoinLogger.info(
+    { pledgeId: pledge.id, paymentIntentId },
+    "[DivinityCoin] payment.requires_action recorded on pledge metadata"
+  );
+
+  // Email recovery (intentionally skipped in Phase 1 — see WhiteLabelFlip.md
+  // decision: a recovery link without a recovery destination is noise.
+  // Phase 4 wires this into a hosted-checkout setup-session redirect.)
+
+  return { success: true, message: "requires_action recorded" };
+}
+
+/**
+ * Handle checkout.completed webhook event.
+ *
+ * Fires for white-label hosted checkout sessions when the user finishes
+ * card capture (PAYMENT mode) or save-a-card (SETUP mode) on
+ * divinitycoin.com. PAYMENT-mode sessions also fire payment.succeeded
+ * (the underlying PI is created up-front) — both handlers converge on
+ * the same commit path via CAS in Phase 2, so dedupe is automatic.
+ *
+ * Phase 1: stub that logs + acknowledges. No pledges have
+ * divinityCoinCheckoutSessionId set yet (Phase 2 starts writing it),
+ * so the lookup will always return null and the handler is a clean
+ * no-op. Phase 2 swaps the TODO for a call to the shared
+ * commitDcPledge() helper.
+ */
+export async function handleCheckoutCompleted(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>
+): Promise<PaymentEventResponse> {
+  const sessionId = data.sessionId;
+  paymentsDivinitycoinLogger.info(
+    {
+      sessionId,
+      mode: data.mode,
+      paymentIntentId: data.paymentIntentId,
+      setupIntentId: data.setupIntentId,
+      paymentMethodId: data.paymentMethodId,
+      pledgeId: data.pledgeId,
+    },
+    "[DivinityCoin] checkout.completed received"
+  );
+
+  if (!sessionId) {
+    return { success: false, error: "sessionId required" };
+  }
+
+  const pledge = await db.pledge.findFirst({
+    where: { divinityCoinCheckoutSessionId: sessionId, deletedAt: null },
+    select: { id: true, status: true },
+  });
+
+  if (!pledge) {
+    paymentsDivinitycoinLogger.info(
+      { sessionId },
+      "[DivinityCoin] checkout.completed for unknown session — no pledge has this id (expected in Phase 1)"
+    );
+    return { success: true, message: "No pledge with this session id" };
+  }
+
+  if (pledge.status !== "PENDING") {
+    paymentsDivinitycoinLogger.info(
+      { pledgeId: pledge.id, status: pledge.status },
+      "[DivinityCoin] checkout.completed: pledge already terminal — no-op"
+    );
+    return { success: true, message: `Pledge already ${pledge.status}` };
+  }
+
+  // Phase 2 wires the commit here:
+  //   await commitDcPledge(pledge.id, { paymentIntentId, paymentMethodId, setupIntentId, mode });
+  // Phase 1 is a logging stub. PAYMENT-mode pledges will still complete
+  // via the existing payment.succeeded handler; SETUP-mode pledges
+  // aren't created until Phase 2.
+  paymentsDivinitycoinLogger.info(
+    { pledgeId: pledge.id },
+    "[DivinityCoin] checkout.completed: Phase 1 stub — commit lands in Phase 2"
+  );
+  return { success: true, message: "Phase 1: acknowledged, no commit yet" };
+}
+
+/**
+ * Handle checkout.failed webhook event.
+ *
+ * Hosted checkout session ended in a permanent failure (e.g. card
+ * declined and DC gave up). Marks the pledge FAILED so it surfaces
+ * in the backer dashboard with the right state and so the abandoned-
+ * cart cleanup doesn't double-handle it. Idempotent.
+ */
+export async function handleCheckoutFailed(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>
+): Promise<PaymentEventResponse> {
+  const sessionId = data.sessionId;
+  const reason = data.error || data.reason || "Hosted checkout failed";
+
+  paymentsDivinitycoinLogger.info(
+    { sessionId, reason },
+    "[DivinityCoin] checkout.failed received"
+  );
+
+  if (!sessionId) {
+    return { success: false, error: "sessionId required" };
+  }
+
+  const pledge = await db.pledge.findFirst({
+    where: { divinityCoinCheckoutSessionId: sessionId, deletedAt: null },
+    select: { id: true, status: true },
+  });
+
+  if (!pledge) {
+    return { success: true, message: "No pledge with this session id" };
+  }
+
+  if (pledge.status !== "PENDING") {
+    return { success: true, message: `Pledge already ${pledge.status}` };
+  }
+
+  // CAS for idempotent webhook retries
+  await db.pledge.updateMany({
+    where: { id: pledge.id, status: "PENDING", deletedAt: null },
+    data: {
+      status: "FAILED",
+      lastFailureReason: reason,
+    },
+  });
+
+  paymentsDivinitycoinLogger.info(
+    { pledgeId: pledge.id },
+    "[DivinityCoin] checkout.failed: pledge marked FAILED"
+  );
+  return { success: true, message: "Pledge marked as failed" };
+}
+
+/**
+ * Handle checkout.expired webhook event.
+ *
+ * Session passed its expiresAt (default 30 min) without completion.
+ * Logged for visibility; the existing abandoned-cart cleanup cron
+ * handles the actual pledge teardown so we don't fight it. Idempotent.
+ */
+export async function handleCheckoutExpired(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>
+): Promise<PaymentEventResponse> {
+  const sessionId = data.sessionId;
+  paymentsDivinitycoinLogger.info(
+    { sessionId },
+    "[DivinityCoin] checkout.expired received — abandoned-cart cron will sweep"
+  );
+  return { success: true, message: "Acknowledged; cleanup handled by cron" };
+}
+
+/**
+ * Handle checkout.canceled webhook event.
+ *
+ * User clicked cancel on the hosted page. Same handling as expired —
+ * log and let the abandoned-cart cron clean up.
+ */
+export async function handleCheckoutCanceled(
+  data: NonNullable<DivinityCoinWebhookRequest["data"]>
+): Promise<PaymentEventResponse> {
+  const sessionId = data.sessionId;
+  paymentsDivinitycoinLogger.info(
+    { sessionId },
+    "[DivinityCoin] checkout.canceled received — abandoned-cart cron will sweep"
+  );
+  return { success: true, message: "Acknowledged; cleanup handled by cron" };
+}
+
+/**
  * Handle refund.completed webhook event
  * DivinityCoin calls this when a refund has been processed on their end
  * (e.g. Stripe refund completed for a card payment).

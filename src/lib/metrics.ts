@@ -188,6 +188,10 @@ export const metrics = {
     "rate_limit_hits_total",
     "Total rate limit hits"
   ),
+  dcWebhookEvents: new Counter(
+    "dc_webhook_events_total",
+    "Total DivinityCoin webhook events received, by event type"
+  ),
 };
 
 /**

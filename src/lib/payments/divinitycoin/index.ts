@@ -16,6 +16,13 @@ export type {
   DetachPaymentMethodResult,
   ChargeSavedPaymentMethodInput,
   ChargeSavedPaymentMethodResult,
+  // White-label hosted checkout types (DC partner API 2026-05-15)
+  DcCheckoutMode,
+  DcCheckoutStatus,
+  CreateCheckoutSessionInput,
+  CreateCheckoutSessionResult,
+  CheckoutSessionDetails,
+  GetCheckoutSessionResult,
 } from "./types";
 
 export {
@@ -33,7 +40,12 @@ export {
   handleRefundRequest,
   handlePaymentSucceeded,
   handlePaymentFailed,
+  handlePaymentRequiresAction,
   handleRefundCompleted,
+  handleCheckoutCompleted,
+  handleCheckoutFailed,
+  handleCheckoutExpired,
+  handleCheckoutCanceled,
 } from "./payments";
 
 export {
@@ -54,3 +66,12 @@ export {
   verifyDcPayment,
   getDcSetupIntent,
 } from "./saved-cards";
+
+// White-label hosted checkout helpers (DC partner API 2026-05-15).
+// See ./checkout-sessions.ts. Phase 1 ships the helpers + webhook
+// handlers; no caller wires the create flow until Phase 2 lands
+// behind the DIVINITYCOIN_HOSTED_CHECKOUT env flag.
+export {
+  createDcCheckoutSession,
+  getDcCheckoutSession,
+} from "./checkout-sessions";

@@ -73,41 +73,45 @@ under any combination of triggers.
 Goal: receive the new webhook events, add lib helpers, no UI / pledge
 flow change.
 
-- [ ] Add `divinityCoinCheckoutSessionId String? @unique` to Pledge
+- [x] Add `divinityCoinCheckoutSessionId String? @unique` to Pledge
       model in `prisma/schema/pledge.prisma`
-- [ ] Hand-written SQL migration:
+- [x] Hand-written SQL migration:
       `prisma/migrations/add_dc_checkout_session.sql` — single
       `ALTER TABLE "Pledge" ADD COLUMN "divinityCoinCheckoutSessionId" TEXT`
       + `CREATE UNIQUE INDEX`. Instant, no table rewrite, existing
       pledges get NULL
-- [ ] Create `src/lib/payments/divinitycoin/checkout-sessions.ts`
+- [x] Create `src/lib/payments/divinitycoin/checkout-sessions.ts`
       with `createDcCheckoutSession()` + `getDcCheckoutSession()`
       wrappers around `callDivinityCoinAPI`. Plain helpers; no
       callers yet
-- [ ] Extend `src/lib/payments/divinitycoin/types.ts` with
+- [x] Extend `src/lib/payments/divinitycoin/types.ts` with
       `CheckoutCompletedEvent`, `CheckoutFailedEvent`,
       `CheckoutExpiredEvent`, `CheckoutCanceledEvent`,
       `PaymentRequiresActionEvent` payload types
-- [ ] Add 5 new cases to the switch in
+- [x] Add 5 new cases to the switch in
       `src/lib/payments/divinitycoin/webhooks.ts:122` —
       `payment.requires_action`, `checkout.completed`,
       `checkout.failed`, `checkout.expired`, `checkout.canceled`
-- [ ] Implement handlers in `src/lib/payments/divinitycoin/payments.ts`:
+- [x] Implement handlers in `src/lib/payments/divinitycoin/payments.ts`:
       `handlePaymentRequiresAction`, `handleCheckoutCompleted`,
       `handleCheckoutFailed`, `handleCheckoutExpired`,
       `handleCheckoutCanceled`. All idempotent: check pledge status,
       no-op if already `COMPLETED` / `FAILED` / `CANCELLED`
-- [ ] `handlePaymentRequiresAction` persists the clientSecret to the
-      pledge metadata and sends a recovery email (no recovery page
-      yet — see decisions above)
-- [ ] Extend the `eventTypes` self-documentation array in
+- [x] `handlePaymentRequiresAction` persists the clientSecret to the
+      pledge metadata. Recovery email **deferred** to Phase 4: a
+      "your card needs verification" email with no recovery
+      destination is noise, and Phase 4 wires the email link into a
+      hosted-checkout setup session anyway. Admin can act on the
+      persisted state if intervention is needed before then.
+- [x] Extend the `eventTypes` self-documentation array in
       `src/app/api/webhooks/divinitycoin/route.ts:80-160` so the GET
       response advertises the new events
-- [ ] Add Prometheus counters in
-      `src/lib/payments/divinitycoin/payments.ts`:
-      `dcWebhookEventsTotal{event}` for visibility
-- [ ] Lint + typecheck clean
-- [ ] Commit + push (standalone commit, separate from Phase 2)
+- [x] Add Prometheus counters in `src/lib/metrics.ts`:
+      `dcWebhookEvents{event}` — incremented in
+      `src/lib/payments/divinitycoin/webhooks.ts` before the dispatch
+      switch so every event is tallied regardless of handler outcome
+- [x] Lint + typecheck clean
+- [x] Commit + push (standalone commit, separate from Phase 2)
 
 ---
 
