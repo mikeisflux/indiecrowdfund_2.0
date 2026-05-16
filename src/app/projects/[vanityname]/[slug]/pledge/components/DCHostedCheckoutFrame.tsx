@@ -1,37 +1,42 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { flushSync } from "react-dom";
+import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/fetch-utils";
 
-// Embeds DC's white-label hosted checkout page
-// (https://divinitycoin.com/checkout/cs_...) inside an iframe on our
+// Embeds DC's white-label hosted checkout page in an iframe on our
 // pledge step so the user never visually leaves indiecrowdfund.com.
 //
-// Why an iframe instead of a full-page redirect:
-//   - UX continuity: the pledge wizard surrounds the card form just
-//     like the prior Stripe-Elements integration did. No third-party
-//     URL in the address bar, no jarring nav transition.
-//   - Stripe stays hidden from our origin's network tab: the iframe
-//     loads divinitycoin.com, and any Stripe.js it pulls in is on
-//     DC's origin, not ours.
+// DC drives the embed via a postMessage protocol — no polling on our
+// side. Messages share `namespace: "divinitycoin-checkout"` and
+// `sessionId`. Three event types:
+//   - "ready"    — iframe mounted, ok to drop the loading veil.
+//   - "resize"   — content height changed; mirror onto the iframe.
+//   - "complete" — session reached a terminal state; payload includes
+//                  status ("complete" | "failed" | "expired" |
+//                  "canceled") and a redirectUrl.
 //
-// Completion model: we poll
-// POST /api/pledges/[id]/confirm-dc-checkout every POLL_INTERVAL_MS.
-// That route calls DC's get-checkout-session and returns:
-//   200 + { ok: true }          → success, fire onSuccess
-//   202 + { status: "pending" } → still in-flight, keep polling
-//   400 + { status: "failed"|"expired"|"canceled" } → fire onFailure
+// Default DC behavior on complete: top-nav the browser to redirectUrl
+// (which would unmount the iframe + reload the whole page). To keep
+// the user inline on our pledge wizard's success step, we
+// synchronously remove the iframe from the DOM the moment the
+// "complete" message fires — DC's docs confirm a synchronous handler
+// runs before their nav and removal aborts it. We use ReactDOM.flushSync
+// so the React unmount commits in the same tick the message handler
+// runs in.
 //
-// Iframe-blocked fallback: if DC ever sets X-Frame-Options: DENY or
-// a frame-ancestors that doesn't include indiecrowdfund.com, the
-// iframe paints blank and the user gets stuck. Below the iframe we
-// always show a "Trouble loading? Open on DivinityCoin" link that
-// does a full-page redirect — same destination, just without the
-// embed. Belt-and-suspenders: an onError-style detector kicks the
-// user there automatically if the iframe hasn't reported a load
-// event after IFRAME_DETECT_MS.
+// Mobile WebKit (iOS Safari + in-app webviews) is handled entirely
+// inside DC's iframe — they detect UA, render a "Continue securely"
+// button, open the same checkout URL in a top-level popup, and post
+// the same "complete" message back from the popup. We don't need to
+// detect platform or change UI.
+//
+// The "Open in a new tab" fallback link below the iframe is a
+// belt-and-suspenders escape for users who hit unusual browser
+// behavior — same checkout URL, just as a top-level redirect. On
+// return, the existing handleSuccessRedirect picks up DC's
+// ?session_id query param and dispatches /confirm-dc-checkout there.
 
 interface DCHostedCheckoutFrameProps {
   checkoutUrl: string;
@@ -41,8 +46,28 @@ interface DCHostedCheckoutFrameProps {
   onFailure: (message: string) => void;
 }
 
-const POLL_INTERVAL_MS = 3000;
-const IFRAME_DETECT_MS = 12000; // give DC ~12s to paint before assuming a frame block
+const DC_ORIGIN = "https://divinitycoin.com";
+const DC_NAMESPACE = "divinitycoin-checkout";
+// Initial height before DC's first resize event lands. DC's snippet
+// example uses 480px; we match.
+const INITIAL_IFRAME_HEIGHT = 480;
+
+type DcMessage =
+  | { namespace: typeof DC_NAMESPACE; type: "ready"; sessionId: string }
+  | { namespace: typeof DC_NAMESPACE; type: "resize"; sessionId: string; height: number }
+  | {
+      namespace: typeof DC_NAMESPACE;
+      type: "complete";
+      sessionId: string;
+      status: "complete" | "failed" | "expired" | "canceled";
+      redirectUrl?: string;
+    };
+
+function isDcMessage(data: unknown): data is DcMessage {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return d.namespace === DC_NAMESPACE && typeof d.type === "string";
+}
 
 export default function DCHostedCheckoutFrame({
   checkoutUrl,
@@ -51,130 +76,135 @@ export default function DCHostedCheckoutFrame({
   onSuccess,
   onFailure,
 }: DCHostedCheckoutFrameProps) {
-  const [iframeLoaded, setIframeLoaded] = useState(false);
-  const [iframeMaybeBlocked, setIframeMaybeBlocked] = useState(false);
+  const [iframeReady, setIframeReady] = useState(false);
+  const [iframeHeight, setIframeHeight] = useState(INITIAL_IFRAME_HEIGHT);
+  // Drives the iframe's presence in JSX. flushSync({ () => setShowIframe(false) })
+  // commits the unmount synchronously in the same tick the message
+  // arrives, which aborts DC's top-nav.
+  const [showIframe, setShowIframe] = useState(true);
+  // Latch so a late-arriving duplicate complete (rare DC retry) doesn't
+  // double-fire onSuccess / onFailure.
   const finishedRef = useRef(false);
 
-  // Pings the confirm endpoint to check if DC's session is in a
-  // terminal state yet. Returns true if polling should stop (terminal
-  // outcome reached or non-retriable error), false to keep polling.
-  const checkOnce = useCallback(async (): Promise<boolean> => {
-    if (finishedRef.current) return true;
-    try {
-      const res = await apiFetch(`/api/pledges/${pledgeId}/confirm-dc-checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
-      });
-      const data = await res.json().catch(() => ({}));
+  const handleComplete = useCallback(
+    async (status: "complete" | "failed" | "expired" | "canceled") => {
+      if (finishedRef.current) return;
+      finishedRef.current = true;
 
-      if (res.ok && data.ok) {
-        finishedRef.current = true;
-        onSuccess();
-        return true;
+      // For terminal failure states the message itself is authoritative —
+      // no server verification needed, just surface the reason.
+      if (status === "failed") {
+        onFailure("Your card couldn't be processed. Please try a different card.");
+        return;
+      }
+      if (status === "expired") {
+        onFailure("Checkout session expired. Please start a new pledge.");
+        return;
+      }
+      if (status === "canceled") {
+        onFailure("Checkout was cancelled. Your pledge wasn't completed.");
+        return;
       }
 
-      // 202 = still pending. Keep polling silently.
-      if (res.status === 202) return false;
-
-      // 400 with a terminal status — fail the flow with the
-      // server-provided message (already cardholder-friendly).
-      if (!res.ok && (data.status === "failed" || data.status === "expired" || data.status === "canceled")) {
-        finishedRef.current = true;
-        onFailure(data.message || `Checkout ${data.status}`);
-        return true;
+      // status === "complete". Server-verify via /confirm-dc-checkout —
+      // for SETUP-mode this also runs commitDcPledge so the project
+      // counters bump before we transition the wizard. For PAYMENT-mode
+      // the route just acknowledges; payment.succeeded webhook commits
+      // independently. Either way, ok=true means it's safe to show
+      // success; the checkout.completed webhook is an idempotent
+      // parallel commit.
+      try {
+        const res = await apiFetch(`/api/pledges/${pledgeId}/confirm-dc-checkout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.ok) {
+          onSuccess();
+          return;
+        }
+        // 202 pendingWebhook (PAYMENT mode race with webhook) — treat
+        // as success; webhook commits within a couple seconds.
+        if (res.status === 202) {
+          onSuccess();
+          return;
+        }
+        onFailure(data.message || data.error || "We couldn't finalize your pledge. Please contact support.");
+      } catch (err) {
+        onFailure(err instanceof Error ? err.message : "Network error finalizing pledge.");
       }
+    },
+    [pledgeId, sessionId, onSuccess, onFailure]
+  );
 
-      // 502 (DC down) or other transient — keep polling and let
-      // the user retry; the timeout in the parent will eventually
-      // surface a generic error.
-      return false;
-    } catch {
-      // Network blip — keep polling.
-      return false;
-    }
-  }, [pledgeId, sessionId, onSuccess, onFailure]);
-
-  // Polling loop. Starts immediately on mount; cleans up on unmount.
   useEffect(() => {
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== DC_ORIGIN) return;
+      if (!isDcMessage(event.data)) return;
+      // Stale messages from a previous session (e.g. user navigated
+      // backward and resumed) — ignore.
+      if (event.data.sessionId !== sessionId) return;
 
-    const tick = async () => {
-      if (stopped) return;
-      const done = await checkOnce();
-      if (done || stopped) return;
-      timer = setTimeout(tick, POLL_INTERVAL_MS);
+      const msg = event.data;
+
+      if (msg.type === "ready") {
+        setIframeReady(true);
+        return;
+      }
+
+      if (msg.type === "resize") {
+        if (typeof msg.height === "number" && msg.height > 0) {
+          setIframeHeight(msg.height);
+        }
+        return;
+      }
+
+      if (msg.type === "complete") {
+        // Synchronously unmount the iframe so DC's queued top-nav
+        // sees no iframe to nav and bails. flushSync forces React to
+        // commit the unmount in this same tick instead of batching.
+        flushSync(() => setShowIframe(false));
+        // Now async: verify + transition the wizard.
+        handleComplete(msg.status);
+      }
     };
 
-    // Wait one poll interval before the first check so we don't slam
-    // DC with a confirm before the user has even seen the iframe.
-    timer = setTimeout(tick, POLL_INTERVAL_MS);
-
-    return () => {
-      stopped = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [checkOnce]);
-
-  // Iframe-block detector: cross-origin iframes can't be inspected
-  // for X-Frame-Options / CSP violations directly, so we rely on the
-  // load event firing within a reasonable window. If it doesn't, we
-  // flag the iframe as "maybe blocked" and surface a more prominent
-  // fallback CTA. (Note: this is a UX nudge — a determined user can
-  // always click the persistent "Open on DivinityCoin" link below
-  // the iframe.)
-  useEffect(() => {
-    if (iframeLoaded) return;
-    const t = setTimeout(() => {
-      if (!iframeLoaded && !finishedRef.current) {
-        setIframeMaybeBlocked(true);
-      }
-    }, IFRAME_DETECT_MS);
-    return () => clearTimeout(t);
-  }, [iframeLoaded]);
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [sessionId, handleComplete]);
 
   return (
     <div className="space-y-3">
-      <div className="relative w-full overflow-hidden rounded-lg border border-border bg-card">
-        {!iframeLoaded && !iframeMaybeBlocked && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/95 z-10">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">Loading secure checkout...</p>
-          </div>
-        )}
-        <iframe
-          src={checkoutUrl}
-          className="block w-full"
-          style={{ height: "min(720px, 80vh)", border: "none" }}
-          title="Secure checkout"
-          allow="payment"
-          onLoad={() => setIframeLoaded(true)}
-        />
-      </div>
-
-      {iframeMaybeBlocked ? (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <div className="flex-1 text-sm">
-            <p className="font-medium text-amber-900 dark:text-amber-100">
-              Trouble loading the secure checkout?
-            </p>
-            <p className="text-amber-800 dark:text-amber-200 mt-1">
-              Click below to complete your pledge in a new tab. We&apos;ll
-              update your pledge automatically when you finish.
-            </p>
-            <Button
-              variant="outline"
-              className="mt-3"
-              onClick={() => window.open(checkoutUrl, "_blank", "noopener,noreferrer")}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open secure checkout in a new tab
-            </Button>
-          </div>
+      {showIframe ? (
+        <div className="relative w-full overflow-hidden rounded-lg border border-border bg-card">
+          {!iframeReady && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/95 z-10">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground">Loading secure checkout...</p>
+            </div>
+          )}
+          <iframe
+            src={checkoutUrl}
+            title="Secure checkout"
+            allow="payment *; publickey-credentials-get *"
+            className="block w-full"
+            style={{ height: `${iframeHeight}px`, border: "none", transition: "height 200ms ease" }}
+          />
         </div>
       ) : (
+        // Iframe was torn down by a complete message. The parent
+        // wizard transitions to its success step within a few hundred
+        // ms (after /confirm-dc-checkout responds), so this fallback
+        // copy is mostly cosmetic — it's only visible during the
+        // brief window between iframe-removal and wizard transition.
+        <div className="flex flex-col items-center justify-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+          <p className="text-sm text-muted-foreground">Finalizing your pledge...</p>
+        </div>
+      )}
+
+      {showIframe && (
         <p className="text-xs text-muted-foreground text-center">
           Having trouble?{" "}
           <button

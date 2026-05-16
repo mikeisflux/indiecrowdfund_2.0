@@ -178,13 +178,39 @@ frame-ancestors), the component shows a fallback "Open in a new tab"
 CTA after a 12s detection window — the same hosted page works in a
 new tab, so the user is never stranded.
 
+**postMessage protocol (2026-05-16, after DC confirmation):** DC
+shipped a richer iframe protocol than the polling pattern assumed —
+their iframe streams `ready` / `resize` / `complete` postMessages
+(namespace `divinitycoin-checkout`), handles mobile WebKit (iOS
+Safari, in-app webviews) automatically via a popup fallback, and
+emits the same `complete` event regardless of platform. Reworked
+`DCHostedCheckoutFrame` to:
+  - Listen for postMessages (validates origin === divinitycoin.com,
+    namespace, sessionId)
+  - Auto-resize via DC's `resize` event (ResizeObserver-driven on
+    their side) instead of fixed `min(720px, 80vh)`
+  - On `complete`: `flushSync` unmount the iframe synchronously so
+    DC's queued top-nav-to-returnUrl aborts, then verify via
+    `/api/pledges/[id]/confirm-dc-checkout` and trigger
+    onSuccess / onFailure. flushSync forces React to commit the
+    unmount in the same tick the message arrives, which is what DC's
+    docs say is required to intercept their nav.
+  - Add `allow="payment *; publickey-credentials-get *"` to the
+    iframe so embedded Stripe Elements can fire Payment Request API
+    + WebAuthn (3DS) calls
+  - Drop the polling loop, the 12s iframe-blocked detector, and the
+    elaborate amber fallback CTA — DC's mobile-WebKit popup handler
+    covers the cases the detector was guarding against
+  - Keep the persistent "Open in a new tab" link below the iframe as
+    a final user-initiated escape hatch; the existing
+    handleSuccessRedirect picks up `?session_id` from a top-level
+    return cleanly
+
 - [x] New component
       `src/app/projects/[vanityname]/[slug]/pledge/components/DCHostedCheckoutFrame.tsx`:
-      mounts an iframe at `checkoutUrl`, polls
-      `/api/pledges/[id]/confirm-dc-checkout` every 3s for terminal
-      state, fires `onSuccess` / `onFailure`. Persistent "open in new
-      tab" link below the iframe + a more prominent CTA after 12s if
-      the iframe load event never fires
+      postMessage-driven, flushSync unmount on `complete`, auto-resize,
+      mobile-WebKit handled inside DC's iframe (transparent to us),
+      "open in new tab" fallback link
 - [x] `src/proxy.ts` CSP: `frame-src` extended to allow
       `https://divinitycoin.com` so the iframe can load
 - [x] `usePledge.ts`: added `dcCheckoutUrl` + `dcSessionId` state.
