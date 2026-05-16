@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/fetch-utils";
 
@@ -15,28 +14,30 @@ import { apiFetch } from "@/lib/fetch-utils";
 //   - "resize"   — content height changed; mirror onto the iframe.
 //   - "complete" — session reached a terminal state; payload includes
 //                  status ("complete" | "failed" | "expired" |
-//                  "canceled") and a redirectUrl.
+//                  "canceled"), redirectUrl, and (sanity-check)
+//                  disableAutoRedirect echoed from the session create.
 //
-// Default DC behavior on complete: top-nav the browser to redirectUrl
-// (which would unmount the iframe + reload the whole page). To keep
-// the user inline on our pledge wizard's success step, we
-// synchronously remove the iframe from the DOM the moment the
-// "complete" message fires — DC's docs confirm a synchronous handler
-// runs before their nav and removal aborts it. We use ReactDOM.flushSync
-// so the React unmount commits in the same tick the message handler
-// runs in.
+// Nav: the session is created with `disableAutoRedirect: true` so DC
+// does NOT top-nav the browser on completion. Their "complete"
+// postMessage still fires and our handler owns the transition (hide
+// the iframe, server-verify via /confirm-dc-checkout, advance the
+// wizard to its success step). If we ever forget to set the flag,
+// DC's nav fires synchronously in the same tick as the postMessage
+// — no client-side trick (flushSync, removeChild) reliably suppresses
+// it. So we treat the echoed flag as load-bearing and log a warning
+// if it ever comes back false.
 //
-// Mobile WebKit (iOS Safari + in-app webviews) is handled entirely
-// inside DC's iframe — they detect UA, render a "Continue securely"
-// button, open the same checkout URL in a top-level popup, and post
-// the same "complete" message back from the popup. We don't need to
-// detect platform or change UI.
+// Mobile WebKit (iOS Safari, in-app webviews) is handled inside DC's
+// iframe — they detect UA, render a "Continue securely" button, open
+// the same session in a top-level popup, and post the result back
+// into the iframe. Same "complete" event lands here regardless of
+// platform. We don't detect platform or change UI.
 //
-// The "Open in a new tab" fallback link below the iframe is a
-// belt-and-suspenders escape for users who hit unusual browser
-// behavior — same checkout URL, just as a top-level redirect. On
-// return, the existing handleSuccessRedirect picks up DC's
-// ?session_id query param and dispatches /confirm-dc-checkout there.
+// No "open in new tab" fallback link: with disableAutoRedirect on,
+// any user who completes in a separate top-level tab is stranded on
+// DC's success page with no way back (and our wizard would still
+// show the broken iframe). The frame-ancestors allowlist on DC's
+// side is the actual fix; this component depends on that working.
 
 interface DCHostedCheckoutFrameProps {
   checkoutUrl: string;
@@ -61,6 +62,7 @@ type DcMessage =
       sessionId: string;
       status: "complete" | "failed" | "expired" | "canceled";
       redirectUrl?: string;
+      disableAutoRedirect?: boolean;
     };
 
 function isDcMessage(data: unknown): data is DcMessage {
@@ -78,10 +80,6 @@ export default function DCHostedCheckoutFrame({
 }: DCHostedCheckoutFrameProps) {
   const [iframeReady, setIframeReady] = useState(false);
   const [iframeHeight, setIframeHeight] = useState(INITIAL_IFRAME_HEIGHT);
-  // Drives the iframe's presence in JSX. flushSync({ () => setShowIframe(false) })
-  // commits the unmount synchronously in the same tick the message
-  // arrives, which aborts DC's top-nav.
-  const [showIframe, setShowIframe] = useState(true);
   // Latch so a late-arriving duplicate complete (rare DC retry) doesn't
   // double-fire onSuccess / onFailure.
   const finishedRef = useRef(false);
@@ -161,11 +159,16 @@ export default function DCHostedCheckoutFrame({
       }
 
       if (msg.type === "complete") {
-        // Synchronously unmount the iframe so DC's queued top-nav
-        // sees no iframe to nav and bails. flushSync forces React to
-        // commit the unmount in this same tick instead of batching.
-        flushSync(() => setShowIframe(false));
-        // Now async: verify + transition the wizard.
+        // Sanity check: we created the session with
+        // disableAutoRedirect: true. If DC echoes back false here,
+        // their nav is about to fire and yank us off the page —
+        // surface it so we catch the regression. Doesn't block our
+        // handler from running.
+        if (msg.disableAutoRedirect === false) {
+          console.warn(
+            "[DCHostedCheckoutFrame] DC reported disableAutoRedirect=false on complete — DC may be about to top-nav the browser. Check session creation payload."
+          );
+        }
         handleComplete(msg.status);
       }
     };
@@ -176,46 +179,21 @@ export default function DCHostedCheckoutFrame({
 
   return (
     <div className="space-y-3">
-      {showIframe ? (
-        <div className="relative w-full overflow-hidden rounded-lg border border-border bg-card">
-          {!iframeReady && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/95 z-10">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">Loading secure checkout...</p>
-            </div>
-          )}
-          <iframe
-            src={checkoutUrl}
-            title="Secure checkout"
-            allow="payment *; publickey-credentials-get *"
-            className="block w-full"
-            style={{ height: `${iframeHeight}px`, border: "none", transition: "height 200ms ease" }}
-          />
-        </div>
-      ) : (
-        // Iframe was torn down by a complete message. The parent
-        // wizard transitions to its success step within a few hundred
-        // ms (after /confirm-dc-checkout responds), so this fallback
-        // copy is mostly cosmetic — it's only visible during the
-        // brief window between iframe-removal and wizard transition.
-        <div className="flex flex-col items-center justify-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">Finalizing your pledge...</p>
-        </div>
-      )}
-
-      {showIframe && (
-        <p className="text-xs text-muted-foreground text-center">
-          Having trouble?{" "}
-          <button
-            type="button"
-            className="underline hover:text-foreground transition-colors"
-            onClick={() => window.open(checkoutUrl, "_blank", "noopener,noreferrer")}
-          >
-            Open secure checkout in a new tab
-          </button>
-        </p>
-      )}
+      <div className="relative w-full overflow-hidden rounded-lg border border-border bg-card">
+        {!iframeReady && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/95 z-10">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+            <p className="text-sm text-muted-foreground">Loading secure checkout...</p>
+          </div>
+        )}
+        <iframe
+          src={checkoutUrl}
+          title="Secure checkout"
+          allow="payment *; publickey-credentials-get *"
+          className="block w-full"
+          style={{ height: `${iframeHeight}px`, border: "none", transition: "height 200ms ease" }}
+        />
+      </div>
     </div>
   );
 }

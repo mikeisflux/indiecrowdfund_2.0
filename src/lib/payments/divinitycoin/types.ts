@@ -205,6 +205,14 @@ export interface CreateCheckoutSessionInput {
   partnerLogoUrl?: string;
   description?: string;
   expiresInMinutes?: number;        // 1-1440, default 30
+  // When true, DC skips the default top-nav-to-returnUrl on session
+  // completion. The "complete" postMessage still fires (with this
+  // value echoed in the payload) and the partner page owns what
+  // happens next. Required for iframe embeds where the parent wants
+  // to keep the user inline and transition its own UI on completion
+  // — DC's default nav would yank the top window to returnUrl
+  // before the partner's React handler had a chance to finish.
+  disableAutoRedirect?: boolean;
   // PAYMENT-mode only:
   amount?: number;                  // cents, >0
   currency?: string;                // default "usd"

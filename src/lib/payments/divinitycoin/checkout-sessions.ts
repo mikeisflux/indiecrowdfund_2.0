@@ -66,6 +66,7 @@ export async function createDcCheckoutSession(
   if (input.partnerLogoUrl) payload.partnerLogoUrl = input.partnerLogoUrl;
   if (input.description) payload.description = input.description;
   if (input.expiresInMinutes) payload.expiresInMinutes = input.expiresInMinutes;
+  if (input.disableAutoRedirect) payload.disableAutoRedirect = true;
   if (mode === "payment") {
     payload.amount = input.amount;
     payload.currency = input.currency || "usd";

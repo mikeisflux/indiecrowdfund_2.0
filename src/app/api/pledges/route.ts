@@ -451,6 +451,11 @@ export async function POST(req: NextRequest) {
               cancelUrl: pledgePageBase, // back to the pledge page (no success flag)
               partnerLogoUrl: partnerLogoUrl || undefined,
               description: `Pledge to ${project.title}`,
+              // Iframe embed wants DC to skip the default top-nav so
+              // our React handler in DCHostedCheckoutFrame stays in
+              // control. The "complete" postMessage still fires and
+              // we transition the wizard inline.
+              disableAutoRedirect: true,
               ...(useSavedCardFlow
                 ? {}
                 : {
