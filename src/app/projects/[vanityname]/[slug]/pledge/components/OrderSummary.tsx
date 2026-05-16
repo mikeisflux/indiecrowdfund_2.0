@@ -32,6 +32,13 @@ interface OrderSummaryProps {
   clientSecret: string | null;
   project: ProjectData | null;
   paymentError: string | null;
+  // DivinityCoin white-label hosted checkout (DC partner API 2026-05-15).
+  // When set, the user is paying through DC's iframe — clientSecret stays
+  // null but the payment IS set up. Used to suppress the "Setting up
+  // payment..." spinner that otherwise spins forever on hosted-checkout
+  // pledges (the spinner was gated only on !clientSecret, which is
+  // permanently true in the hosted flow).
+  dcCheckoutUrl: string | null;
 }
 
 export function OrderSummary({
@@ -57,6 +64,7 @@ export function OrderSummary({
   clientSecret,
   project,
   paymentError,
+  dcCheckoutUrl,
 }: OrderSummaryProps) {
   // Order Summary for Add-ons step - Add Items Mode
   if (step === "addons" && isAddItemsMode) {
@@ -361,7 +369,7 @@ export function OrderSummary({
             </div>
 
             {/* Status message */}
-            {!clientSecret && !paymentError && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
+            {!clientSecret && !dcCheckoutUrl && !paymentError && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>
@@ -471,7 +479,7 @@ export function OrderSummary({
               </Label>
             </div>
 
-            {!clientSecret && !paymentError && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
+            {!clientSecret && !dcCheckoutUrl && !paymentError && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>
@@ -566,7 +574,7 @@ export function OrderSummary({
             </div>
 
             {/* Status message - show spinner while payment is being set up */}
-            {!clientSecret && !paymentError && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
+            {!clientSecret && !dcCheckoutUrl && !paymentError && project?.paymentProcessor !== "PAYPAL" && project?.paymentProcessor !== "WHOP" ? (
               <div className="flex items-center justify-center gap-2 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Setting up payment...</span>

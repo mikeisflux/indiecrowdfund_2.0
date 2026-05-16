@@ -199,6 +199,7 @@ export default function PledgePage() {
                 clientSecret={pledge.clientSecret}
                 project={pledge.project}
                 paymentError={pledge.paymentError}
+                dcCheckoutUrl={pledge.dcCheckoutUrl}
               />
 
               {/* Rewards Warning */}
