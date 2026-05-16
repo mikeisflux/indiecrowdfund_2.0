@@ -30,7 +30,13 @@ export {
   cachedConfig,
   getDivinityCoinConfig,
   getDivinityCoinWebhookSecret,
+  isHostedCheckoutEnabled,
 } from "./config";
+
+// Shared commit bookkeeping for SETUP-mode DC pledges. See
+// commit-pledge.ts for the race model + callers.
+export { commitDcPledge } from "./commit-pledge";
+export type { CommitDcPledgeInput, CommitDcPledgeResult } from "./commit-pledge";
 
 export { callDivinityCoinAPI } from "./client";
 

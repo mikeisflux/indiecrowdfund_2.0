@@ -75,3 +75,26 @@ export async function getDivinityCoinWebhookSecret(): Promise<string | null> {
 
   return process.env.DIVINITYCOIN_WEBHOOK_SECRET || null;
 }
+
+/**
+ * Flip to true (set DIVINITYCOIN_HOSTED_CHECKOUT=true in env) to route
+ * new DC pledges through the white-label hosted checkout page at
+ * divinitycoin.com/checkout/cs_... instead of the inline Stripe Elements
+ * surface on our domain.
+ *
+ * When false (default), DC pledges create a SetupIntent / PaymentIntent
+ * and the client mounts Stripe Elements directly — the pre-2026-05-15
+ * behavior is fully preserved.
+ *
+ * When true, /api/pledges' DC branch calls create-checkout-session
+ * instead, persists the cs_... on the pledge, and returns a checkoutUrl
+ * the client redirects the user to. Existing in-flight pledges that
+ * already have a clientSecret are unaffected; only NEW pledges take
+ * the new path.
+ *
+ * Env-driven (not DB-driven) so flipping it requires a process restart
+ * — intentional: prevents the flag from changing mid-pledge.
+ */
+export function isHostedCheckoutEnabled(): boolean {
+  return process.env.DIVINITYCOIN_HOSTED_CHECKOUT === "true";
+}

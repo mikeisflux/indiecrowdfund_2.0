@@ -5,7 +5,9 @@ import {
 } from "@/lib/notifications";
 import { assignBackerNumber, claimRewardSlot, claimAddonSlots } from "@/lib/payments/rewards";
 import { circuitBreaker } from "@/lib/circuit-breaker";
+import { metrics } from "@/lib/metrics";
 import { getDivinityCoinConfig, paymentsDivinitycoinLogger } from "./config";
+import { commitDcPledge } from "./commit-pledge";
 import type {
   DivinityCoinWebhookRequest,
   RefundRequestResponse,
@@ -923,24 +925,28 @@ export async function handlePaymentRequiresAction(
  *
  * Fires for white-label hosted checkout sessions when the user finishes
  * card capture (PAYMENT mode) or save-a-card (SETUP mode) on
- * divinitycoin.com. PAYMENT-mode sessions also fire payment.succeeded
- * (the underlying PI is created up-front) — both handlers converge on
- * the same commit path via CAS in Phase 2, so dedupe is automatic.
+ * divinitycoin.com.
  *
- * Phase 1: stub that logs + acknowledges. No pledges have
- * divinityCoinCheckoutSessionId set yet (Phase 2 starts writing it),
- * so the lookup will always return null and the handler is a clean
- * no-op. Phase 2 swaps the TODO for a call to the shared
- * commitDcPledge() helper.
+ * PAYMENT mode: the underlying PaymentIntent fires payment.succeeded
+ * in parallel, and handlePaymentSucceeded does the COMPLETED-state
+ * commit there. This handler is a no-op for PAYMENT mode — the
+ * existing path handles it, no double-counting.
+ *
+ * SETUP mode: payment.* never fires (no charge yet, just a card save),
+ * so this webhook is the only commit trigger besides the user-return
+ * /api/pledges/[id]/confirm-dc-checkout route. Both paths call
+ * commitDcPledge; the helper's atomic confirmationEmailSent CAS
+ * guarantees exactly one runs the side effects.
  */
 export async function handleCheckoutCompleted(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
   const sessionId = data.sessionId;
+  const mode = data.mode;
   paymentsDivinitycoinLogger.info(
     {
       sessionId,
-      mode: data.mode,
+      mode,
       paymentIntentId: data.paymentIntentId,
       setupIntentId: data.setupIntentId,
       paymentMethodId: data.paymentMethodId,
@@ -955,13 +961,13 @@ export async function handleCheckoutCompleted(
 
   const pledge = await db.pledge.findFirst({
     where: { divinityCoinCheckoutSessionId: sessionId, deletedAt: null },
-    select: { id: true, status: true },
+    select: { id: true, status: true, chargedImmediately: true },
   });
 
   if (!pledge) {
     paymentsDivinitycoinLogger.info(
       { sessionId },
-      "[DivinityCoin] checkout.completed for unknown session — no pledge has this id (expected in Phase 1)"
+      "[DivinityCoin] checkout.completed for unknown session — no pledge with this id"
     );
     return { success: true, message: "No pledge with this session id" };
   }
@@ -974,16 +980,44 @@ export async function handleCheckoutCompleted(
     return { success: true, message: `Pledge already ${pledge.status}` };
   }
 
-  // Phase 2 wires the commit here:
-  //   await commitDcPledge(pledge.id, { paymentIntentId, paymentMethodId, setupIntentId, mode });
-  // Phase 1 is a logging stub. PAYMENT-mode pledges will still complete
-  // via the existing payment.succeeded handler; SETUP-mode pledges
-  // aren't created until Phase 2.
-  paymentsDivinitycoinLogger.info(
-    { pledgeId: pledge.id },
-    "[DivinityCoin] checkout.completed: Phase 1 stub — commit lands in Phase 2"
-  );
-  return { success: true, message: "Phase 1: acknowledged, no commit yet" };
+  // PAYMENT mode: ride the existing payment.succeeded path. That
+  // handler already handles status flip + counter bumps + reward/addon
+  // claims + email — duplicating any of that here would just be a
+  // contest with its CAS for no gain. The session-level event is
+  // informational for PAYMENT mode.
+  if (mode === "payment") {
+    paymentsDivinitycoinLogger.info(
+      { pledgeId: pledge.id },
+      "[DivinityCoin] checkout.completed (PAYMENT mode): leaving commit to payment.succeeded"
+    );
+    return { success: true, message: "PAYMENT mode — payment.succeeded will commit" };
+  }
+
+  // SETUP mode: this webhook IS the commit signal. Race-safely
+  // delegate to the shared helper — confirm-dc-checkout may also be
+  // running it from the user-return path; commitDcPledge's CAS makes
+  // both calls safe.
+  const result = await commitDcPledge({
+    pledgeId: pledge.id,
+    paymentMethodId: typeof data.paymentMethodId === "string" ? data.paymentMethodId : undefined,
+    setupIntentId: typeof data.setupIntentId === "string" ? data.setupIntentId : undefined,
+    source: "checkout.completed webhook",
+  });
+
+  if (!result.ok) {
+    paymentsDivinitycoinLogger.error(
+      { pledgeId: pledge.id, err: result.error },
+      "[DivinityCoin] checkout.completed: commitDcPledge failed"
+    );
+    return { success: false, error: result.error };
+  }
+
+  metrics.dcHostedCheckoutSessions.inc({ state: "completed" });
+
+  return {
+    success: true,
+    message: result.alreadyCommitted ? "Already committed by another path" : "Pledge committed",
+  };
 }
 
 /**
@@ -1031,6 +1065,8 @@ export async function handleCheckoutFailed(
     },
   });
 
+  metrics.dcHostedCheckoutSessions.inc({ state: "failed" });
+
   paymentsDivinitycoinLogger.info(
     { pledgeId: pledge.id },
     "[DivinityCoin] checkout.failed: pledge marked FAILED"
@@ -1049,6 +1085,7 @@ export async function handleCheckoutExpired(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
   const sessionId = data.sessionId;
+  metrics.dcHostedCheckoutSessions.inc({ state: "expired" });
   paymentsDivinitycoinLogger.info(
     { sessionId },
     "[DivinityCoin] checkout.expired received — abandoned-cart cron will sweep"
@@ -1066,6 +1103,7 @@ export async function handleCheckoutCanceled(
   data: NonNullable<DivinityCoinWebhookRequest["data"]>
 ): Promise<PaymentEventResponse> {
   const sessionId = data.sessionId;
+  metrics.dcHostedCheckoutSessions.inc({ state: "canceled" });
   paymentsDivinitycoinLogger.info(
     { sessionId },
     "[DivinityCoin] checkout.canceled received — abandoned-cart cron will sweep"

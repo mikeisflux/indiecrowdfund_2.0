@@ -131,6 +131,14 @@ export async function createPledgeForPayment(
   type?: string;
   paypalOrderId?: string;
   whopSessionId?: string;
+  // DivinityCoin white-label hosted checkout (DC partner API 2026-05-15).
+  // When the server returns type === "hosted_checkout", the client
+  // redirects to checkoutUrl instead of mounting Stripe Elements.
+  // sessionId is informational — DC appends ?session_id=... to our
+  // returnUrl, and the existing handleSuccessRedirect effect picks
+  // it up to dispatch /confirm-dc-checkout.
+  checkoutUrl?: string;
+  sessionId?: string;
 }> {
   const addonsWithQuantity = Object.entries(selectedAddons).map(([id, quantity]) => ({
     id,
@@ -185,6 +193,8 @@ export async function createPledgeForPayment(
     type: data.type,
     paypalOrderId: data.paypalOrderId,
     whopSessionId: data.whopSessionId,
+    checkoutUrl: data.checkoutUrl,
+    sessionId: data.sessionId,
   };
 }
 

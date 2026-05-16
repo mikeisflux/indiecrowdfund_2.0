@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { getDivinityCoinConfig } from "@/lib/payments/divinitycoin";
+import {
+  createDcCheckoutSession,
+  getDivinityCoinConfig,
+  isHostedCheckoutEnabled,
+} from "@/lib/payments/divinitycoin";
 import { createPayPalPayment } from "@/lib/payments/paypal";
 import { createWhopPayment } from "@/lib/payments/whop";
 import { isEmailVerificationRequired } from "@/lib/email";
@@ -10,6 +14,7 @@ import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
 import { withCorrelation } from "@/lib/correlation";
 import { metrics } from "@/lib/metrics";
+import { APP_URL } from "@/lib/notifications/types";
 
 const pledgeLogger = logger.child({ module: "pledges" });
 
@@ -71,8 +76,14 @@ export async function POST(req: NextRequest) {
       const body = await req.json();
       const data = createPledgeSchema.parse(body);
 
-      // Get project to determine payment processor
-      const project = await db.project.findFirst({ where: { id: data.projectId, deletedAt: null } });
+      // Get project to determine payment processor. creator.vanityUrl
+      // is loaded eagerly so the DC hosted-checkout branch can build
+      // a self-routing returnUrl back to the pledge page without an
+      // extra query.
+      const project = await db.project.findFirst({
+        where: { id: data.projectId, deletedAt: null },
+        include: { creator: { select: { vanityUrl: true } } },
+      });
 
       if (!project) {
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -399,6 +410,93 @@ export async function POST(req: NextRequest) {
             where: { id: session.user.id, deletedAt: null },
             select: { email: true, name: true },
           });
+
+          // Phase 2: white-label hosted checkout. When the
+          // DIVINITYCOIN_HOSTED_CHECKOUT env flag is on, route through
+          // DC's hosted card-capture page instead of inline Stripe
+          // Elements. SETUP mode for AoN-unfunded (no charge yet,
+          // save card for charge-on-success cron); PAYMENT mode for
+          // KIA / already-funded AoN (immediate charge). User is
+          // redirected to divinitycoin.com, completes the card on
+          // DC's branded page, then returns to ?session_id=... on the
+          // pledge page where the existing success-redirect effect
+          // dispatches /confirm-dc-checkout.
+          //
+          // The pledge row already exists at this point (PENDING +
+          // chargedImmediately set above), so the session create
+          // simply attaches a cs_... that the return + webhook paths
+          // use to look it up.
+          if (isHostedCheckoutEnabled()) {
+            const vanity = project.creator?.vanityUrl;
+            // Pledge page lives at /projects/[vanityname]/[slug]/pledge.
+            // Fall back to the project's id-keyed pledge URL pattern if
+            // for some reason the creator has no vanity URL — every
+            // creator that can have a LIVE project has one in practice,
+            // but we don't crash if not.
+            const pledgePageBase = vanity
+              ? `${APP_URL}/projects/${vanity}/${project.slug}/pledge`
+              : `${APP_URL}/projects/${project.id}/pledge`;
+            // success=true + pledgeId so the existing
+            // handleSuccessRedirect effect in usePledge.ts picks this
+            // up and POSTs /confirm-dc-checkout when it sees the
+            // DC-appended session_id query param.
+            const returnUrl = `${pledgePageBase}?success=true&pledgeId=${pledge.id}`;
+            const partnerLogoUrl = process.env.NEXT_PUBLIC_BRAND_LOGO_URL;
+
+            const dcSession = await createDcCheckoutSession({
+              mode: useSavedCardFlow ? "setup" : "payment",
+              platformUserId: pledge.userId,
+              email: userRecord?.email || "",
+              returnUrl,
+              cancelUrl: pledgePageBase, // back to the pledge page (no success flag)
+              partnerLogoUrl: partnerLogoUrl || undefined,
+              description: `Pledge to ${project.title}`,
+              ...(useSavedCardFlow
+                ? {}
+                : {
+                    amount: Math.round(data.amount * 100),
+                    currency: "usd",
+                    pledgeId: pledge.id,
+                    projectId: data.projectId,
+                  }),
+            });
+
+            if (!dcSession.success) {
+              pledgeLogger.error(
+                { correlationId, pledgeId: pledge.id, err: dcSession.error },
+                "Failed to create DC hosted-checkout session"
+              );
+              await db.pledgeAddon.deleteMany({ where: { pledgeId: pledge.id } });
+              await db.pledge.deleteMany({ where: { id: pledge.id } });
+              return NextResponse.json(
+                { error: dcSession.error || "Failed to initialize payment" },
+                { status: 502 }
+              );
+            }
+
+            await db.pledge.update({
+              where: { id: pledge.id },
+              data: { divinityCoinCheckoutSessionId: dcSession.sessionId },
+            });
+
+            metrics.pledgesCreated.inc({ status: "pending", processor: "divinitycoin" });
+            metrics.dcHostedCheckoutSessions.inc({ state: "created" });
+            metrics.pledgesByDcFlow.inc({ flow: "hosted_checkout" });
+
+            return NextResponse.json({
+              paymentMethod: "DIVINITYCOIN",
+              type: "hosted_checkout",
+              checkoutUrl: dcSession.checkoutUrl,
+              sessionId: dcSession.sessionId,
+              pledgeId: pledge.id,
+              chargedImmediately: !useSavedCardFlow,
+            });
+          }
+
+          // Inline Stripe Elements path (pre-Phase-2 default; remains
+          // the live path when the flag is off and during the rollout
+          // soak in Phase 3).
+          metrics.pledgesByDcFlow.inc({ flow: "elements" });
 
           const dcAbortController = new AbortController();
           const dcTimeout = setTimeout(() => dcAbortController.abort(), 15000); // 15s timeout

@@ -36,6 +36,10 @@ export function usePledge() {
   // confirmation needed a full-page redirect (3DS) — its presence tells
   // handleSuccessRedirect to finish via the DC saved-card flow.
   const setupIntentParam = searchParams?.get("setup_intent") ?? null;
+  // DC appends `session_id` when returning from the white-label hosted
+  // checkout flow (Phase 2+) — its presence routes handleSuccessRedirect
+  // through /confirm-dc-checkout instead of /confirm or /confirm-dc-setup.
+  const dcSessionIdParam = searchParams?.get("session_id") ?? null;
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -147,21 +151,38 @@ export function usePledge() {
       if (successParam === "true") {
         if (pledgeIdParam) {
           try {
-            // A `setup_intent` param means Stripe did a full-page 3DS
-            // redirect during the DC saved-card flow — finish it via
-            // confirm-dc-setup (which resolves the saved card from the
-            // SetupIntent), NOT /confirm (that rejects
-            // non-chargedImmediately pledges with a 400).
-            const res = setupIntentParam
-              ? await apiFetch(`/api/pledges/${pledgeIdParam}/confirm-dc-setup`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ setupIntentId: setupIntentParam }),
-                })
-              : await apiFetch(`/api/pledges/${pledgeIdParam}/confirm`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                });
+            // Dispatch order matters:
+            //   1. dcSessionIdParam → DC's white-label hosted checkout
+            //      flow (Phase 2+). The user just returned from
+            //      divinitycoin.com/checkout/cs_...; /confirm-dc-checkout
+            //      reconciles via get-checkout-session and runs
+            //      commitDcPledge for SETUP mode.
+            //   2. setupIntentParam → DC inline-Elements SetupIntent
+            //      did a full-page 3DS redirect; /confirm-dc-setup
+            //      resolves the saved card from the SetupIntent.
+            //   3. neither → KIA / already-funded-AoN / Stripe / PayPal
+            //      immediate-charge flow; /confirm closes out the PI.
+            //      /confirm rejects non-chargedImmediately pledges so
+            //      it must NOT be hit on saved-card flows.
+            let res: Response;
+            if (dcSessionIdParam) {
+              res = await apiFetch(`/api/pledges/${pledgeIdParam}/confirm-dc-checkout`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sessionId: dcSessionIdParam }),
+              });
+            } else if (setupIntentParam) {
+              res = await apiFetch(`/api/pledges/${pledgeIdParam}/confirm-dc-setup`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ setupIntentId: setupIntentParam }),
+              });
+            } else {
+              res = await apiFetch(`/api/pledges/${pledgeIdParam}/confirm`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+              });
+            }
             if (!res.ok) console.error("Failed to confirm pledge after redirect");
           } catch (error) {
             console.error("Error confirming pledge after redirect:", error);
@@ -171,7 +192,7 @@ export function usePledge() {
       }
     }
     handleSuccessRedirect();
-  }, [successParam, pledgeIdParam, setupIntentParam]);
+  }, [successParam, pledgeIdParam, setupIntentParam, dcSessionIdParam]);
 
   // Initialize Stripe - DISABLED: Replaced by PayPal
   // useEffect(() => {
@@ -335,6 +356,20 @@ export function usePledge() {
       } else if (result.whopSessionId) {
         // Whop flow: use sessionId for embedded checkout
         setWhopSessionId(result.whopSessionId);
+      } else if (result.type === "hosted_checkout" && result.checkoutUrl) {
+        // DivinityCoin white-label hosted checkout (Phase 2+,
+        // gated by DIVINITYCOIN_HOSTED_CHECKOUT on the server).
+        // Full-page redirect to divinitycoin.com/checkout/cs_...
+        // — DC handles card capture + 3DS + brand UI on their
+        // domain, then redirects back to our returnUrl with
+        // ?success=true&pledgeId=...&session_id=... where the
+        // handleSuccessRedirect effect picks up and dispatches
+        // /confirm-dc-checkout. No Elements mount on our side.
+        window.location.href = result.checkoutUrl;
+        // Intentionally don't reset isProcessing here — the page is
+        // about to unload, and clearing state would briefly flash
+        // the "ready to pay" UI before the redirect lands.
+        return;
       } else {
         if (!result.clientSecret) throw new Error("Invalid payment response - missing client secret");
         if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));

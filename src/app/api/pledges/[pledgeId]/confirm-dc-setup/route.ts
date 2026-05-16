@@ -3,10 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { sendPledgeConfirmationEmail, isEmailTypeEnabled } from "@/lib/email";
-import { notifyPledgeReceived, notifyProjectFunded } from "@/lib/notifications";
-import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
-import { getDcSetupIntent } from "@/lib/payments/divinitycoin";
+import { commitDcPledge, getDcSetupIntent } from "@/lib/payments/divinitycoin";
 
 const log = logger.child({ module: "pledges-confirm-dc-setup" });
 
@@ -70,33 +67,13 @@ export async function POST(
 
     const pledge = await db.pledge.findFirst({
       where: { id: pledgeId, deletedAt: null },
-      include: {
-        project: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            imageUrl: true,
-            currency: true,
-            goalAmount: true,
-            currentAmount: true,
-            creatorId: true,
-            creator: { select: { vanityUrl: true } },
-          },
-        },
-        user: {
-          select: { id: true, email: true, name: true },
-        },
-        reward: {
-          select: { id: true, title: true, amount: true },
-        },
-        addons: {
-          select: {
-            addonId: true,
-            quantity: true,
-            addon: { select: { title: true, amount: true } },
-          },
-        },
+      select: {
+        id: true,
+        userId: true,
+        paymentProcessor: true,
+        status: true,
+        chargedImmediately: true,
+        divinityCoinSetupIntentId: true,
       },
     });
     if (!pledge) {
@@ -159,205 +136,27 @@ export async function POST(
       resolvedPaymentMethodId = si.paymentMethodId;
     }
 
-    // Persist the saved card. Idempotent — re-saving the same pm/intent
-    // is a no-op write; a DIFFERENT pm replaces the prior one (the cron
-    // charges whatever is on file when it runs). We deliberately do NOT
-    // early-return when the pm matches: the commit bookkeeping below is
-    // keyed off confirmationEmailSent, not the card, so a pledge with a
-    // card on file but the flag still false self-heals on the next call.
-    if (
-      pledge.divinityCoinPaymentMethodId !== resolvedPaymentMethodId ||
-      pledge.divinityCoinSetupIntentId !== effectiveSetupIntentId
-    ) {
-      await db.pledge.update({
-        where: { id: pledge.id },
-        data: {
-          divinityCoinSetupIntentId: effectiveSetupIntentId,
-          divinityCoinPaymentMethodId: resolvedPaymentMethodId,
-        },
-      });
-      log.info(
-        { pledgeId: pledge.id, setupIntentId: effectiveSetupIntentId },
-        "[Confirm DC Setup] Card saved on pledge for AoN charge-on-success"
-      );
-    }
-
-    // ── COMMIT BOOKKEEPING ──
-    // Atomically flip confirmationEmailSent false→true. If two requests
-    // race (double-submit), only one matches the WHERE clause and runs
-    // the bookkeeping; the loser sees count === 0 and returns early.
-    const claim = await db.pledge.updateMany({
-      where: { id: pledge.id, confirmationEmailSent: false },
-      data: { confirmationEmailSent: true },
+    // Delegate the saved-card persist + bookkeeping to the shared
+    // commit helper. Same behavior the inline-Elements flow has always
+    // had — the helper is the byte-identical extract. The
+    // hosted-checkout return + checkout.completed webhook call the
+    // same helper for SETUP-mode pledges; the CAS inside guarantees
+    // only one of them runs the side effects.
+    const result = await commitDcPledge({
+      pledgeId: pledge.id,
+      paymentMethodId: resolvedPaymentMethodId,
+      setupIntentId: effectiveSetupIntentId,
+      source: "confirm-dc-setup",
     });
 
-    if (claim.count === 0) {
-      return NextResponse.json({
-        ok: true,
-        pledgeId: pledge.id,
-        alreadyConfirmed: true,
-      });
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
-
-    // Count the pledge toward the project goal. lib/stats.ts counts
-    // confirmationEmailSent PENDING pledges, but currentAmount /
-    // backerCount are denormalized counters the dashboards read directly.
-    const updatedProject = await db.project.update({
-      where: { id: pledge.projectId },
-      data: {
-        currentAmount: { increment: Number(pledge.amount) },
-        backerCount: { increment: 1 },
-      },
-    });
-
-    // Notify the creator if the project just hit its goal.
-    const projectIsFunded =
-      Number(updatedProject.currentAmount) >= Number(updatedProject.goalAmount);
-    const justReachedGoal =
-      projectIsFunded &&
-      Number(updatedProject.currentAmount) - Number(pledge.amount) <
-        Number(updatedProject.goalAmount);
-    if (justReachedGoal) {
-      await notifyProjectFunded(pledge.projectId).catch((err) =>
-        log.error({ err: String(err) }, "notifyProjectFunded failed")
-      );
-    }
-
-    // Claim reward + addon slots.
-    if (pledge.reward?.id) {
-      const claimed = await claimRewardSlot(pledge.reward.id);
-      if (!claimed) {
-        log.warn(
-          { pledgeId: pledge.id, rewardId: pledge.reward.id },
-          "[Confirm DC Setup] Reward sold out"
-        );
-      }
-    }
-    if (pledge.addons?.length) {
-      await claimAddonSlots(
-        pledge.addons.map((a: { addonId: string; quantity: number }) => ({
-          id: a.addonId,
-          quantity: a.quantity,
-        }))
-      ).catch((err) => log.error({ err: String(err) }, "claimAddonSlots failed"));
-    }
-
-    // Notify the creator of the new pledge.
-    try {
-      await notifyPledgeReceived(
-        pledge.projectId,
-        pledge.project.creatorId,
-        pledge.user.name || "A backer",
-        pledge.amount
-      );
-    } catch (notifyError) {
-      log.error(
-        { err: String(notifyError) },
-        `[Confirm DC Setup] Failed to notify creator for pledge ${pledge.id}`
-      );
-    }
-
-    // Assign a backer number before the email so it can include it.
-    let assignedBackerNumber = pledge.backerNumber;
-    if (!assignedBackerNumber) {
-      try {
-        assignedBackerNumber = await assignBackerNumber(pledge.projectId, pledge.id);
-      } catch (bnError) {
-        log.error(
-          { err: String(bnError) },
-          `[Confirm DC Setup] Failed to assign backer number for pledge ${pledge.id}`
-        );
-      }
-    }
-
-    // Send the confirmation email. chargedImmediately is false here, so
-    // the email tells the backer they'll be charged when the campaign
-    // succeeds rather than that they were charged now.
-    const pledgeEmailEnabled = await isEmailTypeEnabled("pledgeConfirmation");
-    if (pledge.user.email && pledgeEmailEnabled) {
-      const addons =
-        pledge.addons?.map(
-          (addonEntry: {
-            quantity: number;
-            addon: { title: string; amount: unknown };
-          }) => ({
-            title: addonEntry.addon.title,
-            quantity: addonEntry.quantity,
-            amount: Number(addonEntry.addon.amount) * addonEntry.quantity,
-          })
-        ) || [];
-
-      const rawAddr = pledge.shippingAddress as Record<string, string> | null;
-      const shippingInfo = rawAddr
-        ? {
-            name: rawAddr.name || null,
-            address: rawAddr.line1 || rawAddr.address1 || null,
-            city: rawAddr.city || null,
-            state: rawAddr.state || null,
-            postalCode: rawAddr.postalCode || rawAddr.zip || null,
-            country: rawAddr.country || null,
-          }
-        : null;
-
-      const projectUrlPath = pledge.project.creator?.vanityUrl
-        ? `/projects/${pledge.project.creator.vanityUrl}/${pledge.project.slug}`
-        : undefined;
-
-      const emailResult = await sendPledgeConfirmationEmail(
-        pledge.user.email,
-        pledge.user.name || "Backer",
-        pledge.project.title,
-        pledge.project.slug,
-        Number(pledge.amount),
-        pledge.reward?.title || null,
-        pledge.chargedImmediately,
-        pledge.project.imageUrl,
-        pledge.project.currency || "USD",
-        addons,
-        shippingInfo,
-        projectUrlPath,
-        Number(pledge.rewardAmount) || undefined,
-        Number(pledge.shippingAmount) || undefined,
-        pledge.paymentProcessor as "STRIPE" | "DIVINITYCOIN" | "PAYPAL",
-        assignedBackerNumber,
-        pledge.id
-      );
-
-      if (emailResult.success) {
-        try {
-          await db.emailLog.create({
-            data: {
-              userId: pledge.user.id,
-              projectId: pledge.project.id,
-              pledgeId: pledge.id,
-              type: "PLEDGE_CONFIRMATION",
-              subject: emailResult.subject,
-              recipientEmail: pledge.user.email,
-              htmlContent: emailResult.html,
-            },
-          });
-        } catch (logErr) {
-          log.error(
-            { err: String(logErr) },
-            `[Confirm DC Setup] Failed to log confirmation email for pledge ${pledge.id}`
-          );
-        }
-      } else {
-        log.error(
-          { err: String(emailResult.error) },
-          `[Confirm DC Setup] Failed to send confirmation email for pledge ${pledge.id}`
-        );
-      }
-    }
-
-    log.info(
-      { pledgeId: pledge.id, setupIntentId: effectiveSetupIntentId },
-      "[Confirm DC Setup] Pledge committed for AoN charge-on-success"
-    );
 
     return NextResponse.json({
       ok: true,
       pledgeId: pledge.id,
+      alreadyConfirmed: result.alreadyCommitted,
     });
   } catch (err) {
     log.error(

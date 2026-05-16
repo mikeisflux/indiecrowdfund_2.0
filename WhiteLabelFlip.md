@@ -123,59 +123,86 @@ untouched.
 
 ### Server-side
 
-- [ ] Add `hostedCheckoutEnabled` flag (env-driven) to
-      `src/lib/payments/divinitycoin/config.ts`
-- [ ] Refactor the bookkeeping in
+- [x] Add `hostedCheckoutEnabled` flag (env-driven) to
+      `src/lib/payments/divinitycoin/config.ts` — exported as
+      `isHostedCheckoutEnabled()`, reads
+      `DIVINITYCOIN_HOSTED_CHECKOUT === "true"`
+- [x] Refactor the bookkeeping in
       `src/app/api/pledges/[pledgeId]/confirm-dc-setup/route.ts` into
       a shared `commitDcPledge()` helper in
-      `src/lib/payments/divinitycoin/commit-pledge.ts`. Confirm
-      behavior is byte-identical for existing callers (atomic CAS,
-      counter increments, reward/addon claims, backer-number
-      assignment, confirmation email, creator notification)
-- [ ] Update `confirm-dc-setup` route to call the new shared helper
-- [ ] In `src/app/api/pledges/route.ts` DC branch
-      (lines ~238-495): when `hostedCheckoutEnabled` is true, call
+      `src/lib/payments/divinitycoin/commit-pledge.ts`. Behavior is
+      byte-identical: atomic `confirmationEmailSent` CAS, counter
+      increments, just-reached-goal notify, reward/addon slot claims,
+      backer number assignment, confirmation email + EmailLog
+- [x] Update `confirm-dc-setup` route to call the new shared helper
+      (route now only owns auth + state validation + 3DS recovery via
+      `getDcSetupIntent`; commit work delegates to `commitDcPledge`)
+- [x] In `src/app/api/pledges/route.ts` DC branch
+      (lines ~238-495): when `isHostedCheckoutEnabled()` is true, call
       `createDcCheckoutSession()` with mode `setup` (AoN-unfunded) or
       `payment` (KIA / AoN-funded). Pass
-      `returnUrl = ${BASE}/projects/[vanityname]/[slug]/pledge/return?pledgeId=...`,
-      `partnerLogoUrl = ${BASE}/logo.png` (explicit, per decision
-      above), `description = "Pledge to ${project.title}"`. Persist
-      `divinityCoinCheckoutSessionId`. Return
-      `{ checkoutUrl, sessionId, intentType: "hosted_checkout", pledgeId }`
-- [ ] Create `src/app/api/pledges/[pledgeId]/confirm-dc-checkout/route.ts`
+      `returnUrl = ${APP_URL}/projects/[vanityname]/[slug]/pledge?success=true&pledgeId=...`
+      so the existing `handleSuccessRedirect` effect picks up the
+      DC-appended `?session_id` and dispatches `/confirm-dc-checkout`.
+      `partnerLogoUrl` reads `NEXT_PUBLIC_BRAND_LOGO_URL` (set it to
+      pass our logo; if unset, DC falls back to the partner record's
+      stored copy). `description = "Pledge to ${project.title}"`.
+      Persist `divinityCoinCheckoutSessionId`. Returns
+      `{ type: "hosted_checkout", checkoutUrl, sessionId, pledgeId,
+      chargedImmediately }`
+- [x] Create `src/app/api/pledges/[pledgeId]/confirm-dc-checkout/route.ts`
       POST endpoint. Pulls pledge, calls `getDcCheckoutSession()`, on
-      `status=complete` runs `commitDcPledge()`. Atomic CAS dedupes
-      against the webhook
-- [ ] Flesh out `handleCheckoutCompleted` (from Phase 1) to also run
-      `commitDcPledge()` when the pledge is still PENDING. Either
-      path can win — CAS guarantees one commits, other is no-op
+      `status === "complete"` + `mode === "setup"` runs
+      `commitDcPledge()`. PAYMENT mode trusts the existing
+      `payment.succeeded` webhook (the underlying PI fires it). All
+      non-success terminal states get explicit response shapes so the
+      client can render the right UI. CAS dedupes against the
+      `checkout.completed` webhook race
+- [x] Flesh out `handleCheckoutCompleted` (from Phase 1) to call
+      `commitDcPledge()` for SETUP-mode sessions only. PAYMENT-mode
+      sessions are explicitly delegated to `payment.succeeded` so
+      we don't fight that handler's CAS for no gain. Either of the
+      two SETUP paths (this webhook vs. confirm-dc-checkout) can win
+      — `commitDcPledge` CAS guarantees one commits, other no-ops
 
 ### Client-side
 
-- [ ] Create return page:
-      `src/app/projects/[vanityname]/[slug]/pledge/return/page.tsx`.
-      Reads `?session_id=...&pledgeId=...` from query, POSTs to
-      `/api/pledges/[pledgeId]/confirm-dc-checkout`, on success
-      redirects to `/projects/[...]/pledge/success`, on failure shows
-      retry / contact-support UI
-- [ ] In `src/app/projects/[vanityname]/[slug]/pledge/hooks/usePledge.ts`:
-      detect `intentType === "hosted_checkout"` response and
-      `window.location.href = checkoutUrl`. Skip Elements mount
-      entirely on this path
-- [ ] Verify the Elements path (existing `setup_intent` / `payment_intent`
-      responses) still works when the flag is off — no regressions in
-      `PaymentStep.tsx` / `DCPaymentWrapper.tsx` / `StripePaymentForm.tsx`
+- [x] No standalone return page needed — the DC returnUrl points back
+      at the existing pledge wizard with `?success=true&pledgeId=...`
+      and DC appends `&session_id=...`. The existing
+      `handleSuccessRedirect` effect in `usePledge.ts` now branches on
+      `session_id` first (DC hosted-checkout), then `setup_intent`
+      (DC inline-Elements 3DS), then nothing (immediate-charge
+      `/confirm`). Failure / pending / expired / canceled session
+      states surface as the route's structured response so the
+      wizard's success-step can degrade gracefully — Phase 4 can add
+      a dedicated failure UI if needed
+- [x] In `src/app/projects/[vanityname]/[slug]/pledge/hooks/usePledge.ts`:
+      detect `result.type === "hosted_checkout"` in
+      `createPledgeForPayment` and `window.location.href =
+      checkoutUrl`. Skip the Stripe Elements mount entirely on this
+      path; the redirect unloads the page so `isProcessing` is
+      intentionally not reset
+- [x] Verify the Elements path (existing `setup_intent` /
+      `payment_intent` responses) still works when the flag is off —
+      `PaymentStep.tsx` / `DCPaymentWrapper.tsx` /
+      `StripePaymentForm.tsx` untouched; the
+      `else if (result.type === "hosted_checkout"...)` branch only
+      fires when the server returns that shape (flag on)
 
 ### Telemetry
 
-- [ ] Add metric `pledgesByDcFlow{flow="elements"|"hosted_checkout"}`
-- [ ] Add metric `dcHostedCheckoutSessionsCreated`,
-      `dcHostedCheckoutSessionsCompleted`,
-      `dcHostedCheckoutSessionsAbandoned`
+- [x] Add metric `pledgesByDcFlow{flow="elements"|"hosted_checkout"}`
+      in `src/lib/metrics.ts`. Incremented in `/api/pledges` DC
+      branch right at the fork point
+- [x] Add metric
+      `dcHostedCheckoutSessions{state="created"|"completed"|"failed"|"expired"|"canceled"}`.
+      `created` ticks in `/api/pledges`, the rest in the matching
+      webhook handlers in `payments.ts`
 
 ### Verification
 
-- [ ] Lint + typecheck clean
+- [x] Lint + typecheck clean
 - [ ] Manual test with flag off: existing flow unchanged
 - [ ] Manual test with flag on (dev only): create pledge → redirect
       to DC → complete card → redirect back → pledge COMPLETED →
@@ -187,7 +214,7 @@ untouched.
       `checkout.completed` fires → pledge committed via
       `commitDcPledge` → no double-count vs. existing
       `confirm-dc-setup` callers
-- [ ] Commit + push (separate commit from Phase 1)
+- [x] Commit + push (separate commit from Phase 1)
 
 ---
 

@@ -192,6 +192,14 @@ export const metrics = {
     "dc_webhook_events_total",
     "Total DivinityCoin webhook events received, by event type"
   ),
+  pledgesByDcFlow: new Counter(
+    "pledges_by_dc_flow_total",
+    "DivinityCoin pledges created, split by checkout surface (elements vs hosted_checkout)"
+  ),
+  dcHostedCheckoutSessions: new Counter(
+    "dc_hosted_checkout_sessions_total",
+    "DivinityCoin hosted-checkout sessions by terminal state (created | completed | failed | expired | canceled)"
+  ),
 };
 
 /**
