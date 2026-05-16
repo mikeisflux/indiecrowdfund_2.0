@@ -541,7 +541,7 @@ function getCSPHeader(allowShopifyIframe: boolean = false): string {
     "font-src 'self' https://fonts.gstatic.com https://applepay.cdn-apple.com data:",
     "img-src 'self' data: blob: https: http:",
     "connect-src 'self' blob: https://api.stripe.com https://*.paypal.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://vitals.vercel-analytics.com https://*.r2.cloudflarestorage.com https://unpkg.com wss: https://api.whop.com https://*.whop.com https://apple-pay-gateway.apple.com https://*.apple.com",
-    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://www.youtube.com https://youtube.com https://player.vimeo.com https://www.google.com https://recaptcha.google.com https://whop.com https://*.whop.com",
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://www.youtube.com https://youtube.com https://player.vimeo.com https://www.google.com https://recaptcha.google.com https://whop.com https://*.whop.com https://divinitycoin.com",
     // Worker sources - allow blob URLs for pdf.js web worker
     "worker-src 'self' blob:",
     "object-src 'none'",

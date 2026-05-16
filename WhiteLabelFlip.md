@@ -167,28 +167,45 @@ untouched.
 
 ### Client-side
 
-- [x] No standalone return page needed — the DC returnUrl points back
-      at the existing pledge wizard with `?success=true&pledgeId=...`
-      and DC appends `&session_id=...`. The existing
-      `handleSuccessRedirect` effect in `usePledge.ts` now branches on
-      `session_id` first (DC hosted-checkout), then `setup_intent`
-      (DC inline-Elements 3DS), then nothing (immediate-charge
-      `/confirm`). Failure / pending / expired / canceled session
-      states surface as the route's structured response so the
-      wizard's success-step can degrade gracefully — Phase 4 can add
-      a dedicated failure UI if needed
-- [x] In `src/app/projects/[vanityname]/[slug]/pledge/hooks/usePledge.ts`:
-      detect `result.type === "hosted_checkout"` in
-      `createPledgeForPayment` and `window.location.href =
-      checkoutUrl`. Skip the Stripe Elements mount entirely on this
-      path; the redirect unloads the page so `isProcessing` is
-      intentionally not reset
+**Iframe correction (2026-05-16):** the initial Phase 2 client used a
+full-page redirect to divinitycoin.com on `hosted_checkout`. Reverted
+that — the checkout now stays on icf.com inside an iframe, matching
+the inline UX users had with Stripe Elements. Cross-origin polling on
+`/api/pledges/[id]/confirm-dc-checkout` drives completion. CSP
+`frame-src` was extended to allow `https://divinitycoin.com`. If DC
+ever blocks iframe embedding (X-Frame-Options / restrictive
+frame-ancestors), the component shows a fallback "Open in a new tab"
+CTA after a 12s detection window — the same hosted page works in a
+new tab, so the user is never stranded.
+
+- [x] New component
+      `src/app/projects/[vanityname]/[slug]/pledge/components/DCHostedCheckoutFrame.tsx`:
+      mounts an iframe at `checkoutUrl`, polls
+      `/api/pledges/[id]/confirm-dc-checkout` every 3s for terminal
+      state, fires `onSuccess` / `onFailure`. Persistent "open in new
+      tab" link below the iframe + a more prominent CTA after 12s if
+      the iframe load event never fires
+- [x] `src/proxy.ts` CSP: `frame-src` extended to allow
+      `https://divinitycoin.com` so the iframe can load
+- [x] `usePledge.ts`: added `dcCheckoutUrl` + `dcSessionId` state.
+      On `hosted_checkout` response, sets state instead of doing
+      `window.location.href`. Reset guards + auto-create guard
+      updated so the iframe state participates
+- [x] `PaymentStep.tsx`: when `dcCheckoutUrl && dcSessionId &&
+      currentPledgeId` are all set, mount `DCHostedCheckoutFrame`
+      instead of `DCPaymentWrapper`. Lazy-loaded via `dynamic` like
+      the existing wrapper
+- [x] `page.tsx`: pass `dcCheckoutUrl` + `dcSessionId` through to
+      `PaymentStep`
+- [x] `handleSuccessRedirect` keeps its `session_id` query-param
+      branch as a fallback for the "open in new tab" / DC redirect
+      cases — the route is idempotent so a double-confirm from
+      iframe-poll + URL-fallback is safe
 - [x] Verify the Elements path (existing `setup_intent` /
       `payment_intent` responses) still works when the flag is off —
-      `PaymentStep.tsx` / `DCPaymentWrapper.tsx` /
-      `StripePaymentForm.tsx` untouched; the
-      `else if (result.type === "hosted_checkout"...)` branch only
-      fires when the server returns that shape (flag on)
+      `DCPaymentWrapper.tsx` / `StripePaymentForm.tsx` untouched;
+      the iframe branch only renders when the server returns
+      `hosted_checkout` (flag on)
 
 ### Telemetry
 

@@ -167,6 +167,8 @@ export default function PledgePage() {
                 whopPlanId={pledge.whopPlanId}
                 whopEnvironment={pledge.whopEnvironment}
                 intentType={pledge.intentType}
+                dcCheckoutUrl={pledge.dcCheckoutUrl}
+                dcSessionId={pledge.dcSessionId}
               />
             )}
           </div>

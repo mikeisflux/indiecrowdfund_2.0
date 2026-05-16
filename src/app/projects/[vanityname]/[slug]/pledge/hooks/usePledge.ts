@@ -91,6 +91,14 @@ export function usePledge() {
   const [whopSessionId, setWhopSessionId] = useState<string | null>(null);
   const [whopPlanId, setWhopPlanId] = useState<string | null>(null);
   const [whopEnvironment, setWhopEnvironment] = useState<"production" | "sandbox">("production");
+  // DivinityCoin white-label hosted checkout state (Phase 2+,
+  // server-gated by DIVINITYCOIN_HOSTED_CHECKOUT). When set, the
+  // PaymentStep mounts an iframe of checkoutUrl on the pledge page
+  // and polls /confirm-dc-checkout for terminal state. dcSessionId
+  // is the cs_... persisted on the pledge — also accepted by the
+  // confirm route as the session lookup key.
+  const [dcCheckoutUrl, setDcCheckoutUrl] = useState<string | null>(null);
+  const [dcSessionId, setDcSessionId] = useState<string | null>(null);
 
   const creatingPaymentRef = useRef(false);
 
@@ -263,10 +271,13 @@ export function usePledge() {
   const total = subtotal + totalShipping;
   const addItemsTotal = addonsTotal + addonsShipping;
 
-  // Reset guard on state clear
+  // Reset guard on state clear. dcCheckoutUrl participates here so
+  // the auto-create effect doesn't fire a second pledge while the
+  // hosted-checkout iframe is mounted (which has its own session +
+  // pledge already in flight).
   useEffect(() => {
-    if (!clientSecret && !paypalOrderId && !whopSessionId && !paymentError && !isProcessing) creatingPaymentRef.current = false;
-  }, [clientSecret, paypalOrderId, whopSessionId, paymentError, isProcessing]);
+    if (!clientSecret && !paypalOrderId && !whopSessionId && !dcCheckoutUrl && !paymentError && !isProcessing) creatingPaymentRef.current = false;
+  }, [clientSecret, paypalOrderId, whopSessionId, dcCheckoutUrl, paymentError, isProcessing]);
 
   const createAdditionalItemsPurchase = async () => {
     if (!project || !existingPledgeId || Object.keys(selectedAddons).length === 0) return;
@@ -322,7 +333,7 @@ export function usePledge() {
 
   const createPledgeForPayment = async () => {
     if (!project || (!selectedReward && !pledgeWithoutReward)) return;
-    if (clientSecret || paypalOrderId || whopSessionId) return;
+    if (clientSecret || paypalOrderId || whopSessionId || dcCheckoutUrl) return;
     if (currentPledgeId) return;
     if (creatingPaymentRef.current) return;
     // Block pledge creation when the cart contains shippable items and
@@ -356,20 +367,18 @@ export function usePledge() {
       } else if (result.whopSessionId) {
         // Whop flow: use sessionId for embedded checkout
         setWhopSessionId(result.whopSessionId);
-      } else if (result.type === "hosted_checkout" && result.checkoutUrl) {
+      } else if (result.type === "hosted_checkout" && result.checkoutUrl && result.sessionId) {
         // DivinityCoin white-label hosted checkout (Phase 2+,
         // gated by DIVINITYCOIN_HOSTED_CHECKOUT on the server).
-        // Full-page redirect to divinitycoin.com/checkout/cs_...
-        // — DC handles card capture + 3DS + brand UI on their
-        // domain, then redirects back to our returnUrl with
-        // ?success=true&pledgeId=...&session_id=... where the
-        // handleSuccessRedirect effect picks up and dispatches
-        // /confirm-dc-checkout. No Elements mount on our side.
-        window.location.href = result.checkoutUrl;
-        // Intentionally don't reset isProcessing here — the page is
-        // about to unload, and clearing state would briefly flash
-        // the "ready to pay" UI before the redirect lands.
-        return;
+        // We keep the user on indiecrowdfund.com and mount DC's
+        // checkout page in an iframe via DCHostedCheckoutFrame on
+        // the PaymentStep. The iframe polls
+        // /api/pledges/[id]/confirm-dc-checkout for terminal state
+        // and fires onSuccess / onFailure when DC reports complete /
+        // failed / expired / canceled. No Stripe loaded on our
+        // origin; no full-page redirect.
+        setDcCheckoutUrl(result.checkoutUrl);
+        setDcSessionId(result.sessionId);
       } else {
         if (!result.clientSecret) throw new Error("Invalid payment response - missing client secret");
         if (result.publishableKey && !dcStripePromise) setDcStripePromise(loadStripe(result.publishableKey));
@@ -391,10 +400,10 @@ export function usePledge() {
     } else if (isAddItemsMode) {
       if (step === "payment" && !clientSecret && !currentPledgeId && !isProcessing && !paymentError && project && Object.keys(selectedAddons).length > 0) createAdditionalItemsPurchase();
     } else {
-      if (step === "payment" && !clientSecret && !paypalOrderId && !whopSessionId && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) createPledgeForPayment();
+      if (step === "payment" && !clientSecret && !paypalOrderId && !whopSessionId && !dcCheckoutUrl && !currentPledgeId && !isProcessing && !paymentError && project && (selectedReward || pledgeWithoutReward)) createPledgeForPayment();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, currentPledgeId, isProcessing, paymentError, isAddItemsMode, isModifyMode, selectedAddons]);
+  }, [step, project, selectedReward, pledgeWithoutReward, clientSecret, dcCheckoutUrl, currentPledgeId, isProcessing, paymentError, isAddItemsMode, isModifyMode, selectedAddons]);
 
   const getExistingPledgeRewardId = async (pledgeId: string): Promise<string | null> => {
     try {
@@ -596,6 +605,8 @@ export function usePledge() {
     paypalOrderId, paypalClientId, paypalMode,
     // Whop
     whopSessionId, whopPlanId, whopEnvironment,
+    // DivinityCoin white-label hosted checkout (iframe on this page)
+    dcCheckoutUrl, dcSessionId,
     // Totals
     totalShipping, addonsShipping, total, addItemsTotal,
     // Handlers

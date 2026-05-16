@@ -12,6 +12,16 @@ import { WhopPaymentForm } from "./WhopPaymentForm";
 import { apiFetch } from "@/lib/fetch-utils";
 
 // Dynamically import the DC/Stripe wrapper so Stripe.js only loads when payment is initiated
+const DCHostedCheckoutFrame = dynamic(() => import("./DCHostedCheckoutFrame"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col items-center justify-center py-8">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+      <p className="text-sm text-muted-foreground">Loading secure checkout...</p>
+    </div>
+  ),
+});
+
 const DCPaymentWrapper = dynamic(() => import("./DCPaymentWrapper"), {
   ssr: false,
   loading: () => (
@@ -50,6 +60,11 @@ interface PaymentStepProps {
   // DC pledges that save the card now and defer the charge to the
   // success cron, "payment_intent" for KIA / already-funded AoN.
   intentType: "payment_intent" | "setup_intent";
+  // DivinityCoin white-label hosted checkout (iframe). When both are
+  // set, the inline Stripe Elements path is bypassed and DC's hosted
+  // page is mounted in an iframe via DCHostedCheckoutFrame.
+  dcCheckoutUrl: string | null;
+  dcSessionId: string | null;
 }
 
 const isEmailVerificationError = (error: string | null) =>
@@ -150,6 +165,8 @@ export function PaymentStep({
   whopPlanId,
   whopEnvironment,
   intentType,
+  dcCheckoutUrl,
+  dcSessionId,
 }: PaymentStepProps) {
   // In modify mode, show the charge amount (difference), not the full total
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
@@ -334,8 +351,22 @@ export function PaymentStep({
               </div>
             )
           ) : project?.paymentProcessor === "DIVINITYCOIN" ? (
-            /* DivinityCoin Payment - Card form via DC's Stripe account (lazily loaded) */
-            clientSecret && dcStripePromise ? (
+            /* DivinityCoin Payment. Two surfaces depending on
+               DIVINITYCOIN_HOSTED_CHECKOUT (server env flag):
+               - off (default): inline Stripe Elements via
+                 DCPaymentWrapper, exactly the pre-Phase-2 behavior.
+               - on: DC's white-label hosted page in an iframe via
+                 DCHostedCheckoutFrame. User stays on icf.com; DC
+                 owns the card capture surface inside the frame. */
+            dcCheckoutUrl && dcSessionId && currentPledgeId ? (
+              <DCHostedCheckoutFrame
+                checkoutUrl={dcCheckoutUrl}
+                pledgeId={currentPledgeId}
+                sessionId={dcSessionId}
+                onSuccess={handlePaymentSuccess}
+                onFailure={handlePaymentError}
+              />
+            ) : clientSecret && dcStripePromise ? (
               <DCPaymentWrapper
                 clientSecret={clientSecret}
                 dcStripePromise={dcStripePromise}
