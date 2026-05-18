@@ -85,6 +85,17 @@ export function ErrorReporter() {
       /cross-origin object/,
       // ResizeObserver loop limit — benign browser warning, not a real error
       /ResizeObserver loop/,
+      // React reconciliation vs page translator: when Chrome / Edge / Google
+      // Translate / DeepL replaces text nodes with their wrapped versions,
+      // React's virtual DOM no longer matches the real DOM. The next state
+      // update calls insertBefore/removeChild against a node that's no
+      // longer where React thinks it is and throws NotFoundError. Always
+      // an extension or built-in translator interfering — never a bug in
+      // our code. Edge 148's built-in translator is a known repeat
+      // offender. Stack always lands deep in React's commit phase.
+      /Failed to execute 'insertBefore' on 'Node'/,
+      /Failed to execute 'removeChild' on 'Node'/,
+      /NotFoundError.*The node (before which|to be removed)/,
       // Network aborts from users navigating away
       /The operation was aborted/,
       /AbortError/,
@@ -260,6 +271,13 @@ export function ErrorReporter() {
         IGNORED_404_PATH_PATTERNS.some((p) => p.test(requestUrl));
       const isExpected404 =
         (response.status === 404 && requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond")) ||
+        // /api/projects/vanity/[creator]/[slug] returns 404 for any
+        // project that isn't LIVE / FUNDED / FAILED — by design, the
+        // public view shouldn't expose drafts, pending review, or
+        // cancelled campaigns. Creators previewing their own pre-launch
+        // project on the public URL trigger this expected 404. Not
+        // actionable.
+        (response.status === 404 && /\/api\/projects\/vanity\/[^/]+\/[^/?]+/.test(requestUrl)) ||
         isBotProbe404;
       // 401s from authed-only endpoints fired by client-side useEffects before the
       // session handshake completes (or after a silent session expiry on long-lived

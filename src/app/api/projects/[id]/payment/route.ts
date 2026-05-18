@@ -11,7 +11,19 @@ export const dynamic = "force-dynamic";
 
 const paymentSchema = z.object({
   projectType: z.enum(["INDIVIDUAL", "BUSINESS", "NONPROFIT"]).optional(),
-  paymentProcessor: z.enum(["STRIPE", "DIVINITYCOIN", "PAYPAL", "WHOP"]).optional(),
+  // NMI is accepted as a legacy input value and silently transformed
+  // to DIVINITYCOIN. The project builder loads the project's existing
+  // paymentProcessor into its store and re-sends it on every save —
+  // any legacy project still tagged "NMI" 400'd on every payment-step
+  // save until this transform existed. The processor was decommissioned
+  // when PaymentCloud cancelled the merchant account; DIVINITYCOIN is
+  // the supported replacement, so coercing to DC on save is what the
+  // creator actually wants (and matches the migrate-to-dc admin tool's
+  // behavior).
+  paymentProcessor: z
+    .enum(["STRIPE", "DIVINITYCOIN", "PAYPAL", "WHOP", "NMI"])
+    .transform((v) => (v === "NMI" ? ("DIVINITYCOIN" as const) : v))
+    .optional(),
   campaignType: z.enum(["ALL_OR_NOTHING", "KEEP_IT_ALL"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),
@@ -138,9 +150,11 @@ export async function POST(
         if (!updateData.campaignType) {
           updateData.campaignType = "KEEP_IT_ALL";
         }
-        // Only force-switch if currently on Stripe or PayPal (leave DIVINITYCOIN/WHOP as-is)
+        // Only force-switch if currently on a deprecated/disallowed
+        // processor for NSFW (STRIPE, PAYPAL, or legacy NMI).
+        // DIVINITYCOIN/WHOP stay as-is.
         const currentProcessor = currentProject?.paymentProcessor;
-        if ((currentProcessor === "STRIPE" || currentProcessor === "PAYPAL") && !updateData.paymentProcessor) {
+        if ((currentProcessor === "STRIPE" || currentProcessor === "PAYPAL" || currentProcessor === "NMI") && !updateData.paymentProcessor) {
           updateData.paymentProcessor = "DIVINITYCOIN";
         }
       }
