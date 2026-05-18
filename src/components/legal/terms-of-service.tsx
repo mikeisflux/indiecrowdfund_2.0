@@ -1,12 +1,14 @@
 /* eslint-disable react/no-unescaped-entities */
 
+import Link from "next/link";
+
 export function TermsOfServiceContent() {
   return (
     <div className="prose prose-zinc dark:prose-invert max-w-none">
       <div className="rounded-lg border bg-white dark:bg-zinc-900 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-2">IndieCrowdfund — Terms of Service</h2>
         <p className="text-sm text-muted-foreground mb-8">
-          <strong>Last Updated:</strong> March 13, 2026
+          <strong>Last Updated:</strong> May 17, 2026
         </p>
 
         <p className="mb-6">
@@ -21,8 +23,11 @@ export function TermsOfServiceContent() {
         <p className="mb-4">
           IndieCrowdfund is a platform where creators can publish projects, raise funding, offer rewards, and communicate with supporters ("Backers"). IndieCrowdfund facilitates these interactions but does not itself run or guarantee the success of any project.
         </p>
-        <p className="mb-6">
+        <p className="mb-4">
           We are not a store, a bank, or an investment service. We provide tools; creators are responsible for their own projects and for fulfilling commitments made to backers.
+        </p>
+        <p className="mb-6">
+          IndieCrowdfund supports the full spectrum of sequential art created by independent creators — from traditional Western comics and graphic novels to manga-style works, OEL (Original English Language) manga, manhwa, manhua, webcomics, and hybrid traditions blending Eastern and Western storytelling. We formally recognize anime-influenced and manga-style sequential art as a legitimate and established part of Western comics culture, and such campaigns are fully eligible to launch on the platform.
         </p>
 
         <h3 className="text-xl font-semibold mt-8 mb-4">2. Eligibility</h3>
@@ -155,7 +160,120 @@ export function TermsOfServiceContent() {
           IndieCrowdfund reserves the right to request additional documentation, deny applications, or revoke access at any time based on verification findings.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">8. Prohibited Activities</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">8. Content Standards &amp; Age Requirements</h3>
+        <p className="mb-4">
+          All campaigns on IndieCrowdfund are subject to our{" "}
+          <Link href="/terms?tab=guidelines" className="text-emerald-600 hover:underline">
+            Content Guidelines
+          </Link>
+          , which establish content standards, eligibility criteria, and prohibited
+          content policies for sequential-art campaigns. These guidelines apply
+          regardless of the work&apos;s format, genre, or country of creative origin —
+          including manga, OEL manga, manhwa, manhua, and other anime-influenced
+          works.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">8.1 Content Ratings</h4>
+        <p className="mb-4">Every campaign must declare a content rating:</p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>
+            <strong>ALL AGES</strong> — no violence, language, or themes beyond
+            what is appropriate for young children.
+          </li>
+          <li>
+            <strong>TEEN (13+)</strong> — mild action violence, moderate themes,
+            no sexual content.
+          </li>
+          <li>
+            <strong>MATURE (17+)</strong> — strong themes, graphic violence, horror.
+            Suggestive content permitted only with verified adult characters. No
+            explicit sexual content.
+          </li>
+          <li>
+            <strong>ADULT (18+)</strong> — explicit sexual content permitted ONLY
+            where all depicted characters are verifiably 18 or older. Subject to
+            all character age verification requirements below and in our{" "}
+            <Link href="/terms?tab=guidelines" className="text-emerald-600 hover:underline">
+              Content Guidelines
+            </Link>
+            .
+          </li>
+        </ul>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">8.2 Character Age — Absolute Standard</h4>
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+          <p className="text-red-800 dark:text-red-200 font-medium mb-2">
+            No character depicted in suggestive, romantic, or sexual content may
+            be under the age of 18.
+          </p>
+          <p className="text-red-700 dark:text-red-300 text-sm">
+            This applies universally — regardless of whether a character&apos;s
+            age is explicitly stated, implied, or left ambiguous. When in doubt,
+            the character must be treated as a minor and the content is not
+            permitted.
+          </p>
+        </div>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">8.3 Visual Standards — Skeletal Maturity</h4>
+        <p className="mb-4">
+          Written age labels alone are not sufficient. A character described as
+          "18" but drawn with the skeletal proportions, facial structure, or body
+          development of a child will be treated as a minor for the purposes of
+          these Terms. Adult characters in suggestive or sexual content must
+          demonstrate visual markers of skeletal and physiological maturity,
+          including:
+        </p>
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>Facial bone structure consistent with a fully developed adult.</li>
+          <li>
+            Body proportions consistent with adult skeletal development —
+            appropriate limb-to-torso ratios and the absence of prepubescent
+            body markers.
+          </li>
+          <li>Character height and build that does not suggest childhood or early adolescence.</li>
+          <li>
+            Absence of infantilizing visual cues — including oversized heads
+            disproportionate to adult anatomy, underdeveloped or absent
+            secondary sexual characteristics paired with childlike facial
+            features, or costumes and staging that evoke childhood.
+          </li>
+        </ul>
+        <p className="mb-4">
+          Heavily chibi, super-deformed, or simplified art styles that obscure
+          these markers are not exempt. Full visual standards are detailed in our{" "}
+          <Link href="/terms?tab=guidelines" className="text-emerald-600 hover:underline">
+            Content Guidelines § 4
+          </Link>
+          .
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">8.4 Ambiguous Age Policy</h4>
+        <p className="mb-6">
+          Where a character&apos;s age cannot be clearly established as 18 or
+          older through both written documentation AND visual evidence of adult
+          skeletal maturity, the character will be treated as a minor and the
+          content will not be approved.
+        </p>
+
+        <h4 className="text-lg font-semibold mt-6 mb-3">8.5 Pre-Launch Review</h4>
+        <p className="mb-4">
+          All campaigns undergo content review before going live. Standard review
+          takes 3–5 business days. Campaigns flagged for potential policy
+          concerns may be held for extended review. For MATURE or ADULT-rated
+          campaigns featuring suggestive content, creators may be asked to
+          provide written in-universe documentation establishing character age,
+          visual evidence that the character&apos;s depiction meets the skeletal
+          maturity standards above, or revisions if the initial submission does
+          not meet visual standards.
+        </p>
+        <p className="mb-6">
+          Creators whose campaigns are rejected may submit a written appeal
+          with supporting documentation within 14 days. Appeals are reviewed by
+          a separate staff member from the original reviewer; appeal decisions
+          are final.
+        </p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">9. Prohibited Activities</h3>
         <p className="mb-4">Users may not:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>Break any laws while using the platform</li>
@@ -165,9 +283,72 @@ export function TermsOfServiceContent() {
           <li>Upload malware, attempt hacks, or disrupt platform operations</li>
           <li>Use IndieCrowdfund to fund prohibited items (weapons, hate material, adult services, etc.)</li>
         </ul>
-        <p className="mb-6 font-medium">Violations may result in account termination.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">9. Intellectual Property</h3>
+        <p className="mb-4 font-medium">In addition, the following content is strictly prohibited:</p>
+
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+          <p className="text-red-800 dark:text-red-200 font-medium mb-2">
+            Zero-Tolerance: Sexualized Depictions of Minors
+          </p>
+          <p className="text-red-700 dark:text-red-300 text-sm mb-2">
+            IndieCrowdfund maintains an absolute zero-tolerance policy toward any
+            sexually suggestive or explicit depiction of a character who is,
+            appears to be, or is contextually implied to be under 18 — regardless
+            of stated fictional age, art style, or country of creative origin.
+            This includes content commonly referred to as <em>lolicon</em>{" "}
+            (sexualized depictions of minor-presenting female characters) and{" "}
+            <em>shotacon</em> (sexualized depictions of minor-presenting male
+            characters).
+          </p>
+          <p className="text-red-700 dark:text-red-300 text-sm">
+            Pretextual adult-age claims (e.g., a character with unambiguous
+            child anatomy labeled as &quot;actually 500 years old&quot;), swimsuit /
+            lingerie / nude content featuring characters with minor-presenting
+            anatomy, romantic or sexual framing between an adult character and
+            a minor-presenting character, and use of artistic style to obscure
+            intended age in sexual or suggestive contexts are all prohibited.
+            Violations may be reported to appropriate authorities where legally
+            required and will result in permanent account suspension.
+          </p>
+        </div>
+
+        <ul className="list-disc pl-6 mb-4 space-y-2">
+          <li>
+            <strong>Hate speech &amp; supremacist content</strong> — comics whose
+            primary purpose is to dehumanize, degrade, or incite violence
+            against individuals or groups based on race, ethnicity, religion,
+            gender, sexual orientation, disability, or national origin. Villains,
+            dark themes, and historical depictions of racism and atrocity are not
+            automatically prohibited; context and intent matter. Comics that
+            explore these themes critically are eligible. Comics that celebrate
+            or promote them are not.
+          </li>
+          <li>
+            <strong>Real-person violations</strong> — sexual or sexually suggestive
+            depictions of real, identifiable living individuals without
+            documented consent, and defamatory content presented as factual that
+            targets real individuals.
+          </li>
+          <li>
+            <strong>Intellectual property violations</strong> — campaigns that
+            reproduce substantial portions of copyrighted work without
+            authorization, or that present unlicensed derivative works as
+            official or authorized products. Parody, criticism, and commentary
+            are recognized as protected uses; fan comics operating clearly
+            within parody and non-commercial traditions will be evaluated
+            individually.
+          </li>
+          <li>
+            <strong>Other prohibited material</strong> — disinformation
+            campaigns disguised as comics or sequential art; content designed
+            to facilitate real-world violence, illegal activity, or
+            exploitation; and campaigns that misrepresent the nature of the
+            product, creator credentials, or use of funds.
+          </li>
+        </ul>
+        <p className="mb-6 font-medium">Violations may result in account termination and, where required by law, referral to appropriate authorities.</p>
+
+        <h3 className="text-xl font-semibold mt-8 mb-4">10. Intellectual Property</h3>
         <p className="mb-4">
           Creators retain ownership of their content but grant IndieCrowdfund a limited license to:
         </p>
@@ -178,7 +359,7 @@ export function TermsOfServiceContent() {
         </ul>
         <p className="mb-6">Users may not copy, steal, or misuse other creators' content.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">10. Platform Rights</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">11. Platform Rights</h3>
         <p className="mb-4">IndieCrowdfund may:</p>
         <ul className="list-disc pl-6 mb-6 space-y-2">
           <li>Remove content that violates these Terms</li>
@@ -188,7 +369,7 @@ export function TermsOfServiceContent() {
           <li>Refuse service at our discretion</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">11. Disclaimers</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">12. Disclaimers</h3>
         <p className="mb-4 font-medium">IndieCrowdfund is provided "as is" without warranties.</p>
         <p className="mb-4">We do not guarantee:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
@@ -200,7 +381,7 @@ export function TermsOfServiceContent() {
         </ul>
         <p className="mb-6 font-medium">Use the platform at your own risk.</p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">12. Limitation of Liability</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">13. Limitation of Liability</h3>
         <p className="mb-4">To the fullest extent permitted by law:</p>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>IndieCrowdfund is not liable for losses related to project failures, disputes, delays, or unfulfilled rewards</li>
@@ -210,22 +391,22 @@ export function TermsOfServiceContent() {
           Some jurisdictions do not allow certain limitations; in such cases, the limitations apply to the maximum extent allowed.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">13. Dispute Resolution</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">14. Dispute Resolution</h3>
         <p className="mb-4">
           You agree to resolve disputes through binding arbitration, not in court. Class actions are waived. Local consumer rights may apply based on your jurisdiction.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">14. Governing Law</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">15. Governing Law</h3>
         <p className="mb-6">
           These Terms are governed by the laws of the State of Indiana, without regard to conflicts of law.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">15. Changes to These Terms</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">16. Changes to These Terms</h3>
         <p className="mb-6">
           We may update these Terms at any time. We will notify users by email or website notice. Continued use after changes means you accept the updated Terms.
         </p>
 
-        <h3 className="text-xl font-semibold mt-8 mb-4">16. Contact Information</h3>
+        <h3 className="text-xl font-semibold mt-8 mb-4">17. Contact Information</h3>
         <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4">
           <p className="font-semibold mb-2">IndieCrowdfund, Inc.</p>
           <p className="mb-1">

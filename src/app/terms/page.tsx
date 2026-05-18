@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,8 +26,32 @@ import {
   PciComplianceContent,
 } from "@/components/legal";
 
+// Tab values exposed in the URL ?tab=… so other legal docs (e.g. TOS
+// "see our Content Guidelines § 4") can deep-link to a specific tab
+// instead of dumping users on the Terms tab and making them hunt for
+// the right sidebar entry.
+const VALID_TAB_VALUES = new Set([
+  "terms", "privacy", "refunds", "creator", "backer", "shipping",
+  "chargebacks", "fraud", "cookies", "guidelines", "dmca", "ai",
+  "gdpr", "data-deletion", "nsfw", "pci",
+]);
+
 export default function TermsPage() {
-  const [activeTab, setActiveTab] = useState("terms");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get("tab");
+  const [activeTab, setActiveTab] = useState(
+    tabParam && VALID_TAB_VALUES.has(tabParam) ? tabParam : "terms"
+  );
+
+  // Re-sync if the URL changes via navigation (e.g. Link inside this
+  // page goes to /terms?tab=privacy without a full reload). Skip
+  // unknown values so a typo'd link doesn't blank the page.
+  useEffect(() => {
+    if (tabParam && VALID_TAB_VALUES.has(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabParam]);
 
   return (
     <div className="relative min-h-screen bg-background overflow-hidden">
