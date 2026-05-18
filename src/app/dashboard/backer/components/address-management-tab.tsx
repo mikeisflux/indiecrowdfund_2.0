@@ -392,7 +392,13 @@ export function AddressManagementTab() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        {/* max-h-[90vh] + flex column so the form body can scroll
+            internally while the footer (with the Save / Cancel
+            buttons) stays pinned at the bottom of the modal. Without
+            this, on shorter viewports the form pushes the footer
+            off-screen and the user can't reach Save — the bug a
+            backer ran into May 2026. */}
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {editingAddress ? "Edit Address" : "Add New Address"}
@@ -404,7 +410,7 @@ export function AddressManagementTab() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 -mx-6 px-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Label</Label>
