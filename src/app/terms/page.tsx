@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,21 +36,21 @@ const VALID_TAB_VALUES = new Set([
 ]);
 
 export default function TermsPage() {
-  const searchParams = useSearchParams();
-  const tabParam = searchParams?.get("tab");
-  const [activeTab, setActiveTab] = useState(
-    tabParam && VALID_TAB_VALUES.has(tabParam) ? tabParam : "terms"
-  );
+  const [activeTab, setActiveTab] = useState("terms");
 
-  // Re-sync if the URL changes via navigation (e.g. Link inside this
-  // page goes to /terms?tab=privacy without a full reload). Skip
-  // unknown values so a typo'd link doesn't blank the page.
+  // Read ?tab= from the URL after mount and switch tabs if a valid
+  // value is supplied. Done in useEffect (not via useSearchParams /
+  // useState initializer) because useSearchParams during render opts
+  // the route out of static generation, and this page is otherwise
+  // perfectly static. window.location is safe here — useEffect only
+  // runs client-side, so window is always defined.
   useEffect(() => {
-    if (tabParam && VALID_TAB_VALUES.has(tabParam) && tabParam !== activeTab) {
-      setActiveTab(tabParam);
+    if (typeof window === "undefined") return;
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab && VALID_TAB_VALUES.has(tab)) {
+      setActiveTab(tab);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabParam]);
+  }, []);
 
   return (
     <div className="relative min-h-screen bg-background overflow-hidden">
