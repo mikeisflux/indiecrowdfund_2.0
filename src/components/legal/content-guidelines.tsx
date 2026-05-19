@@ -23,6 +23,23 @@ export function ContentGuidelinesContent() {
           submitted materials regardless of format, genre, or country of origin.
         </p>
 
+        {/* Responsive 16:9 wrapper so the iframe scales cleanly on
+            every viewport instead of using YouTube's fixed 560x315.
+            frame-src for youtube.com is already in src/proxy.ts CSP. */}
+        <div className="mb-8 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800">
+          <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+            <iframe
+              src="https://www.youtube.com/embed/UEXdGmjfgsE?si=0hocr5jhP2pYMVa4"
+              title="IndieCrowdfund Content Guidelines overview"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full"
+              style={{ border: 0 }}
+            />
+          </div>
+        </div>
+
         <h3 className="text-xl font-semibold mt-8 mb-4">1. Platform Mission &amp; Scope</h3>
         <p className="mb-4">
           IndieCrowdfund&apos;s comics platform exists to support the full
