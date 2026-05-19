@@ -215,8 +215,8 @@ export function SiteHeader() {
             <span className="hidden sm:inline">IndieCrowdfund</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
-            <NavLink href="/crowdfunds">Crowdfunds</NavLink>
             <NavLink href="/projects/new">Start a Project</NavLink>
+            <NavLink href="/crowdfunds">Crowdfunds</NavLink>
             <NavLink href="/shop">Digital Shop</NavLink>
             <NavLink href="/lcs-locator">LCS Locator</NavLink>
             <NavLink href="/retailers">Retailers</NavLink>
@@ -284,11 +284,11 @@ export function SiteHeader() {
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-4 mt-6">
-                <Link href="/crowdfunds" className="text-sm font-medium hover:text-primary py-2">
-                  Crowdfunds
-                </Link>
                 <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2">
                   Start a Project
+                </Link>
+                <Link href="/crowdfunds" className="text-sm font-medium hover:text-primary py-2">
+                  Crowdfunds
                 </Link>
                 <Link href="/shop" className="text-sm font-medium hover:text-primary py-2">
                   Digital Shop
