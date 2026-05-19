@@ -683,7 +683,7 @@ export default function AboutUsPage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/discover">
+              <Link href="/crowdfunds">
                 <Button
                   size="lg"
                   variant="outline"
@@ -891,7 +891,7 @@ export default function AboutUsPage() {
                   Start a Project
                 </Button>
               </Link>
-              <Link href="/discover">
+              <Link href="/crowdfunds">
                 <Button size="lg" variant="outline" className="gap-2 group">
                   <Search className="h-5 w-5" />
                   Discover Projects

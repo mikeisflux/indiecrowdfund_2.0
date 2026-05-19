@@ -440,7 +440,7 @@ export default function CreatorDashboard() {
                     {([
                       { value: "updates", icon: FileText, label: "Post Updates", gradient: "from-amber-500 to-orange-500" },
                       { value: "social", icon: Sparkles, label: "Social Hub", gradient: "from-pink-500 to-rose-500" },
-                      { value: "marketplace", icon: ShoppingCart, label: "Marketplace", gradient: "from-purple-500 to-fuchsia-500" },
+                      { value: "marketplace", icon: ShoppingCart, label: "Digital Shop", gradient: "from-purple-500 to-fuchsia-500" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (
                       <button
                         key={value}

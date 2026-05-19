@@ -72,7 +72,7 @@ export default function TermsPage() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/discover" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/crowdfunds" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Discover
             </Link>
             <Link href="/projects/new" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -98,7 +98,7 @@ export default function TermsPage() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px]">
               <nav className="flex flex-col gap-4 mt-6">
-                <Link href="/discover" className="text-lg font-medium">Discover</Link>
+                <Link href="/crowdfunds" className="text-lg font-medium">Discover</Link>
                 <Link href="/projects/new" className="text-lg font-medium">Start a Project</Link>
                 <Link href="/retailers" className="text-lg font-medium">Retailers</Link>
                 <Link href="/about-us" className="text-lg font-medium">About Us</Link>

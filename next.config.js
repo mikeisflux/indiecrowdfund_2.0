@@ -16,6 +16,23 @@ const nextConfig = {
         permanent: true,
       },
       { source: '/cookies', destination: '/privacy#cookies', permanent: true },
+      // Rename (2026-05-19): /marketplace → /shop, /discover → /crowdfunds.
+      // Public-facing URL changes, with 301 redirects to preserve link
+      // equity from search indexes, emailed links, and any external
+      // bookmarks. /api/marketplace/* paths are NOT renamed — those
+      // serve uploaded files (digital downloads, audio streams, video
+      // streams) and any URL already shared in a confirmation email
+      // would 404 if those moved.
+      { source: '/marketplace', destination: '/shop', permanent: true },
+      { source: '/marketplace/:path*', destination: '/shop/:path*', permanent: true },
+      { source: '/discover', destination: '/crowdfunds', permanent: true },
+      { source: '/discover/:path*', destination: '/crowdfunds/:path*', permanent: true },
+      { source: '/marketplace-handbook', destination: '/shop-handbook', permanent: true },
+      { source: '/marketplace-handbook/:path*', destination: '/shop-handbook/:path*', permanent: true },
+      { source: '/dashboard/marketplace', destination: '/dashboard/shop', permanent: true },
+      { source: '/dashboard/marketplace/:path*', destination: '/dashboard/shop/:path*', permanent: true },
+      { source: '/admin/marketplace', destination: '/admin/shop', permanent: true },
+      { source: '/admin/marketplace/:path*', destination: '/admin/shop/:path*', permanent: true },
     ];
   },
   // Note: Shopify iframe headers are handled by proxy.ts for proper CSP frame-ancestors support

@@ -633,7 +633,7 @@ export default function BackerDashboard() {
                 Discover new projects and track your backed campaigns
               </p>
             </div>
-            <Link href="/discover">
+            <Link href="/crowdfunds">
               <Button size="lg" className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 text-white shadow-lg shadow-primary/25 group">
                 <Search className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
                 Explore Projects
@@ -846,7 +846,7 @@ export default function BackerDashboard() {
                     <CardContent className="py-12 text-center">
                       <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                       <p className="text-muted-foreground">No backed projects yet</p>
-                      <Link href="/discover" className="inline-block mt-4">
+                      <Link href="/crowdfunds" className="inline-block mt-4">
                         <Button variant="outline">Explore Projects</Button>
                       </Link>
                     </CardContent>
@@ -1058,7 +1058,7 @@ export default function BackerDashboard() {
                       <p className="text-sm text-muted-foreground mt-1">
                         Save projects you&apos;re interested in backing later
                       </p>
-                      <Link href="/discover" className="inline-block mt-4">
+                      <Link href="/crowdfunds" className="inline-block mt-4">
                         <Button variant="outline">Explore Projects</Button>
                       </Link>
                     </CardContent>
@@ -1292,7 +1292,7 @@ export default function BackerDashboard() {
                     ? `Based on your backed projects`
                     : "Discover projects you might like"}
                 </p>
-                <Link href="/discover">
+                <Link href="/crowdfunds">
                   <Button variant="outline" className="w-full hover:border-primary/50 hover:bg-primary/5">
                     <Search className="mr-2 h-4 w-4" />
                     Discover Similar Projects

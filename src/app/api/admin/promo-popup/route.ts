@@ -65,7 +65,7 @@ const defaultSlides = [
     gradientTo: "#06b6d4",
   },
   {
-    title: "Digital Marketplace",
+    title: "Digital Shop",
     subtitle: "Sell digital products with zero platform fees on your revenue",
     features: [
       "Instant Digital Delivery — automatic file distribution on purchase",

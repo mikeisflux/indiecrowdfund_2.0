@@ -372,7 +372,7 @@ export default async function SuccessStoriesPage() {
                   Discover innovative projects from creators around the world and be part of bringing new ideas to life.
                 </p>
                 <div className="mt-6 pt-4 border-t">
-                  <Link href="/discover">
+                  <Link href="/crowdfunds">
                     <Button variant="outline" className="w-full">
                       Discover Projects
                     </Button>
@@ -416,7 +416,7 @@ export default async function SuccessStoriesPage() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link href="/discover">
+            <Link href="/crowdfunds">
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
                 Explore Projects
               </Button>

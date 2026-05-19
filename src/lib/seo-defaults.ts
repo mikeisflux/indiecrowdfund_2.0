@@ -25,7 +25,7 @@ export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
     ogImage: DEFAULT_OG_IMAGE,
     keywords: ["crowdfunding", "kickstarter alternative", "independent creators", "fund projects", "creative campaigns"],
   },
-  "/discover": {
+  "/crowdfunds": {
     title: "Discover Projects - Browse Creative Campaigns",
     description:
       "Explore crowdfunding campaigns across categories like games, art, music, film, and technology. Find and back the next big idea on IndieCrowdfund.",
@@ -135,7 +135,7 @@ export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
     ogImage: DEFAULT_OG_IMAGE,
     keywords: ["indiekit", "creator tools", "campaign management", "backer communication", "analytics"],
   },
-  "/marketplace": {
+  "/shop": {
     title: "Marketplace - Shop Creator Products & Add-ons",
     description:
       "Browse the IndieCrowdfund Marketplace for unique products, digital downloads, and add-ons from independent creators. Support creators beyond crowdfunding.",
@@ -145,7 +145,7 @@ export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
     ogImage: DEFAULT_OG_IMAGE,
     keywords: ["marketplace", "creator products", "digital downloads", "indie products", "shop creator goods"],
   },
-  "/marketplace/books": {
+  "/shop/books": {
     title: "Books - Indie Author Marketplace",
     description:
       "Discover books from independent authors on the IndieCrowdfund Marketplace. Browse fiction, non-fiction, graphic novels, and more from talented indie creators.",
@@ -205,7 +205,7 @@ export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
     ogImage: DEFAULT_OG_IMAGE,
     keywords: ["divinitycoin", "platform currency", "rewards", "earn coins", "crowdfunding rewards"],
   },
-  "/marketplace-handbook/creators": {
+  "/shop-handbook/creators": {
     title: "Marketplace Creator Guide - Sell Your Products",
     description:
       "The complete guide for selling on the IndieCrowdfund Marketplace. Learn how to list products, manage orders, set pricing, and grow your creator shop.",
@@ -215,7 +215,7 @@ export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
     ogImage: DEFAULT_OG_IMAGE,
     keywords: ["sell on marketplace", "creator shop", "list products", "marketplace guide", "creator selling"],
   },
-  "/marketplace-handbook/backers": {
+  "/shop-handbook/backers": {
     title: "Marketplace Backer Guide - How to Shop",
     description:
       "Your guide to shopping on the IndieCrowdfund Marketplace. Learn how to find products, make purchases, track orders, and support independent creators.",

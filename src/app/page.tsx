@@ -465,7 +465,7 @@ async function FeaturedProjectsSection({ userId }: { userId: string | undefined 
             </div>
             <p className="text-muted-foreground">Handpicked projects we love</p>
           </div>
-          <Link href="/discover">
+          <Link href="/crowdfunds">
             <Button variant="ghost" className="group hover:bg-primary/10">
               View all
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -577,7 +577,7 @@ async function PrelaunchProjectsSection({ userId }: { userId: string | undefined
             </div>
             <p className="text-muted-foreground">Coming soon - follow to get notified when they launch</p>
           </div>
-          <Link href="/discover?prelaunch=true">
+          <Link href="/crowdfunds?prelaunch=true">
             <Button variant="ghost" className="group hover:bg-amber-500/10">
               View all
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -668,7 +668,7 @@ async function PastCampaignsSection() {
             </div>
             <p className="text-muted-foreground">Recently completed campaigns</p>
           </div>
-          <Link href="/discover?status=past">
+          <Link href="/crowdfunds?status=past">
             <Button variant="ghost" className="group">
               View all
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -930,7 +930,7 @@ export default async function HomePage() {
                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Link href="/discover">
+            <Link href="/crowdfunds">
               <Button size="lg" className="bg-white text-primary hover:bg-white/90 shadow-lg shadow-black/20 text-base px-8">
                 Explore Projects
               </Button>

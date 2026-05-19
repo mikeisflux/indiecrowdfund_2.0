@@ -503,7 +503,7 @@ export default function ProjectPage() {
           </div>
           <h1 className="text-2xl font-bold">{error}</h1>
           <p className="text-muted-foreground">The project you&apos;re looking for could not be found.</p>
-          <Link href="/discover">
+          <Link href="/crowdfunds">
             <Button className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/20">
               Browse Projects
             </Button>
@@ -639,7 +639,7 @@ export default function ProjectPage() {
                     <span className="font-medium">Project We Love</span>
                   </div>
                 )}
-                <Link href={`/discover?category=${project.category.toLowerCase()}`} className="flex items-center gap-1.5 hover:text-primary">
+                <Link href={`/crowdfunds?category=${project.category.toLowerCase()}`} className="flex items-center gap-1.5 hover:text-primary">
                   <span className="h-4 w-4 rounded-full border-2 flex items-center justify-center text-[10px] font-bold">?</span>
                   <span>{project.category}</span>
                 </Link>

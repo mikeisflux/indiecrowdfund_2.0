@@ -259,7 +259,7 @@ export default function FollowingPage() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/discover">
+            <Link href="/crowdfunds">
               <Button size="sm" className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
                 <Search className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Discover</span>
@@ -328,7 +328,7 @@ export default function FollowingPage() {
                   <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                     Follow projects to get notified about updates, funding milestones, and when they launch.
                   </p>
-                  <Link href="/discover">
+                  <Link href="/crowdfunds">
                     <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
                       <Search className="mr-2 h-4 w-4" />
                       Discover Projects
@@ -455,7 +455,7 @@ export default function FollowingPage() {
                   <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                     Follow creators to get notified when they launch new projects.
                   </p>
-                  <Link href="/discover">
+                  <Link href="/crowdfunds">
                     <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
                       <Search className="mr-2 h-4 w-4" />
                       Discover Creators

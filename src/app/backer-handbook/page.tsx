@@ -201,7 +201,7 @@ const tabContent: Record<string, TabContent> = {
     ],
   },
   'marketplace': {
-    title: 'Digital Marketplace',
+    title: 'Digital Shop',
     description: 'A store for finished digital books, comics, and other downloadable content. Different from pledging — when you buy here, you get the file right now.',
     steps: [
       { title: 'What is the Marketplace?', description: 'A storefront for completed digital works that creators have published — books, comics, art packs, music. Unlike crowdfunding pledges (which can take months to deliver), marketplace purchases are delivered instantly to your account.', tip: 'Use the Marketplace when you want something right now. Use crowdfunding when you want to support a creator making something new.' },
@@ -349,7 +349,7 @@ export default function BackerHandbookPage() {
               <h3 className="text-xl font-bold mb-2">Ready to Discover Projects?</h3>
               <p className="text-blue-100 mb-4">Find amazing campaigns to support today.</p>
               <div className="flex gap-3">
-                <Link href="/discover" className="inline-flex items-center gap-2 rounded-lg bg-white text-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-50">
+                <Link href="/crowdfunds" className="inline-flex items-center gap-2 rounded-lg bg-white text-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-50">
                   <Search className="h-4 w-4" /> Browse Projects
                 </Link>
                 <Link href="/creator-handbook" className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-4 py-2 text-sm font-medium hover:bg-white/10">

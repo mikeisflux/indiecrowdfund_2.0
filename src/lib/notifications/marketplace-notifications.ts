@@ -163,7 +163,7 @@ export async function notifyMarketplaceBookReview(
 
   const isApproved = action === "APPROVED";
   const dashboardUrl = `/dashboard/marketplace`;
-  const bookUrl = isApproved ? `/marketplace/books/${book.slug}` : dashboardUrl;
+  const bookUrl = isApproved ? `/shop/books/${book.slug}` : dashboardUrl;
 
   // Create in-app notification
   await createNotification({

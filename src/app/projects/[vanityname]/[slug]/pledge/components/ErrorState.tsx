@@ -31,7 +31,7 @@ export function ErrorState({ error }: ErrorStateProps) {
           <p className="mb-8 text-muted-foreground">
             {error || "The project you're looking for could not be found."}
           </p>
-          <Link href="/discover">
+          <Link href="/crowdfunds">
             <Button className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/20">
               Discover Projects
             </Button>

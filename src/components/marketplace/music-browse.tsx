@@ -317,7 +317,7 @@ export function MusicBrowse() {
   return (
     <div className="space-y-10 pb-24">
           {/* Featured Albums — horizontal scroll cards */}
-          <HScrollSection title="Featured" icon={Star} seeAllHref="/marketplace/music/featured">
+          <HScrollSection title="Featured" icon={Star} seeAllHref="/shop/music/featured">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="shrink-0 w-[140px] sm:w-[180px]">
@@ -350,7 +350,7 @@ export function MusicBrowse() {
                 <h2 className="text-xl font-bold text-foreground">Hot Songs</h2>
               </div>
               <Link
-                href="/marketplace/music/hot"
+                href="/shop/music/hot"
                 className="px-3 py-1.5 rounded-full border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
               >
                 SEE ALL
@@ -390,7 +390,7 @@ export function MusicBrowse() {
           </section>
 
           {/* Staff Picks */}
-          <HScrollSection title="Staff Picks" icon={Sparkles} seeAllHref="/marketplace/music/staff-picks">
+          <HScrollSection title="Staff Picks" icon={Sparkles} seeAllHref="/shop/music/staff-picks">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="shrink-0 w-[140px] sm:w-[180px]">
@@ -414,7 +414,7 @@ export function MusicBrowse() {
           </HScrollSection>
 
           {/* New Releases */}
-          <HScrollSection title="New Releases" icon={Clock} seeAllHref="/marketplace/music/new">
+          <HScrollSection title="New Releases" icon={Clock} seeAllHref="/shop/music/new">
             {loading
               ? Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="shrink-0 w-[140px] sm:w-[180px]">
@@ -449,7 +449,7 @@ export function MusicBrowse() {
               {GENRE_CARDS.map((genre) => (
                 <Link
                   key={genre.value}
-                  href={`/marketplace/music/genre/${genre.value}`}
+                  href={`/shop/music/genre/${genre.value}`}
                   className="group"
                 >
                   <div

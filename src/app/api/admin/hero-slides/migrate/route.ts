@@ -141,7 +141,7 @@ export async function POST() {
         "IndieCrowdfund leads the way!",
         "IndieCrowdfund is the future home to thousands of creative projects in art, design, film, games, music, and more. Back a project or start your own today.",
         "Discover Projects",
-        "/discover",
+        "/crowdfunds",
         "Start a Project",
         "/projects/new"
       );

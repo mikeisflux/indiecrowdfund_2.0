@@ -88,7 +88,7 @@ const defaultSlide: Partial<HeroSlide> = {
   subtitle: "",
   description: "",
   buttonText: "Discover Projects",
-  buttonLink: "/discover",
+  buttonLink: "/crowdfunds",
   showPrimaryButton: true,
   secondaryButtonText: "Start a Project",
   secondaryButtonLink: "/projects/new",
@@ -749,7 +749,7 @@ export default function HeroSliderPage() {
                         id="buttonLink"
                         value={editingSlide?.buttonLink || ""}
                         onChange={(e) => setEditingSlide({ ...editingSlide, buttonLink: e.target.value })}
-                        placeholder="/discover"
+                        placeholder="/crowdfunds"
                       />
                     </div>
                   </div>

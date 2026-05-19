@@ -329,7 +329,7 @@ export default function ActivityPage() {
                 Your activity feed will show updates from projects you back and follow.
               </p>
               <div className="flex justify-center gap-4">
-                <Link href="/discover">
+                <Link href="/crowdfunds">
                   <Button className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90">
                     Discover Projects
                   </Button>
@@ -465,7 +465,7 @@ export default function ActivityPage() {
                 )}
               </Button>
             </Link>
-            <Link href="/discover">
+            <Link href="/crowdfunds">
               <Button variant="outline" size="sm">
                 <Users className="mr-2 h-4 w-4" />
                 Discover More

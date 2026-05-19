@@ -9,7 +9,7 @@ import {
 export const getTypeBadge = (type: string) => {
   const config: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
     PLEDGE: { label: "Pledge", variant: "default" },
-    MARKETPLACE: { label: "Marketplace", variant: "secondary" },
+    MARKETPLACE: { label: "Digital Shop", variant: "secondary" },
     DC_TRANSACTION: { label: "DC Transaction", variant: "outline" },
     DC_REDEMPTION: { label: "DC Redemption", variant: "outline" },
     PAYOUT: { label: "Payout", variant: "secondary" },

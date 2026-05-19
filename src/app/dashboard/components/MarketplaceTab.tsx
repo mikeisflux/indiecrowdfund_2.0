@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 
 // Lazy-load the full Marketplace page component
 const MarketplacePage = dynamic(
-  () => import("@/app/dashboard/marketplace/page"),
+  () => import("@/app/dashboard/shop/page"),
   {
     loading: () => (
       <div className="flex items-center justify-center py-12">

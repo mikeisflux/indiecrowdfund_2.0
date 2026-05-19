@@ -55,7 +55,7 @@ interface Company {
 // Book Tile Component with 2:3 Portrait Book Cover Design
 function BookTile({ book }: { book: Book }) {
   return (
-    <Link href={`/marketplace/books/${book.slug}`}>
+    <Link href={`/shop/books/${book.slug}`}>
       <div className="group relative aspect-[2/3] rounded-xl overflow-hidden bg-card border border-border shadow-lg hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-400/30 transition-all duration-300">
         {/* Cover Image */}
         {book.coverImage ? (
@@ -118,7 +118,7 @@ function BookTile({ book }: { book: Book }) {
 // Company Tile Component
 function CompanyTile({ company }: { company: Company }) {
   return (
-    <Link href={`/marketplace/companies/${company.slug}`}>
+    <Link href={`/shop/companies/${company.slug}`}>
       <div className="group relative rounded-xl overflow-hidden bg-card border border-border shadow-lg hover:shadow-xl hover:border-cyan-400/30 transition-all duration-300">
         {/* Banner */}
         <div className="relative h-24 bg-gradient-to-br from-cyan-900/50 to-blue-900/50">
@@ -278,7 +278,7 @@ export function MarketplaceContent({
   const handleTabChange = (next: string) => {
     const tab = (next as MarketplaceTab) || "comics";
     setActiveTab(tab);
-    router.push(`/marketplace/${tab}`, { scroll: false });
+    router.push(`/shop/${tab}`, { scroll: false });
   };
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -369,7 +369,7 @@ export function MarketplaceContent({
                 <p className="text-muted-foreground">Do you prefer physical books? Some of our creators offer printed editions.</p>
               </div>
             </div>
-            <Link href="/marketplace/physical-media">
+            <Link href="/shop/physical-media">
               <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">
                 Click Here
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -383,7 +383,7 @@ export function MarketplaceContent({
           <div className="absolute inset-0 bg-grid-black/5 dark:bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
           <div className="relative">
             <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-              Digital Marketplace
+              Digital Shop
             </h1>
             <p className="text-sm text-muted-foreground max-w-xl mb-4">
               Discover and purchase digital comics, music, and movies from independent creators.
@@ -461,7 +461,7 @@ export function MarketplaceContent({
                         <h2 className="text-xl font-bold text-foreground">Featured</h2>
                       </div>
                       <Link
-                        href="/marketplace/comics/featured"
+                        href="/shop/comics/featured"
                         className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300 flex items-center gap-1 group"
                       >
                         View All
@@ -498,7 +498,7 @@ export function MarketplaceContent({
                         <h2 className="text-xl font-bold text-foreground">Staff Picks</h2>
                       </div>
                       <Link
-                        href="/marketplace/comics/staff-picks"
+                        href="/shop/comics/staff-picks"
                         className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300 flex items-center gap-1 group"
                       >
                         View All
@@ -530,7 +530,7 @@ export function MarketplaceContent({
                 <BookSection
                   title="All Comics"
                   books={allBooks}
-                  viewAllHref="/marketplace/comics/all"
+                  viewAllHref="/shop/comics/all"
                   loading={loading}
                   icon={TrendingUp}
                 />

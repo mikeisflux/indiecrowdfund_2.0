@@ -31,7 +31,7 @@ const tabs = [
   { id: 'launch', label: 'Submit & Launch', icon: Rocket },
   { id: 'manage', label: 'During the Campaign', icon: Activity },
   { id: 'after-funding', label: 'After Funding', icon: Package },
-  { id: 'marketplace', label: 'Digital Marketplace', icon: ShoppingBag },
+  { id: 'marketplace', label: 'Digital Shop', icon: ShoppingBag },
 ];
 
 interface FieldInfo {
@@ -180,7 +180,7 @@ const tabContent: Record<string, { title: string; description: string; fields: F
     ]
   },
   'marketplace': {
-    title: 'Digital Marketplace',
+    title: 'Digital Shop',
     description: 'A separate storefront for selling completed digital works (ebooks, comics, art packs, music) directly to customers. No funding goal, no campaign — instant purchase and instant delivery. Different from crowdfunding.',
     fields: [
       { name: 'What is the Marketplace?', required: false, description: 'A dedicated /marketplace storefront for selling already-finished digital works. No campaign, no funding goal, no surveys, no shipping. Customers buy a file, get the file. Useful for backlist titles, completed series, side projects, demos, free samples.', tips: 'Marketplace and crowdfunding can run in parallel. Use marketplace for what\'s done; crowdfund what you\'re still making.' },

@@ -140,7 +140,7 @@ export function UserProfileDropdown() {
                   <Bookmark className="h-4 w-4 md:hidden" />
                   <span>Saved projects</span>
                 </Link>
-                <Link href="/discover" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
+                <Link href="/crowdfunds" className="flex items-center gap-2 text-sm hover:text-primary transition-colors p-2 md:p-0 rounded-md hover:bg-muted/50 md:hover:bg-transparent">
                   <Compass className="h-4 w-4 md:hidden" />
                   <span>Recommended</span>
                 </Link>
@@ -203,7 +203,7 @@ export function UserProfileDropdown() {
                   {profileData.backedProjects.slice(0, 4).map((project) => (
                     <Link
                       key={project.id}
-                      href={project.projectUrl || "/discover"}
+                      href={project.projectUrl || "/crowdfunds"}
                       className="flex items-center gap-3 hover:bg-muted/50 rounded-md p-1.5 -ml-1.5 transition-colors"
                     >
                       <div className="h-9 w-9 rounded bg-muted overflow-hidden flex-shrink-0">

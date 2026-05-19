@@ -276,7 +276,7 @@ export function FollowingTab() {
                 <p className="text-muted-foreground max-w-md mx-auto mb-6">
                   Follow creators to get notified when they launch new projects or post updates.
                 </p>
-                <Link href="/discover">
+                <Link href="/crowdfunds">
                   <Button className="bg-gradient-to-r from-primary to-purple-500">
                     Discover Creators
                   </Button>

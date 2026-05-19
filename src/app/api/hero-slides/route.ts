@@ -24,7 +24,7 @@ const defaultSlideData = {
   subtitle: "IndieCrowdfund leads the way!",
   description: "IndieCrowdfund is the future home to thousands of creative projects in art, design, film, games, music, and more. Back a project or start your own today.",
   buttonText: "Discover Projects",
-  buttonLink: "/discover",
+  buttonLink: "/crowdfunds",
   showPrimaryButton: true,
   secondaryButtonText: "Start a Project",
   secondaryButtonLink: "/projects/new",

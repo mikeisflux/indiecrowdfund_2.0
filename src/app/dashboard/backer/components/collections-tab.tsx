@@ -335,7 +335,7 @@ export function CollectionsTab() {
                 <div className="py-12 text-center">
                   <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
                   <p className="text-muted-foreground mb-4">No projects in this collection</p>
-                  <Link href="/discover">
+                  <Link href="/crowdfunds">
                     <Button variant="outline">Browse Projects</Button>
                   </Link>
                 </div>

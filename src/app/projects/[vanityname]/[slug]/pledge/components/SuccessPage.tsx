@@ -132,7 +132,7 @@ export function SuccessPage({
                 Backer Dashboard
               </Button>
             </Link>
-            <Link href="/discover">
+            <Link href="/crowdfunds">
               <Button size="lg" variant="outline" className="w-full sm:w-auto px-8">
                 Keep Exploring
               </Button>

@@ -136,7 +136,7 @@ export function SiteHeader() {
     if (searchQuery.trim()) {
       setShowSuggestions(false);
       setMobileSearchOpen(false);
-      router.push(`/discover?q=${encodeURIComponent(searchQuery.trim())}&scope=all`);
+      router.push(`/crowdfunds?q=${encodeURIComponent(searchQuery.trim())}&scope=all`);
     }
   };
 
@@ -184,7 +184,7 @@ export function SiteHeader() {
             </Link>
           ))}
           <Link
-            href={`/discover?q=${encodeURIComponent(searchQuery.trim())}&scope=all`}
+            href={`/crowdfunds?q=${encodeURIComponent(searchQuery.trim())}&scope=all`}
             onClick={() => {
               setShowSuggestions(false);
               setSearchQuery("");
@@ -215,9 +215,9 @@ export function SiteHeader() {
             <span className="hidden sm:inline">IndieCrowdfund</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
-            <NavLink href="/discover">Discover</NavLink>
+            <NavLink href="/crowdfunds">Crowdfunds</NavLink>
             <NavLink href="/projects/new">Start a Project</NavLink>
-            <NavLink href="/marketplace">Marketplace</NavLink>
+            <NavLink href="/shop">Digital Shop</NavLink>
             <NavLink href="/lcs-locator">LCS Locator</NavLink>
             <NavLink href="/retailers">Retailers</NavLink>
             <DropdownMenu>
@@ -284,14 +284,14 @@ export function SiteHeader() {
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-4 mt-6">
-                <Link href="/discover" className="text-sm font-medium hover:text-primary py-2">
-                  Discover
+                <Link href="/crowdfunds" className="text-sm font-medium hover:text-primary py-2">
+                  Crowdfunds
                 </Link>
                 <Link href="/projects/new" className="text-sm font-medium hover:text-primary py-2">
                   Start a Project
                 </Link>
-                <Link href="/marketplace" className="text-sm font-medium hover:text-primary py-2">
-                  Marketplace
+                <Link href="/shop" className="text-sm font-medium hover:text-primary py-2">
+                  Digital Shop
                 </Link>
                 <Link href="/lcs-locator" className="text-sm font-medium hover:text-primary py-2">
                   LCS Locator

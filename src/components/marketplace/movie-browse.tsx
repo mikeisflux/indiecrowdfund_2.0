@@ -101,12 +101,12 @@ function HeroSpotlight({ movie }: { movie: MovieItem }) {
           <p className="text-xs sm:text-sm text-white/70 line-clamp-2 mb-4 max-w-md hidden sm:block">{movie.description}</p>
         )}
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link href={`/marketplace/books/${movie.slug}`}>
+          <Link href={`/shop/books/${movie.slug}`}>
             <Button className="bg-white text-black hover:bg-white/90 font-bold gap-2 h-9 sm:h-11 px-4 sm:px-6 text-sm rounded-md">
               <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /> Play
             </Button>
           </Link>
-          <Link href={`/marketplace/books/${movie.slug}`}>
+          <Link href={`/shop/books/${movie.slug}`}>
             <Button variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 font-semibold gap-2 h-9 sm:h-11 px-4 sm:px-6 text-sm rounded-md backdrop-blur-sm">
               <Info className="w-4 h-4 sm:w-5 sm:h-5" /> More Info
             </Button>
@@ -122,7 +122,7 @@ function HeroSpotlight({ movie }: { movie: MovieItem }) {
 function LandscapeCard({ item, isLarge, rank }: { item: MovieItem; isLarge?: boolean; rank?: number }) {
   return (
     <Link
-      href={`/marketplace/books/${item.slug}`}
+      href={`/shop/books/${item.slug}`}
       className={cn(
         "shrink-0 group relative rounded-lg overflow-hidden",
         isLarge
@@ -335,7 +335,7 @@ export function MovieBrowse() {
         <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">Browse by Genre</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
           {GENRE_CARDS.map((genre) => (
-            <Link key={genre.value} href={`/marketplace/movies/genre/${genre.value}`} className="group">
+            <Link key={genre.value} href={`/shop/movies/genre/${genre.value}`} className="group">
               <div className={cn("relative aspect-video rounded-md overflow-hidden bg-gradient-to-br", genre.gradient, "flex items-center justify-center p-3 hover:scale-105 hover:shadow-lg transition-all duration-200")}>
                 <span className="text-white font-bold text-xs sm:text-sm text-center leading-tight drop-shadow-md">{genre.label}</span>
               </div>

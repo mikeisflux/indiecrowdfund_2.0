@@ -88,7 +88,7 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
     tags: ["marketplace", "purchase", "buy", "instant", "delivery"],
     content:
       "The marketplace sells books, music, and movies as instant purchases — your card is charged immediately and the digital content shows up in your Digital Library right away. Different from crowdfunding pledges which fund a future project. Marketplace items have no funding goal and ship/deliver instantly.",
-    link: "/marketplace",
+    link: "/shop",
   },
 
   // ============== Account & profile ==============
@@ -274,19 +274,19 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
   },
   {
     id: "marketplace-handbook-backers",
-    title: "Marketplace Handbook for Backers",
+    title: "Digital Shop Handbook for Backers",
     tags: ["marketplace handbook", "marketplace backer", "buying", "instant purchase"],
     content:
-      "Marketplace Handbook (Backers) covers how the marketplace differs from crowdfunding pledges — instant charge, instant delivery, refund/return policies for digital and physical goods.",
-    link: "/marketplace-handbook/backers",
+      "Digital Shop Handbook (Backers) covers how the marketplace differs from crowdfunding pledges — instant charge, instant delivery, refund/return policies for digital and physical goods.",
+    link: "/shop-handbook/backers",
   },
   {
     id: "marketplace-handbook-creators",
-    title: "Marketplace Handbook for Creators",
+    title: "Digital Shop Handbook for Creators",
     tags: ["marketplace handbook", "marketplace creator", "selling", "list product"],
     content:
-      "Marketplace Handbook (Creators) walks through listing a product (book, music, movie), pricing, processor selection, payouts, and using the marketplace to sell post-campaign inventory. Available at /marketplace-handbook/creators.",
-    link: "/marketplace-handbook/creators",
+      "Digital Shop Handbook (Creators) walks through listing a product (book, music, movie), pricing, processor selection, payouts, and using the marketplace to sell post-campaign inventory. Available at /shop-handbook/creators.",
+    link: "/shop-handbook/creators",
   },
   {
     id: "indiekit-handbook",
