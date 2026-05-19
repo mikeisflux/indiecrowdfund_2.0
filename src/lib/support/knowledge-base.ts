@@ -42,9 +42,9 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
   {
     id: "fees",
     title: "Platform fees",
-    tags: ["fees", "platform fee", "processing fee", "rolling reserve", "payout"],
+    tags: ["fees", "platform fee", "processing fee", "payout"],
     content:
-      "IndieCrowdfund's platform fee is 3% of successfully funded projects. Total fees vary by processor: ~7.5% with Mentom Payments (4% + $0.38/txn + 3% platform), ~6.5% with PayPal (3.49% + $0.49/txn + 3% platform), ~6.5% with Divinity Payments, ~6% with Whop. Mentom Payments holds 10% of gross funds in escrow for 180 days as chargeback protection on campaigns that raise over $2,500.",
+      "IndieCrowdfund's platform fee is 3% of successfully funded projects. Total fees vary by processor: ~7.5% with Mentom Payments (4% + $0.38/txn + 3% platform), ~6.5% with PayPal (3.49% + $0.49/txn + 3% platform), ~6.5% with Divinity Payments, ~6% with Whop.",
     link: "/fees",
   },
   {

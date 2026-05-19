@@ -92,45 +92,6 @@ export function TermsOfServiceContent() {
           <li>Transfer net funds to the creator</li>
         </ul>
 
-        <h4 className="text-lg font-semibold mt-6 mb-2">6a. Rolling Reserve</h4>
-        <p className="mb-4">
-          For certain higher-risk campaigns, IndieCrowdfund may hold a
-          180-day rolling reserve to protect against chargebacks, refunds,
-          and other disputes. By launching such a campaign, creators agree
-          to the following:
-        </p>
-        <ul className="list-disc pl-6 mb-4 space-y-2">
-          <li>
-            <strong>Amount:</strong> Up to 10% of gross campaign revenue is
-            placed in escrow. The reserve is calculated before processing and
-            platform fees are deducted, not on the creator&apos;s net.
-          </li>
-          <li>
-            <strong>Duration:</strong> The reserve is held for 180 days from
-            the date the project is funded. Any unused balance is released to
-            the creator&apos;s payout account at the end of that window.
-          </li>
-          <li>
-            <strong>Manual flag:</strong> New creators, creators with limited
-            track record on the platform, and creators on high-risk
-            categories may be flagged for the reserve regardless of amount
-            raised. This is an individual evaluation decided by IndieCrowdfund
-            during the project approval review.
-          </li>
-          <li>
-            <strong>Scope:</strong> The reserve applies to crowdfunding
-            pledges and IndieKit after-sale charges (post-campaign add-on
-            and balance-due payments). The reserve does NOT apply to digital
-            marketplace sales.
-          </li>
-          <li>
-            <strong>Chargeback offset:</strong> If chargebacks occur during or
-            after the hold period, IndieCrowdfund may use the reserve and the
-            creator&apos;s on-file chargeback card to recoup losses before the
-            remaining reserve is released.
-          </li>
-        </ul>
-
         <p className="mb-6">
           Creators are responsible for all taxes, shipping costs, duties, and regulatory compliance.
         </p>

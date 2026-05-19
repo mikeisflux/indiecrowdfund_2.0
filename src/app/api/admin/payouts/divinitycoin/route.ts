@@ -282,7 +282,6 @@ export async function GET(request: NextRequest) {
       const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
       const totalFees = Math.round((partnerFee + platformFee) * 100) / 100;
 
-      const rollingReserveHeld = 0;
       const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
 
       const settlements = project.divinityCoinSettlements || [];
@@ -326,13 +325,6 @@ export async function GET(request: NextRequest) {
         amountSettled,
         remainingAmount,
         backerCount,
-        // Rolling reserve display fields (legacy — always false for DC)
-        rollingReserveActive: false,
-        rollingReserveSubject: project.rollingReserveSubject,
-        rollingReserveAuto: project.rollingReserveAuto,
-        rollingReserveHeld,
-        rollingReserveReleaseAt: project.rollingReserveReleaseAt,
-        rollingReserveReleased: project.rollingReserveReleased,
         hasBank: !!bankAccount,
         bankVerified: bankAccount?.isVerified || false,
         hasPendingSettlement,
