@@ -327,7 +327,7 @@ export function ContentGuidelinesContent() {
           </li>
         </ul>
 
-        <h4 className="text-lg font-semibold mt-6 mb-3">5.2 Hate Speech &amp; Supremacist Content</h4>
+        <h4 className="text-lg font-semibold mt-6 mb-3">5.2 Hate Speech</h4>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>
             Comics whose primary purpose is to dehumanize, degrade, or incite

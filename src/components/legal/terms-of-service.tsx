@@ -124,7 +124,7 @@ export function TermsOfServiceContent() {
         <h3 className="text-xl font-semibold mt-8 mb-4">8. Content Standards &amp; Age Requirements</h3>
         <p className="mb-4">
           All campaigns on IndieCrowdfund are subject to our{" "}
-          <Link href="/terms?tab=guidelines" className="text-emerald-600 hover:underline">
+          <Link href="/content-guidelines" className="text-emerald-600 hover:underline">
             Content Guidelines
           </Link>
           , which establish content standards, eligibility criteria, and prohibited
@@ -154,7 +154,7 @@ export function TermsOfServiceContent() {
             <strong>ADULT (18+)</strong> — explicit sexual content permitted ONLY
             where all depicted characters are verifiably 18 or older. Subject to
             all character age verification requirements below and in our{" "}
-            <Link href="/terms?tab=guidelines" className="text-emerald-600 hover:underline">
+            <Link href="/content-guidelines" className="text-emerald-600 hover:underline">
               Content Guidelines
             </Link>
             .
@@ -202,7 +202,7 @@ export function TermsOfServiceContent() {
         <p className="mb-4">
           Heavily chibi, super-deformed, or simplified art styles that obscure
           these markers are not exempt. Full visual standards are detailed in our{" "}
-          <Link href="/terms?tab=guidelines" className="text-emerald-600 hover:underline">
+          <Link href="/content-guidelines" className="text-emerald-600 hover:underline">
             Content Guidelines § 4
           </Link>
           .
@@ -275,7 +275,7 @@ export function TermsOfServiceContent() {
 
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li>
-            <strong>Hate speech &amp; supremacist content</strong> — comics whose
+            <strong>Hate speech</strong> — comics whose
             primary purpose is to dehumanize, degrade, or incite violence
             against individuals or groups based on race, ethnicity, religion,
             gender, sexual orientation, disability, or national origin. Villains,
