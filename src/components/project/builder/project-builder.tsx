@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useProjectStore, BUILDER_STEPS } from "@/lib/stores/project-store";
 import { BasicsStep } from "./basics-step";
@@ -55,6 +55,31 @@ export function ProjectBuilder() {
   const [isLaunching, setIsLaunching] = useState(false);
   const [isSubFormOpen, setIsSubFormOpen] = useState(false);
   const [showReReviewWarning, setShowReReviewWarning] = useState(false);
+
+  // Unsaved-changes guard: warn before the tab closes or reloads while the
+  // builder holds edits that haven't been pushed to the server yet.
+  const isDirtyRef = useRef(false);
+  const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    // The first run is the post-hydration baseline, not a user edit.
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      return;
+    }
+    isDirtyRef.current = true;
+  }, [basics, story, rewards, items, people, payment, promotion]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   const isApproved = projectStatus === "APPROVED";
   const isLive = !!projectStatus && ["LIVE", "FUNDED", "PAUSED"].includes(projectStatus);
@@ -259,6 +284,7 @@ export function ProjectBuilder() {
           }
         }
 
+        isDirtyRef.current = false;
         toast.success("Project created successfully");
         return true;
       }
@@ -442,6 +468,7 @@ export function ProjectBuilder() {
         }
       }
 
+      isDirtyRef.current = false;
       toast.success("Project saved successfully");
       return true;
     } catch (error) {

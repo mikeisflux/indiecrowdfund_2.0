@@ -176,6 +176,15 @@ export function CommentsTab({
 
           {/* Comments */}
           <div className="space-y-0">
+            {comments.length === 0 && (
+              <div className="text-center py-10 text-muted-foreground">
+                <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium text-foreground">No comments yet</p>
+                <p className="text-sm mt-1">
+                  Be the first to start the conversation on this project.
+                </p>
+              </div>
+            )}
             {comments.map((comment) => (
               <div
                 key={comment.id}

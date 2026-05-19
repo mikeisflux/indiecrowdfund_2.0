@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -108,7 +108,7 @@ export const revalidate = 60;
 // Fetch featured/live projects from database (excludes closed campaigns)
 // Not wrapped in unstable_cache — it caches stale empty results after deploys.
 // The page is already dynamic due to auth(), so direct queries are fine.
-async function getFeaturedProjects() {
+const getFeaturedProjects = cache(async () => {
   try {
     const now = new Date();
     const projects = await db.project.findMany({
@@ -179,12 +179,12 @@ async function getFeaturedProjects() {
     console.error("Error fetching featured projects:", error);
     return [];
   }
-}
+});
 
 // Fetch projects in prelaunch from database
 // Note: Not wrapped in unstable_cache because Date serialization in the cache
 // can cause stale empty results. The page is already dynamic due to auth().
-async function getPrelaunchProjects() {
+const getPrelaunchProjects = cache(async () => {
   try {
     const projects = await db.project.findMany({
       where: {
@@ -246,11 +246,11 @@ async function getPrelaunchProjects() {
     console.error("Error fetching prelaunch projects:", error);
     return [];
   }
-}
+});
 
 // Fetch past/closed campaigns from database
 // Not wrapped in unstable_cache — it caches stale empty results after deploys.
-async function getPastCampaigns() {
+const getPastCampaigns = cache(async () => {
   try {
     const now = new Date();
     const projects = await db.project.findMany({
@@ -324,7 +324,7 @@ async function getPastCampaigns() {
     console.error("Error fetching past campaigns:", error);
     return [];
   }
-}
+});
 
 // Get user's followed project IDs
 async function getUserFollowedProjectIds(userId: string | undefined): Promise<Set<string>> {
@@ -747,6 +747,49 @@ async function PastCampaignsSection() {
   );
 }
 
+// Shown only when every project section is empty so the page never looks broken.
+async function ProjectsEmptyState() {
+  const [featured, prelaunch, past] = await Promise.all([
+    getFeaturedProjects(),
+    getPrelaunchProjects(),
+    getPastCampaigns(),
+  ]);
+
+  if (featured.length > 0 || prelaunch.length > 0 || past.length > 0) {
+    return null;
+  }
+
+  return (
+    <section className="py-10 md:py-16">
+      <div className="container">
+        <div className="glass-card rounded-2xl border border-border/50 p-10 md:p-14 text-center max-w-2xl mx-auto">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-emerald-500/20">
+            <Rocket className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold md:text-3xl mb-3">No live projects yet</h2>
+          <p className="text-muted-foreground mb-6">
+            Be the first to launch a campaign on IndieCrowdfund — your creative
+            project could be the one that gets this community started.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/projects/new">
+              <Button size="lg" className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 group">
+                Start a Project
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link href="/crowdfunds">
+              <Button size="lg" variant="outline">
+                Browse Crowdfunds
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
@@ -824,6 +867,11 @@ export default async function HomePage() {
       {/* Past Campaigns - streams in */}
       <Suspense fallback={<ProjectSectionSkeleton />}>
         <PastCampaignsSection />
+      </Suspense>
+
+      {/* Empty state - only renders when every project section is empty */}
+      <Suspense fallback={null}>
+        <ProjectsEmptyState />
       </Suspense>
 
       {/* How It Works */}

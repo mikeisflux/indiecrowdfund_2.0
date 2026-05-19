@@ -705,6 +705,23 @@ function NewBookForm() {
     setCurrentStep(1);
   }, []);
 
+  // Warn before the tab closes or reloads while the wizard holds entered
+  // data. This intentionally does NOT persist a draft — stale drafts bled
+  // between books, which is why the mount effect above clears all caches.
+  useEffect(() => {
+    const isDirty =
+      JSON.stringify(formData) !== JSON.stringify(createInitialFormData()) ||
+      tagsInput.trim() !== "";
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [formData, tagsInput]);
+
   const updateForm = (field: keyof BookFormData, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };

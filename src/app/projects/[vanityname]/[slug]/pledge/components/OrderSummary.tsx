@@ -296,6 +296,19 @@ export function OrderSummary({
             </div>
           </div>
 
+          {/* Charge-timing disclosure - surfaced before payment so backers
+              know when they'll be charged before committing. */}
+          {project && (
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-border/50 bg-muted/50 p-3">
+              <Info className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {project.campaignType === "KEEP_IT_ALL"
+                  ? "This is a Keep It All campaign — your card is charged immediately and the creator keeps every pledge, whether or not the funding goal is met."
+                  : "This is an All or Nothing campaign — your card is only charged if the project reaches its funding goal by the deadline."}
+              </p>
+            </div>
+          )}
+
           {/* Continue button */}
           <div className="mt-4">
             <Button
@@ -385,7 +398,11 @@ export function OrderSummary({
               <Link href="/terms" className="underline">Terms of Use</Link>
               , and{" "}
               <Link href="/privacy" className="underline">Privacy Policy</Link>
-              , and for our payment processor, Stripe, to charge your payment method.
+              {project?.paymentProcessor === "WHOP"
+                ? ", and for Whop to process your payment."
+                : project?.paymentProcessor === "PAYPAL"
+                ? ", and for PayPal to process your payment."
+                : ", and for Divinity Payments to process your payment."}
             </p>
           </div>
         </CardContent>
@@ -557,7 +574,7 @@ export function OrderSummary({
             <p className="text-sm text-muted-foreground mb-4">
               {project?.campaignType === "KEEP_IT_ALL"
                 ? "Your payment is collected immediately. The creator keeps all pledges regardless of the funding outcome."
-                : "Backing means supporting a creative project, regardless of the outcome."
+                : "Your card is only charged if this project reaches its funding goal by the deadline."
               }
             </p>
 

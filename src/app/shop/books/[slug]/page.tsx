@@ -915,7 +915,7 @@ export default function BookDetailPage() {
               </Button>
             ) : (
               <>
-                {book?.paymentProcessor === "PAYPAL" ? (
+                {book?.paymentProcessor === "PAYPAL" && (
                   <Button
                     className="h-16 bg-[#003087] hover:bg-[#002070] justify-start"
                     onClick={() => handlePurchase("paypal")}
@@ -931,36 +931,35 @@ export default function BookDetailPage() {
                       <div className="text-sm opacity-80 text-white">Pay with PayPal or card</div>
                     </div>
                   </Button>
-                ) : (
-                  <>
-                    {book?.paymentProcessor !== "DIVINITYCOIN" && (
-                      <Button
-                        variant="outline"
-                        className="h-16 justify-start"
-                        onClick={() => handlePurchase("stripe")}
-                        disabled={purchasing}
-                      >
-                        <CreditCard className="w-6 h-6 mr-4" />
-                        <div className="text-left">
-                          <div className="font-semibold">Credit/Debit Card</div>
-                          <div className="text-sm text-muted-foreground">Pay with Stripe</div>
-                        </div>
-                      </Button>
-                    )}
-                    <Button
-                      className="h-16 bg-[#0066FF] hover:bg-[#0052CC] justify-start"
-                      onClick={() => handlePurchase("divinitycoin")}
-                      disabled={purchasing}
-                    >
-                      <Coins className="w-6 h-6 mr-4" />
-                      <div className="text-left">
-                        <div className="font-semibold">Divinity Payments</div>
-                        <div className="text-sm opacity-80">
-                          Pay with credit or debit card
-                        </div>
+                )}
+                {book?.paymentProcessor === "STRIPE" && (
+                  <Button
+                    variant="outline"
+                    className="h-16 justify-start"
+                    onClick={() => handlePurchase("stripe")}
+                    disabled={purchasing}
+                  >
+                    <CreditCard className="w-6 h-6 mr-4" />
+                    <div className="text-left">
+                      <div className="font-semibold">Credit/Debit Card</div>
+                      <div className="text-sm text-muted-foreground">Pay with credit or debit card</div>
+                    </div>
+                  </Button>
+                )}
+                {book?.paymentProcessor === "DIVINITYCOIN" && (
+                  <Button
+                    className="h-16 bg-[#0066FF] hover:bg-[#0052CC] justify-start"
+                    onClick={() => handlePurchase("divinitycoin")}
+                    disabled={purchasing}
+                  >
+                    <Coins className="w-6 h-6 mr-4" />
+                    <div className="text-left">
+                      <div className="font-semibold">Divinity Payments</div>
+                      <div className="text-sm opacity-80">
+                        Pay with credit or debit card
                       </div>
-                    </Button>
-                  </>
+                    </div>
+                  </Button>
                 )}
               </>
             )}

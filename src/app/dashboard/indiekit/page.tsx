@@ -23,6 +23,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -154,6 +164,21 @@ const POST_FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementT
   { id: "late-backers", label: "Late Backers", icon: TrendingUp },
 ];
 
+// Workflow steps that freeze backer data — these require an explicit
+// confirmation before running because reversing them isn't a single click.
+const WORKFLOW_CONFIRM_COPY: Record<string, { title: string; body: string; cta: string }> = {
+  lock_orders: {
+    title: "Lock all orders?",
+    body: "This finalizes every backer's reward and add-on selections so they can no longer change their order. Only do this once your survey window has closed.",
+    cta: "Lock Orders",
+  },
+  lock_addresses: {
+    title: "Lock all shipping addresses?",
+    body: "This finalizes every backer's shipping address so they can no longer update where their rewards are sent. Do this just before you push orders to fulfillment.",
+    cta: "Lock Addresses",
+  },
+};
+
 export default function IndieKitPage() {
   const searchParams = useSearchParams();
   const initialProjectId = useInitialProjectId();
@@ -208,6 +233,7 @@ export default function IndieKitPage() {
   const [isDistributionDialogOpen, setIsDistributionDialogOpen] = useState(false);
   const [isNPSDialogOpen, setIsNPSDialogOpen] = useState(false);
   const [isChargePreviewOpen, setIsChargePreviewOpen] = useState(false);
+  const [confirmStepId, setConfirmStepId] = useState<string | null>(null);
 
   // Computed
   const hasActiveCampaign = projects.some(p =>
@@ -321,14 +347,10 @@ export default function IndieKitPage() {
     }
   }, [fetchData, isInitialized]);
 
-  // Workflow action handler - same as v1
-  const handleWorkflowAction = async (stepId: string) => {
-    if (!selectedProjectId || workflowActionLoading) return;
-
-    if (stepId === "charge_cards") {
-      setIsChargePreviewOpen(true);
-      return;
-    }
+  // Runs a workflow action against the API. Confirmation (when required) is
+  // handled by handleWorkflowAction before this is reached.
+  const executeWorkflowAction = async (stepId: string) => {
+    if (!selectedProjectId) return;
 
     const actionMap: Record<string, { action: string; successMsg: string; errorMsg: string }> = {
       lock_orders: { action: "lock_orders", successMsg: "Orders locked successfully", errorMsg: "Failed to lock orders" },
@@ -338,13 +360,7 @@ export default function IndieKitPage() {
     };
 
     const actionConfig = actionMap[stepId];
-    if (!actionConfig) {
-      if (stepId === "surveys") {
-        setActiveSection("always");
-        setActiveAlwaysTab("email-marketing");
-      }
-      return;
-    }
+    if (!actionConfig) return;
 
     const pledgeIds = backers.map(b => b.id);
     if (pledgeIds.length === 0) {
@@ -370,6 +386,30 @@ export default function IndieKitPage() {
     } finally {
       setWorkflowActionLoading(null);
     }
+  };
+
+  // Workflow action handler - dispatches based on the step.
+  const handleWorkflowAction = async (stepId: string) => {
+    if (!selectedProjectId || workflowActionLoading) return;
+
+    if (stepId === "charge_cards") {
+      setIsChargePreviewOpen(true);
+      return;
+    }
+
+    if (stepId === "surveys") {
+      setActiveSection("always");
+      setActiveAlwaysTab("email-marketing");
+      return;
+    }
+
+    // Lock steps freeze backer data — confirm before running.
+    if (WORKFLOW_CONFIRM_COPY[stepId]) {
+      setConfirmStepId(stepId);
+      return;
+    }
+
+    await executeWorkflowAction(stepId);
   };
 
   // Backer handlers
@@ -979,7 +1019,7 @@ export default function IndieKitPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {backersToCharge.slice(0, 10).map((backer) => {
+                      {backersToCharge.map((backer) => {
                         // Surface a line for every contributor to the
                         // balance, not just addons. If the balance is
                         // sourced from a shipping upgrade or a reward-
@@ -1029,11 +1069,6 @@ export default function IndieKitPage() {
                       })}
                     </TableBody>
                   </Table>
-                  {backersToCharge.length > 10 && (
-                    <div className="p-3 text-center text-sm text-muted-foreground border-t">
-                      And {backersToCharge.length - 10} more backers...
-                    </div>
-                  )}
                 </div>
               </div>
             );
@@ -1101,6 +1136,36 @@ export default function IndieKitPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Lock-step confirmation */}
+      <AlertDialog
+        open={confirmStepId !== null}
+        onOpenChange={(open) => { if (!open) setConfirmStepId(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-amber-500" />
+              {confirmStepId ? WORKFLOW_CONFIRM_COPY[confirmStepId]?.title : ""}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmStepId ? WORKFLOW_CONFIRM_COPY[confirmStepId]?.body : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const step = confirmStepId;
+                setConfirmStepId(null);
+                if (step) executeWorkflowAction(step);
+              }}
+            >
+              {confirmStepId ? WORKFLOW_CONFIRM_COPY[confirmStepId]?.cta : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
