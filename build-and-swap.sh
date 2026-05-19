@@ -68,9 +68,22 @@ else
 fi
 
 # Step 2: Install dependencies
+#
+# Uses `npm ci` (not `npm install`):
+#   - Installs strictly from package-lock.json's resolved tarball
+#     URLs + integrity hashes — never re-resolves version ranges
+#     against registry metadata, so a stale npm metadata cache on
+#     the deploy box can't break the install (this is exactly what
+#     caused the uuid@13.0.2 ETARGET failure with the old
+#     `npm install --prefer-offline`).
+#   - Never writes to package-lock.json, so the next deploy's
+#     `git pull` can't hit a "local changes would be overwritten"
+#     conflict on the lockfile.
+#   - Wipes node_modules first, guaranteeing the deployed tree
+#     exactly matches the committed lockfile.
 echo ""
 echo "📦 Step 2: Installing dependencies..."
-if npm install --prefer-offline 2>&1; then
+if npm ci 2>&1; then
     echo -e "${GREEN}   Dependencies installed${NC}"
 else
     echo -e "${RED}❌ ERROR: Failed to install dependencies${NC}"
