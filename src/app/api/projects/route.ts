@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { generateProjectSlug } from "@/lib/utils";
 import { getBatchProjectStats } from "@/lib/stats";
+import { batchResolveCampaignDisplays } from "@/lib/currency";
 
 // Reject base64 data URIs and other inline content — imageUrl must be a
 // real URL/path, otherwise we get multi-MB rows that break og:image generation.
@@ -211,6 +212,7 @@ export async function GET(req: NextRequest) {
         slug: project.slug,
         category: project.category,
         imageUrl: project.imageUrl || "",
+        location: project.location || "",
         creator: {
           id: project.creator.id,
           name: project.creator.name || "Creator",
@@ -229,8 +231,23 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // Batch-resolve currency display for the whole page (1 FX cache
+    // read + one Frankfurter call per unique non-USD currency, not
+    // per project). For US-only lists this is effectively free.
+    const currentDisplays = await batchResolveCampaignDisplays(
+      formattedProjects.map((p) => ({ location: p.location, usdAmount: p.currentAmount }))
+    );
+    const goalDisplays = await batchResolveCampaignDisplays(
+      formattedProjects.map((p) => ({ location: p.location, usdAmount: p.goalAmount }))
+    );
+    const projectsWithDisplay = formattedProjects.map((p, i) => ({
+      ...p,
+      currentAmountDisplay: currentDisplays[i],
+      goalAmountDisplay: goalDisplays[i],
+    }));
+
     return NextResponse.json({
-      projects: formattedProjects,
+      projects: projectsWithDisplay,
       pagination: {
         total,
         limit,

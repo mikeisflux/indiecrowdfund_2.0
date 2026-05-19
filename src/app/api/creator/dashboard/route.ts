@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const creatorDashboardLogger = logger.child({ module: "creator-dashboard" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { resolveCampaignDisplay } from "@/lib/currency";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,7 @@ export async function GET(req: NextRequest) {
             launchedAt: true,
             createdAt: true,
             deletedAt: true,
+            location: true,
             creator: {
               select: {
                 vanityUrl: true,
@@ -800,6 +802,11 @@ export async function GET(req: NextRequest) {
         imageUrl: selectedProject.imageUrl,
         goalAmount: Number(selectedProject.goalAmount),
         currentAmount: actualCurrentAmount,
+        // Localized currency display — creator's country pulled
+        // from Project.location, USD-equivalent shown below in
+        // the UI for non-US creators.
+        currentAmountDisplay: await resolveCampaignDisplay(selectedProject.location, actualCurrentAmount),
+        goalAmountDisplay: await resolveCampaignDisplay(selectedProject.location, Number(selectedProject.goalAmount)),
         backerCount: actualBackerCount,
         daysRemaining,
         endDate: selectedProject.endDate,

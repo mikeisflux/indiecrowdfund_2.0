@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { PROJECT_CATEGORIES } from "@/types";
 import { formatTimeRemaining } from "@/lib/utils";
+import type { CampaignAmountDisplay } from "@/components/project-details/types";
 
 // Project type from API
 interface Project {
@@ -61,6 +62,12 @@ interface Project {
   creator: { id: string; name: string; image: string | null };
   goalAmount: number;
   currentAmount: number;
+  // Server-resolved currency display (creator's local currency
+  // + USD-equivalent below for non-US). Optional so older cached
+  // responses without these fields still render via the
+  // formatMoney fallback.
+  currentAmountDisplay?: CampaignAmountDisplay;
+  goalAmountDisplay?: CampaignAmountDisplay;
   backerCount: number;
   followerCount?: number;
   daysRemaining: number;
@@ -714,11 +721,19 @@ function ProjectCard({ project }: { project: Project }) {
               <div className="flex w-full items-center justify-between text-sm">
                 <div>
                   <span className="font-bold text-primary">
-                    ${Number(project.currentAmount).toLocaleString()}
+                    {project.currentAmountDisplay?.primaryFormatted ?? `$${Number(project.currentAmount).toLocaleString()}`}
                   </span>
                   <span className="text-muted-foreground text-xs">
-                    {" "}/ ${Number(project.goalAmount).toLocaleString()}
+                    {" "}/ {project.goalAmountDisplay?.primaryFormatted ?? `$${Number(project.goalAmount).toLocaleString()}`}
                   </span>
+                  {project.currentAmountDisplay?.showUsdSecondary && (
+                    <div className="text-muted-foreground text-[10px] mt-0.5">
+                      ≈ {project.currentAmountDisplay.usdFormatted}
+                      {project.goalAmountDisplay?.showUsdSecondary && (
+                        <> / {project.goalAmountDisplay.usdFormatted} USD</>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-muted-foreground text-xs">
                   <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/50">
@@ -813,10 +828,18 @@ function ProjectListItem({ project }: { project: Project }) {
               ) : (
                 <div className="text-right flex-shrink-0">
                   <p className="font-bold text-lg text-primary">
-                    ${project.currentAmount.toLocaleString()}
+                    {project.currentAmountDisplay?.primaryFormatted ?? `$${project.currentAmount.toLocaleString()}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    of ${project.goalAmount.toLocaleString()}
+                    of {project.goalAmountDisplay?.primaryFormatted ?? `$${project.goalAmount.toLocaleString()}`}
+                    {project.currentAmountDisplay?.showUsdSecondary && (
+                      <span className="block text-[10px] mt-0.5">
+                        ≈ {project.currentAmountDisplay.usdFormatted}
+                        {project.goalAmountDisplay?.showUsdSecondary && (
+                          <> / {project.goalAmountDisplay.usdFormatted} USD</>
+                        )}
+                      </span>
+                    )}
                   </p>
                 </div>
               )}

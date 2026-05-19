@@ -9,6 +9,17 @@ export interface Project {
   projectUrl: string;
 }
 
+// Mirrors the resolveCampaignDisplay shape from src/lib/currency.ts.
+// Duplicated locally to avoid pulling Prisma client types into the
+// client-side dashboard bundle.
+export interface CampaignAmountDisplay {
+  currency: string;
+  symbol: string;
+  primaryFormatted: string;
+  usdFormatted: string;
+  showUsdSecondary: boolean;
+}
+
 export interface SelectedProject {
   id: string;
   title: string;
@@ -17,6 +28,12 @@ export interface SelectedProject {
   imageUrl: string | null;
   goalAmount: number;
   currentAmount: number;
+  // Server-resolved local-currency display (creator's location →
+  // local currency primary, USD below for non-US). Optional to
+  // stay backwards-compat with older /api/creator/dashboard
+  // responses still in flight when this ships.
+  currentAmountDisplay?: CampaignAmountDisplay;
+  goalAmountDisplay?: CampaignAmountDisplay;
   backerCount: number;
   daysRemaining: number;
   endDate: string | null;

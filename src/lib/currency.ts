@@ -300,54 +300,116 @@ export function formatInCurrency(amount: number, currency: string): string {
   }
 }
 
-/**
- * Convenience server-side resolver: given a Project location +
- * a USD amount, return the data needed by the display component
- * (target currency, the converted amount, formatted strings,
- * whether to show the USD-below row).
- */
-export async function resolveCampaignDisplay(
-  location: string | null | undefined,
-  usdAmount: number
-): Promise<{
+export interface CampaignDisplay {
   currency: string;
   symbol: string;
   primaryFormatted: string;
   usdFormatted: string;
   showUsdSecondary: boolean;
-}> {
-  const { currency, symbol } = currencyForLocation(location);
+}
+
+function buildDisplay(usdAmount: number, currency: string, symbol: string, rate: number | null): CampaignDisplay {
   const usdFormatted = formatInCurrency(usdAmount, "USD");
-
   if (currency === "USD") {
-    return {
-      currency,
-      symbol,
-      primaryFormatted: usdFormatted,
-      usdFormatted,
-      showUsdSecondary: false,
-    };
+    return { currency, symbol, primaryFormatted: usdFormatted, usdFormatted, showUsdSecondary: false };
   }
-
-  const rate = await getUsdRateTo(currency);
   if (rate == null) {
-    // No rate available at all — show USD only rather than make
-    // up a number. Logged in getUsdRateTo when this happens.
-    return {
-      currency: "USD",
-      symbol: "$",
-      primaryFormatted: usdFormatted,
-      usdFormatted,
-      showUsdSecondary: false,
-    };
+    // No rate available — show USD only rather than make up a
+    // number. Logged in getUsdRateTo / batchGetUsdRates when this
+    // happens.
+    return { currency: "USD", symbol: "$", primaryFormatted: usdFormatted, usdFormatted, showUsdSecondary: false };
   }
-
-  const converted = usdAmount * rate;
   return {
     currency,
     symbol,
-    primaryFormatted: formatInCurrency(converted, currency),
+    primaryFormatted: formatInCurrency(usdAmount * rate, currency),
     usdFormatted,
     showUsdSecondary: true,
   };
+}
+
+/**
+ * Convenience server-side resolver: given a Project location +
+ * a USD amount, return the data needed by the display component
+ * (target currency, the converted amount, formatted strings,
+ * whether to show the USD-below row).
+ *
+ * For list pages rendering many projects, prefer
+ * batchResolveCampaignDisplays — single-call variant does one
+ * fxRatesUsd cache read per call.
+ */
+export async function resolveCampaignDisplay(
+  location: string | null | undefined,
+  usdAmount: number
+): Promise<CampaignDisplay> {
+  const { currency, symbol } = currencyForLocation(location);
+  const rate = currency === "USD" ? 1 : await getUsdRateTo(currency);
+  return buildDisplay(usdAmount, currency, symbol, rate);
+}
+
+/**
+ * Batch version for list pages. Reads the fxRatesUsd cache once,
+ * fetches each unique missing currency in parallel, then formats
+ * every item synchronously. For a 20-project discover page this
+ * is ~1 DB read + at most a few Frankfurter calls (most are
+ * already cached after the first non-USD render), instead of 20
+ * cache reads.
+ *
+ * Inputs are { location, usdAmount } pairs; output preserves the
+ * input order so callers can `inputs[i] -> outputs[i]`.
+ */
+export async function batchResolveCampaignDisplays(
+  inputs: Array<{ location: string | null | undefined; usdAmount: number }>
+): Promise<CampaignDisplay[]> {
+  if (inputs.length === 0) return [];
+
+  // Resolve currency per input first (cheap, no IO).
+  const resolved = inputs.map((i) => ({
+    usdAmount: i.usdAmount,
+    ...currencyForLocation(i.location),
+  }));
+
+  const neededCurrencies = Array.from(
+    new Set(resolved.map((r) => r.currency).filter((c) => c !== "USD"))
+  );
+
+  if (neededCurrencies.length === 0) {
+    return resolved.map((r) => buildDisplay(r.usdAmount, r.currency, r.symbol, 1));
+  }
+
+  const cache = await readCache();
+  const now = Date.now();
+  const rates: Record<string, number | null> = { USD: 1 };
+  const toFetch: string[] = [];
+
+  for (const cur of neededCurrencies) {
+    const entry = cache[cur];
+    if (entry && now - new Date(entry.fetchedAt).getTime() < FX_CACHE_TTL_MS) {
+      rates[cur] = entry.rate;
+    } else {
+      toFetch.push(cur);
+    }
+  }
+
+  if (toFetch.length > 0) {
+    const fetched = await Promise.all(
+      toFetch.map(async (cur) => ({ cur, rate: await fetchFromFrankfurter(cur) }))
+    );
+    let cacheChanged = false;
+    for (const { cur, rate } of fetched) {
+      if (rate != null) {
+        rates[cur] = rate;
+        cache[cur] = { rate, fetchedAt: new Date().toISOString() };
+        cacheChanged = true;
+      } else {
+        // Fall back to stale cache for this currency if any.
+        rates[cur] = cache[cur]?.rate ?? null;
+      }
+    }
+    if (cacheChanged) {
+      await writeCache(cache);
+    }
+  }
+
+  return resolved.map((r) => buildDisplay(r.usdAmount, r.currency, r.symbol, rates[r.currency] ?? null));
 }

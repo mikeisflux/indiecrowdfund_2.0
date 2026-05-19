@@ -334,9 +334,19 @@ export default function CreatorDashboard() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Campaign Progress</span>
-                  <span className="text-sm text-muted-foreground">
-                    <span className="font-bold text-primary">${Number(project.currentAmount).toLocaleString()}</span>
-                    {" "}of ${Number(project.goalAmount).toLocaleString()}
+                  <span className="text-sm text-muted-foreground text-right">
+                    <span className="font-bold text-primary">
+                      {project.currentAmountDisplay?.primaryFormatted ?? `$${Number(project.currentAmount).toLocaleString()}`}
+                    </span>
+                    {" "}of {project.goalAmountDisplay?.primaryFormatted ?? `$${Number(project.goalAmount).toLocaleString()}`}
+                    {project.currentAmountDisplay?.showUsdSecondary && (
+                      <span className="block text-[10px] mt-0.5">
+                        ≈ {project.currentAmountDisplay.usdFormatted}
+                        {project.goalAmountDisplay?.showUsdSecondary && (
+                          <> / {project.goalAmountDisplay.usdFormatted} USD</>
+                        )}
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="relative h-3 overflow-hidden rounded-full bg-muted">
