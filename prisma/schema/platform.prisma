@@ -258,6 +258,14 @@ model PlatformSettings {
   printingComicsWebhookSecret String?  @db.Text   // Webhook signature secret (when exposed)
   printingComicsEnvironment   String   @default("production") // "production" or "sandbox"
 
+  // 24h cache of USD-to-X exchange rates, keyed by ISO currency code.
+  // Each entry: { rate: number, fetchedAt: ISO string }. Refreshed
+  // lazily by src/lib/currency.ts when a stale entry is read. Stored
+  // here rather than in a dedicated FxRate table to skip a migration
+  // — there's at most ~30 entries (one per supported creator-country
+  // currency) so a JSON blob is fine.
+  fxRatesUsd            Json?
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

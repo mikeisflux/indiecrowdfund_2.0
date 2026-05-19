@@ -5,6 +5,7 @@ const projectsVanityLogger = logger.child({ module: "projects-vanity" });
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getProjectStats } from "@/lib/stats";
+import { resolveCampaignDisplay } from "@/lib/currency";
 
 export async function GET(
   req: NextRequest,
@@ -210,6 +211,15 @@ export async function GET(
       goalAmount: Number(project.goalAmount),
       currentAmount: liveStats.currentAmount,
       backerCount: liveStats.backerCount,
+      // Localized currency display. Server-resolved here so the
+      // page can render the creator's local currency + the USD
+      // equivalent without doing any FX lookup on the client.
+      // For US / unknown locations this returns USD-only and
+      // showUsdSecondary=false; for non-US locations (e.g. Blue
+      // Orchid Books in Doncaster, England) it returns GBP
+      // primary + USD secondary, etc.
+      currentAmountDisplay: await resolveCampaignDisplay(project.location, liveStats.currentAmount),
+      goalAmountDisplay: await resolveCampaignDisplay(project.location, Number(project.goalAmount)),
       // Duration
       durationType: project.durationType,
       durationDays: project.durationDays,

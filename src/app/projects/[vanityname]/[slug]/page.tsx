@@ -664,16 +664,31 @@ export default function ProjectPage() {
                   </div>
                 </div>
 
-                {/* Funding amount */}
+                {/* Funding amount. For non-US creators (e.g. UK) the
+                    primary line is the creator's local currency; the
+                    USD equivalent renders below in smaller type. For
+                    US / unknown creator-location the secondary USD
+                    row is suppressed so the layout is unchanged for
+                    the 99% case. */}
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span className={`text-3xl font-bold bg-gradient-to-r from-[#05ce78] to-emerald-500 bg-clip-text text-transparent transition-all duration-500 ${statsJustUpdated ? "scale-105" : ""}`}>
-                      {formatMoney(project.currentAmount)}
+                      {project.currentAmountDisplay?.primaryFormatted ?? formatMoney(project.currentAmount)}
                     </span>
                     <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    pledged of {formatMoney(project.goalAmount)} goal
+                  {project.currentAmountDisplay?.showUsdSecondary && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      ≈ {project.currentAmountDisplay.usdFormatted} USD
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    pledged of {project.goalAmountDisplay?.primaryFormatted ?? formatMoney(project.goalAmount)} goal
+                    {project.goalAmountDisplay?.showUsdSecondary && (
+                      <span className="block text-xs mt-0.5">
+                        ≈ {project.goalAmountDisplay.usdFormatted} USD goal
+                      </span>
+                    )}
                   </p>
                 </div>
 

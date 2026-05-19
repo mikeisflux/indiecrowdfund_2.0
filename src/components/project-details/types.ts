@@ -29,6 +29,18 @@ export interface ProjectUpdate {
   createdAt: string | Date;
 }
 
+// Mirrors the resolveCampaignDisplay return shape from
+// src/lib/currency.ts. Kept here as a duplicate (rather than imported)
+// so client components don't transitively pull in the Prisma client
+// types via the currency module's db dependency.
+export interface CampaignAmountDisplay {
+  currency: string;
+  symbol: string;
+  primaryFormatted: string;
+  usdFormatted: string;
+  showUsdSecondary: boolean;
+}
+
 export interface ProjectData {
   id: string;
   title: string;
@@ -44,6 +56,13 @@ export interface ProjectData {
   risks: string;
   goalAmount: number;
   currentAmount: number;
+  // Localized currency display, computed server-side from Project.location
+  // by /api/projects/vanity/[vanityname]/[slug]. Falls back to USD-only
+  // (showUsdSecondary: false) for US / unknown locations; for non-US
+  // (e.g. UK creators) currency/symbol/primaryFormatted reflect the local
+  // currency with USD as the secondary line below.
+  currentAmountDisplay?: CampaignAmountDisplay;
+  goalAmountDisplay?: CampaignAmountDisplay;
   backerCount: number;
   daysRemaining: number;
   endDate: string | Date;
