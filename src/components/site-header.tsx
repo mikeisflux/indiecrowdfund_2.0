@@ -218,7 +218,6 @@ export function SiteHeader() {
             <NavLink href="/projects/new">Start a Project</NavLink>
             <NavLink href="/crowdfunds">Crowdfunds</NavLink>
             <NavLink href="/shop">Digital Shop</NavLink>
-            <NavLink href="/lcs-locator">LCS Locator</NavLink>
             <NavLink href="/retailers">Retailers</NavLink>
             <DropdownMenu>
               <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors relative group flex items-center gap-1 outline-none">
@@ -292,9 +291,6 @@ export function SiteHeader() {
                 </Link>
                 <Link href="/shop" className="text-sm font-medium hover:text-primary py-2">
                   Digital Shop
-                </Link>
-                <Link href="/lcs-locator" className="text-sm font-medium hover:text-primary py-2">
-                  LCS Locator
                 </Link>
                 <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
                   Retailers

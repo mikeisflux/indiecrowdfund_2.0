@@ -23,7 +23,6 @@ const STATIC_PAGES = [
   "/what-is-divinitycoin",
   "/shop-handbook/creators",
   "/shop-handbook/backers",
-  "/lcs-locator",
   "/collaborate",
   "/bug-report",
   "/login",

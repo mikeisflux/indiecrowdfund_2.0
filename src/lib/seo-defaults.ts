@@ -225,16 +225,6 @@ export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
     ogImage: DEFAULT_OG_IMAGE,
     keywords: ["marketplace shopping", "backer guide", "buy from creators", "track orders", "marketplace help"],
   },
-  "/lcs-locator": {
-    title: "LCS Locator - Find Local Creator Shops Near You",
-    description:
-      "Find local creator shops and retail partners near you with the IndieCrowdfund LCS Locator. Discover independent creators and unique products in your area.",
-    ogTitle: "Find Local Creator Shops - LCS Locator",
-    ogDescription:
-      "Use our locator to find local creator shops and indie retail partners in your area.",
-    ogImage: DEFAULT_OG_IMAGE,
-    keywords: ["local creator shops", "store locator", "find creators near me", "indie shops", "retail locator"],
-  },
   "/collaborate": {
     title: "Collaborate - Partner With Other Creators",
     description:

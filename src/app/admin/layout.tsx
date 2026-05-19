@@ -51,7 +51,6 @@ import {
   SlidersHorizontal,
   Megaphone,
   Coins,
-  MapPin,
   ArrowLeftRight,
   Sparkles,
   ListOrdered,
@@ -121,7 +120,6 @@ const navigation: NavSection[] = [
     items: [
       { name: "Users", href: "/admin/users", icon: Users, badgeKey: "users" },
       { name: "Retailers", href: "/admin/retailers", icon: Store, badgeKey: "retailers" },
-      { name: "LCS Locator", href: "/admin/lcs-locator", icon: MapPin },
     ],
   },
   {
