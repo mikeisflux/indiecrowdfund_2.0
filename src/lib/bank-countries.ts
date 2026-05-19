@@ -1,36 +1,40 @@
 // Shared config + validation for creator payout bank accounts across the
 // DivinityCoin, PayPal, and Whop "save bank account" forms and their API
-// routes. Each processor's form/route used to inline this logic; with a
-// third country (Italy — IBAN + BIC, a structurally different shape than
-// the US/UK digit fields) the per-file copies diverge too easily, so the
-// country config + sanitizer + validator live here once.
+// routes. Each processor's form/route used to inline this logic; with
+// extra countries (Italy uses IBAN + BIC, Japan uses the 7-digit zengin
+// code + account number, all structurally different from the US/UK
+// digit fields) the per-file copies diverge too easily, so the country
+// config + sanitizer + validator live here once.
 
-export type BankCountry = "US" | "GB" | "IT";
+export type BankCountry = "US" | "GB" | "IT" | "JP";
 
 export const BANK_COUNTRY_OPTIONS: { value: BankCountry; label: string }[] = [
   { value: "US", label: "United States" },
   { value: "GB", label: "United Kingdom" },
   { value: "IT", label: "Italy" },
+  { value: "JP", label: "Japan" },
 ];
 
 // Country codes the API routes accept in a save request.
-export const SUPPORTED_BANK_COUNTRIES = new Set<string>(["US", "GB", "IT"]);
+export const SUPPORTED_BANK_COUNTRIES = new Set<string>(["US", "GB", "IT", "JP"]);
 
 interface BankCountryFields {
   // The "routing identifier" field — US ABA routing number, UK Sort
-  // Code, or Italian BIC/SWIFT.
+  // Code, Italian BIC/SWIFT, or Japanese 7-digit zengin code
+  // (4-digit bank + 3-digit branch concatenated).
   routingLabel: string;
   routingPlaceholder: string;
   routingHelp: string;
   routingMaxLength: number;
-  // The "account" field — US/UK account number, or Italian IBAN.
+  // The "account" field — US/UK/JP account number, or Italian IBAN.
   accountLabel: string;
   accountPlaceholder: string;
   // HTML maxLength on the raw input. Looser than accountSliceLength for
   // IT so a space-formatted IBAN paste isn't truncated before the
   // sanitizer strips the spaces.
   accountMaxLength: number;
-  // Length the *sanitized* value is capped at (US 17, UK 8, IT IBAN 27).
+  // Length the *sanitized* value is capped at (US 17, UK 8, IT IBAN 27,
+  // JP 8).
   accountSliceLength: number;
   // Bank-name input placeholder.
   bankNamePlaceholder: string;
@@ -74,18 +78,32 @@ export const BANK_COUNTRY_FIELDS: Record<BankCountry, BankCountryFields> = {
     bankNamePlaceholder: "e.g., Intesa Sanpaolo, UniCredit",
     inputMode: "text",
   },
+  JP: {
+    routingLabel: "Bank code + Branch code",
+    routingPlaceholder: "7 digits (4-digit bank + 3-digit branch)",
+    routingHelp:
+      "7 digits total — your 4-digit bank code (zengin code) followed by your 3-digit branch code, no separators. e.g. bank 0005 + branch 001 = 0005001",
+    routingMaxLength: 7,
+    accountLabel: "Account Number",
+    accountPlaceholder: "7 or 8 digits",
+    accountMaxLength: 8,
+    accountSliceLength: 8,
+    bankNamePlaceholder: "e.g., Mitsubishi UFJ Bank, Sumitomo Mitsui Banking",
+    inputMode: "numeric",
+  },
 };
 
 // Normalises whatever the API returns into a known BankCountry. Anything
 // unrecognised — including a pre-international null — falls back to "US".
 export function parseBankCountry(value: unknown): BankCountry {
-  return value === "GB" || value === "IT" ? value : "US";
+  if (value === "GB" || value === "IT" || value === "JP") return value;
+  return "US";
 }
 
-// US/UK routing + account numbers are digits only. Italy's BIC + IBAN are
-// alphanumeric, stored uppercase with separators stripped. Pass maxLength
-// to also cap the result (the forms do, to bound the input; the API
-// routes don't — validation enforces exact lengths there).
+// US/UK/JP routing + account numbers are digits only. Italy's BIC + IBAN
+// are alphanumeric, stored uppercase with separators stripped. Pass
+// maxLength to also cap the result (the forms do, to bound the input;
+// the API routes don't — validation enforces exact lengths there).
 export function sanitizeBankField(
   country: BankCountry,
   raw: string,
@@ -121,6 +139,21 @@ export function validateBankFields(
     // add it as a recipient.
     if (!payoutPhone || payoutPhone.trim().length < 7) {
       return "Phone number is required for UK bank accounts (your bank requires it on the payee record)";
+    }
+    return null;
+  }
+
+  if (country === "JP") {
+    // Japanese banks identify the receiving branch by a single 7-digit
+    // zengin-system code: 4-digit bank code followed by 3-digit branch
+    // code. Stored concatenated with no separator. Account numbers in
+    // Japan are typically 7 digits but some banks (e.g. Japan Post Bank
+    // / Yucho's standardized format) use 8 — accept both.
+    if (!/^\d{7}$/.test(routingNumber)) {
+      return "Japanese bank code must be 7 digits (4-digit bank code + 3-digit branch code)";
+    }
+    if (!/^\d{7,8}$/.test(accountNumber)) {
+      return "Japanese account number must be 7 or 8 digits";
     }
     return null;
   }
