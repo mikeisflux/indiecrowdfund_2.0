@@ -31,7 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
-import { SocialShareButtons } from "@/components/social-share-buttons";
+import { SocialShareDropdown } from "@/components/social-share-buttons";
 import { MobileProfileLinks } from "@/components/mobile-profile-links";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -244,7 +244,9 @@ export function SiteHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          {/* Mobile search toggle button */}
+          {/* Mobile search toggle button — search has its own row
+              below the nav on desktop, but on mobile we keep the
+              toggle to save vertical space on small viewports. */}
           <Button
             variant="ghost"
             size="icon"
@@ -260,33 +262,11 @@ export function SiteHeader() {
             <span className="sr-only">Toggle search</span>
           </Button>
 
-          {/* Desktop search bar */}
-          <form
-            ref={searchContainerRef}
-            className="hidden md:flex relative group"
-            onSubmit={handleSearchSubmit}
-          >
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
-            <Input
-              placeholder="Search all projects..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => {
-                if (searchQuery.trim().length >= 2) setShowSuggestions(true);
-              }}
-              className="w-64 pl-10 bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all"
-            />
-            {suggestionsDropdown}
-          </form>
-          {/* Social share — opens each platform's share-intent URL in
-              a popup, pre-populated with the canonical site URL. Each
-              platform handles its own auth. Hidden on small screens
-              to keep the header tidy; the burger menu surfaces them
-              on mobile via MobileProfileLinks. */}
-          <SocialShareButtons className="hidden lg:flex" />
+          {/* Social share — single dropdown trigger replaces the
+              four inline icons that used to crowd the header. The
+              dropdown menu inside opens Facebook / X / LinkedIn /
+              Reddit share-intent popups. */}
+          <SocialShareDropdown className="hidden md:inline-flex" />
           <ThemeToggle />
           <div className="hidden sm:block">
             <UserProfileDropdown />
@@ -335,13 +315,38 @@ export function SiteHeader() {
                 <div className="border-t pt-4 mt-2">
                   <MobileProfileLinks />
                 </div>
-                <div className="border-t pt-4 mt-2">
-                  <p className="text-xs text-muted-foreground mb-2">Share IndieCrowdfund</p>
-                  <SocialShareButtons />
-                </div>
               </nav>
             </SheetContent>
           </Sheet>
+        </div>
+      </div>
+
+      {/* Desktop search row — search lives on its own line below the
+          main nav so it doesn't crowd the logo / nav / actions row.
+          Hidden on mobile (the mobile-search toggle in the row above
+          slides it in below conditionally). */}
+      <div className="hidden md:block border-t border-border/50 bg-background/60">
+        <div className="container py-2.5">
+          <form
+            ref={searchContainerRef}
+            className="relative group max-w-3xl mx-auto"
+            onSubmit={handleSearchSubmit}
+          >
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
+            <Input
+              placeholder="Search all projects..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => {
+                if (searchQuery.trim().length >= 2) setShowSuggestions(true);
+              }}
+              className="w-full pl-10 bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all"
+            />
+            {suggestionsDropdown}
+          </form>
         </div>
       </div>
 

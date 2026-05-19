@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback } from "react";
-import { Facebook, Linkedin } from "lucide-react";
+import { Facebook, Linkedin, Share2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Header social-share row — opens each platform's share-intent URL in
 // a new tab, pre-populated with the canonical site URL + a short
@@ -115,5 +122,45 @@ export function SocialShareButtons({ className = "" }: { className?: string }) {
         </a>
       ))}
     </div>
+  );
+}
+
+// Compact dropdown variant — single trigger button with a Share icon
+// that opens a menu containing the four share targets. Used in the
+// site header to recover the real estate the four inline icons used
+// to consume. Shares the same TARGETS list as SocialShareButtons so
+// adding / removing a platform updates both surfaces.
+export function SocialShareDropdown({ className = "" }: { className?: string }) {
+  const handleSelect = useCallback(
+    (href: string) => () => openShareWindow(href),
+    []
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={className}
+          aria-label="Share IndieCrowdfund"
+          title="Share IndieCrowdfund"
+        >
+          <Share2 className="h-5 w-5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        {TARGETS.map(({ name, href, Icon, hoverColor }) => (
+          <DropdownMenuItem
+            key={name}
+            onSelect={handleSelect(href)}
+            className="cursor-pointer flex items-center gap-2"
+          >
+            <Icon className={`h-4 w-4 text-muted-foreground ${hoverColor.replace("hover:", "group-hover:")}`} />
+            <span>Share on {name}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
