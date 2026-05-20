@@ -410,7 +410,7 @@ export function CommentsTab({
           <div className="sticky top-20">
             <p className="text-muted-foreground text-sm mb-4">
               This is your space to offer support and feedback. Remember to{" "}
-              <Link href="#" className="text-primary underline">be constructive</Link>—there&apos;s a human behind this project.
+              <Link href="/trust-safety" className="text-primary underline">be constructive</Link>—there&apos;s a human behind this project.
             </p>
             <p className="text-muted-foreground text-sm mb-4">
               Have a question for the creator?{" "}

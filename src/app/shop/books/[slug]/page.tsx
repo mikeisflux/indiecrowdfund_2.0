@@ -851,7 +851,7 @@ export default function BookDetailPage() {
 
           {/* Promo Code Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <label htmlFor="promo-code" className="text-sm font-medium text-foreground flex items-center gap-2">
               <Ticket className="w-4 h-4" />
               Have a promo code?
             </label>
@@ -872,26 +872,32 @@ export default function BookDetailPage() {
                 </Button>
               </div>
             ) : (
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Enter promo code"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  className="font-mono"
-                  onKeyDown={(e) => e.key === "Enter" && validatePromoCode()}
-                />
-                <Button
-                  variant="outline"
-                  onClick={validatePromoCode}
-                  disabled={validatingCode || !promoCode.trim()}
-                >
-                  {validatingCode ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Apply"
-                  )}
-                </Button>
-              </div>
+              <>
+                <div className="flex gap-2">
+                  <Input
+                    id="promo-code"
+                    placeholder="Enter promo code"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    className="font-mono"
+                    onKeyDown={(e) => e.key === "Enter" && validatePromoCode()}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={validatePromoCode}
+                    disabled={validatingCode || !promoCode.trim()}
+                  >
+                    {validatingCode ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Apply"
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Codes are not case-sensitive.
+                </p>
+              </>
             )}
           </div>
 

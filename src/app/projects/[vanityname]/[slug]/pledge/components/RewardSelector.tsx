@@ -134,7 +134,12 @@ export function RewardSelector({
                         {shipping > 0 && (
                           <>
                             <span className="text-muted-foreground text-sm">+${Number(shipping).toFixed(2)} shipping</span>
-                            <button className="text-muted-foreground hover:text-foreground">
+                            <button
+                              type="button"
+                              aria-label="Shipping cost information"
+                              title="Shipping cost is added at checkout based on your destination country."
+                              className="text-muted-foreground hover:text-foreground"
+                            >
                               <Info className="h-4 w-4" />
                             </button>
                           </>

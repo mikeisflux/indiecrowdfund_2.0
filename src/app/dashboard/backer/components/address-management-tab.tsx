@@ -353,6 +353,7 @@ export function AddressManagementTab() {
                       variant="outline"
                       size="sm"
                       onClick={() => openEditDialog(address)}
+                      aria-label={`Edit ${address.label} address`}
                       className="flex-1"
                     >
                       <Pencil className="h-3 w-3 mr-2" />
@@ -363,6 +364,7 @@ export function AddressManagementTab() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleSetDefault(address.id)}
+                        aria-label={`Set ${address.label} address as default`}
                         className="flex-1"
                       >
                         <Star className="h-3 w-3 mr-2" />
@@ -374,6 +376,7 @@ export function AddressManagementTab() {
                       size="sm"
                       onClick={() => handleDelete(address.id)}
                       disabled={deleting === address.id}
+                      aria-label={`Delete ${address.label} address`}
                       className="text-destructive hover:bg-destructive/10"
                     >
                       {deleting === address.id ? (

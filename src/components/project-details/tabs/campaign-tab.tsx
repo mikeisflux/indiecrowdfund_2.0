@@ -145,7 +145,7 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
               </div>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
-              {project.creator.bio} <Link href="#" className="text-primary">See more</Link>
+              {project.creator.bio}
             </p>
           </CardContent>
         </Card>

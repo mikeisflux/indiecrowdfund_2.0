@@ -31,6 +31,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { MarketplacePaymentSettings } from "@/components/marketplace/marketplace-payment-settings";
@@ -64,6 +74,12 @@ export default function CreatorMarketplaceDashboard() {
   const [creatingCode, setCreatingCode] = useState(false);
   const [editingCodeId, setEditingCodeId] = useState<string | null>(null);
   const [deletingCodeId, setDeletingCodeId] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const fetchDiscountCodes = useCallback(async () => {
     try {
@@ -135,10 +151,7 @@ export default function CreatorMarketplaceDashboard() {
     }
   };
 
-  const handleDeleteCode = async (codeId: string) => {
-    if (!confirm("Are you sure you want to delete this promo code?")) {
-      return;
-    }
+  const doDeleteCode = async (codeId: string) => {
     setDeletingCodeId(codeId);
     try {
       const res = await apiFetch(`/api/creator/marketplace/discount-codes?codeId=${codeId}`, {
@@ -161,6 +174,16 @@ export default function CreatorMarketplaceDashboard() {
     } finally {
       setDeletingCodeId(null);
     }
+  };
+
+  const handleDeleteCode = async (codeId: string) => {
+    setConfirmState({
+      title: "Delete this promo code?",
+      description:
+        "Backers will no longer be able to redeem this code. If it already has redemptions it will be deactivated instead of deleted.",
+      confirmLabel: "Delete Code",
+      onConfirm: () => doDeleteCode(codeId),
+    });
   };
 
   const copyCodeToClipboard = (code: string) => {
@@ -196,11 +219,7 @@ export default function CreatorMarketplaceDashboard() {
     fetchDiscountCodes();
   }, [fetchData, fetchDiscountCodes]);
 
-  const handleDelete = async (bookId: string) => {
-    if (!confirm("Are you sure you want to delete this book? This action cannot be undone.")) {
-      return;
-    }
-
+  const doDeleteBook = async (bookId: string) => {
     try {
       const res = await apiFetch(`/api/creator/marketplace/books/${bookId}`, {
         method: "DELETE",
@@ -217,6 +236,16 @@ export default function CreatorMarketplaceDashboard() {
       console.error("Error deleting book:", error);
       toast.error(error instanceof Error ? error.message : "Failed to delete book");
     }
+  };
+
+  const handleDelete = async (bookId: string) => {
+    setConfirmState({
+      title: "Delete this book?",
+      description:
+        "This permanently removes the book from your shop. This action cannot be undone.",
+      confirmLabel: "Delete Book",
+      onConfirm: () => doDeleteBook(bookId),
+    });
   };
 
   const handleSubmitForReview = async (bookId: string) => {
@@ -500,6 +529,33 @@ export default function CreatorMarketplaceDashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <AlertDialog
+        open={confirmState !== null}
+        onOpenChange={(open) => { if (!open) setConfirmState(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmState?.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmState?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                const action = confirmState?.onConfirm;
+                setConfirmState(null);
+                action?.();
+              }}
+            >
+              {confirmState?.confirmLabel ?? "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

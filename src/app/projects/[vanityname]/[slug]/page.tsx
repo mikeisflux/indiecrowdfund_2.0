@@ -800,7 +800,7 @@ export default function ProjectPage() {
                   </>
                 ) : (
                   <>
-                    <Link href="#" className="underline hover:text-foreground">All or nothing.</Link>{" "}
+                    <span className="font-medium">All or nothing.</span>{" "}
                     This project will only be funded if it reaches its goal by {formatDate(project.endDate)}.
                   </>
                 )}

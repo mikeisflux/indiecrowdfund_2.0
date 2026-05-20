@@ -211,7 +211,7 @@ export function OrderSummary({
               size="lg"
               onClick={() => setStep("payment")}
             >
-              Continue
+              Continue to Payment
             </Button>
           </div>
         </CardContent>
@@ -316,7 +316,7 @@ export function OrderSummary({
               size="lg"
               onClick={() => setStep("payment")}
             >
-              Continue
+              Continue to Payment
             </Button>
           </div>
         </CardContent>

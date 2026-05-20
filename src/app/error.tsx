@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 
@@ -52,11 +53,25 @@ export default function Error({
       </div>
       <h2 className="text-xl font-semibold">Something went wrong</h2>
       <p className="max-w-md text-center text-muted-foreground">
-        An unexpected error occurred. Please try again or contact support if the problem persists.
+        An unexpected error occurred. Please try again, or visit our help
+        center if the problem persists.
       </p>
-      <Button onClick={reset} variant="outline">
-        Try again
-      </Button>
+      {error.digest && (
+        <p className="text-xs text-muted-foreground">
+          Error code:{" "}
+          <code className="font-mono rounded bg-muted px-1.5 py-0.5">
+            {error.digest}
+          </code>
+        </p>
+      )}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Button onClick={reset} variant="outline">
+          Try again
+        </Button>
+        <Link href="/help">
+          <Button variant="ghost">Visit Help Center</Button>
+        </Link>
+      </div>
     </div>
   );
 }

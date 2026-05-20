@@ -55,6 +55,7 @@ export function ProjectBuilder() {
   const [isLaunching, setIsLaunching] = useState(false);
   const [isSubFormOpen, setIsSubFormOpen] = useState(false);
   const [showReReviewWarning, setShowReReviewWarning] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
   // Unsaved-changes guard: warn before the tab closes or reloads while the
   // builder holds edits that haven't been pushed to the server yet.
@@ -81,6 +82,12 @@ export function ProjectBuilder() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
+  useEffect(() => {
+    if (!justSaved) return;
+    const timer = setTimeout(() => setJustSaved(false), 2500);
+    return () => clearTimeout(timer);
+  }, [justSaved]);
+
   const isApproved = projectStatus === "APPROVED";
   const isLive = !!projectStatus && ["LIVE", "FUNDED", "PAUSED"].includes(projectStatus);
   const isSubmitted = projectStatus === "SUBMITTED";
@@ -89,6 +96,7 @@ export function ProjectBuilder() {
 
   const saveProject = async () => {
     setIsSaving(true);
+    setJustSaved(false);
 
     try {
       // Validate minimum requirements
@@ -285,6 +293,7 @@ export function ProjectBuilder() {
         }
 
         isDirtyRef.current = false;
+        setJustSaved(true);
         toast.success("Project created successfully");
         return true;
       }
@@ -469,6 +478,7 @@ export function ProjectBuilder() {
       }
 
       isDirtyRef.current = false;
+      setJustSaved(true);
       toast.success("Project saved successfully");
       return true;
     } catch (error) {
@@ -822,6 +832,11 @@ export function ProjectBuilder() {
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Saving...
+                    </>
+                  ) : justSaved ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Saved
                     </>
                   ) : (
                     <>

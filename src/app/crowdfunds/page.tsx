@@ -687,7 +687,7 @@ function ProjectCard({ project }: { project: Project }) {
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-muted">
               {project.creator.image ? (
-                <Image src={project.creator.image} alt="" width={20} height={20} className="rounded-full object-cover" />
+                <Image src={project.creator.image} alt={project.creator.name} width={20} height={20} className="rounded-full object-cover" />
               ) : (
                 <span className="text-[10px] font-medium">{project.creator.name?.charAt(0)}</span>
               )}
@@ -848,7 +848,7 @@ function ProjectListItem({ project }: { project: Project }) {
               <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-muted">
                   {project.creator.image ? (
-                    <Image src={project.creator.image} alt="" width={20} height={20} className="rounded-full object-cover" />
+                    <Image src={project.creator.image} alt={project.creator.name} width={20} height={20} className="rounded-full object-cover" />
                   ) : (
                     <span className="text-[10px] font-medium">{project.creator.name?.charAt(0)}</span>
                   )}
