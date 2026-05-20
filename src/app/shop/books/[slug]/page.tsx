@@ -432,7 +432,7 @@ export default function BookDetailPage() {
         {/* Back Button */}
         <Link href="/shop" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          Back to Marketplace
+          Back to Digital Shop
         </Link>
 
         <div className="grid md:grid-cols-3 gap-8">

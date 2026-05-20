@@ -705,7 +705,7 @@ function ProjectCard({ project }: { project: Project }) {
               {project.creator.image ? (
                 <Image src={project.creator.image} alt={project.creator.name} width={20} height={20} className="rounded-full object-cover" />
               ) : (
-                <span className="text-[10px] font-medium">{project.creator.name?.charAt(0)}</span>
+                <span className="text-xs font-medium">{project.creator.name?.charAt(0)}</span>
               )}
             </span>
             by <span className="font-medium text-foreground/80">{project.creator.name}</span>
@@ -866,7 +866,7 @@ function ProjectListItem({ project }: { project: Project }) {
                   {project.creator.image ? (
                     <Image src={project.creator.image} alt={project.creator.name} width={20} height={20} className="rounded-full object-cover" />
                   ) : (
-                    <span className="text-[10px] font-medium">{project.creator.name?.charAt(0)}</span>
+                    <span className="text-xs font-medium">{project.creator.name?.charAt(0)}</span>
                   )}
                 </span>
                 by <span className="font-medium text-foreground/80">{project.creator.name}</span>
