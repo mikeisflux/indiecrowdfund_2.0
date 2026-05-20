@@ -379,12 +379,12 @@ export function BasicsStep() {
         {/* Primary Category Row */}
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Primary category</Label>
+            <Label htmlFor="primary-category">Primary category</Label>
             <Select
               value={basics.category || ""}
               onValueChange={handlePrimaryCategoryChange}
             >
-              <SelectTrigger>
+              <SelectTrigger id="primary-category">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
@@ -398,13 +398,13 @@ export function BasicsStep() {
           </div>
 
           <div className="space-y-2">
-            <Label>Primary subcategory</Label>
+            <Label htmlFor="primary-subcategory">Primary subcategory</Label>
             <Select
               value={basics.subcategory || ""}
               onValueChange={(value) => updateBasics({ subcategory: value })}
               disabled={!basics.category}
             >
-              <SelectTrigger>
+              <SelectTrigger id="primary-subcategory">
                 <SelectValue placeholder={basics.category ? "Select a subcategory" : "Select a category first"} />
               </SelectTrigger>
               <SelectContent>
@@ -431,12 +431,12 @@ export function BasicsStep() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Category</Label>
+            <Label htmlFor="secondary-category">Category</Label>
             <Select
               value={basics.secondaryCategory || ""}
               onValueChange={handleSecondaryCategoryChange}
             >
-              <SelectTrigger>
+              <SelectTrigger id="secondary-category">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
@@ -450,13 +450,13 @@ export function BasicsStep() {
           </div>
 
           <div className="space-y-2">
-            <Label>Subcategory</Label>
+            <Label htmlFor="secondary-subcategory">Subcategory</Label>
             <Select
               value={basics.secondarySubcategory || ""}
               onValueChange={(value) => updateBasics({ secondarySubcategory: value })}
               disabled={!basics.secondaryCategory}
             >
-              <SelectTrigger>
+              <SelectTrigger id="secondary-subcategory">
                 <SelectValue placeholder={basics.secondaryCategory ? "Select a subcategory" : "Select a category first"} />
               </SelectTrigger>
               <SelectContent>

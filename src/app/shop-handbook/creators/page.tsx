@@ -54,8 +54,8 @@ const overviewSteps: Step[] = [
   },
   {
     title: 'Why sell here?',
-    description: 'The Marketplace is extra income on top of your crowdfunding work. Sell your old books while you make new ones. Sell digital versions of campaigns you already shipped. Your existing IndieCrowdfund audience already knows and trusts the site.',
-    example: 'Crowdfund Vol. 2 while Vol. 1 sits on the Marketplace bringing in steady sales.',
+    description: 'The Digital Shop is extra income on top of your crowdfunding work. Sell your old books while you make new ones. Sell digital versions of campaigns you already shipped. Your existing IndieCrowdfund audience already knows and trusts the site.',
+    example: 'Crowdfund Vol. 2 while Vol. 1 sits on the Digital Shop bringing in steady sales.',
   },
   {
     title: 'What can you sell?',
@@ -72,13 +72,13 @@ const overviewSteps: Step[] = [
 const setupSteps: Step[] = [
   {
     title: 'Open your creator dashboard',
-    description: 'Sign in and go to Dashboard → Marketplace. If you have run a crowdfunding campaign before, you already have creator access. If you are new, you will need to apply through the creator signup flow first.',
-    tip: 'The Marketplace tab only shows up once you have creator access turned on.',
+    description: 'Sign in and go to Dashboard → Shop. If you have run a crowdfunding campaign before, you already have creator access. If you are new, you will need to apply through the creator signup flow first.',
+    tip: 'The Shop tab only shows up once you have creator access turned on.',
   },
   {
     title: 'Add your bank account',
-    description: 'Before you can sell, you need a way to get paid. In the Marketplace dashboard, open Payment Settings, pick your processor (Divinity Payments, PayPal, or Whop), and add your bank routing and account numbers. The processor deposits your sales there on its standard schedule.',
-    example: 'Dashboard → Marketplace → Payment Settings → choose processor → enter bank details → save.',
+    description: 'Before you can sell, you need a way to get paid. In the Shop dashboard, open Payment Settings, pick your processor (Divinity Payments, PayPal, or Whop), and add your bank routing and account numbers. The processor deposits your sales there on its standard schedule.',
+    example: 'Dashboard → Shop → Payment Settings → choose processor → enter bank details → save.',
   },
   {
     title: 'Fill out your creator profile',
@@ -95,7 +95,7 @@ const setupSteps: Step[] = [
 const creatingSteps: Step[] = [
   {
     title: 'Click "Add New Book"',
-    description: 'In your Marketplace dashboard, click "Add New Book". A short form walks you step by step: details, files, price.',
+    description: 'In your Shop dashboard, click "Add New Book". A short form walks you step by step: details, files, price.',
     tip: 'Have your PDF and cover image ready before you start. The form is much faster when you can just upload.',
   },
   {
@@ -148,12 +148,12 @@ const pricingSteps: Step[] = [
   },
   {
     title: 'Card processing',
-    description: 'Marketplace sales go through Divinity Payments, PayPal, or Whop — whichever processor you set up. Each has a fee of about 3% + $0.30 per sale. Divinity Payments and Whop accept every content type (including NSFW); PayPal does not allow NSFW.',
+    description: 'Digital Shop sales go through Divinity Payments, PayPal, or Whop — whichever processor you set up. Each has a fee of about 3% + $0.30 per sale. Divinity Payments and Whop accept every content type (including NSFW); PayPal does not allow NSFW.',
     tip: 'When you set the price, use the fee calculator on the book form to see exactly what hits your bank.',
   },
   {
     title: 'Currency',
-    description: 'You can price in USD, EUR, or GBP. The Marketplace shows readers prices in your chosen currency. Some readers see converted amounts based on where they live.',
+    description: 'You can price in USD, EUR, or GBP. The Digital Shop shows readers prices in your chosen currency. Some readers see converted amounts based on where they live.',
     tip: 'USD reaches the most readers. Pick that unless you have a specific reason to use EUR or GBP.',
   },
   {
@@ -166,12 +166,12 @@ const pricingSteps: Step[] = [
 const managingSteps: Step[] = [
   {
     title: 'The Books tab',
-    description: 'Open Dashboard → Marketplace → Books. You see every book you have ever uploaded with its current status: Draft, Under Review, Live, or Rejected. Quick way to see what needs your attention.',
+    description: 'Open Dashboard → Shop → Books. You see every book you have ever uploaded with its current status: Draft, Under Review, Live, or Rejected. Quick way to see what needs your attention.',
     tip: 'Check this tab a few times a week — review status updates and sales counts show up here.',
   },
   {
     title: 'What each status means',
-    description: 'Draft = you are still working on it, not submitted yet. Submitted = our team is reviewing it. Live = it is in the Marketplace, customers can buy it. Rejected = something needs to change before we can list it.',
+    description: 'Draft = you are still working on it, not submitted yet. Submitted = our team is reviewing it. Live = it is in the Digital Shop, customers can buy it. Rejected = something needs to change before we can list it.',
     example: 'Rejected? You\'ll see notes from review explaining what to fix — usually a clearer description or a higher-resolution cover.',
   },
   {
@@ -191,7 +191,7 @@ const managingSteps: Step[] = [
   },
   {
     title: 'Unpublish or archive a book',
-    description: 'Unpublish = take it off the Marketplace but keep its data. Archive = put it away long-term. Both let existing customers keep what they bought; only new customers can no longer buy it.',
+    description: 'Unpublish = take it off the Digital Shop but keep its data. Archive = put it away long-term. Both let existing customers keep what they bought; only new customers can no longer buy it.',
     example: 'Unpublish your old edition when you launch a revised or expanded version.',
   },
 ];
@@ -199,7 +199,7 @@ const managingSteps: Step[] = [
 const promotionSteps: Step[] = [
   {
     title: 'Make a discount code',
-    description: 'Open the Discount Codes tab in your Marketplace dashboard. Create a code: pick the percentage off (or 100% for free), how long the code is valid, how many people can use it, and how many times each person can use it.',
+    description: 'Open the Discount Codes tab in your Shop dashboard. Create a code: pick the percentage off (or 100% for free), how long the code is valid, how many people can use it, and how many times each person can use it.',
     example: 'Code "LAUNCH50" → 50% off → first week → max 100 uses → 1 per customer.',
   },
   {
@@ -214,12 +214,12 @@ const promotionSteps: Step[] = [
   },
   {
     title: 'Cross-promote with your campaigns',
-    description: 'Already running a crowdfunding campaign? Mention your Marketplace books inside campaign updates and the project page. Offer Marketplace buyers a discount code for your next campaign.',
+    description: 'Already running a crowdfunding campaign? Mention your Digital Shop books inside campaign updates and the project page. Offer Digital Shop buyers a discount code for your next campaign.',
     tip: 'Backers who loved your campaign want to buy your other books too. Make it easy for them.',
   },
   {
     title: 'Email your followers',
-    description: 'You have followers on IndieCrowdfund and maybe an email list elsewhere. When you launch a new Marketplace book, email them. Existing fans are the most likely buyers.',
+    description: 'You have followers on IndieCrowdfund and maybe an email list elsewhere. When you launch a new Digital Shop book, email them. Existing fans are the most likely buyers.',
     example: '"New book is live. As a thank-you for following, here\'s 20% off this week with code FOLLOWER."',
   },
   {
@@ -229,7 +229,7 @@ const promotionSteps: Step[] = [
   },
   {
     title: 'Build a catalog',
-    description: 'More books = more ways readers find you. When someone enjoys one of your books, they often buy more. Add to your Marketplace shelf over time.',
+    description: 'More books = more ways readers find you. When someone enjoys one of your books, they often buy more. Add to your Digital Shop shelf over time.',
     example: 'One-time buyers turn into loyal fans who buy everything you release.',
   },
 ];
@@ -244,8 +244,8 @@ const faqs: FAQ[] = [
     answer: 'You will get specific feedback explaining why. Most common reasons: a thin description, a low-quality cover, or a PDF that does not display correctly. Fix the issue and resubmit.',
   },
   {
-    question: 'Can I sell printed copies on the Marketplace?',
-    answer: 'Not yet — the Marketplace is digital-only PDFs. But you can add a link on your creator profile to wherever you sell printed copies (your own store, Amazon, print-on-demand). That link shows up on every book page.',
+    question: 'Can I sell printed copies on the Digital Shop?',
+    answer: 'Not yet — the Digital Shop is digital-only PDFs. But you can add a link on your creator profile to wherever you sell printed copies (your own store, Amazon, print-on-demand). That link shows up on every book page.',
   },
   {
     question: 'What file types can I upload?',
@@ -273,7 +273,7 @@ const faqs: FAQ[] = [
   },
   {
     question: 'Can I sell books from my old crowdfunding campaigns?',
-    answer: 'Yes, and many creators do. Once a campaign is fulfilled, the digital version is a great fit for the Marketplace. It keeps the project earning money long after the campaign closes.',
+    answer: 'Yes, and many creators do. Once a campaign is fulfilled, the digital version is a great fit for the Digital Shop. It keeps the project earning money long after the campaign closes.',
   },
 ];
 
@@ -356,7 +356,7 @@ export default function MarketplaceCreatorHandbookPage() {
             For Creators & Authors
           </p>
           <p className="mt-4 max-w-2xl mx-auto text-primary-foreground/70">
-            Your complete guide to listing, selling, and promoting your digital books on the IndieCrowdfund Marketplace
+            Your complete guide to listing, selling, and promoting your digital books on the IndieCrowdfund Digital Shop
           </p>
         </div>
       </div>
@@ -585,7 +585,7 @@ export default function MarketplaceCreatorHandbookPage() {
                       <div>
                         <h4 className="font-medium text-foreground">Discount Codes</h4>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Create promo codes in the Discount Codes tab of your Marketplace dashboard. Offer free copies, percentage off, or fixed discounts to drive sales and reward loyal readers.
+                          Create promo codes in the Discount Codes tab of your Shop dashboard. Offer free copies, percentage off, or fixed discounts to drive sales and reward loyal readers.
                         </p>
                       </div>
                     </div>
@@ -652,18 +652,18 @@ export default function MarketplaceCreatorHandbookPage() {
               <p className="mt-2 text-primary-foreground/80">Your digital books are waiting for an audience.</p>
               <div className="mt-6 flex flex-wrap justify-center gap-4">
                 <Link
-                  href="/dashboard/marketplace"
+                  href="/dashboard/shop"
                   className="inline-flex items-center gap-2 rounded-lg bg-background px-6 py-3 font-medium text-foreground hover:bg-muted transition-colors"
                 >
                   <BookOpen className="h-5 w-5" />
-                  Go to Marketplace Dashboard
+                  Go to Shop Dashboard
                 </Link>
                 <Link
                   href="/shop"
                   className="inline-flex items-center gap-2 rounded-lg border-2 border-primary-foreground px-6 py-3 font-medium text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
                 >
                   <Star className="h-5 w-5" />
-                  View Marketplace
+                  View Digital Shop
                 </Link>
               </div>
             </div>

@@ -880,7 +880,12 @@ function NewBookForm() {
                   value={formData.mediaCategory}
                   onValueChange={(value) => {
                     updateForm("mediaCategory", value);
-                    updateForm("category", "");
+                    // Keep the chosen genre only if it's also valid for the
+                    // new media type; otherwise clear it.
+                    const genres = GENRES_BY_MEDIA_CATEGORY[value] || [];
+                    if (!genres.some((g) => g.value === formData.category)) {
+                      updateForm("category", "");
+                    }
                   }}
                 >
                   <SelectTrigger>

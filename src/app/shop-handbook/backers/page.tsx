@@ -51,8 +51,8 @@ const overviewSteps: Step[] = [
   },
   {
     title: 'How is it different from crowdfunding?',
-    description: 'Crowdfunding is when you help pay for a book that is not made yet. You wait for it to be made and shipped. The Marketplace is for books that are already done. You pay and you get them right now.',
-    example: 'Crowdfunding: "Help me make a comic next year." → Marketplace: "Buy my finished comic today."',
+    description: 'Crowdfunding is when you help pay for a book that is not made yet. You wait for it to be made and shipped. The Digital Shop is for books that are already done. You pay and you get them right now.',
+    example: 'Crowdfunding: "Help me make a comic next year." → Digital Shop: "Buy my finished comic today."',
   },
   {
     title: 'What can you buy?',
@@ -62,15 +62,15 @@ const overviewSteps: Step[] = [
   {
     title: 'Who makes the books?',
     description: 'Real indie creators, the same kind of people who run crowdfunding campaigns on this site. They get paid most of the money from each sale, so buying here helps them keep making things.',
-    example: 'A creator might run a Kickstarter for Book 1, then sell Book 1 on the Marketplace once it is finished.',
+    example: 'A creator might run a Kickstarter for Book 1, then sell Book 1 on the Digital Shop once it is finished.',
   },
 ];
 
 const browsingSteps: Step[] = [
   {
-    title: 'Open the Marketplace',
-    description: 'Click "Digital Shop" in the top menu. Or just type /marketplace in the address bar. The home page shows new releases, staff picks, and the most popular books.',
-    tip: 'You can also reach the Marketplace from the footer of any page on the site.',
+    title: 'Open the Digital Shop',
+    description: 'Click "Digital Shop" in the top menu. Or just type /shop in the address bar. The home page shows new releases, staff picks, and the most popular books.',
+    tip: 'You can also reach the Digital Shop from the footer of any page on the site.',
   },
   {
     title: 'Look at the featured shelves',
@@ -79,7 +79,7 @@ const browsingSteps: Step[] = [
   },
   {
     title: 'Browse the full catalog',
-    description: 'Click "Browse All Books" to see every book on the Marketplace. Each book shows the cover, title, who made it, the price, and the star rating.',
+    description: 'Click "Browse All Books" to see every book on the Digital Shop. Each book shows the cover, title, who made it, the price, and the star rating.',
     tip: 'Use this when you are not sure what you want and just want to look around.',
   },
   {
@@ -112,7 +112,7 @@ const purchasingSteps: Step[] = [
   },
   {
     title: 'Enter your card',
-    description: 'The Marketplace processes card payments through Divinity Payments, PayPal, or Whop depending on the creator\'s setup. Type your credit or debit card number, expiration, and CVV in the form. Your card details are encrypted in your browser and sent straight to the processor — they never touch IndieCrowdfund servers.',
+    description: 'The Digital Shop processes card payments through Divinity Payments, PayPal, or Whop depending on the creator\'s setup. Type your credit or debit card number, expiration, and CVV in the form. Your card details are encrypted in your browser and sent straight to the processor — they never touch IndieCrowdfund servers.',
     tip: 'Save your card to make next time faster. Saved cards are stored on the processor\'s side, never on IndieCrowdfund servers.',
   },
   {
@@ -135,12 +135,12 @@ const purchasingSteps: Step[] = [
 const librarySteps: Step[] = [
   {
     title: 'Find your books in your dashboard',
-    description: 'Open your Backer Dashboard at /dashboard/backer. Two tabs hold your Marketplace books. The Downloads tab (/dashboard/backer?tab=downloads) shows everything you own — Marketplace books at the top as cover tiles, plus any files from crowdfunding campaigns below. The Digital Library tab (/dashboard/backer?tab=digital-library) is where you actually read books in your browser.',
+    description: 'Open your Backer Dashboard at /dashboard/backer. Two tabs hold your Digital Shop books. The Downloads tab (/dashboard/backer?tab=downloads) shows everything you own — Digital Shop books at the top as cover tiles, plus any files from crowdfunding campaigns below. The Digital Library tab (/dashboard/backer?tab=digital-library) is where you actually read books in your browser.',
     tip: 'Easy way to remember: Downloads = "see all my files." Digital Library = "open and read a book."',
   },
   {
     title: 'See your whole collection',
-    description: 'In the Downloads tab, every Marketplace book you have ever bought shows up as a cover tile. Newest at the top. You can see your whole digital bookshelf at a glance.',
+    description: 'In the Downloads tab, every Digital Shop book you have ever bought shows up as a cover tile. Newest at the top. You can see your whole digital bookshelf at a glance.',
     example: 'Bought 5 books in the last month? All 5 show up here in order, newest first.',
   },
   {
@@ -201,8 +201,8 @@ const readingSteps: Step[] = [
 const supportSteps: Step[] = [
   {
     title: 'Buying directly helps the creator',
-    description: 'Most online stores keep a big chunk of every sale. Indie creators on this Marketplace keep most of theirs. When you buy a book here, the creator actually gets paid.',
-    tip: 'Buying from this Marketplace is one of the most direct ways to help an indie creator.',
+    description: 'Most online stores keep a big chunk of every sale. Indie creators on this Digital Shop keep most of theirs. When you buy a book here, the creator actually gets paid.',
+    tip: 'Buying from this Digital Shop is one of the most direct ways to help an indie creator.',
   },
   {
     title: 'Leave a review',
@@ -211,7 +211,7 @@ const supportSteps: Step[] = [
   },
   {
     title: 'Follow the creator',
-    description: 'Click the "Follow" button on a creator\'s profile. You will get an email when they release something new — Marketplace book or crowdfunding campaign.',
+    description: 'Click the "Follow" button on a creator\'s profile. You will get an email when they release something new — Digital Shop book or crowdfunding campaign.',
     tip: 'Following is free. It just means you hear about new stuff first.',
   },
   {
@@ -221,8 +221,8 @@ const supportSteps: Step[] = [
   },
   {
     title: 'Back their next campaign',
-    description: 'Many Marketplace creators also run crowdfunding campaigns. If you loved their book, look at their profile to see if they have a campaign running, and back it.',
-    tip: 'Backing campaigns gets you stuff you can\'t buy in the Marketplace — early-bird tiers, signed copies, exclusive add-ons.',
+    description: 'Many Digital Shop creators also run crowdfunding campaigns. If you loved their book, look at their profile to see if they have a campaign running, and back it.',
+    tip: 'Backing campaigns gets you stuff you can\'t buy in the Digital Shop — early-bird tiers, signed copies, exclusive add-ons.',
   },
   {
     title: 'Get a physical copy',
@@ -246,7 +246,7 @@ const faqs: FAQ[] = [
   },
   {
     question: 'What kind of file is a book?',
-    answer: 'All Marketplace books are PDF files. PDFs work on almost every device — phone, tablet, laptop, e-reader — with the original layout, fonts, and pictures.',
+    answer: 'All Digital Shop books are PDF files. PDFs work on almost every device — phone, tablet, laptop, e-reader — with the original layout, fonts, and pictures.',
   },
   {
     question: 'Can I read on a Kindle?',
@@ -257,12 +257,12 @@ const faqs: FAQ[] = [
     answer: 'First try refreshing the Downloads tab and clicking download again. If that does not work, check that you are signed in to the right account and that your internet is working. Still stuck? Email support with your order number.',
   },
   {
-    question: 'Are Marketplace books the same as crowdfunding rewards?',
-    answer: 'No, they are separate. Marketplace books appear in your Downloads tab as Marketplace Books at the top. Crowdfunding rewards (digital files from a campaign you backed) appear below in the same tab. Same place, two sources.',
+    question: 'Are Digital Shop books the same as crowdfunding rewards?',
+    answer: 'No, they are separate. Digital Shop books appear at the top of your Downloads tab. Crowdfunding rewards (digital files from a campaign you backed) appear below in the same tab. Same place, two sources.',
   },
   {
     question: 'How is my card processed?',
-    answer: 'The Marketplace processes card payments through Divinity Payments, PayPal, or Whop, depending on which one the creator selected. You enter your card on the checkout page, it is encrypted in your browser, and the processor charges it right away. IndieCrowdfund servers never see your full card number. The checkout experience looks slightly different for each processor, but the result is the same — book in your library, receipt in your inbox.',
+    answer: 'The Digital Shop processes card payments through Divinity Payments, PayPal, or Whop, depending on which one the creator selected. You enter your card on the checkout page, it is encrypted in your browser, and the processor charges it right away. IndieCrowdfund servers never see your full card number. The checkout experience looks slightly different for each processor, but the result is the same — book in your library, receipt in your inbox.',
   },
 ];
 
@@ -396,7 +396,7 @@ export default function MarketplaceBackerHandbookPage() {
                 <>
                   <SectionHeader
                     title="Understanding the Digital Shop"
-                    description="Learn what the marketplace is, how it works, and what makes it different from crowdfunding."
+                    description="Learn what the Digital Shop is, how it works, and what makes it different from crowdfunding."
                   />
                   <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
                     <div className="flex gap-3">
@@ -420,7 +420,7 @@ export default function MarketplaceBackerHandbookPage() {
               {activeTab === 'browsing' && (
                 <>
                   <SectionHeader
-                    title="Browsing the Marketplace"
+                    title="Browsing the Digital Shop"
                     description="How to find and explore digital books and content from indie creators."
                   />
                   <div className="space-y-4">
@@ -435,7 +435,7 @@ export default function MarketplaceBackerHandbookPage() {
                 <>
                   <SectionHeader
                     title="Making a Purchase"
-                    description="Step-by-step guide to purchasing digital content from the marketplace."
+                    description="Step-by-step guide to purchasing digital content from the Digital Shop."
                   />
                   <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
                     <div className="flex gap-3">
@@ -568,7 +568,7 @@ export default function MarketplaceBackerHandbookPage() {
                   className="inline-flex items-center gap-2 rounded-lg bg-background px-6 py-3 font-medium text-foreground hover:bg-muted transition-colors"
                 >
                   <ShoppingCart className="h-5 w-5" />
-                  Visit Marketplace
+                  Visit Digital Shop
                 </Link>
                 <Link
                   href="/dashboard/backer?tab=downloads"

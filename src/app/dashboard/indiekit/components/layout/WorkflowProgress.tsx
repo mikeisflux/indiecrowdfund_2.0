@@ -8,6 +8,15 @@ import { Progress } from "@/components/ui/progress";
 import { Check, Lock, ChevronRight, Loader2, ClipboardList } from "lucide-react";
 import type { WorkflowStep, Backer, FulfillmentStats } from "../../types";
 
+// Plain-language explanations for each workflow action button.
+const ACTION_TOOLTIPS: Record<string, string> = {
+  lock_orders: "Finalize backer reward and add-on selections — they can no longer change their order.",
+  charge_cards: "Charge backers for add-ons or balances owed beyond their original pledge.",
+  lock_addresses: "Finalize backer shipping addresses so they can no longer be changed.",
+  start_shipping: "Push these orders into your fulfillment workflow.",
+  shipped: "Mark these orders as shipped to backers.",
+};
+
 interface WorkflowProgressProps {
   workflowSteps: WorkflowStep[];
   stats: FulfillmentStats | null;
@@ -123,6 +132,7 @@ export function WorkflowProgress({
                   <Button
                     size="sm"
                     variant="outline"
+                    title={ACTION_TOOLTIPS[step.id]}
                     className="w-full text-xs h-7 border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950"
                     onClick={(e) => {
                       e.stopPropagation();
