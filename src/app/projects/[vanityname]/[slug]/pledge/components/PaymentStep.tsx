@@ -172,9 +172,13 @@ export function PaymentStep({
   const displayTotal = isModifyMode && modifyChargeAmount != null ? modifyChargeAmount : total;
   return (
     <div className="space-y-8">
-      {/* Confirm payment method heading */}
+      {/* Payment method heading */}
       <div>
-        <h2 className="text-xl font-semibold mb-3">Confirm your payment method</h2>
+        <h2 className="text-xl font-semibold mb-3">
+          {intentType === "setup_intent"
+            ? "Save your payment method"
+            : "Confirm your payment method"}
+        </h2>
         {isModifyMode ? (
           <p className="text-sm text-muted-foreground leading-relaxed">
             You&apos;re modifying your pledge. Only the additional amount of{" "}

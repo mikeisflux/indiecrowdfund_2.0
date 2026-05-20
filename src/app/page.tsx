@@ -393,7 +393,7 @@ function ProjectSectionSkeleton() {
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="glass-card rounded-2xl overflow-hidden">
               <div className="aspect-video bg-muted animate-pulse" />
               <div className="p-4 space-y-3">

@@ -560,13 +560,29 @@ function DiscoverContent() {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card mb-6">
               <Sparkles className="h-10 w-10 text-muted-foreground" />
             </div>
-            <h3 className="mb-2 text-xl font-semibold">No projects found</h3>
-            <p className="mb-6 text-muted-foreground max-w-md mx-auto">
-              Try adjusting your filters or search terms to discover more amazing projects
-            </p>
-            <Button onClick={clearFilters} className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/20">
-              Clear all filters
-            </Button>
+            {activeFilterCount > 0 ? (
+              <>
+                <h3 className="mb-2 text-xl font-semibold">No projects found</h3>
+                <p className="mb-6 text-muted-foreground max-w-md mx-auto">
+                  Try adjusting your filters or search terms to discover more amazing projects
+                </p>
+                <Button onClick={clearFilters} className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/20">
+                  Clear all filters
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="mb-2 text-xl font-semibold">No projects here yet</h3>
+                <p className="mb-6 text-muted-foreground max-w-md mx-auto">
+                  There aren&apos;t any crowdfunds to show right now. Check back soon, or start your own.
+                </p>
+                <Link href="/projects/new">
+                  <Button className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/20">
+                    Start a Project
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         ) : filteredProjects.length === 0 && isLoading ? (
           <div className="py-8 text-center">

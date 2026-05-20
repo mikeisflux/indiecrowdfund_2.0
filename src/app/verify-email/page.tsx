@@ -84,14 +84,15 @@ function VerifyEmailContent() {
           {status === "success" && (
             <>
               <p className="text-sm text-muted-foreground">
-                You can now enjoy all features of your account.
+                Your email is verified. Discover a project to back, or head to
+                your dashboard to finish setting up your profile.
               </p>
               <div className="flex flex-col gap-2">
-                <Button onClick={() => router.push("/dashboard")} className="w-full">
-                  Go to Dashboard
+                <Button onClick={() => router.push("/crowdfunds")} className="w-full">
+                  Browse Crowdfunds
                 </Button>
-                <Button variant="outline" onClick={() => router.push("/")} className="w-full">
-                  Go to Home
+                <Button variant="outline" onClick={() => router.push("/dashboard")} className="w-full">
+                  Go to Dashboard
                 </Button>
               </div>
             </>
