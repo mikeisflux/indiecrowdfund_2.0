@@ -313,7 +313,7 @@ export function MarketplaceContent({
         setStaffPicks(data.books || []);
       }
 
-      // Fetch The Dollar Bin (comics priced $1.00 or less)
+      // Fetch The Dollar Bin (comics priced under $5.00)
       const dollarBinRes = await fetch("/api/marketplace/books?dollarBin=true&mediaCategory=comics&limit=15");
       if (dollarBinRes.ok) {
         const data = await dollarBinRes.json();

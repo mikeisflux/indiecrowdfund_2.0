@@ -4,7 +4,7 @@ export default function DollarBinComicsPage() {
   return (
     <MarketplaceListingPage
       title="The Dollar Bin"
-      description="Comics priced at $1.00 or less"
+      description="Comics priced under $5.00"
       apiQuery="?mediaCategory=comics&dollarBin=true"
       detailHrefPrefix="/shop/books/"
       kind="movie"
