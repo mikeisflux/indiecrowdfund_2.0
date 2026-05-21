@@ -1,0 +1,13 @@
+import { MarketplaceListingPage } from "@/components/marketplace/marketplace-listing-page";
+
+export default function DollarBinComicsPage() {
+  return (
+    <MarketplaceListingPage
+      title="The Dollar Bin"
+      description="Comics priced at $1.00 or less"
+      apiQuery="?mediaCategory=comics&dollarBin=true"
+      detailHrefPrefix="/shop/books/"
+      kind="movie"
+    />
+  );
+}

@@ -20,6 +20,7 @@ import {
   Book as BookIcon,
   Music,
   Film,
+  DollarSign,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MusicBrowse } from "@/components/marketplace/music-browse";
@@ -201,12 +202,14 @@ function BookSection({
   viewAllHref,
   loading,
   icon: Icon,
+  emptyMessage = "No books available yet",
 }: {
   title: string;
   books: Book[];
   viewAllHref: string;
   loading: boolean;
   icon: React.ComponentType<{ className?: string }>;
+  emptyMessage?: string;
 }) {
   // Show 15 books max to leave room for Show More tile (fills 2 rows of 8)
   const displayBooks = books.slice(0, 15);
@@ -238,7 +241,7 @@ function BookSection({
       ) : books.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>No books available yet</p>
+          <p>{emptyMessage}</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
@@ -284,6 +287,7 @@ export function MarketplaceContent({
   const [searchQuery, setSearchQuery] = useState("");
   const [featuredBooks, setFeaturedBooks] = useState<Book[]>([]);
   const [staffPicks, setStaffPicks] = useState<Book[]>([]);
+  const [dollarBinBooks, setDollarBinBooks] = useState<Book[]>([]);
   const [allBooks, setAllBooks] = useState<Book[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -307,6 +311,13 @@ export function MarketplaceContent({
       if (staffRes.ok) {
         const data = await staffRes.json();
         setStaffPicks(data.books || []);
+      }
+
+      // Fetch The Dollar Bin (comics priced $1.00 or less)
+      const dollarBinRes = await fetch("/api/marketplace/books?dollarBin=true&mediaCategory=comics&limit=15");
+      if (dollarBinRes.ok) {
+        const data = await dollarBinRes.json();
+        setDollarBinBooks(data.books || []);
       }
 
       // Fetch all comics (15 for display + Show More tile fills 2 rows of 8)
@@ -525,6 +536,16 @@ export function MarketplaceContent({
                     )}
                   </section>
                 </div>
+
+                {/* The Dollar Bin - Full Width */}
+                <BookSection
+                  title="The Dollar Bin"
+                  books={dollarBinBooks}
+                  viewAllHref="/shop/comics/dollar-bin"
+                  loading={loading}
+                  icon={DollarSign}
+                  emptyMessage="No dollar comics yet — check back soon!"
+                />
 
                 {/* All Comics Section - Full Width */}
                 <BookSection

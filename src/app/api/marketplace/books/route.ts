@@ -18,6 +18,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const featured = searchParams.get("featured") === "true";
     const staffPick = searchParams.get("staffPick") === "true";
+    // The Dollar Bin: books priced at $1.00 or less.
+    const dollarBin = searchParams.get("dollarBin") === "true";
     const mediaCategory = searchParams.get("mediaCategory");
     const category = searchParams.get("category");
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
@@ -48,6 +50,10 @@ export async function GET(request: Request) {
 
     if (staffPick) {
       where.isStaffPick = true;
+    }
+
+    if (dollarBin) {
+      where.price = { lte: 1 };
     }
 
     if (category) {
