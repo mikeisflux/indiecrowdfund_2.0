@@ -9,6 +9,7 @@ interface BookListPanelProps {
   onSelectBook: (book: MarketplaceBook) => void;
   onApprove: () => void;
   onReject: () => void;
+  onRevert: () => void;
   onToggleFeatured: () => void;
   onToggleStaffPick: () => void;
   isLoading: boolean;
@@ -23,6 +24,7 @@ export function BookListPanel({
   onSelectBook,
   onApprove,
   onReject,
+  onRevert,
   onToggleFeatured,
   onToggleStaffPick,
   isLoading,
@@ -68,6 +70,7 @@ export function BookListPanel({
               book={selectedBook}
               onApprove={onApprove}
               onReject={onReject}
+              onRevert={onRevert}
               onToggleFeatured={onToggleFeatured}
               onToggleStaffPick={onToggleStaffPick}
               isSubmitting={isSubmitting}

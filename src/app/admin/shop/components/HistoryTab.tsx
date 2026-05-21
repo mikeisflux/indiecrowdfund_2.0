@@ -2,6 +2,26 @@ import { Badge } from "@/components/ui/badge";
 import { History } from "lucide-react";
 import { ReviewHistory } from "../types";
 
+const ACTION_LABELS: Record<string, string> = {
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  REQUESTED_CHANGES: "Reverted to Review",
+  SUBMITTED: "Submitted",
+  FLAGGED: "Flagged",
+  DEACTIVATED: "Deactivated",
+  REACTIVATED: "Reactivated",
+};
+
+function actionBadgeClass(action: string): string {
+  if (action === "APPROVED" || action === "REACTIVATED") {
+    return "bg-emerald-100 text-emerald-400 border-emerald-200";
+  }
+  if (action === "REQUESTED_CHANGES") {
+    return "bg-amber-100 text-amber-500 border-amber-200";
+  }
+  return "bg-rose-100 text-rose-400 border-rose-200";
+}
+
 interface HistoryTabProps {
   reviewHistory: ReviewHistory[];
 }
@@ -19,35 +39,32 @@ export function HistoryTab({ reviewHistory }: HistoryTabProps) {
             <p>No review history</p>
           </div>
         ) : (
-          reviewHistory.map((review) => (
-            <div key={review.id} className="p-4 rounded-lg bg-muted/50 border border-border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">{review.bookTitle}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {review.action} by {review.reviewedBy}
-                  </p>
+          reviewHistory.map((review) => {
+            const label = ACTION_LABELS[review.action] || review.action;
+            return (
+              <div key={review.id} className="p-4 rounded-lg bg-muted/50 border border-border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">{review.bookTitle}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {label} by {review.reviewedBy}
+                    </p>
+                  </div>
+                  <Badge className={actionBadgeClass(review.action)}>
+                    {label}
+                  </Badge>
                 </div>
-                <Badge
-                  className={
-                    review.action === "APPROVED"
-                      ? "bg-emerald-100 text-emerald-400 border-emerald-200"
-                      : "bg-rose-100 text-rose-400 border-rose-200"
-                  }
-                >
-                  {review.action}
-                </Badge>
-              </div>
-              {review.notes && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {review.notes}
+                {review.notes && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {review.notes}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground/70 mt-2">
+                  {new Date(review.createdAt).toLocaleString()}
                 </p>
-              )}
-              <p className="text-xs text-muted-foreground/70 mt-2">
-                {new Date(review.createdAt).toLocaleString()}
-              </p>
-            </div>
-          ))
+              </div>
+            );
+          })
         )}
       </div>
     </div>

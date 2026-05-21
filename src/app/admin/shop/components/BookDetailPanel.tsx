@@ -18,6 +18,7 @@ import {
   User,
   Calendar,
   Eye,
+  Undo2,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadges";
 import { MarketplaceBook } from "../types";
@@ -26,6 +27,7 @@ interface BookDetailPanelProps {
   book: MarketplaceBook;
   onApprove: () => void;
   onReject: () => void;
+  onRevert: () => void;
   onToggleFeatured: () => void;
   onToggleStaffPick: () => void;
   isSubmitting: boolean;
@@ -35,6 +37,7 @@ export function BookDetailPanel({
   book,
   onApprove,
   onReject,
+  onRevert,
   onToggleFeatured,
   onToggleStaffPick,
   isSubmitting,
@@ -205,41 +208,59 @@ export function BookDetailPanel({
 
       {/* Admin Actions for Live Books */}
       {book.status === "LIVE" && (
-        <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-4">
-          <h3 className="text-sm font-medium text-muted-foreground">Homepage Categories</h3>
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-            <div>
-              <p className="font-medium text-foreground flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-600" />
-                Featured
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Show in Featured section on marketplace homepage
-              </p>
+        <>
+          <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Homepage Categories</h3>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium text-foreground flex items-center gap-2">
+                  <Star className="w-4 h-4 text-amber-600" />
+                  Featured
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Show in Featured section on marketplace homepage
+                </p>
+              </div>
+              <Switch
+                checked={book.isFeatured}
+                onCheckedChange={onToggleFeatured}
+                disabled={isSubmitting}
+              />
             </div>
-            <Switch
-              checked={book.isFeatured}
-              onCheckedChange={onToggleFeatured}
-              disabled={isSubmitting}
-            />
-          </div>
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-            <div>
-              <p className="font-medium text-foreground flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                Staff Pick
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Show in Staff Picks section on marketplace homepage
-              </p>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium text-foreground flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  Staff Pick
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Show in Staff Picks section on marketplace homepage
+                </p>
+              </div>
+              <Switch
+                checked={book.isStaffPick}
+                onCheckedChange={onToggleStaffPick}
+                disabled={isSubmitting}
+              />
             </div>
-            <Switch
-              checked={book.isStaffPick}
-              onCheckedChange={onToggleStaffPick}
-              disabled={isSubmitting}
-            />
           </div>
-        </div>
+
+          <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">Review Status</h3>
+            <Button
+              onClick={onRevert}
+              disabled={isSubmitting}
+              variant="outline"
+              className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
+            >
+              <Undo2 className="w-4 h-4 mr-2" />
+              Revert to Pending Review
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Removes the book from the live shop and notifies the creator with a reason to correct.
+            </p>
+          </div>
+        </>
       )}
 
       {/* Review Actions for Pending Books */}

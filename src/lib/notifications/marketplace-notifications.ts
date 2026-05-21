@@ -286,3 +286,89 @@ export async function notifyMarketplaceBookReview(
     notificationsMarketplaceNotificationsLogger.error({ err: error }, `Failed to send marketplace book review email for ${bookId}:`);
   }
 }
+
+/**
+ * Notify a creator when their live marketplace book is reverted to pending
+ * review by an admin, so they can correct the issue and have it re-approved.
+ */
+export async function notifyMarketplaceBookReverted(
+  bookId: string,
+  reason: string
+) {
+  const book = await db.marketplaceBook.findFirst({
+    where: { id: bookId, deletedAt: null },
+    include: {
+      creator: {
+        select: { id: true, email: true, name: true },
+      },
+    },
+  });
+
+  if (!book || !book.creator.email) return;
+
+  const dashboardUrl = `/dashboard/shop`;
+
+  // In-app notification
+  await createNotification({
+    userId: book.creator.id,
+    type: "MARKETPLACE_BOOK_REJECTED",
+    title: "Action Needed: Book Moved Back to Review",
+    message: `Your book "${book.title}" was moved back to pending review. Reason: ${reason}. Please correct the issue — it will go live again once re-approved.`,
+    actionUrl: dashboardUrl,
+  });
+
+  // Send email
+  try {
+    const creatorName = book.creator.name || "Creator";
+    await sendEmail({
+      to: book.creator.email,
+      subject: `Action needed: "${book.title}" was moved back to review`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }
+            .header h1 { color: white; margin: 0; font-size: 24px; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; }
+            .book-title { font-size: 20px; font-weight: bold; color: #1f2937; margin-bottom: 16px; }
+            .reason-box { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+            .button { display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+            .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Action Needed on Your Book</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${escapeHtml(creatorName)},</p>
+              <p>Your book has been moved back to pending review and is temporarily off the shop while an issue is corrected:</p>
+              <p class="book-title">&ldquo;${escapeHtml(book.title)}&rdquo;</p>
+              <div class="reason-box">
+                <strong>Reason:</strong><br>
+                ${escapeHtml(reason)}
+              </div>
+              <p>Please review the feedback, make the necessary changes, and your book will be re-reviewed. Once approved it will go live on the shop again.</p>
+              <p style="text-align: center;">
+                <a href="${APP_URL}${dashboardUrl}" class="button">Edit Your Book</a>
+              </p>
+              <p>If you have questions about this, please reach out to our support team.</p>
+              <p>Best,<br>The ${APP_NAME} Team</p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+    notificationsMarketplaceNotificationsLogger.info(`Sent marketplace book revert email to ${book.creator.email} for book ${bookId}`);
+  } catch (error) {
+    notificationsMarketplaceNotificationsLogger.error({ err: error }, `Failed to send marketplace book revert email for ${bookId}:`);
+  }
+}

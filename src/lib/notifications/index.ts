@@ -38,6 +38,7 @@ export {
   notifyMarketplacePurchase,
   notifyMarketplaceSale,
   notifyMarketplaceBookReview,
+  notifyMarketplaceBookReverted,
 } from "./marketplace-notifications";
 
 // Export social notifications

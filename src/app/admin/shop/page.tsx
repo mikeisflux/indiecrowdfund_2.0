@@ -41,6 +41,7 @@ import { HistoryTab } from "./components/HistoryTab";
 import { TransactionsTab } from "./components/TransactionsTab";
 import { PdfManagementTab } from "./components/PdfManagementTab";
 import { RejectDialog } from "./components/RejectDialog";
+import { RevertToPendingDialog } from "./components/RevertToPendingDialog";
 import { AddToCategoryDialog } from "./components/AddToCategoryDialog";
 
 // ─── Category config ─────────────────────────────────────────────────
@@ -104,6 +105,9 @@ export default function AdminMarketplacePage() {
   // Dialogs
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [showRevertDialog, setShowRevertDialog] = useState(false);
+  const [revertReason, setRevertReason] = useState("");
+  const [revertNotes, setRevertNotes] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addDialogCategory, setAddDialogCategory] = useState<"featured" | "staffPick">("featured");
 
@@ -269,6 +273,35 @@ export default function AdminMarketplacePage() {
       fetchHistory();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to reject");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRevert = async () => {
+    if (!selectedBook) return;
+    if (!revertReason) { toast.error("Please select a reason"); return; }
+    if (revertReason === "Other" && !revertNotes.trim()) {
+      toast.error("Please add notes explaining the reason");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await apiFetch(`/api/admin/marketplace/books/${selectedBook.id}/revert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: revertReason, notes: revertNotes.trim() }),
+      });
+      if (!response.ok) { const d = await response.json(); throw new Error(d.error || "Failed"); }
+      toast.success(`${categoryLabel.slice(0, -1)} reverted to pending review — creator notified`);
+      setShowRevertDialog(false);
+      setRevertReason("");
+      setRevertNotes("");
+      setSelectedBook(null);
+      fetchBooks();
+      fetchHistory();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to revert");
     } finally {
       setIsSubmitting(false);
     }
@@ -521,6 +554,7 @@ export default function AdminMarketplacePage() {
             onSelectBook={setSelectedBook}
             onApprove={handleApprove}
             onReject={() => setShowRejectDialog(true)}
+            onRevert={() => setShowRevertDialog(true)}
             onToggleFeatured={() => handleToggleFeatured()}
             onToggleStaffPick={() => handleToggleStaffPick()}
             isLoading={isLoading}
@@ -561,6 +595,7 @@ export default function AdminMarketplacePage() {
             onSelectBook={setSelectedBook}
             onApprove={handleApprove}
             onReject={() => setShowRejectDialog(true)}
+            onRevert={() => setShowRevertDialog(true)}
             onToggleFeatured={() => handleToggleFeatured()}
             onToggleStaffPick={() => handleToggleStaffPick()}
             isLoading={isLoading}
@@ -626,6 +661,19 @@ export default function AdminMarketplacePage() {
         rejectionReason={rejectionReason}
         onReasonChange={setRejectionReason}
         onReject={handleReject}
+        isSubmitting={isSubmitting}
+      />
+      <RevertToPendingDialog
+        open={showRevertDialog}
+        onOpenChange={(open) => {
+          setShowRevertDialog(open);
+          if (!open) { setRevertReason(""); setRevertNotes(""); }
+        }}
+        reason={revertReason}
+        onReasonChange={setRevertReason}
+        notes={revertNotes}
+        onNotesChange={setRevertNotes}
+        onRevert={handleRevert}
         isSubmitting={isSubmitting}
       />
       <AddToCategoryDialog
