@@ -67,9 +67,15 @@ export function ErrorReporter() {
       /moz-extension:\/\//,
       /chrome-extension:\/\//,
       /safari-extension:\/\//,
+      /safari-web-extension:\/\//,
       // Browser-injected scripts (Firefox reader mode, Brave's copy, etc.)
       /__firefox__/,
       /window\.__firefox__/,
+      // iOS Safari / in-app browser userscripts run under a "user-script"
+      // pseudo-URL. The Twitter/X in-app browser injects a layout shim
+      // (updateGapFiller / updateFooterPositions) that throws ReferenceErrors
+      // for its own undefined globals (CONFIG, etc.). Not our code.
+      /user-script/,
       // Facebook in-app browser WebView lifecycle errors
       /Java object is gone/,
       /Error invoking postMessage/,
@@ -179,10 +185,25 @@ export function ErrorReporter() {
       return BROWSER_NOISE_PATTERNS.some((pattern) => pattern.test(text));
     };
 
+    // Injected third-party scripts (in-app browser layout shims, iOS
+    // userscripts, media-hooking Safari extensions) throw ReferenceErrors
+    // for globals they expect but we never define — CONFIG, EmptyRanges,
+    // and the like. A genuine error in our compiled app always has at
+    // least one stack frame in our /_next/ bundle; an injected script's
+    // stack never does. So a ReferenceError with no /_next/ frame is
+    // third-party noise, not our bug.
+    const isInjectedReferenceError = (message?: string, stack?: string): boolean => {
+      if (!message) return false;
+      const isReferenceError = /Can't find variable:|\bis not defined\b/.test(message);
+      if (!isReferenceError) return false;
+      return !stack || !stack.includes("/_next/");
+    };
+
     const handleError = (event: ErrorEvent) => {
       if (!event.message) return;
       if (isBrowserNoise(event.message, event.error?.stack)) return;
       if (event.error?.name === "ChunkLoadError") return;
+      if (isInjectedReferenceError(event.message, event.error?.stack)) return;
       reportError(
         event.message || "Unhandled error",
         event.error?.stack
@@ -195,6 +216,7 @@ export function ErrorReporter() {
       const stack = error instanceof Error ? error.stack : undefined;
       if (isBrowserNoise(message, stack)) return;
       if (error instanceof Error && error.name === "ChunkLoadError") return;
+      if (isInjectedReferenceError(message, stack)) return;
       reportError(`Unhandled Promise Rejection: ${message}`, stack);
     };
 
@@ -278,6 +300,13 @@ export function ErrorReporter() {
         // project on the public URL trigger this expected 404. Not
         // actionable.
         (response.status === 404 && /\/api\/projects\/vanity\/[^/]+\/[^/?]+/.test(requestUrl)) ||
+        // /api/projects/slug/[slug] backs the project edit page. It returns
+        // 404 for DRAFT/SUBMITTED projects when the requester isn't the
+        // creator/admin/collaborator — which happens when a creator opens
+        // their edit link in an in-app browser (Facebook, etc.) that didn't
+        // carry over their session cookie. The 404 is the route correctly
+        // protecting a private draft, not a backend bug.
+        (response.status === 404 && /\/api\/projects\/slug\/[^/?]+(\?|$)/.test(requestUrl)) ||
         isBotProbe404;
       // 401s from authed-only endpoints fired by client-side useEffects before the
       // session handshake completes (or after a silent session expiry on long-lived

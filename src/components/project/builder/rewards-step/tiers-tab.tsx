@@ -418,7 +418,18 @@ export function TiersTab({
           >
             <SortableContext items={tierIds} strategy={verticalListSortingStrategy}>
               {sortedTiers.map((tier) => {
-                const rewardIndex = rewards.indexOf(tier);
+                // manualOrder can hold a stale reward reference after the
+                // store replaces a reward object, which makes indexOf()
+                // return -1 and crashes the row action handlers (rewards[-1]).
+                // Fall back to matching by id (saved) or title (unsaved).
+                let rewardIndex = rewards.indexOf(tier);
+                if (rewardIndex === -1) {
+                  rewardIndex = rewards.findIndex(
+                    (r) =>
+                      r.type === "TIER" &&
+                      (tier.id ? r.id === tier.id : r.title === tier.title)
+                  );
+                }
                 return (
                   <SortableTierRow
                     key={tier.id || `tier-${rewardIndex}`}

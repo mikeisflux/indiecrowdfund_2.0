@@ -411,7 +411,18 @@ export function AddonsTab({
           >
             <SortableContext items={addonIds} strategy={verticalListSortingStrategy}>
               {sortedAddons.map((addon) => {
-                const rewardIndex = rewards.indexOf(addon);
+                // manualOrder can hold a stale reward reference after the
+                // store replaces an add-on object, which makes indexOf()
+                // return -1 and crashes the row action handlers (rewards[-1]).
+                // Fall back to matching by id (saved) or title (unsaved).
+                let rewardIndex = rewards.indexOf(addon);
+                if (rewardIndex === -1) {
+                  rewardIndex = rewards.findIndex(
+                    (r) =>
+                      r.type === "ADDON" &&
+                      (addon.id ? r.id === addon.id : r.title === addon.title)
+                  );
+                }
                 return (
                   <SortableAddonRow
                     key={addon.id || `addon-${rewardIndex}`}

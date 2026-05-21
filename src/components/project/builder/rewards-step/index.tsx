@@ -290,6 +290,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   const openEditRewardForm = (index: number) => {
     const reward = rewards[index];
+    if (!reward) return;
     setCurrentReward(reward);
     // Use projectItemId if available (from API), otherwise try to match by title, then fall back to id.
     // Older reward records loaded from the API may have items as undefined rather than an empty array;
@@ -455,6 +456,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   const handleDeleteReward = async (index: number) => {
     const reward = rewards[index];
+    if (!reward) return;
     if (reward.backerCount && reward.backerCount > 0) {
       toast.error("Cannot delete reward with backers. End the reward instead.");
       return;
@@ -485,6 +487,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   const handleEndReward = async (index: number) => {
     const reward = rewards[index];
+    if (!reward) return;
     if (!reward.id) {
       toast.error("Reward must be saved before ending");
       return;
@@ -510,6 +513,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
 
   const handleDuplicateReward = (index: number) => {
     const reward = rewards[index];
+    if (!reward) return;
     addReward({ ...reward, id: undefined, title: `${reward.title} (Copy)` });
     toast.success("Reward duplicated");
   };
