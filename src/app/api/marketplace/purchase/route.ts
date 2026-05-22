@@ -46,6 +46,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
 
+    // Stripe is a decommissioned marketplace processor — the white-label
+    // flip moved card payments to DivinityCoin. Treat any legacy STRIPE
+    // book as DivinityCoin so it stays purchasable via the working flow.
+    if (book.paymentProcessor === "STRIPE") {
+      book.paymentProcessor = "DIVINITYCOIN";
+    }
+
     // Check if already purchased
     const existingPurchase = await prisma.marketplacePurchase.findFirst({
       where: {

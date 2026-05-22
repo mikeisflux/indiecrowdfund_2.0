@@ -21,9 +21,17 @@ const paymentSchema = z.object({
   // creator actually wants (and matches the migrate-to-dc admin tool's
   // behavior).
   paymentProcessor: z
-    .enum(["STRIPE", "DIVINITYCOIN", "PAYPAL", "WHOP", "NMI"])
-    .transform((v) => (v === "NMI" ? ("DIVINITYCOIN" as const) : v))
-    .optional(),
+    .preprocess(
+      // The builder re-sends the project's stored processor on every save.
+      // A draft that never picked one sends "" or null, which the enum
+      // rejects with a 400. Coerce empty/null to undefined (treated as a
+      // no-op — the processor field is simply left unchanged).
+      (v) => (v === "" || v === null ? undefined : v),
+      z
+        .enum(["STRIPE", "DIVINITYCOIN", "PAYPAL", "WHOP", "NMI"])
+        .transform((v) => (v === "NMI" ? ("DIVINITYCOIN" as const) : v))
+        .optional()
+    ),
   campaignType: z.enum(["ALL_OR_NOTHING", "KEEP_IT_ALL"]).optional(),
   hasAdultContent: z.boolean().optional(),
   hasRiskyContent: z.boolean().optional(),

@@ -238,32 +238,7 @@ export default function BookDetailPage() {
         return;
       }
 
-      if (paymentMethod === "stripe") {
-        // Use Stripe Checkout
-        const res = await apiFetch("/api/marketplace/checkout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-
-          },
-          body: JSON.stringify({
-            bookId: book.id,
-            promoCode: appliedPromo?.code,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to create checkout session");
-        }
-
-        if (data.checkoutUrl) {
-          toast.info("Redirecting to payment...");
-          window.location.href = data.checkoutUrl;
-          return;
-        }
-      } else if (paymentMethod === "paypal") {
+      if (paymentMethod === "paypal") {
         // PayPal Advanced Checkout — fetch PayPal client ID then create order
         const configRes = await fetch("/api/paypal/config");
         const configData = await configRes.json();
@@ -938,21 +913,7 @@ export default function BookDetailPage() {
                     </div>
                   </Button>
                 )}
-                {book?.paymentProcessor === "STRIPE" && (
-                  <Button
-                    variant="outline"
-                    className="h-16 justify-start"
-                    onClick={() => handlePurchase("stripe")}
-                    disabled={purchasing}
-                  >
-                    <CreditCard className="w-6 h-6 mr-4" />
-                    <div className="text-left">
-                      <div className="font-semibold">Credit/Debit Card</div>
-                      <div className="text-sm text-muted-foreground">Pay with credit or debit card</div>
-                    </div>
-                  </Button>
-                )}
-                {book?.paymentProcessor === "DIVINITYCOIN" && (
+                {(book?.paymentProcessor === "DIVINITYCOIN" || book?.paymentProcessor === "STRIPE") && (
                   <Button
                     className="h-16 bg-[#0066FF] hover:bg-[#0052CC] justify-start"
                     onClick={() => handlePurchase("divinitycoin")}

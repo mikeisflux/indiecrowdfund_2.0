@@ -80,7 +80,16 @@ export async function GET() {
     const statsMap = await getBatchProjectStats(allProjects);
 
     // Transform data
-    const creators = following.map((f: typeof following[0]) => ({
+    const creators = following.map((f: typeof following[0]) => {
+      // Sum live backer counts across the creator's loaded projects so the
+      // following card can render a backer total — the UI reads
+      // `totalBackers` and crashed on undefined when it wasn't returned.
+      const totalBackers = f.creator.createdProjects.reduce(
+        (sum: number, p: typeof f.creator.createdProjects[0]) =>
+          sum + (statsMap.get(p.id)?.backerCount ?? 0),
+        0
+      );
+      return {
       id: f.creator.id,
       name: f.creator.name,
       image: f.creator.image,
@@ -88,7 +97,8 @@ export async function GET() {
       followedAt: f.createdAt,
       notifyNewProjects: f.notifyNewProjects,
       notifyUpdates: f.notifyUpdates,
-      totalProjects: f.creator._count.createdProjects,
+      projectCount: f.creator._count.createdProjects,
+      totalBackers,
       memberSince: f.creator.createdAt,
       recentProjects: f.creator.createdProjects.map((p: typeof f.creator.createdProjects[0]) => {
         const liveStats = statsMap.get(p.id) ?? { currentAmount: 0, backerCount: 0 };
@@ -107,7 +117,8 @@ export async function GET() {
           backerCount: liveStats.backerCount,
         };
       }),
-    }));
+      };
+    });
 
     // Build activity feed from recent projects across all followed creators
     const allRecentProjects = following.flatMap((f: typeof following[0]) =>
@@ -142,7 +153,7 @@ export async function GET() {
 
     // Calculate stats
     const totalProjects = creators.reduce(
-      (sum: number, c: { totalProjects: number }) => sum + c.totalProjects,
+      (sum: number, c: { projectCount: number }) => sum + c.projectCount,
       0
     );
 
