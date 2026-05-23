@@ -149,6 +149,20 @@ export function ErrorReporter() {
       // very loud on iPhone DDG sessions.
       /Invalid call to runtime\.sendMessage/i,
       /runtime\.sendMessage.*Tab not found/i,
+      // Brave on iOS injects a reader-mode detector that touches
+      // `n.standardSelectors`; when the page's DOM doesn't match its
+      // expectations its own `n` is undefined and the script throws.
+      // Same class as the __firefox__ Brave-injection noise above.
+      /standardSelectors/,
+      // Babel-compiled third-party libraries (extensions, in-app
+      // browsers, ad SDKs) sometimes call their own classes as plain
+      // functions and hit this Babel-generated guard. Never our code —
+      // our bundles only contain working ES classes.
+      /Cannot call a class as a function/,
+      // Browser-native fetch / AbortSignal.timeout firing on flaky
+      // user wifi or a backgrounded tab. Same class as AbortError +
+      // "The operation was aborted" above — user-side, not actionable.
+      /TimeoutError.*operation timed out/i,
     ];
 
     // Paths that automated scanners / ad networks / browser feature-detection
@@ -293,6 +307,13 @@ export function ErrorReporter() {
         IGNORED_404_PATH_PATTERNS.some((p) => p.test(requestUrl));
       const isExpected404 =
         (response.status === 404 && requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond")) ||
+        // /api/backer/marketplace-purchases/[id]/download 404 means
+        // the book's pdfFileUrl is empty or the underlying R2 file is
+        // missing — a data issue with that specific book, not a backend
+        // regression. The Digital Library UI surfaces the failure to
+        // the buyer; the admin still gets the row-level detail in
+        // pm2 logs (the route logs the R2 key + directory listing).
+        (response.status === 404 && /\/api\/backer\/marketplace-purchases\/[^/]+\/download/.test(requestUrl)) ||
         // /api/projects/vanity/[creator]/[slug] returns 404 for any
         // project that isn't LIVE / FUNDED / FAILED — by design, the
         // public view shouldn't expose drafts, pending review, or
@@ -373,7 +394,11 @@ export function ErrorReporter() {
         // collaborator without canManageCommunity). The compose form
         // surfaces the rejection inline as a toast — admin-logging
         // every "tried to email before launch" is noise, not a bug.
-        requestUrl.includes("/api/creator/email/compose")
+        requestUrl.includes("/api/creator/email/compose") ||
+        // Chargeback-card 403: same CSRF-cookie-expired-on-stale-tab
+        // class as /api/user/notifications above. The edit page surfaces
+        // a toast and the next page load fixes it. Not actionable.
+        /\/api\/projects\/[^/]+\/chargeback-card$/.test(requestUrl)
       );
       // /api/auth/recaptcha 5xx is transient (nginx upstream briefly down during pm2 reload);
       // the client retries with backoff and falls back to disabled, so failures here are

@@ -141,7 +141,15 @@ export function usePledge() {
           setPledgeWithoutReward(true);
           setCustomPledgeAmount(existingPledge.amount);
         }
-        if (existingPledge.addons?.length > 0) {
+        // Prefer the pending (unconfirmed) addon set if one exists — even if
+        // empty — so a user returning to a half-finished modify sees their
+        // last intended state instead of the committed pre-change addons.
+        if (existingPledge.pendingModification) {
+          const pendingAddons = existingPledge.pendingModification.addons || [];
+          const addonMap: Record<string, number> = {};
+          for (const addon of pendingAddons) addonMap[addon.id] = addon.quantity;
+          setSelectedAddons(addonMap);
+        } else if (existingPledge.addons?.length > 0) {
           const addonMap: Record<string, number> = {};
           for (const addon of existingPledge.addons) addonMap[addon.id] = addon.quantity;
           setSelectedAddons(addonMap);
@@ -410,7 +418,10 @@ export function usePledge() {
       const res = await fetch(`/api/pledges/${pledgeId}`);
       if (!res.ok) return null;
       const data = await res.json();
-      return data.pledge?.reward?.id || null;
+      // Pending unconfirmed reward swap wins over the committed reward —
+      // otherwise the form renders with the original reward and the next
+      // save overwrites the pending change with the pre-swap rewardId.
+      return data.pledge?.pendingModification?.rewardId ?? data.pledge?.reward?.id ?? null;
     } catch {
       return null;
     }

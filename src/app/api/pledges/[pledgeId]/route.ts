@@ -196,6 +196,20 @@ export async function GET(
         isFunded,
         campaignClosed,
         refundRequest: pledge.refundRequest ?? null,
+        // Pending modification (reward swap and/or addon changes the backer
+        // saved but hasn't paid the upcharge for). Surfaced so the modify
+        // form can preload the user's last intended state — otherwise it
+        // re-renders with the committed (pre-change) reward and the next
+        // save silently reverts the unconfirmed swap.
+        pendingModification: (() => {
+          const meta = pledge.metadata as { pendingModification?: { rewardId?: string | null; addons?: { id: string; quantity: number }[] } } | null;
+          const pm = meta?.pendingModification;
+          if (!pm) return null;
+          return {
+            rewardId: pm.rewardId ?? null,
+            addons: pm.addons ?? [],
+          };
+        })(),
       },
     });
   } catch (error) {
