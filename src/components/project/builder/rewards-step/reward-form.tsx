@@ -535,11 +535,21 @@ export function RewardForm({
                                   shippingCountries: [...currentReward.shippingCountries, country.code],
                                 });
                               } else {
+                                // Also drop the unchecked country's entry
+                                // from shippingCost — otherwise the value
+                                // sticks around and backers from that
+                                // country still get charged at checkout,
+                                // even though the creator removed it.
+                                const nextCost = {
+                                  ...((currentReward.shippingCost as Record<string, number>) || {}),
+                                };
+                                delete nextCost[country.code];
                                 onRewardChange({
                                   ...currentReward,
                                   shippingCountries: currentReward.shippingCountries.filter(
                                     (c) => c !== country.code
                                   ),
+                                  shippingCost: nextCost,
                                 });
                               }
                             }}
