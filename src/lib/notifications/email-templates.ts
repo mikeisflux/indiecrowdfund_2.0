@@ -520,7 +520,7 @@ export async function sendMarketplacePurchaseEmail(
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #333; margin: 0;">${APP_NAME} Marketplace</h1>
+          <h1 style="color: #333; margin: 0;">${APP_NAME} Digital Shop</h1>
         </div>
 
         <div style="background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
@@ -559,7 +559,7 @@ export async function sendMarketplacePurchaseEmail(
         </div>
 
         <div style="text-align: center; color: #999; font-size: 12px;">
-          <p>You received this email because you made a purchase on ${APP_NAME} Marketplace.</p>
+          <p>You received this email because you made a purchase on ${APP_NAME} Digital Shop.</p>
           <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
         </div>
       </body>
@@ -588,7 +588,7 @@ export async function sendMarketplaceSaleEmail(
   paymentMethod: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP",
   buyerName: string
 ) {
-  const dashboardUrl = `${APP_URL}/dashboard/marketplace`;
+  const dashboardUrl = `${APP_URL}/dashboard/shop`;
 
   const paymentMethodLabel = paymentMethod === "DIVINITYCOIN" ? "Divinity Payments" : "Stripe";
   const formatAmount = (amt: number) => paymentMethod === "DIVINITYCOIN"
@@ -605,7 +605,7 @@ export async function sendMarketplaceSaleEmail(
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #333; margin: 0;">${APP_NAME} Marketplace</h1>
+          <h1 style="color: #333; margin: 0;">${APP_NAME} Digital Shop</h1>
         </div>
 
         <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
@@ -653,7 +653,7 @@ export async function sendMarketplaceSaleEmail(
         </div>
 
         <div style="text-align: center; color: #999; font-size: 12px;">
-          <p>You received this email because someone purchased your book on ${APP_NAME} Marketplace.</p>
+          <p>You received this email because someone purchased your book on ${APP_NAME} Digital Shop.</p>
           <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
         </div>
       </body>

@@ -110,7 +110,7 @@ export async function notifyMarketplaceSale(
 
   if (!purchase || !purchase.book.creator.email) return;
 
-  const dashboardUrl = `/dashboard/marketplace`;
+  const dashboardUrl = `/dashboard/shop`;
   const buyerName = purchase.buyer.name || "A customer";
 
   // Create in-app notification for creator
@@ -162,7 +162,7 @@ export async function notifyMarketplaceBookReview(
   if (!book || !book.creator.email) return;
 
   const isApproved = action === "APPROVED";
-  const dashboardUrl = `/dashboard/marketplace`;
+  const dashboardUrl = `/dashboard/shop`;
   const bookUrl = isApproved ? `/shop/books/${book.slug}` : dashboardUrl;
 
   // Create in-app notification
@@ -183,7 +183,7 @@ export async function notifyMarketplaceBookReview(
     if (isApproved) {
       await sendEmail({
         to: book.creator.email,
-        subject: `🎉 "${book.title}" is now live on the marketplace!`,
+        subject: `🎉 "${book.title}" is now live on the Digital Shop!`,
         html: `
           <!DOCTYPE html>
           <html>
