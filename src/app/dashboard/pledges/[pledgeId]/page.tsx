@@ -553,7 +553,7 @@ export default function ManagePledgePage() {
               Modify Your Pledge
             </CardTitle>
             <CardDescription>
-              The campaign hasn&apos;t reached its goal yet — change anything you like with no charges or refunds.
+              The campaign hasn&apos;t funded yet, so your card isn&apos;t charged on changes — your full updated total will be charged if the campaign funds.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1055,7 +1055,7 @@ function ModifyPanel({
         <p className="text-sm text-muted-foreground mb-3">
           Change your reward tier or add-ons.{" "}
           {isAonUnfunded
-            ? "Since the campaign hasn't reached its goal yet, there are no charges or refunds — we just update your selection."
+            ? "Since the campaign hasn't funded yet, your card isn't charged for changes — your full updated total will be charged if the campaign funds."
             : "If your new total is less you'll receive a refund; if it's more you'll pay the difference."}
         </p>
         <Button
@@ -1078,7 +1078,7 @@ function ModifyPanel({
   const diffAbs = Math.abs(modifyDiff);
   const diffLabel =
     isAonUnfunded
-      ? "No charge — campaign hasn't reached its goal yet"
+      ? "Saved — your card is charged for the full total if the campaign funds"
       : modifyDiff === 0
       ? "No price change"
       : modifyDiff > 0
