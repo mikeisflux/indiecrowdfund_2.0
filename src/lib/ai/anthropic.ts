@@ -467,7 +467,15 @@ Respond in JSON format:
     };
   } catch (error) {
     aiAnthropicLogger.error({ err: error }, "Auto-tag error:");
-    throw new Error("Failed to auto-tag project");
+    // Fail safe — caller (e.g. project submit) treats empty tags as
+    // "AI unavailable, skip" rather than 500ing the whole request. Out
+    // of credits / rate limit / network blip shouldn't block submits.
+    return {
+      primaryCategory: "Technology",
+      suggestedCategories: [],
+      tags: [],
+      confidence: 0,
+    };
   }
 }
 
@@ -524,7 +532,15 @@ Respond in JSON format:
     };
   } catch (error) {
     aiAnthropicLogger.error({ err: error }, "Marketing copy error:");
-    throw new Error("Failed to generate marketing copy");
+    // Fail safe — caller renders empty fields the user can fill in
+    // manually, rather than 500ing the marketing UI.
+    return {
+      tagline: "",
+      subtitle: "",
+      emailSubject: "",
+      socialPosts: { twitter: "", facebook: "", instagram: "" },
+      callToAction: "Back this project",
+    };
   }
 }
 
@@ -564,7 +580,9 @@ Respond in JSON format:
     };
   } catch (error) {
     aiAnthropicLogger.error({ err: error }, "Improve description error:");
-    throw new Error("Failed to improve description");
+    // Fail safe — return the original text unchanged so the UI can
+    // still render rather than 500ing the description editor.
+    return { improved: currentDescription, suggestions: [] };
   }
 }
 
@@ -648,7 +666,17 @@ Respond in JSON format:
     };
   } catch (error) {
     aiAnthropicLogger.error({ err: error }, "Campaign content error:");
-    throw new Error("Failed to generate campaign content");
+    // Fail safe — fall back to the caller-supplied templates so the
+    // cron-driven email campaigns degrade gracefully (no AI-personalized
+    // intro, but the campaign still goes out) instead of throwing and
+    // killing the whole scheduled run.
+    return {
+      subject: params.subjectTemplate || "Projects you'll love",
+      preheader: "Discover amazing projects",
+      personalizedIntro: params.introMessage,
+      projectRecommendations: [],
+      footer: "Happy exploring!",
+    };
   }
 }
 

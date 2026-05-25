@@ -135,6 +135,12 @@ function getPrismaClient(): PrismaClient {
         "terminating connection due to administrator command",
         "server closed the connection unexpectedly",
         "Unique constraint failed on the fields: (`fingerprint`)",
+        // ProjectFollower has a (projectId, userId) unique. Re-clicking
+        // "Follow" or rapid double-submit races both pass the existing-
+        // follow check and race to insert. The POST handler at
+        // /api/user/following catches P2002 and returns 200 with
+        // alreadyFollowing:true, so the engine log is pure noise.
+        "Unique constraint failed on the fields: (`\"projectId\"`, `\"userId\"`)",
         // Session cleanup races: session.delete() after validation finds
         // the row was already reaped (expiry, logout, signout-everywhere).
         // Our callers already .catch(() => {}) these at the app level,
