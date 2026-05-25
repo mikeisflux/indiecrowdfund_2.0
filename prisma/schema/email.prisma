@@ -228,6 +228,11 @@ model EmailQueue {
   fromName      String?
   replyTo       String?
   isCreatorEmail Boolean         @default(false)
+  // Transactional emails (password reset, email verification) must always
+  // be delivered even when the recipient unsubscribed from marketing.
+  // Persisted so the worker can pass it through to sendEmail() on every
+  // retry, including auto-queue fallbacks from failed direct sends.
+  skipUnsubscribeCheck Boolean   @default(false)
 
   // Queue status
   status        EmailQueueStatus @default(PENDING)

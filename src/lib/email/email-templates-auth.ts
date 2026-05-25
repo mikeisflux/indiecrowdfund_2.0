@@ -1,4 +1,4 @@
-import { sendEmail } from "./email-config";
+import { sendEmail, queueEmail, EMAIL_PRIORITY } from "./email-config";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -55,12 +55,16 @@ export async function sendPasswordResetEmail(email: string, token: string) {
     </html>
   `;
 
-  // Password reset is a transactional email - always send even if unsubscribed
-  return sendEmail({
+  // Password reset is a transactional email — route through the queue at
+  // SYSTEM priority so it never gets stuck behind marketing campaigns when
+  // Mailgun/SendGrid is rate-limiting, and so failures are retried with
+  // full visibility in /admin/email-queue instead of silently dropping.
+  return queueEmail({
     to: email,
     subject: `Reset your ${APP_NAME} password`,
     html,
     skipUnsubscribeCheck: true,
+    priority: EMAIL_PRIORITY.SYSTEM,
   });
 }
 
@@ -183,11 +187,15 @@ export async function sendVerificationEmail(
     </html>
   `;
 
-  // Email verification is a transactional email - always send even if unsubscribed
-  return sendEmail({
+  // Email verification is a transactional email — route through the queue at
+  // SYSTEM priority so it never gets stuck behind marketing campaigns when
+  // Mailgun/SendGrid is rate-limiting, and so failures are retried with
+  // full visibility in /admin/email-queue instead of silently dropping.
+  return queueEmail({
     to: email,
     subject: `Verify your ${APP_NAME} email address`,
     html,
     skipUnsubscribeCheck: true,
+    priority: EMAIL_PRIORITY.SYSTEM,
   });
 }

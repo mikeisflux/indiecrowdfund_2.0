@@ -575,6 +575,7 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
           fromName: customFromName || null,
           replyTo: replyTo || null,
           isCreatorEmail: isCreatorEmail || false,
+          skipUnsubscribeCheck: skipUnsubscribeCheck || false,
           priority: EMAIL_PRIORITY.RETRY,
           status: "PENDING",
           error: `Auto-queued after direct send failure: ${result.error}`,
@@ -593,7 +594,7 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
 
 // Queue an email for rate-limited sending (1 per second max)
 export async function queueEmail(options: SendEmailOptions & { priority?: number }): Promise<{ success: boolean; queueId?: string; error?: string }> {
-  const { to, subject, html, text, fromEmail, fromName, replyTo, isCreatorEmail, priority = 0 } = options;
+  const { to, subject, html, text, fromEmail, fromName, replyTo, isCreatorEmail, skipUnsubscribeCheck, priority = 0 } = options;
 
   try {
     const queueEntry = await db.emailQueue.create({
@@ -606,6 +607,7 @@ export async function queueEmail(options: SendEmailOptions & { priority?: number
         fromName: fromName || null,
         replyTo: replyTo || null,
         isCreatorEmail: isCreatorEmail || false,
+        skipUnsubscribeCheck: skipUnsubscribeCheck || false,
         priority,
         status: "PENDING",
       },
@@ -647,6 +649,7 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
       fromName: string | null;
       replyTo: string | null;
       isCreatorEmail: boolean;
+      skipUnsubscribeCheck: boolean;
       attempts: number;
       maxAttempts: number;
       priority: number;
@@ -665,6 +668,7 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
       )
       RETURNING "id", "toEmail", "subject", "bodyHtml", "bodyText",
                 "fromEmail", "fromName", "replyTo", "isCreatorEmail",
+                "skipUnsubscribeCheck",
                 "attempts", "maxAttempts", "priority"
     `;
 
@@ -687,6 +691,7 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
       fromName: queueEntry.fromName || undefined,
       replyTo: queueEntry.replyTo || undefined,
       isCreatorEmail: queueEntry.isCreatorEmail,
+      skipUnsubscribeCheck: queueEntry.skipUnsubscribeCheck,
       _fromQueue: true,
     });
     const timeoutPromise = new Promise<never>((_, reject) =>
