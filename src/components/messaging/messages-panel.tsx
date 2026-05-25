@@ -97,6 +97,12 @@ export function MessagesPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
   const prevConversationKeyRef = useRef<string | null>(null);
+  // Tracks which recipientId/projectId combo we've already deep-linked to.
+  // Without this, the effect below re-runs whenever `conversations` mutates
+  // (e.g. on every selection, when we zero out unreadCount) and snaps the
+  // selection back to the URL-provided recipient, overriding the user's
+  // click on a different conversation.
+  const processedRecipientKeyRef = useRef<string | null>(null);
 
   // Fetch conversations
   useEffect(() => {
@@ -122,45 +128,60 @@ export function MessagesPanel({
 
   // Fetch messages when conversation is selected
   useEffect(() => {
-    if (selectedConversation) {
-      const loadMessages = async () => {
-        try {
-          const params = new URLSearchParams({
-            conversationWith: selectedConversation.otherUser.id,
-          });
-          if (selectedConversation.project?.id) {
-            params.set("projectId", selectedConversation.project.id);
-          }
-          const res = await apiFetch(`/api/messages?${params}`);
-          if (res.ok) {
-            const data = await res.json();
-            setMessages(data.messages || []);
+    if (!selectedConversation) return;
 
-            // Mark as read
-            await apiFetch("/api/messages", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", },
-              body: JSON.stringify({
-                conversationWith: selectedConversation.otherUser.id,
-                projectId: selectedConversation.project?.id,
-              }),
-            });
+    // Abort any in-flight fetch from a previous selection so a slow response
+    // for the old conversation can't overwrite the messages we just loaded
+    // for the new one. Without this, rapid switching A→B could leave the UI
+    // showing A's messages under B's header.
+    const controller = new AbortController();
 
-            // Update unread count in conversation list
-            setConversations((prev) =>
-              prev.map((c) =>
-                c.otherUser.id === selectedConversation.otherUser.id && c.project?.id === selectedConversation.project?.id
-                  ? { ...c, unreadCount: 0 }
-                  : c
-              )
-            );
-          }
-        } catch (error) {
-          console.error("Failed to fetch messages:", error);
+    const loadMessages = async () => {
+      try {
+        const params = new URLSearchParams({
+          conversationWith: selectedConversation.otherUser.id,
+        });
+        if (selectedConversation.project?.id) {
+          params.set("projectId", selectedConversation.project.id);
         }
-      };
-      loadMessages();
-    }
+        const res = await apiFetch(`/api/messages?${params}`, {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (controller.signal.aborted) return;
+          setMessages(data.messages || []);
+
+          // Mark as read
+          await apiFetch("/api/messages", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversationWith: selectedConversation.otherUser.id,
+              projectId: selectedConversation.project?.id,
+            }),
+            signal: controller.signal,
+          });
+          if (controller.signal.aborted) return;
+
+          // Update unread count in conversation list
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.otherUser.id === selectedConversation.otherUser.id && c.project?.id === selectedConversation.project?.id
+                ? { ...c, unreadCount: 0 }
+                : c
+            )
+          );
+        }
+      } catch (error) {
+        if ((error as { name?: string })?.name === "AbortError") return;
+        console.error("Failed to fetch messages:", error);
+      }
+    };
+    loadMessages();
+
+    return () => controller.abort();
   }, [selectedConversation]);
 
   // Auto scroll to bottom only when the user is already near the bottom or the
@@ -195,6 +216,16 @@ export function MessagesPanel({
   // If recipientId is provided, open that conversation or prepare new conversation
   useEffect(() => {
     if (!recipientId || loading) return;
+
+    // Only deep-link to the recipientId on the first effect run for this
+    // recipientId/projectId combo. The conversation-fetch effect mutates
+    // `conversations` after every selection (clearing unreadCount), and
+    // without this guard each mutation would re-trigger this effect and
+    // snap the selection back to the URL recipient — making it impossible
+    // to switch conversations once the page loaded with a deep link.
+    const recipientKey = `${recipientId}:${projectId ?? ""}`;
+    if (processedRecipientKeyRef.current === recipientKey) return;
+    processedRecipientKeyRef.current = recipientKey;
 
     // With both recipient + project: try exact match, then fall back to any
     // conversation with that recipient. With recipient only (e.g. coming
