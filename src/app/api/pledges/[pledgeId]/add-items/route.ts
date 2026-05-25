@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 const pledgesAddItemsLogger = logger.child({ module: "pledges-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getDivinityCoinConfig, chargeDcSavedPaymentMethod } from "@/lib/payments/divinitycoin";
+import { getDivinityCoinConfig, chargeDcSavedPaymentMethod, formatDeclineReason } from "@/lib/payments/divinitycoin";
 
 export const dynamic = "force-dynamic";
 
@@ -249,15 +249,17 @@ export async function POST(
             where: { id: pledgeId },
             data: { metadata: { ...currentMetadata } },
           }).catch(() => null);
-          const reason =
-            charge.error ||
-            (charge.declineCode ? `Card declined: ${charge.declineCode}` : "Charge failed");
+          const reason = formatDeclineReason({
+            declineCode: charge.declineCode,
+            code: charge.code,
+            fallbackError: charge.error,
+          });
           pledgesAddItemsLogger.warn(
-            { pledgeId, declineCode: charge.declineCode, status: charge.status },
+            { pledgeId, declineCode: charge.declineCode, code: charge.code, status: charge.status },
             "[AddItems DC] Saved-card off-session charge declined"
           );
           return NextResponse.json(
-            { error: reason, declineCode: charge.declineCode },
+            { error: reason, declineCode: charge.declineCode, code: charge.code },
             { status: 402 }
           );
         }

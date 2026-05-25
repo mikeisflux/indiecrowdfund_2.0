@@ -21,6 +21,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/reconcile-dc-pledges",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/cleanup-chat",
       "schedule": "0 4 * * *"
     }

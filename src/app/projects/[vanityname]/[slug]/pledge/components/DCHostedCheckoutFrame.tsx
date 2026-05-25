@@ -89,28 +89,13 @@ export default function DCHostedCheckoutFrame({
       if (finishedRef.current) return;
       finishedRef.current = true;
 
-      // For terminal failure states the message itself is authoritative —
-      // no server verification needed, just surface the reason.
-      if (status === "failed") {
-        onFailure("Your card couldn't be processed. Please try a different card.");
-        return;
-      }
-      if (status === "expired") {
-        onFailure("Checkout session expired. Please start a new pledge.");
-        return;
-      }
-      if (status === "canceled") {
-        onFailure("Checkout was cancelled. Your pledge wasn't completed.");
-        return;
-      }
-
-      // status === "complete". Server-verify via /confirm-dc-checkout —
-      // for SETUP-mode this also runs commitDcPledge so the project
-      // counters bump before we transition the wizard. For PAYMENT-mode
-      // the route just acknowledges; payment.succeeded webhook commits
-      // independently. Either way, ok=true means it's safe to show
-      // success; the checkout.completed webhook is an idempotent
-      // parallel commit.
+      // Even for non-success statuses we server-verify before showing the
+      // user a failure. DC's iframe occasionally posts `failed` when the
+      // gateway actually succeeded (mobile webview / popup races) — if we
+      // believed the message we'd tell the user their card was declined
+      // while the charge has already settled, leaving them stuck. Single
+      // source of truth: /confirm-dc-checkout, which calls DC's
+      // get-checkout-session for the authoritative state.
       try {
         const res = await apiFetch(`/api/pledges/${pledgeId}/confirm-dc-checkout`, {
           method: "POST",
@@ -128,9 +113,32 @@ export default function DCHostedCheckoutFrame({
           onSuccess();
           return;
         }
-        onFailure(data.message || data.error || "We couldn't finalize your pledge. Please contact support.");
+
+        // Server agrees the session ended badly — surface DC's reason
+        // (insufficient funds, expired card, etc.) if confirm-dc-checkout
+        // surfaced one, otherwise fall back to the iframe's status hint.
+        if (data.message || data.error) {
+          onFailure(data.message || data.error);
+          return;
+        }
+        if (status === "failed") {
+          onFailure("Your card couldn't be processed. Please try a different card.");
+        } else if (status === "expired") {
+          onFailure("Checkout session expired. Please start a new pledge.");
+        } else if (status === "canceled") {
+          onFailure("Checkout was cancelled. Your pledge wasn't completed.");
+        } else {
+          onFailure("We couldn't finalize your pledge. Please contact support.");
+        }
       } catch (err) {
-        onFailure(err instanceof Error ? err.message : "Network error finalizing pledge.");
+        // Network blip talking to our own server. Don't claim failure —
+        // the payment may have settled at the gateway. Tell the user we
+        // couldn't verify and let the reconcile cron pick it up.
+        onFailure(
+          err instanceof Error
+            ? `We couldn't reach our server to verify your payment (${err.message}). If your card was charged, your pledge will appear within a few minutes.`
+            : "We couldn't reach our server to verify your payment. If your card was charged, your pledge will appear within a few minutes."
+        );
       }
     },
     [pledgeId, sessionId, onSuccess, onFailure]
@@ -176,6 +184,64 @@ export default function DCHostedCheckoutFrame({
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, [sessionId, handleComplete]);
+
+  // Polling fallback. DC's "complete" postMessage occasionally never
+  // reaches us (origin mismatch, sessionId rotation, mobile webview that
+  // closes the popup before posting). Without a backstop the user stares
+  // at DC's "Payment complete. Returning to indiecrowdfund.com..." until
+  // they refresh — and if the webhook also dropped, the pledge stays
+  // PENDING and invisible in their dashboard forever. So once the iframe
+  // has been ready a while we ask our own server every few seconds
+  // whether the checkout session resolved. confirm-dc-checkout pulls DC's
+  // authoritative status; if it's settled either way, finishedRef + the
+  // shared handleComplete path runs the right transition. Stops on its
+  // own once handleComplete latches finishedRef or the component
+  // unmounts.
+  useEffect(() => {
+    if (!iframeReady) return;
+    let cancelled = false;
+    const POLL_DELAY_MS = 30_000; // first poll 30s after iframe is ready
+    const POLL_INTERVAL_MS = 10_000; // then every 10s
+
+    const poll = async () => {
+      if (cancelled || finishedRef.current) return;
+      try {
+        const res = await apiFetch(`/api/pledges/${pledgeId}/confirm-dc-checkout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (cancelled || finishedRef.current) return;
+        if (res.ok && data.ok) {
+          finishedRef.current = true;
+          onSuccess();
+          return;
+        }
+        if (res.status === 202) {
+          // Pending — keep polling.
+        } else if (!res.ok && (data.status === "failed" || data.status === "expired" || data.status === "canceled")) {
+          finishedRef.current = true;
+          onFailure(data.message || data.error || "Checkout did not complete.");
+          return;
+        }
+      } catch {
+        // Transient network error — try again next interval.
+      }
+    };
+
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    const initialTimer = setTimeout(() => {
+      poll();
+      pollTimer = setInterval(poll, POLL_INTERVAL_MS);
+    }, POLL_DELAY_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(initialTimer);
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [iframeReady, pledgeId, sessionId, onSuccess, onFailure]);
 
   return (
     <div className="space-y-3">

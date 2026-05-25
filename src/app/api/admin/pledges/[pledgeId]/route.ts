@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 const adminPledgesLogger = logger.child({ module: "admin-pledges" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { callDivinityCoinAPI, handlePaymentSucceeded, verifyDcPayment, getDcCheckoutSession } from "@/lib/payments/divinitycoin";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
 import { sendPledgeConfirmationEmail } from "@/lib/email";
 import { isAdmin } from "@/lib/auth-helpers";
@@ -224,6 +224,88 @@ export async function PATCH(
           { status: 500 }
         );
       }
+    }
+
+    // Recover a stuck DC pledge whose payment actually succeeded at the
+    // gateway but is still PENDING on our side. Happens when the user's
+    // browser drops DC's "complete" postMessage (origin mismatch, tab
+    // backgrounded, mobile webview quirks) AND the checkout.completed/
+    // payment.succeeded webhook fails to land. KIA projects have no
+    // automatic backstop today — the existing verifyStuckDcImmediateCharges
+    // sweeper only runs inside process-funded-campaigns, which never
+    // fires for KIA. This action lets admins (or support) verify with DC
+    // and commit via the same idempotent path the webhook uses.
+    if (action === "recover_dc") {
+      if (pledge.paymentProcessor !== "DIVINITYCOIN") {
+        return NextResponse.json(
+          { error: "Recovery is only available for DivinityCoin pledges" },
+          { status: 400 }
+        );
+      }
+      if (pledge.status === "COMPLETED") {
+        return NextResponse.json({
+          ok: true,
+          message: "Pledge is already completed",
+          alreadyCommitted: true,
+        });
+      }
+      if (pledge.status !== "PENDING") {
+        return NextResponse.json(
+          { error: `Cannot recover a pledge that is ${pledge.status.toLowerCase()}` },
+          { status: 400 }
+        );
+      }
+
+      // Resolve the PaymentIntent id. If confirm-dc-checkout never ran
+      // (dropped postMessage), we may only have the checkout-session id —
+      // look up the session to fish out the PI before verifying.
+      let paymentIntentId = pledge.divinityCoinPaymentId;
+      if (!paymentIntentId && pledge.divinityCoinCheckoutSessionId) {
+        const sessionResult = await getDcCheckoutSession(pledge.divinityCoinCheckoutSessionId);
+        if (sessionResult.success && sessionResult.session.paymentIntentId) {
+          paymentIntentId = sessionResult.session.paymentIntentId;
+          await db.pledge.update({
+            where: { id: pledge.id },
+            data: { divinityCoinPaymentId: paymentIntentId },
+          });
+        }
+      }
+
+      if (!paymentIntentId) {
+        return NextResponse.json(
+          { error: "No PaymentIntent on file and DC checkout session has none. Manual review needed." },
+          { status: 400 }
+        );
+      }
+
+      const verified = await verifyDcPayment(paymentIntentId);
+      if (!verified.success) {
+        return NextResponse.json(
+          { error: `DC verify-payment failed: ${verified.error}` },
+          { status: 502 }
+        );
+      }
+
+      if (verified.status === "succeeded") {
+        // Reuse the canonical webhook completion path — CAS-guarded so
+        // it no-ops if the real webhook lands seconds later.
+        await handlePaymentSucceeded({
+          pledgeId: pledge.id,
+          paymentId: paymentIntentId,
+        });
+        return NextResponse.json({
+          ok: true,
+          message: "Pledge committed via DC verify-payment",
+          paymentIntentId,
+        });
+      }
+
+      return NextResponse.json({
+        ok: false,
+        status: verified.status,
+        paymentIntentId,
+        message: `DC reports payment is ${verified.status} — cannot commit.`,
+      });
     }
 
     if (action === "cancel") {

@@ -73,6 +73,8 @@ export {
   getDcSetupIntent,
 } from "./saved-cards";
 
+export { formatDeclineReason } from "./decline-reasons";
+
 // White-label hosted checkout helpers (DC partner API 2026-05-15).
 // See ./checkout-sessions.ts. Phase 1 ships the helpers + webhook
 // handlers; no caller wires the create flow until Phase 2 lands

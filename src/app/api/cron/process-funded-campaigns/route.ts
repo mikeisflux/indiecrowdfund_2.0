@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
 import { db } from "@/lib/db";
 import { captureAuthorizedPaypalPledges } from "@/lib/payments/paypal";
-import { chargeDcSavedPaymentMethod, verifyDcPayment, handlePaymentSucceeded } from "@/lib/payments/divinitycoin";
+import { chargeDcSavedPaymentMethod, verifyDcPayment, handlePaymentSucceeded, formatDeclineReason } from "@/lib/payments/divinitycoin";
 
 // Charge all PENDING DivinityCoin pledges with a saved card (pm_...)
 // for a project that has hit its goal. CAS-claim chargedImmediately
@@ -94,9 +94,11 @@ async function captureDcPendingPledges(projectId: string): Promise<{
         result.successful++;
       } else {
         const newRetryCount = (p.retryCount || 0) + 1;
-        const reason =
-          charge.error ||
-          (charge.declineCode ? `Card declined: ${charge.declineCode}` : "DivinityCoin declined");
+        const reason = formatDeclineReason({
+          declineCode: charge.declineCode,
+          code: charge.code,
+          fallbackError: charge.error,
+        });
         if (newRetryCount >= MAX_DC_RETRIES) {
           await db.pledge.update({
             where: { id: p.id },
