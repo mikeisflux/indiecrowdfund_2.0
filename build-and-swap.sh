@@ -221,60 +221,42 @@ else
     exit 1
 fi
 
-# Step 7: Rolling restart per worker (full kill + respawn, but staggered)
-# `pm2 reload all` does a graceful SIGUSR2 reload that keeps the Node
-# worker process alive — but Next.js route handlers can stay cached in
-# memory across the signal, so newly-deployed code in /api routes
-# silently keeps running the older version. `pm2 restart all` would
-# fully kill and respawn every worker, guaranteeing fresh code is
-# loaded, but it tears them all down at once → ~5s of full downtime.
+# Step 7: Simultaneous restart of every PM2 worker.
 #
-# This loop walks each cluster instance, hard-restarts it, and waits
-# 5s before moving to the next. While one worker is restarting the
-# others keep serving traffic, so the cluster stays online with at
-# most 1/N capacity loss for a few seconds per worker.
+# We used to do a rolling restart here (one worker at a time, 5s
+# between) for zero-downtime. The problem: between the .next swap in
+# Step 6b and a given worker actually being restarted, that worker is
+# running the OLD compiled code with the OLD chunk-ID-to-content
+# manifest, but reading from the NEW .next/ directory on disk. The new
+# build's chunk IDs differ from the old one's, so any require() lookup
+# of an old chunk ID returns undefined from the new manifest →
+# "TypeError: Cannot read properties of undefined (reading 'call')" at
+# webpack-runtime.js (Next.js suppresses the missing-module path and
+# only logs the bare TypeError + an error digest). The rolling-window
+# duration (5s × N workers) was the entire exposure window.
+#
+# A simultaneous restart eliminates that window: every worker tears
+# down and respawns reading the new .next/ at roughly the same time.
+# Cost is a brief full-cluster outage (~3–5s while workers boot), which
+# is shorter than the rolling window's total degraded-service period
+# and won't leak chunk-mismatch 500s to backers. PM2 itself drains
+# in-flight connections before SIGKILL, and Step 8's health check +
+# auto-rollback still catches any crash-loop on the new build.
 echo ""
-echo "🔄 Step 7: Rolling restart (one PM2 worker at a time, 5s between)..."
-INSTANCE_IDS=$(pm2 jlist 2>/dev/null | node -e '
-let raw = "";
-process.stdin.on("data", c => raw += c);
-process.stdin.on("end", () => {
-  try {
-    const apps = JSON.parse(raw);
-    process.stdout.write(apps.map(a => a.pm_id).join(" "));
-  } catch { process.stdout.write(""); }
-})')
-
-if [ -z "$INSTANCE_IDS" ]; then
-    echo -e "${YELLOW}   No PM2 instances found — falling back to pm2 restart all${NC}"
-    pm2 restart all --update-env 2>&1 || true
-else
-    RESTART_FAILED=0
-    for pm_id in $INSTANCE_IDS; do
-        echo "   Restarting instance $pm_id..."
-        if pm2 restart "$pm_id" --update-env 2>&1; then
-            echo -e "${GREEN}   Instance $pm_id back online${NC}"
-            sleep 5
-        else
-            echo -e "${RED}   Instance $pm_id failed to restart${NC}"
-            RESTART_FAILED=1
-            break
-        fi
-    done
-
-    if [ $RESTART_FAILED -eq 1 ]; then
-        echo -e "${RED}❌ ERROR: Rolling restart failed mid-way!${NC}"
-        echo "   Attempting rollback..."
-        LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
-        if [ -n "$LATEST_BACKUP" ]; then
-            rm -rf .next
-            mv "$LATEST_BACKUP" .next
-            pm2 restart all --update-env
-            echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
-        fi
-        exit 1
-    fi
+echo "🔄 Step 7: Restarting all PM2 workers (brief full restart)..."
+if pm2 restart all --update-env 2>&1; then
     echo -e "${GREEN}   All workers restarted with new build${NC}"
+else
+    echo -e "${RED}❌ ERROR: pm2 restart all failed!${NC}"
+    echo "   Attempting rollback..."
+    LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
+    if [ -n "$LATEST_BACKUP" ]; then
+        rm -rf .next
+        mv "$LATEST_BACKUP" .next
+        pm2 restart all --update-env
+        echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
+    fi
+    exit 1
 fi
 
 # Step 8: Post-deploy health check.
