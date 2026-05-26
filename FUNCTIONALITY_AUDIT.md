@@ -146,36 +146,38 @@ All 11 pages clean. Retailers are a parallel auth surface (separate from creator
 
 ## 10. Admin (non-payment)
 
-- [ ] `/admin` — Admin dashboard
-- [ ] `/admin/users` — User management
-- [ ] `/admin/projects` — Project moderation/management
-- [ ] `/admin/analytics` — Site analytics
-- [ ] `/admin/security` — Security log
-- [ ] `/admin/moderation` — Content moderation
-- [ ] `/admin/bug-reports` — Bug report inbox
-- [ ] `/admin/error-logs` — Error log viewer
-- [ ] `/admin/email` — Admin email inbox
-- [ ] `/admin/email-queue` — Email queue
-- [ ] `/admin/email/creator-sent` — Creator emails
-- [ ] `/admin/ai` — AI admin
-- [ ] `/admin/ai-marketing` — AI marketing campaigns
-- [ ] `/admin/announcement-bar` — Top announcement
-- [ ] `/admin/changelog` — Changelog editor
-- [ ] `/admin/consent-banner` — Cookie banner config
-- [ ] `/admin/promo-popup` — Popup config
-- [ ] `/admin/hero-slider` — Homepage hero
-- [ ] `/admin/page-builder` — Static page editor
-- [ ] `/admin/themes` — Theme config
-- [ ] `/admin/seo` — SEO tools
-- [ ] `/admin/media` — Media library
-- [ ] `/admin/notifications` — Notification config
-- [ ] `/admin/press` — Press releases
-- [ ] `/admin/settings` — Platform settings
-- [ ] `/admin/shop` — Shop management
-- [ ] `/admin/prelaunch` — Prelaunch tools
-- [ ] `/admin/retailers` — Retailer approvals
-- [ ] `/admin/cron` — Cron monitor
-- [ ] `/admin/link-sanitizer` — Link sanitizer tool
+All 30 in-scope admin pages clean. `/admin/layout.tsx:266` enforces `session.user.role === "SUPER_ADMIN"` at the layout level, so individual pages don't need to re-check (no page-level auth gate is a feature, not a bug). Every mutation across the admin surface uses `apiFetch` (CSRF wrapper). GETs intentionally use raw `fetch` — CSRF only applies to mutations.
+
+- [x] `/admin` — Health + dashboard polls, 30s interval with cleanup. OK.
+- [x] `/admin/users` — Role/ban/delete/password/create all via `apiFetch`. Minor: two eslint-disable on useEffect deps (lines 151, 159) for `fetchUserPledges`/`fetchUserEmails` — fragile but works.
+- [x] `/admin/projects` — Approve/reject/bulk via `useProjectsData` hook, all `apiFetch`. OK.
+- [x] `/admin/analytics` — Read-only, CSV export client-side. OK. Minor: silent failure on API error.
+- [x] `/admin/security` — Settings PATCH via `apiFetch`. OK.
+- [x] `/admin/moderation` — Resolve/dismiss/escalate via `apiFetch` PATCH. ADMIN or SUPER_ADMIN (intentionally broader). OK.
+- [x] `/admin/bug-reports` — Status PATCH via `apiFetch`, refetches after change. OK.
+- [x] `/admin/error-logs` — Bulk PATCH/DELETE via `apiFetch`, auto-refresh w/ ref-guarded cleanup. OK.
+- [x] `/admin/email` — Mailbox UI, all GETs (no mutations on this page). OK.
+- [x] `/admin/email-queue` — start/stop/retry/clear via `apiFetch`, 3s polling. OK.
+- [x] `/admin/email/creator-sent` — Detail fetch via `apiFetch`, debounced search, auto-refresh pauses when dialog open. OK.
+- [x] `/admin/ai` — Settings PATCH + POST runs via `apiFetch`. OK.
+- [x] `/admin/ai-marketing` — Campaign + auto-tag CRUD via `apiFetch`. OK.
+- [x] `/admin/announcement-bar` — Save uses `apiFetch` with `json:` shortcut (valid per `fetch-utils.ts:14`), reorder PATCH, toggle PUT all good. OK.
+- [x] `/admin/changelog` — Create/edit/delete/toggle/extract-from-git all via `apiFetch`. OK.
+- [x] `/admin/consent-banner` — Save uses `apiFetch` PUT. OK.
+- [x] `/admin/promo-popup` — PUT save + POST reset via `apiFetch`, refetches. OK.
+- [x] `/admin/hero-slider` — POST/PUT/DELETE slide CRUD via `apiFetch`, refetches. OK.
+- [x] `/admin/page-builder` — Page CRUD via `apiFetch`, refetches after save. OK.
+- [x] `/admin/themes` — PATCH save via `apiFetch`, reloads to confirm DB persistence. OK.
+- [x] `/admin/seo` — Uses `fetchWithRetry` + manual `getCSRFHeaders()` on mutations (different pattern, still CSRF-protected). OK.
+- [x] `/admin/media` — Upload POST via `apiFetch`, list refresh after upload. OK.
+- [x] `/admin/notifications` — Preferences save via `apiFetch`. Minor: optimistic updates with weak rollback (acceptable).
+- [x] `/admin/press` — Press release CRUD via `apiFetch`. OK.
+- [x] `/admin/settings` — Section-based save via `apiFetch`, refetches after to mask sensitive values. OK.
+- [x] `/admin/shop` — Approve/reject/feature/staff-pick + file uploads + reorder all via `apiFetch`. OK.
+- [x] `/admin/prelaunch` — Approve/reject via `apiFetch`. Minor: `getPageUrl()` doesn't null-check vanityUrl/slug — should never happen in practice but defensive.
+- [x] `/admin/retailers` — Approve/reject PATCH + resend-approval POST via `apiFetch`. OK.
+- [x] `/admin/cron` — Crontab PUT via `apiFetch`, backup-captured for restore. OK.
+- [x] `/admin/link-sanitizer` — DELETE + cleanup-projects POST via `apiFetch`. OK.
 
 ---
 
