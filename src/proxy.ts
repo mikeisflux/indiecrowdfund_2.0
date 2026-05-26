@@ -7,7 +7,7 @@ const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";
 
 // Routes that require authentication (but not admin role)
-const protectedRoutes = ["/dashboard", "/projects/new"];
+const protectedRoutes = ["/dashboard", "/projects/new", "/retailers/dashboard", "/retailers/account", "/retailers/orders", "/retailers/invoices", "/retailers/projects"];
 
 // Routes that require SUPER_ADMIN role (validated in actual routes)
 const adminRoutes = ["/admin", "/api/admin"];

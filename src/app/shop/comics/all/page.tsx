@@ -7,7 +7,7 @@ export default function AllComicsPage() {
       description="Every comic on the platform, newest first"
       apiQuery="?mediaCategory=comics"
       detailHrefPrefix="/shop/books/"
-      kind="movie"
+      kind="comics"
     />
   );
 }

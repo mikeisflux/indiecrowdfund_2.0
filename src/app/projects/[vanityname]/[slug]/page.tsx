@@ -228,8 +228,8 @@ export default function ProjectPage() {
         if (response.ok) {
           setIsFollowing(true);
         } else if (response.status === 401) {
-          // User not logged in - redirect to sign in
-          window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.href)}`;
+          const returnTo = window.location.pathname + window.location.search;
+          window.location.href = `/login?callbackUrl=${encodeURIComponent(returnTo)}`;
           return;
         } else {
           toast.error("Failed to follow project");

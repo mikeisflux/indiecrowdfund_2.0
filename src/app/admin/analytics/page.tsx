@@ -128,6 +128,7 @@ export default function AnalyticsPage() {
       }
     } catch (error) {
       console.error("Error fetching analytics:", error);
+      toast.error("Failed to load analytics");
     } finally {
       setIsLoading(false);
     }

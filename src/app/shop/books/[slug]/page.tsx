@@ -127,8 +127,8 @@ export default function BookDetailPage() {
       setBook(data.book);
       setHasPurchased(data.hasPurchased);
     } catch (error) {
-      console.error("Error fetching book:", error);
-      toast.error("Failed to load book");
+      console.error("Error fetching item:", error);
+      toast.error("Failed to load item");
     } finally {
       setLoading(false);
     }

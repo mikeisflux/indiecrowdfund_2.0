@@ -7,7 +7,7 @@ export default function StaffPickComicsPage() {
       description="Comics our team is loving right now"
       apiQuery="?mediaCategory=comics&staffPick=true"
       detailHrefPrefix="/shop/books/"
-      kind="movie"
+      kind="comics"
     />
   );
 }

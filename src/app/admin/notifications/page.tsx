@@ -2,6 +2,7 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -121,6 +122,7 @@ export default function NotificationsPage() {
       setNotifications(prev =>
         prev.map(n => (n.id === id ? { ...n, read: false } : n))
       );
+      toast.error("Failed to mark as read");
     }
   };
 
@@ -144,6 +146,7 @@ export default function NotificationsPage() {
       console.error("Error marking all as read:", error);
       // Revert on error
       setNotifications(previousNotifications);
+      toast.error("Failed to mark all as read");
     }
   };
 
@@ -170,8 +173,10 @@ export default function NotificationsPage() {
       if (!response.ok) {
         throw new Error("Failed to save preferences");
       }
+      toast.success("Preferences saved");
     } catch (error) {
       console.error("Error saving preferences:", error);
+      toast.error("Failed to save preferences");
     } finally {
       setIsSaving(false);
     }

@@ -7,7 +7,7 @@ export default function DollarBinComicsPage() {
       description="Comics priced $5.00 or less"
       apiQuery="?mediaCategory=comics&dollarBin=true"
       detailHrefPrefix="/shop/books/"
-      kind="movie"
+      kind="comics"
     />
   );
 }

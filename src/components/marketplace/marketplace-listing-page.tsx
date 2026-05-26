@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Music, Film } from "lucide-react";
+import { Music, Film, BookOpen } from "lucide-react";
 
 // Shared scaffold for "see all" / "browse by filter" pages on the
 // marketplace. Each listing page (Featured Music, Hot Music, Music by
@@ -36,12 +36,13 @@ interface Props {
   // appended to this prefix.
   detailHrefPrefix: string;
   // Display kind so we pick the right empty-state icon + grid aspect.
-  kind: "music" | "movie";
+  kind: "music" | "movie" | "comics";
 }
 
 const FALLBACK_ICON: Record<Props["kind"], ComponentType<{ className?: string }>> = {
   music: Music,
   movie: Film,
+  comics: BookOpen,
 };
 
 function Tile({ item, detailHrefPrefix, kind }: { item: Item; detailHrefPrefix: string; kind: Props["kind"] }) {
