@@ -61,12 +61,14 @@ export async function GET(
       let accountHolder = "[Encrypted]";
       let accountNumber = "[Encrypted]";
       let routingNumber = "[Encrypted]";
+      let payoutPhone: string | null = null;
 
       try {
         if (bankAccount.bankNameEncrypted) bankName = decrypt(bankAccount.bankNameEncrypted);
         if (bankAccount.accountHolderEncrypted) accountHolder = decrypt(bankAccount.accountHolderEncrypted);
         if (bankAccount.accountNumberEncrypted) accountNumber = decrypt(bankAccount.accountNumberEncrypted);
         if (bankAccount.routingNumberEncrypted) routingNumber = decrypt(bankAccount.routingNumberEncrypted);
+        if (bankAccount.payoutPhoneEncrypted) payoutPhone = decrypt(bankAccount.payoutPhoneEncrypted);
       } catch (error) {
         adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting Whop bank account details:");
       }
@@ -91,6 +93,8 @@ export async function GET(
         accountLastFour: bankAccount.accountLastFour,
         routingNumber,
         accountType: bankAccount.accountType,
+        bankCountry: bankAccount.bankCountry,
+        payoutPhone,
         isVerified: bankAccount.isVerified,
         verifiedAt: bankAccount.verifiedAt,
         verificationMethod: null,
@@ -114,12 +118,14 @@ export async function GET(
       let accountHolder = "[Encrypted]";
       let accountNumber = "[Encrypted]";
       let routingNumber = "[Encrypted]";
+      let payoutPhone: string | null = null;
 
       try {
         if (bankAccount.bankNameEncrypted) bankName = decrypt(bankAccount.bankNameEncrypted);
         if (bankAccount.accountHolderEncrypted) accountHolder = decrypt(bankAccount.accountHolderEncrypted);
         if (bankAccount.accountNumberEncrypted) accountNumber = decrypt(bankAccount.accountNumberEncrypted);
         if (bankAccount.routingNumberEncrypted) routingNumber = decrypt(bankAccount.routingNumberEncrypted);
+        if (bankAccount.payoutPhoneEncrypted) payoutPhone = decrypt(bankAccount.payoutPhoneEncrypted);
       } catch (error) {
         adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting PayPal bank account details:");
       }
@@ -144,6 +150,8 @@ export async function GET(
         accountLastFour: bankAccount.accountLastFour,
         routingNumber,
         accountType: bankAccount.accountType,
+        bankCountry: bankAccount.bankCountry,
+        payoutPhone,
         isVerified: bankAccount.isVerified,
         verifiedAt: bankAccount.verifiedAt,
         verificationMethod: bankAccount.verificationMethod,
@@ -178,6 +186,7 @@ export async function GET(
     let accountHolder = "[Encrypted]";
     let accountNumber = "[Encrypted]";
     let routingNumber = "[Encrypted]";
+    let payoutPhone: string | null = null;
 
     try {
       if (bankAccount.bankNameEncrypted) {
@@ -191,6 +200,9 @@ export async function GET(
       }
       if (bankAccount.routingNumberEncrypted) {
         routingNumber = decrypt(bankAccount.routingNumberEncrypted);
+      }
+      if (bankAccount.payoutPhoneEncrypted) {
+        payoutPhone = decrypt(bankAccount.payoutPhoneEncrypted);
       }
     } catch (error) {
       adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting bank account details:");
@@ -217,6 +229,8 @@ export async function GET(
       accountLastFour: bankAccount.accountLastFour,
       routingNumber,
       accountType: bankAccount.accountType,
+      bankCountry: bankAccount.bankCountry,
+      payoutPhone,
       isVerified: bankAccount.isVerified,
       verifiedAt: bankAccount.verifiedAt,
       verificationMethod: bankAccount.verificationMethod,

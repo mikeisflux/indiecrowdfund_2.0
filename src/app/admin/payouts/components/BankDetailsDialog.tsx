@@ -206,6 +206,16 @@ export function BankDetailsDialog({
                 )}
               </div>
               <div>
+                <Label className="text-xs text-muted-foreground">Bank Country</Label>
+                <p className="font-medium">{bankDetails.bankCountry || "—"}</p>
+              </div>
+              {bankDetails.payoutPhone && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Payout Phone</Label>
+                  <p className="font-medium font-mono">{bankDetails.payoutPhone}</p>
+                </div>
+              )}
+              <div>
                 <Label className="text-xs text-muted-foreground">Verification Status</Label>
                 <p className="font-medium">{bankDetails.isVerified ? "Verified" : "Unverified"}</p>
               </div>

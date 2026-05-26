@@ -87,6 +87,13 @@ export interface BankAccountDetails {
   accountLastFour: string | null;
   routingNumber: string;
   accountType: string;
+  // ISO 3166-1 alpha-2 country code that drove routing-format selection
+  // at collection time (US ABA vs UK Sort Code vs IT/JP). Always present —
+  // the schema defaults legacy rows to "US".
+  bankCountry: string;
+  // Decrypted at /api/admin/bank-accounts/[id]. Only populated when the
+  // creator entered one (required for UK accounts, optional elsewhere).
+  payoutPhone: string | null;
   isVerified: boolean;
   verifiedAt: string | null;
 }
