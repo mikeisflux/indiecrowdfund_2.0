@@ -197,4 +197,33 @@ All 30 in-scope admin pages clean. `/admin/layout.tsx:266` enforces `session.use
 
 ## Audit log
 
-Notable findings will be appended here as a running changelog.
+### Final summary (2026-05-26)
+
+**Coverage:** 138 pages audited across 10 sections (every `page.tsx` in `src/app/` except 11 payment-related pages explicitly out of scope per the original spec, plus `/survey/preview` which was verified clean — API enforces creator-or-collaborator access). Total LOC reviewed ≈ 80k.
+
+**Real production bugs fixed during audit:**
+
+1. **Missing `/api/stripe/config` endpoint** — Created `src/app/api/stripe/config/route.ts` (commit `677c485e`). Was blocking all Stripe survey-addon payments at `/dashboard/pledges/[pledgeId]/survey:355` with "Failed to load payment configuration" — endpoint never existed. Fix also patches the same call in `pay/balance/[token]/page.tsx:75`, whose env-var fallback was broken (referenced `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` which doesn't exist; project uses `STRIPE_PUBLISHABLE_KEY` without the public prefix).
+
+2. **35 dead `/dashboard/marketplace/*` links across the shop creator dashboard** — Fixed with project-wide rename (commit `933858b4`). The 2026-05-19 marketplace→shop rewrite in `next.config.js` covered only top-level `/marketplace` paths, missing every `/dashboard/marketplace/*` reference inside the dashboard. Result: every "Add Book", "Edit Music", "Edit Movie", "Company Profile" link, and every post-save redirect, was a dead 404 for shop creators. Fixed all 35 references across 13 files.
+
+**Minor UX gaps still open (not fixed during audit):**
+
+1. `src/app/projects/[vanityname]/[slug]/page.tsx:232` — `callbackUrl` passes full `window.location.href`. The downstream `sanitizeRedirectUrl()` only accepts relative paths, so users land on `/dashboard` after login instead of returning to the project. Should use `pathname + search` only.
+2. `src/app/projects/[vanityname]/[slug]/edit/page.tsx` — No SSR auth gate; page shell loads briefly for unauthed users before client-side fetch returns 401. API enforces ownership (not a security hole), but UX is a flash-of-content. Could wrap with a server component that redirects to `/login` like `/projects/new` does.
+
+**Minor cosmetic notes (worth a follow-up but not blocking):**
+
+- `src/app/shop/comics/{all,dollar-bin,featured,staff-picks}/page.tsx` pass `kind="movie"` to `MarketplaceListingPage` because the component's `kind` prop type is `"music" | "movie"` and doesn't include `"comics"`. Aspect ratio (2/3) works for comic covers, but the empty-state fallback icon is Film instead of something comic-appropriate.
+- `src/app/shop/books/[slug]/page.tsx` error toast says "Failed to load book" even when the universal item viewer is loading music/movie/comic.
+- `src/app/admin/users/page.tsx` lines 151, 159 use eslint-disable to skip `fetchUserPledges`/`fetchUserEmails` in useEffect deps — fragile if hook signatures change.
+- `src/app/admin/analytics/page.tsx` silently console-logs on fetch failure with no user-facing toast — user sees a spinner forever.
+- `src/app/admin/notifications/page.tsx` optimistic updates have weak rollback if the background save fails.
+- `src/app/admin/prelaunch/page.tsx` `getPageUrl()` doesn't null-check `vanityUrl`/`slug` before building the link.
+- Adding `/retailers/*` to `protectedRoutes` in `src/proxy.ts` would give defense-in-depth at the edge; currently only the per-page 401 redirects guard the surface.
+
+**Architectural verifications that turned out fine:**
+
+- `/shop/books/[slug]` is the **universal item viewer** for all media types via `mediaCategory`; the `detailHrefPrefix="/shop/books/"` everywhere is intentional, not a copy-paste bug.
+- Admin pages don't need page-level `SUPER_ADMIN` checks — `src/app/admin/layout.tsx:266` enforces the role gate before any page renders.
+- Raw `fetch()` on GETs is intentional throughout — CSRF only applies to mutations, and the `csrfExemptRoutes` list in `src/proxy.ts` handles webhook/track endpoints that bypass the wrapper.
