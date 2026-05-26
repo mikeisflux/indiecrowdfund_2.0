@@ -95,10 +95,11 @@ Status legend:
 
 ## 6. Backer Dashboard
 
-- [ ] `/dashboard/backer` — Backer hub
-- [ ] `/dashboard/following` — Followed projects
-- [ ] `/dashboard/pledges/[pledgeId]` — Pledge detail (non-payment view)
-- [ ] `/dashboard/pledges/[pledgeId]/survey` — Fill survey
+- [x] `/dashboard/backer` — 1401-line backer hub. Mutations use `apiFetch`, polling cleanup OK, session-gated. OK.
+- [x] `/dashboard/following` — `/api/user/following` GET + unfollow via `apiFetch`, optimistic UI updates. OK.
+- [x] `/dashboard/pledges/[pledgeId]` — Pledge detail (1218 lines). All mutations use `apiFetch`, API enforces pledge-ownership, refetch after every change. OK.
+- [x] `/dashboard/pledges/[pledgeId]/survey` — **Fixed during audit**: was calling missing `/api/stripe/config` endpoint (line 355), throwing "Failed to load payment configuration" for any backer paying for survey addons with Stripe. Created the missing route at `src/app/api/stripe/config/route.ts` returning `{ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY }` (matches the PayPal/DC config pattern). Also fixes the same call in `pay/balance/[token]/page.tsx:75`.
+- [x] `/dashboard/pledges/[pledgeId]/complete-with-dc` — DivinityCoin re-entry handles already-completed pledges, payment form loads with correct secret. OK.
 
 ## 7. Marketplace / Shop (public)
 
