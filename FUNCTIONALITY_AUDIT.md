@@ -67,10 +67,11 @@ Status legend:
 
 ## 4. Project Pages (non-pledge)
 
-- [ ] `/projects/[vanityname]/[slug]` — Project detail (live/funded)
-- [ ] `/projects/[vanityname]/[slug]/prelaunch` — Coming soon teaser
-- [ ] `/projects/[vanityname]/[slug]/edit` — Creator project builder
-- [ ] `/projects/new` — Create project entrypoint
+- [x] `/projects/[vanityname]/[slug]` — Project detail. All API endpoints exist, follow/unfollow uses `apiFetch`, polling effects cleaned up. **Minor UX bug**: `page.tsx:232` uses `window.location.href` (full URL) for `callbackUrl`. The downstream `sanitizeRedirectUrl()` (`src/lib/auth/actions.ts:31`) rejects non-relative URLs, so after login users land on `/dashboard` instead of back at the project. Should use `window.location.pathname + window.location.search` like the prelaunch page does.
+- [x] `/projects/[vanityname]/[slug]/prelaunch` — Coming-soon teaser. Proper status gating (LIVE/FUNDED redirect to detail), permission checks for preview viewers, `apiFetch` for mutations, safe `encodeURIComponent(pathname)` for callbackUrl. OK.
+- [x] `/projects/[vanityname]/[slug]/edit` — Project builder. **Minor UX gap**: no SSR auth gate, so the page shell loads briefly for unauthed users before client-side fetch returns 401. Not a security hole — `/api/projects/slug/[slug]` enforces creator ownership. Could add a server-component wrapper that redirects → `/login` like `/projects/new` does.
+- [x] `/projects/new` — Server-side `auth()` check redirects to `/login?callbackUrl=/projects/new`. OK.
+- [x] Layouts (`[slug]/layout.tsx`, `prelaunch/layout.tsx`) — Server-rendered metadata + JSON-LD, `notFound()` on miss, slug-migration redirect to correct creator. OK.
 
 ## 5. Creator Dashboard
 
