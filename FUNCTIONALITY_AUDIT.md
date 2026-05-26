@@ -130,17 +130,19 @@ Note: `/shop/books/[slug]` is the **universal item viewer** that serves all medi
 
 ## 9. Retailers
 
-- [ ] `/retailers` — Retailer landing
-- [ ] `/retailers/apply` — Apply form
-- [ ] `/retailers/login` — Retailer login
-- [ ] `/retailers/forgot-password` — Reset request
-- [ ] `/retailers/reset-password` — Reset via token
-- [ ] `/retailers/dashboard` — Retailer hub
-- [ ] `/retailers/account` — Account settings
-- [ ] `/retailers/orders` — Orders list
-- [ ] `/retailers/invoices` — Invoices list
-- [ ] `/retailers/projects` — Available projects
-- [ ] `/retailers/projects/[id]` — Project detail
+All 11 pages clean. Retailers are a parallel auth surface (separate from creator/backer sessions). Each protected page does its own `/api/retailers/me` (or `session-auth`) check and 401-redirects to `/retailers/login`. Note: `/retailers/*` routes are not in `protectedRoutes` in `src/proxy.ts` (which only covers `/dashboard` and `/projects/new`) — could be added for defense-in-depth but current per-page check is sufficient.
+
+- [x] `/retailers` — Server-rendered landing, `getRetailerStats()`. OK.
+- [x] `/retailers/apply` — `apiFetch` POST `/api/retailers/apply`, reCAPTCHA, success screen. OK.
+- [x] `/retailers/login` — `apiFetch` POST `/api/retailers/login`, session check, reCAPTCHA, auto-redirect if already logged in. OK.
+- [x] `/retailers/forgot-password` — `apiFetch` POST `/api/retailers/forgot-password`, reCAPTCHA. OK.
+- [x] `/retailers/reset-password` — Token validation GET + `apiFetch` POST, password length/match validation. OK.
+- [x] `/retailers/dashboard` — Tab-based hub, `apiFetch` for logout, 401-redirect. OK.
+- [x] `/retailers/account` — `apiFetch` PATCH for updates, 401-redirect. OK.
+- [x] `/retailers/orders` — GET orders, `apiFetch` for logout. OK.
+- [x] `/retailers/invoices` — GET invoices, `apiFetch` for logout. OK.
+- [x] `/retailers/projects` — GET catalog, justified exhaustive-deps disable. OK.
+- [x] `/retailers/projects/[id]` — Project detail/preorder, `apiFetch` POST for order creation, success redirect. OK.
 
 ## 10. Admin (non-payment)
 
