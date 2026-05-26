@@ -75,23 +75,23 @@ Status legend:
 
 ## 5. Creator Dashboard
 
-- [ ] `/dashboard` — Creator dashboard root
-- [ ] `/dashboard/projects` — Creator's projects list
-- [ ] `/dashboard/profile` — Public profile editor
-- [ ] `/dashboard/activity` — Activity feed
-- [ ] `/dashboard/social` — Social links
-- [ ] `/dashboard/updates` — Project updates composer
-- [ ] `/dashboard/settings` — Account settings
-- [ ] `/dashboard/messages` — DM inbox (already touched: snap-back + race fix)
-- [ ] `/dashboard/notifications` — Notification center
-- [ ] `/dashboard/indiekit` — IndieKit hub
-- [ ] `/dashboard/indiekit-v2` — IndieKit v2 hub
-- [ ] `/dashboard/indiekit/emails/[id]/edit` — Email template editor
-- [ ] `/dashboard/indiekit/shopify/app` — Shopify app config
-- [ ] `/dashboard/indiekit/shopify/install` — Shopify install flow
-- [ ] `/dashboard/indiekit/survey/[pledgeId]` — Survey responder (creator-side preview)
-- [ ] `/dashboard/projects/[id]/survey` — Survey builder
-- [ ] `/dashboard/projects/[id]/survey/responses` — Survey response viewer
+- [x] `/dashboard` — Calls `/api/creator/dashboard` + `/api/creator/email/threads?filter=unread`. Polling cleanup correct, refetches on visibility change, 401-redirects to login. OK.
+- [x] `/dashboard/projects` — Redirect to `/dashboard/indiekit` (target exists). OK.
+- [x] `/dashboard/profile` — `/api/user/profile` GET/PATCH, `/api/upload` POST via `apiFetch`, vanity-URL lock works. OK.
+- [x] `/dashboard/activity` — `/api/user/activity` GET, session-gated. OK.
+- [x] `/dashboard/social` — `/api/auth/social/connections` GET/DELETE (DELETE uses `apiFetch`). Minor: loose `selectedPlatforms.length` dep on line 139 — theoretical loop risk only, doesn't fire in practice. OK.
+- [x] `/dashboard/updates` — Composer POSTs/PATCH/DELETE to `/api/creator/indiekit/updates` via `apiFetch`, refetches after save. OK.
+- [x] `/dashboard/settings` — All mutations (`/api/user/settings`, `/api/creator/paypal`, password change, email change) use `apiFetch`. OK.
+- [x] `/dashboard/messages` — Auth-gated, delegates to `MessagesPanel`. Snap-back + race fix already landed earlier. OK.
+- [x] `/dashboard/notifications` — `/api/user/notifications` PATCH/DELETE via `apiFetch`. GET uses raw `fetch` (fine — CSRF only for mutations). OK.
+- [x] `/dashboard/indiekit` — Hub at 1171 lines. All API calls verified, mutations (`/backers`, `/feedback`) use `apiFetch`, tab routing intact. OK.
+- [x] `/dashboard/indiekit-v2` — Redirect to `/dashboard/indiekit`. OK.
+- [x] `/dashboard/indiekit/emails/[id]/edit` — `/api/creator/indiekit/campaigns` GET/POST via `apiFetch`, unsaved-changes badge, save-before-send flow. OK.
+- [x] `/dashboard/indiekit/shopify/app` — Iframe breakout handler with Suspense. OK.
+- [x] `/dashboard/indiekit/shopify/install` — Server-rendered OAuth entry, signed state param, validates shop. OK.
+- [x] `/dashboard/indiekit/survey/[pledgeId]` — `fetchWithRetry` GET. OK.
+- [x] `/dashboard/projects/[id]/survey` — Survey builder, 1183 lines. All CRUD endpoints (`item-questions`, `backer-questions`, `send`, `lock`) use `apiFetch` and refetch after save. Questions persist correctly. OK.
+- [x] `/dashboard/projects/[id]/survey/responses` — `/api/projects/[id]/survey/responses` GET + POST (export) via `apiFetch`, blob download flow. OK.
 
 ## 6. Backer Dashboard
 
