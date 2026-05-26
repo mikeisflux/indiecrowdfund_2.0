@@ -103,27 +103,17 @@ Status legend:
 
 ## 7. Marketplace / Shop (public)
 
-- [ ] `/shop` — Marketplace landing
-- [ ] `/cart` — Shopping cart
-- [ ] `/shop/books` — Books index
-- [ ] `/shop/books/[slug]` — Book detail
-- [ ] `/shop/books/featured` — Featured books
-- [ ] `/shop/books/staff-picks` — Staff picks
-- [ ] `/shop/comics` — Comics index
-- [ ] `/shop/comics/all` — All comics
-- [ ] `/shop/comics/dollar-bin` — $1-5 comics
-- [ ] `/shop/comics/featured` — Featured comics
-- [ ] `/shop/comics/staff-picks` — Staff picks
-- [ ] `/shop/movies` — Movies index
-- [ ] `/shop/movies/genre/[genre]` — Movies by genre
-- [ ] `/shop/music` — Music index
-- [ ] `/shop/music/featured` — Featured music
-- [ ] `/shop/music/genre/[genre]` — Music by genre
-- [ ] `/shop/music/hot` — Hot music
-- [ ] `/shop/music/new` — New music
-- [ ] `/shop/music/staff-picks` — Staff picks
-- [ ] `/shop/physical-media` — Physical media
-- [ ] `/shop/companies/[slug]` — Publisher/label profile
+Note: `/shop/books/[slug]` is the **universal item viewer** that serves all media types (books/comics/music/movies) via the `mediaCategory` field on the Book model. The `detailHrefPrefix="/shop/books/"` everywhere is intentional, not a copy-paste bug as initially suspected.
+
+- [x] `/shop`, `/cart`, `/shop/comics`, `/shop/movies`, `/shop/music` — Redirects/shells. Targets exist. OK.
+- [x] `/shop/books` — Books index. OK.
+- [x] `/shop/books/[slug]` — Universal item detail (968 lines). Stripe/PayPal/DC purchase flow, promo code redemption, video embed when `videoUrl` present, all mutations use `apiFetch`. OK. **Minor:** error toast says "Failed to load book" even when item is music/movie/comic — cosmetic.
+- [x] `/shop/books/featured`, `/shop/books/staff-picks` — Custom implementations (not the shared wrapper). OK.
+- [x] `/shop/comics/{all,dollar-bin,featured,staff-picks}` — Wrappers around `MarketplaceListingPage`. **Minor:** pass `kind="movie"` because the component's `kind` prop type is `"music" | "movie"` and doesn't include `"comics"`. Aspect ratio (2/3) is fine for comic covers; only the empty-state fallback icon is wrong (Film instead of book/comic). Component could be extended to accept `"comics"`.
+- [x] `/shop/movies/genre/[genre]` — Wrapper, `kind="movie"`. OK.
+- [x] `/shop/music/{featured,hot,new,staff-picks,genre/[genre]}` — Wrappers, `kind="music"`. OK.
+- [x] `/shop/physical-media` — Standalone page. OK.
+- [x] `/shop/companies/[slug]` — Publisher/label profile (331 lines). OK.
 
 ## 8. Shop Creator Dashboard
 
