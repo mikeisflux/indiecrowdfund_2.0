@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
+import { VanityUrlWarningBanner } from "@/components/vanity-url-warning-banner";
 
 // Import types
 import type { DashboardData } from "./types";
@@ -217,6 +218,7 @@ export default function CreatorDashboard() {
   if (!data?.projects.length) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <VanityUrlWarningBanner />
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
           <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
@@ -283,6 +285,7 @@ export default function CreatorDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <VanityUrlWarningBanner />
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
