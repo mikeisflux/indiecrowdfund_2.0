@@ -803,7 +803,7 @@ function NewBookForm() {
       }
 
       toast.success(asDraft ? "Book saved as draft" : "Book submitted for review");
-      router.push("/dashboard/marketplace");
+      router.push("/dashboard/shop");
     } catch (error) {
       console.error("Error creating book:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create book");
@@ -825,7 +825,7 @@ function NewBookForm() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
-              href="/dashboard/marketplace"
+              href="/dashboard/shop"
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />

@@ -60,7 +60,7 @@ export default function EditBookPage() {
         if (!res.ok) {
           if (res.status === 404) {
             toast.error("Book not found");
-            router.push("/dashboard/marketplace");
+            router.push("/dashboard/shop");
             return;
           }
           throw new Error("Failed to fetch book");
@@ -113,7 +113,7 @@ export default function EditBookPage() {
       } catch (error) {
         console.error("Error fetching book:", error);
         toast.error("Failed to load book");
-        router.push("/dashboard/marketplace");
+        router.push("/dashboard/shop");
       } finally {
         setLoading(false);
       }
@@ -197,7 +197,7 @@ export default function EditBookPage() {
       // If PDF or cover image changed on a live book, it was sent for re-review
       if (updateResult.requiresReReview) {
         toast.info("Book sent for re-review due to content changes. It will be unavailable until approved.");
-        router.push("/dashboard/marketplace");
+        router.push("/dashboard/shop");
         return;
       }
 
@@ -216,7 +216,7 @@ export default function EditBookPage() {
         toast.success("Book updated successfully");
       }
 
-      router.push("/dashboard/marketplace");
+      router.push("/dashboard/shop");
     } catch (error) {
       console.error("Error updating book:", error);
       toast.error(error instanceof Error ? error.message : "Failed to update book");
@@ -256,7 +256,7 @@ export default function EditBookPage() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
-              href="/dashboard/marketplace"
+              href="/dashboard/shop"
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />

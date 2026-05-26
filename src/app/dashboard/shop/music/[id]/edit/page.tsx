@@ -86,7 +86,7 @@ export default function EditMusicPage() {
   const fetchBook = useCallback(async () => {
     try {
       const res = await fetch(`/api/creator/marketplace/books/${bookId}`);
-      if (!res.ok) { toast.error("Track not found"); router.push("/dashboard/marketplace"); return; }
+      if (!res.ok) { toast.error("Track not found"); router.push("/dashboard/shop"); return; }
       const data = await res.json();
       const b = data.book;
       setTitle(b.title);
@@ -104,7 +104,7 @@ export default function EditMusicPage() {
       setTags(b.tags || []);
       setTagsInput((b.tags || []).join(", "));
       setBookStatus(b.status);
-    } catch { toast.error("Failed to load track"); router.push("/dashboard/marketplace"); }
+    } catch { toast.error("Failed to load track"); router.push("/dashboard/shop"); }
     finally { setLoading(false); }
   }, [bookId, router]);
 
@@ -205,7 +205,7 @@ export default function EditMusicPage() {
         throw new Error(errorMsg);
       }
       toast.success("Track updated!");
-      router.push("/dashboard/marketplace");
+      router.push("/dashboard/shop");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to save"); }
     finally { setSaving(false); }
   };
@@ -216,7 +216,7 @@ export default function EditMusicPage() {
       const res = await apiFetch(`/api/creator/marketplace/books/${bookId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
       toast.success("Track deleted");
-      router.push("/dashboard/marketplace");
+      router.push("/dashboard/shop");
     } catch { toast.error("Failed to delete"); }
   };
 
@@ -246,7 +246,7 @@ export default function EditMusicPage() {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-14 sm:h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <Link href="/dashboard/marketplace" className="p-2 rounded-lg hover:bg-muted"><ArrowLeft className="h-5 w-5" /></Link>
+            <Link href="/dashboard/shop" className="p-2 rounded-lg hover:bg-muted"><ArrowLeft className="h-5 w-5" /></Link>
             <div className="flex items-center gap-2">
               <Music className="h-5 w-5 text-emerald-500" />
               <h1 className="text-base sm:text-lg font-bold">Edit Track</h1>

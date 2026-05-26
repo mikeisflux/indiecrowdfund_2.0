@@ -350,7 +350,7 @@ export function MovieBrowse() {
           <Film className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
           <h3 className="text-xl font-bold text-foreground mb-2">Be the First Filmmaker</h3>
           <p className="text-muted-foreground max-w-md mx-auto mb-6">Upload your short films, features, documentaries, and more.</p>
-          <Link href="/dashboard/marketplace">
+          <Link href="/dashboard/shop">
             <Button className="bg-gradient-to-r from-rose-500 to-orange-500 text-white gap-2">Upload Your Film <ArrowRight className="w-4 h-4" /></Button>
           </Link>
         </div>

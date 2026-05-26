@@ -117,14 +117,16 @@ Note: `/shop/books/[slug]` is the **universal item viewer** that serves all medi
 
 ## 8. Shop Creator Dashboard
 
-- [ ] `/dashboard/shop` — Shop creator hub
-- [ ] `/dashboard/shop/company` — Company profile
-- [ ] `/dashboard/shop/books/new` — New book
-- [ ] `/dashboard/shop/books/[id]/edit` — Edit book
-- [ ] `/dashboard/shop/movies/new` — New movie
-- [ ] `/dashboard/shop/movies/[id]/edit` — Edit movie
-- [ ] `/dashboard/shop/music/new` — New music
-- [ ] `/dashboard/shop/music/[id]/edit` — Edit music
+**Major fix during audit:** the entire shop creator dashboard had stale `/dashboard/marketplace/*` references from the 2026-05-19 marketplace→shop rename. The `next.config.js` rewrites only cover top-level `/marketplace` → `/shop`, not `/dashboard/marketplace/*`. Result: every "Add Book", "Edit Book", "Edit Music", "Edit Movie", "Company Profile" link, and every post-save redirect, was a dead 404. Fixed all 35 references across 13 files with a single project-wide rename. API paths (`/api/marketplace/*`) intentionally preserved per the rename memo.
+
+- [x] `/dashboard/shop` — Shop creator hub. After rename, all hub links/redirects target real routes. `/api/creator/marketplace/*` endpoints all exist, mutations use `apiFetch`. OK.
+- [x] `/dashboard/shop/company` — GET/POST/PUT `/api/creator/marketplace/company`, `/api/upload` for file uploads, dynamic-import BlockEditor. OK.
+- [x] `/dashboard/shop/books/new` (1263) — PDF file manager (`/api/creator/marketplace/files/upload`), image upload, POST `/api/creator/marketplace/books`. OK.
+- [x] `/dashboard/shop/books/[id]/edit` — Fetches existing book, PATCH/PUT to update, handles re-review for LIVE items, payment-processor split saves correctly. OK.
+- [x] `/dashboard/shop/movies/new` — 5-step wizard, video upload (`/api/creator/marketplace/video/upload`), POST `/api/creator/marketplace/movies`. OK.
+- [x] `/dashboard/shop/movies/[id]/edit` — Pre-populates form, save flows correct. OK.
+- [x] `/dashboard/shop/music/new` (1007) — Multi-track support, audio upload (`/api/creator/marketplace/audio/upload`), loads company name, POST `/api/creator/marketplace/music`. OK.
+- [x] `/dashboard/shop/music/[id]/edit` — Pre-populates form, save flows correct. OK.
 
 ## 9. Retailers
 

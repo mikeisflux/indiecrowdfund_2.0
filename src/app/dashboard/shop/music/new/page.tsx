@@ -585,7 +585,7 @@ export default function NewMusicPage() {
       }
 
       toast.success(asDraft ? "Release saved as draft" : "Release submitted for review");
-      router.push("/dashboard/marketplace");
+      router.push("/dashboard/shop");
     } catch (error) {
       console.error("Error creating release:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create release");
@@ -609,7 +609,7 @@ export default function NewMusicPage() {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard/marketplace" className="p-2 rounded-lg hover:bg-muted">
+            <Link href="/dashboard/shop" className="p-2 rounded-lg hover:bg-muted">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center gap-2">

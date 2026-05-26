@@ -326,7 +326,7 @@ export default function CreatorMarketplaceDashboard() {
             Back to Dashboard
           </Link>
           <div className="flex items-center gap-2 ml-auto">
-            <Link href="/dashboard/marketplace/company">
+            <Link href="/dashboard/shop/company">
               <Button variant="outline" className="border-border">
                 <Building2 className="w-4 h-4 mr-2" />
                 {company ? "Edit Company" : "Create Company"}
@@ -342,19 +342,19 @@ export default function CreatorMarketplaceDashboard() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard/marketplace/books/new" className="flex items-center gap-2 cursor-pointer">
+                  <Link href="/dashboard/shop/books/new" className="flex items-center gap-2 cursor-pointer">
                     <BookOpen className="w-4 h-4" />
                     New Comic
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard/marketplace/music/new" className="flex items-center gap-2 cursor-pointer">
+                  <Link href="/dashboard/shop/music/new" className="flex items-center gap-2 cursor-pointer">
                     <Music className="w-4 h-4" />
                     New Music
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard/marketplace/movies/new" className="flex items-center gap-2 cursor-pointer">
+                  <Link href="/dashboard/shop/movies/new" className="flex items-center gap-2 cursor-pointer">
                     <Film className="w-4 h-4" />
                     New Movie
                   </Link>

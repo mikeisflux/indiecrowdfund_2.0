@@ -59,7 +59,7 @@ export function CompanyProfileCard({ company }: { company: CompanyProfile }) {
                 <p className="text-muted-foreground mt-1">{company.tagline}</p>
               )}
             </div>
-            <Link href="/dashboard/marketplace/company">
+            <Link href="/dashboard/shop/company">
               <Button variant="outline" size="sm">
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Profile

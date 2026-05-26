@@ -257,7 +257,7 @@ export default function NewMoviePage() {
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
       toast.success(asDraft ? "Movie saved as draft" : "Movie submitted for review");
-      router.push("/dashboard/marketplace");
+      router.push("/dashboard/shop");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create movie");
     } finally {
@@ -291,7 +291,7 @@ export default function NewMoviePage() {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-14 sm:h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3 sm:gap-4">
-            <Link href="/dashboard/marketplace" className="p-2 rounded-lg hover:bg-muted">
+            <Link href="/dashboard/shop" className="p-2 rounded-lg hover:bg-muted">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center gap-2">

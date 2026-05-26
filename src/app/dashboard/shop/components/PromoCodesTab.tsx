@@ -78,7 +78,7 @@ export function PromoCodesTab({
               <p className="text-muted-foreground mb-4">
                 You need at least one live book to create promo codes.
               </p>
-              <Link href="/dashboard/marketplace/books/new">
+              <Link href="/dashboard/shop/books/new">
                 <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Book
