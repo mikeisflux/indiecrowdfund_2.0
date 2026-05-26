@@ -17,53 +17,53 @@ Status legend:
 
 ## 1. Public / Marketing
 
-- [ ] `/` — Home page
-- [ ] `/about-us` — Platform pitch
-- [ ] `/fees` — Fee schedule
-- [ ] `/faq` — FAQ
-- [ ] `/contact` — Contact form
-- [ ] `/privacy` — Privacy policy
-- [ ] `/terms` — Terms of service
-- [ ] `/term` — Legacy ToS redirect (?)
-- [ ] `/content-guidelines` — Content policy
-- [ ] `/trust-safety` — Trust & safety
-- [ ] `/fulfillment` — Fulfillment policy
-- [ ] `/success-stories` — Case studies
-- [ ] `/help` — Help center landing
-- [ ] `/help/whitelist` — Email whitelist guide
-- [ ] `/press` — Press releases index
-- [ ] `/press/[slug]` — Single press release
-- [ ] `/changelog` — Changelog
-- [ ] `/backer-handbook` — Backer guide
-- [ ] `/creator-handbook` — Creator guide
-- [ ] `/shop-handbook/backers` — Shop guide (backers)
-- [ ] `/shop-handbook/creators` — Shop guide (creators)
-- [ ] `/indiekit-handbook` — IndieKit guide
-- [ ] `/what-is-divinitycoin` — DivinityCoin explainer
-- [ ] `/access-denied` — 403 page
-- [ ] `/verification-complete` — Post-email-verify landing
-- [ ] `/bug-report` — Bug report form
-- [ ] `/chat` — Chat (?)
+- [x] `/` — Home page. Server component, proper `next/image`, no broken links.
+- [x] `/about-us` — Calls `/api/platform-stats` (endpoint exists at `src/app/api/platform-stats/route.ts`).
+- [x] `/fees` — Fee schedule. Client form state OK.
+- [x] `/faq` — Accordion FAQ. OK.
+- [x] `/contact` — Uses `apiFetch("/api/contact")` for CSRF. OK.
+- [x] `/privacy` — Static content. OK.
+- [x] `/terms` — Tab system with URL deep-linking. OK.
+- [x] `/term` — Redirects to `/terms`. OK.
+- [x] `/content-guidelines` — Static, links valid. OK.
+- [x] `/trust-safety` — Static, links to `/contact`, `/faq`, `/creator-handbook`. OK.
+- [x] `/fulfillment` — Redirects to `/dashboard/indiekit`. OK.
+- [x] `/success-stories` — Server component, DB-driven, error-handled. OK.
+- [x] `/help` — Server component with metadata + search. OK.
+- [x] `/help/whitelist` — Static guide. OK.
+- [x] `/press` — Server component, `db.pressRelease` query, error-handled. OK.
+- [x] `/press/[slug]` — Dynamic. Uses `dangerouslySetInnerHTML` (acceptable for trusted admin-authored content).
+- [x] `/changelog` — Server component, DB-driven groupings. OK.
+- [x] `/backer-handbook` — 10-tab handbook. OK.
+- [x] `/creator-handbook` — 11-tab creator workflow guide. OK.
+- [x] `/shop-handbook/backers` — 6-tab buyer guide. OK.
+- [x] `/shop-handbook/creators` — 6-tab seller guide. OK.
+- [x] `/indiekit-handbook` — 30+ collapsible sections. OK.
+- [x] `/what-is-divinitycoin` — FAQ accordion. OK.
+- [x] `/access-denied` — Simple error page with nav. OK.
+- [x] `/verification-complete` — Validates `returnUrl` via `getSafeReturnUrl` (no open redirect). OK.
+- [x] `/bug-report` — Uses `apiFetch("/api/bug-reports")` (endpoint exists). Math-challenge spam guard. OK.
+- [x] `/chat` — Auth-gated, renders `ChatRoom` component for logged-in users. OK.
 
 ## 2. Auth
 
-- [ ] `/login` — Email/password login
-- [ ] `/register` — Sign up
-- [ ] `/forgot-password` — Request reset
-- [ ] `/reset-password` — Reset via token
-- [ ] `/choose-role` — Post-signup role picker
-- [ ] `/verify-email` — Token verification landing
-- [ ] Modal variants (`/@modal/...`) — intercepting routes for in-place auth
+- [x] `/login` — Server component with `LoginForm` + Suspense. OK.
+- [x] `/register` — Server component with `RegisterForm` + Suspense. OK.
+- [x] `/forgot-password` — Server component with `ForgotPasswordForm`. OK.
+- [x] `/reset-password` — Server component with `ResetPasswordForm` + Suspense. OK.
+- [x] `/choose-role` — Server-side auth guard redirects unauth → `/login`. OK.
+- [x] `/verify-email` — Calls `/api/user/verify-email` (exists). Handles token+email params, loading/success/error states. OK.
+- [x] Modal variants (`/@modal/...`) — intercepting routes reusing the same forms. OK.
 
 ## 3. Discovery
 
-- [ ] `/explore` — Browse all projects
-- [ ] `/crowdfunds` — Live + upcoming filter
-- [ ] `/projects` — Project index (?)
-- [ ] `/projects/[vanityname]` — Creator profile
-- [ ] `/u/[username]` — User profile
-- [ ] `/[vanityname]/[slug]` — Catch-all (likely redirect to `/projects/...`)
-- [ ] `/collaborate/[id]` — Collab invite accept
+- [x] `/explore` — Redirects to `/crowdfunds`. OK.
+- [x] `/crowdfunds` — Live + upcoming filter. Calls `/api/projects` (exists). Filters/pagination/loading states sound. OK.
+- [x] `/projects` — Redirects to `/crowdfunds`. OK.
+- [x] `/projects/[vanityname]` — Server-rendered legacy URL handler, `notFound()` for misses. OK.
+- [x] `/u/[username]` — Calls `/api/user/public-profile/[username]` (exists). Follow/unfollow mutations use `apiFetch` for CSRF. OK.
+- [x] `/[vanityname]/[slug]` — Catch-all redirect → `/projects/[vanityname]/[slug]`, validates DB hit. OK.
+- [x] `/collaborate/[id]` — Login `callbackUrl` flows through `sanitizeRedirectUrl()` downstream so no open redirect. OK.
 
 ## 4. Project Pages (non-pledge)
 
