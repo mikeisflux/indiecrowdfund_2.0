@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 const adminPayoutsWhopLogger = logger.child({ module: "admin-payouts-whop" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { calculateInternationalFees } from "@/lib/payouts/international-fees";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
                 accountType: true,
                 isVerified: true,
                 verifiedAt: true,
+                bankCountry: true,
               },
             },
           },
@@ -172,7 +174,17 @@ export async function GET(request: NextRequest) {
       const perTransactionFee = 0; // Whop doesn't charge per-transaction
       const partnerFee = processorFee;
       const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
-      const totalFees = Math.round((partnerFee + platformFee) * 100) / 100;
+      const platformAndProcessorFees = Math.round((partnerFee + platformFee) * 100) / 100;
+
+      // International wire surcharges only apply when the destination
+      // bank is non-US. CC fee is taken from the post-platform-fees
+      // subtotal so we don't pyramid the FX margin on top of our cut.
+      const subtotalAfterPlatformFees = Math.round((effectiveRevenue - platformAndProcessorFees) * 100) / 100;
+      const intlFees = calculateInternationalFees(
+        project.creator.whopBankAccount?.bankCountry,
+        subtotalAfterPlatformFees,
+      );
+      const totalFees = Math.round((platformAndProcessorFees + intlFees.totalInternationalFees) * 100) / 100;
       const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
 
       const settlements = project.whopSettlements || [];
@@ -198,6 +210,10 @@ export async function GET(request: NextRequest) {
         perTransactionFee,
         partnerFee,
         platformFee,
+        bankCountry: intlFees.bankCountry,
+        isInternational: intlFees.isInternational,
+        wireFee: intlFees.wireFee,
+        currencyConversionFee: intlFees.currencyConversionFee,
         totalFees,
         amountOwed,
         amountSettled,

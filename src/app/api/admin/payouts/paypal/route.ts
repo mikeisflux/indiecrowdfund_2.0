@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { calculateInternationalFees } from "@/lib/payouts/international-fees";
 
 const paypalPayoutsLogger = logger.child({ module: "admin-paypal-payouts" });
 
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
                 accountLastFour: true,
                 accountType: true,
                 isVerified: true,
+                bankCountry: true,
               },
             },
             paypalPayoutConfig: { select: { id: true, paypalEmail: true } },
@@ -116,7 +118,12 @@ export async function POST(req: NextRequest) {
     });
 
     const grossAmount = data.grossAmount;
-    const { paypalFee, platformFee, netAmount } = calcPayoutAmounts(grossAmount, data.platformFeePercent, pledgeCount);
+    const { paypalFee, platformFee, netAmount: netBeforeIntl } = calcPayoutAmounts(grossAmount, data.platformFeePercent, pledgeCount);
+
+    // International wire surcharges only apply when the destination
+    // bank is non-US. CC fee is 1.5% of the post-platform-fees subtotal.
+    const intlFees = calculateInternationalFees(bankAccount.bankCountry, netBeforeIntl);
+    const netAmount = Math.round((netBeforeIntl - intlFees.totalInternationalFees) * 100) / 100;
 
     if (netAmount <= 0) {
       return NextResponse.json({ error: "Net payout amount is zero or negative" }, { status: 400 });
@@ -128,7 +135,9 @@ export async function POST(req: NextRequest) {
     // the same campaign (real money, hard to reverse). Inside the
     // lock we also check for an existing non-failed payout and return
     // 409 instead of creating a second one.
-    const feeNote = `PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}`;
+    const feeNote = intlFees.isInternational
+      ? `PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}, Wire fee: $${intlFees.wireFee.toFixed(2)}, FX fee (1.5%): $${intlFees.currencyConversionFee.toFixed(2)}`
+      : `PayPal fee: $${paypalFee.toFixed(2)}, Platform fee: $${platformFee.toFixed(2)}`;
     let payout;
     try {
       payout = await db.$transaction(async (tx) => {
@@ -151,7 +160,7 @@ export async function POST(req: NextRequest) {
             projectId: project.id,
             projectName: project.title,
             grossAmount,
-            platformFee: platformFee + paypalFee,
+            platformFee: platformFee + paypalFee + intlFees.totalInternationalFees,
             netAmount,
             status: "PENDING",
             initiatedAt: new Date(),

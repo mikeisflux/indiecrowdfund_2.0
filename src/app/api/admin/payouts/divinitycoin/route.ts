@@ -5,6 +5,7 @@ const adminPayoutsDivinitycoinLogger = logger.child({ module: "admin-payouts-div
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendPayoutCreatedEmail } from "@/lib/notifications/email-templates";
+import { calculateInternationalFees } from "@/lib/payouts/international-fees";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
                 accountType: true,
                 isVerified: true,
                 verifiedAt: true,
+                bankCountry: true,
               },
             },
           },
@@ -280,8 +282,17 @@ export async function GET(request: NextRequest) {
       const perTransactionFee = Math.round(perTransactionRate * backerCount * 100) / 100;
       const partnerFee = Math.round((processorFee + perTransactionFee) * 100) / 100;
       const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
-      const totalFees = Math.round((partnerFee + platformFee) * 100) / 100;
+      const platformAndProcessorFees = Math.round((partnerFee + platformFee) * 100) / 100;
 
+      // International wire surcharges only apply when the destination
+      // bank is non-US. CC fee is taken from the post-platform-fees
+      // subtotal so we don't pyramid the FX margin on top of our cut.
+      const subtotalAfterPlatformFees = Math.round((effectiveRevenue - platformAndProcessorFees) * 100) / 100;
+      const intlFees = calculateInternationalFees(
+        project.creator.divinityCoinBankAccount?.bankCountry,
+        subtotalAfterPlatformFees,
+      );
+      const totalFees = Math.round((platformAndProcessorFees + intlFees.totalInternationalFees) * 100) / 100;
       const amountOwed = Math.round((effectiveRevenue - totalFees) * 100) / 100;
 
       const settlements = project.divinityCoinSettlements || [];
@@ -320,6 +331,10 @@ export async function GET(request: NextRequest) {
         perTransactionFee,
         partnerFee,
         platformFee,
+        bankCountry: intlFees.bankCountry,
+        isInternational: intlFees.isInternational,
+        wireFee: intlFees.wireFee,
+        currencyConversionFee: intlFees.currencyConversionFee,
         totalFees,
         amountOwed,
         amountSettled,

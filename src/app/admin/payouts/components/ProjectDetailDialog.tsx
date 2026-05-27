@@ -184,6 +184,18 @@ export function ProjectDetailDialog({
                     <span>Platform Fee (3%)</span>
                     <span className="text-red-500">-{formatCurrency(selectedProject.platformFee)}</span>
                   </div>
+                  {selectedProject.isInternational && (
+                    <>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>International Wire Fee ({selectedProject.bankCountry})</span>
+                        <span className="text-red-500">-{formatCurrency(selectedProject.wireFee)}</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Currency Conversion Fee (1.5%)</span>
+                        <span className="text-red-500">-{formatCurrency(selectedProject.currencyConversionFee)}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="border-t pt-2 flex justify-between font-bold">
                     <span>Amount Owed to Creator</span>
                     <span>{formatCurrency(selectedProject.amountOwed)}</span>

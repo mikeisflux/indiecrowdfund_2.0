@@ -24,6 +24,14 @@ export interface CreatorProject {
   perTransactionFee: number;
   partnerFee: number;
   platformFee: number;
+  // International wire transfer surcharges. Both zero for US banks.
+  // wireFee is a flat $25 SWIFT/correspondent-bank pass-through; the
+  // CC fee is 1.5% of the subtotal before wire charges. See
+  // src/lib/payouts/international-fees.ts for the calculation.
+  bankCountry: string;
+  isInternational: boolean;
+  wireFee: number;
+  currencyConversionFee: number;
   totalFees: number;
   amountOwed: number;
   amountSettled: number;
