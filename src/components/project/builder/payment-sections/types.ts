@@ -60,6 +60,12 @@ export interface DivinityCoinBankSectionProps {
     // field shows. Defaults to "US". See @/lib/bank-countries.
     bankCountry: BankCountry;
     payoutPhone: string;
+    billingLine1: string;
+    billingLine2: string;
+    billingCity: string;
+    billingState: string;
+    billingZip: string;
+    billingCountry: string;
   };
   setBankAccount: React.Dispatch<React.SetStateAction<{
     bankName: string;
@@ -69,6 +75,12 @@ export interface DivinityCoinBankSectionProps {
     accountType: "checking" | "savings";
     bankCountry: BankCountry;
     payoutPhone: string;
+    billingLine1: string;
+    billingLine2: string;
+    billingCity: string;
+    billingState: string;
+    billingZip: string;
+    billingCountry: string;
   }>>;
   bankAccountStatus: {
     saved: boolean;

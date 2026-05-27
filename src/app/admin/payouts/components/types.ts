@@ -94,6 +94,15 @@ export interface BankAccountDetails {
   // Decrypted at /api/admin/bank-accounts/[id]. Only populated when the
   // creator entered one (required for UK accounts, optional elsewhere).
   payoutPhone: string | null;
+  // Decrypted billing address from the bank-account form. Required for
+  // KYC + chargeback reconciliation; null for historical rows from
+  // before the form captured it.
+  billingLine1: string | null;
+  billingLine2: string | null;
+  billingCity: string | null;
+  billingState: string | null;
+  billingZip: string | null;
+  billingCountry: string | null;
   isVerified: boolean;
   verifiedAt: string | null;
 }

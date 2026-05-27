@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Banknote, CheckCircle, Loader2, Lock, Building2 } from "lucide-react";
 import { DivinityCoinBankSectionProps } from "./types";
+import { BillingAddressInputs } from "./billing-address-inputs";
 import {
   BANK_COUNTRY_OPTIONS,
   BANK_COUNTRY_FIELDS,
@@ -213,6 +214,21 @@ export function DivinityCoinBankSection({
                   </p>
                 </div>
               ) : null}
+
+              <BillingAddressInputs
+                idPrefix="dc"
+                value={{
+                  billingLine1: bankAccount.billingLine1,
+                  billingLine2: bankAccount.billingLine2,
+                  billingCity: bankAccount.billingCity,
+                  billingState: bankAccount.billingState,
+                  billingZip: bankAccount.billingZip,
+                  billingCountry: bankAccount.billingCountry,
+                }}
+                onChange={(addr) =>
+                  setBankAccount(prev => ({ ...prev, ...addr }))
+                }
+              />
 
               {!isUS && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">

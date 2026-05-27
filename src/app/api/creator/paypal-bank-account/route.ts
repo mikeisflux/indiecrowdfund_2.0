@@ -64,7 +64,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { bankName, accountHolder, accountNumber, routingNumber, accountType, bankCountry, payoutPhone } = body;
+    const {
+      bankName,
+      accountHolder,
+      accountNumber,
+      routingNumber,
+      accountType,
+      bankCountry,
+      payoutPhone,
+      billingLine1,
+      billingLine2,
+      billingCity,
+      billingState,
+      billingZip,
+      billingCountry,
+    } = body;
 
     // Default to US for backwards compatibility — every account that
     // pre-dates international support is a US ACH account. New form
@@ -81,6 +95,14 @@ export async function POST(req: NextRequest) {
     if (!bankName || !accountHolder || !accountNumber || !routingNumber) {
       return NextResponse.json(
         { error: "All fields are required" },
+        { status: 400 }
+      );
+    }
+
+    // Billing address required for KYC + chargeback reconciliation.
+    if (!billingLine1 || !billingCity || !billingZip || !billingCountry) {
+      return NextResponse.json(
+        { error: "Billing address is required (line 1, city, ZIP/postal code, country)" },
         { status: 400 }
       );
     }
@@ -104,6 +126,12 @@ export async function POST(req: NextRequest) {
     const encryptedAccountNumber = encrypt(accountValue);
     const encryptedRoutingNumber = encrypt(routingValue);
     const encryptedPayoutPhone = payoutPhone ? encrypt(String(payoutPhone).trim()) : null;
+    const encryptedBillingLine1 = encrypt(String(billingLine1).trim());
+    const encryptedBillingLine2 = billingLine2 ? encrypt(String(billingLine2).trim()) : null;
+    const encryptedBillingCity = encrypt(String(billingCity).trim());
+    const encryptedBillingState = billingState ? encrypt(String(billingState).trim()) : null;
+    const encryptedBillingZip = encrypt(String(billingZip).trim());
+    const encryptedBillingCountry = encrypt(String(billingCountry).trim().toUpperCase());
     const lastFour = getLastDigits(accountValue, 4);
 
     // Atomic upsert on userId @unique — avoids findUnique→create TOCTOU
@@ -118,6 +146,12 @@ export async function POST(req: NextRequest) {
         routingNumberEncrypted: encryptedRoutingNumber,
         bankCountry: country,
         payoutPhoneEncrypted: encryptedPayoutPhone,
+        billingLine1Encrypted: encryptedBillingLine1,
+        billingLine2Encrypted: encryptedBillingLine2,
+        billingCityEncrypted: encryptedBillingCity,
+        billingStateEncrypted: encryptedBillingState,
+        billingZipEncrypted: encryptedBillingZip,
+        billingCountryEncrypted: encryptedBillingCountry,
         bankNameDisplay: bankName,
         accountLastFour: lastFour,
         accountType: accountType || "checking",
@@ -132,6 +166,12 @@ export async function POST(req: NextRequest) {
         routingNumberEncrypted: encryptedRoutingNumber,
         bankCountry: country,
         payoutPhoneEncrypted: encryptedPayoutPhone,
+        billingLine1Encrypted: encryptedBillingLine1,
+        billingLine2Encrypted: encryptedBillingLine2,
+        billingCityEncrypted: encryptedBillingCity,
+        billingStateEncrypted: encryptedBillingState,
+        billingZipEncrypted: encryptedBillingZip,
+        billingCountryEncrypted: encryptedBillingCountry,
         bankNameDisplay: bankName,
         accountLastFour: lastFour,
         accountType: accountType || "checking",

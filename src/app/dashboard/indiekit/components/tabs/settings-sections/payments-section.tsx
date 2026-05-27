@@ -36,6 +36,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
+import { BillingAddressInputs } from "@/components/project/builder/payment-sections/billing-address-inputs";
 
 interface PaymentsSectionProps {
   projectId?: string;
@@ -54,6 +55,12 @@ interface BankAccountState {
   // field shows. Defaults to "US". See @/lib/bank-countries.
   bankCountry: BankCountry;
   payoutPhone: string;
+  billingLine1: string;
+  billingLine2: string;
+  billingCity: string;
+  billingState: string;
+  billingZip: string;
+  billingCountry: string;
 }
 
 interface BankStatus {
@@ -114,6 +121,12 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     accountType: "checking",
     bankCountry: "US",
     payoutPhone: "",
+    billingLine1: "",
+    billingLine2: "",
+    billingCity: "",
+    billingState: "",
+    billingZip: "",
+    billingCountry: "US",
   });
   const [bankStatus, setBankStatus] = useState<BankStatus>({
     saved: false,
@@ -215,6 +228,12 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
     if (!bankAccount.bankName || !bankAccount.accountHolder ||
         !bankAccount.accountNumber || !bankAccount.routingNumber) {
       toast.error("Please fill in all bank account fields");
+      return;
+    }
+
+    if (!bankAccount.billingLine1.trim() || !bankAccount.billingCity.trim() ||
+        !bankAccount.billingZip.trim() || !bankAccount.billingCountry.trim()) {
+      toast.error("Billing address is required (line 1, city, ZIP, country)");
       return;
     }
 
@@ -507,6 +526,21 @@ export function PaymentsSection({ projectId }: PaymentsSectionProps) {
                     </p>
                   </div>
                 ) : null}
+
+                <BillingAddressInputs
+                  idPrefix="indiekit-bank"
+                  value={{
+                    billingLine1: bankAccount.billingLine1,
+                    billingLine2: bankAccount.billingLine2,
+                    billingCity: bankAccount.billingCity,
+                    billingState: bankAccount.billingState,
+                    billingZip: bankAccount.billingZip,
+                    billingCountry: bankAccount.billingCountry,
+                  }}
+                  onChange={(addr) =>
+                    setBankAccount((prev) => ({ ...prev, ...addr }))
+                  }
+                />
 
                 {!isUS && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">

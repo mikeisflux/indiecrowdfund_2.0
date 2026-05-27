@@ -62,6 +62,12 @@ export async function GET(
       let accountNumber = "[Encrypted]";
       let routingNumber = "[Encrypted]";
       let payoutPhone: string | null = null;
+      let billingLine1: string | null = null;
+      let billingLine2: string | null = null;
+      let billingCity: string | null = null;
+      let billingState: string | null = null;
+      let billingZip: string | null = null;
+      let billingCountry: string | null = null;
 
       try {
         if (bankAccount.bankNameEncrypted) bankName = decrypt(bankAccount.bankNameEncrypted);
@@ -69,6 +75,12 @@ export async function GET(
         if (bankAccount.accountNumberEncrypted) accountNumber = decrypt(bankAccount.accountNumberEncrypted);
         if (bankAccount.routingNumberEncrypted) routingNumber = decrypt(bankAccount.routingNumberEncrypted);
         if (bankAccount.payoutPhoneEncrypted) payoutPhone = decrypt(bankAccount.payoutPhoneEncrypted);
+        if (bankAccount.billingLine1Encrypted) billingLine1 = decrypt(bankAccount.billingLine1Encrypted);
+        if (bankAccount.billingLine2Encrypted) billingLine2 = decrypt(bankAccount.billingLine2Encrypted);
+        if (bankAccount.billingCityEncrypted) billingCity = decrypt(bankAccount.billingCityEncrypted);
+        if (bankAccount.billingStateEncrypted) billingState = decrypt(bankAccount.billingStateEncrypted);
+        if (bankAccount.billingZipEncrypted) billingZip = decrypt(bankAccount.billingZipEncrypted);
+        if (bankAccount.billingCountryEncrypted) billingCountry = decrypt(bankAccount.billingCountryEncrypted);
       } catch (error) {
         adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting Whop bank account details:");
       }
@@ -95,6 +107,12 @@ export async function GET(
         accountType: bankAccount.accountType,
         bankCountry: bankAccount.bankCountry,
         payoutPhone,
+        billingLine1,
+        billingLine2,
+        billingCity,
+        billingState,
+        billingZip,
+        billingCountry,
         isVerified: bankAccount.isVerified,
         verifiedAt: bankAccount.verifiedAt,
         verificationMethod: null,
@@ -119,6 +137,12 @@ export async function GET(
       let accountNumber = "[Encrypted]";
       let routingNumber = "[Encrypted]";
       let payoutPhone: string | null = null;
+      let billingLine1: string | null = null;
+      let billingLine2: string | null = null;
+      let billingCity: string | null = null;
+      let billingState: string | null = null;
+      let billingZip: string | null = null;
+      let billingCountry: string | null = null;
 
       try {
         if (bankAccount.bankNameEncrypted) bankName = decrypt(bankAccount.bankNameEncrypted);
@@ -126,6 +150,12 @@ export async function GET(
         if (bankAccount.accountNumberEncrypted) accountNumber = decrypt(bankAccount.accountNumberEncrypted);
         if (bankAccount.routingNumberEncrypted) routingNumber = decrypt(bankAccount.routingNumberEncrypted);
         if (bankAccount.payoutPhoneEncrypted) payoutPhone = decrypt(bankAccount.payoutPhoneEncrypted);
+        if (bankAccount.billingLine1Encrypted) billingLine1 = decrypt(bankAccount.billingLine1Encrypted);
+        if (bankAccount.billingLine2Encrypted) billingLine2 = decrypt(bankAccount.billingLine2Encrypted);
+        if (bankAccount.billingCityEncrypted) billingCity = decrypt(bankAccount.billingCityEncrypted);
+        if (bankAccount.billingStateEncrypted) billingState = decrypt(bankAccount.billingStateEncrypted);
+        if (bankAccount.billingZipEncrypted) billingZip = decrypt(bankAccount.billingZipEncrypted);
+        if (bankAccount.billingCountryEncrypted) billingCountry = decrypt(bankAccount.billingCountryEncrypted);
       } catch (error) {
         adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting PayPal bank account details:");
       }
@@ -152,6 +182,12 @@ export async function GET(
         accountType: bankAccount.accountType,
         bankCountry: bankAccount.bankCountry,
         payoutPhone,
+        billingLine1,
+        billingLine2,
+        billingCity,
+        billingState,
+        billingZip,
+        billingCountry,
         isVerified: bankAccount.isVerified,
         verifiedAt: bankAccount.verifiedAt,
         verificationMethod: bankAccount.verificationMethod,
@@ -187,6 +223,12 @@ export async function GET(
     let accountNumber = "[Encrypted]";
     let routingNumber = "[Encrypted]";
     let payoutPhone: string | null = null;
+    let billingLine1: string | null = null;
+    let billingLine2: string | null = null;
+    let billingCity: string | null = null;
+    let billingState: string | null = null;
+    let billingZip: string | null = null;
+    let billingCountry: string | null = null;
 
     try {
       if (bankAccount.bankNameEncrypted) {
@@ -204,6 +246,12 @@ export async function GET(
       if (bankAccount.payoutPhoneEncrypted) {
         payoutPhone = decrypt(bankAccount.payoutPhoneEncrypted);
       }
+      if (bankAccount.billingLine1Encrypted) billingLine1 = decrypt(bankAccount.billingLine1Encrypted);
+      if (bankAccount.billingLine2Encrypted) billingLine2 = decrypt(bankAccount.billingLine2Encrypted);
+      if (bankAccount.billingCityEncrypted) billingCity = decrypt(bankAccount.billingCityEncrypted);
+      if (bankAccount.billingStateEncrypted) billingState = decrypt(bankAccount.billingStateEncrypted);
+      if (bankAccount.billingZipEncrypted) billingZip = decrypt(bankAccount.billingZipEncrypted);
+      if (bankAccount.billingCountryEncrypted) billingCountry = decrypt(bankAccount.billingCountryEncrypted);
     } catch (error) {
       adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting bank account details:");
       // Continue with encrypted placeholders if decryption fails
@@ -231,6 +279,12 @@ export async function GET(
       accountType: bankAccount.accountType,
       bankCountry: bankAccount.bankCountry,
       payoutPhone,
+      billingLine1,
+      billingLine2,
+      billingCity,
+      billingState,
+      billingZip,
+      billingCountry,
       isVerified: bankAccount.isVerified,
       verifiedAt: bankAccount.verifiedAt,
       verificationMethod: bankAccount.verificationMethod,

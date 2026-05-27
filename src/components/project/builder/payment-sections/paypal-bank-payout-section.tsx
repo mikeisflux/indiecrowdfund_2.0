@@ -25,6 +25,7 @@ import {
   parseBankCountry,
   type BankCountry,
 } from "@/lib/bank-countries";
+import { BillingAddressInputs, isBillingAddressComplete } from "./billing-address-inputs";
 
 interface BankAccountState {
   bankName: string;
@@ -37,6 +38,12 @@ interface BankAccountState {
   // field shows. Defaults to "US". See @/lib/bank-countries.
   bankCountry: BankCountry;
   payoutPhone: string;
+  billingLine1: string;
+  billingLine2: string;
+  billingCity: string;
+  billingState: string;
+  billingZip: string;
+  billingCountry: string;
 }
 
 export function PayPalBankPayoutSection() {
@@ -48,6 +55,12 @@ export function PayPalBankPayoutSection() {
     accountType: "checking",
     bankCountry: "US",
     payoutPhone: "",
+    billingLine1: "",
+    billingLine2: "",
+    billingCity: "",
+    billingState: "",
+    billingZip: "",
+    billingCountry: "US",
   });
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -89,6 +102,10 @@ export function PayPalBankPayoutSection() {
     if (!bankAccount.bankName || !bankAccount.accountHolder ||
         !bankAccount.accountNumber || !bankAccount.routingNumber) {
       toast.error("Please fill in all bank account fields");
+      return;
+    }
+    if (!isBillingAddressComplete(bankAccount)) {
+      toast.error("Billing address is required (line 1, city, ZIP, country)");
       return;
     }
     const validationError = validateBankFields(country, bankAccount);
@@ -296,6 +313,21 @@ export function PayPalBankPayoutSection() {
                   </p>
                 </div>
               ) : null}
+
+              <BillingAddressInputs
+                idPrefix="pp"
+                value={{
+                  billingLine1: bankAccount.billingLine1,
+                  billingLine2: bankAccount.billingLine2,
+                  billingCity: bankAccount.billingCity,
+                  billingState: bankAccount.billingState,
+                  billingZip: bankAccount.billingZip,
+                  billingCountry: bankAccount.billingCountry,
+                }}
+                onChange={(addr) =>
+                  setBankAccount((prev) => ({ ...prev, ...addr }))
+                }
+              />
 
               {!isUS && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">

@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
+import { BillingAddressInputs } from "@/components/project/builder/payment-sections/billing-address-inputs";
 
 interface StripeStatus {
   connected: boolean;
@@ -109,6 +110,12 @@ export function PaymentSettings({
     accountType: "checking" as "checking" | "savings",
     bankCountry: "US" as BankCountry,
     payoutPhone: "",
+    billingLine1: "",
+    billingLine2: "",
+    billingCity: "",
+    billingState: "",
+    billingZip: "",
+    billingCountry: "US",
   });
   const [bankAccountStatus, setBankAccountStatus] = useState<BankAccountStatus>({
     saved: false,
@@ -269,6 +276,12 @@ export function PaymentSettings({
       !bankAccount.routingNumber
     ) {
       toast.error("Please fill in all bank account fields");
+      return;
+    }
+
+    if (!bankAccount.billingLine1.trim() || !bankAccount.billingCity.trim() ||
+        !bankAccount.billingZip.trim() || !bankAccount.billingCountry.trim()) {
+      toast.error("Billing address is required (line 1, city, ZIP, country)");
       return;
     }
 
@@ -689,6 +702,21 @@ export function PaymentSettings({
                     </p>
                   </div>
                 ) : null}
+
+                <BillingAddressInputs
+                  idPrefix="dc-settings"
+                  value={{
+                    billingLine1: bankAccount.billingLine1,
+                    billingLine2: bankAccount.billingLine2,
+                    billingCity: bankAccount.billingCity,
+                    billingState: bankAccount.billingState,
+                    billingZip: bankAccount.billingZip,
+                    billingCountry: bankAccount.billingCountry,
+                  }}
+                  onChange={(addr) =>
+                    setBankAccount((prev) => ({ ...prev, ...addr }))
+                  }
+                />
 
                 {!isUS && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">

@@ -64,7 +64,22 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { bankName, accountHolder, accountNumber, routingNumber, accountType, bankCountry, payoutPhone, projectId } = body;
+    const {
+      bankName,
+      accountHolder,
+      accountNumber,
+      routingNumber,
+      accountType,
+      bankCountry,
+      payoutPhone,
+      billingLine1,
+      billingLine2,
+      billingCity,
+      billingState,
+      billingZip,
+      billingCountry,
+      projectId,
+    } = body;
 
     // If projectId is provided, verify the user is the project owner (not just a collaborator)
     if (projectId) {
@@ -105,6 +120,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Billing address required for KYC + chargeback reconciliation. State
+    // is optional (UK/IT have no equivalent on a personal bank record).
+    if (!billingLine1 || !billingCity || !billingZip || !billingCountry) {
+      return NextResponse.json(
+        { error: "Billing address is required (line 1, city, ZIP/postal code, country)" },
+        { status: 400 }
+      );
+    }
+
     // Sanitize per country (US/UK digits-only; IT BIC + IBAN are
     // alphanumeric, uppercased, separators stripped) then run the shared
     // country-specific format validation.
@@ -125,6 +149,12 @@ export async function POST(req: NextRequest) {
     const encryptedAccountNumber = encrypt(accountValue);
     const encryptedRoutingNumber = encrypt(routingValue);
     const encryptedPayoutPhone = payoutPhone ? encrypt(String(payoutPhone).trim()) : null;
+    const encryptedBillingLine1 = encrypt(String(billingLine1).trim());
+    const encryptedBillingLine2 = billingLine2 ? encrypt(String(billingLine2).trim()) : null;
+    const encryptedBillingCity = encrypt(String(billingCity).trim());
+    const encryptedBillingState = billingState ? encrypt(String(billingState).trim()) : null;
+    const encryptedBillingZip = encrypt(String(billingZip).trim());
+    const encryptedBillingCountry = encrypt(String(billingCountry).trim().toUpperCase());
 
     // Last 4 of the account identifier for display
     const lastFour = getLastDigits(accountValue, 4);
@@ -139,6 +169,12 @@ export async function POST(req: NextRequest) {
         routingNumberEncrypted: encryptedRoutingNumber,
         bankCountry: country,
         payoutPhoneEncrypted: encryptedPayoutPhone,
+        billingLine1Encrypted: encryptedBillingLine1,
+        billingLine2Encrypted: encryptedBillingLine2,
+        billingCityEncrypted: encryptedBillingCity,
+        billingStateEncrypted: encryptedBillingState,
+        billingZipEncrypted: encryptedBillingZip,
+        billingCountryEncrypted: encryptedBillingCountry,
         bankNameDisplay: bankName,
         accountLastFour: lastFour,
         accountType: accountType || "checking",
@@ -153,6 +189,12 @@ export async function POST(req: NextRequest) {
         routingNumberEncrypted: encryptedRoutingNumber,
         bankCountry: country,
         payoutPhoneEncrypted: encryptedPayoutPhone,
+        billingLine1Encrypted: encryptedBillingLine1,
+        billingLine2Encrypted: encryptedBillingLine2,
+        billingCityEncrypted: encryptedBillingCity,
+        billingStateEncrypted: encryptedBillingState,
+        billingZipEncrypted: encryptedBillingZip,
+        billingCountryEncrypted: encryptedBillingCountry,
         bankNameDisplay: bankName,
         accountLastFour: lastFour,
         accountType: accountType || "checking",

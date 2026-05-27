@@ -72,6 +72,12 @@ export function PaymentStep() {
     accountType: "checking" as "checking" | "savings",
     bankCountry: "US" as BankCountry,
     payoutPhone: "",
+    billingLine1: "",
+    billingLine2: "",
+    billingCity: "",
+    billingState: "",
+    billingZip: "",
+    billingCountry: "US",
   });
   const [bankAccountStatus, setBankAccountStatus] = useState<{
     saved: boolean;
@@ -110,6 +116,12 @@ export function PaymentStep() {
     if (!bankAccount.bankName || !bankAccount.accountHolder ||
         !bankAccount.accountNumber || !bankAccount.routingNumber) {
       toast.error("Please fill in all bank account fields");
+      return;
+    }
+
+    if (!bankAccount.billingLine1.trim() || !bankAccount.billingCity.trim() ||
+        !bankAccount.billingZip.trim() || !bankAccount.billingCountry.trim()) {
+      toast.error("Billing address is required (line 1, city, ZIP, country)");
       return;
     }
 

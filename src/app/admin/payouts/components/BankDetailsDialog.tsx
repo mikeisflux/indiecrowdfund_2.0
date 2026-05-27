@@ -216,6 +216,25 @@ export function BankDetailsDialog({
                 </div>
               )}
               <div>
+                <Label className="text-xs text-muted-foreground">Billing Address</Label>
+                {bankDetails.billingLine1 ? (
+                  <div className="font-medium text-sm leading-snug">
+                    <p>{bankDetails.billingLine1}</p>
+                    {bankDetails.billingLine2 && <p>{bankDetails.billingLine2}</p>}
+                    <p>
+                      {[bankDetails.billingCity, bankDetails.billingState, bankDetails.billingZip]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                    <p>{bankDetails.billingCountry}</p>
+                  </div>
+                ) : (
+                  <p className="font-medium text-amber-600 dark:text-amber-400">
+                    Not on file — legacy account, ask creator to re-save.
+                  </p>
+                )}
+              </div>
+              <div>
                 <Label className="text-xs text-muted-foreground">Verification Status</Label>
                 <p className="font-medium">{bankDetails.isVerified ? "Verified" : "Unverified"}</p>
               </div>

@@ -272,6 +272,17 @@ model PayPalBankAccount {
   // doesn't. Encrypted at rest like the rest of the payee identity.
   payoutPhoneEncrypted  String?  @db.Text
 
+  // Encrypted billing address (KYC + chargeback reconciliation parity
+  // with DivinityCoinBankAccount / PaymentCloudBankAccount). Optional
+  // so historical rows aren't blocked; the form requires it on new
+  // saves.
+  billingLine1Encrypted   String? @db.Text
+  billingLine2Encrypted   String? @db.Text
+  billingCityEncrypted    String? @db.Text
+  billingStateEncrypted   String? @db.Text
+  billingZipEncrypted     String? @db.Text
+  billingCountryEncrypted String? @db.Text
+
   // Non-sensitive display data
   bankNameDisplay       String?  // e.g., "Chase Bank"
   accountLastFour       String?  // e.g., "4567"
@@ -430,6 +441,17 @@ model WhopBankAccount {
   // the payee record before they'll add it as a recipient; US ACH
   // doesn't. Encrypted at rest like the rest of the payee identity.
   payoutPhoneEncrypted  String?  @db.Text
+
+  // Encrypted billing address (KYC + chargeback reconciliation parity
+  // with DivinityCoinBankAccount / PaymentCloudBankAccount). Optional
+  // so historical rows aren't blocked; the form requires it on new
+  // saves.
+  billingLine1Encrypted   String? @db.Text
+  billingLine2Encrypted   String? @db.Text
+  billingCityEncrypted    String? @db.Text
+  billingStateEncrypted   String? @db.Text
+  billingZipEncrypted     String? @db.Text
+  billingCountryEncrypted String? @db.Text
 
   // Non-sensitive display data
   bankNameDisplay       String?  // e.g., "Chase Bank"
