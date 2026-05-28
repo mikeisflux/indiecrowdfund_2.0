@@ -160,7 +160,7 @@ export async function GET(
       },
       creator: {
         id: project.creator.id,
-        name: project.creator.name,
+        name: project.creator.name ?? "Creator",
         hasStripeConnected: false,
         isOnboarded: false,
       },

@@ -312,7 +312,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    if (!project.creator.whopBankAccount) {
+    const whopBankAccount = project.creator.whopBankAccount;
+    if (!whopBankAccount) {
       return NextResponse.json({ error: "Creator has no Whop bank account on file" }, { status: 400 });
     }
 
@@ -340,7 +341,7 @@ export async function POST(request: NextRequest) {
 
         return tx.whopSettlement.create({
           data: {
-            bankAccountId: project.creator.whopBankAccount!.id,
+            bankAccountId: whopBankAccount.id,
             projectId,
             projectName: project.title,
             amount,

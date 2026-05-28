@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
       }),
       // Auto-promote user to CREATOR role when prelaunch is approved
       ...(shouldPromoteCreator
-        ? [db.user.update({ where: { id: project.creator!.id }, data: { role: "CREATOR" } })]
+        ? [db.user.update({ where: { id: project.creator.id }, data: { role: "CREATOR" } })]
         : []),
     ]);
 
