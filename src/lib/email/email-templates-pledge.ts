@@ -60,9 +60,19 @@ export async function sendPledgeConfirmationEmail(
 
   const formattedAmount = formatCurrency(amount);
 
+  // KIA (Keep It All) and AoN (All or Nothing) need fundamentally
+  // different framing here — confusing the two leads to support
+  // tickets like "did my card get charged?" because backers can't
+  // tell from the email which model they're under. Each campaign type
+  // gets its own headline, body copy, status, notice block, and
+  // "what happens next" section.
+  const headline = chargedImmediately
+    ? "Payment Received — Thanks for Backing!"
+    : "Pledge Reserved — Card on File";
+
   const chargeMessage = chargedImmediately
-    ? `Your payment of <strong>${formattedAmount}</strong> has been processed successfully.`
-    : `Your card has been saved and will be charged <strong>${formattedAmount}</strong> when the campaign reaches its funding goal.`;
+    ? `Your payment of <strong>${formattedAmount}</strong> has been processed successfully. You're officially backing this project!`
+    : `<strong>No charge has been made yet.</strong> We've saved your card and will charge <strong>${formattedAmount}</strong> only if this campaign reaches its funding goal. If it falls short, you won't be charged at all.`;
 
   // Build addons HTML
   const addonsHtml = addons.length > 0 ? addons.map(addon => `
@@ -103,7 +113,7 @@ export async function sendPledgeConfirmationEmail(
         </div>
 
         <div style="background: linear-gradient(135deg, #028858 0%, #10b981 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
-          <h2 style="margin-top: 0; color: white; text-align: center;">Thank You for Your Pledge!</h2>
+          <h2 style="margin-top: 0; color: white; text-align: center;">${headline}</h2>
 
           ${absoluteImageUrl ? `<img src="${absoluteImageUrl}" alt="${escapeHtml(projectTitle)}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin: 20px auto; display: block;">` : ""}
 
@@ -156,7 +166,7 @@ export async function sendPledgeConfirmationEmail(
               </tr>
               <tr>
                 <td style="padding: 4px 0; color: #666;">Status</td>
-                <td style="padding: 4px 0; text-align: right; font-weight: 600; color: #028858;">${chargedImmediately ? "✓ Paid" : "Card Saved"}</td>
+                <td style="padding: 4px 0; text-align: right; font-weight: 600; color: #028858;">${chargedImmediately ? "✓ Paid" : "Card Saved · No charge yet"}</td>
               </tr>
             </table>
           </div>
@@ -166,13 +176,16 @@ export async function sendPledgeConfirmationEmail(
 
         ${!chargedImmediately ? `
         <div style="background: #fffbeb; border-radius: 8px; padding: 15px; margin-bottom: 20px; border: 1px solid #fef3c7;">
-          <p style="margin: 0; font-size: 14px;"><strong>Note:</strong> Your card will only be charged if the campaign successfully reaches its funding goal. If the campaign doesn't reach its goal, you won't be charged.</p>
+          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>When will my card be charged?</strong></p>
+          <p style="margin: 0; font-size: 14px;">Your card will <strong>only</strong> be charged if <em>${escapeHtml(projectTitle)}</em> reaches its funding goal by the campaign deadline. If the campaign doesn't reach its goal, your card is never charged and the saved card is dropped.</p>
         </div>
         ` : ""}
 
         <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
           <p style="margin: 0 0 15px 0;"><strong>What happens next?</strong></p>
-          <p style="margin: 0; color: #666;">You'll receive updates from the creator as the project progresses. ${!hasShipping ? "We'll send you a survey to collect shipping details closer to the estimated delivery date." : "The creator will reach out when it's time to ship your rewards."}</p>
+          ${chargedImmediately
+            ? `<p style="margin: 0; color: #666;">Your payment is confirmed and your slot is locked in. You'll receive updates from the creator as the project progresses. ${!hasShipping ? "We'll send a survey to collect shipping details closer to the estimated delivery date." : "The creator will reach out when it's time to ship your rewards."}</p>`
+            : `<p style="margin: 0; color: #666;">Watch for an email if the campaign hits its goal — that's when we'll charge your card. You'll get a separate payment-confirmation email at that point. ${!hasShipping ? "Once funded, we'll send a survey to collect shipping details closer to the estimated delivery date." : "Once funded, the creator will reach out when it's time to ship your rewards."}</p>`}
         </div>
 
         <div style="text-align: center; margin: 20px 0;">
@@ -192,7 +205,10 @@ export async function sendPledgeConfirmationEmail(
     </html>
   `;
 
-  const subject = `Your pledge for "${projectTitle.replace(/[\r\n]/g, " ")}" is confirmed!`;
+  const safeTitle = projectTitle.replace(/[\r\n]/g, " ");
+  const subject = chargedImmediately
+    ? `Payment received — your "${safeTitle}" pledge is confirmed`
+    : `Pledge reserved for "${safeTitle}" — card saved, not yet charged`;
   const result = await sendEmail({
     to: email,
     subject,
