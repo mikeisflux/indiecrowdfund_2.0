@@ -268,10 +268,23 @@ export async function PUT(req: NextRequest) {
       db.projectReview.create({
         data: {
           projectId,
-          action: action === "APPROVE" ? "APPROVED" : action === "REJECT" ? "REJECTED" : "REVIEWED",
-          previousStatus: project.prelaunchStatus,
-          newStatus: newPrelaunchStatus,
-          notes: reviewNotes,
+          // ProjectReview.action is the ReviewAction enum (no "REVIEWED"
+          // value). Map prelaunch actions onto the closest existing
+          // member; the prelaunch transition itself is captured in
+          // `notes` and the flagsRaised marker below.
+          action:
+            action === "APPROVE" ? "APPROVED"
+            : action === "REJECT" ? "REJECTED"
+            : action === "PUBLISH" ? "REACTIVATE"
+            : "DEACTIVATE",
+          // previousStatus/newStatus are ProjectStatus, not PrelaunchStatus.
+          // Prelaunch actions don't actually change project.status, so
+          // both sides stay equal to the current project status. The
+          // prelaunch transition (e.g. SUBMITTED -> REJECTED) lives in
+          // `notes` for audit purposes.
+          previousStatus: project.status,
+          newStatus: project.status,
+          notes: `[Prelaunch ${action}: ${project.prelaunchStatus} -> ${newPrelaunchStatus}] ${reviewNotes}`,
           flagsRaised: ["prelaunch_admin_action"],
         },
       }),
