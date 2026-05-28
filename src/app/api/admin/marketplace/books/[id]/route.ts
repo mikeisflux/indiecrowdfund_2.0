@@ -123,7 +123,20 @@ export async function PATCH(
     if (body.tags !== undefined) updateData.tags = body.tags;
     if (body.isFeatured !== undefined) updateData.isFeatured = body.isFeatured;
     if (body.isStaffPick !== undefined) updateData.isStaffPick = body.isStaffPick;
-    if (body.status !== undefined) updateData.status = body.status;
+    if (body.status !== undefined) {
+      // status is a MarketplaceBookStatus enum column — writing an
+      // unknown value here triggers a Prisma validation error that
+      // the generic 500 catch below would mask (same class of bug
+      // as the prelaunch reject 500 fixed in fe4d6d3f).
+      const validStatuses = ["DRAFT", "SUBMITTED", "PENDING_REVIEW", "APPROVED", "REJECTED", "LIVE", "DEACTIVATED", "ARCHIVED"];
+      if (!validStatuses.includes(body.status)) {
+        return NextResponse.json(
+          { error: `Invalid status "${body.status}". Must be one of: ${validStatuses.join(", ")}` },
+          { status: 400 }
+        );
+      }
+      updateData.status = body.status;
+    }
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
