@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminDivinityPayoutsLogger = logger.child({ module: "admin-divinity-payouts" });
@@ -112,7 +113,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminDivinityPayoutsLogger.error({ err: String(error) }, "Error fetching settlements:");
+    adminDivinityPayoutsLogger.error({ err: formatError(error) }, "Error fetching settlements:");
     return NextResponse.json(
       { error: "Failed to fetch settlements" },
       { status: 500 }
@@ -208,7 +209,7 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    adminDivinityPayoutsLogger.error({ err: String(error) }, "Error creating settlement:");
+    adminDivinityPayoutsLogger.error({ err: formatError(error) }, "Error creating settlement:");
     return NextResponse.json(
       { error: "Failed to create settlement" },
       { status: 500 }
@@ -395,7 +396,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, settlement: updated });
   } catch (error) {
-    adminDivinityPayoutsLogger.error({ err: String(error) }, "Error updating settlement:");
+    adminDivinityPayoutsLogger.error({ err: formatError(error) }, "Error updating settlement:");
     return NextResponse.json(
       { error: "Failed to update settlement" },
       { status: 500 }
@@ -455,7 +456,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    adminDivinityPayoutsLogger.error({ err: String(error) }, "Error deleting settlement:");
+    adminDivinityPayoutsLogger.error({ err: formatError(error) }, "Error deleting settlement:");
     return NextResponse.json(
       { error: "Failed to delete settlement" },
       { status: 500 }

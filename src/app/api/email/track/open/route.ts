@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const emailTrackOpenLogger = logger.child({ module: "email-track-open" });
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    emailTrackOpenLogger.error({ err: String(error) }, "Error tracking email open:");
+    emailTrackOpenLogger.error({ err: formatError(error) }, "Error tracking email open:");
     // Still return pixel to not break email display
     return new NextResponse(TRACKING_PIXEL, {
       status: 200,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsSlugCheckLogger = logger.child({ module: "projects-slug-check" });
@@ -52,7 +53,7 @@ export async function GET(
       slug,
     });
   } catch (error) {
-    projectsSlugCheckLogger.error({ err: String(error) }, "Error checking slug availability:");
+    projectsSlugCheckLogger.error({ err: formatError(error) }, "Error checking slug availability:");
     return NextResponse.json(
       { error: "Failed to check slug availability" },
       { status: 500 }

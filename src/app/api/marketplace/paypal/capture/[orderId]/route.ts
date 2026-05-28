@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
@@ -202,7 +203,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, purchaseId: purchase.id });
   } catch (error) {
-    captureLogger.error({ err: String(error) }, "Marketplace PayPal capture error");
+    captureLogger.error({ err: formatError(error) }, "Marketplace PayPal capture error");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

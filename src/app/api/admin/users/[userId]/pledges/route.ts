@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminUsersPledgesLogger = logger.child({ module: "admin-users-pledges" });
@@ -75,7 +76,7 @@ export async function GET(
 
     return NextResponse.json({ pledges: serializedPledges });
   } catch (error) {
-    adminUsersPledgesLogger.error({ err: String(error) }, "Error fetching user pledges:");
+    adminUsersPledgesLogger.error({ err: formatError(error) }, "Error fetching user pledges:");
     return NextResponse.json(
       { error: "Failed to fetch user pledges" },
       { status: 500 }

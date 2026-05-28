@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminSeoCronLogger = logger.child({ module: "admin-seo-cron" });
@@ -191,7 +192,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     const duration = Date.now() - startTime;
-    adminSeoCronLogger.error({ err: String(error) }, "Error running SEO cron job:");
+    adminSeoCronLogger.error({ err: formatError(error) }, "Error running SEO cron job:");
 
     // Attempt to log the failure
     try {

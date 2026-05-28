@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -49,7 +50,7 @@ export async function GET() {
     });
     return NextResponse.json({ releases });
   } catch (error) {
-    adminPressLogger.error({ err: String(error) }, "Failed to list press releases");
+    adminPressLogger.error({ err: formatError(error) }, "Failed to list press releases");
     return NextResponse.json(
       { error: "Failed to list press releases" },
       { status: 500 }
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ release });
   } catch (error) {
-    adminPressLogger.error({ err: String(error) }, "Failed to create press release");
+    adminPressLogger.error({ err: formatError(error) }, "Failed to create press release");
     return NextResponse.json(
       { error: "Failed to create press release" },
       { status: 500 }

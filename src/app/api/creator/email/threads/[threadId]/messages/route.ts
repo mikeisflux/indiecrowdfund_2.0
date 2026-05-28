@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailThreadsMessagesLogger = logger.child({ module: "creator-email-threads-messages" });
@@ -68,7 +69,7 @@ export async function GET(
 
     return NextResponse.json({ messages: formattedMessages });
   } catch (error) {
-    creatorEmailThreadsMessagesLogger.error({ err: String(error) }, "Error fetching thread messages:");
+    creatorEmailThreadsMessagesLogger.error({ err: formatError(error) }, "Error fetching thread messages:");
     return NextResponse.json(
       { error: "Failed to fetch messages" },
       { status: 500 }

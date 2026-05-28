@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminApiKeysLogger = logger.child({ module: "admin-api-keys" });
@@ -93,7 +94,7 @@ export async function GET() {
 
     return NextResponse.json({ apiKeys: formattedKeys });
   } catch (error) {
-    adminApiKeysLogger.error({ err: String(error) }, "Error fetching API keys:");
+    adminApiKeysLogger.error({ err: formatError(error) }, "Error fetching API keys:");
     return NextResponse.json(
       { error: "Failed to fetch API keys" },
       { status: 500 }
@@ -170,7 +171,7 @@ export async function POST(req: NextRequest) {
       message: "API key created. Save this key now - you won't be able to see it again!",
     });
   } catch (error) {
-    adminApiKeysLogger.error({ err: String(error) }, "Error creating API key:");
+    adminApiKeysLogger.error({ err: formatError(error) }, "Error creating API key:");
     return NextResponse.json(
       { error: "Failed to create API key" },
       { status: 500 }
@@ -225,7 +226,7 @@ export async function DELETE(req: NextRequest) {
       message: "API key deleted successfully",
     });
   } catch (error) {
-    adminApiKeysLogger.error({ err: String(error) }, "Error deleting API key:");
+    adminApiKeysLogger.error({ err: formatError(error) }, "Error deleting API key:");
     return NextResponse.json(
       { error: "Failed to delete API key" },
       { status: 500 }

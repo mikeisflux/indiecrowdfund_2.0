@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const userProfileLogger = logger.child({ module: "user-profile" });
@@ -44,7 +45,7 @@ export async function GET() {
 
     return NextResponse.json(user);
   } catch (error) {
-    userProfileLogger.error({ err: String(error) }, "Profile fetch error:");
+    userProfileLogger.error({ err: formatError(error) }, "Profile fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch profile" },
       { status: 500 }
@@ -154,7 +155,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json(updatedUser);
   } catch (error) {
-    userProfileLogger.error({ err: String(error) }, "Profile update error:");
+    userProfileLogger.error({ err: formatError(error) }, "Profile update error:");
     return NextResponse.json(
       { error: "Failed to update profile" },
       { status: 500 }

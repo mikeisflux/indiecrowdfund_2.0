@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminSeoKeywordsLogger = logger.child({ module: "admin-seo-keywords" });
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminSeoKeywordsLogger.error({ err: String(error) }, "Error fetching SEO keywords:");
+    adminSeoKeywordsLogger.error({ err: formatError(error) }, "Error fetching SEO keywords:");
     return NextResponse.json(
       { error: "Failed to fetch SEO keywords" },
       { status: 500 }
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminSeoKeywordsLogger.error({ err: String(error) }, "Error creating SEO keyword:");
+    adminSeoKeywordsLogger.error({ err: formatError(error) }, "Error creating SEO keyword:");
     return NextResponse.json(
       { error: "Failed to create SEO keyword" },
       { status: 500 }
@@ -230,7 +231,7 @@ export async function PATCH(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminSeoKeywordsLogger.error({ err: String(error) }, "Error updating SEO keyword:");
+    adminSeoKeywordsLogger.error({ err: formatError(error) }, "Error updating SEO keyword:");
     return NextResponse.json(
       { error: "Failed to update SEO keyword" },
       { status: 500 }
@@ -282,7 +283,7 @@ export async function DELETE(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminSeoKeywordsLogger.error({ err: String(error) }, "Error deleting SEO keyword:");
+    adminSeoKeywordsLogger.error({ err: formatError(error) }, "Error deleting SEO keyword:");
     return NextResponse.json(
       { error: "Failed to delete SEO keyword" },
       { status: 500 }

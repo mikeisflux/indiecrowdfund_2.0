@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const chatStickersLogger = logger.child({ module: "chat-stickers" });
@@ -110,7 +111,7 @@ export async function GET() {
 
     return NextResponse.json({ stickerPacks: STICKER_PACKS });
   } catch (error) {
-    chatStickersLogger.error({ err: String(error) }, "Error fetching stickers:");
+    chatStickersLogger.error({ err: formatError(error) }, "Error fetching stickers:");
     return NextResponse.json(
       { error: "Failed to fetch stickers" },
       { status: 500 }

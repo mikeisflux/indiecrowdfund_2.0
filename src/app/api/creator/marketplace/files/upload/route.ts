@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorMarketplaceFilesUploadLogger = logger.child({ module: "creator-marketplace-files-upload" });
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
       fileSize,
     });
   } catch (error) {
-    creatorMarketplaceFilesUploadLogger.error({ err: String(error) }, "[Marketplace Upload] Error:");
+    creatorMarketplaceFilesUploadLogger.error({ err: formatError(error) }, "[Marketplace Upload] Error:");
     return NextResponse.json(
       { error: "Upload failed" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminBankAccountsLogger = logger.child({ module: "admin-bank-accounts" });
@@ -82,7 +83,7 @@ export async function GET(
         if (bankAccount.billingZipEncrypted) billingZip = decrypt(bankAccount.billingZipEncrypted);
         if (bankAccount.billingCountryEncrypted) billingCountry = decrypt(bankAccount.billingCountryEncrypted);
       } catch (error) {
-        adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting Whop bank account details:");
+        adminBankAccountsLogger.error({ err: formatError(error) }, "Error decrypting Whop bank account details:");
       }
 
       auditLog({
@@ -157,7 +158,7 @@ export async function GET(
         if (bankAccount.billingZipEncrypted) billingZip = decrypt(bankAccount.billingZipEncrypted);
         if (bankAccount.billingCountryEncrypted) billingCountry = decrypt(bankAccount.billingCountryEncrypted);
       } catch (error) {
-        adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting PayPal bank account details:");
+        adminBankAccountsLogger.error({ err: formatError(error) }, "Error decrypting PayPal bank account details:");
       }
 
       auditLog({
@@ -253,7 +254,7 @@ export async function GET(
       if (bankAccount.billingZipEncrypted) billingZip = decrypt(bankAccount.billingZipEncrypted);
       if (bankAccount.billingCountryEncrypted) billingCountry = decrypt(bankAccount.billingCountryEncrypted);
     } catch (error) {
-      adminBankAccountsLogger.error({ err: String(error) }, "Error decrypting bank account details:");
+      adminBankAccountsLogger.error({ err: formatError(error) }, "Error decrypting bank account details:");
       // Continue with encrypted placeholders if decryption fails
     }
 
@@ -292,7 +293,7 @@ export async function GET(
       updatedAt: bankAccount.updatedAt,
     });
   } catch (error) {
-    adminBankAccountsLogger.error({ err: String(error) }, "Error fetching bank account:");
+    adminBankAccountsLogger.error({ err: formatError(error) }, "Error fetching bank account:");
     return NextResponse.json(
       { error: "Failed to fetch bank account" },
       { status: 500 }
@@ -402,7 +403,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    adminBankAccountsLogger.error({ err: String(error) }, "Error updating bank account:");
+    adminBankAccountsLogger.error({ err: formatError(error) }, "Error updating bank account:");
     return NextResponse.json(
       { error: "Failed to update bank account" },
       { status: 500 }

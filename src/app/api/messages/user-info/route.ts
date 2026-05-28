@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const messagesUserInfoLogger = logger.child({ module: "messages-user-info" });
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ user });
   } catch (error) {
-    messagesUserInfoLogger.error({ err: String(error) }, "Error fetching user info:");
+    messagesUserInfoLogger.error({ err: formatError(error) }, "Error fetching user info:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

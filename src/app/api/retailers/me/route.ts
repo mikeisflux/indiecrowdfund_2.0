@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const retailersMeLogger = logger.child({ module: "retailers-me" });
@@ -346,7 +347,7 @@ export async function GET() {
       featuredProjects: projectsWithDaysLeft,
     });
   } catch (error) {
-    retailersMeLogger.error({ err: String(error) }, "Error fetching retailer data:");
+    retailersMeLogger.error({ err: formatError(error) }, "Error fetching retailer data:");
     return NextResponse.json(
       { error: "Failed to fetch retailer data" },
       { status: 500 }

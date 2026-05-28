@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsPaymentLogger = logger.child({ module: "projects-payment" });
@@ -192,7 +193,7 @@ export async function POST(
       project: updated,
     });
   } catch (error) {
-    projectsPaymentLogger.error({ err: String(error) }, "Update payment error:");
+    projectsPaymentLogger.error({ err: formatError(error) }, "Update payment error:");
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -249,7 +250,7 @@ export async function GET(
 
     return NextResponse.json(project);
   } catch (error) {
-    projectsPaymentLogger.error({ err: String(error) }, "Get payment error:");
+    projectsPaymentLogger.error({ err: formatError(error) }, "Get payment error:");
     return NextResponse.json(
       { error: "Failed to get payment settings" },
       { status: 500 }

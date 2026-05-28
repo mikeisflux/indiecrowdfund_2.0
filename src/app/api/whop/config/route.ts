@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
@@ -27,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({ planId, environment });
   } catch (error) {
-    whopConfigRouteLogger.error({ err: String(error) }, "Failed to fetch Whop config");
+    whopConfigRouteLogger.error({ err: formatError(error) }, "Failed to fetch Whop config");
     return NextResponse.json({ error: "Failed to fetch config" }, { status: 500 });
   }
 }

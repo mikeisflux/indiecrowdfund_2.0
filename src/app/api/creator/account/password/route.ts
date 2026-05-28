@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorAccountPasswordLogger = logger.child({ module: "creator-account-password" });
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorAccountPasswordLogger.error({ err: String(error) }, "Password update error:");
+    creatorAccountPasswordLogger.error({ err: formatError(error) }, "Password update error:");
     return NextResponse.json({ error: "Failed to update password" }, { status: 500 });
   }
 }

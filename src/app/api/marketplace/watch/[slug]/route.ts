@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const watchLogger = logger.child({ module: "marketplace-watch" });
@@ -66,7 +67,7 @@ export async function GET(
 
     return NextResponse.redirect(fileUrl, 302);
   } catch (error) {
-    watchLogger.error({ err: String(error) }, "Error streaming video");
+    watchLogger.error({ err: formatError(error) }, "Error streaming video");
     return NextResponse.json({ error: "Streaming failed" }, { status: 500 });
   }
 }

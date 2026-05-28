@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
@@ -499,7 +500,7 @@ export async function GET(req: NextRequest) {
       headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    creatorIndiekitLogger.error({ correlationId, err: String(error) }, "IndieKit API error:");
+    creatorIndiekitLogger.error({ correlationId, err: formatError(error) }, "IndieKit API error:");
     return NextResponse.json(
       { error: "Failed to fetch IndieKit data", correlationId },
       { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }

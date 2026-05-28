@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { withCorrelation } from "@/lib/correlation";
 
@@ -350,7 +351,7 @@ export async function POST(
       message: "Pledge confirmed successfully",
     });
   } catch (error) {
-    pledgesConfirmLogger.error({ err: String(error), correlationId }, "Failed to confirm pledge:");
+    pledgesConfirmLogger.error({ err: formatError(error), correlationId }, "Failed to confirm pledge:");
     return NextResponse.json(
       { error: "Failed to confirm pledge" },
       { status: 500 }

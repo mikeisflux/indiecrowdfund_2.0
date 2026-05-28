@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailThreadsReadLogger = logger.child({ module: "creator-email-threads-read" });
@@ -44,7 +45,7 @@ export async function POST(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorEmailThreadsReadLogger.error({ err: String(error) }, "Error marking thread as read:");
+    creatorEmailThreadsReadLogger.error({ err: formatError(error) }, "Error marking thread as read:");
     return NextResponse.json(
       { error: "Failed to mark as read" },
       { status: 500 }

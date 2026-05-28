@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const resendApprovalLogger = logger.child({ module: "admin-retailers-resend-approval" });
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
       message: `Approval email sent to ${retailer.email}`,
     });
   } catch (error) {
-    resendApprovalLogger.error({ err: String(error) }, "Error resending retailer approval email:");
+    resendApprovalLogger.error({ err: formatError(error) }, "Error resending retailer approval email:");
     return NextResponse.json(
       { error: "Failed to resend approval email" },
       { status: 500 }

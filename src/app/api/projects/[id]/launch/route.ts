@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsLaunchLogger = logger.child({ module: "projects-launch" });
@@ -286,7 +287,7 @@ export async function POST(
       endDate: endDate.toISOString(),
     });
   } catch (error) {
-    projectsLaunchLogger.error({ err: String(error) }, "Error launching project:");
+    projectsLaunchLogger.error({ err: formatError(error) }, "Error launching project:");
     // Log more details about the error
     if (error instanceof Error) {
       projectsLaunchLogger.error({ err: String(error.name) }, "Error name:");

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const marketplaceCompaniesLogger = logger.child({ module: "marketplace-companies" });
@@ -106,7 +107,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    marketplaceCompaniesLogger.error({ err: String(error) }, "Error fetching companies:");
+    marketplaceCompaniesLogger.error({ err: formatError(error) }, "Error fetching companies:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ company });
   } catch (error) {
-    marketplaceCompaniesLogger.error({ err: String(error) }, "Error creating/updating company:");
+    marketplaceCompaniesLogger.error({ err: formatError(error) }, "Error creating/updating company:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

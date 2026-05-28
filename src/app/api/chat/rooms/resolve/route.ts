@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -96,7 +97,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ room });
   } catch (error) {
-    roomsLogger.error({ err: String(error) }, "Failed to resolve chat room");
+    roomsLogger.error({ err: formatError(error) }, "Failed to resolve chat room");
     return NextResponse.json(
       { error: "Failed to resolve chat room" },
       { status: 500 }

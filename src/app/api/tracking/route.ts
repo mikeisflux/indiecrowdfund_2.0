@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const trackingLogger = logger.child({ module: "tracking" });
@@ -141,7 +142,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    trackingLogger.error({ err: String(error) }, "Tracking error:");
+    trackingLogger.error({ err: formatError(error) }, "Tracking error:");
     // Return success anyway - tracking shouldn't fail requests
     return NextResponse.json({ success: true });
   }

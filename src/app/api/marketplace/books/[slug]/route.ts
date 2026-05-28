@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const marketplaceBooksLogger = logger.child({ module: "marketplace-books" });
@@ -118,7 +119,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       hasPurchased,
     });
   } catch (error) {
-    marketplaceBooksLogger.error({ err: String(error) }, "Error fetching book:");
+    marketplaceBooksLogger.error({ err: formatError(error) }, "Error fetching book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -224,7 +225,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ book: updatedBook });
   } catch (error) {
-    marketplaceBooksLogger.error({ err: String(error) }, "Error updating book:");
+    marketplaceBooksLogger.error({ err: formatError(error) }, "Error updating book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -278,7 +279,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    marketplaceBooksLogger.error({ err: String(error) }, "Error deleting book:");
+    marketplaceBooksLogger.error({ err: formatError(error) }, "Error deleting book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

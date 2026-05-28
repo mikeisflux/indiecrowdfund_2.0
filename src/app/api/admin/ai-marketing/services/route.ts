@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingServicesLogger = logger.child({ module: "admin-ai-marketing-services" });
@@ -482,7 +483,7 @@ export async function POST(request: Request) {
       result,
     });
   } catch (error) {
-    adminAiMarketingServicesLogger.error({ err: String(error) }, "AI service error:");
+    adminAiMarketingServicesLogger.error({ err: formatError(error) }, "AI service error:");
     return NextResponse.json(
       {
         error:
@@ -554,7 +555,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    adminAiMarketingServicesLogger.error({ err: String(error) }, "Error checking AI services:");
+    adminAiMarketingServicesLogger.error({ err: formatError(error) }, "Error checking AI services:");
     return NextResponse.json(
       { error: "Failed to check AI services" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const cronProcessFundedCampaignsLogger = logger.child({ module: "cron-process-funded-campaigns" });
@@ -374,7 +375,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    cronProcessFundedCampaignsLogger.error({ err: String(error) }, "Process funded campaigns cron error:");
+    cronProcessFundedCampaignsLogger.error({ err: formatError(error) }, "Process funded campaigns cron error:");
     return NextResponse.json(
       { error: "Failed to process funded campaigns" },
       { status: 500 }

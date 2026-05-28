@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingCampaignsManageAbortLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-abort" });
@@ -89,14 +90,14 @@ export async function POST(
       // Delete and restart properly to preserve npm start config
       exec("cd /root/indiecrowdfund_2.0 && npx pm2 delete indiecrowdfund 2>/dev/null; npx pm2 start npm --name indiecrowdfund -- start", (error) => {
         if (error) {
-          adminAiMarketingCampaignsManageAbortLogger.error({ err: String(error) }, "Failed to restart PM2:");
+          adminAiMarketingCampaignsManageAbortLogger.error({ err: formatError(error) }, "Failed to restart PM2:");
         }
       });
     });
 
     return response;
   } catch (error) {
-    adminAiMarketingCampaignsManageAbortLogger.error({ err: String(error) }, "Error aborting campaign:");
+    adminAiMarketingCampaignsManageAbortLogger.error({ err: formatError(error) }, "Error aborting campaign:");
     return NextResponse.json(
       { error: "Failed to abort campaign" },
       { status: 500 }

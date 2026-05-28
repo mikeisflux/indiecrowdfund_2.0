@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const userFollowingLogger = logger.child({ module: "user-following" });
@@ -144,7 +145,7 @@ export async function GET(request: Request) {
       })),
     });
   } catch (error) {
-    userFollowingLogger.error({ err: String(error) }, "Following fetch error:");
+    userFollowingLogger.error({ err: formatError(error) }, "Following fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch following data" },
       { status: 500 }
@@ -286,7 +287,7 @@ export async function POST(request: Request) {
       message: "Successfully followed project",
     });
   } catch (error) {
-    userFollowingLogger.error({ err: String(error) }, "Follow project error:");
+    userFollowingLogger.error({ err: formatError(error) }, "Follow project error:");
     return NextResponse.json(
       { error: "Failed to follow project" },
       { status: 500 }
@@ -347,7 +348,7 @@ export async function DELETE(request: Request) {
       { status: 400 }
     );
   } catch (error) {
-    userFollowingLogger.error({ err: String(error) }, "Unfollow error:");
+    userFollowingLogger.error({ err: formatError(error) }, "Unfollow error:");
     return NextResponse.json(
       { error: "Failed to unfollow" },
       { status: 500 }

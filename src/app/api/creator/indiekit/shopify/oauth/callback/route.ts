@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitShopifyOauthCallbackLogger = logger.child({ module: "creator-indiekit-shopify-oauth-callback" });
@@ -188,7 +189,7 @@ export async function GET(req: NextRequest) {
       new URL(`/dashboard/indiekit?shopify=connected&shop=${encodeURIComponent(shopInfo.name)}`, appUrl)
     );
   } catch (error) {
-    creatorIndiekitShopifyOauthCallbackLogger.error({ err: String(error) }, "Shopify OAuth callback error:");
+    creatorIndiekitShopifyOauthCallbackLogger.error({ err: formatError(error) }, "Shopify OAuth callback error:");
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.url;
     return NextResponse.redirect(
       new URL("/dashboard/indiekit?error=Failed to complete Shopify authorization", appUrl)

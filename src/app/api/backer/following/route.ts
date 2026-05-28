@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const backerFollowingLogger = logger.child({ module: "backer-following" });
@@ -167,7 +168,7 @@ export async function GET() {
       },
     }, { headers: corsHeaders });
   } catch (error) {
-    backerFollowingLogger.error({ err: String(error) }, "Error fetching following:");
+    backerFollowingLogger.error({ err: formatError(error) }, "Error fetching following:");
     return NextResponse.json(
       { error: "Failed to fetch following" },
       { status: 500, headers: corsHeaders }
@@ -270,7 +271,7 @@ export async function POST(request: NextRequest) {
       { status: 400, headers: corsHeaders }
     );
   } catch (error) {
-    backerFollowingLogger.error({ err: String(error) }, "Error with follow operation:");
+    backerFollowingLogger.error({ err: formatError(error) }, "Error with follow operation:");
     return NextResponse.json(
       { error: "Operation failed" },
       { status: 500, headers: corsHeaders }
@@ -309,7 +310,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    backerFollowingLogger.error({ err: String(error) }, "Error unfollowing:");
+    backerFollowingLogger.error({ err: formatError(error) }, "Error unfollowing:");
     return NextResponse.json(
       { error: "Failed to unfollow" },
       { status: 500, headers: corsHeaders }

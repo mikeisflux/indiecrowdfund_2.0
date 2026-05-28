@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitSurveysLogger = logger.child({ module: "creator-indiekit-surveys" });
@@ -147,7 +148,7 @@ export async function GET(
         : null,
     });
   } catch (error) {
-    creatorIndiekitSurveysLogger.error({ err: String(error) }, "Error fetching pledge survey response:");
+    creatorIndiekitSurveysLogger.error({ err: formatError(error) }, "Error fetching pledge survey response:");
     return NextResponse.json(
       { error: "Failed to fetch survey response" },
       { status: 500 }

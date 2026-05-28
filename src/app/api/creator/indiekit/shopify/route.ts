@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitShopifyLogger = logger.child({ module: "creator-indiekit-shopify" });
@@ -181,7 +182,7 @@ export async function GET(req: NextRequest) {
         : null,
     });
   } catch (error) {
-    creatorIndiekitShopifyLogger.error({ err: String(error) }, "Shopify GET error:");
+    creatorIndiekitShopifyLogger.error({ err: formatError(error) }, "Shopify GET error:");
     return NextResponse.json({ error: "Failed to fetch Shopify integration" }, { status: 500 });
   }
 }
@@ -821,7 +822,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    creatorIndiekitShopifyLogger.error({ err: String(error) }, "Shopify POST error:");
+    creatorIndiekitShopifyLogger.error({ err: formatError(error) }, "Shopify POST error:");
     return NextResponse.json(
       { error: "Failed to process Shopify request" },
       { status: 500 }

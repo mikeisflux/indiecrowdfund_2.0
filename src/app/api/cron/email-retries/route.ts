@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const cronEmailRetriesLogger = logger.child({ module: "cron-email-retries" });
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    cronEmailRetriesLogger.error({ err: String(error) }, "Email retry cron error:");
+    cronEmailRetriesLogger.error({ err: formatError(error) }, "Email retry cron error:");
     return NextResponse.json(
       { error: "Failed to process email retries" },
       { status: 500 }

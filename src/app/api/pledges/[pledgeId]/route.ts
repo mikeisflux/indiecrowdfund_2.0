@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const pledgesLogger = logger.child({ module: "pledges" });
@@ -213,7 +214,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    pledgesLogger.error({ err: String(error) }, "Get pledge error:");
+    pledgesLogger.error({ err: formatError(error) }, "Get pledge error:");
     return NextResponse.json(
       { error: "Failed to fetch pledge" },
       { status: 500 }
@@ -914,7 +915,7 @@ export async function PATCH(
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    pledgesLogger.error({ err: String(error) }, "Update pledge error:");
+    pledgesLogger.error({ err: formatError(error) }, "Update pledge error:");
     return NextResponse.json(
       { error: "Failed to update pledge" },
       { status: 500 }
@@ -1007,7 +1008,7 @@ export async function DELETE(
       message: "Pledge cancelled successfully",
     });
   } catch (error) {
-    pledgesLogger.error({ err: String(error) }, "Cancel pledge error:");
+    pledgesLogger.error({ err: formatError(error) }, "Cancel pledge error:");
     return NextResponse.json(
       { error: "Failed to cancel pledge" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsCollaboratorsLogger = logger.child({ module: "projects-collaborators" });
@@ -175,7 +176,7 @@ export async function POST(
       emailSent: emailResult.success,
     });
   } catch (error) {
-    projectsCollaboratorsLogger.error({ err: String(error) }, "Add collaborator error:");
+    projectsCollaboratorsLogger.error({ err: formatError(error) }, "Add collaborator error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -246,7 +247,7 @@ export async function GET(
 
     return NextResponse.json({ collaborators });
   } catch (error) {
-    projectsCollaboratorsLogger.error({ err: String(error) }, "Get collaborators error:");
+    projectsCollaboratorsLogger.error({ err: formatError(error) }, "Get collaborators error:");
     return NextResponse.json(
       { error: "Failed to fetch collaborators" },
       { status: 500 }
@@ -298,7 +299,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    projectsCollaboratorsLogger.error({ err: String(error) }, "Delete collaborator error:");
+    projectsCollaboratorsLogger.error({ err: formatError(error) }, "Delete collaborator error:");
     return NextResponse.json(
       { error: "Failed to delete collaborator" },
       { status: 500 }

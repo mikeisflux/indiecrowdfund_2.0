@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const verifyIdLogger = logger.child({ module: "verify-id" });
@@ -50,7 +51,7 @@ export async function GET() {
       latestVerification,
     });
   } catch (error) {
-    verifyIdLogger.error({ err: String(error) }, "Error getting verification status:");
+    verifyIdLogger.error({ err: formatError(error) }, "Error getting verification status:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest) {
       reference: result.reference,
     });
   } catch (error) {
-    verifyIdLogger.error({ err: String(error) }, "Error starting verification:");
+    verifyIdLogger.error({ err: formatError(error) }, "Error starting verification:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

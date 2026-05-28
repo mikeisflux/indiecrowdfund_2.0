@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminMarketplacePdfManagementLogger = logger.child({ module: "admin-marketplace-pdf-management" });
@@ -253,7 +254,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    adminMarketplacePdfManagementLogger.error({ err: String(error) }, "Error fetching PDF management data:");
+    adminMarketplacePdfManagementLogger.error({ err: formatError(error) }, "Error fetching PDF management data:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -475,7 +476,7 @@ export async function PATCH() {
       results,
     });
   } catch (error) {
-    adminMarketplacePdfManagementLogger.error({ err: String(error) }, "Error bulk-fixing PDF file sizes:");
+    adminMarketplacePdfManagementLogger.error({ err: formatError(error) }, "Error bulk-fixing PDF file sizes:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -740,7 +741,7 @@ export async function POST(request: NextRequest) {
       })),
     });
   } catch (error) {
-    adminMarketplacePdfManagementLogger.error({ err: String(error) }, "Error scanning R2 files:");
+    adminMarketplacePdfManagementLogger.error({ err: formatError(error) }, "Error scanning R2 files:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

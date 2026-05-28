@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { randomBytes } from "crypto";
 
@@ -34,7 +35,7 @@ export async function GET(
       rewards: serializedRewards,
     });
   } catch (error) {
-    projectsRewardsLogger.error({ err: String(error) }, "Fetch rewards error:");
+    projectsRewardsLogger.error({ err: formatError(error) }, "Fetch rewards error:");
     return NextResponse.json(
       { error: "Failed to fetch rewards" },
       { status: 500 }
@@ -280,7 +281,7 @@ export async function POST(
       reward: savedReward,
     });
   } catch (error) {
-    projectsRewardsLogger.error({ err: String(error) }, "Create reward error:");
+    projectsRewardsLogger.error({ err: formatError(error) }, "Create reward error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       projectsRewardsLogger.error({ err: String(errorMessage) }, "Zod validation error:");
@@ -434,7 +435,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    projectsRewardsLogger.error({ err: String(error) }, "Update reward error:");
+    projectsRewardsLogger.error({ err: formatError(error) }, "Update reward error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       projectsRewardsLogger.error({ err: String(errorMessage) }, "Zod validation error:");
@@ -552,7 +553,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    projectsRewardsLogger.error({ err: String(error) }, "Delete reward error:");
+    projectsRewardsLogger.error({ err: formatError(error) }, "Delete reward error:");
     return NextResponse.json(
       { error: "Failed to delete reward" },
       { status: 500 }

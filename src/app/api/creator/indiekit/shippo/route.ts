@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import type { NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
@@ -273,7 +274,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    creatorIndiekitShippoLogger.error({ err: String(error) }, "Shippo API error:");
+    creatorIndiekitShippoLogger.error({ err: formatError(error) }, "Shippo API error:");
     return NextResponse.json({ error: "Failed to process Shippo request" }, { status: 500 });
   }
 }

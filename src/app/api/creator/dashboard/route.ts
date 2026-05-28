@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorDashboardLogger = logger.child({ module: "creator-dashboard" });
@@ -853,7 +854,7 @@ export async function GET(req: NextRequest) {
       userRole,
     });
   } catch (error) {
-    creatorDashboardLogger.error({ err: String(error) }, "Creator dashboard error:");
+    creatorDashboardLogger.error({ err: formatError(error) }, "Creator dashboard error:");
     return NextResponse.json(
       { error: "Failed to fetch dashboard data" },
       { status: 500 }

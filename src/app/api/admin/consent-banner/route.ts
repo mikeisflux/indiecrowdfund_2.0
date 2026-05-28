@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminConsentBannerLogger = logger.child({ module: "admin-consent-banner" });
@@ -61,7 +62,7 @@ export async function GET() {
 
     return NextResponse.json({ banner });
   } catch (error) {
-    adminConsentBannerLogger.error({ err: String(error) }, "Error fetching consent banner:");
+    adminConsentBannerLogger.error({ err: formatError(error) }, "Error fetching consent banner:");
     return NextResponse.json({ error: "Failed to fetch consent banner" }, { status: 500 });
   }
 }
@@ -97,7 +98,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ banner });
   } catch (error) {
-    adminConsentBannerLogger.error({ err: String(error) }, "Error updating consent banner:");
+    adminConsentBannerLogger.error({ err: formatError(error) }, "Error updating consent banner:");
     return NextResponse.json({ error: "Failed to update consent banner" }, { status: 500 });
   }
 }
@@ -132,7 +133,7 @@ export async function POST() {
 
     return NextResponse.json({ banner });
   } catch (error) {
-    adminConsentBannerLogger.error({ err: String(error) }, "Error resetting consent banner:");
+    adminConsentBannerLogger.error({ err: formatError(error) }, "Error resetting consent banner:");
     return NextResponse.json({ error: "Failed to reset consent banner" }, { status: 500 });
   }
 }

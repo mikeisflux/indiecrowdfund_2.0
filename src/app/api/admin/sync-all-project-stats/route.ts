@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -38,7 +39,7 @@ export async function POST() {
       ...result,
     });
   } catch (error) {
-    adminSyncAllProjectStatsLogger.error({ err: String(error) }, "Batch sync error:");
+    adminSyncAllProjectStatsLogger.error({ err: formatError(error) }, "Batch sync error:");
     return NextResponse.json({ error: "Failed to sync" }, { status: 500 });
   }
 }

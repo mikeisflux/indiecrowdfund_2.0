@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorBankAccountLogger = logger.child({ module: "creator-bank-account" });
@@ -47,7 +48,7 @@ export async function GET() {
       isVerified: bankAccount.isVerified,
     });
   } catch (error) {
-    creatorBankAccountLogger.error({ err: String(error) }, "Error fetching bank account:");
+    creatorBankAccountLogger.error({ err: formatError(error) }, "Error fetching bank account:");
     return NextResponse.json(
       { error: "Failed to fetch bank account" },
       { status: 500 }
@@ -207,7 +208,7 @@ export async function POST(req: NextRequest) {
       lastFour,
     });
   } catch (error) {
-    creatorBankAccountLogger.error({ err: String(error) }, "Error saving bank account:");
+    creatorBankAccountLogger.error({ err: formatError(error) }, "Error saving bank account:");
     // Provide more specific error messages
     if (error instanceof Error) {
       if (error.message.includes("BANK_ACCOUNT_ENCRYPTION_KEY")) {
@@ -244,7 +245,7 @@ export async function DELETE() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorBankAccountLogger.error({ err: String(error) }, "Error deleting bank account:");
+    creatorBankAccountLogger.error({ err: formatError(error) }, "Error deleting bank account:");
     return NextResponse.json(
       { error: "Failed to delete bank account" },
       { status: 500 }

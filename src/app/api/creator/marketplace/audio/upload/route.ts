@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const audioUploadLogger = logger.child({ module: "creator-marketplace-audio-upload" });
@@ -193,7 +194,7 @@ export async function POST(request: NextRequest) {
       fileSize,
     });
   } catch (error) {
-    audioUploadLogger.error({ err: String(error) }, "[Audio Upload] Error");
+    audioUploadLogger.error({ err: formatError(error) }, "[Audio Upload] Error");
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

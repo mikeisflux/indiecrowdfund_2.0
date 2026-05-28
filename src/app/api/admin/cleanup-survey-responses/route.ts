@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -116,7 +117,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     cleanupSurveyResponsesLogger.error(
-      { err: String(error) },
+      { err: formatError(error) },
       "Cleanup survey responses audit error",
     );
     return NextResponse.json(
@@ -254,7 +255,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     cleanupSurveyResponsesLogger.error(
-      { err: String(error) },
+      { err: formatError(error) },
       "Cleanup survey responses error",
     );
     return NextResponse.json(

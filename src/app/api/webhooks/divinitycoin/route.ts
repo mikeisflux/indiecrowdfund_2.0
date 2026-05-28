@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const webhooksDivinitycoinLogger = logger.child({ module: "webhooks-divinitycoin" });
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
     webhooksDivinitycoinLogger.info(`[DivinityCoin Webhook] Successfully processed: ${event.event}`);
     return NextResponse.json(response);
   } catch (error) {
-    webhooksDivinitycoinLogger.error({ err: String(error) }, "[DivinityCoin Webhook] Error:");
+    webhooksDivinitycoinLogger.error({ err: formatError(error) }, "[DivinityCoin Webhook] Error:");
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 }
@@ -215,7 +216,7 @@ export async function GET() {
       sandboxMode: process.env.NODE_ENV !== "production",
     });
   } catch (error) {
-    webhooksDivinitycoinLogger.error({ err: String(error) }, "[DivinityCoin Webhook] GET Error:");
+    webhooksDivinitycoinLogger.error({ err: formatError(error) }, "[DivinityCoin Webhook] GET Error:");
     return NextResponse.json(
       { error: "Failed to get webhook info" },
       { status: 500 }

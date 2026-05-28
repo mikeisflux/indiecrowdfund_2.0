@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsSubmitLogger = logger.child({ module: "projects-submit" });
@@ -363,7 +364,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    projectsSubmitLogger.error({ err: String(error) }, "Error submitting project:");
+    projectsSubmitLogger.error({ err: formatError(error) }, "Error submitting project:");
     return NextResponse.json(
       { error: "Failed to submit project" },
       { status: 500 }

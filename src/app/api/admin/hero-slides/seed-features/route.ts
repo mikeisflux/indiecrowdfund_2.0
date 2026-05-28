@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const seedLogger = logger.child({ module: "hero-slides-seed-features" });
@@ -255,7 +256,7 @@ export async function POST() {
       { headers: corsHeaders }
     );
   } catch (error) {
-    seedLogger.error({ err: String(error) }, "Error seeding feature slides");
+    seedLogger.error({ err: formatError(error) }, "Error seeding feature slides");
     return NextResponse.json(
       { error: "Failed to seed feature slides", details: String(error) },
       { status: 500, headers: corsHeaders }

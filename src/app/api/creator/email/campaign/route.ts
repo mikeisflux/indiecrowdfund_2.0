@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailCampaignLogger = logger.child({ module: "creator-email-campaign" });
@@ -430,7 +431,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
     });
   } catch (error) {
-    creatorEmailCampaignLogger.error({ err: String(error) }, "Error sending campaign:");
+    creatorEmailCampaignLogger.error({ err: formatError(error) }, "Error sending campaign:");
     return NextResponse.json(
       { error: "Failed to send campaign" },
       { status: 500 }

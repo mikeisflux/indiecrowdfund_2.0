@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const backerDigitalFilesProgressLogger = logger.child({ module: "backer-digital-files-progress" });
@@ -74,7 +75,7 @@ export async function GET() {
 
     return NextResponse.json({ progress: progressMap });
   } catch (error) {
-    backerDigitalFilesProgressLogger.error({ err: String(error) }, "Error fetching reading progress:");
+    backerDigitalFilesProgressLogger.error({ err: formatError(error) }, "Error fetching reading progress:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    backerDigitalFilesProgressLogger.error({ err: String(error) }, "Error saving reading progress:");
+    backerDigitalFilesProgressLogger.error({ err: formatError(error) }, "Error saving reading progress:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

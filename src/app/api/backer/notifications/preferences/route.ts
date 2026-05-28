@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const backerNotificationsPreferencesLogger = logger.child({ module: "backer-notifications-preferences" });
@@ -135,7 +136,7 @@ export async function GET() {
       totalProjects: projects.length,
     }, { headers: corsHeaders });
   } catch (error) {
-    backerNotificationsPreferencesLogger.error({ err: String(error) }, "Error fetching notification preferences:");
+    backerNotificationsPreferencesLogger.error({ err: formatError(error) }, "Error fetching notification preferences:");
     return NextResponse.json(
       { error: "Failed to fetch preferences" },
       { status: 500, headers: corsHeaders }
@@ -208,7 +209,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ preference: pref }, { headers: corsHeaders });
   } catch (error) {
-    backerNotificationsPreferencesLogger.error({ err: String(error) }, "Error updating notification preferences:");
+    backerNotificationsPreferencesLogger.error({ err: formatError(error) }, "Error updating notification preferences:");
     return NextResponse.json(
       { error: "Failed to update preferences" },
       { status: 500, headers: corsHeaders }
@@ -237,7 +238,7 @@ export async function PATCH(request: NextRequest) {
       },
     }, { headers: corsHeaders });
   } catch (error) {
-    backerNotificationsPreferencesLogger.error({ err: String(error) }, "Error updating global preferences:");
+    backerNotificationsPreferencesLogger.error({ err: formatError(error) }, "Error updating global preferences:");
     return NextResponse.json(
       { error: "Failed to update preferences" },
       { status: 500, headers: corsHeaders }

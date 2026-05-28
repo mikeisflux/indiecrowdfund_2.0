@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const collaboratorRespondLogger = logger.child({ module: "collaborator-respond" });
@@ -160,7 +161,7 @@ export async function POST(
       });
     }
   } catch (error) {
-    collaboratorRespondLogger.error({ err: String(error) }, "Collaborator respond error:");
+    collaboratorRespondLogger.error({ err: formatError(error) }, "Collaborator respond error:");
     return NextResponse.json(
       { error: "Failed to process response" },
       { status: 500 }

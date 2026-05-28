@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const updatesLogger = logger.child({ module: "updates" });
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ update }, { status: 201 });
   } catch (error) {
-    updatesLogger.error({ err: String(error) }, "Create update error:");
+    updatesLogger.error({ err: formatError(error) }, "Create update error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -102,7 +103,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ updates });
   } catch (error) {
-    updatesLogger.error({ err: String(error) }, "Get updates error:");
+    updatesLogger.error({ err: formatError(error) }, "Get updates error:");
     return NextResponse.json(
       { error: "Failed to fetch updates" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const backerDigitalFilesExtractCoverLogger = logger.child({ module: "backer-digital-files-extract-cover" });
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
       ...(result.error && { error: result.error }),
     });
   } catch (error) {
-    backerDigitalFilesExtractCoverLogger.error({ err: String(error) }, "Cover extraction error:");
+    backerDigitalFilesExtractCoverLogger.error({ err: formatError(error) }, "Cover extraction error:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -139,7 +140,7 @@ export async function GET() {
       files: filesNeedingCovers,
     });
   } catch (error) {
-    backerDigitalFilesExtractCoverLogger.error({ err: String(error) }, "Error fetching files needing covers:");
+    backerDigitalFilesExtractCoverLogger.error({ err: formatError(error) }, "Error fetching files needing covers:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

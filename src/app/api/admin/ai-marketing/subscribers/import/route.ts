@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingSubscribersImportLogger = logger.child({ module: "admin-ai-marketing-subscribers-import" });
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest) {
       errors: errors.slice(0, 10), // Limit errors returned
     });
   } catch (error) {
-    adminAiMarketingSubscribersImportLogger.error({ err: String(error) }, "Error importing subscribers:");
+    adminAiMarketingSubscribersImportLogger.error({ err: formatError(error) }, "Error importing subscribers:");
     return NextResponse.json(
       { error: "Failed to import subscribers" },
       { status: 500 }

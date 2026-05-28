@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminRetailersSurveysLogger = logger.child({ module: "admin-retailers-surveys" });
@@ -165,7 +166,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    adminRetailersSurveysLogger.error({ err: String(error) }, "Error fetching retailer surveys:");
+    adminRetailersSurveysLogger.error({ err: formatError(error) }, "Error fetching retailer surveys:");
     return NextResponse.json(
       { error: "Failed to fetch surveys" },
       { status: 500 }

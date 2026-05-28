@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminSidebarStatsLogger = logger.child({ module: "admin-sidebar-stats" });
@@ -200,7 +201,7 @@ export async function GET() {
 
     return response;
   } catch (error) {
-    adminSidebarStatsLogger.error({ err: String(error) }, "Error fetching sidebar stats:");
+    adminSidebarStatsLogger.error({ err: formatError(error) }, "Error fetching sidebar stats:");
     return NextResponse.json(
       { error: "Failed to fetch stats" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminMarketplaceBooksRevertLogger = logger.child({ module: "admin-marketplace-books-revert" });
@@ -111,7 +112,7 @@ export async function POST(
       message: "Book reverted to pending review",
     });
   } catch (error) {
-    adminMarketplaceBooksRevertLogger.error({ err: String(error) }, "Error reverting book:");
+    adminMarketplaceBooksRevertLogger.error({ err: formatError(error) }, "Error reverting book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

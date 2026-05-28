@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getPlatformTotals } from "@/lib/stats";
 
@@ -11,7 +12,7 @@ export async function GET() {
     const totals = await getPlatformTotals();
     return NextResponse.json(totals);
   } catch (error) {
-    platformStatsLogger.error({ err: String(error) }, "Error fetching platform stats:");
+    platformStatsLogger.error({ err: formatError(error) }, "Error fetching platform stats:");
     return NextResponse.json({ error: "Failed to fetch platform stats" }, { status: 500 });
   }
 }

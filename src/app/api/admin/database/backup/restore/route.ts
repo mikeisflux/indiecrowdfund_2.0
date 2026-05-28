@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminDatabaseBackupRestoreLogger = logger.child({ module: "admin-database-backup-restore" });
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
       details: stderr || stdout,
     });
   } catch (error) {
-    adminDatabaseBackupRestoreLogger.error({ err: String(error) }, "Error restoring backup:");
+    adminDatabaseBackupRestoreLogger.error({ err: formatError(error) }, "Error restoring backup:");
     return NextResponse.json(
       { error: "Failed to restore backup", details: String(error) },
       { status: 500 }
@@ -228,7 +229,7 @@ export async function PUT(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminDatabaseBackupRestoreLogger.error({ err: String(error) }, "Error uploading backup:");
+    adminDatabaseBackupRestoreLogger.error({ err: formatError(error) }, "Error uploading backup:");
     return NextResponse.json(
       { error: "Failed to upload backup", details: String(error) },
       { status: 500 }

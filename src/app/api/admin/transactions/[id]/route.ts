@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminTransactionsLogger = logger.child({ module: "admin-transactions" });
@@ -71,7 +72,7 @@ export async function GET(
 
     return NextResponse.json({ detail });
   } catch (error) {
-    adminTransactionsLogger.error({ err: String(error) }, "Error fetching transaction detail:");
+    adminTransactionsLogger.error({ err: formatError(error) }, "Error fetching transaction detail:");
     return NextResponse.json(
       { error: "Failed to fetch transaction detail" },
       { status: 500 }

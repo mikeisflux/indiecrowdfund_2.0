@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const verifyIdCallbackLogger = logger.child({ module: "verify-id-callback" });
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    verifyIdCallbackLogger.error({ err: String(error) }, "Error processing Shufti callback:");
+    verifyIdCallbackLogger.error({ err: formatError(error) }, "Error processing Shufti callback:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

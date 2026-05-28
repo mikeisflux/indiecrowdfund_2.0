@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const announcementBarLogger = logger.child({ module: "announcement-bar" });
@@ -64,7 +65,7 @@ export async function GET() {
 
     return NextResponse.json({ announcements }, { headers: corsHeaders });
   } catch (error) {
-    announcementBarLogger.error({ err: String(error) }, "Error fetching announcement bars:");
+    announcementBarLogger.error({ err: formatError(error) }, "Error fetching announcement bars:");
     return NextResponse.json({ announcements: [] }, { headers: corsHeaders });
   }
 }

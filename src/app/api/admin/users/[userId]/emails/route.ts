@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminUsersEmailsLogger = logger.child({ module: "admin-users-emails" });
@@ -52,7 +53,7 @@ export async function GET(
 
     return NextResponse.json({ emailLogs });
   } catch (error) {
-    adminUsersEmailsLogger.error({ err: String(error) }, "Error fetching user emails:");
+    adminUsersEmailsLogger.error({ err: formatError(error) }, "Error fetching user emails:");
     return NextResponse.json(
       { error: "Failed to fetch user emails" },
       { status: 500 }
@@ -134,7 +135,7 @@ export async function POST(
       message: "Confirmation email sent successfully",
     });
   } catch (error) {
-    adminUsersEmailsLogger.error({ err: String(error) }, "Error sending confirmation email:");
+    adminUsersEmailsLogger.error({ err: formatError(error) }, "Error sending confirmation email:");
     return NextResponse.json(
       { error: "Failed to send confirmation email" },
       { status: 500 }

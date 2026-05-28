@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsSimilarLogger = logger.child({ module: "projects-similar" });
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
       }
     );
   } catch (error) {
-    projectsSimilarLogger.error({ err: String(error) }, "Similar projects error:");
+    projectsSimilarLogger.error({ err: formatError(error) }, "Similar projects error:");
     return NextResponse.json({ projects: [] });
   }
 }

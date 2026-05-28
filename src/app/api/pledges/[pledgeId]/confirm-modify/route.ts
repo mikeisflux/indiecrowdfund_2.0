@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const pledgesConfirmModifyLogger = logger.child({ module: "pledges-confirm-modify" });
@@ -258,7 +259,7 @@ export async function POST(
       newAmount: pending.newAmount,
     });
   } catch (error) {
-    pledgesConfirmModifyLogger.error({ err: String(error) }, "Failed to confirm pledge modification:");
+    pledgesConfirmModifyLogger.error({ err: formatError(error) }, "Failed to confirm pledge modification:");
     return NextResponse.json(
       { error: "Failed to confirm pledge modification" },
       { status: 500 }

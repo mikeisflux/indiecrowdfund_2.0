@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const userPublicProfileLogger = logger.child({ module: "user-public-profile" });
@@ -294,7 +295,7 @@ export async function GET(
 
     return NextResponse.json(response);
   } catch (error) {
-    userPublicProfileLogger.error({ err: String(error) }, "Public profile fetch error:");
+    userPublicProfileLogger.error({ err: formatError(error) }, "Public profile fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch profile" },
       { status: 500 }

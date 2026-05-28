@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const rewardsLogger = logger.child({ module: "rewards" });
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ reward }, { status: 201 });
   } catch (error) {
-    rewardsLogger.error({ err: String(error) }, "Create reward error:");
+    rewardsLogger.error({ err: formatError(error) }, "Create reward error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -171,7 +172,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ reward: updatedReward });
   } catch (error) {
-    rewardsLogger.error({ err: String(error) }, "Update reward error:");
+    rewardsLogger.error({ err: formatError(error) }, "Update reward error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -236,7 +237,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    rewardsLogger.error({ err: String(error) }, "Delete reward error:");
+    rewardsLogger.error({ err: formatError(error) }, "Delete reward error:");
     return NextResponse.json(
       { error: "Failed to delete reward" },
       { status: 500 }
@@ -293,7 +294,7 @@ export async function GET(req: NextRequest) {
       isLive: project?.status === "LIVE" || project?.status === "FUNDED",
     });
   } catch (error) {
-    rewardsLogger.error({ err: String(error) }, "Get rewards error:");
+    rewardsLogger.error({ err: formatError(error) }, "Get rewards error:");
     return NextResponse.json(
       { error: "Failed to fetch rewards" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsLogger = logger.child({ module: "projects" });
@@ -310,7 +311,7 @@ async function handleCollaborators(
         );
       }
     } catch (error) {
-      projectsLogger.error({ err: String(error) }, `Error processing collaborator ${emailLower}:`);
+      projectsLogger.error({ err: formatError(error) }, `Error processing collaborator ${emailLower}:`);
       // Continue processing other collaborators even if one fails
     }
   }
@@ -394,7 +395,7 @@ export async function GET(
 
     return NextResponse.json({ project: serializedProject });
   } catch (error) {
-    projectsLogger.error({ err: String(error) }, "Get project error:");
+    projectsLogger.error({ err: formatError(error) }, "Get project error:");
     return NextResponse.json(
       { error: "Failed to fetch project" },
       { status: 500 }
@@ -847,7 +848,7 @@ export async function PATCH(
       return NextResponse.json({ project: updated });
     }
   } catch (error) {
-    projectsLogger.error({ err: String(error) }, "Update project error:");
+    projectsLogger.error({ err: formatError(error) }, "Update project error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -1113,7 +1114,7 @@ export async function DELETE(
       message: "Project deleted successfully",
     });
   } catch (error) {
-    projectsLogger.error({ err: String(error) }, "Delete project error:");
+    projectsLogger.error({ err: formatError(error) }, "Delete project error:");
     return NextResponse.json(
       { error: "Failed to delete project" },
       { status: 500 }

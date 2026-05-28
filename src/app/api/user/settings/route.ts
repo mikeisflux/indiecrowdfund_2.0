@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const userSettingsLogger = logger.child({ module: "user-settings" });
@@ -73,7 +74,7 @@ export async function GET() {
       connectedAccounts: user.accounts.map((a: { provider: string }) => a.provider),
     });
   } catch (error) {
-    userSettingsLogger.error({ err: String(error) }, "Settings fetch error:");
+    userSettingsLogger.error({ err: formatError(error) }, "Settings fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch settings" },
       { status: 500 }
@@ -210,7 +211,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json(updatedUser);
   } catch (error) {
-    userSettingsLogger.error({ err: String(error) }, "Settings update error:");
+    userSettingsLogger.error({ err: formatError(error) }, "Settings update error:");
     return NextResponse.json(
       { error: "Failed to update settings" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const streamLogger = logger.child({ module: "marketplace-stream" });
@@ -113,7 +114,7 @@ export async function GET(
     // Fallback: redirect to the stored URL directly
     return NextResponse.redirect(fileUrl, 302);
   } catch (error) {
-    streamLogger.error({ err: String(error) }, "Error streaming track");
+    streamLogger.error({ err: formatError(error) }, "Error streaming track");
     return NextResponse.json(
       { error: "Streaming failed" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getSecret } from "@/lib/vault";
@@ -114,7 +115,7 @@ export async function GET(req: NextRequest) {
       hasMore: json.data?.has_next ?? false,
     });
   } catch (error) {
-    gifsLogger.error({ err: String(error) }, "Klipy fetch failed");
+    gifsLogger.error({ err: formatError(error) }, "Klipy fetch failed");
     return NextResponse.json(
       { enabled: true, gifs: [], error: "Klipy request failed" },
       { status: 502 }

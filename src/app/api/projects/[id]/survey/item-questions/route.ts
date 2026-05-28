@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsSurveyItemQuestionsLogger = logger.child({ module: "projects-survey-item-questions" });
@@ -92,7 +93,7 @@ export async function GET(
 
     return NextResponse.json({ itemQuestions });
   } catch (error) {
-    projectsSurveyItemQuestionsLogger.error({ err: String(error) }, "Error fetching item questions:");
+    projectsSurveyItemQuestionsLogger.error({ err: formatError(error) }, "Error fetching item questions:");
     return NextResponse.json(
       { error: "Failed to fetch item questions" },
       { status: 500 }
@@ -189,7 +190,7 @@ export async function POST(
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    projectsSurveyItemQuestionsLogger.error({ err: String(error) }, "Error creating item question:");
+    projectsSurveyItemQuestionsLogger.error({ err: formatError(error) }, "Error creating item question:");
     return NextResponse.json(
       { error: "Failed to create item question" },
       { status: 500 }
@@ -317,7 +318,7 @@ export async function PUT(
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    projectsSurveyItemQuestionsLogger.error({ err: String(error) }, "Error updating item question:");
+    projectsSurveyItemQuestionsLogger.error({ err: formatError(error) }, "Error updating item question:");
     return NextResponse.json(
       { error: "Failed to update item question" },
       { status: 500 }
@@ -383,7 +384,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    projectsSurveyItemQuestionsLogger.error({ err: String(error) }, "Error deleting item question:");
+    projectsSurveyItemQuestionsLogger.error({ err: formatError(error) }, "Error deleting item question:");
     return NextResponse.json(
       { error: "Failed to delete item question" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const backerAddressesLogger = logger.child({ module: "backer-addresses" });
@@ -30,7 +31,7 @@ export async function GET() {
 
     return NextResponse.json({ addresses }, { headers: corsHeaders });
   } catch (error) {
-    backerAddressesLogger.error({ err: String(error) }, "Error fetching addresses:");
+    backerAddressesLogger.error({ err: formatError(error) }, "Error fetching addresses:");
     return NextResponse.json(
       { error: "Failed to fetch addresses" },
       { status: 500, headers: corsHeaders }
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ address }, { headers: corsHeaders });
   } catch (error) {
-    backerAddressesLogger.error({ err: String(error) }, "Error creating address:");
+    backerAddressesLogger.error({ err: formatError(error) }, "Error creating address:");
     return NextResponse.json(
       { error: "Failed to create address" },
       { status: 500, headers: corsHeaders }

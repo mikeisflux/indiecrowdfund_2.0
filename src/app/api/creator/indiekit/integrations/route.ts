@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitIntegrationsLogger = logger.child({ module: "creator-indiekit-integrations" });
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
       project: projectIntegrations,
     });
   } catch (error) {
-    creatorIndiekitIntegrationsLogger.error({ err: String(error) }, "Integrations GET error:");
+    creatorIndiekitIntegrationsLogger.error({ err: formatError(error) }, "Integrations GET error:");
     return NextResponse.json({ error: "Failed to fetch integrations" }, { status: 500 });
   }
 }
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    creatorIndiekitIntegrationsLogger.error({ err: String(error) }, "Integrations POST error:");
+    creatorIndiekitIntegrationsLogger.error({ err: formatError(error) }, "Integrations POST error:");
     return NextResponse.json({ error: "Failed to process integration request" }, { status: 500 });
   }
 }

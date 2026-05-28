@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAnnouncementBarLogger = logger.child({ module: "admin-announcement-bar" });
@@ -93,7 +94,7 @@ export async function GET() {
       },
     }, { headers: corsHeaders });
   } catch (error) {
-    adminAnnouncementBarLogger.error({ err: String(error) }, "Error fetching announcement bars:");
+    adminAnnouncementBarLogger.error({ err: formatError(error) }, "Error fetching announcement bars:");
     return NextResponse.json({ error: "Failed to fetch announcement bars" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ announcement }, { headers: corsHeaders });
   } catch (error) {
-    adminAnnouncementBarLogger.error({ err: String(error) }, "Error creating announcement bar:");
+    adminAnnouncementBarLogger.error({ err: formatError(error) }, "Error creating announcement bar:");
     return NextResponse.json({ error: "Failed to create announcement bar" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -204,7 +205,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ announcement }, { headers: corsHeaders });
   } catch (error) {
-    adminAnnouncementBarLogger.error({ err: String(error) }, "Error updating announcement bar:");
+    adminAnnouncementBarLogger.error({ err: formatError(error) }, "Error updating announcement bar:");
     return NextResponse.json({ error: "Failed to update announcement bar" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -233,7 +234,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    adminAnnouncementBarLogger.error({ err: String(error) }, "Error deleting announcement bar:");
+    adminAnnouncementBarLogger.error({ err: formatError(error) }, "Error deleting announcement bar:");
     return NextResponse.json({ error: "Failed to delete announcement bar" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -266,7 +267,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    adminAnnouncementBarLogger.error({ err: String(error) }, "Error reordering announcement bars:");
+    adminAnnouncementBarLogger.error({ err: formatError(error) }, "Error reordering announcement bars:");
     return NextResponse.json({ error: "Failed to reorder announcement bars" }, { status: 500, headers: corsHeaders });
   }
 }

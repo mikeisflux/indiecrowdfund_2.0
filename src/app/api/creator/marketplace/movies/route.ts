@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const moviesLogger = logger.child({ module: "creator-marketplace-movies" });
@@ -151,7 +152,7 @@ export async function POST(request: Request) {
       movie: { id: item.id, title: item.title, slug: item.slug },
     });
   } catch (error) {
-    moviesLogger.error({ err: String(error) }, "Error creating movie listing");
+    moviesLogger.error({ err: formatError(error) }, "Error creating movie listing");
     return NextResponse.json(
       { error: "Failed to create movie listing" },
       { status: 500 }

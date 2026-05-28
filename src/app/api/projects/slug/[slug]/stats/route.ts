@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { db } from "@/lib/db";
 import { getProjectStats, syncProjectStats } from "@/lib/stats";
@@ -41,7 +42,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    projectsSlugStatsLogger.error({ err: String(error) }, "Failed to fetch project stats:");
+    projectsSlugStatsLogger.error({ err: formatError(error) }, "Failed to fetch project stats:");
     return NextResponse.json({ error: "Failed to fetch project stats" }, { status: 500 });
   }
 }

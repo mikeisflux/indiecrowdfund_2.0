@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminDatabaseBackupLogger = logger.child({ module: "admin-database-backup" });
@@ -118,7 +119,7 @@ export async function GET() {
 
     return NextResponse.json({ backups });
   } catch (error) {
-    adminDatabaseBackupLogger.error({ err: String(error) }, "Error listing backups:");
+    adminDatabaseBackupLogger.error({ err: formatError(error) }, "Error listing backups:");
     return NextResponse.json(
       { error: "Failed to list backups", details: String(error) },
       { status: 500 }
@@ -213,7 +214,7 @@ export async function POST() {
       },
     });
   } catch (error) {
-    adminDatabaseBackupLogger.error({ err: String(error) }, "Error creating backup:");
+    adminDatabaseBackupLogger.error({ err: formatError(error) }, "Error creating backup:");
     return NextResponse.json(
       { error: "Failed to create backup", details: String(error) },
       { status: 500 }
@@ -258,7 +259,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true, deleted: sanitizedFilename });
   } catch (error) {
-    adminDatabaseBackupLogger.error({ err: String(error) }, "Error deleting backup:");
+    adminDatabaseBackupLogger.error({ err: formatError(error) }, "Error deleting backup:");
     return NextResponse.json(
       { error: "Failed to delete backup", details: String(error) },
       { status: 500 }

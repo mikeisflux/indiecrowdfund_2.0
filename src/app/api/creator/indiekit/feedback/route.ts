@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitFeedbackLogger = logger.child({ module: "creator-indiekit-feedback" });
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid feedback data" }, { status: 400 });
     }
-    creatorIndiekitFeedbackLogger.error({ err: String(error) }, "NPS feedback error:");
+    creatorIndiekitFeedbackLogger.error({ err: formatError(error) }, "NPS feedback error:");
     return NextResponse.json({ error: "Failed to submit feedback" }, { status: 500 });
   }
 }

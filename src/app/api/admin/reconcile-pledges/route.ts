@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminReconcilePledgesLogger = logger.child({ module: "admin-reconcile-pledges" });
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(summary);
   } catch (error) {
-    adminReconcilePledgesLogger.error({ err: String(error) }, "Reconciliation error:");
+    adminReconcilePledgesLogger.error({ err: formatError(error) }, "Reconciliation error:");
     return NextResponse.json(
       { error: "Failed to reconcile pledges" },
       { status: 500 }
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(summary);
   } catch (error) {
-    adminReconcilePledgesLogger.error({ err: String(error) }, "Reconciliation fix error:");
+    adminReconcilePledgesLogger.error({ err: formatError(error) }, "Reconciliation fix error:");
     return NextResponse.json(
       { error: "Failed to apply reconciliation fixes" },
       { status: 500 }

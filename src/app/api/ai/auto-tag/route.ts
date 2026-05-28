@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const aiAutoTagLogger = logger.child({ module: "ai-auto-tag" });
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
       ...result,
     });
   } catch (error) {
-    aiAutoTagLogger.error({ err: String(error) }, "Auto-tag error:");
+    aiAutoTagLogger.error({ err: formatError(error) }, "Auto-tag error:");
     return NextResponse.json(
       { error: "Failed to auto-tag project" },
       { status: 500 }

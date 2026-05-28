@@ -220,3 +220,37 @@ Static audits at this depth have diminishing returns. The remaining failure mode
 1. **Centralize request validation.** A zod schema at every handler entry, with `safeParse` and a logged 400 on failure. This kills the entire FE↔BE contract bug class structurally.
 2. **Replace generic catches with a shared admin-handler wrapper.** The wrapper logs Prisma error codes/meta at info level before returning the generic 500 toast. This makes future bugs of the prelaunch class diagnosable in seconds.
 3. **Add Playwright smoke tests for the top-20 user flows.** That covers race/data-shape/contract drift simultaneously by exercising real paths against real data. Needs `DATABASE_URL`, so out of scope here.
+
+---
+
+## Pass 4 — Structural fixes from Pass 3's recommendations
+
+### Diagnostic logging across every API handler
+
+The prelaunch reject bug took multiple back-and-forth exchanges to diagnose because every catch block in the codebase used the pattern `logger.error({ err: String(error) }, "...")`. That stringification collapsed Prisma errors into a single line and stripped:
+- the **error code** (P2002 unique-violation, P2025 record-not-found, etc.)
+- the **meta** object (which column, which constraint, which value)
+- the **clientVersion** (which is useful for cross-referencing migration state)
+
+Without those, a `PrismaClientValidationError` saying "Invalid `prisma.projectReview.create()` invocation" gave no breadcrumb identifying that `previousStatus` had been handed a `PrelaunchStatus` value instead of a `ProjectStatus` value.
+
+**Fix landed in this pass:**
+
+- Added `src/lib/errors.ts` exporting `formatError(error)`. Detects Prisma's known + initialization errors via `instanceof` (top-level exported classes) and the other three Prisma subclasses by `error.constructor.name`. Returns a structured `{ kind, code, meta, message, clientVersion }` object that pino logs as a nested field.
+- Ran a project-wide sed replacing `err: String(error)` with `err: formatError(error)` across **338 catch blocks** in `src/app/api/`. Each touched file got the import auto-added at the top. Manually fixed one file (`/api/internal/blocked-ips/route.ts`) where sed had inserted the import inside a JSDoc block comment.
+- Future Prisma-class bugs (next prelaunch-style enum mismatch, missing required field, unique-constraint collision) will now log the code + meta at error level the moment they fire. Diagnosis goes from a multi-message investigation to a single `grep` over the log stream.
+
+### Schema-validated request bodies
+
+Pass 3 documented that the FE↔BE contract bug class can be killed structurally with zod schemas at handler entry. Created `src/lib/api-helpers.ts` exporting `parseBody(req, schema)` that:
+
+- Wraps `req.json()` so malformed JSON returns a clear 400 instead of throwing inside the handler.
+- Runs `safeParse` and, on failure, logs the issues array + the raw body at warn level (so a future contract break is a 30-second log grep) and returns a 400 with the structured issue list to the client.
+- Returns `{ data }` on success, fully typed via `z.infer<T>` — handlers can destructure with no `any` and no manual `if (!x)` guards.
+
+Migrated `/api/admin/prelaunch` PUT as the canonical example (the same handler whose Prisma bug started Pass 1's retrofit). The action enum is now declared in the schema (`z.enum(["APPROVE", "REJECT", "UNPUBLISH", "PUBLISH", "DELETE"])`), so a frontend sending a typo'd action gets a 400 with `path: "action", code: "invalid_enum_value"` instead of falling through to the switch default with an unactionable "Invalid action" message.
+
+**Migration status for the rest of the handlers:** the helper is in place; opportunistic migration of remaining handlers is the natural follow-up as each is touched. ~340 handlers in `/api/` still use manual `body.x` destructuring; converting all at once would risk the kind of sweep regression we want to avoid. The recommended cadence is:
+- Migrate any handler when you touch it for unrelated work.
+- Migrate any handler that has a complex body (>4 fields or nested objects) on the next bug-fix pass.
+- Leave trivial single-field handlers (just `{ id }`) alone — the manual destructure is fine there.

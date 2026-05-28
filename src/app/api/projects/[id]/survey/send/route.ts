@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsSurveySendLogger = logger.child({ module: "projects-survey-send" });
@@ -151,7 +152,7 @@ export async function POST(
       message: `Survey sent to ${pledges.length} backer${pledges.length !== 1 ? "s" : ""}`,
     });
   } catch (error) {
-    projectsSurveySendLogger.error({ err: String(error) }, "Error sending survey:");
+    projectsSurveySendLogger.error({ err: formatError(error) }, "Error sending survey:");
     return NextResponse.json(
       { error: "Failed to send survey" },
       { status: 500 }

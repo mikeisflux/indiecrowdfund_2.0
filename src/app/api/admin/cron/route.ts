@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminCronLogger = logger.child({ module: "admin-cron" });
@@ -59,7 +60,7 @@ export async function GET() {
       return NextResponse.json({ crontab: "" });
     }
   } catch (error) {
-    adminCronLogger.error({ err: String(error) }, "Error reading crontab:");
+    adminCronLogger.error({ err: formatError(error) }, "Error reading crontab:");
     return NextResponse.json(
       { error: "Failed to read crontab" },
       { status: 500 }
@@ -102,7 +103,7 @@ export async function PUT(req: NextRequest) {
     try {
       await writeCrontab(content);
     } catch (error) {
-      adminCronLogger.error({ err: String(error) }, "Error writing crontab:");
+      adminCronLogger.error({ err: formatError(error) }, "Error writing crontab:");
       // Try to restore backup if write failed
       if (backup) {
         try {
@@ -119,7 +120,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ success: true, backup });
   } catch (error) {
-    adminCronLogger.error({ err: String(error) }, "Error writing crontab:");
+    adminCronLogger.error({ err: formatError(error) }, "Error writing crontab:");
     return NextResponse.json(
       { error: "Failed to write crontab" },
       { status: 500 }

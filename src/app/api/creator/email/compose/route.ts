@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailComposeLogger = logger.child({ module: "creator-email-compose" });
@@ -227,7 +228,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    creatorEmailComposeLogger.error({ err: String(error) }, "Error composing email:");
+    creatorEmailComposeLogger.error({ err: formatError(error) }, "Error composing email:");
     return NextResponse.json(
       { error: "Failed to send email" },
       { status: 500 }

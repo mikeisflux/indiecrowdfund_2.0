@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailThreadsForwardLogger = logger.child({ module: "creator-email-threads-forward" });
@@ -218,7 +219,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    creatorEmailThreadsForwardLogger.error({ err: String(error) }, "Error forwarding email:");
+    creatorEmailThreadsForwardLogger.error({ err: formatError(error) }, "Error forwarding email:");
     return NextResponse.json(
       { error: "Failed to forward email" },
       { status: 500 }

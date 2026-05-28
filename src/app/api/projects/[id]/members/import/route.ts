@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsMembersImportLogger = logger.child({ module: "projects-members-import" });
@@ -180,7 +181,7 @@ async function syncToAdminNewsletter(
     });
   } catch (error) {
     // Log but don't fail the import if newsletter sync fails
-    projectsMembersImportLogger.error({ err: String(error) }, "Failed to sync to admin newsletter:");
+    projectsMembersImportLogger.error({ err: formatError(error) }, "Failed to sync to admin newsletter:");
   }
 }
 
@@ -376,7 +377,7 @@ export async function POST(
       skipped,
     });
   } catch (error) {
-    projectsMembersImportLogger.error({ err: String(error) }, "Error importing project members:");
+    projectsMembersImportLogger.error({ err: formatError(error) }, "Error importing project members:");
     return NextResponse.json(
       { error: "Failed to import members" },
       { status: 500 }

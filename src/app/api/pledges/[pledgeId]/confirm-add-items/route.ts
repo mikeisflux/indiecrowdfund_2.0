@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const pledgesConfirmAddItemsLogger = logger.child({ module: "pledges-confirm-add-items" });
@@ -300,7 +301,7 @@ export async function POST(
       addedItems: addons.map((a: { title: string }) => a.title),
     });
   } catch (error) {
-    pledgesConfirmAddItemsLogger.error({ err: String(error) }, "Failed to confirm additional items:");
+    pledgesConfirmAddItemsLogger.error({ err: formatError(error) }, "Failed to confirm additional items:");
     return NextResponse.json(
       { error: "Failed to confirm additional items" },
       { status: 500 }

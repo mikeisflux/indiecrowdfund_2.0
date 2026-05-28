@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import type { NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
@@ -234,7 +235,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    creatorIndiekitEasypostLogger.error({ err: String(error) }, "EasyPost API error:");
+    creatorIndiekitEasypostLogger.error({ err: formatError(error) }, "EasyPost API error:");
     return NextResponse.json({ error: "Failed to process EasyPost request" }, { status: 500 });
   }
 }

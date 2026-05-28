@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminEmailsLogger = logger.child({ module: "admin-emails" });
@@ -74,7 +75,7 @@ export async function GET(
 
     return NextResponse.json({ emailLog });
   } catch (error) {
-    adminEmailsLogger.error({ err: String(error) }, "Error fetching email:");
+    adminEmailsLogger.error({ err: formatError(error) }, "Error fetching email:");
     return NextResponse.json(
       { error: "Failed to fetch email" },
       { status: 500 }

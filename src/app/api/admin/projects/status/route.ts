@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminProjectsStatusLogger = logger.child({ module: "admin-projects-status" });
@@ -247,7 +248,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    adminProjectsStatusLogger.error({ err: String(error) }, "Error changing project status:");
+    adminProjectsStatusLogger.error({ err: formatError(error) }, "Error changing project status:");
     return NextResponse.json(
       { error: "Failed to change project status" },
       { status: 500 }

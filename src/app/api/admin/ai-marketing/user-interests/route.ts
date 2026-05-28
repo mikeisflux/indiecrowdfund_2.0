@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingUserInterestsLogger = logger.child({ module: "admin-ai-marketing-user-interests" });
@@ -211,7 +212,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    adminAiMarketingUserInterestsLogger.error({ err: String(error) }, "Error fetching user interests:");
+    adminAiMarketingUserInterestsLogger.error({ err: formatError(error) }, "Error fetching user interests:");
     return NextResponse.json(
       { error: "Failed to fetch user interest data" },
       { status: 500 }
@@ -341,7 +342,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    adminAiMarketingUserInterestsLogger.error({ err: String(error) }, "Error updating user interests:");
+    adminAiMarketingUserInterestsLogger.error({ err: formatError(error) }, "Error updating user interests:");
     return NextResponse.json(
       { error: "Failed to update user interest profiles" },
       { status: 500 }

@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { parseBody } from "@/lib/api-helpers";
 
 const adminPrelaunchLogger = logger.child({ module: "admin-prelaunch" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+// Validated payload for PUT /api/admin/prelaunch. The fixed action set
+// here is what the route's switch statement (line ~190) accepts; a
+// frontend sending anything else gets a 400 with a clear "invalid
+// enum_value" issue path instead of falling through to the switch
+// default (which previously returned "Invalid action" with no detail
+// about which value was rejected).
+const prelaunchActionSchema = z.object({
+  projectId: z.string().min(1),
+  action: z.enum(["APPROVE", "REJECT", "UNPUBLISH", "PUBLISH", "DELETE"]),
+  reason: z.string().optional(),
+});
 
 // Helper to check admin role
 async function requireAdmin() {
@@ -134,7 +149,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminPrelaunchLogger.error({ err: String(error) }, "Error fetching prelaunch pages:");
+    adminPrelaunchLogger.error({ err: formatError(error) }, "Error fetching prelaunch pages:");
     return NextResponse.json(
       { error: "Failed to fetch prelaunch pages" },
       { status: 500 }
@@ -154,12 +169,9 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const body = await req.json();
-    const { projectId, action, reason } = body;
-
-    if (!projectId) {
-      return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
-    }
+    const parsed = await parseBody(req, prelaunchActionSchema);
+    if ("response" in parsed) return parsed.response;
+    const { projectId, action, reason } = parsed.data;
 
     const project = await db.project.findFirst({ where: { id: projectId, deletedAt: null },
       select: {
@@ -299,7 +311,7 @@ export async function PUT(req: NextRequest) {
       message: `Prelaunch page ${action.toLowerCase()}ed successfully`,
     });
   } catch (error) {
-    adminPrelaunchLogger.error({ err: String(error) }, "Error updating prelaunch page:");
+    adminPrelaunchLogger.error({ err: formatError(error) }, "Error updating prelaunch page:");
     return NextResponse.json(
       { error: "Failed to update prelaunch page" },
       { status: 500 }

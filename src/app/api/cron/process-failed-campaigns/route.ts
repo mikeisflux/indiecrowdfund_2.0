@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const cronProcessFailedCampaignsLogger = logger.child({ module: "cron-process-failed-campaigns" });
@@ -198,7 +199,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    cronProcessFailedCampaignsLogger.error({ err: String(error) }, "Process ended campaigns cron error:");
+    cronProcessFailedCampaignsLogger.error({ err: formatError(error) }, "Process ended campaigns cron error:");
     return NextResponse.json(
       { error: "Failed to process ended campaigns" },
       { status: 500 }

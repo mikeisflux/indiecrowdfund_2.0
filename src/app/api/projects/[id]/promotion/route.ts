@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsPromotionLogger = logger.child({ module: "projects-promotion" });
@@ -65,7 +66,7 @@ export async function POST(
       project: updated,
     });
   } catch (error) {
-    projectsPromotionLogger.error({ err: String(error) }, "Update promotion error:");
+    projectsPromotionLogger.error({ err: formatError(error) }, "Update promotion error:");
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -115,7 +116,7 @@ export async function GET(
 
     return NextResponse.json(project);
   } catch (error) {
-    projectsPromotionLogger.error({ err: String(error) }, "Get promotion error:");
+    projectsPromotionLogger.error({ err: formatError(error) }, "Get promotion error:");
     return NextResponse.json(
       { error: "Failed to get promotion settings" },
       { status: 500 }

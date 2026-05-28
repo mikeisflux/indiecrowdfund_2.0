@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const backerSurveysLogger = logger.child({ module: "backer-surveys" });
@@ -181,7 +182,7 @@ export async function GET(request: NextRequest) {
       stats,
     }, { headers: corsHeaders });
   } catch (error) {
-    backerSurveysLogger.error({ err: String(error) }, "Error fetching backer surveys:");
+    backerSurveysLogger.error({ err: formatError(error) }, "Error fetching backer surveys:");
     return NextResponse.json(
       { error: "Failed to fetch surveys" },
       { status: 500, headers: corsHeaders }
@@ -353,7 +354,7 @@ export async function POST(request: NextRequest) {
       questions: questions.sort((a, b) => a.sortOrder - b.sortOrder),
     }, { headers: corsHeaders });
   } catch (error) {
-    backerSurveysLogger.error({ err: String(error) }, "Error fetching survey details:");
+    backerSurveysLogger.error({ err: formatError(error) }, "Error fetching survey details:");
     return NextResponse.json(
       { error: "Failed to fetch survey details" },
       { status: 500, headers: corsHeaders }

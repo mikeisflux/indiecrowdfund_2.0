@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -55,7 +56,7 @@ export async function GET() {
 
     return NextResponse.json({ payouts });
   } catch (error) {
-    paypalPayoutsLogger.error({ err: String(error) }, "Failed to list payouts");
+    paypalPayoutsLogger.error({ err: formatError(error) }, "Failed to list payouts");
     return NextResponse.json({ error: "Failed to list payouts" }, { status: 500 });
   }
 }
@@ -211,7 +212,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid data" }, { status: 400 });
     }
-    paypalPayoutsLogger.error({ err: String(error) }, "Payout initiation error");
+    paypalPayoutsLogger.error({ err: formatError(error) }, "Payout initiation error");
     return NextResponse.json({ error: "Failed to initiate payout" }, { status: 500 });
   }
 }

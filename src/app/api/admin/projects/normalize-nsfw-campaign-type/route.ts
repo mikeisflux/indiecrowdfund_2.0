@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -79,7 +80,7 @@ export async function POST() {
       })),
     });
   } catch (error) {
-    normalizeLogger.error({ err: String(error) }, "Error normalizing NSFW campaign types");
+    normalizeLogger.error({ err: formatError(error) }, "Error normalizing NSFW campaign types");
     return NextResponse.json(
       { error: "Failed to normalize NSFW projects" },
       { status: 500 }

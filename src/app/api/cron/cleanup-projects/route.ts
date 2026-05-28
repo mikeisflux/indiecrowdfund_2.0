@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const cronCleanupProjectsLogger = logger.child({ module: "cron-cleanup-projects" });
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    cronCleanupProjectsLogger.error({ err: String(error) }, "[Cron] Project Sanitizer Error:");
+    cronCleanupProjectsLogger.error({ err: formatError(error) }, "[Cron] Project Sanitizer Error:");
     return NextResponse.json(
       { error: "Failed to clean up projects" },
       { status: 500 }
@@ -162,7 +163,7 @@ export async function POST(_req: NextRequest) {
       })),
     });
   } catch (error) {
-    cronCleanupProjectsLogger.error({ err: String(error) }, "[Admin] Project Sanitizer Error:");
+    cronCleanupProjectsLogger.error({ err: formatError(error) }, "[Admin] Project Sanitizer Error:");
     return NextResponse.json(
       { error: "Failed to clean up projects" },
       { status: 500 }

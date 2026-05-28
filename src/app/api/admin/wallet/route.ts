@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminWalletLogger = logger.child({ module: "admin-wallet" });
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
       newBalance: 0,
     });
   } catch (error) {
-    adminWalletLogger.error({ err: String(error) }, "Zero wallet balance error:");
+    adminWalletLogger.error({ err: formatError(error) }, "Zero wallet balance error:");
     return NextResponse.json(
       { error: "Failed to zero wallet balance" },
       { status: 500 }

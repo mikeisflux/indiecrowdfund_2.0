@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitModifiersLogger = logger.child({ module: "creator-indiekit-modifiers" });
@@ -148,7 +149,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    creatorIndiekitModifiersLogger.error({ err: String(error) }, "Modifier GET error:");
+    creatorIndiekitModifiersLogger.error({ err: formatError(error) }, "Modifier GET error:");
     return NextResponse.json({ error: "Failed to fetch modifier data" }, { status: 500 });
   }
 }
@@ -521,7 +522,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    creatorIndiekitModifiersLogger.error({ err: String(error) }, "Modifier POST error:");
+    creatorIndiekitModifiersLogger.error({ err: formatError(error) }, "Modifier POST error:");
     return NextResponse.json({ error: "Failed to process modifier action" }, { status: 500 });
   }
 }

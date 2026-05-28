@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitUpdatesLogger = logger.child({ module: "creator-indiekit-updates" });
@@ -82,7 +83,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ updates: formattedUpdates });
   } catch (error) {
-    creatorIndiekitUpdatesLogger.error({ err: String(error) }, "IndieKit updates fetch error:");
+    creatorIndiekitUpdatesLogger.error({ err: formatError(error) }, "IndieKit updates fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch updates" },
       { status: 500 }
@@ -212,7 +213,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    creatorIndiekitUpdatesLogger.error({ err: String(error) }, "IndieKit update create error:");
+    creatorIndiekitUpdatesLogger.error({ err: formatError(error) }, "IndieKit update create error:");
     return NextResponse.json(
       { error: "Failed to create update" },
       { status: 500 }
@@ -298,7 +299,7 @@ export async function PATCH(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    creatorIndiekitUpdatesLogger.error({ err: String(error) }, "IndieKit update patch error:");
+    creatorIndiekitUpdatesLogger.error({ err: formatError(error) }, "IndieKit update patch error:");
     return NextResponse.json(
       { error: "Failed to update" },
       { status: 500 }
@@ -355,7 +356,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorIndiekitUpdatesLogger.error({ err: String(error) }, "IndieKit update delete error:");
+    creatorIndiekitUpdatesLogger.error({ err: formatError(error) }, "IndieKit update delete error:");
     return NextResponse.json(
       { error: "Failed to delete update" },
       { status: 500 }

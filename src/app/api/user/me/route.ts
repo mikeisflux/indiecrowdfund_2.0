@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const userMeLogger = logger.child({ module: "user-me" });
@@ -26,7 +27,7 @@ export async function GET() {
 
     return NextResponse.json({ user, vanityUrl: user?.vanityUrl || null });
   } catch (error) {
-    userMeLogger.error({ err: String(error) }, "Error fetching current user:");
+    userMeLogger.error({ err: formatError(error) }, "Error fetching current user:");
     return NextResponse.json({ user: null });
   }
 }

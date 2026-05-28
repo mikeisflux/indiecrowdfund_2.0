@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const chatAdminDeleteLogger = logger.child({ module: "chat-admin-delete" });
@@ -55,7 +56,7 @@ export async function DELETE(req: NextRequest) {
       message: "Message deleted",
     });
   } catch (error) {
-    chatAdminDeleteLogger.error({ err: String(error) }, "Error deleting chat message:");
+    chatAdminDeleteLogger.error({ err: formatError(error) }, "Error deleting chat message:");
     return NextResponse.json(
       { error: "Failed to delete message" },
       { status: 500 }

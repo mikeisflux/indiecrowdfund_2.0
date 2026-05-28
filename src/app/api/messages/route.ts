@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const messagesLogger = logger.child({ module: "messages" });
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {
-    messagesLogger.error({ err: String(error) }, "Create message error:");
+    messagesLogger.error({ err: formatError(error) }, "Create message error:");
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -279,7 +280,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ messages, conversations, totalUnread });
   } catch (error) {
-    messagesLogger.error({ err: String(error) }, "Get messages error:");
+    messagesLogger.error({ err: formatError(error) }, "Get messages error:");
     return NextResponse.json(
       { error: "Failed to fetch messages" },
       { status: 500 }
@@ -331,7 +332,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    messagesLogger.error({ err: String(error) }, "Mark messages read error:");
+    messagesLogger.error({ err: formatError(error) }, "Mark messages read error:");
     return NextResponse.json(
       { error: "Failed to mark messages as read" },
       { status: 500 }

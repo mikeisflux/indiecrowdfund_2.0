@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminHeroSlidesLogger = logger.child({ module: "admin-hero-slides" });
@@ -94,7 +95,7 @@ export async function GET() {
       },
     }, { headers: corsHeaders });
   } catch (error) {
-    adminHeroSlidesLogger.error({ err: String(error) }, "Error fetching hero slides:");
+    adminHeroSlidesLogger.error({ err: formatError(error) }, "Error fetching hero slides:");
     return NextResponse.json({ error: "Failed to fetch hero slides" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ slide }, { headers: corsHeaders });
   } catch (error) {
-    adminHeroSlidesLogger.error({ err: String(error) }, "Error creating hero slide:");
+    adminHeroSlidesLogger.error({ err: formatError(error) }, "Error creating hero slide:");
     return NextResponse.json({ error: "Failed to create hero slide" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -257,7 +258,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ slide }, { headers: corsHeaders });
   } catch (error) {
-    adminHeroSlidesLogger.error({ err: String(error) }, "Error updating hero slide:");
+    adminHeroSlidesLogger.error({ err: formatError(error) }, "Error updating hero slide:");
     return NextResponse.json({ error: "Failed to update hero slide" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -286,7 +287,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    adminHeroSlidesLogger.error({ err: String(error) }, "Error deleting hero slide:");
+    adminHeroSlidesLogger.error({ err: formatError(error) }, "Error deleting hero slide:");
     return NextResponse.json({ error: "Failed to delete hero slide" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -318,7 +319,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    adminHeroSlidesLogger.error({ err: String(error) }, "Error reordering slides:");
+    adminHeroSlidesLogger.error({ err: formatError(error) }, "Error reordering slides:");
     return NextResponse.json({ error: "Failed to reorder slides" }, { status: 500, headers: corsHeaders });
   }
 }

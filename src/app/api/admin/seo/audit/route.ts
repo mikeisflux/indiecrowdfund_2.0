@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminSeoAuditLogger = logger.child({ module: "admin-seo-audit" });
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminSeoAuditLogger.error({ err: String(error) }, "Error fetching SEO audits:");
+    adminSeoAuditLogger.error({ err: formatError(error) }, "Error fetching SEO audits:");
     return NextResponse.json(
       { error: "Failed to fetch SEO audits" },
       { status: 500 }
@@ -78,7 +79,7 @@ export async function POST() {
       },
     });
   } catch (error) {
-    adminSeoAuditLogger.error({ err: String(error) }, "Error running SEO audit:");
+    adminSeoAuditLogger.error({ err: formatError(error) }, "Error running SEO audit:");
     return NextResponse.json(
       { error: "Failed to run SEO audit" },
       { status: 500 }

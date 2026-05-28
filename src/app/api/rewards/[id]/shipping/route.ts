@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const rewardsShippingLogger = logger.child({ module: "rewards-shipping" });
@@ -97,7 +98,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    rewardsShippingLogger.error({ err: String(error) }, "Update reward shipping error:");
+    rewardsShippingLogger.error({ err: formatError(error) }, "Update reward shipping error:");
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues.map(i => i.message).join(", ") }, { status: 400 });
     }
@@ -168,7 +169,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    rewardsShippingLogger.error({ err: String(error) }, "Get reward shipping error:");
+    rewardsShippingLogger.error({ err: formatError(error) }, "Get reward shipping error:");
     return NextResponse.json({ error: "Failed to get shipping" }, { status: 500 });
   }
 }

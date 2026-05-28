@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailSendTestLogger = logger.child({ module: "creator-email-send-test" });
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: `Test email sent to ${to}` });
   } catch (error) {
-    creatorEmailSendTestLogger.error({ err: String(error) }, "Send test email error:");
+    creatorEmailSendTestLogger.error({ err: formatError(error) }, "Send test email error:");
     return NextResponse.json(
       { error: "Failed to send test email" },
       { status: 500 }

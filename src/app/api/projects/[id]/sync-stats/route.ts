@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -67,7 +68,7 @@ export async function POST(
       updated: true,
     });
   } catch (error) {
-    projectsSyncStatsLogger.error({ err: String(error) }, "Failed to sync project stats:");
+    projectsSyncStatsLogger.error({ err: formatError(error) }, "Failed to sync project stats:");
     return NextResponse.json({ error: "Failed to sync project stats" }, { status: 500 });
   }
 }

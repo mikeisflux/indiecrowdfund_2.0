@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
@@ -258,7 +259,7 @@ export async function GET(req: NextRequest) {
       headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    projectsLogger.error({ correlationId, err: String(error) }, "Failed to fetch projects:");
+    projectsLogger.error({ correlationId, err: formatError(error) }, "Failed to fetch projects:");
     return NextResponse.json(
       { error: "Failed to fetch projects", correlationId },
       { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
@@ -424,7 +425,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    projectsLogger.error({ correlationId, err: String(error) }, "Failed to create project:");
+    projectsLogger.error({ correlationId, err: formatError(error) }, "Failed to create project:");
     return NextResponse.json(
       { error: "Failed to create project", correlationId },
       { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }

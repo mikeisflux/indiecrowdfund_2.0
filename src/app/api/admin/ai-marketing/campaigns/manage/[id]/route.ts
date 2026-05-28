@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingCampaignsManageLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage" });
@@ -69,7 +70,7 @@ export async function GET(
 
     return NextResponse.json({ campaign });
   } catch (error) {
-    adminAiMarketingCampaignsManageLogger.error({ err: String(error) }, "Error fetching campaign:");
+    adminAiMarketingCampaignsManageLogger.error({ err: formatError(error) }, "Error fetching campaign:");
     return NextResponse.json(
       { error: "Failed to fetch campaign" },
       { status: 500 }
@@ -185,7 +186,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, campaign });
   } catch (error) {
-    adminAiMarketingCampaignsManageLogger.error({ err: String(error) }, "Error updating campaign:");
+    adminAiMarketingCampaignsManageLogger.error({ err: formatError(error) }, "Error updating campaign:");
     return NextResponse.json(
       { error: "Failed to update campaign" },
       { status: 500 }
@@ -240,7 +241,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: `Campaign "${existing.name}" deleted` });
   } catch (error) {
-    adminAiMarketingCampaignsManageLogger.error({ err: String(error) }, "Error deleting campaign:");
+    adminAiMarketingCampaignsManageLogger.error({ err: formatError(error) }, "Error deleting campaign:");
     return NextResponse.json(
       { error: "Failed to delete campaign" },
       { status: 500 }

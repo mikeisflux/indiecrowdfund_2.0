@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const divinitycoinConfigLogger = logger.child({ module: "divinitycoin-config" });
@@ -31,7 +32,7 @@ export async function GET() {
       stripePublishableKey: settings.divinityCoinStripePublishableKey,
     });
   } catch (error) {
-    divinitycoinConfigLogger.error({ err: String(error) }, "[DivinityCoin Config] Error:");
+    divinitycoinConfigLogger.error({ err: formatError(error) }, "[DivinityCoin Config] Error:");
     return NextResponse.json(
       { error: "Failed to load DivinityCoin config" },
       { status: 500 }

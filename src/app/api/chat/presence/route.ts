@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const chatPresenceLogger = logger.child({ module: "chat-presence" });
@@ -118,7 +119,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ users });
   } catch (error) {
     chatPresenceLogger.error(
-      { err: String(error) },
+      { err: formatError(error) },
       "Error fetching chat presence:"
     );
     return NextResponse.json(
@@ -156,7 +157,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     chatPresenceLogger.error(
-      { err: String(error) },
+      { err: formatError(error) },
       "Error updating chat presence:"
     );
     return NextResponse.json(
@@ -185,7 +186,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     chatPresenceLogger.error(
-      { err: String(error) },
+      { err: formatError(error) },
       "Error removing chat presence:"
     );
     return NextResponse.json(

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorMarketplaceDiscountCodesLogger = logger.child({ module: "creator-marketplace-discount-codes" });
@@ -112,7 +113,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    creatorMarketplaceDiscountCodesLogger.error({ err: String(error) }, "Error fetching discount codes:");
+    creatorMarketplaceDiscountCodesLogger.error({ err: formatError(error) }, "Error fetching discount codes:");
     return NextResponse.json(
       { error: "Failed to fetch discount codes" },
       { status: 500 }
@@ -246,7 +247,7 @@ export async function POST(request: NextRequest) {
       discountCode,
     });
   } catch (error) {
-    creatorMarketplaceDiscountCodesLogger.error({ err: String(error) }, "Error creating discount code:");
+    creatorMarketplaceDiscountCodesLogger.error({ err: formatError(error) }, "Error creating discount code:");
     return NextResponse.json(
       { error: "Failed to create discount code" },
       { status: 500 }
@@ -338,7 +339,7 @@ export async function PUT(request: NextRequest) {
       discountCode: updatedCode,
     });
   } catch (error) {
-    creatorMarketplaceDiscountCodesLogger.error({ err: String(error) }, "Error updating discount code:");
+    creatorMarketplaceDiscountCodesLogger.error({ err: formatError(error) }, "Error updating discount code:");
     return NextResponse.json(
       { error: "Failed to update discount code" },
       { status: 500 }
@@ -419,7 +420,7 @@ export async function DELETE(request: NextRequest) {
       deleted: true,
     });
   } catch (error) {
-    creatorMarketplaceDiscountCodesLogger.error({ err: String(error) }, "Error deleting discount code:");
+    creatorMarketplaceDiscountCodesLogger.error({ err: formatError(error) }, "Error deleting discount code:");
     return NextResponse.json(
       { error: "Failed to delete discount code" },
       { status: 500 }

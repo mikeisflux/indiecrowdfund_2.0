@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const marketplaceRedeemCodeLogger = logger.child({ module: "marketplace-redeem-code" });
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === "ALREADY_REDEEMED") {
       return NextResponse.json({ error: "You already own this book" }, { status: 409 });
     }
-    marketplaceRedeemCodeLogger.error({ err: String(error) }, "Error redeeming promo code:");
+    marketplaceRedeemCodeLogger.error({ err: formatError(error) }, "Error redeeming promo code:");
     return NextResponse.json(
       { error: "Failed to redeem promo code" },
       { status: 500 }

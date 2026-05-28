@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingBehaviorLogger = logger.child({ module: "admin-ai-marketing-behavior" });
@@ -196,7 +197,7 @@ export async function GET(request: Request) {
         })),
     });
   } catch (error) {
-    adminAiMarketingBehaviorLogger.error({ err: String(error) }, "Error fetching behavior data:");
+    adminAiMarketingBehaviorLogger.error({ err: formatError(error) }, "Error fetching behavior data:");
     return NextResponse.json(
       { error: "Failed to fetch behavior data" },
       { status: 500 }

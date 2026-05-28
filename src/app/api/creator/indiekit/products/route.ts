@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitProductsLogger = logger.child({ module: "creator-indiekit-products" });
@@ -106,7 +107,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ products: formattedProducts });
   } catch (error) {
-    creatorIndiekitProductsLogger.error({ err: String(error) }, "IndieKit products fetch error:");
+    creatorIndiekitProductsLogger.error({ err: formatError(error) }, "IndieKit products fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch products" },
       { status: 500 }
@@ -203,7 +204,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    creatorIndiekitProductsLogger.error({ err: String(error) }, "IndieKit product create error:");
+    creatorIndiekitProductsLogger.error({ err: formatError(error) }, "IndieKit product create error:");
     return NextResponse.json(
       { error: "Failed to create product" },
       { status: 500 }
@@ -292,7 +293,7 @@ export async function PATCH(req: NextRequest) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    creatorIndiekitProductsLogger.error({ err: String(error) }, "IndieKit product update error:");
+    creatorIndiekitProductsLogger.error({ err: formatError(error) }, "IndieKit product update error:");
     return NextResponse.json(
       { error: "Failed to update product" },
       { status: 500 }
@@ -348,7 +349,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorIndiekitProductsLogger.error({ err: String(error) }, "IndieKit product delete error:");
+    creatorIndiekitProductsLogger.error({ err: formatError(error) }, "IndieKit product delete error:");
     return NextResponse.json(
       { error: "Failed to delete product" },
       { status: 500 }

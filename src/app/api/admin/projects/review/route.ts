@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
@@ -306,7 +307,7 @@ export async function POST(req: NextRequest) {
       headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminProjectsReviewLogger.error({ correlationId, err: String(error) }, "Error reviewing project:");
+    adminProjectsReviewLogger.error({ correlationId, err: formatError(error) }, "Error reviewing project:");
     return NextResponse.json(
       { error: "Failed to review project", correlationId },
       { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
@@ -484,7 +485,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminProjectsReviewLogger.error({ err: String(error) }, "Error fetching projects for review:");
+    adminProjectsReviewLogger.error({ err: formatError(error) }, "Error fetching projects for review:");
     return NextResponse.json(
       { error: "Failed to fetch projects" },
       { status: 500 }

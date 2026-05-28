@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
         headers: { [CORRELATION_HEADER]: correlationId },
       });
     } catch (error) {
-      authSessionLogger.error({ correlationId, err: String(error) }, "Error fetching session:");
+      authSessionLogger.error({ correlationId, err: formatError(error) }, "Error fetching session:");
       return NextResponse.json({ user: null }, {
         headers: { [CORRELATION_HEADER]: correlationId },
       });

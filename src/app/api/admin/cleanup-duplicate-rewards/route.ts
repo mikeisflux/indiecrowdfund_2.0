@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
       totalDuplicatesToRemove: duplicateGroups.reduce((sum, g) => sum + g.deleteIds.length, 0),
     });
   } catch (error) {
-    cleanupLogger.error({ err: String(error) }, "Preview cleanup error:");
+    cleanupLogger.error({ err: formatError(error) }, "Preview cleanup error:");
     return NextResponse.json({ error: "Failed to preview cleanup" }, { status: 500 });
   }
 }
@@ -141,7 +142,7 @@ export async function POST(req: NextRequest) {
       totalPledgesMerged: totalMerged,
     });
   } catch (error) {
-    cleanupLogger.error({ err: String(error) }, "Cleanup error:");
+    cleanupLogger.error({ err: formatError(error) }, "Cleanup error:");
     return NextResponse.json({ error: "Failed to cleanup duplicates" }, { status: 500 });
   }
 }

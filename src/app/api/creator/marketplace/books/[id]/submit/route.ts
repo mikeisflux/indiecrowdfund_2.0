@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorMarketplaceBooksSubmitLogger = logger.child({ module: "creator-marketplace-books-submit" });
@@ -108,7 +109,7 @@ export async function POST(
       message: "Book submitted for review",
     });
   } catch (error) {
-    creatorMarketplaceBooksSubmitLogger.error({ err: String(error) }, "Error submitting book for review:");
+    creatorMarketplaceBooksSubmitLogger.error({ err: formatError(error) }, "Error submitting book for review:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

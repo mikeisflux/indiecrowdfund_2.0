@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -205,7 +206,7 @@ export async function POST() {
       projects: results,
     });
   } catch (error) {
-    recoverLogger.error({ err: String(error) }, "Error recovering base64 images");
+    recoverLogger.error({ err: formatError(error) }, "Error recovering base64 images");
     return NextResponse.json(
       { error: "Failed to recover images", details: error instanceof Error ? error.message : "Unknown" },
       { status: 500 }

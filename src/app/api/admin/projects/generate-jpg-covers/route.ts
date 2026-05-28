@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -196,7 +197,7 @@ export async function POST(req: NextRequest) {
       results,
     });
   } catch (error) {
-    generateJpgLogger.error({ err: String(error) }, "Error generating JPG covers");
+    generateJpgLogger.error({ err: formatError(error) }, "Error generating JPG covers");
     return NextResponse.json(
       { error: "Failed to generate JPG covers", details: error instanceof Error ? error.message : "Unknown" },
       { status: 500 }

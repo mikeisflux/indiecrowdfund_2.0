@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const retailersResetPasswordLogger = logger.child({ module: "retailers-reset-password" });
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
       message: "Password has been reset successfully",
     });
   } catch (error) {
-    retailersResetPasswordLogger.error({ err: String(error) }, "Error resetting retailer password:");
+    retailersResetPasswordLogger.error({ err: formatError(error) }, "Error resetting retailer password:");
     return NextResponse.json(
       { error: "Failed to reset password" },
       { status: 500 }
@@ -144,7 +145,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ valid: true });
   } catch (error) {
-    retailersResetPasswordLogger.error({ err: String(error) }, "Error verifying reset token:");
+    retailersResetPasswordLogger.error({ err: formatError(error) }, "Error verifying reset token:");
     return NextResponse.json(
       { valid: false, error: "Failed to verify token" },
       { status: 500 }

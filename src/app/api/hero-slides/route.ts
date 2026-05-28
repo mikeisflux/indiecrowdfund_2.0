@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const heroSlidesLogger = logger.child({ module: "hero-slides" });
@@ -126,7 +127,7 @@ export async function GET() {
 
     return NextResponse.json({ slides }, { headers: corsHeaders });
   } catch (error) {
-    heroSlidesLogger.error({ err: String(error) }, "Error fetching hero slides:");
+    heroSlidesLogger.error({ err: formatError(error) }, "Error fetching hero slides:");
     return NextResponse.json({ slides: [] }, { headers: corsHeaders });
   }
 }

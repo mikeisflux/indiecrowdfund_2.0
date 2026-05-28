@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorMarketplaceCompanyLogger = logger.child({ module: "creator-marketplace-company" });
@@ -45,7 +46,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    creatorMarketplaceCompanyLogger.error({ err: String(error) }, "Error fetching company:");
+    creatorMarketplaceCompanyLogger.error({ err: formatError(error) }, "Error fetching company:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    creatorMarketplaceCompanyLogger.error({ err: String(error) }, "Error creating company:");
+    creatorMarketplaceCompanyLogger.error({ err: formatError(error) }, "Error creating company:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -211,7 +212,7 @@ export async function PUT(request: Request) {
       message: "Company profile updated",
     });
   } catch (error) {
-    creatorMarketplaceCompanyLogger.error({ err: String(error) }, "Error updating company:");
+    creatorMarketplaceCompanyLogger.error({ err: formatError(error) }, "Error updating company:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

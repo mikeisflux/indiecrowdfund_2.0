@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const authLogoutLogger = logger.child({ module: "auth-logout" });
@@ -9,7 +10,7 @@ export async function POST() {
     await deleteSession();
     return NextResponse.json({ success: true });
   } catch (error) {
-    authLogoutLogger.error({ err: String(error) }, "Logout error:");
+    authLogoutLogger.error({ err: formatError(error) }, "Logout error:");
     return NextResponse.json({ error: "Failed to logout" }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import type { NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
@@ -182,7 +183,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    creatorIndiekitStampsLogger.error({ err: String(error) }, "Stamps.com API error:");
+    creatorIndiekitStampsLogger.error({ err: formatError(error) }, "Stamps.com API error:");
     return NextResponse.json({ error: "Failed to process Stamps.com request" }, { status: 500 });
   }
 }

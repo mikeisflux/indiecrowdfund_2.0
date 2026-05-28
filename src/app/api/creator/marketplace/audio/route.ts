@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const audioFilesLogger = logger.child({ module: "creator-marketplace-audio" });
@@ -51,7 +52,7 @@ export async function GET() {
 
     return NextResponse.json({ files: formatted });
   } catch (error) {
-    audioFilesLogger.error({ err: String(error) }, "Error listing audio files");
+    audioFilesLogger.error({ err: formatError(error) }, "Error listing audio files");
     return NextResponse.json({ error: "Failed to list audio files" }, { status: 500 });
   }
 }
@@ -89,7 +90,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    audioFilesLogger.error({ err: String(error) }, "Error deleting audio file");
+    audioFilesLogger.error({ err: formatError(error) }, "Error deleting audio file");
     return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
   }
 }

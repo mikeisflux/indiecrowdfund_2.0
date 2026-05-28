@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const uploadLogger = logger.child({ module: "upload" });
@@ -286,7 +287,7 @@ export async function POST(req: NextRequest) {
       filename,
     });
   } catch (error) {
-    uploadLogger.error({ err: String(error) }, "Upload error:");
+    uploadLogger.error({ err: formatError(error) }, "Upload error:");
     return NextResponse.json(
       { error: "Failed to upload file" },
       { status: 500 }

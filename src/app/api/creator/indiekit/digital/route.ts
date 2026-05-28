@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitDigitalLogger = logger.child({ module: "creator-indiekit-digital" });
@@ -225,7 +226,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ rules: formattedRules });
   } catch (error) {
-    creatorIndiekitDigitalLogger.error({ err: String(error) }, "IndieKit digital GET error:");
+    creatorIndiekitDigitalLogger.error({ err: formatError(error) }, "IndieKit digital GET error:");
     return NextResponse.json(
       { error: "Failed to fetch distribution rules" },
       { status: 500 }
@@ -749,7 +750,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    creatorIndiekitDigitalLogger.error({ err: String(error) }, "IndieKit digital API error:");
+    creatorIndiekitDigitalLogger.error({ err: formatError(error) }, "IndieKit digital API error:");
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }
@@ -798,7 +799,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorIndiekitDigitalLogger.error({ err: String(error) }, "IndieKit digital DELETE error:");
+    creatorIndiekitDigitalLogger.error({ err: formatError(error) }, "IndieKit digital DELETE error:");
     return NextResponse.json(
       { error: "Failed to delete distribution rule" },
       { status: 500 }

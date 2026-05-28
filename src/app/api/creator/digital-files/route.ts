@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorDigitalFilesLogger = logger.child({ module: "creator-digital-files" });
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ files }, { headers: corsHeaders });
   } catch (error) {
-    creatorDigitalFilesLogger.error({ err: String(error) }, "Error fetching digital files:");
+    creatorDigitalFilesLogger.error({ err: formatError(error) }, "Error fetching digital files:");
     return NextResponse.json(
       { error: "Failed to fetch digital files" },
       { status: 500, headers: corsHeaders }
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
       { headers: corsHeaders }
     );
   } catch (error) {
-    creatorDigitalFilesLogger.error({ err: String(error) }, "Error creating digital file:");
+    creatorDigitalFilesLogger.error({ err: formatError(error) }, "Error creating digital file:");
     return NextResponse.json(
       { error: "Failed to create digital file" },
       { status: 500, headers: corsHeaders }
@@ -405,7 +406,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400, headers: corsHeaders });
   } catch (error) {
-    creatorDigitalFilesLogger.error({ err: String(error) }, "Error replacing digital file:");
+    creatorDigitalFilesLogger.error({ err: formatError(error) }, "Error replacing digital file:");
     return NextResponse.json({ error: "Failed to replace digital file" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -466,7 +467,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    creatorDigitalFilesLogger.error({ err: String(error) }, "Error deleting digital file:");
+    creatorDigitalFilesLogger.error({ err: formatError(error) }, "Error deleting digital file:");
     return NextResponse.json(
       { error: "Failed to delete digital file" },
       { status: 500, headers: corsHeaders }

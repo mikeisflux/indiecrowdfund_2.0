@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { runAutomatedMarketing } from "@/lib/ai/automation";
 
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    cronAiMarketingLogger.error({ err: String(error) }, "AI marketing cron error:");
+    cronAiMarketingLogger.error({ err: formatError(error) }, "AI marketing cron error:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

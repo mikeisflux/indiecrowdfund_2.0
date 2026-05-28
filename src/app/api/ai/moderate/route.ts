@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const aiModerateLogger = logger.child({ module: "ai-moderate" });
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
       ...result,
     });
   } catch (error) {
-    aiModerateLogger.error({ err: String(error) }, "Moderation error:");
+    aiModerateLogger.error({ err: formatError(error) }, "Moderation error:");
     return NextResponse.json(
       { error: "Failed to moderate content" },
       { status: 500 }

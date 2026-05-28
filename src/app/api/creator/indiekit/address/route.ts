@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitAddressLogger = logger.child({ module: "creator-indiekit-address" });
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorIndiekitAddressLogger.error({ err: String(error) }, "Address API error:");
+    creatorIndiekitAddressLogger.error({ err: formatError(error) }, "Address API error:");
     return NextResponse.json({ error: "Failed to update address" }, { status: 500 });
   }
 }

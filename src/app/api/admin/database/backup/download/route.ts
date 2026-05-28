@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminDatabaseBackupDownloadLogger = logger.child({ module: "admin-database-backup-download" });
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminDatabaseBackupDownloadLogger.error({ err: String(error) }, "Error downloading backup:");
+    adminDatabaseBackupDownloadLogger.error({ err: formatError(error) }, "Error downloading backup:");
     return NextResponse.json(
       { error: "Failed to download backup", details: String(error) },
       { status: 500 }

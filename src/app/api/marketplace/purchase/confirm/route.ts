@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const marketplacePurchaseConfirmLogger = logger.child({ module: "marketplace-purchase-confirm" });
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
       message: "Purchase confirmed",
     });
   } catch (error) {
-    marketplacePurchaseConfirmLogger.error({ err: String(error) }, "Error confirming purchase:");
+    marketplacePurchaseConfirmLogger.error({ err: formatError(error) }, "Error confirming purchase:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

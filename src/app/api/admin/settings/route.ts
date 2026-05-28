@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { auditLog, computeChanges } from "@/lib/audit";
@@ -236,7 +237,7 @@ export async function GET() {
 
     return NextResponse.json({ settings: maskedSettings });
   } catch (error) {
-    settingsLogger.error({ err: String(error) }, "Unexpected error fetching settings");
+    settingsLogger.error({ err: formatError(error) }, "Unexpected error fetching settings");
     return NextResponse.json(
       { error: "Failed to fetch settings", details: String(error) },
       { status: 500 }
@@ -557,7 +558,7 @@ export async function PATCH(req: NextRequest) {
       settings: maskedSettings
     });
   } catch (error) {
-    settingsLogger.error({ err: String(error) }, "Error updating settings");
+    settingsLogger.error({ err: formatError(error) }, "Error updating settings");
     return NextResponse.json(
       { error: "Failed to update settings", details: String(error) },
       { status: 500 }

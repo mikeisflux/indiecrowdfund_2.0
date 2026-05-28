@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const userNotificationsLogger = logger.child({ module: "user-notifications" });
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     if (!isClientAbort(error)) {
-      userNotificationsLogger.error({ err: String(error) }, "Error fetching notifications:");
+      userNotificationsLogger.error({ err: formatError(error) }, "Error fetching notifications:");
     }
     return NextResponse.json(
       { error: "Failed to fetch notifications" },
@@ -133,7 +134,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     if (!isClientAbort(error)) {
-      userNotificationsLogger.error({ err: String(error) }, "Error updating notifications:");
+      userNotificationsLogger.error({ err: formatError(error) }, "Error updating notifications:");
     }
     return NextResponse.json(
       { error: "Failed to update notifications" },
@@ -188,7 +189,7 @@ export async function DELETE(req: NextRequest) {
     );
   } catch (error) {
     if (!isClientAbort(error)) {
-      userNotificationsLogger.error({ err: String(error) }, "Error deleting notification:");
+      userNotificationsLogger.error({ err: formatError(error) }, "Error deleting notification:");
     }
     return NextResponse.json(
       { error: "Failed to delete notification" },

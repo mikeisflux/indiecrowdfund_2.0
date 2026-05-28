@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitAddonsLogger = logger.child({ module: "creator-indiekit-addons" });
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ addons });
   } catch (error) {
-    creatorIndiekitAddonsLogger.error({ err: String(error) }, "Addons GET error:");
+    creatorIndiekitAddonsLogger.error({ err: formatError(error) }, "Addons GET error:");
     return NextResponse.json({ error: "Failed to fetch addons" }, { status: 500 });
   }
 }
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    creatorIndiekitAddonsLogger.error({ err: String(error) }, "Addons POST error:");
+    creatorIndiekitAddonsLogger.error({ err: formatError(error) }, "Addons POST error:");
     return NextResponse.json({ error: "Failed to process addon request" }, { status: 500 });
   }
 }
@@ -196,7 +197,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorIndiekitAddonsLogger.error({ err: String(error) }, "Addons DELETE error:");
+    creatorIndiekitAddonsLogger.error({ err: formatError(error) }, "Addons DELETE error:");
     return NextResponse.json({ error: "Failed to delete addon" }, { status: 500 });
   }
 }

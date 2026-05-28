@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitFulfillmentLogger = logger.child({ module: "creator-indiekit-fulfillment" });
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorIndiekitFulfillmentLogger.error({ err: String(error) }, "Fulfillment API error:");
+    creatorIndiekitFulfillmentLogger.error({ err: formatError(error) }, "Fulfillment API error:");
     return NextResponse.json({ error: "Failed to process fulfillment request" }, { status: 500 });
   }
 }

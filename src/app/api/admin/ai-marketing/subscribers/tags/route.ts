@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingSubscribersTagsLogger = logger.child({ module: "admin-ai-marketing-subscribers-tags" });
@@ -140,7 +141,7 @@ export async function GET() {
       totalSubscribers: subscribers.length,
     });
   } catch (error) {
-    adminAiMarketingSubscribersTagsLogger.error({ err: String(error) }, "Error fetching subscriber tags:");
+    adminAiMarketingSubscribersTagsLogger.error({ err: formatError(error) }, "Error fetching subscriber tags:");
     return NextResponse.json(
       { error: "Failed to fetch subscriber tags" },
       { status: 500 }

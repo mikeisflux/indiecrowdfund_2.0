@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const verifyIdCheckLogger = logger.child({ module: "verify-id-check" });
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
       loggedIn: !!session?.user?.id,
     });
   } catch (error) {
-    verifyIdCheckLogger.error({ err: String(error) }, "Error checking verification requirement:");
+    verifyIdCheckLogger.error({ err: formatError(error) }, "Error checking verification requirement:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminSeoLogger = logger.child({ module: "admin-seo" });
@@ -76,7 +77,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    adminSeoLogger.error({ err: String(error) }, "Error fetching SEO dashboard stats:");
+    adminSeoLogger.error({ err: formatError(error) }, "Error fetching SEO dashboard stats:");
     return NextResponse.json(
       { error: "Failed to fetch SEO dashboard stats" },
       { status: 500 }

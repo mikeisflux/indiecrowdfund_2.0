@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminMarketplaceBooksReviewLogger = logger.child({ module: "admin-marketplace-books-review" });
@@ -131,7 +132,7 @@ export async function POST(
       message: action === "approve" ? "Book approved and published" : "Book rejected",
     });
   } catch (error) {
-    adminMarketplaceBooksReviewLogger.error({ err: String(error) }, "Error reviewing book:");
+    adminMarketplaceBooksReviewLogger.error({ err: formatError(error) }, "Error reviewing book:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

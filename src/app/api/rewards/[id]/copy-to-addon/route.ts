@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const rewardsCopyToAddonLogger = logger.child({ module: "rewards-copy-to-addon" });
@@ -86,7 +87,7 @@ export async function POST(
       }
     }, { status: 201 });
   } catch (error) {
-    rewardsCopyToAddonLogger.error({ err: String(error) }, "Copy to addon error:");
+    rewardsCopyToAddonLogger.error({ err: formatError(error) }, "Copy to addon error:");
     return NextResponse.json(
       { error: "Failed to copy reward to add-on" },
       { status: 500 }

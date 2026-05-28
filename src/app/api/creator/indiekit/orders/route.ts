@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitOrdersLogger = logger.child({ module: "creator-indiekit-orders" });
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    creatorIndiekitOrdersLogger.error({ err: String(error) }, "Fetch addons error:");
+    creatorIndiekitOrdersLogger.error({ err: formatError(error) }, "Fetch addons error:");
     return NextResponse.json({ error: "Failed to fetch addons" }, { status: 500 });
   }
 }
@@ -350,7 +351,7 @@ export async function PATCH(req: NextRequest) {
         { status: 400 }
       );
     }
-    creatorIndiekitOrdersLogger.error({ err: String(error) }, "Edit order error:");
+    creatorIndiekitOrdersLogger.error({ err: formatError(error) }, "Edit order error:");
     return NextResponse.json(
       { error: "Failed to update order" },
       { status: 500 }
@@ -554,7 +555,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    creatorIndiekitOrdersLogger.error({ err: String(error) }, "Orders POST error:");
+    creatorIndiekitOrdersLogger.error({ err: formatError(error) }, "Orders POST error:");
     return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }

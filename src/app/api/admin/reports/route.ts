@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminReportsLogger = logger.child({ module: "admin-reports" });
@@ -95,7 +96,7 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error) {
-    adminReportsLogger.error({ err: String(error) }, "Error fetching reports:");
+    adminReportsLogger.error({ err: formatError(error) }, "Error fetching reports:");
     return NextResponse.json(
       { error: "Failed to fetch reports" },
       { status: 500 }
@@ -136,7 +137,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, report });
   } catch (error) {
-    adminReportsLogger.error({ err: String(error) }, "Error creating report:");
+    adminReportsLogger.error({ err: formatError(error) }, "Error creating report:");
     return NextResponse.json(
       { error: "Failed to create report" },
       { status: 500 }
@@ -247,7 +248,7 @@ export async function PATCH(req: NextRequest) {
       report: updatedReport
     });
   } catch (error) {
-    adminReportsLogger.error({ err: String(error) }, "Error updating report:");
+    adminReportsLogger.error({ err: formatError(error) }, "Error updating report:");
     return NextResponse.json(
       { error: "Failed to update report" },
       { status: 500 }

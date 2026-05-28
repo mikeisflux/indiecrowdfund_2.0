@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const uploadsLogger = logger.child({ module: "uploads" });
@@ -162,7 +163,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    uploadsLogger.error({ err: String(error) }, "Error serving upload:");
+    uploadsLogger.error({ err: formatError(error) }, "Error serving upload:");
     return NextResponse.json({ error: "Failed to serve file" }, { status: 500 });
   }
 }

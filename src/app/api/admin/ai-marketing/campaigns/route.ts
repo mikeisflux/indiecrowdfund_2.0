@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingCampaignsLogger = logger.child({ module: "admin-ai-marketing-campaigns" });
@@ -148,7 +149,7 @@ export async function GET() {
 
     return NextResponse.json({ campaigns: campaignsWithCounts });
   } catch (error) {
-    adminAiMarketingCampaignsLogger.error({ err: String(error) }, "Error fetching campaigns:");
+    adminAiMarketingCampaignsLogger.error({ err: formatError(error) }, "Error fetching campaigns:");
     return NextResponse.json(
       { error: "Failed to fetch campaigns" },
       { status: 500 }
@@ -432,7 +433,7 @@ export async function POST(request: Request) {
         : `Campaign created as draft.${featuresUsed.length > 0 ? ` AI features: ${featuresUsed.join(", ")}.` : ""} Review and send when ready.`,
     });
   } catch (error) {
-    adminAiMarketingCampaignsLogger.error({ err: String(error) }, "Error creating campaign:");
+    adminAiMarketingCampaignsLogger.error({ err: formatError(error) }, "Error creating campaign:");
     return NextResponse.json(
       { error: "Failed to create campaign" },
       { status: 500 }

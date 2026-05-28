@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const cronEmailQueueLogger = logger.child({ module: "cron-email-queue" });
@@ -116,7 +117,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    cronEmailQueueLogger.error({ err: String(error) }, "Email queue cron error:");
+    cronEmailQueueLogger.error({ err: formatError(error) }, "Email queue cron error:");
     return NextResponse.json(
       { error: "Failed to process email queue" },
       { status: 500 }

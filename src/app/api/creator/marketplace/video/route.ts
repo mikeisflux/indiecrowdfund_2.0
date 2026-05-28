@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const videoFilesLogger = logger.child({ module: "creator-marketplace-video" });
@@ -52,7 +53,7 @@ export async function GET() {
 
     return NextResponse.json({ files: formatted });
   } catch (error) {
-    videoFilesLogger.error({ err: String(error) }, "Error listing video files");
+    videoFilesLogger.error({ err: formatError(error) }, "Error listing video files");
     return NextResponse.json({ error: "Failed to list video files" }, { status: 500 });
   }
 }
@@ -89,7 +90,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    videoFilesLogger.error({ err: String(error) }, "Error deleting video file");
+    videoFilesLogger.error({ err: formatError(error) }, "Error deleting video file");
     return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
   }
 }

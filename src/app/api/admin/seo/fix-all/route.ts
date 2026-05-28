@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminSeoFixAllLogger = logger.child({ module: "admin-seo-fix-all" });
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminSeoFixAllLogger.error({ err: String(error) }, "Error in bulk SEO fix:");
+    adminSeoFixAllLogger.error({ err: formatError(error) }, "Error in bulk SEO fix:");
     return NextResponse.json(
       { error: "Failed to apply SEO fixes" },
       { status: 500 }

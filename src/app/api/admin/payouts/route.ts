@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminPayoutsLogger = logger.child({ module: "admin-payouts" });
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    adminPayoutsLogger.error({ err: String(error) }, "Error fetching payouts:");
+    adminPayoutsLogger.error({ err: formatError(error) }, "Error fetching payouts:");
     return NextResponse.json(
       { error: "Failed to fetch payouts" },
       { status: 500 }
@@ -294,7 +295,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(payout, { status: 201 });
   } catch (error) {
-    adminPayoutsLogger.error({ err: String(error) }, "Error creating payout:");
+    adminPayoutsLogger.error({ err: formatError(error) }, "Error creating payout:");
     return NextResponse.json(
       { error: "Failed to create payout" },
       { status: 500 }
@@ -456,7 +457,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(updatedPayout);
   } catch (error) {
-    adminPayoutsLogger.error({ err: String(error) }, "Error updating payout:");
+    adminPayoutsLogger.error({ err: formatError(error) }, "Error updating payout:");
     return NextResponse.json(
       { error: "Failed to update payout" },
       { status: 500 }
@@ -525,7 +526,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    adminPayoutsLogger.error({ err: String(error) }, "Error deleting payout:");
+    adminPayoutsLogger.error({ err: formatError(error) }, "Error deleting payout:");
     return NextResponse.json(
       { error: "Failed to delete payout" },
       { status: 500 }

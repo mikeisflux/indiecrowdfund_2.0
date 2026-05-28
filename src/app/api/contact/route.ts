@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const contactLogger = logger.child({ module: "contact" });
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
       message: "Your message has been sent successfully.",
     });
   } catch (error) {
-    contactLogger.error({ err: String(error) }, "Contact form error:");
+    contactLogger.error({ err: formatError(error) }, "Contact form error:");
 
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');

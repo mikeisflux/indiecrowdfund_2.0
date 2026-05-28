@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const collaborationsLogger = logger.child({ module: "collaborations" });
@@ -68,7 +69,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    collaborationsLogger.error({ err: String(error) }, "Error removing collaboration:");
+    collaborationsLogger.error({ err: formatError(error) }, "Error removing collaboration:");
     return NextResponse.json(
       { error: "Failed to remove collaboration" },
       { status: 500 }

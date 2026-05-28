@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const collaboratorLogger = logger.child({ module: "collaborator" });
@@ -87,7 +88,7 @@ export async function GET(
       status: collaborator.status,
     });
   } catch (error) {
-    collaboratorLogger.error({ err: String(error) }, "Collaborator fetch error:");
+    collaboratorLogger.error({ err: formatError(error) }, "Collaborator fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch collaboration details" },
       { status: 500 }

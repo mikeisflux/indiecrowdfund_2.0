@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorPayPalBankAccountLogger = logger.child({ module: "creator-paypal-bank-account" });
@@ -47,7 +48,7 @@ export async function GET() {
       isVerified: bankAccount.isVerified,
     });
   } catch (error) {
-    creatorPayPalBankAccountLogger.error({ err: String(error) }, "Error fetching PayPal bank account:");
+    creatorPayPalBankAccountLogger.error({ err: formatError(error) }, "Error fetching PayPal bank account:");
     return NextResponse.json(
       { error: "Failed to fetch bank account" },
       { status: 500 }
@@ -184,7 +185,7 @@ export async function POST(req: NextRequest) {
       lastFour,
     });
   } catch (error) {
-    creatorPayPalBankAccountLogger.error({ err: String(error) }, "Error saving PayPal bank account:");
+    creatorPayPalBankAccountLogger.error({ err: formatError(error) }, "Error saving PayPal bank account:");
     if (error instanceof Error && error.message.includes("BANK_ACCOUNT_ENCRYPTION_KEY")) {
       return NextResponse.json(
         { error: "Server configuration error: encryption key not set" },
@@ -213,7 +214,7 @@ export async function DELETE() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorPayPalBankAccountLogger.error({ err: String(error) }, "Error deleting PayPal bank account:");
+    creatorPayPalBankAccountLogger.error({ err: formatError(error) }, "Error deleting PayPal bank account:");
     return NextResponse.json(
       { error: "Failed to delete bank account" },
       { status: 500 }

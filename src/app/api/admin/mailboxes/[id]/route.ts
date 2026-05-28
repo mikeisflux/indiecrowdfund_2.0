@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminMailboxesLogger = logger.child({ module: "admin-mailboxes" });
@@ -60,7 +61,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    adminMailboxesLogger.error({ err: String(error) }, "Error fetching mailbox:");
+    adminMailboxesLogger.error({ err: formatError(error) }, "Error fetching mailbox:");
     return NextResponse.json(
       { error: "Failed to fetch mailbox" },
       { status: 500 }
@@ -162,7 +163,7 @@ export async function PUT(
       },
     });
   } catch (error) {
-    adminMailboxesLogger.error({ err: String(error) }, "Error updating mailbox:");
+    adminMailboxesLogger.error({ err: formatError(error) }, "Error updating mailbox:");
     return NextResponse.json(
       { error: "Failed to update mailbox" },
       { status: 500 }
@@ -216,7 +217,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    adminMailboxesLogger.error({ err: String(error) }, "Error deleting mailbox:");
+    adminMailboxesLogger.error({ err: formatError(error) }, "Error deleting mailbox:");
     return NextResponse.json(
       { error: "Failed to delete mailbox" },
       { status: 500 }

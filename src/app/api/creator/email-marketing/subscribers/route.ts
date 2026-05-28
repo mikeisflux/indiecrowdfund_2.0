@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailMarketingSubscribersLogger = logger.child({ module: "creator-email-marketing-subscribers" });
@@ -158,7 +159,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ subscribers, stats });
   } catch (error) {
-    creatorEmailMarketingSubscribersLogger.error({ err: String(error) }, "Error fetching subscribers:");
+    creatorEmailMarketingSubscribersLogger.error({ err: formatError(error) }, "Error fetching subscribers:");
     return NextResponse.json(
       { error: "Failed to fetch subscribers" },
       { status: 500 }
@@ -270,7 +271,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    creatorEmailMarketingSubscribersLogger.error({ err: String(error) }, "Error adding subscriber:");
+    creatorEmailMarketingSubscribersLogger.error({ err: formatError(error) }, "Error adding subscriber:");
     return NextResponse.json(
       { error: "Failed to add subscriber" },
       { status: 500 }

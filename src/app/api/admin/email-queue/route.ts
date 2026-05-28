@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminEmailQueueLogger = logger.child({ module: "admin-email-queue" });
@@ -141,7 +142,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminEmailQueueLogger.error({ err: String(error) }, "Error fetching email queue:");
+    adminEmailQueueLogger.error({ err: formatError(error) }, "Error fetching email queue:");
     return NextResponse.json(
       { error: "Failed to fetch email queue status" },
       { status: 500 }
@@ -268,7 +269,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    adminEmailQueueLogger.error({ err: String(error) }, "Error controlling email queue:");
+    adminEmailQueueLogger.error({ err: formatError(error) }, "Error controlling email queue:");
     return NextResponse.json(
       { error: "Failed to control email queue" },
       { status: 500 }
@@ -295,7 +296,7 @@ export async function DELETE() {
       count: result.count,
     });
   } catch (error) {
-    adminEmailQueueLogger.error({ err: String(error) }, "Error clearing email queue:");
+    adminEmailQueueLogger.error({ err: formatError(error) }, "Error clearing email queue:");
     return NextResponse.json(
       { error: "Failed to clear email queue" },
       { status: 500 }

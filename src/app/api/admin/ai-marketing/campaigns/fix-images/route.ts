@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingCampaignsFixImagesLogger = logger.child({ module: "admin-ai-marketing-campaigns-fix-images" });
@@ -144,7 +145,7 @@ export async function POST(request: Request) {
       totalImagesUploaded: results.reduce((sum, r) => sum + r.imagesFixed, 0),
     });
   } catch (error) {
-    adminAiMarketingCampaignsFixImagesLogger.error({ err: String(error) }, "Error fixing campaign images:");
+    adminAiMarketingCampaignsFixImagesLogger.error({ err: formatError(error) }, "Error fixing campaign images:");
     return NextResponse.json(
       { error: "Failed to fix campaign images" },
       { status: 500 }
@@ -180,7 +181,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    adminAiMarketingCampaignsFixImagesLogger.error({ err: String(error) }, "Error checking campaigns:");
+    adminAiMarketingCampaignsFixImagesLogger.error({ err: formatError(error) }, "Error checking campaigns:");
     return NextResponse.json(
       { error: "Failed to check campaigns" },
       { status: 500 }

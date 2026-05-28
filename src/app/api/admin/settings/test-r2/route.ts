@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminSettingsTestR2Logger = logger.child({ module: "admin-settings-test-r2" });
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       message: "Connection successful",
     });
   } catch (error) {
-    adminSettingsTestR2Logger.error({ err: String(error) }, "R2 connection test error:");
+    adminSettingsTestR2Logger.error({ err: formatError(error) }, "R2 connection test error:");
 
     let errorMessage = "Connection failed";
     let errorDetails = "";

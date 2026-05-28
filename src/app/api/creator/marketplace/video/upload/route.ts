@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const videoUploadLogger = logger.child({ module: "creator-marketplace-video-upload" });
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
       fileSize,
     });
   } catch (error) {
-    videoUploadLogger.error({ err: String(error) }, "[Video Upload] Error");
+    videoUploadLogger.error({ err: formatError(error) }, "[Video Upload] Error");
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

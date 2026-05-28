@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const userVerifyEmailLogger = logger.child({ module: "user-verify-email" });
@@ -227,7 +228,7 @@ export async function POST() {
       message: "Verification email sent! Please check your inbox.",
     });
   } catch (error) {
-    userVerifyEmailLogger.error({ err: String(error) }, "Send verification email error:");
+    userVerifyEmailLogger.error({ err: formatError(error) }, "Send verification email error:");
     return NextResponse.json(
       { error: "Failed to send verification email" },
       { status: 500 }
@@ -331,7 +332,7 @@ export async function GET(req: NextRequest) {
       message: "Email verified successfully!",
     });
   } catch (error) {
-    userVerifyEmailLogger.error({ err: String(error) }, "Verify email error:");
+    userVerifyEmailLogger.error({ err: formatError(error) }, "Verify email error:");
     return NextResponse.json(
       { error: "Failed to verify email" },
       { status: 500 }

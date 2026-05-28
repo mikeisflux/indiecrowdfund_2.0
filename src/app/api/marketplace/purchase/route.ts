@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const marketplacePurchaseLogger = logger.child({ module: "marketplace-purchase" });
@@ -260,7 +261,7 @@ export async function POST(request: Request) {
       currency: book.currency,
     });
   } catch (error) {
-    marketplacePurchaseLogger.error({ err: String(error) }, "Error processing purchase:");
+    marketplacePurchaseLogger.error({ err: formatError(error) }, "Error processing purchase:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -323,7 +324,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    marketplacePurchaseLogger.error({ err: String(error) }, "Error fetching purchases:");
+    marketplacePurchaseLogger.error({ err: formatError(error) }, "Error fetching purchases:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

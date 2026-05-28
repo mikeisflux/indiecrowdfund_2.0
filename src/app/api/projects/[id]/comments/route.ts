@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsCommentsLogger = logger.child({ module: "projects-comments" });
@@ -243,7 +244,7 @@ export async function GET(
 
     return NextResponse.json(formattedComments);
   } catch (error) {
-    projectsCommentsLogger.error({ err: String(error) }, "Error fetching comments:");
+    projectsCommentsLogger.error({ err: formatError(error) }, "Error fetching comments:");
     return NextResponse.json(
       { error: "Failed to fetch comments" },
       { status: 500 }
@@ -493,7 +494,7 @@ export async function POST(
       parentId: comment.parentId,
     });
   } catch (error) {
-    projectsCommentsLogger.error({ err: String(error) }, "Error creating comment:");
+    projectsCommentsLogger.error({ err: formatError(error) }, "Error creating comment:");
     return NextResponse.json(
       { error: "Failed to create comment" },
       { status: 500 }

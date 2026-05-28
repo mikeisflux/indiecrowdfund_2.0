@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorAccountPreferencesLogger = logger.child({ module: "creator-account-preferences" });
@@ -29,7 +30,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    creatorAccountPreferencesLogger.error({ err: String(error) }, "Preferences GET error:");
+    creatorAccountPreferencesLogger.error({ err: formatError(error) }, "Preferences GET error:");
     return NextResponse.json({ error: "Failed to fetch preferences" }, { status: 500 });
   }
 }
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorAccountPreferencesLogger.error({ err: String(error) }, "Preferences update error:");
+    creatorAccountPreferencesLogger.error({ err: formatError(error) }, "Preferences update error:");
     return NextResponse.json({ error: "Failed to update preferences" }, { status: 500 });
   }
 }

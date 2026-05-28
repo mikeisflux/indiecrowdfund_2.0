@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -165,7 +166,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     bulkResendLogger.error(
-      { err: String(error) },
+      { err: formatError(error) },
       "Error bulk-resending confirmation emails"
     );
     return NextResponse.json(

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminProjectsProcessPledgesLogger = logger.child({ module: "admin-projects-process-pledges" });
@@ -175,7 +176,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    adminProjectsProcessPledgesLogger.error({ err: String(error) }, "Admin pledge diagnosis error:");
+    adminProjectsProcessPledgesLogger.error({ err: formatError(error) }, "Admin pledge diagnosis error:");
     return NextResponse.json(
       {
         error: "Failed to diagnose pledges",
@@ -259,7 +260,7 @@ export async function POST(
       error: "Pledge processing is only supported for DivinityCoin projects on this endpoint",
     }, { status: 400 });
   } catch (error) {
-    adminProjectsProcessPledgesLogger.error({ err: String(error) }, "Admin pledge processing error:");
+    adminProjectsProcessPledgesLogger.error({ err: formatError(error) }, "Admin pledge processing error:");
     return NextResponse.json(
       { error: "Failed to process pledges" },
       { status: 500 }

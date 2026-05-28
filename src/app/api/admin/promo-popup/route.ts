@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminPromoPopupLogger = logger.child({ module: "admin-promo-popup" });
@@ -153,7 +154,7 @@ export async function GET() {
 
     return NextResponse.json({ popup }, { headers: corsHeaders });
   } catch (error) {
-    adminPromoPopupLogger.error({ err: String(error) }, "Error fetching promo popup:");
+    adminPromoPopupLogger.error({ err: formatError(error) }, "Error fetching promo popup:");
     return NextResponse.json({ error: "Failed to fetch promo popup" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -189,7 +190,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ popup }, { headers: corsHeaders });
   } catch (error) {
-    adminPromoPopupLogger.error({ err: String(error) }, "Error updating promo popup:");
+    adminPromoPopupLogger.error({ err: formatError(error) }, "Error updating promo popup:");
     return NextResponse.json({ error: "Failed to update promo popup" }, { status: 500, headers: corsHeaders });
   }
 }
@@ -224,7 +225,7 @@ export async function POST() {
 
     return NextResponse.json({ popup }, { headers: corsHeaders });
   } catch (error) {
-    adminPromoPopupLogger.error({ err: String(error) }, "Error resetting promo popup:");
+    adminPromoPopupLogger.error({ err: formatError(error) }, "Error resetting promo popup:");
     return NextResponse.json({ error: "Failed to reset promo popup" }, { status: 500, headers: corsHeaders });
   }
 }

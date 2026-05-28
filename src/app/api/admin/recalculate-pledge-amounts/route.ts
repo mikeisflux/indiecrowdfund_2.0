@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminRecalculatePledgeAmountsLogger = logger.child({ module: "admin-recalculate-pledge-amounts" });
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
       fixes,
     });
   } catch (error) {
-    adminRecalculatePledgeAmountsLogger.error({ err: String(error) }, "Recalculate pledge amounts (dry run) error:");
+    adminRecalculatePledgeAmountsLogger.error({ err: formatError(error) }, "Recalculate pledge amounts (dry run) error:");
     return NextResponse.json(
       { error: "Failed to analyze pledge amounts" },
       { status: 500 }
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
       })),
     });
   } catch (error) {
-    adminRecalculatePledgeAmountsLogger.error({ err: String(error) }, "Recalculate pledge amounts error:");
+    adminRecalculatePledgeAmountsLogger.error({ err: formatError(error) }, "Recalculate pledge amounts error:");
     return NextResponse.json(
       { error: "Failed to recalculate pledge amounts" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const payBalanceLogger = logger.child({ module: "pay-balance" });
@@ -93,7 +94,7 @@ export async function GET(req: NextRequest) {
       originalAmount: pledgeTotal,
     });
   } catch (error) {
-    payBalanceLogger.error({ err: String(error) }, "Error fetching balance details:");
+    payBalanceLogger.error({ err: formatError(error) }, "Error fetching balance details:");
     return NextResponse.json({ error: "Failed to load payment details" }, { status: 500 });
   }
 }

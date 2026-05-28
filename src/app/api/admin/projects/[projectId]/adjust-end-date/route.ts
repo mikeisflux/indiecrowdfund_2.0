@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminProjectsAdjustEndDateLogger = logger.child({ module: "admin-projects-adjust-end-date" });
@@ -63,7 +64,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    adminProjectsAdjustEndDateLogger.error({ err: String(error) }, "Error adjusting end date:");
+    adminProjectsAdjustEndDateLogger.error({ err: formatError(error) }, "Error adjusting end date:");
     return NextResponse.json({ error: "Failed to adjust end date" }, { status: 500 });
   }
 }

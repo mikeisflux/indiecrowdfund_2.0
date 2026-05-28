@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailThreadsDeleteLogger = logger.child({ module: "creator-email-threads-delete" });
@@ -50,7 +51,7 @@ export async function DELETE(
       deletedCount: deleteResult.count,
     });
   } catch (error) {
-    creatorEmailThreadsDeleteLogger.error({ err: String(error) }, "Error deleting thread:");
+    creatorEmailThreadsDeleteLogger.error({ err: formatError(error) }, "Error deleting thread:");
     return NextResponse.json(
       { error: "Failed to delete thread" },
       { status: 500 }

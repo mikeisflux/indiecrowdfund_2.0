@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminHeroSlidesMigrateLogger = logger.child({ module: "admin-hero-slides-migrate" });
@@ -159,7 +160,7 @@ export async function POST() {
       count,
     }, { headers: corsHeaders });
   } catch (error) {
-    adminHeroSlidesMigrateLogger.error({ err: String(error) }, "Migration error:");
+    adminHeroSlidesMigrateLogger.error({ err: formatError(error) }, "Migration error:");
     return NextResponse.json(
       { error: "Migration failed", details: String(error) },
       { status: 500, headers: corsHeaders }

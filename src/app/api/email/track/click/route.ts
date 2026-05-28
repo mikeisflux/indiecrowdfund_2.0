@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const emailTrackClickLogger = logger.child({ module: "email-track-click" });
@@ -127,7 +128,7 @@ export async function GET(request: Request) {
     }
     return NextResponse.redirect(decodedUrl);
   } catch (error) {
-    emailTrackClickLogger.error({ err: String(error) }, "Error tracking email click:");
+    emailTrackClickLogger.error({ err: formatError(error) }, "Error tracking email click:");
     // Redirect to homepage on error
     return NextResponse.redirect(new URL("/", request.url));
   }

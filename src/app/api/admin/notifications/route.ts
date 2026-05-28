@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminNotificationsLogger = logger.child({ module: "admin-notifications" });
@@ -310,7 +311,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    adminNotificationsLogger.error({ err: String(error) }, "Error fetching admin notifications:");
+    adminNotificationsLogger.error({ err: formatError(error) }, "Error fetching admin notifications:");
     return NextResponse.json(
       { error: "Failed to fetch notifications" },
       { status: 500 }
@@ -353,7 +354,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    adminNotificationsLogger.error({ err: String(error) }, "Error updating notifications:");
+    adminNotificationsLogger.error({ err: formatError(error) }, "Error updating notifications:");
     return NextResponse.json(
       { error: "Failed to update notifications" },
       { status: 500 }

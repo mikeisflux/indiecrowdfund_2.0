@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminLinkSanitizerLogger = logger.child({ module: "admin-link-sanitizer" });
@@ -114,7 +115,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminLinkSanitizerLogger.error({ err: String(error) }, "Failed to fetch project links:");
+    adminLinkSanitizerLogger.error({ err: formatError(error) }, "Failed to fetch project links:");
     return NextResponse.json(
       { error: "Failed to fetch project links" },
       { status: 500 }
@@ -157,7 +158,7 @@ export async function DELETE(req: NextRequest) {
       deletedCount: result.count,
     });
   } catch (error) {
-    adminLinkSanitizerLogger.error({ err: String(error) }, "Failed to delete projects:");
+    adminLinkSanitizerLogger.error({ err: formatError(error) }, "Failed to delete projects:");
     return NextResponse.json(
       { error: "Failed to delete projects" },
       { status: 500 }

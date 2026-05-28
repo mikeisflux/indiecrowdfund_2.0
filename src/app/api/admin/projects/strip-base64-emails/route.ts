@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -275,7 +276,7 @@ export async function POST() {
     });
   } catch (error) {
     stripLogger.error(
-      { err: String(error) },
+      { err: formatError(error) },
       "Error stripping base64 from emails"
     );
     return NextResponse.json(

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminBuildBackupLogger = logger.child({ module: "admin-build-backup" });
@@ -108,7 +109,7 @@ export async function GET() {
       buildDir: BUILD_DIR,
     });
   } catch (error) {
-    adminBuildBackupLogger.error({ err: String(error) }, "Error listing build backups:");
+    adminBuildBackupLogger.error({ err: formatError(error) }, "Error listing build backups:");
     return NextResponse.json(
       { error: "Failed to list build backups" },
       { status: 500 }
@@ -165,7 +166,7 @@ export async function DELETE(req: NextRequest) {
       message: `Deleted backup: ${backupName}`,
     });
   } catch (error) {
-    adminBuildBackupLogger.error({ err: String(error) }, "Error deleting build backup:");
+    adminBuildBackupLogger.error({ err: formatError(error) }, "Error deleting build backup:");
     return NextResponse.json(
       { error: "Failed to delete build backup" },
       { status: 500 }

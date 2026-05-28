@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminDivinitycoinRedemptionsLogger = logger.child({ module: "admin-divinitycoin-redemptions" });
@@ -157,7 +158,7 @@ export async function GET(req: NextRequest) {
       stats: statsSummary,
     });
   } catch (error) {
-    adminDivinitycoinRedemptionsLogger.error({ err: String(error) }, "Error fetching DivinityCoin transactions:");
+    adminDivinitycoinRedemptionsLogger.error({ err: formatError(error) }, "Error fetching DivinityCoin transactions:");
     return NextResponse.json(
       { error: "Failed to fetch transactions" },
       { status: 500 }
@@ -264,7 +265,7 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    adminDivinitycoinRedemptionsLogger.error({ err: String(error) }, "Error creating DivinityCoin transaction:");
+    adminDivinitycoinRedemptionsLogger.error({ err: formatError(error) }, "Error creating DivinityCoin transaction:");
     return NextResponse.json(
       { error: "Failed to create transaction" },
       { status: 500 }
@@ -377,7 +378,7 @@ export async function PATCH(req: NextRequest) {
         : null,
     });
   } catch (error) {
-    adminDivinitycoinRedemptionsLogger.error({ err: String(error) }, "Error updating DivinityCoin transaction:");
+    adminDivinitycoinRedemptionsLogger.error({ err: formatError(error) }, "Error updating DivinityCoin transaction:");
     return NextResponse.json(
       { error: "Failed to update transaction" },
       { status: 500 }
@@ -411,7 +412,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    adminDivinitycoinRedemptionsLogger.error({ err: String(error) }, "Error deleting DivinityCoin transaction:");
+    adminDivinitycoinRedemptionsLogger.error({ err: formatError(error) }, "Error deleting DivinityCoin transaction:");
     return NextResponse.json(
       { error: "Failed to delete transaction" },
       { status: 500 }

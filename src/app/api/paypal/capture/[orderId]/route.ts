@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getPayPalConfig, getPayPalAccessToken } from "@/lib/payments/paypal";
@@ -375,7 +376,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, pledgeId: pledge.id });
   } catch (error) {
-    paypalCaptureLogger.error({ err: String(error) }, "PayPal capture error");
+    paypalCaptureLogger.error({ err: formatError(error) }, "PayPal capture error");
     return NextResponse.json({ error: "Failed to process payment" }, { status: 500 });
   }
 }

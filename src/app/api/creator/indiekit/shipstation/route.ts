@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitShipstationLogger = logger.child({ module: "creator-indiekit-shipstation" });
@@ -277,7 +278,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    creatorIndiekitShipstationLogger.error({ err: String(error) }, "ShipStation API error:");
+    creatorIndiekitShipstationLogger.error({ err: formatError(error) }, "ShipStation API error:");
     return NextResponse.json({ error: "Failed to process ShipStation request" }, { status: 500 });
   }
 }

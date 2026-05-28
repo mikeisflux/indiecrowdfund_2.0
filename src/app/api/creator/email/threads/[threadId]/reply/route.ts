@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailThreadsReplyLogger = logger.child({ module: "creator-email-threads-reply" });
@@ -224,7 +225,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    creatorEmailThreadsReplyLogger.error({ err: String(error) }, "Error sending reply:");
+    creatorEmailThreadsReplyLogger.error({ err: formatError(error) }, "Error sending reply:");
     return NextResponse.json(
       { error: "Failed to send reply" },
       { status: 500 }

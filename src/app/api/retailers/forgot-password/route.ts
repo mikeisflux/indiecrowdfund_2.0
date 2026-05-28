@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const retailersForgotPasswordLogger = logger.child({ module: "retailers-forgot-password" });
@@ -141,7 +142,7 @@ export async function POST(req: NextRequest) {
       message: "If an account exists with this email, you will receive a password reset link.",
     });
   } catch (error) {
-    retailersForgotPasswordLogger.error({ err: String(error) }, "Error requesting retailer password reset:");
+    retailersForgotPasswordLogger.error({ err: formatError(error) }, "Error requesting retailer password reset:");
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminEmailBlocklistPurgeLogger = logger.child({ module: "admin-email-blocklist-purge" });
@@ -67,7 +68,7 @@ export async function DELETE() {
       message: `Removed all ${result.count} blocklist entries and restored ${restoredCount} subscriber records`,
     });
   } catch (error) {
-    adminEmailBlocklistPurgeLogger.error({ err: String(error) }, "Error removing all blocklist entries:");
+    adminEmailBlocklistPurgeLogger.error({ err: formatError(error) }, "Error removing all blocklist entries:");
     return NextResponse.json(
       { error: "Failed to remove blocklist entries" },
       { status: 500 }
@@ -147,7 +148,7 @@ export async function POST(request: NextRequest) {
       message: `Purged ${result.count} webhook-added blocklist entries and restored ${restoredSubscribers.count} subscriber records`,
     });
   } catch (error) {
-    adminEmailBlocklistPurgeLogger.error({ err: String(error) }, "Error purging blocklist:");
+    adminEmailBlocklistPurgeLogger.error({ err: formatError(error) }, "Error purging blocklist:");
     return NextResponse.json(
       { error: "Failed to purge blocklist entries" },
       { status: 500 }

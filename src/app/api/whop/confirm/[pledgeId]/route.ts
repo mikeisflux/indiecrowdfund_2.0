@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { claimRewardSlot, claimAddonSlots, assignBackerNumber } from "@/lib/payments/rewards";
@@ -182,7 +183,7 @@ export async function POST(
     whopConfirmLogger.info({ pledgeId }, "Whop pledge confirmed successfully");
     return NextResponse.json({ success: true });
   } catch (error) {
-    whopConfirmLogger.error({ err: String(error) }, "Error confirming Whop pledge");
+    whopConfirmLogger.error({ err: formatError(error) }, "Error confirming Whop pledge");
     return NextResponse.json({ error: "Failed to confirm payment" }, { status: 500 });
   }
 }

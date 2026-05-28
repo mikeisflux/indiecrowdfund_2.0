@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const userProfileDropdownLogger = logger.child({ module: "user-profile-dropdown" });
@@ -163,7 +164,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    userProfileDropdownLogger.error({ err: String(error) }, "Profile dropdown error:");
+    userProfileDropdownLogger.error({ err: formatError(error) }, "Profile dropdown error:");
     return NextResponse.json(
       { error: "Failed to fetch profile data" },
       { status: 500 }

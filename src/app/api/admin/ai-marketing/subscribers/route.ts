@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingSubscribersLogger = logger.child({ module: "admin-ai-marketing-subscribers" });
@@ -360,7 +361,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminAiMarketingSubscribersLogger.error({ err: String(error) }, "Error fetching subscribers:");
+    adminAiMarketingSubscribersLogger.error({ err: formatError(error) }, "Error fetching subscribers:");
     return NextResponse.json(
       { error: "Failed to fetch subscribers" },
       { status: 500 }
@@ -425,7 +426,7 @@ export async function POST(req: NextRequest) {
       reactivated: !!existing,
     });
   } catch (error) {
-    adminAiMarketingSubscribersLogger.error({ err: String(error) }, "Error creating subscriber:");
+    adminAiMarketingSubscribersLogger.error({ err: formatError(error) }, "Error creating subscriber:");
     return NextResponse.json(
       { error: "Failed to create subscriber" },
       { status: 500 }
@@ -497,7 +498,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, subscriber });
   } catch (error) {
-    adminAiMarketingSubscribersLogger.error({ err: String(error) }, "Error updating subscriber:");
+    adminAiMarketingSubscribersLogger.error({ err: formatError(error) }, "Error updating subscriber:");
     return NextResponse.json(
       { error: "Failed to update subscriber" },
       { status: 500 }
@@ -588,7 +589,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    adminAiMarketingSubscribersLogger.error({ err: String(error) }, "Error deleting subscriber:");
+    adminAiMarketingSubscribersLogger.error({ err: formatError(error) }, "Error deleting subscriber:");
     return NextResponse.json(
       { error: "Failed to delete subscriber" },
       { status: 500 }

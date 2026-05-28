@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -118,7 +119,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    streamLogger.error({ err: String(error) }, "PDF stream error:");
+    streamLogger.error({ err: formatError(error) }, "PDF stream error:");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

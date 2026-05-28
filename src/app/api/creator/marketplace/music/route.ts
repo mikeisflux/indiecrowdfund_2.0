@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const musicLogger = logger.child({ module: "creator-marketplace-music" });
@@ -176,7 +177,7 @@ export async function POST(request: Request) {
       tracks: createdTracks.map((t) => ({ id: t.id, title: t.title, slug: t.slug })),
     });
   } catch (error) {
-    musicLogger.error({ err: String(error) }, "Error creating music release");
+    musicLogger.error({ err: formatError(error) }, "Error creating music release");
     return NextResponse.json(
       { error: "Failed to create music release" },
       { status: 500 }

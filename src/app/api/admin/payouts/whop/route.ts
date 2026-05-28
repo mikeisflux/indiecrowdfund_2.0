@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminPayoutsWhopLogger = logger.child({ module: "admin-payouts-whop" });
@@ -279,7 +280,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ projects: filteredProjects, stats });
   } catch (error) {
-    adminPayoutsWhopLogger.error({ err: String(error) }, "Error fetching Whop payouts:");
+    adminPayoutsWhopLogger.error({ err: formatError(error) }, "Error fetching Whop payouts:");
     return NextResponse.json({ error: "Failed to fetch Whop payouts" }, { status: 500 });
   }
 }
@@ -365,7 +366,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, settlement });
   } catch (error) {
-    adminPayoutsWhopLogger.error({ err: String(error) }, "Error creating Whop settlement:");
+    adminPayoutsWhopLogger.error({ err: formatError(error) }, "Error creating Whop settlement:");
     return NextResponse.json({ error: "Failed to create settlement" }, { status: 500 });
   }
 }

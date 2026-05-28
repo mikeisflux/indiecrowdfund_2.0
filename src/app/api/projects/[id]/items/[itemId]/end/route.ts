@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsEndLogger = logger.child({ module: "projects-end" });
@@ -96,7 +97,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    projectsEndLogger.error({ err: String(error) }, "Error ending item:");
+    projectsEndLogger.error({ err: formatError(error) }, "Error ending item:");
     return NextResponse.json(
       { error: "Failed to end item" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const chatMessagesLogger = logger.child({ module: "chat-messages" });
@@ -113,7 +114,7 @@ export async function GET(req: NextRequest) {
       banReason: currentUser?.chatBanReason,
     });
   } catch (error) {
-    chatMessagesLogger.error({ err: String(error) }, "Error fetching chat messages:");
+    chatMessagesLogger.error({ err: formatError(error) }, "Error fetching chat messages:");
     return NextResponse.json(
       { error: "Failed to fetch messages" },
       { status: 500 }
@@ -286,7 +287,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message });
   } catch (error) {
-    chatMessagesLogger.error({ err: String(error) }, "Error sending chat message:");
+    chatMessagesLogger.error({ err: formatError(error) }, "Error sending chat message:");
     return NextResponse.json(
       { error: "Failed to send message" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -50,7 +51,7 @@ export async function POST(
     });
     return NextResponse.json({ member });
   } catch (error) {
-    membersLogger.error({ err: String(error) }, "Failed to join chat room");
+    membersLogger.error({ err: formatError(error) }, "Failed to join chat room");
     return NextResponse.json(
       { error: "Failed to join room" },
       { status: 500 }
@@ -80,7 +81,7 @@ export async function DELETE(
     ]);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    membersLogger.error({ err: String(error) }, "Failed to leave chat room");
+    membersLogger.error({ err: formatError(error) }, "Failed to leave chat room");
     return NextResponse.json(
       { error: "Failed to leave room" },
       { status: 500 }

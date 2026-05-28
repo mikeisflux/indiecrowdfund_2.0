@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminMediaUploadLogger = logger.child({ module: "admin-media-upload" });
@@ -182,7 +183,7 @@ export async function POST(req: NextRequest) {
       file: mediaFile
     });
   } catch (error) {
-    adminMediaUploadLogger.error({ err: String(error) }, "Error uploading file:");
+    adminMediaUploadLogger.error({ err: formatError(error) }, "Error uploading file:");
     return NextResponse.json(
       { error: "Failed to upload file" },
       { status: 500 }

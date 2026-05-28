@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorPledgesLogger = logger.child({ module: "creator-pledges" });
@@ -122,7 +123,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    creatorPledgesLogger.error({ err: String(error) }, "Creator get pledge error:");
+    creatorPledgesLogger.error({ err: formatError(error) }, "Creator get pledge error:");
     return NextResponse.json(
       { error: "Failed to fetch pledge" },
       { status: 500 }
@@ -415,7 +416,7 @@ export async function PATCH(
 
     return NextResponse.json({ error: "Invalid action. Use 'cancel' or 'refund'" }, { status: 400 });
   } catch (error) {
-    creatorPledgesLogger.error({ err: String(error) }, "Creator update pledge error:");
+    creatorPledgesLogger.error({ err: formatError(error) }, "Creator update pledge error:");
     return NextResponse.json(
       { error: "Failed to update pledge" },
       { status: 500 }
@@ -522,7 +523,7 @@ export async function DELETE(
       message: "Pledge deleted successfully",
     });
   } catch (error) {
-    creatorPledgesLogger.error({ err: String(error) }, "Creator delete pledge error:");
+    creatorPledgesLogger.error({ err: formatError(error) }, "Creator delete pledge error:");
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: "Failed to delete pledge", details: errorMessage },

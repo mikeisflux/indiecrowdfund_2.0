@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsPrelaunchLogger = logger.child({ module: "projects-prelaunch" });
@@ -168,7 +169,7 @@ export async function POST(
       project: updated,
     });
   } catch (error) {
-    projectsPrelaunchLogger.error({ err: String(error) }, "Update prelaunch error:");
+    projectsPrelaunchLogger.error({ err: formatError(error) }, "Update prelaunch error:");
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -218,7 +219,7 @@ export async function GET(
 
     return NextResponse.json(project);
   } catch (error) {
-    projectsPrelaunchLogger.error({ err: String(error) }, "Get prelaunch error:");
+    projectsPrelaunchLogger.error({ err: formatError(error) }, "Get prelaunch error:");
     return NextResponse.json(
       { error: "Failed to get prelaunch settings" },
       { status: 500 }

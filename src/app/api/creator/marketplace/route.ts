@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorMarketplaceLogger = logger.child({ module: "creator-marketplace" });
@@ -156,7 +157,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    creatorMarketplaceLogger.error({ err: String(error) }, "Error fetching creator marketplace data:");
+    creatorMarketplaceLogger.error({ err: formatError(error) }, "Error fetching creator marketplace data:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

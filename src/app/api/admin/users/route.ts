@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { withCorrelation, CORRELATION_HEADER } from "@/lib/correlation";
 
@@ -152,7 +153,7 @@ export async function GET(req: NextRequest) {
       headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminUsersLogger.error({ correlationId, err: String(error) }, "Error fetching users:");
+    adminUsersLogger.error({ correlationId, err: formatError(error) }, "Error fetching users:");
     return NextResponse.json(
       { error: "Failed to fetch users", correlationId },
       { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
@@ -363,7 +364,7 @@ export async function PATCH(req: NextRequest) {
             message: `Password reset email sent to ${user.email}`,
           });
         } catch (error) {
-          adminUsersLogger.error({ correlationId, err: String(error) }, "Error sending reset email:");
+          adminUsersLogger.error({ correlationId, err: formatError(error) }, "Error sending reset email:");
           return NextResponse.json(
             { error: "Failed to send reset email", correlationId },
             { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
@@ -544,7 +545,7 @@ export async function PATCH(req: NextRequest) {
       headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminUsersLogger.error({ correlationId, err: String(error) }, "Error updating user:");
+    adminUsersLogger.error({ correlationId, err: formatError(error) }, "Error updating user:");
     return NextResponse.json(
       { error: "Failed to update user", correlationId },
       { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
@@ -655,7 +656,7 @@ export async function POST(req: NextRequest) {
       headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminUsersLogger.error({ correlationId, err: String(error) }, "Error creating user:");
+    adminUsersLogger.error({ correlationId, err: formatError(error) }, "Error creating user:");
     return NextResponse.json(
       { error: "Failed to create user", correlationId },
       { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }
@@ -1068,7 +1069,7 @@ export async function DELETE(req: NextRequest) {
       headers: { [CORRELATION_HEADER]: correlationId },
     });
   } catch (error) {
-    adminUsersLogger.error({ correlationId, err: String(error) }, "Error deleting user:");
+    adminUsersLogger.error({ correlationId, err: formatError(error) }, "Error deleting user:");
     return NextResponse.json(
       { error: "Failed to delete user. Please check server logs for details.", correlationId },
       { status: 500, headers: { [CORRELATION_HEADER]: correlationId } }

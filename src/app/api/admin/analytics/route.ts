@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAnalyticsLogger = logger.child({ module: "admin-analytics" });
@@ -504,7 +505,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ error: "Invalid tab" }, { status: 400 });
   } catch (error) {
-    adminAnalyticsLogger.error({ err: String(error) }, "Error fetching analytics:");
+    adminAnalyticsLogger.error({ err: formatError(error) }, "Error fetching analytics:");
     return NextResponse.json(
       { error: "Failed to fetch analytics" },
       { status: 500 }

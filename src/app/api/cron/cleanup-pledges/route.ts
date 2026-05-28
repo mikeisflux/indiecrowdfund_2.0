@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const cronCleanupPledgesLogger = logger.child({ module: "cron-cleanup-pledges" });
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
       totalAmountCleared: stalePledges.reduce((sum, p) => sum + Number(p.amount), 0),
     });
   } catch (error) {
-    cronCleanupPledgesLogger.error({ err: String(error) }, "[Cron] Error in pledge cleanup:");
+    cronCleanupPledgesLogger.error({ err: formatError(error) }, "[Cron] Error in pledge cleanup:");
     return NextResponse.json(
       { error: "Failed to cleanup stale pledges" },
       { status: 500 }

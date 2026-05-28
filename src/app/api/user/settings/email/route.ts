@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import crypto from "crypto";
 
@@ -162,7 +163,7 @@ export async function POST(request: Request) {
       user: updatedUser,
     });
   } catch (error) {
-    userSettingsEmailLogger.error({ err: String(error) }, "Email change error:");
+    userSettingsEmailLogger.error({ err: formatError(error) }, "Email change error:");
     return NextResponse.json(
       { error: "Failed to change email" },
       { status: 500 }

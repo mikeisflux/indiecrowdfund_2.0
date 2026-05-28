@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorMarketplaceBooksLogger = logger.child({ module: "creator-marketplace-books" });
@@ -152,7 +153,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    creatorMarketplaceBooksLogger.error({ err: String(error) }, "Error creating marketplace book:");
+    creatorMarketplaceBooksLogger.error({ err: formatError(error) }, "Error creating marketplace book:");
     // Log more details for debugging
     if (error instanceof Error) {
       creatorMarketplaceBooksLogger.error({ err: String(error.message) }, "Error message:");
@@ -233,7 +234,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    creatorMarketplaceBooksLogger.error({ err: String(error) }, "Error fetching creator books:");
+    creatorMarketplaceBooksLogger.error({ err: formatError(error) }, "Error fetching creator books:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

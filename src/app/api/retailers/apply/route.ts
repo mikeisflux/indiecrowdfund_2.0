@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const retailersApplyLogger = logger.child({ module: "retailers-apply" });
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest) {
       applicationId: retailer.id,
     });
   } catch (error) {
-    retailersApplyLogger.error({ err: String(error) }, "Error submitting retailer application:");
+    retailersApplyLogger.error({ err: formatError(error) }, "Error submitting retailer application:");
     return NextResponse.json(
       { error: "Failed to submit application" },
       { status: 500 }

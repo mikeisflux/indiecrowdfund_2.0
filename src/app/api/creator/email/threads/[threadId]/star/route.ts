@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailThreadsStarLogger = logger.child({ module: "creator-email-threads-star" });
@@ -37,7 +38,7 @@ export async function POST(
       message: "Star toggled (stored client-side only for now)"
     });
   } catch (error) {
-    creatorEmailThreadsStarLogger.error({ err: String(error) }, "Error toggling star:");
+    creatorEmailThreadsStarLogger.error({ err: formatError(error) }, "Error toggling star:");
     return NextResponse.json(
       { error: "Failed to toggle star" },
       { status: 500 }

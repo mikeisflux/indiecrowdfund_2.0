@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingCampaignsManageSendLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-send" });
@@ -401,7 +402,7 @@ export async function POST(
       totalRecipients: recipients.length,
     });
   } catch (error) {
-    adminAiMarketingCampaignsManageSendLogger.error({ err: String(error) }, "Error queueing campaign:");
+    adminAiMarketingCampaignsManageSendLogger.error({ err: formatError(error) }, "Error queueing campaign:");
 
     // Try to reset status if failed — only reset if still SENDING.
     // Using updateMany with a status filter prevents overwriting a

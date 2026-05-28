@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingAutoTagLogger = logger.child({ module: "admin-ai-marketing-auto-tag" });
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
             status: "pending" as const,
           };
         } catch (error) {
-          adminAiMarketingAutoTagLogger.error({ err: String(error) }, `Error tagging project ${project.id}:`);
+          adminAiMarketingAutoTagLogger.error({ err: formatError(error) }, `Error tagging project ${project.id}:`);
           return {
             projectId: project.id,
             projectTitle: project.title,
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
       taggedProjects: tagResults,
     });
   } catch (error) {
-    adminAiMarketingAutoTagLogger.error({ err: String(error) }, "Error running auto-tagging:");
+    adminAiMarketingAutoTagLogger.error({ err: formatError(error) }, "Error running auto-tagging:");
     return NextResponse.json(
       { error: "Failed to run auto-tagging" },
       { status: 500 }
@@ -193,7 +194,7 @@ export async function PATCH(request: Request) {
 
           return { projectId: update.projectId, success: true };
         } catch (error) {
-          adminAiMarketingAutoTagLogger.error({ err: String(error) }, `Error updating project ${update.projectId}:`);
+          adminAiMarketingAutoTagLogger.error({ err: formatError(error) }, `Error updating project ${update.projectId}:`);
           return { projectId: update.projectId, success: false, error: "Failed to update" };
         }
       })
@@ -207,7 +208,7 @@ export async function PATCH(request: Request) {
       results,
     });
   } catch (error) {
-    adminAiMarketingAutoTagLogger.error({ err: String(error) }, "Error applying tags:");
+    adminAiMarketingAutoTagLogger.error({ err: formatError(error) }, "Error applying tags:");
     return NextResponse.json(
       { error: "Failed to apply tags" },
       { status: 500 }

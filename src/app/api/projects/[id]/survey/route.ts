@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsSurveyLogger = logger.child({ module: "projects-survey" });
@@ -97,7 +98,7 @@ export async function GET(
       rewards,
     });
   } catch (error) {
-    projectsSurveyLogger.error({ err: String(error) }, "Error fetching survey:");
+    projectsSurveyLogger.error({ err: formatError(error) }, "Error fetching survey:");
     return NextResponse.json(
       { error: "Failed to fetch survey" },
       { status: 500 }
@@ -186,7 +187,7 @@ export async function POST(
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    projectsSurveyLogger.error({ err: String(error) }, "Error creating survey:");
+    projectsSurveyLogger.error({ err: formatError(error) }, "Error creating survey:");
     return NextResponse.json(
       { error: "Failed to create survey" },
       { status: 500 }
@@ -267,7 +268,7 @@ export async function PUT(
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    projectsSurveyLogger.error({ err: String(error) }, "Error updating survey:");
+    projectsSurveyLogger.error({ err: formatError(error) }, "Error updating survey:");
     return NextResponse.json(
       { error: "Failed to update survey" },
       { status: 500 }

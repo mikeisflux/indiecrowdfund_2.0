@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorAccountProfileLogger = logger.child({ module: "creator-account-profile" });
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorAccountProfileLogger.error({ err: String(error) }, "Profile update error:");
+    creatorAccountProfileLogger.error({ err: formatError(error) }, "Profile update error:");
     return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
   }
 }

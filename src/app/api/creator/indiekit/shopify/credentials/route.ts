@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitShopifyCredentialsLogger = logger.child({ module: "creator-indiekit-shopify-credentials" });
@@ -51,7 +52,7 @@ export async function GET() {
       shopDomain,
     });
   } catch (error) {
-    creatorIndiekitShopifyCredentialsLogger.error({ err: String(error) }, "Error fetching Shopify credentials:");
+    creatorIndiekitShopifyCredentialsLogger.error({ err: formatError(error) }, "Error fetching Shopify credentials:");
     return NextResponse.json({ error: "Failed to fetch credentials" }, { status: 500 });
   }
 }
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
       apiKeyPreview,
     });
   } catch (error) {
-    creatorIndiekitShopifyCredentialsLogger.error({ err: String(error) }, "Error saving Shopify credentials:");
+    creatorIndiekitShopifyCredentialsLogger.error({ err: formatError(error) }, "Error saving Shopify credentials:");
     return NextResponse.json({ error: "Failed to save credentials" }, { status: 500 });
   }
 }
@@ -119,7 +120,7 @@ export async function DELETE() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorIndiekitShopifyCredentialsLogger.error({ err: String(error) }, "Error clearing Shopify credentials:");
+    creatorIndiekitShopifyCredentialsLogger.error({ err: formatError(error) }, "Error clearing Shopify credentials:");
     return NextResponse.json({ error: "Failed to clear credentials" }, { status: 500 });
   }
 }

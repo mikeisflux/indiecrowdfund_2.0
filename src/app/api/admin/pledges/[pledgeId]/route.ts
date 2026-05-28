@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminPledgesLogger = logger.child({ module: "admin-pledges" });
@@ -110,7 +111,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    adminPledgesLogger.error({ err: String(error) }, "Admin get pledge error:");
+    adminPledgesLogger.error({ err: formatError(error) }, "Admin get pledge error:");
     return NextResponse.json(
       { error: "Failed to fetch pledge" },
       { status: 500 }
@@ -612,7 +613,7 @@ export async function PATCH(
 
     return NextResponse.json({ error: "Invalid action. Use 'cancel', 'refund', or 'resend_receipt'" }, { status: 400 });
   } catch (error) {
-    adminPledgesLogger.error({ err: String(error) }, "Admin update pledge error:");
+    adminPledgesLogger.error({ err: formatError(error) }, "Admin update pledge error:");
     return NextResponse.json(
       { error: "Failed to update pledge" },
       { status: 500 }
@@ -709,7 +710,7 @@ export async function DELETE(
       message: "Pledge deleted successfully",
     });
   } catch (error) {
-    adminPledgesLogger.error({ err: String(error) }, "Admin delete pledge error:");
+    adminPledgesLogger.error({ err: formatError(error) }, "Admin delete pledge error:");
     return NextResponse.json(
       { error: "Failed to delete pledge" },
       { status: 500 }

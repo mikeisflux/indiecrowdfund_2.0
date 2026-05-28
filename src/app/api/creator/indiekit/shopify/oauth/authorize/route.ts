@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitShopifyOauthAuthorizeLogger = logger.child({ module: "creator-indiekit-shopify-oauth-authorize" });
@@ -110,7 +111,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.redirect(authUrl.toString());
   } catch (error) {
-    creatorIndiekitShopifyOauthAuthorizeLogger.error({ err: String(error) }, "Shopify OAuth authorize error:");
+    creatorIndiekitShopifyOauthAuthorizeLogger.error({ err: formatError(error) }, "Shopify OAuth authorize error:");
     return NextResponse.json({ error: "Failed to initiate Shopify authorization" }, { status: 500 });
   }
 }

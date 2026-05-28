@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const aiMarketingCopyLogger = logger.child({ module: "ai-marketing-copy" });
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
       ...result,
     });
   } catch (error) {
-    aiMarketingCopyLogger.error({ err: String(error) }, "Marketing copy error:");
+    aiMarketingCopyLogger.error({ err: formatError(error) }, "Marketing copy error:");
     return NextResponse.json(
       { error: "Failed to generate marketing copy" },
       { status: 500 }

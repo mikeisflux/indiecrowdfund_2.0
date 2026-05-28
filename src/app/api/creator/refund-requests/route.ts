@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -82,7 +83,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    refundRequestsLogger.error({ err: String(error) }, "Error fetching refund requests");
+    refundRequestsLogger.error({ err: formatError(error) }, "Error fetching refund requests");
     return NextResponse.json({ error: "Failed to fetch refund requests" }, { status: 500 });
   }
 }

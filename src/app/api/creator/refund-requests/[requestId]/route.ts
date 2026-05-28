@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -264,7 +265,7 @@ export async function PATCH(
     refundRequestLogger.info({ requestId, pledgeId: pledge.id }, "Refund request approved and processed");
     return NextResponse.json({ success: true, message: "Refund approved and processed successfully." });
   } catch (error) {
-    refundRequestLogger.error({ err: String(error) }, "Error processing refund request");
+    refundRequestLogger.error({ err: formatError(error) }, "Error processing refund request");
     return NextResponse.json({ error: "Failed to process refund request" }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsCollaboratorsMeLogger = logger.child({ module: "projects-collaborators-me" });
@@ -34,7 +35,7 @@ export async function GET(
       canManageCommunity: collaborator?.canManageCommunity ?? false,
     });
   } catch (error) {
-    projectsCollaboratorsMeLogger.error({ err: String(error) }, "Error checking collaborator status:");
+    projectsCollaboratorsMeLogger.error({ err: formatError(error) }, "Error checking collaborator status:");
     return NextResponse.json({ isCollaborator: false });
   }
 }

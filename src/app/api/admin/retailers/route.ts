@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminRetailersLogger = logger.child({ module: "admin-retailers" });
@@ -119,7 +120,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    adminRetailersLogger.error({ err: String(error) }, "Error fetching retailers:");
+    adminRetailersLogger.error({ err: formatError(error) }, "Error fetching retailers:");
     return NextResponse.json(
       { error: "Failed to fetch retailers" },
       { status: 500 }
@@ -200,7 +201,7 @@ export async function PUT(req: NextRequest) {
       retailer: updatedRetailer,
     });
   } catch (error) {
-    adminRetailersLogger.error({ err: String(error) }, "Error editing retailer:");
+    adminRetailersLogger.error({ err: formatError(error) }, "Error editing retailer:");
     return NextResponse.json(
       { error: "Failed to update retailer" },
       { status: 500 }
@@ -426,7 +427,7 @@ export async function PATCH(req: NextRequest) {
       retailer: updatedRetailer,
     });
   } catch (error) {
-    adminRetailersLogger.error({ err: String(error) }, "Error updating retailer:");
+    adminRetailersLogger.error({ err: formatError(error) }, "Error updating retailer:");
     return NextResponse.json(
       { error: "Failed to update retailer" },
       { status: 500 }

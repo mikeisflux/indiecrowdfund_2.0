@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsStoryLogger = logger.child({ module: "projects-story" });
@@ -73,7 +74,7 @@ export async function POST(
       project: updated,
     });
   } catch (error) {
-    projectsStoryLogger.error({ err: String(error) }, "Update story error:");
+    projectsStoryLogger.error({ err: formatError(error) }, "Update story error:");
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -124,7 +125,7 @@ export async function GET(
 
     return NextResponse.json(project);
   } catch (error) {
-    projectsStoryLogger.error({ err: String(error) }, "Get story error:");
+    projectsStoryLogger.error({ err: formatError(error) }, "Get story error:");
     return NextResponse.json(
       { error: "Failed to get project story" },
       { status: 500 }

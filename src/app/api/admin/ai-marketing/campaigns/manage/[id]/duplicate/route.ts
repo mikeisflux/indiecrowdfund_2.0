@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingCampaignsManageDuplicateLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-duplicate" });
@@ -80,7 +81,7 @@ export async function POST(
       message: `Campaign duplicated as "${duplicate.name}"`,
     });
   } catch (error) {
-    adminAiMarketingCampaignsManageDuplicateLogger.error({ err: String(error) }, "Error duplicating campaign:");
+    adminAiMarketingCampaignsManageDuplicateLogger.error({ err: formatError(error) }, "Error duplicating campaign:");
     return NextResponse.json(
       { error: "Failed to duplicate campaign" },
       { status: 500 }

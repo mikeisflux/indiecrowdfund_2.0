@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminDashboardLogger = logger.child({ module: "admin-dashboard" });
@@ -268,7 +269,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    adminDashboardLogger.error({ err: String(error) }, "Error fetching dashboard stats:");
+    adminDashboardLogger.error({ err: formatError(error) }, "Error fetching dashboard stats:");
     return NextResponse.json(
       { error: "Failed to fetch dashboard statistics" },
       { status: 500 }

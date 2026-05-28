@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorIndiekitSettingsImageLogger = logger.child({ module: "creator-indiekit-settings-image" });
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorIndiekitSettingsImageLogger.error({ err: String(error) }, "Settings image API error:");
+    creatorIndiekitSettingsImageLogger.error({ err: formatError(error) }, "Settings image API error:");
     return NextResponse.json({ error: "Failed to update image" }, { status: 500 });
   }
 }

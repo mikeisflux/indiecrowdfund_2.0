@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminAiMarketingCampaignsManageTestLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-test" });
@@ -133,7 +134,7 @@ export async function POST(
       message: `Test email sent to ${email}`,
     });
   } catch (error) {
-    adminAiMarketingCampaignsManageTestLogger.error({ err: String(error) }, "Error sending test email:");
+    adminAiMarketingCampaignsManageTestLogger.error({ err: formatError(error) }, "Error sending test email:");
     return NextResponse.json(
       { error: "Failed to send test email" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const backerDigitalLibraryLogger = logger.child({ module: "backer-digital-library" });
@@ -245,7 +246,7 @@ export async function GET(request: Request) {
       stats,
     });
   } catch (error) {
-    backerDigitalLibraryLogger.error({ err: String(error) }, "Digital library fetch error:");
+    backerDigitalLibraryLogger.error({ err: formatError(error) }, "Digital library fetch error:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminSecurityStatsLogger = logger.child({ module: "admin-security-stats" });
@@ -50,7 +51,7 @@ export async function GET() {
       users2FAEnabled: 0, // 2FA not yet implemented in schema
     });
   } catch (error) {
-    adminSecurityStatsLogger.error({ err: String(error) }, "Security stats error:");
+    adminSecurityStatsLogger.error({ err: formatError(error) }, "Security stats error:");
     return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
   }
 }

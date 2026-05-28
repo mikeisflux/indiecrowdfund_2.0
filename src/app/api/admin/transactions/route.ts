@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminTransactionsLogger = logger.child({ module: "admin-transactions" });
@@ -191,7 +192,7 @@ export async function GET(request: NextRequest) {
       ...(queryErrors.length > 0 ? { queryErrors } : {}),
     });
   } catch (error) {
-    adminTransactionsLogger.error({ err: String(error) }, "Error fetching unified transactions:");
+    adminTransactionsLogger.error({ err: formatError(error) }, "Error fetching unified transactions:");
     return NextResponse.json(
       { error: "Failed to fetch transactions" },
       { status: 500 }

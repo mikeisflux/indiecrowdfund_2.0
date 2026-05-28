@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -102,7 +103,7 @@ export async function PATCH(
     });
     return NextResponse.json({ release });
   } catch (error) {
-    adminPressIdLogger.error({ err: String(error) }, "Failed to update press release");
+    adminPressIdLogger.error({ err: formatError(error) }, "Failed to update press release");
     return NextResponse.json(
       { error: "Failed to update press release" },
       { status: 500 }
@@ -135,7 +136,7 @@ export async function DELETE(
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    adminPressIdLogger.error({ err: String(error) }, "Failed to delete press release");
+    adminPressIdLogger.error({ err: formatError(error) }, "Failed to delete press release");
     return NextResponse.json(
       { error: "Failed to delete press release" },
       { status: 500 }

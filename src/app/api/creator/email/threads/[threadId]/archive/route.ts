@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const creatorEmailThreadsArchiveLogger = logger.child({ module: "creator-email-threads-archive" });
@@ -50,7 +51,7 @@ export async function POST(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    creatorEmailThreadsArchiveLogger.error({ err: String(error) }, "Error archiving thread:");
+    creatorEmailThreadsArchiveLogger.error({ err: formatError(error) }, "Error archiving thread:");
     return NextResponse.json(
       { error: "Failed to archive thread" },
       { status: 500 }

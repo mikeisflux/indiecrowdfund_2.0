@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const projectsSurveyBackerQuestionsLogger = logger.child({ module: "projects-survey-backer-questions" });
@@ -72,7 +73,7 @@ export async function GET(
 
     return NextResponse.json({ backerQuestions });
   } catch (error) {
-    projectsSurveyBackerQuestionsLogger.error({ err: String(error) }, "Error fetching backer questions:");
+    projectsSurveyBackerQuestionsLogger.error({ err: formatError(error) }, "Error fetching backer questions:");
     return NextResponse.json(
       { error: "Failed to fetch backer questions" },
       { status: 500 }
@@ -159,7 +160,7 @@ export async function POST(
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    projectsSurveyBackerQuestionsLogger.error({ err: String(error) }, "Error creating backer question:");
+    projectsSurveyBackerQuestionsLogger.error({ err: formatError(error) }, "Error creating backer question:");
     return NextResponse.json(
       { error: "Failed to create backer question" },
       { status: 500 }
@@ -261,7 +262,7 @@ export async function PUT(
       const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
-    projectsSurveyBackerQuestionsLogger.error({ err: String(error) }, "Error updating backer question:");
+    projectsSurveyBackerQuestionsLogger.error({ err: formatError(error) }, "Error updating backer question:");
     return NextResponse.json(
       { error: "Failed to update backer question" },
       { status: 500 }
@@ -327,7 +328,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    projectsSurveyBackerQuestionsLogger.error({ err: String(error) }, "Error deleting backer question:");
+    projectsSurveyBackerQuestionsLogger.error({ err: formatError(error) }, "Error deleting backer question:");
     return NextResponse.json(
       { error: "Failed to delete backer question" },
       { status: 500 }

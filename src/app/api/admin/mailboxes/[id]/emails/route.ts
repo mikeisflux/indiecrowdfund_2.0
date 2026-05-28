@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const adminMailboxesEmailsLogger = logger.child({ module: "admin-mailboxes-emails" });
@@ -135,7 +136,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    adminMailboxesEmailsLogger.error({ err: String(error) }, "Error fetching emails:");
+    adminMailboxesEmailsLogger.error({ err: formatError(error) }, "Error fetching emails:");
     return NextResponse.json(
       { error: "Failed to fetch emails" },
       { status: 500 }
@@ -288,7 +289,7 @@ export async function POST(
 
     return NextResponse.json({ email });
   } catch (error) {
-    adminMailboxesEmailsLogger.error({ err: String(error) }, "Error creating email:");
+    adminMailboxesEmailsLogger.error({ err: formatError(error) }, "Error creating email:");
     return NextResponse.json(
       { error: "Failed to create email" },
       { status: 500 }
@@ -350,7 +351,7 @@ export async function DELETE(
       deletedCount: result.count,
     });
   } catch (error) {
-    adminMailboxesEmailsLogger.error({ err: String(error) }, "Error emptying folder:");
+    adminMailboxesEmailsLogger.error({ err: formatError(error) }, "Error emptying folder:");
     return NextResponse.json(
       { error: "Failed to empty folder" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 const userVanityUrlLogger = logger.child({ module: "user-vanity-url" });
@@ -95,7 +96,7 @@ export async function GET() {
       isSet: !!user?.vanityUrl,
     });
   } catch (error) {
-    userVanityUrlLogger.error({ err: String(error) }, "Vanity URL fetch error:");
+    userVanityUrlLogger.error({ err: formatError(error) }, "Vanity URL fetch error:");
     return NextResponse.json(
       { error: "Failed to fetch vanity URL" },
       { status: 500 }
@@ -211,7 +212,7 @@ export async function POST(request: Request) {
       success: true,
     });
   } catch (error) {
-    userVanityUrlLogger.error({ err: String(error) }, "Vanity URL set error:");
+    userVanityUrlLogger.error({ err: formatError(error) }, "Vanity URL set error:");
     return NextResponse.json(
       { error: "Failed to set vanity URL" },
       { status: 500 }
@@ -271,7 +272,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ available: true });
   } catch (error) {
-    userVanityUrlLogger.error({ err: String(error) }, "Vanity URL check error:");
+    userVanityUrlLogger.error({ err: formatError(error) }, "Vanity URL check error:");
     return NextResponse.json(
       { available: false, error: "Failed to check availability" },
       { status: 500 }
