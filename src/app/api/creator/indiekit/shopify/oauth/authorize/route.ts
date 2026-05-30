@@ -10,7 +10,16 @@ import { decryptCredential } from "@/lib/encryption";
 
 export const dynamic = "force-dynamic";
 
-// Required Shopify scopes for IndieKit fulfillment
+// Required Shopify scopes for IndieKit fulfillment.
+//
+// read_customers + write_customers are needed by findOrCreateCustomer
+// in src/lib/shopify-push.ts. Without them, every backer-order push
+// logs a "This action requires merchant approval for write_customers
+// scope" error from Shopify (we saw ~13 of these per hour in prod
+// before this fix). Creators who authorized IndieKit before this
+// change will need to reconnect their Shopify store from the IndieKit
+// settings page to grant the new scopes — Shopify will not silently
+// upgrade an existing access token's permissions.
 const SHOPIFY_SCOPES = [
   "read_products",
   "write_draft_orders",
@@ -18,6 +27,8 @@ const SHOPIFY_SCOPES = [
   "write_orders",
   "read_fulfillments",
   "write_fulfillments",
+  "read_customers",
+  "write_customers",
 ].join(",");
 
 // Create a signed state parameter

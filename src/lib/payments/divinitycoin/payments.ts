@@ -891,8 +891,15 @@ export async function handlePaymentRequiresAction(
     return { success: true, message: "Already recorded" };
   }
 
-  await db.pledge.update({
-    where: { id: pledge.id },
+  // updateMany (not update) so a race with admin-cancel / soft-delete
+  // between the findFirst above and this write doesn't throw P2025.
+  // Webhooks retry; an unrecoverable 500 here would have the provider
+  // pound the endpoint every minute (seen 2x in prod May 23 + May 25
+  // before this fix). If the row is gone by the time we get here, the
+  // backer is no longer waiting on a recovery flow anyway — log and
+  // ack the webhook.
+  const requiresActionUpdate = await db.pledge.updateMany({
+    where: { id: pledge.id, deletedAt: null },
     data: {
       metadata: {
         ...existingMeta,
@@ -907,6 +914,14 @@ export async function handlePaymentRequiresAction(
       },
     },
   });
+
+  if (requiresActionUpdate.count === 0) {
+    paymentsDivinitycoinLogger.info(
+      { pledgeId: pledge.id, paymentIntentId },
+      "[DivinityCoin] payment.requires_action — pledge gone between findFirst and update (soft-deleted or hard-removed); acknowledged"
+    );
+    return { success: true, message: "Pledge no longer present; acknowledged" };
+  }
 
   paymentsDivinitycoinLogger.info(
     { pledgeId: pledge.id, paymentIntentId },

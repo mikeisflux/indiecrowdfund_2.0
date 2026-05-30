@@ -110,7 +110,26 @@ async function findOrCreateCustomer(
       return customerId;
     } else {
       const errorText = await createResponse.text();
-      shopifyPushLogger.error(`[findOrCreateCustomer] Failed to create customer: ${errorText}`);
+      // Shopify returns 403 + "requires merchant approval for
+      // write_customers scope" when the access token was issued
+      // before write_customers was added to SHOPIFY_SCOPES (in the
+      // OAuth authorize route). Downgrade to warn — repeated error-
+      // level logs hammer the error pager every time a backer order
+      // pushes, and the calling code already handles a null return
+      // by creating the draft order with the customer email inline.
+      // Creator needs to reconnect their Shopify store; the rest of
+      // the push still works.
+      const isScopeError =
+        createResponse.status === 403 &&
+        /write_customers|merchant approval/i.test(errorText);
+      if (isScopeError) {
+        shopifyPushLogger.warn(
+          { shopDomain, email },
+          `[findOrCreateCustomer] Shopify access token missing write_customers scope — creator needs to reconnect their store. Continuing without a customer record; the draft order will be created with the email inline.`,
+        );
+      } else {
+        shopifyPushLogger.error(`[findOrCreateCustomer] Failed to create customer: ${errorText}`);
+      }
       return null;
     }
   } catch (error) {
