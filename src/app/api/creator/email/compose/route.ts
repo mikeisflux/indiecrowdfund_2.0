@@ -73,14 +73,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user has access and project is active (LIVE or prelaunchActive)
+    // Verify user has access and project is active.
+    // Active = LIVE, FUNDED (fulfillment in progress), SUBMITTED
+    // (awaiting review but already promotable), or any status where
+    // prelaunchActive is on. FUNDED is the most important case here:
+    // creators need to message backers about packaging, shipping
+    // invoices, address surveys, and reward updates AFTER the campaign
+    // ends. Excluding FUNDED makes this endpoint useless for the case
+    // it gets used the most.
     let project = await db.project.findFirst({
       where: {
         id: projectId,
         deletedAt: null,
         creatorId: session.user.id,
         OR: [
-          { status: "LIVE" },
+          { status: { in: ["LIVE", "FUNDED", "SUBMITTED"] } },
           { prelaunchActive: true },
         ],
       },
@@ -97,7 +104,7 @@ export async function POST(request: NextRequest) {
           canManageCommunity: true,
           project: {
             OR: [
-              { status: "LIVE" },
+              { status: { in: ["LIVE", "FUNDED", "SUBMITTED"] } },
               { prelaunchActive: true },
             ],
           },
@@ -116,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     if (!project) {
       return NextResponse.json(
-        { error: "You must have an active project (LIVE or with active prelaunch page) to send emails" },
+        { error: "You must own (or have community-manager access to) a project that is LIVE, FUNDED, SUBMITTED, or has an active prelaunch page to send emails." },
         { status: 403 }
       );
     }
