@@ -553,8 +553,12 @@ export async function POST(req: NextRequest) {
             // Save the SetupIntent id on the pledge. The pm_... id will
             // be persisted by /api/pledges/[id]/confirm-dc-setup once the
             // browser finishes Stripe Elements confirmation.
-            await db.pledge.update({
-              where: { id: pledge.id },
+            // updateMany so a concurrent abandon-cleanup that soft-
+            // deleted the pledge between create and this stamp doesn't
+            // throw P2025 (the catch below would mis-log this as a DC
+            // API error and the cleanup deleteMany would no-op anyway).
+            await db.pledge.updateMany({
+              where: { id: pledge.id, deletedAt: null },
               data: { divinityCoinSetupIntentId: dcResult.setupIntentId },
             });
             metrics.pledgesCreated.inc({ status: "pending", processor: "divinitycoin" });
@@ -569,8 +573,10 @@ export async function POST(req: NextRequest) {
             });
           }
 
-          await db.pledge.update({
-            where: { id: pledge.id },
+          // updateMany so a concurrent soft-delete doesn't throw P2025
+          // and trip the catch as a misleading "DivinityCoin API error".
+          await db.pledge.updateMany({
+            where: { id: pledge.id, deletedAt: null },
             data: { divinityCoinPaymentId: dcResult.paymentIntentId },
           });
 

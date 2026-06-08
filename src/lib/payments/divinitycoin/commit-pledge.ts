@@ -107,13 +107,25 @@ export async function commitDcPledge(
     (paymentMethodId && pledge.divinityCoinPaymentMethodId !== paymentMethodId) ||
     (effectiveSetupIntentId && pledge.divinityCoinSetupIntentId !== effectiveSetupIntentId)
   ) {
-    await db.pledge.update({
-      where: { id: pledge.id },
+    // updateMany (not update) so a soft-delete race between the
+    // pledge findFirst above and this write doesn't throw P2025
+    // (caught the wider DC API try/catch and logged as a generic
+    // "DivinityCoin API error" — same noise class as the webhook
+    // races already fixed).
+    const stamped = await db.pledge.updateMany({
+      where: { id: pledge.id, deletedAt: null },
       data: {
         ...(paymentMethodId ? { divinityCoinPaymentMethodId: paymentMethodId } : {}),
         ...(effectiveSetupIntentId ? { divinityCoinSetupIntentId: effectiveSetupIntentId } : {}),
       },
     });
+    if (stamped.count === 0) {
+      log.warn(
+        { pledgeId: pledge.id, setupIntentId: effectiveSetupIntentId, source },
+        "[commitDcPledge] Pledge soft-deleted between findFirst and update — abandoning commit"
+      );
+      return { ok: false, error: "Pledge no longer exists" };
+    }
     log.info(
       { pledgeId: pledge.id, setupIntentId: effectiveSetupIntentId, source },
       "[commitDcPledge] Saved-card evidence persisted on pledge"

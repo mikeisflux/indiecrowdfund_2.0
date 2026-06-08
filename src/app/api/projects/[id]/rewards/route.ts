@@ -249,10 +249,21 @@ export async function POST(
           const savedReward = await saveReward(projectId, rewardData);
           results.push({ success: true, reward: savedReward });
         } catch (err) {
-          projectsRewardsLogger.error({ err: String(err) }, `Error saving reward:`);
+          // "Reward not found" is a legitimate 404 (stale ID from
+          // frontend cache, reward deleted concurrently, etc.) — the
+          // batch response already returns success:false with the
+          // message per row, so this is informational, not actionable.
+          // Log at warn so it doesn't trip the error pager.
+          const message = err instanceof Error ? err.message : String(err);
+          const isStaleRewardId = err instanceof Error && err.message === "Reward not found";
+          if (isStaleRewardId) {
+            projectsRewardsLogger.warn({ err: formatError(err), rewardId: rewardData?.id, projectId }, "Skipping save of stale reward id (likely deleted in a parallel session)");
+          } else {
+            projectsRewardsLogger.error({ err: formatError(err), rewardId: rewardData?.id, projectId }, "Error saving reward");
+          }
           results.push({
             success: false,
-            error: err instanceof Error ? err.message : "Unknown error"
+            error: message,
           });
         }
       }

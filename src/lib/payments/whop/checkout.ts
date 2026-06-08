@@ -155,9 +155,10 @@ export async function createWhopPayment({
 
   const sessionId = checkoutConfig.id;
 
-  // Save Whop session ID to pledge
-  await db.pledge.update({
-    where: { id: pledge.id },
+  // Save Whop session ID to pledge. updateMany guards against a
+  // concurrent soft-delete between pledge.create above and this stamp.
+  await db.pledge.updateMany({
+    where: { id: pledge.id, deletedAt: null },
     data: { whopCheckoutId: sessionId },
   });
 

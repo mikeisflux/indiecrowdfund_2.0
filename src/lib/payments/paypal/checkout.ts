@@ -196,9 +196,10 @@ export async function createPayPalPayment({
   const order = await orderRes.json();
   const paypalOrderId: string = order.id;
 
-  // Save PayPal order ID to pledge
-  await db.pledge.update({
-    where: { id: pledge.id },
+  // Save PayPal order ID to pledge. updateMany guards against a
+  // concurrent soft-delete between pledge.create above and this stamp.
+  await db.pledge.updateMany({
+    where: { id: pledge.id, deletedAt: null },
     data: { paypalOrderId },
   });
 

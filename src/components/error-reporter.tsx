@@ -278,6 +278,17 @@ export function ErrorReporter() {
         requestUrl.includes("/api/user/profile") ||
         requestUrl.includes("/api/user/settings") ||
         (requestUrl.includes("/api/surveys/") && requestUrl.includes("/respond")) ||
+        // /api/pledges/[id]/confirm-dc-checkout returns 400 on every
+        // expected end-state from DivinityCoin's hosted checkout:
+        // session.status of failed (card declined), expired (user
+        // walked away), canceled (user clicked back), or the pledge
+        // already moved to a non-PENDING terminal state (CANCELLED /
+        // FAILED / REFUNDED) before the return ping arrived. The
+        // return page renders a real message in every case; admin
+        // logging is duplicate noise from normal payment-flow
+        // outcomes. Server-side these are now logged at info/warn for
+        // diagnosis without pinging the error tracker.
+        /\/api\/pledges\/[^/]+\/confirm-dc-checkout$/.test(requestUrl) ||
         // Project submit returns 400 with `validationErrors: string[]` when
         // the creator's draft is missing required fields (title length,
         // image, rewards, chargeback card, etc.). The UI surfaces those
@@ -345,6 +356,12 @@ export function ErrorReporter() {
         requestUrl.includes("/api/user/vanity-url") ||
         requestUrl.includes("/api/user/notifications") ||
         requestUrl.includes("/api/messages") ||
+        // /api/user/profile-dropdown is fired by the topbar dropdown on
+        // every page load to populate the avatar/menu. Anonymous users
+        // (or signed-out tabs that lost their cookie) get a 401 — the
+        // component degrades to the signed-out variant, no user-visible
+        // breakage. Not actionable.
+        requestUrl.includes("/api/user/profile-dropdown") ||
         requestUrl.includes("/api/creator/dashboard") ||
         requestUrl.includes("/api/creator/email/threads") ||
         // /api/collaborations is fired by the dashboard's

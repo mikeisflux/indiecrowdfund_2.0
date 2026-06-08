@@ -69,9 +69,11 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (pledge.paymentProcessor !== "DIVINITYCOIN") {
+      log.warn({ pledgeId: pledge.id, processor: pledge.paymentProcessor }, "[confirm-dc-checkout] non-DC pledge hit this endpoint");
       return NextResponse.json({ error: "Pledge is not on DivinityCoin" }, { status: 400 });
     }
     if (!pledge.divinityCoinCheckoutSessionId) {
+      log.warn({ pledgeId: pledge.id }, "[confirm-dc-checkout] pledge has no DC session id — likely an inline-Elements pledge, not hosted-checkout");
       return NextResponse.json(
         { error: "Pledge has no DC checkout session — not a hosted-checkout pledge" },
         { status: 400 }
@@ -89,6 +91,7 @@ export async function POST(
       });
     }
     if (pledge.status !== "PENDING") {
+      log.warn({ pledgeId: pledge.id, status: pledge.status }, "[confirm-dc-checkout] pledge is in non-PENDING terminal state (CANCELLED/FAILED/REFUNDED)");
       return NextResponse.json(
         { error: `Pledge is ${pledge.status.toLowerCase()}; cannot confirm` },
         { status: 400 }
@@ -117,6 +120,7 @@ export async function POST(
     // pledge appropriately, but the user-return path may beat the
     // webhook; surface a meaningful response either way.
     if (dcSession.status === "failed") {
+      log.info({ pledgeId: pledge.id, sessionId: dcSession.sessionId }, "[confirm-dc-checkout] DC session failed (card declined / processor reject)");
       return NextResponse.json({
         ok: false,
         status: "failed",
@@ -124,6 +128,7 @@ export async function POST(
       }, { status: 400 });
     }
     if (dcSession.status === "expired") {
+      log.info({ pledgeId: pledge.id, sessionId: dcSession.sessionId }, "[confirm-dc-checkout] DC session expired (user took too long)");
       return NextResponse.json({
         ok: false,
         status: "expired",
@@ -131,6 +136,7 @@ export async function POST(
       }, { status: 400 });
     }
     if (dcSession.status === "canceled") {
+      log.info({ pledgeId: pledge.id, sessionId: dcSession.sessionId }, "[confirm-dc-checkout] DC session canceled by user");
       return NextResponse.json({
         ok: false,
         status: "canceled",

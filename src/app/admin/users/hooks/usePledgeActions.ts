@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
 import { User, UserPledge, EmailLogEntry } from "../components";
@@ -38,7 +38,7 @@ export function usePledgeActions(
     pledgeId: "",
   });
 
-  const fetchUserPledges = async (userId: string) => {
+  const fetchUserPledges = useCallback(async (userId: string) => {
     setLoadingPledges(true);
     try {
       const response = await fetch(`/api/admin/users/${userId}/pledges`);
@@ -51,9 +51,9 @@ export function usePledgeActions(
     } finally {
       setLoadingPledges(false);
     }
-  };
+  }, []);
 
-  const fetchUserEmails = async (userId: string) => {
+  const fetchUserEmails = useCallback(async (userId: string) => {
     setLoadingEmails(true);
     try {
       const response = await fetch(`/api/admin/users/${userId}/emails`);
@@ -66,7 +66,7 @@ export function usePledgeActions(
     } finally {
       setLoadingEmails(false);
     }
-  };
+  }, []);
 
   const handleViewEmail = (email: EmailLogEntry) => {
     setViewingEmail(email);

@@ -141,6 +141,10 @@ function getPrismaClient(): PrismaClient {
         // /api/user/following catches P2002 and returns 200 with
         // alreadyFollowing:true, so the engine log is pure noise.
         "Unique constraint failed on the fields: (`\"projectId\"`, `\"userId\"`)",
+        // CreatorFollow has a (followerId, creatorId) unique — same race
+        // class as ProjectFollower above. /api/backer/following catches
+        // P2002 and returns alreadyFollowing:true.
+        "Unique constraint failed on the fields: (`\"followerId\"`, `\"creatorId\"`)",
         // Session cleanup races: session.delete() after validation finds
         // the row was already reaped (expiry, logout, signout-everywhere).
         // Our callers already .catch(() => {}) these at the app level,
