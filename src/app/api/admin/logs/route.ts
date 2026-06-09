@@ -44,7 +44,7 @@ async function requireSuperAdmin() {
 
 // Resolves `requested` and confirms it's a file under one of our whitelists.
 // Rejects anything with traversal, symlink escape, or paths outside the list.
-export function isPathAllowed(requested: string): boolean {
+function isPathAllowed(requested: string): boolean {
   let resolved: string;
   try {
     resolved = path.resolve(requested);
