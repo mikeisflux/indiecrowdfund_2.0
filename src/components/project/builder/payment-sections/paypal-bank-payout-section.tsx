@@ -280,7 +280,7 @@ export function PayPalBankPayoutSection() {
                 </div>
               </div>
 
-              {country === "US" ? (
+              {country === "US" || country === "CA" ? (
                 <div className="space-y-2">
                   <Label>Account Type</Label>
                   <Select

@@ -6,17 +6,18 @@
 // digit fields) the per-file copies diverge too easily, so the country
 // config + sanitizer + validator live here once.
 
-export type BankCountry = "US" | "GB" | "IT" | "JP";
+export type BankCountry = "US" | "GB" | "IT" | "JP" | "CA";
 
 export const BANK_COUNTRY_OPTIONS: { value: BankCountry; label: string }[] = [
   { value: "US", label: "United States" },
+  { value: "CA", label: "Canada" },
   { value: "GB", label: "United Kingdom" },
   { value: "IT", label: "Italy" },
   { value: "JP", label: "Japan" },
 ];
 
 // Country codes the API routes accept in a save request.
-export const SUPPORTED_BANK_COUNTRIES = new Set<string>(["US", "GB", "IT", "JP"]);
+export const SUPPORTED_BANK_COUNTRIES = new Set<string>(["US", "GB", "IT", "JP", "CA"]);
 
 interface BankCountryFields {
   // The "routing identifier" field — US ABA routing number, UK Sort
@@ -91,16 +92,35 @@ export const BANK_COUNTRY_FIELDS: Record<BankCountry, BankCountryFields> = {
     bankNamePlaceholder: "e.g., Mitsubishi UFJ Bank, Sumitomo Mitsui Banking",
     inputMode: "numeric",
   },
+  CA: {
+    // Canadian EFT identifies the receiving branch by a concatenated
+    // 8-digit string: 3-digit institution number + 5-digit transit
+    // number. Stored together with no separator — same pattern as JP's
+    // zengin code above. The MICR line printed on Canadian cheques shows
+    // them as `transit-institution` but EFT systems take them as one
+    // 8-digit value, so we ask for that.
+    routingLabel: "Institution + Transit",
+    routingPlaceholder: "8 digits (e.g. 00112345)",
+    routingHelp:
+      "8 digits total — your 3-digit institution number followed by your 5-digit transit number, no separators. e.g. institution 001 + transit 12345 = 00112345",
+    routingMaxLength: 8,
+    accountLabel: "Account Number",
+    accountPlaceholder: "7–12 digits",
+    accountMaxLength: 12,
+    accountSliceLength: 12,
+    bankNamePlaceholder: "e.g., RBC, TD, Scotiabank, BMO, CIBC",
+    inputMode: "numeric",
+  },
 };
 
 // Normalises whatever the API returns into a known BankCountry. Anything
 // unrecognised — including a pre-international null — falls back to "US".
 export function parseBankCountry(value: unknown): BankCountry {
-  if (value === "GB" || value === "IT" || value === "JP") return value;
+  if (value === "GB" || value === "IT" || value === "JP" || value === "CA") return value;
   return "US";
 }
 
-// US/UK/JP routing + account numbers are digits only. Italy's BIC + IBAN
+// US/UK/JP/CA routing + account numbers are digits only. Italy's BIC + IBAN
 // are alphanumeric, stored uppercase with separators stripped. Pass
 // maxLength to also cap the result (the forms do, to bound the input;
 // the API routes don't — validation enforces exact lengths there).
@@ -154,6 +174,19 @@ export function validateBankFields(
     }
     if (!/^\d{7,8}$/.test(accountNumber)) {
       return "Japanese account number must be 7 or 8 digits";
+    }
+    return null;
+  }
+
+  if (country === "CA") {
+    // Canadian EFT routing is a concatenated 8-digit value: 3-digit
+    // institution number (which bank) + 5-digit transit number (which
+    // branch). Account numbers vary by bank, commonly 7–12 digits.
+    if (!/^\d{8}$/.test(routingNumber)) {
+      return "Canadian routing must be 8 digits (3-digit institution number + 5-digit transit number)";
+    }
+    if (!/^\d{7,12}$/.test(accountNumber)) {
+      return "Canadian account number must be 7–12 digits";
     }
     return null;
   }

@@ -666,7 +666,7 @@ export function PaymentSettings({
                   </div>
                 </div>
 
-                {country === "US" ? (
+                {country === "US" || country === "CA" ? (
                   <div className="space-y-2">
                     <Label className={compact ? "text-white" : ""}>Account Type</Label>
                     <Select

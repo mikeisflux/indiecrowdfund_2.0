@@ -24,6 +24,11 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BankAccountDetails } from "./types";
+import {
+  BANK_COUNTRY_FIELDS,
+  parseBankCountry,
+  sanitizeBankField,
+} from "@/lib/bank-countries";
 
 interface BankDetailsDialogProps {
   open: boolean;
@@ -124,6 +129,10 @@ export function BankDetailsDialog({
             <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
           </div>
         ) : bankDetails ? (
+          (() => {
+            const country = parseBankCountry(bankDetails.bankCountry);
+            const countryFields = BANK_COUNTRY_FIELDS[country];
+            return (
           <div className="space-y-4">
             <Alert>
               <AlertCircle className="h-4 w-4" />
@@ -159,13 +168,18 @@ export function BankDetailsDialog({
                 )}
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Routing Number</Label>
+                <Label className="text-xs text-muted-foreground">{countryFields.routingLabel}</Label>
                 {editing ? (
                   <Input
                     value={form.routingNumber}
-                    onChange={(e) => setForm((f) => ({ ...f, routingNumber: e.target.value.replace(/\D/g, "") }))}
-                    maxLength={9}
-                    inputMode="numeric"
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        routingNumber: sanitizeBankField(country, e.target.value, countryFields.routingMaxLength),
+                      }))
+                    }
+                    maxLength={countryFields.routingMaxLength}
+                    inputMode={countryFields.inputMode}
                     className="font-mono"
                   />
                 ) : (
@@ -173,13 +187,18 @@ export function BankDetailsDialog({
                 )}
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Account Number</Label>
+                <Label className="text-xs text-muted-foreground">{countryFields.accountLabel}</Label>
                 {editing ? (
                   <Input
                     value={form.accountNumber}
-                    onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value.replace(/\D/g, "") }))}
-                    maxLength={17}
-                    inputMode="numeric"
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        accountNumber: sanitizeBankField(country, e.target.value, countryFields.accountSliceLength),
+                      }))
+                    }
+                    maxLength={countryFields.accountMaxLength}
+                    inputMode={countryFields.inputMode}
                     className="font-mono"
                   />
                 ) : (
@@ -246,6 +265,8 @@ export function BankDetailsDialog({
               </p>
             </div>
           </div>
+            );
+          })()
         ) : (
           <div className="text-center py-4 text-muted-foreground">
             Failed to load bank account details
