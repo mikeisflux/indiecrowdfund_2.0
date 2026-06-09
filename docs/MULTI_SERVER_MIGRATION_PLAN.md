@@ -14,9 +14,9 @@
 1. [Current State (after the Jun 9 fixes)](#current-state-after-the-jun-9-fixes)
 2. [Target Architecture](#target-architecture)
 3. [Load Balancer Options](#load-balancer-options)
-4. [Phased Migration](#phased-migration)
-5. [Component Work](#component-work)
-6. [Open Questions / Decisions Needed](#open-questions--decisions-needed)
+4. [Locked Decisions](#locked-decisions)
+5. [Phased Migration](#phased-migration)
+6. [Component Work](#component-work)
 7. [Cost Estimate](#cost-estimate)
 8. [Risk and Rollback](#risk-and-rollback)
 9. [Pre-Flight Checklist](#pre-flight-checklist)
@@ -187,7 +187,7 @@ Strict ordering — each phase is independently rollback-able.
 
 - [ ] **Sessions:** already in Postgres `Session` table → ✓ shared
 - [ ] **CSRF tokens:** verify they're stateless (signed) or stored in DB
-- [ ] **Rate limit counters:** currently per-process in `src/lib/auth/rate-limit.ts`. With 2+ servers, a brute-forcer gets N× the budget. Move to Redis or Postgres-backed counter, OR live with the looser cap.
+- [ ] **Rate limit counters:** currently per-process LRU in `src/lib/auth/rate-limit.ts`. Per [Locked Decision 7](#locked-decisions): halve the per-IP cap at cutover so the cluster-wide effective budget stays near the original intent. Verify the cap constant lives in one place; if not, refactor to a single config value before scaling out. Re-evaluate (move to Postgres-backed counters for security-critical actions) only if brute-force evidence appears.
 - [ ] **In-process caches:** LRUs become per-server. Tolerable for read-heavy endpoints (each server warms its own); not tolerable for invalidation-sensitive caches.
 - [ ] **Cron jobs:** designate one app server as `CRON_LEADER=true` via env var; cron-bearing code paths check the flag and no-op on followers. List of cron jobs to audit: newsletter sender, stale-pledge cleanup, SEO refresh, botblock watcher.
 - [ ] **Build artifacts (`.next`):** each app server builds independently OR build once and rsync (see Phase 7).
@@ -206,20 +206,59 @@ Strict ordering — each phase is independently rollback-able.
 ### Phase 7 — Centralize the deploy pipeline
 **Goal:** One build, deployed atomically to all app servers.
 
-Two viable patterns:
+**Decision (Locked Decision 6):** Build-once-on-the-LB-box, rsync to app servers.
 
-**Pattern A — Build-on-each-server (simplest, current model):**
-- Each app server runs its own `build-and-swap.sh` triggered by a deploy script that SSH-fans out
-- Wastes CPU on N parallel builds; risks build skew if one server has a slightly different env
+**Why the LB box:**
+- Idle CPU — nginx proxying barely uses one core; building Next.js on the
+  other core during deploy is invisible to live traffic
+- Already on the private network with high-throughput direct routes to
+  every app server (rsync over 10 Gbps internal vs. public internet)
+- One source of truth — every app server gets bit-identical `.next`
+  artifacts. Eliminates the build skew risk of N independent npm installs
+- One node version to keep current — only the LB box needs the build
+  toolchain. App servers just need the Node runtime
 
-**Pattern B — Build-once-and-rsync (more robust):**
-- A separate build runner (could be a dedicated tiny box, or the LB box, or a CI job) builds `.next` + `.prisma` client
-- Rsync to each app server, restart their PM2 in a rolling fashion (watch crashing servers, halt on failure)
-- Requires both servers to have the SAME Node/Prisma versions
+**Script shape (`scripts/build-and-deploy.sh`, runs on the LB box):**
 
-- [ ] Decide on pattern (B is recommended once N > 2)
-- [ ] Rewrite `build-and-swap.sh` accordingly
-- [ ] Add cluster-aware health gate: rollout halts if any app server's `unstable_restarts > 2`
+```bash
+# 1. Pull and build (on LB box)
+git fetch origin && git pull
+npm ci
+npx prisma generate
+NEXT_BUILD_OUTPUT=.next-staging npx next build --webpack
+# (route-tree validation, tsc check, etc. — port from build-and-swap.sh)
+
+# 2. Parallel rsync to each app server's staging dir
+for host in app-01 app-02; do
+  rsync -aHAX --delete .next-staging/ root@$host:~/indiecrowdfund_2.0/.next-staging/ &
+  rsync -aHAX --delete node_modules/.prisma/ root@$host:~/indiecrowdfund_2.0/.prisma-staging/ &
+done
+wait
+
+# 3. Rolling restart -- one server at a time, drained by LB between
+for host in app-01 app-02; do
+  # Drain: tell LB to stop sending traffic
+  ssh lb-01 'sed -i "s/server $host:3000/server $host:3000 down/" /etc/nginx/sites-enabled/ic && nginx -s reload'
+  # Wait for in-flight requests to drain (10s)
+  sleep 10
+  # Swap staging -> live, restart PM2
+  ssh $host 'cd ~/indiecrowdfund_2.0 && \
+    mv .next .next-backup-$(date +%s) && mv .next-staging .next && \
+    mv node_modules/.prisma .prisma-backup-$(date +%s) && mv .prisma-staging node_modules/.prisma && \
+    pm2 reload ecosystem.config.js --update-env'
+  # Health check before un-draining
+  sleep 5
+  ssh $host 'curl -fsS http://127.0.0.1:3000/api/health/live' || { echo "FAIL on $host -- rolling back"; exit 1; }
+  # Un-drain: bring back into LB rotation
+  ssh lb-01 'sed -i "s/server $host:3000 down/server $host:3000/" /etc/nginx/sites-enabled/ic && nginx -s reload'
+done
+```
+
+- [ ] Write `scripts/build-and-deploy.sh` along the above shape
+- [ ] Add SSH keys: LB box has authorized passwordless SSH to each app server (and to itself for nginx reload)
+- [ ] Health gate: rollout halts if any app server's `/api/health/live` doesn't return 200 within 30s of the restart
+- [ ] Auto-rollback path: on failure, restore `.next-backup-*` and reload PM2 on the failed host, then halt (don't continue to next host)
+- [ ] Keep `build-and-swap.sh` on the DB box as a single-server fallback during cutover; remove after Phase 6 is stable
 
 ### Phase 8 — Adapt watchdog and snapshot cron for the split topology
 - [ ] On app servers: watchdog probes `localhost:3000/api/health/live` (unchanged)
@@ -279,16 +318,44 @@ Until centralized logging is in place, the Logs admin tab should be augmented to
 
 ---
 
-## Open Questions / Decisions Needed
+## Locked Decisions
 
-1. **LB choice:** Cloudflare LB ($), self-hosted nginx box, or strip Next.js off this box and re-use its nginx? (See [Load Balancer Options](#load-balancer-options).)
-2. **Hosting provider:** Stay on Hetzner (current) or split across providers for HA?
-3. **Hetzner private network type:** vSwitch (free) vs Cloud Network ($1/mo)?
-4. **App server sizing:** 1× CCX22 (4/16) per app box, or 2× CX22 (4/8)? Smaller-and-more is more failure-tolerant, but pgbouncer config needs adjusting.
-5. **Read replicas:** Do we need a Postgres read replica yet, or is the master + pgbouncer enough? (Probably enough until daily peak QPS doubles.)
-6. **Build strategy:** Build-on-each (Pattern A) or build-once-and-rsync (Pattern B)?
-7. **Rate limit storage:** Redis (new dep), Postgres table, or accept N× cap inflation?
-8. **Centralized logging:** When in the migration? Or wait until pain forces it?
+These were chosen Jun 9 2026. The rest of the plan assumes them.
+
+1. **LB choice:** **Option B — dedicated nginx LB box** (~€5/mo). Cloudflare LB
+   sits in front for DNS / WAF / DDoS, but request routing to the pool of app
+   servers is handled by our own nginx so we keep full control and no
+   per-request cost.
+2. **Hosting provider:** **Hetzner** for everything. No multi-provider HA in
+   this phase — adds operational complexity disproportionate to the
+   reliability gain at our current scale.
+3. **Private network:** **Hetzner Cloud Network** ($1/mo). vSwitch is for
+   dedicated bare-metal; Cloud Network is the right offering for our CX/CCX
+   boxes and gives us a custom subnet range.
+4. **App server size:** **2× CX22** (2 vCPU shared / 4 GB / 40 GB SSD,
+   ~€4/mo each). Two smaller boxes beat one big box for failure tolerance,
+   and CX22 has plenty of room for 4 PM2 workers per box.
+5. **Read replicas:** **None yet** — master + pgbouncer only. Jun 9 wasn't a
+   read-saturation event; it was concurrent connection count + slow queries.
+   pgbouncer fixes the first, endpoint caching fixes the second. A read
+   replica adds replication lag, Prisma read/write routing, and a failover
+   runbook. Worth it when we have a real read-saturation incident. Additive
+   change later.
+6. **Build strategy:** **Build-once on the LB box, rsync to app servers.**
+   nginx LB has idle CPU, lives on the private network, gets us atomic
+   "one source of truth" deploys with zero cross-server build skew. See
+   [Phase 7](#phase-7--centralize-the-deploy-pipeline) for the script shape.
+7. **Rate limit storage:** **Keep the per-process LRU, halve the per-IP cap
+   at cutover.** With 2 app servers × 4 workers = 8 processes, an attacker
+   effectively gets 8× the budget. Cutting the per-process cap in half
+   restores ~4× the original intent — close enough for honest users.
+   Upgrade to Postgres-backed counters for security-critical limits (login,
+   password reset, signup) only if we see real brute-force evidence. Don't
+   pull Redis in just for this.
+8. **Centralized logging:** **Defer.** With 2-3 app servers the Logs admin
+   tab plus `ssh + grep` is sufficient. Revisit when we hit 4+ servers or
+   when an incident is harder to debug than it should be. Not preemptively
+   self-hosting Loki or paying Papertrail/Better Stack.
 
 ---
 
@@ -298,15 +365,16 @@ Rough monthly numbers assuming Hetzner Cloud (other providers similar):
 
 | Component | Spec | Cost |
 |-----------|------|------|
-| db-01 (this box, kept) | CX42: 8 vCPU / 16 GB | already paid |
-| app-01 | CCX22: 4 vCPU / 16 GB dedicated | ~€20/mo |
-| app-02 | CCX22: 4 vCPU / 16 GB dedicated | ~€20/mo |
-| LB box (if Option B) | CX22: 2 vCPU / 4 GB | ~€5/mo |
-| Cloudflare LB (if Option A) | $5 base + $0.50/M requests | ~$10–30/mo depending on traffic |
-| Private network | vSwitch | free |
-| Backup storage (WAL archive) | R2 | <$1/mo for current data volume |
+| db-01 (this box, kept) | existing | already paid |
+| app-01 | CX22: 2 vCPU / 4 GB | ~€4/mo |
+| app-02 | CX22: 2 vCPU / 4 GB | ~€4/mo |
+| lb-01 (nginx) | CX22: 2 vCPU / 4 GB | ~€4/mo |
+| Hetzner Cloud Network | custom subnet | ~€1/mo |
+| Backup storage (WAL archive) | Cloudflare R2 | <€1/mo for current data volume |
 
-**Realistic total:** +€40–60/mo over current single-server cost for 2 app servers + LB choice.
+**Realistic total:** **~€14/mo extra** over current single-server cost. App
+boxes can scale horizontally by adding more CX22s as load grows; no other
+fixed cost increases until that point.
 
 ---
 
@@ -334,6 +402,6 @@ Before starting Phase 1, confirm:
 - [ ] All env vars and secrets are documented somewhere outside the live box
 - [ ] Cloudflare DNS access ready (for DNS-level rollback)
 - [ ] Hetzner account has billing capacity for new boxes
-- [ ] Decision made on each of the [Open Questions](#open-questions--decisions-needed)
+- [x] Decisions locked (see [Locked Decisions](#locked-decisions))
 - [ ] One reliable hour blocked off — phase 1 is reversible but cleaner if uninterrupted
 - [ ] Watchdog disabled during the cutover window so it doesn't fight us (`systemctl stop ic-watchdog.timer`)
