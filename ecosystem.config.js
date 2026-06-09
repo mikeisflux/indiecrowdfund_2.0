@@ -9,7 +9,17 @@ module.exports = {
       exec_mode: 'cluster',
       autorestart: true,
       watch: false,
-      max_memory_restart: '3072M',
+      // Recycle a worker if RSS crosses 2 GB. On the 16 GB box this
+      // is a runaway-worker tripwire, not a normal-growth recycle:
+      // workers come up at ~370 MB cold, so hitting 2 GB means
+      // something genuinely leaked. 4 workers * 2 GB = 8 GB peak
+      // Node, leaves 8 GB headroom for Postgres + buffers + OS, so
+      // we still can't swap-thrash even if all 4 hit the cap at once.
+      // The earlier 3072M was too high to ever trip in practice
+      // because 4 * 3 GB = 12 GB exceeds typical Node growth.
+      // PM2 recycles one worker at a time so this is invisible to
+      // users when it fires.
+      max_memory_restart: '2048M',
       kill_timeout: 5000,
       listen_timeout: 10000,
       // Restart-loop containment. Without these, a worker that crashes
