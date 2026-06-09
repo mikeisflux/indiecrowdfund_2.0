@@ -242,18 +242,29 @@ fi
 # and won't leak chunk-mismatch 500s to backers. PM2 itself drains
 # in-flight connections before SIGKILL, and Step 8's health check +
 # auto-rollback still catches any crash-loop on the new build.
+#
+# We use `pm2 delete` + `pm2 start ecosystem.config.js` instead of
+# `pm2 restart all`. `pm2 restart` only restarts the existing process
+# list from PM2's saved dump -- it ignores any changes to instances /
+# memory limits / env in ecosystem.config.js. So bumping workers 4 → 8
+# in the config file silently had no effect until we delete + start
+# fresh. `pm2 save` after persists the new dump so the next reboot
+# brings up the right worker count.
 echo ""
 echo "🔄 Step 7: Restarting all PM2 workers (brief full restart)..."
-if pm2 restart all --update-env 2>&1; then
+if pm2 delete indiecrowdfund 2>/dev/null; pm2 start ecosystem.config.js --update-env 2>&1; then
+    pm2 save 2>&1 | head -5
     echo -e "${GREEN}   All workers restarted with new build${NC}"
 else
-    echo -e "${RED}❌ ERROR: pm2 restart all failed!${NC}"
+    echo -e "${RED}❌ ERROR: pm2 restart failed!${NC}"
     echo "   Attempting rollback..."
     LATEST_BACKUP=$(ls -dt .next-backup-* 2>/dev/null | head -1)
     if [ -n "$LATEST_BACKUP" ]; then
         rm -rf .next
         mv "$LATEST_BACKUP" .next
-        pm2 restart all --update-env
+        pm2 delete indiecrowdfund 2>/dev/null
+        pm2 start ecosystem.config.js --update-env
+        pm2 save
         echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
     fi
     exit 1
@@ -312,7 +323,9 @@ else
     if [ -n "$LATEST_BACKUP" ]; then
         rm -rf .next
         mv "$LATEST_BACKUP" .next
-        pm2 restart all --update-env
+        pm2 delete indiecrowdfund 2>/dev/null
+        pm2 start ecosystem.config.js --update-env
+        pm2 save
         echo -e "${YELLOW}   Rolled back to ${LATEST_BACKUP}${NC}"
         echo "   New build crashed on startup. Check logs:"
         echo "   tail -100 /var/log/pm2/indiecrowdfund-error-*.log"
@@ -341,4 +354,5 @@ done
 echo ""
 echo "Commands:"
 echo "   View logs:  pm2 logs"
-echo "   Rollback:   cp -r .next-backup-TIMESTAMP .next && pm2 restart all"
+echo "   Rollback:   rm -rf .next && cp -r .next-backup-TIMESTAMP .next && \\"
+echo "               pm2 delete indiecrowdfund && pm2 start ecosystem.config.js && pm2 save"
