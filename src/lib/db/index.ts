@@ -114,9 +114,23 @@ function getPrismaClient(): PrismaClient {
       // database" even though the credentials are correct. The
       // connection itself is still TCP-direct to PostgreSQL on
       // localhost so this doesn't weaken anything in practice.
+      // Connection pool sizing. With pm2 running 8 cluster workers
+      // (see ecosystem.config.js), each worker gets its own pool. Set
+      // max=10 explicitly so total connection demand is bounded at
+      // 8 * 10 = 80, comfortably under Postgres max_connections=150
+      // (default 100 won't have headroom — see scripts/setup-server-
+      // tuning.sh). idleTimeoutMillis releases connections back to
+      // the pool after 1 minute idle so a brief burst doesn't pin
+      // connections forever. connectionTimeoutMillis bounds how long
+      // a query waits for a pool slot before erroring out, which
+      // surfaces pool exhaustion as a clear error instead of a
+      // mystery hang on the request.
       const adapter = new PrismaPg({
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
+        max: 10,
+        idleTimeoutMillis: 60_000,
+        connectionTimeoutMillis: 5_000,
       });
       client = new PrismaClient({
         adapter,
