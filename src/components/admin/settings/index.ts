@@ -11,3 +11,4 @@ export { StorageSettings } from "./storage-settings";
 export { CommunicationSettings } from "./communication-settings";
 export { AnalyticsSettings } from "./analytics-settings";
 export { FulfillmentSettings } from "./fulfillment-settings";
+export { LogsSettings } from "./logs-settings";

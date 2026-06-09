@@ -22,6 +22,7 @@ import {
   CreditCard,
   BarChart3,
   Printer,
+  FileText,
 } from "lucide-react";
 import {
   GeneralSettings,
@@ -37,6 +38,7 @@ import {
   CommunicationSettings,
   AnalyticsSettings,
   FulfillmentSettings,
+  LogsSettings,
 } from "@/components/admin/settings";
 
 interface PlatformSettings {
@@ -968,6 +970,10 @@ export default function SettingsPage() {
             <DatabaseIcon className="mr-2 h-4 w-4" />
             Database
           </TabsTrigger>
+          <TabsTrigger value="logs">
+            <FileText className="mr-2 h-4 w-4" />
+            Logs
+          </TabsTrigger>
         </TabsList>
         </div>
 
@@ -1054,6 +1060,8 @@ export default function SettingsPage() {
         <ApiSettings />
 
         <DatabaseSettings />
+
+        <LogsSettings />
       </Tabs>
     </div>
   );
