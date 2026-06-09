@@ -20,7 +20,7 @@ cat > /etc/systemd/journald.conf.d/persistent.conf <<'CONF'
 Storage=persistent
 SystemMaxUse=2G
 SystemKeepFree=1G
-MaxRetentionSec=30day
+MaxRetentionSec=2day
 CONF
 systemctl restart systemd-journald
 echo "    ok"
