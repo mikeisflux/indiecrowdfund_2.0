@@ -74,8 +74,12 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const dateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    // Caps so a hostile ?limit=10000000 can't pin DB resources on a
+    // query that materialises everything. Admin-only mitigates blast
+    // radius, but defense in depth.
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const limitRaw = parseInt(searchParams.get("limit") || "50") || 50;
+    const limit = Math.min(500, Math.max(1, limitRaw));
 
     // Build date filter
     const dateFilter: { gte?: Date; lte?: Date } = {};

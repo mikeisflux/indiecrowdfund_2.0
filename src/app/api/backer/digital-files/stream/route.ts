@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getR2Storage } from "@/lib/r2";
+import { safeFetchExternal } from "@/lib/safe-fetch";
 
 const streamLogger = logger.child({ module: "backer-digital-files-stream" });
 
@@ -98,13 +99,38 @@ export async function GET(request: NextRequest) {
       }
       content = await r2.getFile(file.r2StorageKey);
     } else if (file.fileUrl) {
-      // Legacy: fetch from direct URL
-      const response = await fetch(file.fileUrl);
-      if (!response.ok) {
+      // Legacy: fetch from direct URL. file.fileUrl is read from the
+      // database -- on new uploads it's set to "" (see
+      // api/creator/digital-files/route.ts), but rows imported from older
+      // systems or seeded data may contain an arbitrary URL. A bare
+      // fetch() here is an SSRF: a hostile fileUrl pointed at
+      // http://169.254.169.254/ (Hetzner / AWS / GCP cloud metadata),
+      // http://localhost:5432, or any internal service would be proxied
+      // through our worker and the response returned to the client.
+      // safeFetchExternal blocks private/loopback/link-local IPs (the
+      // metadata endpoints), refuses redirects, and ends-matches the
+      // hostname against known storage CDNs.
+      try {
+        const result = await safeFetchExternal(file.fileUrl, {
+          allowHostSuffixes: [
+            "r2.cloudflarestorage.com",
+            "r2.dev",
+            "s3.amazonaws.com",
+            "amazonaws.com",
+          ],
+          maxBytes: 200 * 1024 * 1024, // 200 MB cap for legacy downloads
+        });
+        if (!result.ok) {
+          return NextResponse.json({ error: "Failed to fetch file" }, { status: 502 });
+        }
+        content = result.bytes;
+      } catch (fetchErr) {
+        streamLogger.warn(
+          { err: fetchErr instanceof Error ? fetchErr.message : String(fetchErr), fileId: file.id },
+          "Refused to fetch legacy fileUrl (SSRF safety)"
+        );
         return NextResponse.json({ error: "Failed to fetch file" }, { status: 502 });
       }
-      const arrayBuffer = await response.arrayBuffer();
-      content = Buffer.from(arrayBuffer);
     }
 
     if (!content) {

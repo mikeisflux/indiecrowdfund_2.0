@@ -15,8 +15,12 @@ export async function GET(req: NextRequest) {
     const level = searchParams.get("level");
     const source = searchParams.get("source");
     const search = searchParams.get("search");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "25");
+    // Pagination caps so a hostile (or sloppy) ?page=1000000&limit=1000000
+    // can't pin a DB connection on a query that materialises millions of
+    // rows. Admin-only mitigates blast radius, but defense in depth.
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const limitRaw = parseInt(searchParams.get("limit") || "25") || 25;
+    const limit = Math.min(200, Math.max(1, limitRaw));
     const ALLOWED_SORT_FIELDS = ["lastSeen", "createdAt", "eventCount", "title", "level"] as const;
     type SortField = typeof ALLOWED_SORT_FIELDS[number];
     const requestedSort = searchParams.get("sortBy") || "lastSeen";

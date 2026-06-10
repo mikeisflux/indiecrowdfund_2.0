@@ -218,41 +218,53 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        // Atomic compare-and-swap on status. PayPal webhooks can be
-        // retried on any 5xx response (and replayed from the dashboard),
-        // so without this CAS two concurrent REFUNDED webhooks could
-        // both pass the findFirst above, both update pledge status, and
-        // both decrement project stats + reward quantityClaimed —
-        // resulting in double-decremented backerCount and a refund
-        // counted twice in the project's currentAmount.
-        const refundCas = await db.pledge.updateMany({
-          where: { id: refundedPledge.id, status: "COMPLETED", deletedAt: null },
-          data: { status: "REFUNDED" },
+        // Atomic compare-and-swap on status + stats decrement + reward
+        // slot release, all in one transaction.
+        //
+        // Why a single transaction:
+        //   - The CAS prevents two concurrent REFUNDED webhooks from
+        //     both updating the pledge.
+        //   - But without a transaction, the CAS commits, then the
+        //     follow-up project.update / Reward update happen as
+        //     separate writes -- a crash between them leaves the pledge
+        //     marked REFUNDED with project.currentAmount and Reward
+        //     quantityClaimed still counting the refunded backer. On
+        //     PayPal redelivery the CAS now loses (status already
+        //     REFUNDED), so the stats never get reconciled.
+        //   - Wrapping them together means either the whole refund
+        //     applies or none of it does, and the redelivery does the
+        //     full job.
+        const sideEffectsRan = await db.$transaction(async (tx) => {
+          const refundCas = await tx.pledge.updateMany({
+            where: { id: refundedPledge.id, status: "COMPLETED", deletedAt: null },
+            data: { status: "REFUNDED" },
+          });
+          if (refundCas.count === 0) return false;
+
+          if (refundedPledge.confirmationEmailSent) {
+            await tx.project.update({
+              where: { id: refundedPledge.projectId },
+              data: {
+                backerCount: { decrement: 1 },
+                currentAmount: { decrement: Number(refundedPledge.amount) },
+              },
+            });
+          }
+
+          if (refundedPledge.rewardId) {
+            await tx.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${refundedPledge.rewardId}`;
+          }
+          return true;
         });
 
-        if (refundCas.count === 0) {
+        if (!sideEffectsRan) {
           paypalWebhookLogger.info(
             { pledgeId: customId },
             "PayPal refund: lost CAS (already REFUNDED by concurrent webhook), skipping side effects"
           );
-          break;
+        } else {
+          paypalWebhookLogger.info({ pledgeId: customId }, "PayPal payment refunded — stats and reward slot updated");
         }
-
-        if (refundedPledge.confirmationEmailSent) {
-          await db.project.update({
-            where: { id: refundedPledge.projectId },
-            data: {
-              backerCount: { decrement: 1 },
-              currentAmount: { decrement: Number(refundedPledge.amount) },
-            },
-          });
-        }
-
-        if (refundedPledge.rewardId) {
-          await db.$executeRaw`UPDATE "Reward" SET "quantityClaimed" = GREATEST(0, "quantityClaimed" - 1) WHERE id = ${refundedPledge.rewardId}`;
-        }
-
-        paypalWebhookLogger.info({ pledgeId: customId }, "PayPal payment refunded — stats and reward slot updated");
         break;
       }
 

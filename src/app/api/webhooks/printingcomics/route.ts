@@ -79,24 +79,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "not_configured" });
   }
 
-  if (config.webhookSecret) {
-    const verification = verifyPrintingComicsWebhook(
-      config.webhookSecret,
-      signatureHeader,
-      rawBody
+  if (!config.webhookSecret) {
+    // No signing secret configured. We used to accept-and-warn here, but
+    // that meant anyone who learned a ProjectPrintOrder id (or guessed an
+    // externalRef format) could flip order status by hand. The handler
+    // doesn't mutate money flow, but spoofed "order.shipped" / "paid" /
+    // "refunded" events can mislead creators and corrupt fulfillment
+    // state. Reject loudly so operators know to configure the secret.
+    log.error("Rejecting Printing Comics webhook -- no webhook secret configured. Set it in admin/settings to enable verification.");
+    return NextResponse.json(
+      { ok: false, error: "webhook secret not configured" },
+      { status: 503 }
     );
-    if (!verification.ok) {
-      log.warn({ reason: verification.reason }, "Printing Comics webhook signature failed");
-      return NextResponse.json(
-        { ok: false, error: "invalid signature" },
-        { status: 401 }
-      );
-    }
-  } else {
-    // No signing secret configured — accept the webhook but log it.
-    // Once the integration is fully live the admin should rotate +
-    // save the secret to enable verification.
-    log.warn("Accepting Printing Comics webhook WITHOUT signature verification (no webhook secret configured)");
+  }
+
+  const verification = verifyPrintingComicsWebhook(
+    config.webhookSecret,
+    signatureHeader,
+    rawBody
+  );
+  if (!verification.ok) {
+    log.warn({ reason: verification.reason }, "Printing Comics webhook signature failed");
+    return NextResponse.json(
+      { ok: false, error: "invalid signature" },
+      { status: 401 }
+    );
   }
 
   let payload: PCWebhookPayload;

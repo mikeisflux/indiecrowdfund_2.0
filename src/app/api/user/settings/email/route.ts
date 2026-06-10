@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 import crypto from "crypto";
 
 const userSettingsEmailLogger = logger.child({ module: "user-settings-email" });
-import { auth } from "@/lib/auth";
+import { auth, deleteUserSessions, createSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
@@ -133,6 +133,26 @@ export async function POST(request: Request) {
         );
       }
       throw updateErr;
+    }
+
+    // Invalidate every other session for this user — same posture as
+    // the password change endpoint. Email is a recovery factor; if an
+    // attacker briefly hijacked a session, changed the victim's email,
+    // and we left the original sessions valid, both attacker and victim
+    // could continue using the account simultaneously. Then re-issue
+    // THIS request's session so the caller stays logged in without a
+    // forced re-login. (createSession sets a fresh cookie + DB row.)
+    try {
+      await deleteUserSessions(session.user.id);
+      await createSession(session.user.id);
+    } catch (sessionError) {
+      // If session rotation fails the email is already changed and the
+      // old session is gone -- forcing a re-login is the safe fallback,
+      // so just log and continue.
+      userSettingsEmailLogger.error(
+        { err: String(sessionError) },
+        "Failed to rotate session after email change -- user will need to log in again"
+      );
     }
 
     // Send verification email to the new address
