@@ -638,9 +638,53 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      // Count items from addons (with quantity multiplier)
+      // Count items from addons (with quantity multiplier).
+      //
+      // Two shapes show up here:
+      //   1. Addon has a RewardItem[] breakdown -- the creator
+      //      configured it as a bundle of ProjectItems (e.g., "Deluxe
+      //      Pack" containing a sticker + pin + patch). Each
+      //      RewardItem becomes its own production-order row.
+      //   2. Addon has NO RewardItem rows -- the addon itself IS the
+      //      deliverable (e.g., "Sticker Pack $5"). This is the common
+      //      shape for survey-purchased addons where the creator
+      //      doesn't decompose the addon into sub-items.
+      //
+      // Without the (2) fallback below, survey-purchased addons (and
+      // any other addon without RewardItems) silently disappear from
+      // the production order count even though the PledgeAddon row was
+      // created and the money was charged. That was the live bug.
       pledge.addons?.forEach((pledgeAddon: { quantity: number; addon: { id: string; title: string; items?: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }[] } }) => {
-        pledgeAddon.addon.items?.forEach((item) => {
+        const addonItems = pledgeAddon.addon.items || [];
+
+        if (addonItems.length === 0) {
+          // Fallback: count the addon Reward itself as the productable.
+          const itemKey = `addon_${pledgeAddon.addon.id}`;
+          const itemName = pledgeAddon.addon.title;
+          const existingItem = itemCounts.get(itemKey);
+          if (existingItem) {
+            existingItem.count += pledgeAddon.quantity;
+          } else {
+            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, projectItemId: null, sku: null, inStock: false });
+          }
+
+          const existingSku = skuCounts.get(itemKey);
+          if (existingSku) {
+            existingSku.quantity += pledgeAddon.quantity;
+            existingSku.backerIds.add(pledge.id);
+          } else {
+            skuCounts.set(itemKey, {
+              sku: null,
+              name: itemName,
+              quantity: pledgeAddon.quantity,
+              backerIds: new Set([pledge.id]),
+              projectItemId: null,
+            });
+          }
+          return;
+        }
+
+        addonItems.forEach((item) => {
           const itemName = item.projectItem?.title || item.title;
           const itemKey = item.projectItemId
             ? `projectItem_${item.projectItemId}`
