@@ -398,7 +398,7 @@ export default function CreatorDashboard() {
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">Audience</p>
                   <div className="flex flex-wrap gap-1">
                     {([
-                      { value: "backers", icon: Users, label: "Backers", gradient: "from-cyan-500 to-teal-500" },
+                      { value: "backers", icon: Users, label: "Transaction History", gradient: "from-cyan-500 to-teal-500" },
                       { value: "messages", icon: MessageSquare, label: "Messages", gradient: "from-blue-500 to-cyan-500" },
                       { value: "live-stream", icon: Radio, label: "Live Stream", gradient: "from-red-600 to-rose-600" },
                     ] as const).map(({ value, icon: Icon, label, gradient }) => (

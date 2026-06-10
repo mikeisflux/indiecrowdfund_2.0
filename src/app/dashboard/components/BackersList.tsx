@@ -380,7 +380,7 @@ export function BackersList({
             <div className="p-1.5 rounded-lg bg-blue-500/20">
               <Users className="h-4 w-4 text-blue-500" />
             </div>
-            All Backers
+            All Transaction History
           </CardTitle>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Button
