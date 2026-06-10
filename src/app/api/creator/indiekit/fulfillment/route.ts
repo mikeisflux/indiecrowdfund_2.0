@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitFulfillmentLogger = logger.child({ module: "creator-indiekit-fulfillment" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getProjectAccess } from "@/lib/auth/collaborator";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,19 +21,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
     }
 
-    // Verify user has access to this project
-    const project = await db.project.findFirst({
-      where: {
-        id: projectId,
-        deletedAt: null,
-        OR: [
-          { creatorId: session.user.id },
-          { collaborators: { some: { userId: session.user.id, status: "ACCEPTED" } } },
-        ],
-      },
-    });
-
-    if (!project) {
+    // Fulfillment work requires canCoordinateFulfillment. Pre-perm
+    // (legacy all-false) collaborators auto-pass; new restricted
+    // collaborators (e.g. canManageCommunity-only) are blocked here so
+    // they can't flip shipping status / push orders / mark refunds.
+    const access = await getProjectAccess(projectId, session.user.id, "canCoordinateFulfillment");
+    if (!access) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 

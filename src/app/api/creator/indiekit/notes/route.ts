@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitNotesLogger = logger.child({ module: "creator-indiekit-notes" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getProjectAccess } from "@/lib/auth/collaborator";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -43,17 +44,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    // Check access
+    // Backer notes are a community / fulfillment surface, so allow
+    // either canManageCommunity OR canCoordinateFulfillment perms.
+    // Owner + legacy collaborators auto-pass; new restricted
+    // collaborators (e.g. canEditProject-only) are blocked from
+    // writing/reading backer notes.
     if (pledge.project.creatorId !== session.user.id) {
-      const hasAccess = await db.projectCollaborator.findFirst({
-        where: {
-          projectId: pledge.projectId,
-          userId: session.user.id,
-          status: "ACCEPTED",
-        },
-      });
-
-      if (!hasAccess) {
+      const access =
+        (await getProjectAccess(pledge.projectId, session.user.id, "canManageCommunity")) ||
+        (await getProjectAccess(pledge.projectId, session.user.id, "canCoordinateFulfillment"));
+      if (!access) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }
@@ -118,17 +118,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
-    // Check access
+    // Backer notes are a community / fulfillment surface, so allow
+    // either canManageCommunity OR canCoordinateFulfillment perms.
+    // Owner + legacy collaborators auto-pass; new restricted
+    // collaborators (e.g. canEditProject-only) are blocked from
+    // writing/reading backer notes.
     if (pledge.project.creatorId !== session.user.id) {
-      const hasAccess = await db.projectCollaborator.findFirst({
-        where: {
-          projectId: pledge.projectId,
-          userId: session.user.id,
-          status: "ACCEPTED",
-        },
-      });
-
-      if (!hasAccess) {
+      const access =
+        (await getProjectAccess(pledge.projectId, session.user.id, "canManageCommunity")) ||
+        (await getProjectAccess(pledge.projectId, session.user.id, "canCoordinateFulfillment"));
+      if (!access) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }

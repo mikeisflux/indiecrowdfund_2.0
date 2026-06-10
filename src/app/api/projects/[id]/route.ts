@@ -629,6 +629,18 @@ export async function PATCH(
       if (projectData.status !== undefined && projectData.status === "DRAFT" && project.status === "SUBMITTED") {
         // Allow reverting from SUBMITTED back to DRAFT (creator wants to make changes)
         updateData.status = projectData.status;
+        // Audit the downgrade -- this skips a fresh moderation pass, so
+        // we want a paper trail of every SUBMITTED -> DRAFT followed by
+        // re-submit (re-moderation runs on the next /submit).
+        const { auditLog } = await import("@/lib/audit");
+        auditLog({
+          action: "PROJECT_STATUS_CHANGE",
+          actorId: session.user.id,
+          actorEmail: session.user.email || undefined,
+          targetId: project.id,
+          targetType: "PROJECT",
+          details: { from: project.status, to: "DRAFT", trigger: "creator_patch" },
+        });
       }
     }
 

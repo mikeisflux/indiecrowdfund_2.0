@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const creatorIndiekitAddonsLogger = logger.child({ module: "creator-indiekit-addons" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getProjectAccess } from "@/lib/auth/collaborator";
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,9 +21,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
     }
 
-    // Verify user has access to this project before returning addons
-    const project = await verifyProjectAccess(projectId, session.user.id);
-    if (!project) {
+    // Read access -- the catalogue listing should be visible to any
+    // collaborator who can edit OR coordinate fulfillment (segments /
+    // surveys / packing). Owner always passes.
+    const access =
+      (await getProjectAccess(projectId, session.user.id, "canEditProject")) ||
+      (await getProjectAccess(projectId, session.user.id, "canCoordinateFulfillment"));
+    if (!access) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
@@ -43,20 +48,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Helper to verify project access
-async function verifyProjectAccess(projectId: string, userId: string) {
-  return db.project.findFirst({
-    where: {
-      id: projectId,
-      deletedAt: null,
-      OR: [
-        { creatorId: userId },
-        { collaborators: { some: { userId, status: "ACCEPTED" } } },
-      ],
-    },
-  });
-}
-
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -71,8 +62,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
     }
 
-    const project = await verifyProjectAccess(projectId, session.user.id);
-    if (!project) {
+    // Mutations require the catalog-edit perm. Legacy collaborators
+    // (all four perms false) auto-pass; new restricted collaborators
+    // are 403'd here before they can touch the price / quantity / name.
+    const access = await getProjectAccess(projectId, session.user.id, "canEditProject");
+    if (!access) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
@@ -200,8 +194,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project ID and Addon ID required" }, { status: 400 });
     }
 
-    const project = await verifyProjectAccess(projectId, session.user.id);
-    if (!project) {
+    // DELETE = unlink-from-survey -- still a catalog mutation, so the
+    // same canEditProject gate applies.
+    const access = await getProjectAccess(projectId, session.user.id, "canEditProject");
+    if (!access) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 

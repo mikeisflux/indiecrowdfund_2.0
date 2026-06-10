@@ -26,6 +26,7 @@ export type AuditAction =
   | "PROJECT_REACTIVATE"
   | "PROJECT_MAKE_LIVE"
   | "PROJECT_SEND_TO_REVIEW"
+  | "PROJECT_STATUS_CHANGE" // creator-initiated transitions (SUBMITTED -> DRAFT)
   | "PAYOUT_CREATE"
   | "PAYOUT_PROCESS"
   | "PAYOUT_COMPLETE"
@@ -39,7 +40,19 @@ export type AuditAction =
   | "SETTINGS_CHANGE"
   | "ENCRYPTION_KEY_CHANGE"
   | "PAYOUT_SETTINGS_CHANGE"
-  | "API_KEY_CHANGE";
+  | "API_KEY_CHANGE"
+  // Reward / addon / modifier mutations. Adding visibility on these
+  // closes the audit gap the second site-wide audit flagged: a creator
+  // (or a compromised collaborator) editing the addon catalogue mid-
+  // campaign now leaves a paper trail.
+  | "ADDON_MUTATE"
+  | "MODIFIER_CHANGE"
+  // Collaborator lifecycle + per-permission flag changes (the
+  // canEditProject / canManageCommunity / canCoordinateFulfillment /
+  // canConfigurePledgeManager fields on ProjectCollaborator).
+  | "COLLABORATOR_INVITE"
+  | "COLLABORATOR_REMOVE"
+  | "COLLABORATOR_PERMS_CHANGE";
 
 // Fields that should have their values masked in audit logs
 const SENSITIVE_FIELDS = new Set([
@@ -71,7 +84,7 @@ interface AuditEntry {
   actorId: string;
   actorEmail?: string;
   targetId?: string;
-  targetType?: "USER" | "PROJECT" | "PAYOUT" | "IP" | "SETTINGS";
+  targetType?: "USER" | "PROJECT" | "PAYOUT" | "IP" | "SETTINGS" | "REWARD" | "COLLABORATOR";
   details?: Record<string, unknown>;
   changes?: Record<string, { from: unknown; to: unknown }>;
 }

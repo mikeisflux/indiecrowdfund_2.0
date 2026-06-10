@@ -447,6 +447,25 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // Modifier changes alter how rewards are interpreted during
+      // fulfillment (Cover A + "Upgrade to Foil" addon means the
+      // Cover A copy ships as foil). Mid-campaign re-targeting of
+      // modifies_reward_ids is rare and high-impact, so log it.
+      const { auditLog } = await import("@/lib/audit");
+      auditLog({
+        action: "MODIFIER_CHANGE",
+        actorId: session.user.id,
+        actorEmail: session.user.email || undefined,
+        targetId: addonId,
+        targetType: "REWARD",
+        details: {
+          subaction: "set_modifier",
+          projectId,
+          isModifier: !!isModifier,
+          modifiesRewardIds: Array.isArray(modifiesRewardIds) ? modifiesRewardIds.slice(0, 50) : [],
+        },
+      });
+
       return NextResponse.json({
         success: true,
         message: isModifier ? "Addon marked as modifier" : "Addon unmarked as modifier",
