@@ -16,11 +16,13 @@ async function verifyPayPalWebhook(
   try {
     const config = await getPayPalConfig();
     if (!config.webhookId) {
-      if (process.env.NODE_ENV === "development") {
-        paypalWebhookLogger.warn("PayPal webhook ID not configured, skipping verification (development only)");
-        return true;
-      }
-      paypalWebhookLogger.error("PayPal webhook ID not configured — rejecting webhook in production");
+      // No more dev-mode bypass. Even in development the right answer
+      // is to point at a sandbox webhook ID and verify signatures --
+      // the bypass made the handler accept forged events any time
+      // NODE_ENV happened to read "development" (staging boxes that
+      // forgot to flip the env are the realistic risk), and "we'll
+      // only ever set it in real dev" is a posture, not a guarantee.
+      paypalWebhookLogger.error("PayPal webhook ID not configured — rejecting webhook (no dev bypass)");
       return false;
     }
 

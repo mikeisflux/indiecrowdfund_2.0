@@ -151,20 +151,20 @@ export async function GET(
       );
     }
 
-    // Get or create response
-    let response = await db.surveyResponse.findUnique({
+    // Get or create response. Use upsert so two concurrent GETs (e.g.
+    // backer double-clicks the survey link or hits it from two tabs)
+    // don't race past findUnique and then both hit P2002 on the unique
+    // pledgeId. The previous find-then-create pattern leaked a 500 to
+    // the second request even though there was nothing wrong to do.
+    const response = await db.surveyResponse.upsert({
       where: { pledgeId },
+      create: {
+        surveyId: survey.id,
+        pledgeId,
+        isComplete: false,
+      },
+      update: {},
     });
-
-    if (!response) {
-      response = await db.surveyResponse.create({
-        data: {
-          surveyId: survey.id,
-          pledgeId,
-          isComplete: false,
-        },
-      });
-    }
 
     // Filter item questions to only show those relevant to this backer's reward
     const relevantItemQuestions = survey.itemQuestions.filter(

@@ -131,10 +131,21 @@ export async function POST(
         // state and bail out.
         const freshPledge = await tx.pledge.findFirst({
           where: { id: pledgeId, deletedAt: null },
-          select: { metadata: true, rewardId: true },
+          select: { metadata: true, rewardId: true, status: true },
         });
         if (!freshPledge) {
           throw new Error("PLEDGE_DISAPPEARED");
+        }
+        // Defense in depth: refuse to apply a modification if the pledge
+        // has been concurrently cancelled / refunded / chargebacked.
+        // Vanishingly rare (it would require an admin action mid-modify
+        // and the metadata-idempotency check usually catches retries),
+        // but if we don't gate on status we'd assign a new reward to a
+        // CANCELLED pledge and decrement the old reward's quantityClaimed
+        // for a slot that was already returned during the cancellation.
+        if (freshPledge.status !== "PENDING" && freshPledge.status !== "COMPLETED") {
+          alreadyProcessed = true;
+          return;
         }
         const freshMeta = freshPledge.metadata as {
           pendingModification?: unknown;
