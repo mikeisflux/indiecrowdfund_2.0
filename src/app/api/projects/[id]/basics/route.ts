@@ -171,15 +171,37 @@ export async function POST(
       },
     });
   } catch (error) {
-    projectsBasicsLogger.error({ err: formatError(error) }, "Update basics error:");
-
     if (error instanceof z.ZodError) {
+      // Log every failed issue with its dotted path so the server log
+      // shows exactly which field rejected. The previous handler logged
+      // through formatError() which stripped the .issues array, so a
+      // creator stuck on save (Michele, Jun 10) generated 25 unanswered
+      // "Update basics error" entries with no clue about the field.
+      projectsBasicsLogger.warn(
+        {
+          issues: error.issues.map((i) => ({
+            field: i.path.join(".") || "(root)",
+            code: i.code,
+            message: i.message,
+          })),
+        },
+        "Update basics rejected by Zod schema"
+      );
+      const first = error.issues[0];
       return NextResponse.json(
-        { error: error.issues[0]?.message || "Invalid data" },
+        {
+          error: first?.message || "Invalid data",
+          field: first?.path.join(".") || undefined,
+          issues: error.issues.map((i) => ({
+            field: i.path.join(".") || "(root)",
+            message: i.message,
+          })),
+        },
         { status: 400 }
       );
     }
 
+    projectsBasicsLogger.error({ err: formatError(error) }, "Update basics error:");
     return NextResponse.json(
       { error: "Failed to update project basics" },
       { status: 500 }
