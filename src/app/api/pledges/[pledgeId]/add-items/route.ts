@@ -268,6 +268,18 @@ export async function POST(
         // amount in a single transaction. The webhook handler that
         // normally fans out add-ons fires off the original PaymentIntent
         // confirmation, so for the off-session path we apply them here.
+        //
+        // IMPORTANT: the money is already captured by this point, so
+        // nothing in this transaction is allowed to throw for business
+        // reasons — a rollback here means "backer charged, nothing
+        // granted". That's why:
+        //   - an existing PledgeAddon row is incremented, not re-created
+        //     (PledgeAddon has @@unique([pledgeId, addonId]); a bare
+        //     create on a repeat purchase of the same addon throws P2002
+        //     and rolled the whole grant back — that was a live bug)
+        //   - the slot-claim check logs an oversell instead of throwing
+        //     (the confirm-add-items flow can throw because it verifies
+        //     before acking, but here the charge is final)
         await db.$transaction(async (tx) => {
           for (const a of addonsWithQuantity) {
             const reward = await tx.reward.findFirst({
@@ -275,14 +287,61 @@ export async function POST(
               select: { amount: true },
             });
             const unitAmount = reward ? Number(reward.amount) : 0;
-            await tx.pledgeAddon.create({
-              data: {
-                pledgeId: pledge.id,
-                addonId: a.id,
-                quantity: a.quantity,
-                amount: unitAmount * a.quantity,
-              },
+
+            const existingAddon = await tx.pledgeAddon.findFirst({
+              where: { pledgeId: pledge.id, addonId: a.id },
             });
+            if (existingAddon) {
+              await tx.pledgeAddon.update({
+                where: { id: existingAddon.id },
+                data: {
+                  quantity: existingAddon.quantity + a.quantity,
+                  amount: (existingAddon.quantity + a.quantity) * unitAmount,
+                },
+              });
+            } else {
+              await tx.pledgeAddon.create({
+                data: {
+                  pledgeId: pledge.id,
+                  addonId: a.id,
+                  quantity: a.quantity,
+                  amount: unitAmount * a.quantity,
+                },
+              });
+            }
+
+            // Claim addon slots so limited addons track availability on
+            // this path too (parity with confirm-add-items). Row-locked
+            // to serialize against concurrent claims.
+            const addonRows = await tx.$queryRaw<Array<{
+              id: string;
+              quantityAvailable: number | null;
+              quantityClaimed: number;
+            }>>`
+              SELECT id, "quantityAvailable", "quantityClaimed"
+              FROM "Reward"
+              WHERE id = ${a.id}
+              FOR UPDATE
+            `;
+            const addonInfo = addonRows[0];
+            if (addonInfo) {
+              const availableSlots = addonInfo.quantityAvailable === null
+                ? Infinity
+                : addonInfo.quantityAvailable - addonInfo.quantityClaimed;
+              if (availableSlots < a.quantity) {
+                // Money already taken — grant anyway and flag for the
+                // creator/admin to reconcile rather than charging the
+                // backer for nothing.
+                pledgesAddItemsLogger.error(
+                  { pledgeId, addonId: a.id, requested: a.quantity, availableSlots },
+                  "[AddItems DC] OVERSELL: saved-card charge granted more addon units than remained available"
+                );
+              }
+              await tx.reward.update({
+                where: { id: a.id },
+                data: { quantityClaimed: { increment: a.quantity } },
+              });
+            }
           }
           await tx.pledge.update({
             where: { id: pledge.id },
@@ -291,6 +350,12 @@ export async function POST(
               addonsAmount: { increment: amount },
               metadata: { ...currentMetadata },
             },
+          });
+          // Keep the project headline total in step with the pledge bump
+          // (the confirm-add-items path already does this).
+          await tx.project.update({
+            where: { id: pledge.projectId },
+            data: { currentAmount: { increment: amount } },
           });
         });
 

@@ -5,10 +5,20 @@ import { logger } from "@/lib/logger";
 import * as fs from "fs";
 import * as path from "path";
 import * as zlib from "zlib";
-import { promisify } from "util";
 
 const viewLogger = logger.child({ module: "admin-logs-view" });
-const gunzip = promisify(zlib.gunzip);
+
+// Decompression with an output ceiling. A 10 MB gzip of repeated bytes
+// can inflate ~1000x; without the cap a pathological archive could OOM
+// the worker. zlib raises ERR_BUFFER_TOO_LARGE when the cap is hit.
+const MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024; // 64 MB
+function gunzipCapped(buf: Buffer): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    zlib.gunzip(buf, { maxOutputLength: MAX_DECOMPRESSED_BYTES }, (err, out) =>
+      err ? reject(err) : resolve(out)
+    );
+  });
+}
 
 export const dynamic = "force-dynamic";
 
@@ -41,21 +51,28 @@ async function requireSuperAdmin() {
   return { user: session.user };
 }
 
-function isPathAllowed(requested: string): boolean {
-  let resolved: string;
+// realpath-based: follows symlinks so the whitelist applies to the REAL
+// target, not the lexical path (see ../route.ts for the full rationale).
+// Returns the resolved path to read, or null if disallowed.
+async function resolveAllowedPath(requested: string): Promise<string | null> {
+  let real: string;
   try {
-    resolved = path.resolve(requested);
+    real = await fs.promises.realpath(requested);
   } catch {
-    return false;
+    return null;
   }
   for (const dir of LOG_DIRS) {
-    if (path.dirname(resolved) === path.resolve(dir)) return true;
+    if (path.dirname(real) === path.resolve(dir)) return real;
   }
   for (const f of STANDALONE_LOGS) {
     const base = path.resolve(f);
-    if (resolved === base || resolved.startsWith(base + ".")) return true;
+    if (real === base) return real;
+    if (real.startsWith(base + ".")) {
+      const suffix = real.slice(base.length + 1);
+      if (/^(\d+(\.gz)?|gz)$/.test(suffix)) return real;
+    }
   }
-  return false;
+  return null;
 }
 
 const DEFAULT_BYTES = 256 * 1024; // 256 KB
@@ -75,18 +92,19 @@ export async function GET(req: NextRequest) {
   if (!filePath) {
     return NextResponse.json({ error: "Missing path parameter" }, { status: 400 });
   }
-  if (!isPathAllowed(filePath)) {
+  const resolved = await resolveAllowedPath(filePath);
+  if (!resolved) {
     return NextResponse.json({ error: "Path not in allowed log directories" }, { status: 403 });
   }
   try {
-    const stat = await fs.promises.stat(filePath);
+    const stat = await fs.promises.stat(resolved);
     if (!stat.isFile()) {
       return NextResponse.json({ error: "Not a regular file" }, { status: 400 });
     }
     let content: string;
     let truncatedFromStart = false;
 
-    if (filePath.endsWith(".gz")) {
+    if (resolved.endsWith(".gz")) {
       // Gzipped log: must decompress entire file because gzip is not seekable.
       // Cap compressed size at 10 MB to keep this from blowing up memory --
       // anything bigger should be downloaded out-of-band.
@@ -96,8 +114,19 @@ export async function GET(req: NextRequest) {
           { status: 413 }
         );
       }
-      const compressed = await fs.promises.readFile(filePath);
-      const decompressed = await gunzip(compressed);
+      const compressed = await fs.promises.readFile(resolved);
+      let decompressed: Buffer;
+      try {
+        decompressed = await gunzipCapped(compressed);
+      } catch (gzErr) {
+        if (gzErr instanceof Error && "code" in gzErr && gzErr.code === "ERR_BUFFER_TOO_LARGE") {
+          return NextResponse.json(
+            { error: "Compressed log expands past the 64 MB viewer limit. SSH and gunzip locally." },
+            { status: 413 }
+          );
+        }
+        throw gzErr;
+      }
       const fullText = decompressed.toString("utf8");
       if (fullText.length > bytes) {
         content = fullText.slice(fullText.length - bytes);
@@ -107,7 +136,7 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // Plain text: seek to end and read just the tail.
-      const fd = await fs.promises.open(filePath, "r");
+      const fd = await fs.promises.open(resolved, "r");
       try {
         if (stat.size > bytes) {
           const buffer = Buffer.alloc(bytes);
@@ -128,7 +157,7 @@ export async function GET(req: NextRequest) {
       }
     }
     return NextResponse.json({
-      path: filePath,
+      path: resolved,
       size: stat.size,
       bytesReturned: Buffer.byteLength(content, "utf8"),
       truncatedFromStart,
@@ -136,7 +165,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     viewLogger.error(
-      { err: err instanceof Error ? err.message : String(err), path: filePath },
+      { err: err instanceof Error ? err.message : String(err), path: resolved },
       "Failed to read log file"
     );
     return NextResponse.json({ error: "Failed to read log" }, { status: 500 });

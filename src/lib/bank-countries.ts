@@ -136,30 +136,26 @@ export function sanitizeBankField(
   return maxLength != null ? cleaned.slice(0, maxLength) : cleaned;
 }
 
-// Country-specific field validation, shared by the client forms (which
-// toast the returned message) and the API routes (which 400 with it).
-// `routingNumber` / `accountNumber` are expected already sanitized via
-// sanitizeBankField. Returns an error string, or null when valid.
-export function validateBankFields(
+// Format-only validation of the routing + account identifiers. Each field
+// is optional so callers that update a single field (the admin bank-account
+// PATCH) can validate just what changed; full-save callers pass both.
+// Values are expected already sanitized via sanitizeBankField. Returns an
+// error string, or null when valid.
+export function validateBankAccountFormat(
   country: BankCountry,
-  fields: { routingNumber: string; accountNumber: string; payoutPhone?: string }
+  fields: { routingNumber?: string; accountNumber?: string }
 ): string | null {
-  const { routingNumber, accountNumber, payoutPhone } = fields;
+  const { routingNumber, accountNumber } = fields;
 
   if (country === "US") {
-    if (!/^\d{9}$/.test(routingNumber)) return "Routing number must be 9 digits";
-    if (!/^\d{4,17}$/.test(accountNumber)) return "Account number must be 4–17 digits";
+    if (routingNumber !== undefined && !/^\d{9}$/.test(routingNumber)) return "Routing number must be 9 digits";
+    if (accountNumber !== undefined && !/^\d{4,17}$/.test(accountNumber)) return "Account number must be 4–17 digits";
     return null;
   }
 
   if (country === "GB") {
-    if (!/^\d{6}$/.test(routingNumber)) return "UK sort code must be 6 digits (e.g. 60-06-39)";
-    if (!/^\d{8}$/.test(accountNumber)) return "UK account number must be 8 digits";
-    // UK banks require a phone number on the payee record before they'll
-    // add it as a recipient.
-    if (!payoutPhone || payoutPhone.trim().length < 7) {
-      return "Phone number is required for UK bank accounts (your bank requires it on the payee record)";
-    }
+    if (routingNumber !== undefined && !/^\d{6}$/.test(routingNumber)) return "UK sort code must be 6 digits (e.g. 60-06-39)";
+    if (accountNumber !== undefined && !/^\d{8}$/.test(accountNumber)) return "UK account number must be 8 digits";
     return null;
   }
 
@@ -169,10 +165,10 @@ export function validateBankFields(
     // code. Stored concatenated with no separator. Account numbers in
     // Japan are typically 7 digits but some banks (e.g. Japan Post Bank
     // / Yucho's standardized format) use 8 — accept both.
-    if (!/^\d{7}$/.test(routingNumber)) {
+    if (routingNumber !== undefined && !/^\d{7}$/.test(routingNumber)) {
       return "Japanese bank code must be 7 digits (4-digit bank code + 3-digit branch code)";
     }
-    if (!/^\d{7,8}$/.test(accountNumber)) {
+    if (accountNumber !== undefined && !/^\d{7,8}$/.test(accountNumber)) {
       return "Japanese account number must be 7 or 8 digits";
     }
     return null;
@@ -182,10 +178,10 @@ export function validateBankFields(
     // Canadian EFT routing is a concatenated 8-digit value: 3-digit
     // institution number (which bank) + 5-digit transit number (which
     // branch). Account numbers vary by bank, commonly 7–12 digits.
-    if (!/^\d{8}$/.test(routingNumber)) {
+    if (routingNumber !== undefined && !/^\d{8}$/.test(routingNumber)) {
       return "Canadian routing must be 8 digits (3-digit institution number + 5-digit transit number)";
     }
-    if (!/^\d{7,12}$/.test(accountNumber)) {
+    if (accountNumber !== undefined && !/^\d{7,12}$/.test(accountNumber)) {
       return "Canadian account number must be 7–12 digits";
     }
     return null;
@@ -194,11 +190,32 @@ export function validateBankFields(
   // IT — BIC/SWIFT is 8 or 11 chars (6 letters + 2 alphanumeric + an
   // optional 3-char branch code); the Italian IBAN is exactly 27 chars:
   // "IT" + 2 check digits + 23 alphanumeric.
-  if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(routingNumber)) {
+  if (routingNumber !== undefined && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(routingNumber)) {
     return "Enter a valid BIC/SWIFT code (8 or 11 characters)";
   }
-  if (!/^IT\d{2}[A-Z0-9]{23}$/.test(accountNumber)) {
+  if (accountNumber !== undefined && !/^IT\d{2}[A-Z0-9]{23}$/.test(accountNumber)) {
     return "Enter a valid Italian IBAN (27 characters, starting with IT)";
+  }
+  return null;
+}
+
+// Country-specific field validation, shared by the client forms (which
+// toast the returned message) and the API routes (which 400 with it).
+// Adds the payee-record requirements (GB phone) on top of the pure
+// format checks above. Returns an error string, or null when valid.
+export function validateBankFields(
+  country: BankCountry,
+  fields: { routingNumber: string; accountNumber: string; payoutPhone?: string }
+): string | null {
+  const formatError = validateBankAccountFormat(country, fields);
+  if (formatError) return formatError;
+
+  if (country === "GB") {
+    // UK banks require a phone number on the payee record before they'll
+    // add it as a recipient.
+    if (!fields.payoutPhone || fields.payoutPhone.trim().length < 7) {
+      return "Phone number is required for UK bank accounts (your bank requires it on the payee record)";
+    }
   }
   return null;
 }

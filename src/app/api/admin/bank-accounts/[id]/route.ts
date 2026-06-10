@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { decrypt, encrypt } from "@/lib/encryption";
 import { auditLog } from "@/lib/audit";
+import { parseBankCountry, sanitizeBankField, validateBankAccountFormat } from "@/lib/bank-countries";
 
 // Force dynamic - this route uses auth/headers
 export const dynamic = "force-dynamic";
@@ -331,11 +332,36 @@ export async function PATCH(
     if (accountType && !["checking", "savings"].includes(accountType)) {
       return NextResponse.json({ error: "accountType must be 'checking' or 'savings'" }, { status: 400 });
     }
-    if (routingNumber && !/^\d{9}$/.test(routingNumber)) {
-      return NextResponse.json({ error: "routingNumber must be 9 digits" }, { status: 400 });
+
+    // Fetch the record first — validation depends on the account's
+    // bankCountry. (The original validation hardcoded the US formats,
+    // which 400'd every admin correction to a CA/GB/IT/JP account even
+    // though the client dialog correctly offered country formats.)
+    let existing: { userId: string; bankCountry: string } | null = null;
+    let processor: "DIVINITYCOIN" | "PAYPAL" | "WHOP";
+    if (type === "whop") {
+      existing = await db.whopBankAccount.findUnique({ where: { id }, select: { userId: true, bankCountry: true } });
+      processor = "WHOP";
+    } else if (type === "paypal") {
+      existing = await db.payPalBankAccount.findUnique({ where: { id }, select: { userId: true, bankCountry: true } });
+      processor = "PAYPAL";
+    } else {
+      existing = await db.divinityCoinBankAccount.findUnique({ where: { id }, select: { userId: true, bankCountry: true } });
+      processor = "DIVINITYCOIN";
     }
-    if (accountNumber && !/^\d{4,17}$/.test(accountNumber)) {
-      return NextResponse.json({ error: "accountNumber must be 4–17 digits" }, { status: 400 });
+    if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
+
+    // Sanitize + validate per the account's country. The dialog sanitizes
+    // client-side too, but the server must not trust it.
+    const country = parseBankCountry(existing.bankCountry);
+    const routingValue = routingNumber !== undefined ? sanitizeBankField(country, routingNumber) : undefined;
+    const accountValue = accountNumber !== undefined ? sanitizeBankField(country, accountNumber) : undefined;
+    const formatError = validateBankAccountFormat(country, {
+      ...(routingValue !== undefined ? { routingNumber: routingValue } : {}),
+      ...(accountValue !== undefined ? { accountNumber: accountValue } : {}),
+    });
+    if (formatError) {
+      return NextResponse.json({ error: formatError }, { status: 400 });
     }
 
     const updateData: Record<string, string | boolean | null> = {};
@@ -346,12 +372,12 @@ export async function PATCH(
     if (accountHolder !== undefined) {
       updateData.accountHolderEncrypted = encrypt(accountHolder);
     }
-    if (routingNumber !== undefined) {
-      updateData.routingNumberEncrypted = encrypt(routingNumber);
+    if (routingValue !== undefined) {
+      updateData.routingNumberEncrypted = encrypt(routingValue);
     }
-    if (accountNumber !== undefined) {
-      updateData.accountNumberEncrypted = encrypt(accountNumber);
-      updateData.accountLastFour = accountNumber.slice(-4);
+    if (accountValue !== undefined) {
+      updateData.accountNumberEncrypted = encrypt(accountValue);
+      updateData.accountLastFour = accountValue.slice(-4);
     }
     if (accountType !== undefined) {
       updateData.accountType = accountType;
@@ -365,27 +391,14 @@ export async function PATCH(
     updateData.isVerified = false;
     updateData.verifiedAt = null;
 
-    let updatedUserId: string;
-    let processor: "DIVINITYCOIN" | "PAYPAL" | "WHOP";
+    const updatedUserId = existing.userId;
 
     if (type === "whop") {
-      const existing = await db.whopBankAccount.findUnique({ where: { id }, select: { userId: true } });
-      if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
       await db.whopBankAccount.update({ where: { id }, data: updateData });
-      updatedUserId = existing.userId;
-      processor = "WHOP";
     } else if (type === "paypal") {
-      const existing = await db.payPalBankAccount.findUnique({ where: { id }, select: { userId: true } });
-      if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
       await db.payPalBankAccount.update({ where: { id }, data: updateData });
-      updatedUserId = existing.userId;
-      processor = "PAYPAL";
     } else {
-      const existing = await db.divinityCoinBankAccount.findUnique({ where: { id }, select: { userId: true } });
-      if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
       await db.divinityCoinBankAccount.update({ where: { id }, data: updateData });
-      updatedUserId = existing.userId;
-      processor = "DIVINITYCOIN";
     }
 
     auditLog({

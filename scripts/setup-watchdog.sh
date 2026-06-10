@@ -29,6 +29,15 @@ fi
 echo "[1/4] Installing watchdog script to /usr/local/bin/..."
 install -m 0755 "$SRC_WATCHDOG" /usr/local/bin/ic-watchdog.sh
 
+# The first watchdog release ran pm2 without HOME/PM2_HOME set, so pm2
+# spawned a stray daemon at /etc/.pm2 (and "reloaded" its empty process
+# list instead of the real cluster). Kill and remove it if present.
+if [ -d /etc/.pm2 ]; then
+  echo "    Cleaning up stray PM2 daemon at /etc/.pm2 (from pre-fix watchdog)..."
+  PM2_HOME=/etc/.pm2 pm2 kill >/dev/null 2>&1 || true
+  rm -rf /etc/.pm2
+fi
+
 echo "[2/4] Writing systemd service unit..."
 cat > /etc/systemd/system/ic-watchdog.service <<'SERVICE'
 [Unit]
@@ -38,6 +47,11 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+# Without these, pm2 inside the script talks to a freshly-spawned daemon
+# at a bogus home (observed /etc/.pm2) instead of the real cluster at
+# /root/.pm2, making every reload a silent no-op.
+Environment="HOME=/root"
+Environment="PM2_HOME=/root/.pm2"
 ExecStart=/usr/local/bin/ic-watchdog.sh
 SERVICE
 

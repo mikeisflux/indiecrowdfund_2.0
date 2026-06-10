@@ -42,25 +42,38 @@ async function requireSuperAdmin() {
   return { user: session.user };
 }
 
-// Resolves `requested` and confirms it's a file under one of our whitelists.
-// Rejects anything with traversal, symlink escape, or paths outside the list.
-function isPathAllowed(requested: string): boolean {
-  let resolved: string;
+// Resolves `requested` through the real filesystem (following symlinks)
+// and confirms the REAL location is under one of our whitelists. Returns
+// the resolved path to operate on, or null if disallowed.
+//
+// Why realpath and not path.resolve: resolve() is purely lexical — it
+// collapses ".." but does not follow symlinks, so a symlink placed inside
+// a whitelisted dir pointing at /etc/shadow would pass a lexical check
+// while fs operations follow it out of the sandbox. realpath() gives us
+// the final target, and the whitelist check runs against that.
+async function resolveAllowedPath(requested: string): Promise<string | null> {
+  let real: string;
   try {
-    resolved = path.resolve(requested);
+    real = await fs.promises.realpath(requested);
   } catch {
-    return false;
+    return null; // nonexistent, unreadable, or dangling symlink
   }
   // Direct child of a whitelisted directory
   for (const dir of LOG_DIRS) {
-    if (path.dirname(resolved) === path.resolve(dir)) return true;
+    if (path.dirname(real) === path.resolve(dir)) return real;
   }
-  // Standalone log files (and their rotated siblings: .1, .2.gz, .gz)
+  // Standalone log files, plus rotation suffixes ONLY (.1, .2.gz, .gz).
+  // A bare startsWith(base + ".") would also match e.g. a
+  // /var/log/syslog.d/ directory tree — keep it to logrotate shapes.
   for (const f of STANDALONE_LOGS) {
     const base = path.resolve(f);
-    if (resolved === base || resolved.startsWith(base + ".")) return true;
+    if (real === base) return real;
+    if (real.startsWith(base + ".")) {
+      const suffix = real.slice(base.length + 1);
+      if (/^(\d+(\.gz)?|gz)$/.test(suffix)) return real;
+    }
   }
-  return false;
+  return null;
 }
 
 function formatSize(bytes: number): string {
@@ -170,19 +183,20 @@ export async function DELETE(req: NextRequest) {
   if (!filePath) {
     return NextResponse.json({ error: "Missing path parameter" }, { status: 400 });
   }
-  if (!isPathAllowed(filePath)) {
+  const resolved = await resolveAllowedPath(filePath);
+  if (!resolved) {
     return NextResponse.json({ error: "Path not in allowed log directories" }, { status: 403 });
   }
   try {
-    const stat = await fs.promises.stat(filePath);
+    const stat = await fs.promises.stat(resolved);
     if (!stat.isFile()) {
       return NextResponse.json({ error: "Not a regular file" }, { status: 400 });
     }
-    await fs.promises.truncate(filePath, 0);
-    logsLogger.info({ path: filePath, previousSize: stat.size }, "Truncated log file");
+    await fs.promises.truncate(resolved, 0);
+    logsLogger.info({ path: resolved, previousSize: stat.size }, "Truncated log file");
     return NextResponse.json({
       success: true,
-      path: filePath,
+      path: resolved,
       previousSize: stat.size,
     });
   } catch (err) {
