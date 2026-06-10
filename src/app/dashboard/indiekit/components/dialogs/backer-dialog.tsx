@@ -58,6 +58,7 @@ import { EditOrderDialog } from "./edit-order-dialog";
 import { TrackingDialog } from "./tracking-dialog";
 import { RefundDialog } from "./refund-dialog";
 import { NotesDialog } from "./notes-dialog";
+import { NotesPanel } from "./notes-panel";
 import { EmailComposerDialog } from "./email-composer-dialog";
 import { CancelOrderDialog } from "./confirm-dialog";
 import { PackingSlipDialog } from "./packing-slip-dialog";
@@ -120,6 +121,11 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
   const [refundSuggestedAmount, setRefundSuggestedAmount] = useState<number | undefined>(undefined);
   const [refundSuggestedReason, setRefundSuggestedReason] = useState<string | undefined>(undefined);
   const [showNotes, setShowNotes] = useState(false);
+  // Bumped whenever the full NotesDialog closes so the inline NotesPanel
+  // re-fetches and reflects any add/delete done in the dialog. The panel
+  // and dialog both write to the same /api/creator/indiekit/notes
+  // endpoint -- this keeps them in sync without prop-drilling state.
+  const [notesRefreshKey, setNotesRefreshKey] = useState(0);
   const [showEmailComposer, setShowEmailComposer] = useState(false);
   const [showCancelOrder, setShowCancelOrder] = useState(false);
   const [showPackingSlip, setShowPackingSlip] = useState(false);
@@ -477,6 +483,19 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
               )}
             </div>
           </div>
+
+          {/* Notes panel -- pinned above the tabs so the creator sees
+              backer notes in every section (Order, Shipping, etc.)
+              instead of having to remember to open the dropdown -> Notes
+              dialog. Add/delete go straight to the same
+              /api/creator/indiekit/notes that the full NotesDialog
+              uses; notesRefreshKey bumps when the dialog closes so the
+              panel reflects changes made there. */}
+          <NotesPanel
+            pledgeId={backer.id}
+            refreshKey={notesRefreshKey}
+            onOpenFullDialog={() => setShowNotes(true)}
+          />
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -1177,7 +1196,12 @@ export function BackerDialog({ open, onOpenChange, backer, availableAddons = [],
 
       <NotesDialog
         open={showNotes}
-        onOpenChange={setShowNotes}
+        onOpenChange={(open) => {
+          setShowNotes(open);
+          // When the full dialog closes, refresh the inline panel so
+          // adds/deletes made in the dialog land in the pinned view too.
+          if (!open) setNotesRefreshKey((k) => k + 1);
+        }}
         backerId={backer.id}
         backerName={backer.name}
         onSave={() => { /* notes-dialog handles persistence internally */ }}
