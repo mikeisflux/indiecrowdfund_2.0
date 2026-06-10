@@ -24,7 +24,10 @@ async function lookupCountryFromIP(ip: string): Promise<string | null> {
 
   try {
     const response = await circuitBreaker.execute("ip-geo", () =>
-      fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
+      // HTTPS so a network adversary can't MITM the geo response and
+      // forge a different countryCode (would pollute creator analytics).
+      // ip-api.com supports HTTPS on the free tier.
+      fetch(`https://ip-api.com/json/${ip}?fields=countryCode`, {
         signal: AbortSignal.timeout(2000),
       })
     );
@@ -124,6 +127,26 @@ export async function POST(request: Request) {
         { error: `Invalid event type. Must be one of: ${validEventTypes.join(", ")}` },
         { status: 400 }
       );
+    }
+
+    // Cap metadata payload so the unauthenticated, CSRF-exempt,
+    // wildcard-CORS POST surface can't be used to bloat UserBehavior
+    // rows. Without this a single page-view event could ship a 10 MB
+    // JSON blob; multiplied by botnet traffic that's how analytics
+    // tables get OOM'd in an afternoon.
+    if (metadata !== undefined && metadata !== null) {
+      let metadataSize = 0;
+      try {
+        metadataSize = JSON.stringify(metadata).length;
+      } catch {
+        return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
+      }
+      if (metadataSize > 8 * 1024) {
+        return NextResponse.json(
+          { error: "Metadata too large (max 8 KB)" },
+          { status: 413 }
+        );
+      }
     }
 
     // Get user ID if authenticated

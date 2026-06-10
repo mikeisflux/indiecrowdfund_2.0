@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const watchLogger = logger.child({ module: "marketplace-watch" });
 import { db as prisma } from "@/lib/db";
 import { getR2Storage } from "@/lib/r2";
+import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export async function GET(
         id: true,
         videoFileUrl: true,
         videoStreamUrl: true,
+        creatorId: true,
       },
     });
 
@@ -39,9 +41,41 @@ export async function GET(
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
     }
 
-    const fileUrl = item.videoStreamUrl || item.videoFileUrl;
+    // Paid-content gate. Same pattern as /api/marketplace/stream:
+    // the endpoint used to fall back from videoStreamUrl (preview) to
+    // videoFileUrl (paid) when no preview was uploaded, giving away
+    // the paid master to anyone with the slug. Now: serve preview to
+    // the public, full file only to authenticated buyers / the creator.
+    const session = await auth();
+    let isBuyer = false;
+    let isCreator = false;
+    if (session?.user?.id) {
+      if (item.creatorId === session.user.id) {
+        isCreator = true;
+      } else {
+        const purchase = await prisma.marketplacePurchase.findFirst({
+          where: {
+            buyerId: session.user.id,
+            bookId: item.id,
+            status: "COMPLETED",
+          },
+          select: { id: true },
+        });
+        if (purchase) isBuyer = true;
+      }
+    }
+
+    let fileUrl: string | null = null;
+    if (item.videoStreamUrl) {
+      fileUrl = item.videoStreamUrl;
+    } else if (isBuyer || isCreator) {
+      fileUrl = item.videoFileUrl;
+    }
     if (!fileUrl) {
-      return NextResponse.json({ error: "No video available" }, { status: 404 });
+      return NextResponse.json(
+        { error: "No preview available for this video. Purchase to watch." },
+        { status: 404 }
+      );
     }
 
     // Increment view count (non-blocking)

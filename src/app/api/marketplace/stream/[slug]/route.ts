@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 const streamLogger = logger.child({ module: "marketplace-stream" });
 import { db as prisma } from "@/lib/db";
 import { getR2Storage } from "@/lib/r2";
+import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export async function GET(
         audioFileUrl: true,
         audioStreamUrl: true,
         pdfFileUrl: true,
+        creatorId: true,
       },
     });
 
@@ -41,9 +43,53 @@ export async function GET(
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
-    const fileUrl = book.audioStreamUrl || book.audioFileUrl || book.pdfFileUrl;
+    // Paid-content gate.
+    //
+    // The endpoint is documented "Free to stream; downloading the full-
+    // quality file requires purchase." Schema confirms the intent:
+    // `audioStreamUrl` is the public lower-quality preview, `audioFileUrl`
+    // is the paid full-quality master. The previous fallback chain went
+    //   audioStreamUrl || audioFileUrl || pdfFileUrl
+    // so a creator who only uploaded ONE file (the paid one) silently
+    // served the full master to unauthenticated requesters -- bypassing
+    // payment entirely. Anyone with the track slug got the paid file
+    // for free.
+    //
+    // New policy:
+    //   - audioStreamUrl set       -> serve to everyone (public preview)
+    //   - else, user purchased     -> serve audioFileUrl (full)
+    //   - else, user is creator    -> serve audioFileUrl (own track)
+    //   - else                     -> 404 ("no preview available")
+    const session = await auth();
+    let isBuyer = false;
+    let isCreator = false;
+    if (session?.user?.id) {
+      if (book.creatorId === session.user.id) {
+        isCreator = true;
+      } else {
+        const purchase = await prisma.marketplacePurchase.findFirst({
+          where: {
+            buyerId: session.user.id,
+            bookId: book.id,
+            status: "COMPLETED",
+          },
+          select: { id: true },
+        });
+        if (purchase) isBuyer = true;
+      }
+    }
+
+    let fileUrl: string | null = null;
+    if (book.audioStreamUrl) {
+      fileUrl = book.audioStreamUrl;
+    } else if (isBuyer || isCreator) {
+      fileUrl = book.audioFileUrl || book.pdfFileUrl;
+    }
     if (!fileUrl) {
-      return NextResponse.json({ error: "No audio available" }, { status: 404 });
+      return NextResponse.json(
+        { error: "No preview available for this track. Purchase to listen." },
+        { status: 404 }
+      );
     }
 
     // Increment play count (non-blocking)

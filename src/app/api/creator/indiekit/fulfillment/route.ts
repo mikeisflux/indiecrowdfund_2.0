@@ -47,19 +47,47 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Invalid fulfillment status" }, { status: 400 });
       }
 
-      // Update fulfillment status for pledges
-      await db.pledge.updateMany({
+      // State machine: only forward transitions allowed (NOT_STARTED ->
+      // IN_PROGRESS -> SHIPPED -> DELIVERED). Without this gate a creator
+      // could flip already-DELIVERED pledges back to NOT_STARTED to
+      // re-export them, double-print packing slips, or back-date a
+      // dispute. updateMany with a status-IN where-clause makes the
+      // backward transitions land 0 rows; we report which pledges
+      // actually moved.
+      const rank: Record<string, number> = {
+        NOT_STARTED: 0,
+        IN_PROGRESS: 1,
+        SHIPPED: 2,
+        DELIVERED: 3,
+      };
+      const targetRank = rank[effectiveStatus];
+      // Allowed source statuses are everything strictly less than the
+      // target (so DELIVERED can come from any of NOT_STARTED /
+      // IN_PROGRESS / SHIPPED; NOT_STARTED can't come from anything --
+      // it's the initial state).
+      const allowedFromStatuses = Object.entries(rank)
+        .filter(([, r]) => r < targetRank)
+        .map(([s]) => s);
+
+      const updateResult = await db.pledge.updateMany({
         where: {
           id: { in: backerIds },
           projectId,
           deletedAt: null,
+          ...(allowedFromStatuses.length > 0
+            ? { fulfillmentStatus: { in: allowedFromStatuses as ("NOT_STARTED" | "IN_PROGRESS" | "SHIPPED" | "DELIVERED")[] } }
+            : { id: "__never__" }), // NOT_STARTED has no valid source
         },
         data: {
           fulfillmentStatus: effectiveStatus,
         },
       });
 
-      return NextResponse.json({ success: true, updated: backerIds.length });
+      return NextResponse.json({
+        success: true,
+        updated: updateResult.count,
+        skipped: backerIds.length - updateResult.count,
+      });
     }
 
     if (action === "push_to_provider") {

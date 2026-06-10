@@ -95,18 +95,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ addon });
     }
 
-    // Update an existing addon
+    // Update an existing addon.
+    //
+    // CRITICAL: every single-id mutation in this file used to update by
+    // `{ id: addonId }` without scoping to `projectId`. The access check
+    // on line 74 only confirms the caller can edit *some* project --
+    // they could then pass an addonId belonging to ANY other project
+    // and mutate the foreign row cross-tenant (rename, change price,
+    // zero out quantity, end the campaign for that creator's addons,
+    // etc.). updateMany with `{ id, projectId, type: "ADDON" }` makes
+    // the same scope mandatory; count:0 -> 404, can't escape the tenant.
     if (action === "update" && addonId) {
-      const addon = await db.reward.update({
-        where: { id: addonId },
-        data: {
-          title,
-          description,
-          amount,
-          quantityAvailable,
-        },
+      const result = await db.reward.updateMany({
+        where: { id: addonId, projectId, type: "ADDON" },
+        data: { title, description, amount, quantityAvailable },
       });
-
+      if (result.count === 0) {
+        return NextResponse.json({ error: "Addon not found" }, { status: 404 });
+      }
+      const addon = await db.reward.findUnique({ where: { id: addonId } });
       return NextResponse.json({ addon });
     }
 
@@ -124,13 +131,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, linked: result.count });
     }
 
-    // Unlink a single addon from the survey
+    // Unlink a single addon from the survey (scoped to projectId — see
+    // CRITICAL note on `update` above).
     if (action === "unlink" && addonId) {
-      await db.reward.update({
-        where: { id: addonId },
+      const result = await db.reward.updateMany({
+        where: { id: addonId, projectId, type: "ADDON" },
         data: { showInSurvey: false },
       });
-
+      if (result.count === 0) {
+        return NextResponse.json({ error: "Addon not found" }, { status: 404 });
+      }
       return NextResponse.json({ success: true });
     }
 
@@ -145,20 +155,26 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "activate" && addonId) {
-      const addon = await db.reward.update({
-        where: { id: addonId },
+      const result = await db.reward.updateMany({
+        where: { id: addonId, projectId, type: "ADDON" },
         data: { isEnded: false, endedAt: null },
       });
-
+      if (result.count === 0) {
+        return NextResponse.json({ error: "Addon not found" }, { status: 404 });
+      }
+      const addon = await db.reward.findUnique({ where: { id: addonId } });
       return NextResponse.json({ addon });
     }
 
     if (action === "deactivate" && addonId) {
-      const addon = await db.reward.update({
-        where: { id: addonId },
+      const result = await db.reward.updateMany({
+        where: { id: addonId, projectId, type: "ADDON" },
         data: { isEnded: true, endedAt: new Date() },
       });
-
+      if (result.count === 0) {
+        return NextResponse.json({ error: "Addon not found" }, { status: 404 });
+      }
+      const addon = await db.reward.findUnique({ where: { id: addonId } });
       return NextResponse.json({ addon });
     }
 
@@ -189,12 +205,16 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // Unlink from survey (same as POST unlink)
-    await db.reward.update({
-      where: { id: addonId },
+    // Unlink from survey, scoped to projectId (see the CRITICAL note in
+    // POST `update` above). The previous version mutated any addon by
+    // id without tenant scope.
+    const result = await db.reward.updateMany({
+      where: { id: addonId, projectId, type: "ADDON" },
       data: { showInSurvey: false },
     });
-
+    if (result.count === 0) {
+      return NextResponse.json({ error: "Addon not found" }, { status: 404 });
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     creatorIndiekitAddonsLogger.error({ err: formatError(error) }, "Addons DELETE error:");

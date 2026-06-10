@@ -95,13 +95,26 @@ async function extractPdfCover(
     let pdfBuffer: Buffer;
 
     if (pdfUrl.startsWith("http")) {
-      // Fetch from URL
-      const response = await fetch(pdfUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+      // SSRF-hardened fetch. The previous bare fetch(pdfUrl) was reachable
+      // from /api/backer/digital-files/extract-cover whenever a row had
+      // a legacy fileUrl set: a hostile value pointed at
+      // http://169.254.169.254/ (Hetzner / AWS / GCP cloud metadata)
+      // would be proxied back. safeFetchExternal blocks private /
+      // loopback / link-local IPs and refuses redirects.
+      const { safeFetchExternal } = await import("@/lib/safe-fetch");
+      const result = await safeFetchExternal(pdfUrl, {
+        allowHostSuffixes: [
+          "r2.cloudflarestorage.com",
+          "r2.dev",
+          "s3.amazonaws.com",
+          "amazonaws.com",
+        ],
+        maxBytes: 100 * 1024 * 1024, // 100 MB cap on PDF fetches
+      });
+      if (!result.ok) {
+        throw new Error(`Failed to fetch PDF: HTTP ${result.status}`);
       }
-      const arrayBuffer = await response.arrayBuffer();
-      pdfBuffer = Buffer.from(arrayBuffer);
+      pdfBuffer = result.bytes;
     } else {
       // Fetch from R2
       const command = new GetObjectCommand({
