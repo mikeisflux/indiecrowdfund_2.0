@@ -50,7 +50,19 @@ export async function GET(
     });
 
     if (!survey) {
-      return NextResponse.json({ error: "Survey not found" }, { status: 404 });
+      // No survey created yet -- not an error, just an empty state.
+      // Returning 404 here meant the fetch-error-interceptor on the
+      // client flagged it as a Sentinel "unresolved error" event even
+      // though the page rendered fine (frontend already silently swaps
+      // to the no-data state). 200 + surveyExists:false lets the
+      // frontend show a "Create survey" CTA if it wants to, and stops
+      // polluting the error stream.
+      return NextResponse.json({
+        surveyExists: false,
+        responses: [],
+        pagination: { total: 0, page: 1, limit: 50, totalPages: 0 },
+        stats: { total: 0, completed: 0, incomplete: 0, responseRate: 0 },
+      });
     }
 
     const { searchParams } = new URL(req.url);
