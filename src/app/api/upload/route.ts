@@ -191,10 +191,40 @@ export async function POST(req: NextRequest) {
     let finalSize: number;
 
     if (shouldConvert) {
-      // Convert PNG/JPG to WebP using sharp
-      finalBuffer = await sharp(buffer)
-        .webp({ quality: WEBP_QUALITY })
-        .toBuffer();
+      // Convert PNG/JPG to WebP using sharp. This throws if the bytes
+      // aren't a decodable image despite the declared mime type — the
+      // common real-world cases are: a HEIC/AVIF file renamed to .jpg
+      // (Macs hand these out constantly), a truncated/corrupt upload, a
+      // CMYK or 16-bit TIFF masquerading as a supported type, or an
+      // image whose dimensions exceed sharp's ~268 MP input guard. All
+      // of those used to fall through to the generic 500 "Failed to
+      // upload file" with no hint, so the creator just saw it fail
+      // repeatedly (this fired 5× for one creator on /projects/new).
+      // Catch it and return an actionable 400 + log the real reason.
+      try {
+        finalBuffer = await sharp(buffer, { failOn: "error" })
+          .rotate() // honor EXIF orientation before stripping metadata
+          .webp({ quality: WEBP_QUALITY })
+          .toBuffer();
+      } catch (sharpErr) {
+        uploadLogger.warn(
+          {
+            err: sharpErr instanceof Error ? sharpErr.message : String(sharpErr),
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            userId: session.user.id,
+          },
+          "[Upload] sharp failed to decode/convert image"
+        );
+        return NextResponse.json(
+          {
+            error:
+              "We couldn't process that image. If it's a HEIC photo from an iPhone/Mac, re-export it as JPG or PNG first. Very large images (over ~250 megapixels) also need to be resized.",
+          },
+          { status: 400 }
+        );
+      }
       finalMimeType = "image/webp";
       finalSize = finalBuffer.length;
     } else {
