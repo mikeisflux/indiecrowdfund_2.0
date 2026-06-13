@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { UserTransactionsDialog } from "./user-transactions-dialog";
 
 interface User {
   id: string;
@@ -94,6 +95,9 @@ export function MessagesPanel({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [view, setView] = useState<"inbox" | "sent">("inbox");
+  // Backer transactions popup: opens when the creator clicks the other
+  // user's name in the thread header.
+  const [transactionsOpen, setTransactionsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
   const prevConversationKeyRef = useRef<string | null>(null);
@@ -614,9 +618,14 @@ export function MessagesPanel({
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">
+                <button
+                  type="button"
+                  className="font-medium truncate text-left hover:underline decoration-dotted underline-offset-2 focus:outline-none focus:underline"
+                  onClick={() => setTransactionsOpen(true)}
+                  title="View this user's transaction history on your projects"
+                >
                   {selectedConversation.otherUser.name || "Unknown User"}
-                </p>
+                </button>
                 <p className="text-xs text-muted-foreground truncate">
                   {selectedConversation.project?.title ? `Re: ${selectedConversation.project.title}` : "Direct Message"}
                 </p>
@@ -729,6 +738,13 @@ export function MessagesPanel({
           </div>
         )}
       </div>
+      <UserTransactionsDialog
+        open={transactionsOpen}
+        onOpenChange={setTransactionsOpen}
+        userId={selectedConversation?.otherUser.id || null}
+        userName={selectedConversation?.otherUser.name || "Unknown User"}
+        userImage={selectedConversation?.otherUser.image}
+      />
     </div>
   );
 }

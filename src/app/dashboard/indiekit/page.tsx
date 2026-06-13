@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -346,6 +346,26 @@ export default function IndieKitPage() {
       fetchData();
     }
   }, [fetchData, isInitialized]);
+
+  // Deep-link handler: ?backer=<pledgeId> auto-opens the BackerDialog
+  // for that specific pledge once backers have loaded. Used by the
+  // messaging "click a transaction" flow. Fires once per pledgeId so a
+  // refresh of `backers` (caused by paging / filtering) doesn't keep
+  // re-opening the dialog after the user has closed it.
+  const handledBackerDeepLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    const target = searchParams?.get("backer");
+    if (!target) return;
+    if (handledBackerDeepLinkRef.current === target) return;
+    if (backers.length === 0) return;
+    const match = backers.find((b) => b.id === target);
+    if (match) {
+      handledBackerDeepLinkRef.current = target;
+      setActiveAlwaysTab("backers");
+      setSelectedBacker(match);
+      setIsBackerDialogOpen(true);
+    }
+  }, [backers, searchParams]);
 
   // Runs a workflow action against the API. Confirmation (when required) is
   // handled by handleWorkflowAction before this is reached.
