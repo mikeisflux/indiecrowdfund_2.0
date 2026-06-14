@@ -419,6 +419,8 @@ export async function pushOrdersToShopify(
         price?: string;
         sku?: string;
         variant_id?: number;
+        requires_shipping?: boolean;
+        taxable?: boolean;
       }> = [];
 
       if (pledge.reward) {
@@ -480,26 +482,42 @@ export async function pushOrdersToShopify(
           variantId = rewardSku?.variantId ? parseInt(rewardSku.variantId) : undefined;
         }
 
-        // If we have a SKU but no variant_id, look it up in Shopify
-        if (sku && !variantId) {
-          variantId = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, sku) || undefined;
+        // Resolve the Shopify variant. When a SKU is present the live
+        // lookup is authoritative (and cached per SKU) -- this is what
+        // "match by SKU" means: Shopify owns the price + requires_shipping
+        // flag and we only reference the variant, instead of writing the
+        // whole product as a custom line item. We prefer the live lookup
+        // over a stored variantId because stored IDs can be stale or in
+        // GID format ("gid://..." -> parseInt -> NaN). A stored variantId
+        // is only the fallback when there's no SKU to look up.
+        if (sku) {
+          const looked = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, sku);
+          if (looked) variantId = looked;
         }
 
         const rewardSkuData = rewardSkuMap.get(pledge.reward.id);
         const quantity = rewardSkuData?.quantity || 1;
 
-        // If we have variant_id, just use that - Shopify gets title/price from the product
-        if (variantId) {
+        // Matched a Shopify variant -> reference it ONLY. Shopify fills in
+        // title, price, and requires_shipping from the product itself.
+        if (variantId && !Number.isNaN(variantId)) {
           lineItems.push({
             variant_id: variantId,
             quantity,
           });
         } else {
-          // Fallback to custom line item if no product match
+          // No SKU match -- write a custom line item. Use the reward's
+          // own pledged price: pledge.rewardAmount. (The old code read
+          // pledge.pledgeAmount, which never existed on the Pledge model,
+          // so every fallback line item was priced "0".) Mark it physical
+          // so Shopify treats it as a shippable good -- these pushes are
+          // for fulfilling physical rewards.
           lineItems.push({
             title,
             quantity,
-            price: (pledge.pledgeAmount ?? 0).toString(),
+            price: Number(pledge.rewardAmount ?? pledge.amount ?? 0).toFixed(2),
+            requires_shipping: true,
+            taxable: true,
           });
         }
       }
@@ -514,25 +532,32 @@ export async function pushOrdersToShopify(
         const addonSku = addonSkuMap.get(addon.addon.id);
         let addonVariantId = addonSku?.variantId ? parseInt(addonSku.variantId) : undefined;
 
-        // If we have a SKU but no variant_id, look it up in Shopify
-        if (addonSku?.sku && !addonVariantId) {
-          addonVariantId = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, addonSku.sku) || undefined;
+        // SKU lookup is authoritative when present (see reward block above).
+        if (addonSku?.sku) {
+          const looked = await lookupVariantBySku(credentials.shopDomain, credentials.accessToken, addonSku.sku);
+          if (looked) addonVariantId = looked;
         }
 
         const addonQuantity = (addon.quantity ?? 1) * (addonSku?.quantity || 1);
 
-        // If we have variant_id, just use that - Shopify gets title/price from the product
-        if (addonVariantId) {
+        if (addonVariantId && !Number.isNaN(addonVariantId)) {
           lineItems.push({
             variant_id: addonVariantId,
             quantity: addonQuantity,
           });
         } else {
-          // Fallback to custom line item if no product match
+          // No SKU match -- custom line item. PledgeAddon.amount is the
+          // line total (unit price x quantity), so the unit price is
+          // amount / quantity. (The old code read addon.unitPrice, which
+          // never existed on the model, so every addon fell back to "0".)
+          const addonRowQty = addon.quantity || 1;
+          const addonUnitPrice = Number(addon.amount ?? 0) / addonRowQty;
           lineItems.push({
             title: addon.addon.title,
             quantity: addonQuantity,
-            price: (addon.unitPrice ?? 0).toString(),
+            price: addonUnitPrice.toFixed(2),
+            requires_shipping: true,
+            taxable: true,
           });
         }
       }
@@ -601,7 +626,11 @@ export async function pushOrdersToShopify(
             {
               title: `Pledge - ${project?.title || "Project"}`,
               quantity: 1,
-              price: (pledge.pledgeAmount ?? 0).toString(),
+              // pledge.amount is the real pledge total; pledgeAmount never
+              // existed on the model (was always "0").
+              price: Number(pledge.amount ?? 0).toFixed(2),
+              requires_shipping: true,
+              taxable: true,
             },
           ],
           email: customerEmail || undefined,

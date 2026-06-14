@@ -731,7 +731,7 @@ export function InboxTab({ projectId }: InboxTabProps) {
             <div className="flex items-center justify-between mb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Mail className="h-4 w-4" />
-                Messages
+                Inbox
               </CardTitle>
               <Button variant="ghost" size="icon" onClick={fetchThreads}>
                 <RefreshCw className="h-4 w-4" />
