@@ -82,14 +82,42 @@ export async function GET(
       return NextResponse.json({ itemQuestions: [] });
     }
 
-    const itemQuestions = await db.surveyItemQuestion.findMany({
+    // Order by updatedAt DESC so that if a pre-fix duplicate row pair
+    // is still in the DB (created before the @@unique([surveyId,
+    // rewardId]) migration was applied), the dedup loop below keeps
+    // the MOST RECENT one. Before this change the GET was ordered by
+    // sortOrder ASC -- which with everyone defaulting to 0 became
+    // insertion order, so the UI's `questionsMap.set(rewardId, ...)`
+    // loop on the client kept overwriting newer rows with older ones
+    // and the creator saw their stale first save instead of their
+    // latest. Now the newest-per-reward wins both at the wire and on
+    // the client.
+    const rows = await db.surveyItemQuestion.findMany({
       where: { surveyId: survey.id },
       include: {
         variants: { orderBy: { sortOrder: "asc" } },
         customQuestions: { orderBy: { sortOrder: "asc" } },
       },
-      orderBy: { sortOrder: "asc" },
+      orderBy: { updatedAt: "desc" },
     });
+
+    // Collapse to one row per rewardId for resilience against any
+    // pre-migration duplicates. Once the migration in
+    // prisma/migrations/add_unique_survey_item_question.sql has been
+    // applied, this loop is a no-op (the constraint guarantees one
+    // row per (surveyId, rewardId)). Keeping it in regardless so a
+    // pre-migration deploy still ships the correct list to the UI.
+    type Row = (typeof rows)[number];
+    const seen = new Set<string>();
+    const itemQuestions: Row[] = [];
+    for (const r of rows) {
+      if (seen.has(r.rewardId)) continue;
+      seen.add(r.rewardId);
+      itemQuestions.push(r);
+    }
+    // Final return order respects the creator's intended sortOrder
+    // (was the previous behavior), which is what the UI renders.
+    itemQuestions.sort((a: Row, b: Row) => a.sortOrder - b.sortOrder);
 
     return NextResponse.json({ itemQuestions });
   } catch (error) {
@@ -150,38 +178,78 @@ export async function POST(
       return NextResponse.json({ error: "Reward not found" }, { status: 404 });
     }
 
-    // Create item question with variants and custom questions
-    const itemQuestion = await db.surveyItemQuestion.create({
-      data: {
-        surveyId: survey.id,
-        rewardId: data.rewardId,
-        itemName: data.itemName,
-        itemDescription: data.itemDescription,
-        imageUrl: data.imageUrl,
-        sortOrder: data.sortOrder,
-        variants: {
-          create: data.variants.map((v, index) => ({
-            variantType: v.variantType,
-            options: v.options,
-            skuPrefix: v.skuPrefix || generateSkuPrefix(data.itemName, v.variantType),
-            sortOrder: v.sortOrder ?? index,
-          })),
+    // Upsert keyed on (surveyId, rewardId) so this handler is
+    // idempotent at the (survey, reward) level. The previous version
+    // always did .create() with no dedup check -- if a "Save" click
+    // raced itself (UI didn't yet have the questionId back) or if the
+    // client lost state between sessions and didn't switch to PUT, we
+    // ended up with two SurveyItemQuestion rows pointing at the same
+    // reward. GET then returned both, the UI's
+    // `questionsMap.set(q.rewardId, ...)` loop wrote whichever row
+    // Postgres returned last, and the creator saw stale selections
+    // restored on reload.
+    //
+    // Atomic: clear-and-recreate variants/customQuestions on update so
+    // an upsert against an existing row replaces the children rather
+    // than appending to them. Mirrors the PUT handler's pattern.
+    const itemQuestion = await db.$transaction(async (tx) => {
+      const existing = await tx.surveyItemQuestion.findFirst({
+        where: { surveyId: survey.id, rewardId: data.rewardId },
+        select: { id: true },
+      });
+
+      const variantCreate = data.variants.map((v, index) => ({
+        variantType: v.variantType,
+        options: v.options,
+        skuPrefix: v.skuPrefix || generateSkuPrefix(data.itemName, v.variantType),
+        sortOrder: v.sortOrder ?? index,
+      }));
+      const customQuestionCreate = data.customQuestions.map((q, index) => ({
+        question: q.question,
+        description: q.description,
+        questionType: q.questionType,
+        options: q.options,
+        isRequired: q.isRequired,
+        sortOrder: q.sortOrder ?? index,
+      }));
+
+      if (existing) {
+        // Update path -- wipe and recreate children inside the same tx.
+        await tx.surveyItemVariant.deleteMany({ where: { itemQuestionId: existing.id } });
+        await tx.surveyItemCustomQuestion.deleteMany({ where: { itemQuestionId: existing.id } });
+        return tx.surveyItemQuestion.update({
+          where: { id: existing.id },
+          data: {
+            itemName: data.itemName,
+            itemDescription: data.itemDescription,
+            imageUrl: data.imageUrl,
+            sortOrder: data.sortOrder,
+            variants: { create: variantCreate },
+            customQuestions: { create: customQuestionCreate },
+          },
+          include: {
+            variants: { orderBy: { sortOrder: "asc" } },
+            customQuestions: { orderBy: { sortOrder: "asc" } },
+          },
+        });
+      }
+
+      return tx.surveyItemQuestion.create({
+        data: {
+          surveyId: survey.id,
+          rewardId: data.rewardId,
+          itemName: data.itemName,
+          itemDescription: data.itemDescription,
+          imageUrl: data.imageUrl,
+          sortOrder: data.sortOrder,
+          variants: { create: variantCreate },
+          customQuestions: { create: customQuestionCreate },
         },
-        customQuestions: {
-          create: data.customQuestions.map((q, index) => ({
-            question: q.question,
-            description: q.description,
-            questionType: q.questionType,
-            options: q.options,
-            isRequired: q.isRequired,
-            sortOrder: q.sortOrder ?? index,
-          })),
+        include: {
+          variants: { orderBy: { sortOrder: "asc" } },
+          customQuestions: { orderBy: { sortOrder: "asc" } },
         },
-      },
-      include: {
-        variants: { orderBy: { sortOrder: "asc" } },
-        customQuestions: { orderBy: { sortOrder: "asc" } },
-      },
+      });
     });
 
     return NextResponse.json({ itemQuestion });

@@ -59,6 +59,16 @@ model SurveyItemQuestion {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
+  // One row per (survey, reward) -- the IndieKit survey-builder UI
+  // keys per-reward question selections by rewardId; before this unique
+  // constraint, racing "Save" clicks or state loss between sessions
+  // could produce duplicate rows for the same reward, and the load-side
+  // Map-set loop would render whichever row Postgres returned last,
+  // making it look like a "Save Draft" silently reverted to the old
+  // selections. POST is an upsert on this key. Migration at
+  // prisma/migrations/add_unique_survey_item_question.sql collapses
+  // any pre-existing duplicates before installing the index.
+  @@unique([surveyId, rewardId])
   @@index([surveyId])
   @@index([rewardId])
 }
