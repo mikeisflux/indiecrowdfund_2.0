@@ -125,7 +125,34 @@ export class R2Storage {
   }
 
   /**
-   * Generate presigned URL for file upload
+   * Generate presigned URL for file upload.
+   *
+   * IMPORTANT: We deliberately do NOT include ContentType on the signed
+   * PutObjectCommand. The SigV4 signature is computed over every header
+   * declared on the command, so a signed ContentType means the browser
+   * MUST PUT with that exact Content-Type header verbatim -- otherwise
+   * R2 rejects with SignatureDoesNotMatch and the browser surfaces it
+   * as a generic "Network error" with no useful response body.
+   *
+   * In practice this bites real users constantly because the browser
+   * derives the PUT's Content-Type from the File object, and File.type
+   * varies by OS + extension:
+   *   - Windows sometimes hands ".zip" -> "application/x-zip-compressed"
+   *     when our route signed "application/zip"
+   *   - ".cbz"/".cbr"/".epub" -> "" (empty) -> browser falls back to
+   *     "application/octet-stream" instead of the signed value
+   *   - Drag-and-drop vs <input type="file"> can produce different
+   *     File.type values for the same file on the same OS
+   *
+   * Tradeoff for omitting it: zero. We already track mimeType in the
+   * DigitalFile/MediaFile DB row independently of what R2 has stored on
+   * the object, and the download path (getDownloadUrl + serve route)
+   * sets the Content-Type from our row, not from R2's object metadata.
+   *
+   * If a caller needs the object's Content-Type to be authoritative
+   * (e.g. for direct R2 public-URL serving), pin it via the
+   * `metadata` field instead, which is also signed but doesn't get
+   * compared against the request's literal Content-Type header.
    */
   async getUploadUrl(
     key: string,
@@ -135,12 +162,14 @@ export class R2Storage {
       const command = new PutObjectCommand({
         Bucket: this.config.bucketName,
         Key: key,
-        ContentType: options.contentType,
         Metadata: options.metadata,
       });
 
       return await getSignedUrl(this.client, command, {
         expiresIn: options.expiresIn || 3600,
+        // Signing options.contentType into the URL would force the
+        // browser's PUT to match it exactly -- see the docblock above.
+        unhoistableHeaders: new Set(),
       });
     } catch (error) {
       r2Logger.error({ err: error }, "R2 getUploadUrl error:");
