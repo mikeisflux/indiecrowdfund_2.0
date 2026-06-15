@@ -90,13 +90,16 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
     setIsUploading(true);
     setUploadProgress(2);
 
-    // Files above this size go through R2 multipart upload (separate
-    // short PUTs per chunk) instead of a single browser-to-R2 PUT.
-    // Single-PUT works fine for small files; at >100MB the long-lived
-    // TCP becomes fragile across residential / CGNAT networks and
-    // failures surface as the misleading "CORS request did not
-    // succeed". 50MB chunks → 18 parts for a 900MB file.
-    const MULTIPART_THRESHOLD = 100 * 1024 * 1024;
+    // All digital file uploads go through server-proxied R2 multipart
+    // (browser POSTs each chunk to indiecrowdfund.com, our server
+    // forwards to R2 server-to-server). The browser never has to
+    // reach r2.cloudflarestorage.com, which eliminates the entire
+    // class of CORS / residential ISP / CGNAT failures creators were
+    // hitting. Small files take the same path (R2 accepts single-part
+    // multipart for any size since the only part is also the last
+    // part, and the 5MB minimum only applies to intermediate parts).
+    // 50MB chunks → ~18 parts for a 900MB file, 1 part for anything
+    // under 50MB.
     const CHUNK_SIZE = 50 * 1024 * 1024;
 
     const reportClientFailure = (reason: string, extra: Record<string, unknown> = {}) => {
@@ -121,8 +124,8 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
     };
 
     try {
-      if (selectedFile.size > MULTIPART_THRESHOLD) {
-        // ---- Multipart path ----
+      {
+        // ---- Server-proxy multipart (single path for every file) ----
         const initRes = await apiFetch("/api/creator/digital-files/multipart", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -258,65 +261,6 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
           }).catch(() => {});
           throw err;
         }
-      } else {
-        // ---- Single-PUT path (small files) ----
-        const res = await apiFetch("/api/creator/digital-files", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            projectId,
-            fileName: selectedFile.name,
-            fileSize: selectedFile.size,
-            mimeType: selectedFile.type || "application/octet-stream",
-            name: selectedFile.name,
-          }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to initiate upload");
-        }
-
-        const { uploadUrl } = await res.json();
-        setUploadProgress(5);
-
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open("PUT", uploadUrl);
-          xhr.setRequestHeader("Content-Type", selectedFile.type || "application/octet-stream");
-
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              const percent = Math.round(5 + (event.loaded / event.total) * 90);
-              setUploadProgress(percent);
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve();
-            } else {
-              reportClientFailure("HTTP error from R2", {
-                phase: "single-put",
-                xhrStatus: xhr.status,
-                xhrStatusText: xhr.statusText,
-                xhrResponse: (xhr.responseText || "").slice(0, 1000),
-              });
-              reject(new Error("Failed to upload file to storage"));
-            }
-          };
-          xhr.onerror = () => {
-            reportClientFailure("Network error reaching R2", { phase: "single-put" });
-            reject(new Error("Network error during upload"));
-          };
-          xhr.ontimeout = () => {
-            reportClientFailure("XHR timeout", { phase: "single-put" });
-            reject(new Error("Upload timed out"));
-          };
-          xhr.onabort = () => reject(new Error("Upload cancelled"));
-
-          xhr.send(selectedFile);
-        });
       }
 
       setUploadProgress(100);
