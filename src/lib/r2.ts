@@ -5,7 +5,19 @@
  * Provides presigned URLs for secure file uploads and downloads
  */
 
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
+  PutBucketCorsCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { db } from "@/lib/db";
 
@@ -277,6 +289,134 @@ export class R2Storage {
       r2Logger.error({ err: error }, `[R2] Failed to get file ${key}:`);
       return null;
     }
+  }
+
+  /**
+   * Start a multipart upload. Returns the uploadId the client needs to
+   * reference for every UploadPart call and the final
+   * CompleteMultipartUpload. Used for files >100MB where a single PUT
+   * is too fragile across residential / CGNAT networks (long-lived
+   * TCP connections get idle-killed, browser memory pressure builds,
+   * etc.) -- multipart breaks the file into discrete short PUTs that
+   * can each be retried independently.
+   */
+  async createMultipartUpload(
+    key: string,
+    options: UploadOptions = {}
+  ): Promise<{ uploadId: string }> {
+    const command = new CreateMultipartUploadCommand({
+      Bucket: this.config.bucketName,
+      Key: key,
+      Metadata: options.metadata,
+    });
+    const response = await this.client.send(command);
+    if (!response.UploadId) {
+      throw new Error("R2 did not return UploadId from CreateMultipartUpload");
+    }
+    return { uploadId: response.UploadId };
+  }
+
+  /**
+   * Presigned URL for uploading a single part. Each part is its own
+   * short PUT from the browser; the client collects the per-part ETag
+   * R2 returns and passes them all to completeMultipartUpload.
+   *
+   * NOTE: ETag is exposed to JavaScript only if the bucket CORS rule
+   * has `Access-Control-Expose-Headers: ETag`. That's set by
+   * applyDefaultCors() below; run it once after deploy.
+   */
+  async getUploadPartUrl(
+    key: string,
+    uploadId: string,
+    partNumber: number,
+    expiresIn = 3600
+  ): Promise<string> {
+    const command = new UploadPartCommand({
+      Bucket: this.config.bucketName,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+    });
+    return await getSignedUrl(this.client, command, {
+      expiresIn,
+      // Same reason as getUploadUrl -- don't bake any non-host headers
+      // into the signed URL; the browser's PUT only needs to match the
+      // host signature.
+      unhoistableHeaders: new Set(),
+    });
+  }
+
+  /**
+   * Finalize a multipart upload. R2 stitches the parts in the
+   * specified order and the object becomes readable as a single
+   * object at `key`. Parts MUST be sorted by partNumber ascending.
+   */
+  async completeMultipartUpload(
+    key: string,
+    uploadId: string,
+    parts: Array<{ partNumber: number; etag: string }>
+  ): Promise<void> {
+    const sorted = [...parts].sort((a, b) => a.partNumber - b.partNumber);
+    const command = new CompleteMultipartUploadCommand({
+      Bucket: this.config.bucketName,
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: {
+        Parts: sorted.map((p) => ({
+          PartNumber: p.partNumber,
+          ETag: p.etag,
+        })),
+      },
+    });
+    await this.client.send(command);
+  }
+
+  /**
+   * Abort a multipart upload and free the parts already uploaded.
+   * Safe to call multiple times; R2 returns success if the upload was
+   * already gone.
+   */
+  async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+    const command = new AbortMultipartUploadCommand({
+      Bucket: this.config.bucketName,
+      Key: key,
+      UploadId: uploadId,
+    });
+    try {
+      await this.client.send(command);
+    } catch (err) {
+      r2Logger.warn({ err: String(err), key, uploadId }, "abortMultipartUpload failed (non-fatal)");
+    }
+  }
+
+  /**
+   * Install the bucket CORS rules we need for browser uploads:
+   *   - allow PUT/POST/GET/DELETE/HEAD from the public app origin
+   *   - allow `Content-Type` request header (and `If-*` for resumable
+   *     retries)
+   *   - EXPOSE the `ETag` response header so multipart upload clients
+   *     can read it from JS and feed it into CompleteMultipartUpload.
+   *     Without this, multipart uploads silently fail at the finalize
+   *     step because the client has no ETags to send.
+   *
+   * Idempotent -- PutBucketCors replaces the entire rule set.
+   */
+  async applyDefaultCors(allowedOrigins: string[]): Promise<void> {
+    const command = new PutBucketCorsCommand({
+      Bucket: this.config.bucketName,
+      CORSConfiguration: {
+        CORSRules: [
+          {
+            AllowedOrigins: allowedOrigins,
+            AllowedMethods: ["GET", "PUT", "POST", "DELETE", "HEAD"],
+            AllowedHeaders: ["content-type", "if-match", "if-none-match"],
+            ExposeHeaders: ["ETag"],
+            MaxAgeSeconds: 3600,
+          },
+        ],
+      },
+    });
+    await this.client.send(command);
   }
 
   /**

@@ -90,98 +90,226 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
     setIsUploading(true);
     setUploadProgress(2);
 
+    // Files above this size go through R2 multipart upload (separate
+    // short PUTs per chunk) instead of a single browser-to-R2 PUT.
+    // Single-PUT works fine for small files; at >100MB the long-lived
+    // TCP becomes fragile across residential / CGNAT networks and
+    // failures surface as the misleading "CORS request did not
+    // succeed". 50MB chunks → 18 parts for a 900MB file.
+    const MULTIPART_THRESHOLD = 100 * 1024 * 1024;
+    const CHUNK_SIZE = 50 * 1024 * 1024;
+
+    const reportClientFailure = (reason: string, extra: Record<string, unknown> = {}) => {
+      try {
+        void fetch("/api/error-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: `[digital-file-upload] ${reason}`,
+            url: typeof window !== "undefined" ? window.location.href : "",
+            metadata: {
+              fileName: selectedFile.name,
+              fileSize: selectedFile.size,
+              fileType: selectedFile.type || "application/octet-stream",
+              userAgent: navigator.userAgent,
+              ...extra,
+            },
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch {}
+    };
+
     try {
-      // Step 1: Get presigned upload URL from API
-      const res = await apiFetch("/api/creator/digital-files", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({
-          projectId,
-          fileName: selectedFile.name,
-          fileSize: selectedFile.size,
-          mimeType: selectedFile.type || "application/octet-stream",
-          name: selectedFile.name,
-        }),
-      });
+      if (selectedFile.size > MULTIPART_THRESHOLD) {
+        // ---- Multipart path ----
+        const initRes = await apiFetch("/api/creator/digital-files/multipart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "init",
+            projectId,
+            fileName: selectedFile.name,
+            fileSize: selectedFile.size,
+            mimeType: selectedFile.type || "application/octet-stream",
+            name: selectedFile.name,
+          }),
+        });
+        if (!initRes.ok) {
+          const data = await initRes.json();
+          throw new Error(data.error || "Failed to initiate multipart upload");
+        }
+        const { fileId, uploadId } = await initRes.json();
+        setUploadProgress(5);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to initiate upload");
-      }
+        const totalParts = Math.ceil(selectedFile.size / CHUNK_SIZE);
+        const parts: { partNumber: number; etag: string }[] = [];
+        let bytesUploaded = 0;
 
-      const { uploadUrl } = await res.json();
-      setUploadProgress(5);
+        try {
+          for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+            const start = (partNumber - 1) * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, selectedFile.size);
+            const chunk = selectedFile.slice(start, end);
 
-      // Step 2: Upload file directly to R2 using XMLHttpRequest for real progress tracking
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadUrl);
-        xhr.setRequestHeader("Content-Type", selectedFile.type || "application/octet-stream");
-
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            // Map upload progress to 5-95% range (5% for API call, 95-100% for completion)
-            const percent = Math.round(5 + (event.loaded / event.total) * 90);
-            setUploadProgress(percent);
-          }
-        };
-
-        // Capture diagnostic info on failure so the server log can show
-        // what actually went wrong with the direct-to-R2 PUT. Without
-        // this, browser-to-R2 PUT failures are completely invisible to
-        // our backend -- the API call to mint the presigned URL
-        // succeeds, the browser uploads, and any failure (CORS, DNS,
-        // body size, etc.) only surfaces as "Network error" in the UI
-        // with no server-side trace.
-        const reportFailure = (reason: string, extra: Record<string, unknown> = {}) => {
-          try {
-            const u = new URL(uploadUrl);
-            void fetch("/api/error-report", {
+            const signRes = await apiFetch("/api/creator/digital-files/multipart", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                message: `[digital-file-upload] ${reason}`,
-                url: typeof window !== "undefined" ? window.location.href : "",
-                metadata: {
-                  uploadHost: u.host,
-                  uploadPath: u.pathname,
-                  fileName: selectedFile.name,
-                  fileSize: selectedFile.size,
-                  fileType: selectedFile.type || "application/octet-stream",
-                  xhrStatus: xhr.status,
-                  xhrStatusText: xhr.statusText,
-                  xhrReadyState: xhr.readyState,
-                  xhrResponse: (xhr.responseText || "").slice(0, 1000),
-                  userAgent: navigator.userAgent,
-                  ...extra,
-                },
+                action: "sign-part",
+                fileId,
+                uploadId,
+                partNumber,
               }),
-              keepalive: true,
-            }).catch(() => {});
-          } catch {}
-        };
+            });
+            if (!signRes.ok) {
+              const data = await signRes.json();
+              throw new Error(data.error || "Failed to sign part");
+            }
+            const { url } = await signRes.json();
 
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
-            reportFailure("HTTP error from R2", { phase: "onload" });
-            reject(new Error("Failed to upload file to storage"));
+            const etag = await new Promise<string>((resolve, reject) => {
+              const xhr = new XMLHttpRequest();
+              xhr.open("PUT", url);
+              // Don't set Content-Type so the browser doesn't add a
+              // header that wasn't part of the signature.
+
+              xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                  const total = selectedFile.size;
+                  const done = bytesUploaded + event.loaded;
+                  setUploadProgress(Math.round(5 + (done / total) * 90));
+                }
+              };
+
+              xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                  // ETag is exposed only if the bucket CORS allows it
+                  // via ExposeHeaders -- otherwise this returns null
+                  // and the upload can't complete. Hit /api/admin/r2/
+                  // update-cors once after deploy.
+                  const et = xhr.getResponseHeader("ETag") || xhr.getResponseHeader("etag");
+                  if (!et) {
+                    reportClientFailure("Part response missing ETag (CORS ExposeHeaders not set?)", {
+                      partNumber,
+                      phase: "multipart-part",
+                    });
+                    reject(new Error("R2 did not expose ETag — run /api/admin/r2/update-cors"));
+                    return;
+                  }
+                  resolve(et);
+                } else {
+                  reportClientFailure("HTTP error uploading part", {
+                    partNumber,
+                    xhrStatus: xhr.status,
+                    xhrStatusText: xhr.statusText,
+                    xhrResponse: (xhr.responseText || "").slice(0, 1000),
+                    phase: "multipart-part",
+                  });
+                  reject(new Error(`Part ${partNumber} failed with status ${xhr.status}`));
+                }
+              };
+              xhr.onerror = () => {
+                reportClientFailure("Network error uploading part", {
+                  partNumber,
+                  phase: "multipart-part",
+                });
+                reject(new Error(`Network error on part ${partNumber}`));
+              };
+              xhr.onabort = () => reject(new Error("Upload cancelled"));
+
+              xhr.send(chunk);
+            });
+
+            parts.push({ partNumber, etag });
+            bytesUploaded += end - start;
           }
-        };
 
-        xhr.onerror = () => {
-          reportFailure("Network error reaching R2", { phase: "onerror" });
-          reject(new Error("Network error during upload"));
-        };
-        xhr.ontimeout = () => {
-          reportFailure("XHR timeout", { phase: "ontimeout" });
-          reject(new Error("Upload timed out"));
-        };
-        xhr.onabort = () => reject(new Error("Upload cancelled"));
+          const completeRes = await apiFetch("/api/creator/digital-files/multipart", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "complete",
+              fileId,
+              uploadId,
+              parts,
+            }),
+          });
+          if (!completeRes.ok) {
+            const data = await completeRes.json();
+            throw new Error(data.error || "Failed to complete upload");
+          }
+        } catch (err) {
+          // Best-effort abort so R2 doesn't keep storing the partial
+          // parts (and the DB row goes too). Don't await failure --
+          // we want to surface the original error.
+          void apiFetch("/api/creator/digital-files/multipart", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "abort", fileId, uploadId }),
+          }).catch(() => {});
+          throw err;
+        }
+      } else {
+        // ---- Single-PUT path (small files) ----
+        const res = await apiFetch("/api/creator/digital-files", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId,
+            fileName: selectedFile.name,
+            fileSize: selectedFile.size,
+            mimeType: selectedFile.type || "application/octet-stream",
+            name: selectedFile.name,
+          }),
+        });
 
-        xhr.send(selectedFile);
-      });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to initiate upload");
+        }
+
+        const { uploadUrl } = await res.json();
+        setUploadProgress(5);
+
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", uploadUrl);
+          xhr.setRequestHeader("Content-Type", selectedFile.type || "application/octet-stream");
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percent = Math.round(5 + (event.loaded / event.total) * 90);
+              setUploadProgress(percent);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reportClientFailure("HTTP error from R2", {
+                phase: "single-put",
+                xhrStatus: xhr.status,
+                xhrStatusText: xhr.statusText,
+                xhrResponse: (xhr.responseText || "").slice(0, 1000),
+              });
+              reject(new Error("Failed to upload file to storage"));
+            }
+          };
+          xhr.onerror = () => {
+            reportClientFailure("Network error reaching R2", { phase: "single-put" });
+            reject(new Error("Network error during upload"));
+          };
+          xhr.ontimeout = () => {
+            reportClientFailure("XHR timeout", { phase: "single-put" });
+            reject(new Error("Upload timed out"));
+          };
+          xhr.onabort = () => reject(new Error("Upload cancelled"));
+
+          xhr.send(selectedFile);
+        });
+      }
 
       setUploadProgress(100);
       toast.success("File uploaded successfully. Create distribution rules to send it to backers.");
