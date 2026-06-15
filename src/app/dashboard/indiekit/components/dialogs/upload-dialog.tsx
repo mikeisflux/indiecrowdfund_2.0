@@ -126,15 +126,58 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
           }
         };
 
+        // Capture diagnostic info on failure so the server log can show
+        // what actually went wrong with the direct-to-R2 PUT. Without
+        // this, browser-to-R2 PUT failures are completely invisible to
+        // our backend -- the API call to mint the presigned URL
+        // succeeds, the browser uploads, and any failure (CORS, DNS,
+        // body size, etc.) only surfaces as "Network error" in the UI
+        // with no server-side trace.
+        const reportFailure = (reason: string, extra: Record<string, unknown> = {}) => {
+          try {
+            const u = new URL(uploadUrl);
+            void fetch("/api/error-report", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: `[digital-file-upload] ${reason}`,
+                url: typeof window !== "undefined" ? window.location.href : "",
+                metadata: {
+                  uploadHost: u.host,
+                  uploadPath: u.pathname,
+                  fileName: selectedFile.name,
+                  fileSize: selectedFile.size,
+                  fileType: selectedFile.type || "application/octet-stream",
+                  xhrStatus: xhr.status,
+                  xhrStatusText: xhr.statusText,
+                  xhrReadyState: xhr.readyState,
+                  xhrResponse: (xhr.responseText || "").slice(0, 1000),
+                  userAgent: navigator.userAgent,
+                  ...extra,
+                },
+              }),
+              keepalive: true,
+            }).catch(() => {});
+          } catch {}
+        };
+
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve();
           } else {
+            reportFailure("HTTP error from R2", { phase: "onload" });
             reject(new Error("Failed to upload file to storage"));
           }
         };
 
-        xhr.onerror = () => reject(new Error("Network error during upload"));
+        xhr.onerror = () => {
+          reportFailure("Network error reaching R2", { phase: "onerror" });
+          reject(new Error("Network error during upload"));
+        };
+        xhr.ontimeout = () => {
+          reportFailure("XHR timeout", { phase: "ontimeout" });
+          reject(new Error("Upload timed out"));
+        };
         xhr.onabort = () => reject(new Error("Upload cancelled"));
 
         xhr.send(selectedFile);
