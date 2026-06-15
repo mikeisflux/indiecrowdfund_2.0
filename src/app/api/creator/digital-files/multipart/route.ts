@@ -15,16 +15,28 @@ const multipartLogger = logger.child({ module: "creator-digital-files-multipart"
 // the client collects the per-part ETag, then calls /complete which
 // stitches them server-side via R2's CompleteMultipartUpload.
 //
-// One route, four actions to keep auth + ownership checks in one
+// One route, five actions to keep auth + ownership checks in one
 // place:
-//   - init      → create DigitalFile row + R2 multipart upload
-//                 returns { fileId, key, uploadId }
-//   - sign-part → presigned URL for one part number
-//                 returns { url }
-//   - complete  → finalize with the list of ETags
-//                 returns { file }
-//   - abort     → drop the partial upload + DB row
-//                 returns { success }
+//   - init        → create DigitalFile row + R2 multipart upload
+//                   returns { fileId, key, uploadId }
+//   - sign-part   → presigned URL for one part number (browser-direct)
+//                   returns { url }
+//   - upload-part → server-proxied chunk upload (bypasses R2 CORS /
+//                   browser-to-R2 connectivity issues). Body is the
+//                   raw chunk bytes; query params carry the
+//                   coordinates. returns { etag }
+//   - complete    → finalize with the list of ETags
+//                   returns { file }
+//   - abort       → drop the partial upload + DB row
+//                   returns { success }
+//
+// The upload-part action is what the digital-files dialog uses by
+// default for >100MB files, because the browser-direct sign-part path
+// has been failing for creators on consumer networks (the
+// r2.cloudflarestorage.com hostname is blocked at some layer they
+// don't control). Server-proxy uploads same-origin, so the only path
+// the browser sees is indiecrowdfund.com -- and our server forwards
+// the bytes over its own clean upstream.
 
 async function verifyFileAccess(fileId: string, userId: string) {
   const file = await db.digitalFile.findUnique({
@@ -56,13 +68,62 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { action } = body;
-
     const r2 = await getR2Storage();
     if (!r2) {
       return NextResponse.json({ error: "Storage not configured" }, { status: 500 });
     }
+
+    // upload-part has a binary body (raw chunk bytes); coords come in
+    // via query string so we don't have to multipart-form-data parse a
+    // huge body. Detect this action up front and avoid the JSON parse.
+    const url = new URL(request.url);
+    const queryAction = url.searchParams.get("action");
+    if (queryAction === "upload-part") {
+      const fileId = url.searchParams.get("fileId");
+      const uploadId = url.searchParams.get("uploadId");
+      const partNumberStr = url.searchParams.get("partNumber");
+      const partNumber = partNumberStr ? Number(partNumberStr) : NaN;
+
+      if (!fileId || !uploadId || !Number.isInteger(partNumber)) {
+        return NextResponse.json(
+          { error: "fileId, uploadId, partNumber required as query params" },
+          { status: 400 }
+        );
+      }
+      if (partNumber < 1 || partNumber > 10000) {
+        return NextResponse.json(
+          { error: "partNumber must be between 1 and 10000" },
+          { status: 400 }
+        );
+      }
+
+      const file = await verifyFileAccess(fileId, session.user.id);
+      if (!file) {
+        return NextResponse.json({ error: "File not found" }, { status: 404 });
+      }
+
+      // Buffer the chunk (≤100MB by client convention). Streaming
+      // straight to R2 would be lighter on memory but Next.js's
+      // request.body is a ReadableStream that the AWS SDK doesn't
+      // know how to set Content-Length on without consumption, and
+      // R2's UploadPart requires Content-Length up front. 50MB
+      // buffer × per-worker concurrency is well within the box's
+      // budget.
+      const arrayBuffer = await request.arrayBuffer();
+      const buf = Buffer.from(arrayBuffer);
+
+      const { etag } = await r2.uploadPart(
+        file.r2StorageKey,
+        uploadId,
+        partNumber,
+        buf
+      );
+
+      return NextResponse.json({ etag });
+    }
+
+    const body = await request.json();
+    const { action } = body;
 
     if (action === "init") {
       const {

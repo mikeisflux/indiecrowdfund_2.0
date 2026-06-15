@@ -152,27 +152,29 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
             const end = Math.min(start + CHUNK_SIZE, selectedFile.size);
             const chunk = selectedFile.slice(start, end);
 
-            const signRes = await apiFetch("/api/creator/digital-files/multipart", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                action: "sign-part",
-                fileId,
-                uploadId,
-                partNumber,
-              }),
-            });
-            if (!signRes.ok) {
-              const data = await signRes.json();
-              throw new Error(data.error || "Failed to sign part");
-            }
-            const { url } = await signRes.json();
+            // Server-proxy upload: browser POSTs the chunk to our
+            // origin (same-origin -> no CORS preflight, no
+            // r2.cloudflarestorage.com to reach), and our server
+            // forwards to R2 over its own clean upstream. This
+            // bypasses the network-layer block creators have been
+            // hitting on direct browser-to-R2 PUTs.
+            //
+            // CSRF: include the token so the proxy lets the POST
+            // through. apiFetch can't be used here because it
+            // JSON.stringify's the body -- we need raw bytes.
+            const csrfToken =
+              typeof document !== "undefined"
+                ? document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ""
+                : "";
 
             const etag = await new Promise<string>((resolve, reject) => {
               const xhr = new XMLHttpRequest();
-              xhr.open("PUT", url);
-              // Don't set Content-Type so the browser doesn't add a
-              // header that wasn't part of the signature.
+              const proxyUrl = `/api/creator/digital-files/multipart?action=upload-part&fileId=${encodeURIComponent(
+                fileId
+              )}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`;
+              xhr.open("POST", proxyUrl);
+              xhr.setRequestHeader("Content-Type", "application/octet-stream");
+              if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
 
               xhr.upload.onprogress = (event) => {
                 if (event.lengthComputable) {
@@ -184,35 +186,41 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
 
               xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
-                  // ETag is exposed only if the bucket CORS allows it
-                  // via ExposeHeaders -- otherwise this returns null
-                  // and the upload can't complete. Hit /api/admin/r2/
-                  // update-cors once after deploy.
-                  const et = xhr.getResponseHeader("ETag") || xhr.getResponseHeader("etag");
-                  if (!et) {
-                    reportClientFailure("Part response missing ETag (CORS ExposeHeaders not set?)", {
+                  try {
+                    const data = JSON.parse(xhr.responseText);
+                    if (!data.etag) {
+                      reportClientFailure("Proxy response missing etag", {
+                        partNumber,
+                        phase: "proxy-upload-part",
+                        xhrResponse: (xhr.responseText || "").slice(0, 500),
+                      });
+                      reject(new Error(`Part ${partNumber} returned no etag`));
+                      return;
+                    }
+                    resolve(data.etag);
+                  } catch {
+                    reportClientFailure("Proxy response parse failed", {
                       partNumber,
-                      phase: "multipart-part",
+                      phase: "proxy-upload-part",
+                      xhrResponse: (xhr.responseText || "").slice(0, 500),
                     });
-                    reject(new Error("R2 did not expose ETag — run /api/admin/r2/update-cors"));
-                    return;
+                    reject(new Error(`Part ${partNumber} parse failed`));
                   }
-                  resolve(et);
                 } else {
-                  reportClientFailure("HTTP error uploading part", {
+                  reportClientFailure("HTTP error uploading part via proxy", {
                     partNumber,
                     xhrStatus: xhr.status,
                     xhrStatusText: xhr.statusText,
                     xhrResponse: (xhr.responseText || "").slice(0, 1000),
-                    phase: "multipart-part",
+                    phase: "proxy-upload-part",
                   });
                   reject(new Error(`Part ${partNumber} failed with status ${xhr.status}`));
                 }
               };
               xhr.onerror = () => {
-                reportClientFailure("Network error uploading part", {
+                reportClientFailure("Network error uploading part via proxy", {
                   partNumber,
-                  phase: "multipart-part",
+                  phase: "proxy-upload-part",
                 });
                 reject(new Error(`Network error on part ${partNumber}`));
               };

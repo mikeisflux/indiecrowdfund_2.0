@@ -317,6 +317,35 @@ export class R2Storage {
   }
 
   /**
+   * Server-side upload of a single multipart part. Used when the
+   * browser can't reach R2 directly (CORS, residential ISP /
+   * corporate firewall blocking r2.cloudflarestorage.com, etc.). The
+   * client POSTs each chunk to our server which forwards it here.
+   * Returns the part's ETag so the client can pass it into
+   * completeMultipartUpload.
+   */
+  async uploadPart(
+    key: string,
+    uploadId: string,
+    partNumber: number,
+    body: Buffer
+  ): Promise<{ etag: string }> {
+    const command = new UploadPartCommand({
+      Bucket: this.config.bucketName,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+      Body: body,
+      ContentLength: body.length,
+    });
+    const response = await this.client.send(command);
+    if (!response.ETag) {
+      throw new Error("R2 did not return ETag from UploadPart");
+    }
+    return { etag: response.ETag };
+  }
+
+  /**
    * Presigned URL for uploading a single part. Each part is its own
    * short PUT from the browser; the client collects the per-part ETag
    * R2 returns and passes them all to completeMultipartUpload.
