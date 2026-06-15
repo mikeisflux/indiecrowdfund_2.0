@@ -60,7 +60,16 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (eventType) {
-      case "payment.succeeded": {
+      case "payment.succeeded":
+      case "payment_succeeded": {
+        // Whop's webhook dashboard uses UNDERSCORE event names
+        // (payment_succeeded). Our handler used DOT names (payment.succeeded)
+        // which silently never matched -- every Whop payment hit the
+        // default branch, our handler logged "Unhandled" and did nothing,
+        // and the pledge stayed PENDING forever. Found Jun 15 when a
+        // backer paid via Cash App, money landed at Whop, our DB stayed
+        // PENDING, and he opened a refund case. Accept both forms so a
+        // future Whop SDK rename can't break this again.
         const data = event.data;
         // Whop passes metadata on the checkout config — find pledge by whopCheckoutId
         const checkoutConfigId = data?.checkout_configuration_id as string | undefined;
@@ -158,7 +167,8 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      case "payment.failed": {
+      case "payment.failed":
+      case "payment_failed": {
         const data = event.data;
         const metadata = data?.metadata as Record<string, string> | undefined;
         const pledgeId = metadata?.pledgeId;
@@ -174,7 +184,8 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      case "payment.pending": {
+      case "payment.pending":
+      case "payment_pending": {
         const data = event.data;
         const metadata = data?.metadata as Record<string, string> | undefined;
         const pledgeId = metadata?.pledgeId;
