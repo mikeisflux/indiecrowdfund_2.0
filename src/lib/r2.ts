@@ -109,6 +109,22 @@ export function createR2Client(config: R2Config): S3Client {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
     },
+    // Disable the AWS SDK v3.730+ default request checksum injection.
+    // Without this, the SDK adds `x-amz-checksum-crc32` and
+    // `x-amz-sdk-checksum-algorithm: CRC32` to every PutObjectCommand
+    // and bakes them into the presigned URL's query string. The browser
+    // is then required to send those headers on the PUT, and R2 must
+    // both accept them on the request AND echo Access-Control-Allow-
+    // Headers covering them. R2's CORS *does* allow the headers
+    // (verified via direct OPTIONS probe), but Firefox's preflight
+    // still fails as "CORS request did not succeed, Status code:
+    // (null)" -- which usually means the actual response lacked the
+    // expected CORS echo or the SDK-added checksum header was rejected
+    // mid-handshake. Either way, R2 doesn't need or use these
+    // checksums; turning them off makes presigned PUTs go through the
+    // way they always did on SDK <3.730.
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
     // Force path-style URLs (https://<acct>.r2.cloudflarestorage.com/<bucket>/<key>)
     // instead of the SDK's default virtual-host style
     // (https://<bucket>.<acct>.r2.cloudflarestorage.com/<key>). Both are
