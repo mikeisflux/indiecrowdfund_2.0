@@ -109,6 +109,22 @@ export function createR2Client(config: R2Config): S3Client {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
     },
+    // Force path-style URLs (https://<acct>.r2.cloudflarestorage.com/<bucket>/<key>)
+    // instead of the SDK's default virtual-host style
+    // (https://<bucket>.<acct>.r2.cloudflarestorage.com/<key>). Both are
+    // valid on R2 but they're DIFFERENT HOSTNAMES, so they're different
+    // CORS scopes. The R2 dashboard's CORS configuration applies to the
+    // path-style hostname; presigned PUTs to the virtual-host hostname
+    // were failing the browser's CORS preflight with no useful status
+    // ("CORS request did not succeed", reported as "Network error" in
+    // the upload UI). Symptom matched verbatim with a creator's
+    // DevTools trace -- path-style probe returned 204 + correct
+    // Allow-Origin, virtual-host probe blew up the preflight.
+    //
+    // forcePathStyle aligns the signed URL's hostname with the only
+    // CORS-configured one, so the browser's preflight succeeds and
+    // the PUT goes through.
+    forcePathStyle: true,
   });
 }
 
