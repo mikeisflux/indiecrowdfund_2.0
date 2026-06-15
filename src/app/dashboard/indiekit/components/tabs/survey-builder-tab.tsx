@@ -398,43 +398,43 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
     });
   };
 
-  const saveRewardQuestions = async (rewardId: string) => {
-    if (!projectId) return;
+  // Persist one reward's variants + custom questions to the DB. Pure
+  // I/O -- no toast, no setItemQuestions. Returns the resulting state so
+  // the caller can decide whether to surface a toast or batch the map
+  // update across multiple rewards. Used by both the per-card "Save
+  // Questions for X" button AND the top-bar "Save Draft" button, so a
+  // creator who clicks trash on a question and then Save Draft (the
+  // single obvious "save everything" affordance) actually persists the
+  // delete -- before, Save Draft only sent the General Questions tab
+  // payload and silently dropped per-reward edits.
+  const persistRewardQuestions = async (
+    rewardId: string,
+    source: ItemQuestion
+  ): Promise<{ deleted: true } | { itemQuestion: ItemQuestion } | { error: string }> => {
+    if (!projectId) return { error: "No project selected" };
 
-    const itemQuestion = itemQuestions.get(rewardId);
-    if (!itemQuestion) return;
-
-    // Filter out empty variants and questions
-    const variants = itemQuestion.variants.filter(v => v.variantType && v.options.some(o => o.trim()));
-    const customQuestions = itemQuestion.customQuestions.filter(q => q.question.trim());
+    const variants = source.variants.filter(v => v.variantType && v.options.some(o => o.trim()));
+    const customQuestions = source.customQuestions.filter(q => q.question.trim());
 
     if (variants.length === 0 && customQuestions.length === 0) {
-      // If there's an existing question but now empty, delete it
-      if (itemQuestion.id) {
-        setSavingReward(rewardId);
+      if (source.id) {
         try {
-          await apiFetch(`/api/projects/${projectId}/survey/item-questions?questionId=${itemQuestion.id}`, {
-            method: "DELETE",
-          });
-          const newMap = new Map(itemQuestions);
-          newMap.delete(rewardId);
-          setItemQuestions(newMap);
-          toast.success("Questions removed");
+          await apiFetch(
+            `/api/projects/${projectId}/survey/item-questions?questionId=${source.id}`,
+            { method: "DELETE" }
+          );
         } catch {
-          toast.error("Failed to remove questions");
-        } finally {
-          setSavingReward(null);
+          return { error: "Failed to remove questions" };
         }
       }
-      return;
+      return { deleted: true };
     }
 
-    setSavingReward(rewardId);
     try {
       const payload = {
-        ...(itemQuestion.id ? { questionId: itemQuestion.id } : {}),
+        ...(source.id ? { questionId: source.id } : {}),
         rewardId,
-        itemName: itemQuestion.itemName,
+        itemName: source.itemName,
         variants: variants.map((v, i) => ({
           ...v,
           options: v.options.filter(o => o.trim()),
@@ -447,33 +447,79 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
         })),
       };
 
-      const method = itemQuestion.id ? "PUT" : "POST";
+      const method = source.id ? "PUT" : "POST";
       const response = await apiFetch(`/api/projects/${projectId}/survey/item-questions`, {
         method,
         json: payload,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const newMap = new Map(itemQuestions);
-        newMap.set(rewardId, {
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        return { error: err.error || "Failed to save questions" };
+      }
+
+      const data = await response.json();
+      return {
+        itemQuestion: {
           id: data.itemQuestion.id,
           rewardId,
           itemName: data.itemQuestion.itemName,
           variants: data.itemQuestion.variants || [],
           customQuestions: data.itemQuestion.customQuestions || [],
-        });
-        setItemQuestions(newMap);
-        toast.success("Questions saved");
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to save questions");
-      }
+        },
+      };
     } catch {
-      toast.error("Failed to save questions");
+      return { error: "Failed to save questions" };
+    }
+  };
+
+  const saveRewardQuestions = async (rewardId: string) => {
+    const itemQuestion = itemQuestions.get(rewardId);
+    if (!itemQuestion) return;
+
+    setSavingReward(rewardId);
+    try {
+      const result = await persistRewardQuestions(rewardId, itemQuestion);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      const newMap = new Map(itemQuestions);
+      if ("deleted" in result) {
+        newMap.delete(rewardId);
+        toast.success("Questions removed");
+      } else {
+        newMap.set(rewardId, result.itemQuestion);
+        toast.success("Questions saved");
+      }
+      setItemQuestions(newMap);
     } finally {
       setSavingReward(null);
     }
+  };
+
+  // Flush every reward's in-memory itemQuestions to the DB. Called from
+  // the top-bar Save Draft so a single click persists ALL edits
+  // (general questions + every reward's variants + custom questions),
+  // matching what a creator expects when they see a single "Save Draft"
+  // button at the top of the page.
+  const persistAllRewardQuestions = async (): Promise<string[]> => {
+    const errors: string[] = [];
+    const newMap = new Map(itemQuestions);
+    for (const [rewardId, itemQuestion] of itemQuestions) {
+      const result = await persistRewardQuestions(rewardId, itemQuestion);
+      if ("error" in result) {
+        errors.push(`${itemQuestion.itemName}: ${result.error}`);
+        continue;
+      }
+      if ("deleted" in result) {
+        newMap.delete(rewardId);
+      } else {
+        newMap.set(rewardId, result.itemQuestion);
+      }
+    }
+    setItemQuestions(newMap);
+    return errors;
   };
 
   const tiers = rewards.filter(r => r.type === "TIER");
@@ -519,7 +565,18 @@ export function SurveyBuilderTab({ questions = [], projectId }: SurveyBuilderTab
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error || "Failed to save");
-              toast.success("Survey draft saved!");
+
+              // Also flush every per-reward customQuestions/variants
+              // edit. Trash + Add Question controls only mutate local
+              // state; before this, Save Draft only saved the General
+              // Questions tab and the creator's per-reward deletes
+              // silently failed to persist.
+              const rewardErrors = await persistAllRewardQuestions();
+              if (rewardErrors.length > 0) {
+                toast.error(`Some reward questions failed to save: ${rewardErrors.join("; ")}`);
+              } else {
+                toast.success("Survey draft saved!");
+              }
             } catch (error) {
               toast.error(error instanceof Error ? error.message : "Failed to save");
             }
