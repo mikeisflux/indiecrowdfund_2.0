@@ -484,6 +484,17 @@ export function ErrorReporter() {
       // responses (which back data fetches) belong in admin logs.
       const isPageRouteFetch = !requestUrl.startsWith("/api/") && !requestUrl.startsWith("http");
       if (response.status >= 400 && !isInternal && !isPageRouteFetch) {
+        // Best-effort read the response body so Sentry shows the
+        // server's actual error message (e.g. "Reward sold out",
+        // "Invalid addons", "This campaign has ended") instead of
+        // just the HTTP status. Clone first so the original caller
+        // can still consume the response. Cap at 500 chars to avoid
+        // dumping huge bodies into the error tracker.
+        let responseBody: string | undefined;
+        try {
+          responseBody = (await response.clone().text()).slice(0, 500);
+        } catch {}
+
         reportError(
           `HTTP ${response.status} ${response.statusText}: ${requestUrl}`,
           undefined,
@@ -491,6 +502,7 @@ export function ErrorReporter() {
             source: "fetch-error-interceptor",
             statusCode: response.status,
             requestUrl,
+            responseBody,
             referrer: document.referrer || undefined,
           }
         );
