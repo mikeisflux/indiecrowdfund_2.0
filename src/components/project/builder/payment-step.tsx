@@ -326,8 +326,12 @@ export function PaymentStep() {
   const paypalTotalFees = paypalFee + platformFee;
   const paypalNetAmount = goalAmount - paypalTotalFees;
 
-  // Whop: 3% per transaction
-  const whopFee = goalAmount * 0.03;
+  // Whop's effective per-transaction fee on domestic US cards is
+  // 3.5% + $0.37 (2.7% payment processing + 0.8% orchestration +
+  // $0.30 fixed card + $0.07 fraud prevention -- the breakdown
+  // visible in Whop's Activity feed). International cards add ~1%
+  // currency conversion + $0.03 3D Secure.
+  const whopFee = goalAmount * 0.035 + numTransactions * 0.37;
   const whopTotalFees = whopFee + platformFee;
   const whopNetAmount = goalAmount - whopTotalFees;
 

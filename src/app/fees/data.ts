@@ -56,10 +56,10 @@ export const paypalFeeBreakdown = [
 export const whopFeeBreakdown = [
   {
     title: "Whop Processing Fee",
-    rate: "~3%",
+    rate: "3.5% + $0.37",
     description: "Per-transaction fee charged by Whop",
     details:
-      "Whop's embedded checkout processing fee. Supports all content types including adult/NSFW projects. IndieCrowdfund collects pledges through Whop and pays out your net earnings after deducting this fee at settlement.",
+      "Whop's embedded checkout effective rate on domestic US cards: 2.7% payment processing + 0.8% orchestration + $0.30 fixed card + $0.07 Radar = 3.5% + $0.37 per transaction. International cards add ~1% currency conversion + $0.03 3D Secure; tax-collected jurisdictions add the Whop tax service fee. Supports all content types including adult/NSFW projects. IndieCrowdfund collects pledges through Whop and pays out your net earnings after deducting this fee at settlement.",
   },
   {
     title: "IndieCrowdfund Platform Fee",
@@ -88,8 +88,8 @@ export const comparisonData = [
   {
     platform: "IndieCrowdfund (Whop)",
     platformFee: "3%",
-    paymentFee: "~3% Whop",
-    total: "~6%",
+    paymentFee: "3.5% + $0.37/txn",
+    total: "~6.5%",
     highlight: false,
   },
   // Stripe (Legacy) - hidden for now

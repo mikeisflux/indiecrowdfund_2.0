@@ -181,7 +181,7 @@ export function PaymentProcessorSection({
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
-                <span>~6% total fees (3% Whop + 3% platform)</span>
+                <span>~6.5% total fees (3.5% + $0.37/txn Whop + 3% platform)</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
@@ -292,7 +292,7 @@ export function PaymentProcessorSection({
           </h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span>Whop processing fee (~3%)</span>
+              <span>Whop processing fee (3.5% + $0.37/txn)</span>
               <span className="font-medium">{formatCurrency(whopFee)}</span>
             </div>
             <div className="flex justify-between">

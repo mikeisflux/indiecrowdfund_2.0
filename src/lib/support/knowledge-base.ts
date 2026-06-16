@@ -44,7 +44,7 @@ export const KNOWLEDGE_BASE: KbEntry[] = [
     title: "Platform fees",
     tags: ["fees", "platform fee", "processing fee", "payout"],
     content:
-      "IndieCrowdfund's platform fee is 3% of successfully funded projects. Total fees vary by processor: ~7.5% with Mentom Payments (4% + $0.38/txn + 3% platform), ~6.5% with PayPal (3.49% + $0.49/txn + 3% platform), ~6.5% with Divinity Payments, ~6% with Whop.",
+      "IndieCrowdfund's platform fee is 3% of successfully funded projects. Total fees vary by processor: ~7.5% with Mentom Payments (4% + $0.38/txn + 3% platform), ~6.5% with PayPal (3.49% + $0.49/txn + 3% platform), ~6.5% with Divinity Payments, ~6.5% with Whop (3.5% + $0.37/txn + 3% platform).",
     link: "/fees",
   },
   {

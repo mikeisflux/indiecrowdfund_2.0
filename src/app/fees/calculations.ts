@@ -69,9 +69,26 @@ export function calculateDivinityCoinFees(
   return { divinityPartnerFee, perTransactionFee, platformFee, totalFees, youReceive, feePercentage: (totalFees / amount) * 100 };
 }
 
-// 3% Whop fee, then 3% platform fee on the remainder
-export function calculateWhopFees(amount: number): WhopFeeResult {
-  const whopFee = amount * 0.03;
+// Whop's effective fee on domestic US cards is 3.5% + $0.37 per transaction,
+// not the 2.7% + $0.30 headline rate from their marketing page. The actual
+// per-payment breakdown (visible in Whop's payments CSV) is:
+//   - Payment processing percentage fee: 2.7%
+//   - Orchestration fee: 0.8%
+//   - Fixed card processing fee: $0.30
+//   - Radar (fraud) fee: $0.07
+//   = 3.5% + $0.37
+// International cards add ~1% currency conversion + $0.03 3D Secure, and
+// tax-collected jurisdictions add the Whop tax service fee. We surface the
+// 3.5% + $0.37 baseline since that's what creators on US cards actually pay;
+// non-US surcharges are noted in the docs.
+// Then 3% platform fee on the remainder.
+export function calculateWhopFees(
+  amount: number,
+  averagePledge = 50,
+  numTransactions?: number
+): WhopFeeResult {
+  const txns = numTransactions ?? Math.ceil(amount / averagePledge);
+  const whopFee = amount * 0.035 + txns * 0.37;
   const platformFee = (amount - whopFee) * 0.03;
   const totalFees = whopFee + platformFee;
   const youReceive = amount - totalFees;

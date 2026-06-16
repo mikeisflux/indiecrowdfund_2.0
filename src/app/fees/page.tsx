@@ -198,16 +198,16 @@ export default function FeesPage() {
                       <ol className="text-sm text-zinc-600 dark:text-muted-foreground space-y-1 list-decimal list-inside mb-4">
                         <li>Backer completes checkout via Whop&apos;s embedded form</li>
                         <li>Whop processes the $100 payment immediately</li>
-                        <li>Whop fee (~3% = $3.00) deducted at settlement</li>
-                        <li>Platform fee (3% of $97 = $2.91) deducted at settlement</li>
-                        <li>You receive <strong>$94.09</strong> deposited to your account</li>
+                        <li>Whop fee (3.5% + $0.37 = $3.87) deducted at settlement</li>
+                        <li>Platform fee (3% of $96.13 = $2.88) deducted at settlement</li>
+                        <li>You receive <strong>$93.25</strong> deposited to your account</li>
                       </ol>
                       <p className="text-xs text-muted-foreground">Whop only supports <strong>Keep It All</strong> campaigns — payments are collected immediately regardless of funding goal.</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <TotalBadge color="bg-muted/50 dark:bg-zinc-900/20 text-zinc-700 dark:text-muted-foreground" text="Total fees with Whop: approximately 6% of funds raised" />
+              <TotalBadge color="bg-muted/50 dark:bg-zinc-900/20 text-zinc-700 dark:text-muted-foreground" text="Total fees with Whop: approximately 6.5% of funds raised (US cards; international adds ~1% currency conversion)" />
             </TabsContent>
 
             {/* PayPal */}
@@ -363,7 +363,7 @@ export default function FeesPage() {
                   ) : paymentMethod === "whop" ? (
                     <>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-zinc-600 dark:text-muted-foreground">Whop processing fee (~3%)</span>
+                        <span className="text-zinc-600 dark:text-muted-foreground">Whop processing fee (3.5% + $0.37/txn)</span>
                         <span className="text-red-500">-${whopFees.whopFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b">

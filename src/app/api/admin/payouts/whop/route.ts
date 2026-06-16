@@ -167,12 +167,21 @@ export async function GET(request: NextRequest) {
 
       const effectiveRevenue = Math.round((totalRaised - projectRefunds.partialRefundTotal) * 100) / 100;
 
-      // Whop: 3% fee + Platform: configured rate
+      // Whop's effective per-transaction fee is 3.5% + $0.37 (US cards),
+      // not a flat 3%. Per-payment breakdown from Whop's Activity feed:
+      // 2.7% payment processing + 0.8% orchestration + $0.30 fixed card
+      // + $0.07 fraud prevention. International cards add ~1% currency
+      // conversion + $0.03 3D Secure; tax-collected jurisdictions add
+      // the Whop tax service fee. We compute the baseline here; the
+      // surcharges are tracked separately if we expose them later.
       const platformFeeRate = whopPlatformFeeRate;
-      const whopFeeRate = 0.03; // Whop's own processor fee is fixed at 3%
+      const whopFeeRate = 0.035;
+      const whopPerTransactionFee = 0.37;
       const backerCount = project.pledges.length;
-      const processorFee = Math.round(effectiveRevenue * whopFeeRate * 100) / 100;
-      const perTransactionFee = 0; // Whop doesn't charge per-transaction
+      const processorFee = Math.round(
+        (effectiveRevenue * whopFeeRate + backerCount * whopPerTransactionFee) * 100
+      ) / 100;
+      const perTransactionFee = Math.round(backerCount * whopPerTransactionFee * 100) / 100;
       const partnerFee = processorFee;
       const platformFee = Math.round(effectiveRevenue * platformFeeRate * 100) / 100;
       const platformAndProcessorFees = Math.round((partnerFee + platformFee) * 100) / 100;
