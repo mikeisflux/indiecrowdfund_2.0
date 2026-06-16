@@ -205,18 +205,19 @@ export async function POST(request: NextRequest) {
     // Use processor-specific rates
     //   PayPal Advanced Checkout: 3.49% + $0.49/tx
     //   DivinityCoin: 3% + $0.30/tx
-    //   Whop: ~3% (no per-transaction fee)
+    //   Whop: 3.5% + $0.37/tx (US cards; 2.7% payment processing +
+    //     0.8% orchestration + $0.30 fixed + $0.07 Radar)
     //   Stripe (legacy): 2.9% + $0.30/tx
     const proc = project.paymentProcessor;
     const processorPercentRate =
       proc === "PAYPAL" ? 0.0349
       : proc === "DIVINITYCOIN" ? 0.03
-      : proc === "WHOP" ? 0.03
+      : proc === "WHOP" ? 0.035
       : 0.029; // Stripe / unknown legacy
     const processorFixedFee =
       proc === "PAYPAL" ? 0.49
       : proc === "DIVINITYCOIN" ? 0.30
-      : proc === "WHOP" ? 0
+      : proc === "WHOP" ? 0.37
       : 0.30;
 
     const platformFees = Math.round(grossAmount * platformFeeRate * 100) / 100;
