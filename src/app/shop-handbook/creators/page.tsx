@@ -526,7 +526,7 @@ export default function MarketplaceCreatorHandbookPage() {
                         <p className="text-2xl font-bold text-foreground">$9.99</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">
-                        <p className="text-sm text-muted-foreground">Processor (~3% + $0.30)</p>
+                        <p className="text-sm text-muted-foreground">Processor (varies: $0.60 Divinity / $0.72 Whop / $0.84 PayPal)</p>
                         <p className="text-2xl font-bold text-destructive">-$0.60</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted">
