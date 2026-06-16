@@ -148,7 +148,7 @@ const pricingSteps: Step[] = [
   },
   {
     title: 'Card processing',
-    description: 'Digital Shop sales go through Divinity Payments, PayPal, or Whop — whichever processor you set up. Each has a fee of about 3% + $0.30 per sale. Divinity Payments and Whop accept every content type (including NSFW); PayPal does not allow NSFW.',
+    description: 'Digital Shop sales go through Divinity Payments, PayPal, or Whop — whichever processor you set up. Divinity Payments runs about 3% + $0.30 per sale, PayPal about 3.49% + $0.49, and Whop about 3.5% + $0.37 (US cards; international adds ~1% currency conversion). Divinity Payments and Whop accept every content type (including NSFW); PayPal does not allow NSFW.',
     tip: 'When you set the price, use the fee calculator on the book form to see exactly what hits your bank.',
   },
   {
