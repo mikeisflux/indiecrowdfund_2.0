@@ -22,6 +22,14 @@ interface PayPalPaymentFormProps {
   total: number;
   onSuccess: () => void;
   onError: (message: string) => void;
+  // Override the post-capture flow. Defaults to capturing via
+  // /api/paypal/capture/[orderId] then calling
+  // /api/pledges/[id]/confirm. Survey upcharges set
+  // `upchargeConfirmUrl` to /api/pledges/[id]/confirm-add-items
+  // which captures the order AND applies the items in one call --
+  // skipping the standard capture step (it'd 404 because the
+  // upcharge orderId isn't tied to a Pledge row).
+  upchargeConfirmUrl?: string;
 }
 
 export function PayPalPaymentForm({
@@ -34,6 +42,7 @@ export function PayPalPaymentForm({
   setIsProcessing,
   onSuccess,
   onError,
+  upchargeConfirmUrl,
 }: PayPalPaymentFormProps) {
   const [sdkReady, setSdkReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -124,10 +133,20 @@ export function PayPalPaymentForm({
           async onApprove(data: { orderId: string }) {
             setIsProcessing(true);
             try {
-              const captureRes = await apiFetch(`/api/paypal/capture/${data.orderId}`, { method: "POST" });
-              const captureData = await captureRes.json();
-              if (!captureRes.ok) throw new Error(captureData.error || "Payment capture failed");
-              await apiFetch(`/api/pledges/${pledgeId}/confirm`, { method: "POST" });
+              if (upchargeConfirmUrl) {
+                // Upcharge path: confirm-add-items captures the order
+                // via the PayPal API itself AND applies the addon
+                // items in one transactional call.
+                const res = await apiFetch(upchargeConfirmUrl, { method: "POST" });
+                const body = await res.json();
+                if (!res.ok) throw new Error(body.error || "Payment confirmation failed");
+              } else {
+                // Original-pledge path
+                const captureRes = await apiFetch(`/api/paypal/capture/${data.orderId}`, { method: "POST" });
+                const captureData = await captureRes.json();
+                if (!captureRes.ok) throw new Error(captureData.error || "Payment capture failed");
+                await apiFetch(`/api/pledges/${pledgeId}/confirm`, { method: "POST" });
+              }
               onSuccess();
             } catch (err) {
               onError(err instanceof Error ? err.message : "Payment failed. Please try again.");

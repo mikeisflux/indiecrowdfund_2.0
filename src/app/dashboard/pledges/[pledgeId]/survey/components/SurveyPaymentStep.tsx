@@ -6,6 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Stripe } from "@stripe/stripe-js";
 import { SurveyData } from "./types";
+import { WhopPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/WhopPaymentForm";
+import { PayPalPaymentForm } from "@/app/projects/[vanityname]/[slug]/pledge/components/PayPalPaymentForm";
+
+export interface SurveyUpchargePayment {
+  paymentMethod: "DIVINITYCOIN" | "WHOP" | "PAYPAL";
+  // DC path
+  clientSecret?: string | null;
+  // Whop path
+  sessionId?: string;
+  planId?: string;
+  environment?: "production" | "sandbox";
+  // PayPal path
+  paypalOrderId?: string;
+  paypalClientId?: string;
+  paypalMode?: string;
+  pledgeId: string;
+}
 
 // Stripe Payment Form for Survey Addons
 function SurveyPaymentForm({
@@ -103,6 +120,8 @@ interface SurveyPaymentStepProps {
   setPaymentError: (val: string | null) => void;
   setClientSecret: (val: string | null) => void;
   creatingPaymentRef: React.MutableRefObject<boolean>;
+  // Non-DC payment data set by the parent after add-items returns.
+  upchargePayment: SurveyUpchargePayment | null;
   onSuccess: () => void;
   onError: (message: string) => void;
   onPrev: () => void;
@@ -120,10 +139,15 @@ export function SurveyPaymentStep({
   setPaymentError,
   setClientSecret,
   creatingPaymentRef,
+  upchargePayment,
   onSuccess,
   onError,
   onPrev,
 }: SurveyPaymentStepProps) {
+  const pledgeId = upchargePayment?.pledgeId;
+  const confirmUrl = pledgeId
+    ? `/api/pledges/${pledgeId}/confirm-add-items`
+    : undefined;
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -177,10 +201,39 @@ export function SurveyPaymentStep({
         </div>
       )}
 
-      {/* Payment Form — Stripe (Elements) for STRIPE/DC */}
+      {/* Payment Form — branches by processor */}
       <Card>
         <CardContent className="py-5">
-          {clientSecret && stripePromise ? (
+          {/* Whop embedded checkout */}
+          {upchargePayment?.paymentMethod === "WHOP" && pledgeId ? (
+            <WhopPaymentForm
+              sessionId={upchargePayment.sessionId || ""}
+              planId={upchargePayment.planId || ""}
+              pledgeId={pledgeId}
+              environment={upchargePayment.environment || "production"}
+              agreedToTerms={true}
+              isProcessing={isProcessingPayment}
+              setIsProcessing={setIsProcessingPayment}
+              onSuccess={onSuccess}
+              onError={onError}
+              total={addonsTotal}
+              confirmUrl={confirmUrl}
+            />
+          ) : upchargePayment?.paymentMethod === "PAYPAL" && pledgeId ? (
+            <PayPalPaymentForm
+              paypalOrderId={upchargePayment.paypalOrderId || ""}
+              pledgeId={pledgeId}
+              clientId={upchargePayment.paypalClientId || ""}
+              paypalMode={upchargePayment.paypalMode || "live"}
+              agreedToTerms={true}
+              isProcessing={isProcessingPayment}
+              setIsProcessing={setIsProcessingPayment}
+              onSuccess={onSuccess}
+              onError={onError}
+              total={addonsTotal}
+              upchargeConfirmUrl={confirmUrl}
+            />
+          ) : clientSecret && stripePromise ? (
             <Elements
               key={clientSecret}
               stripe={stripePromise}

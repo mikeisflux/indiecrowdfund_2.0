@@ -6,6 +6,8 @@ const pledgesConfirmAddItemsLogger = logger.child({ module: "pledges-confirm-add
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { verifyWhopUpchargePayment } from "@/lib/payments/whop/upcharge";
+import { capturePayPalUpchargeOrder } from "@/lib/payments/paypal/upcharge";
 
 /**
  * POST /api/pledges/[pledgeId]/confirm-add-items
@@ -91,30 +93,55 @@ export async function POST(
     const addonIds = addonsWithQuantity.map(a => a.id);
     const quantityMap = new Map(addonsWithQuantity.map(a => [a.id, a.quantity]));
 
-    // Verify payment based on payment method
+    // Verify payment based on payment method. Each processor stores
+    // its own reference in pendingItems.paymentIntentId:
+    //   DC:     Stripe-style PaymentIntent ID
+    //   WHOP:   Whop checkout configuration ID
+    //   PAYPAL: PayPal order ID
     const paymentMethod = pendingItems.paymentMethod || "DIVINITYCOIN";
-
-    if (paymentMethod !== "DIVINITYCOIN") {
-      return NextResponse.json(
-        { error: "Unsupported payment method for additional items" },
-        { status: 400 }
-      );
-    }
 
     if (!pendingItems.paymentIntentId) {
       return NextResponse.json(
-        { error: "Missing payment intent ID" },
+        { error: "Missing payment reference" },
         { status: 400 }
       );
     }
 
-    const verifyResult = await callDivinityCoinAPI("verify-payment", {
-      paymentIntentId: pendingItems.paymentIntentId,
-    });
-
-    if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
+    if (paymentMethod === "DIVINITYCOIN") {
+      const verifyResult = await callDivinityCoinAPI("verify-payment", {
+        paymentIntentId: pendingItems.paymentIntentId,
+      });
+      if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
+        return NextResponse.json(
+          { error: "Payment not yet completed" },
+          { status: 400 }
+        );
+      }
+    } else if (paymentMethod === "WHOP") {
+      // Verify via Whop's payments API. The checkout config id is in
+      // pendingItems.paymentIntentId; we list payments for our
+      // company and match the one with that checkout_configuration_id.
+      const verify = await verifyWhopUpchargePayment(pendingItems.paymentIntentId);
+      if (!verify.paid) {
+        return NextResponse.json(
+          { error: "Payment not yet completed" },
+          { status: 400 }
+        );
+      }
+    } else if (paymentMethod === "PAYPAL") {
+      // PayPal CAPTURE intent — the client has approved the order
+      // via the SDK; we capture server-side here. Idempotent: if a
+      // parallel call already captured, the helper returns success.
+      const capture = await capturePayPalUpchargeOrder(pendingItems.paymentIntentId);
+      if (!capture.captured) {
+        return NextResponse.json(
+          { error: "Payment capture failed" },
+          { status: 400 }
+        );
+      }
+    } else {
       return NextResponse.json(
-        { error: "Payment not yet completed" },
+        { error: "Unsupported payment method for additional items" },
         { status: 400 }
       );
     }

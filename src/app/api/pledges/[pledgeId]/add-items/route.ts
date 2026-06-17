@@ -5,6 +5,8 @@ const pledgesAddItemsLogger = logger.child({ module: "pledges-add-items" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getDivinityCoinConfig, chargeDcSavedPaymentMethod, formatDeclineReason } from "@/lib/payments/divinitycoin";
+import { createWhopUpcharge } from "@/lib/payments/whop/upcharge";
+import { createPayPalUpcharge } from "@/lib/payments/paypal/upcharge";
 
 export const dynamic = "force-dynamic";
 
@@ -461,14 +463,128 @@ export async function POST(
       }
     }
 
-    // Roll back the reservation marker so the user can retry through DC.
+    // Whop upcharge: create a Whop checkout configuration tagged with
+    // metadata.type="upcharge" so the webhook handler bails out of
+    // the new-pledge completion branch. Client uses the Whop SDK to
+    // pay and then calls confirm-add-items, which verifies the
+    // payment via Whop's API and applies the addons.
+    if (paymentProcessor === "WHOP") {
+      try {
+        const { sessionId, planId, environment } = await createWhopUpcharge({
+          pledgeId: pledge.id,
+          projectId: pledge.projectId,
+          userId: session.user.id,
+          amount,
+        });
+
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            metadata: {
+              ...currentMetadata,
+              pendingAdditionalItems: {
+                paymentMethod: "WHOP",
+                paymentIntentId: sessionId,
+                addons: addonsWithQuantity,
+                amount,
+                createdAt: new Date().toISOString(),
+              },
+            },
+          },
+        });
+
+        pledgesAddItemsLogger.info(
+          { pledgeId, sessionId, amount, addonCount: addonsWithQuantity.length },
+          "[AddItems Whop] Upcharge checkout created"
+        );
+
+        return NextResponse.json({
+          paymentMethod: "WHOP",
+          type: "whop_checkout",
+          sessionId,
+          planId,
+          environment,
+          pledgeId: pledge.id,
+        });
+      } catch (whopErr) {
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: { metadata: { ...currentMetadata } },
+        }).catch(() => null);
+        const message = whopErr instanceof Error ? whopErr.message : "Unknown error";
+        pledgesAddItemsLogger.error({ err: message }, "[AddItems Whop] API error:");
+        return NextResponse.json(
+          { error: `Failed to create Whop checkout: ${message}` },
+          { status: 502 }
+        );
+      }
+    }
+
+    // PayPal upcharge: create a PayPal order (CAPTURE intent) for
+    // just the upcharge amount. Client uses PayPal SDK to approve;
+    // confirm-add-items captures via the PayPal API and applies the
+    // addons. Custom_id is prefixed `upcharge_` so the PayPal capture
+    // route's pledge-lookup-by-orderId never collides with this.
+    if (paymentProcessor === "PAYPAL") {
+      try {
+        const { paypalOrderId, paypalClientId, paypalMode } = await createPayPalUpcharge({
+          pledgeId: pledge.id,
+          projectId: pledge.projectId,
+          amount,
+        });
+
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: {
+            metadata: {
+              ...currentMetadata,
+              pendingAdditionalItems: {
+                paymentMethod: "PAYPAL",
+                paymentIntentId: paypalOrderId,
+                addons: addonsWithQuantity,
+                amount,
+                createdAt: new Date().toISOString(),
+              },
+            },
+          },
+        });
+
+        pledgesAddItemsLogger.info(
+          { pledgeId, paypalOrderId, amount, addonCount: addonsWithQuantity.length },
+          "[AddItems PayPal] Upcharge order created"
+        );
+
+        return NextResponse.json({
+          paymentMethod: "PAYPAL",
+          type: "paypal_order",
+          paypalOrderId,
+          paypalClientId,
+          paypalMode,
+          pledgeId: pledge.id,
+        });
+      } catch (ppErr) {
+        await db.pledge.update({
+          where: { id: pledgeId },
+          data: { metadata: { ...currentMetadata } },
+        }).catch(() => null);
+        const message = ppErr instanceof Error ? ppErr.message : "Unknown error";
+        pledgesAddItemsLogger.error({ err: message }, "[AddItems PayPal] API error:");
+        return NextResponse.json(
+          { error: `Failed to create PayPal order: ${message}` },
+          { status: 502 }
+        );
+      }
+    }
+
+    // Roll back the reservation marker — processor not supported for
+    // add-ons (legacy Stripe or unconfigured).
     await db.pledge.update({
       where: { id: pledgeId },
       data: { metadata: { ...currentMetadata } },
     }).catch(() => null);
 
     return NextResponse.json(
-      { error: "Adding items is only supported for DivinityCoin pledges on this platform." },
+      { error: "Adding items is not supported for this pledge's payment processor." },
       { status: 400 }
     );
   } catch (error) {

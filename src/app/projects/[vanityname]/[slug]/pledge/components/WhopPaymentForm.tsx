@@ -24,6 +24,12 @@ interface WhopPaymentFormProps {
   onSuccess: () => void;
   onError: (message: string) => void;
   total: number;
+  // Override the post-checkout confirm endpoint. Defaults to the
+  // original-pledge confirm (/api/whop/confirm/[pledgeId]). The
+  // survey upcharge flow passes /api/pledges/[id]/confirm-add-items
+  // so the same component drives both pledge creation and add-on
+  // upcharges.
+  confirmUrl?: string;
 }
 
 export function WhopPaymentForm({
@@ -37,6 +43,7 @@ export function WhopPaymentForm({
   onSuccess,
   onError,
   total,
+  confirmUrl,
 }: WhopPaymentFormProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,7 +62,8 @@ export function WhopPaymentForm({
       mountedRef.current = true;
       setIsProcessing(true);
 
-      apiFetch(`/api/whop/confirm/${pledgeId}`, {
+      const url = confirmUrl ?? `/api/whop/confirm/${pledgeId}`;
+      apiFetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ receiptId }),
@@ -72,7 +80,7 @@ export function WhopPaymentForm({
     } else if (status === "error") {
       setLoadError("Payment was cancelled or failed. Please try again.");
     }
-  }, [pledgeId, onSuccess, onError, setIsProcessing]);
+  }, [pledgeId, onSuccess, onError, setIsProcessing, confirmUrl]);
 
   const handlePayNow = async () => {
     if (!agreedToTerms) {
@@ -133,7 +141,8 @@ export function WhopPaymentForm({
         hideSubmitButton={true}
         onComplete={() => {
           setIsProcessing(true);
-          apiFetch(`/api/whop/confirm/${pledgeId}`, {
+          const url = confirmUrl ?? `/api/whop/confirm/${pledgeId}`;
+          apiFetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({}),

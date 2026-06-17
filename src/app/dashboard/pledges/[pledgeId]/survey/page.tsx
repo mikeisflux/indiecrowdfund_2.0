@@ -18,7 +18,7 @@ import { SurveyQuestionsStep } from "./components/SurveyQuestionsStep";
 import { SurveyAddonsStep } from "./components/SurveyAddonsStep";
 import { SurveyAddressStep } from "./components/SurveyAddressStep";
 import { SurveyReviewStep } from "./components/SurveyReviewStep";
-import { SurveyPaymentStep } from "./components/SurveyPaymentStep";
+import { SurveyPaymentStep, SurveyUpchargePayment } from "./components/SurveyPaymentStep";
 
 export default function BackerSurveyPage() {
   const params = useParams();
@@ -55,6 +55,7 @@ export default function BackerSurveyPage() {
   // Payment state
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [upchargePayment, setUpchargePayment] = useState<SurveyUpchargePayment | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const creatingPaymentRef = useRef(false);
@@ -340,7 +341,36 @@ export default function BackerSurveyPage() {
         throw new Error(result.error || "Failed to create payment");
       }
 
-      // Load appropriate Stripe instance
+      // Branch by payment method. Whop and PayPal don't go through
+      // Stripe Elements -- they render their own embedded checkout
+      // components driven by the upchargePayment state.
+      if (result.paymentMethod === "WHOP") {
+        setUpchargePayment({
+          paymentMethod: "WHOP",
+          sessionId: result.sessionId,
+          planId: result.planId,
+          environment: result.environment,
+          pledgeId: result.pledgeId,
+        });
+        setIsProcessingPayment(false);
+        creatingPaymentRef.current = false;
+        return;
+      }
+
+      if (result.paymentMethod === "PAYPAL") {
+        setUpchargePayment({
+          paymentMethod: "PAYPAL",
+          paypalOrderId: result.paypalOrderId,
+          paypalClientId: result.paypalClientId,
+          paypalMode: result.paypalMode,
+          pledgeId: result.pledgeId,
+        });
+        setIsProcessingPayment(false);
+        creatingPaymentRef.current = false;
+        return;
+      }
+
+      // DC / Stripe path: load Stripe Elements
       let stripeLoaded = !!stripePromise;
       if (result.paymentMethod === "DIVINITYCOIN") {
         // Divinity Payments: must use DC's own publishable key
@@ -368,6 +398,11 @@ export default function BackerSurveyPage() {
       }
 
       setClientSecret(result.clientSecret);
+      setUpchargePayment({
+        paymentMethod: "DIVINITYCOIN",
+        clientSecret: result.clientSecret,
+        pledgeId: result.pledgeId || pledgeId,
+      });
       setIsProcessingPayment(false);
       creatingPaymentRef.current = false;
     } catch (err) {
@@ -576,6 +611,7 @@ export default function BackerSurveyPage() {
           setPaymentError={setPaymentError}
           setClientSecret={setClientSecret}
           creatingPaymentRef={creatingPaymentRef}
+          upchargePayment={upchargePayment}
           onSuccess={handlePaymentSuccess}
           onError={handlePaymentError}
           onPrev={prevStep}
