@@ -895,7 +895,12 @@ export default function ProjectPage() {
       {/* Main Content */}
       <section ref={contentSectionRef} className="container py-8 relative">
         {activeTab === "campaign" && (
-          <CampaignTab project={project} tiers={tiers} projectPath={projectPath} />
+          <CampaignTab
+            project={project}
+            tiers={tiers}
+            projectPath={projectPath}
+            onViewCreator={() => handleTabClick("creator")}
+          />
         )}
 
         {activeTab === "rewards" && (

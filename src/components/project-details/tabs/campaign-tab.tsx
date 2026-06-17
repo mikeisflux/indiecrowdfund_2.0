@@ -17,9 +17,13 @@ interface CampaignTabProps {
   project: ProjectData;
   tiers: RewardData[];
   projectPath: string;
+  // Switches the parent ProjectDetails page to the "creator" tab so
+  // clicks on the creator name/card in the right sidebar jump
+  // straight to the full Creator profile instead of being a dead end.
+  onViewCreator?: () => void;
 }
 
-export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
+export function CampaignTab({ project, tiers, projectPath, onViewCreator }: CampaignTabProps) {
   const [pledgeAmount, setPledgeAmount] = useState("1");
   const [activeStorySection, setActiveStorySection] = useState<string>("");
   const storyContentRef = useRef<HTMLDivElement>(null);
@@ -130,7 +134,13 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
         {/* Creator Card */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-start gap-3 mb-4">
+            <button
+              type="button"
+              onClick={onViewCreator}
+              disabled={!onViewCreator}
+              className="flex items-start gap-3 mb-4 w-full text-left group disabled:cursor-default"
+              aria-label={`View ${project.creator.name}'s creator profile`}
+            >
               <Avatar className="h-12 w-12">
                 <AvatarImage src={project.creator.image} />
                 <AvatarFallback className="bg-black text-white">
@@ -138,15 +148,25 @@ export function CampaignTab({ project, tiers, projectPath }: CampaignTabProps) {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h4 className="font-semibold">{project.creator.name}</h4>
+                <h4 className="font-semibold group-hover:text-primary group-hover:underline transition-colors">
+                  {project.creator.name}
+                </h4>
                 <p className="text-sm text-muted-foreground">
                   {project.creator.projectsCreated} created • {project.creator.projectsBacked} backed
                 </p>
               </div>
-            </div>
-            <p className="text-sm text-muted-foreground mb-3">
+            </button>
+            <p className="text-sm text-muted-foreground mb-4">
               {project.creator.bio}
             </p>
+            {onViewCreator && (
+              <Button
+                onClick={onViewCreator}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+              >
+                View Creator Profile
+              </Button>
+            )}
           </CardContent>
         </Card>
 
