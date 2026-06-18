@@ -1104,11 +1104,12 @@ export async function DELETE(
         where: { projectId },
       });
 
-      // Delete email campaigns
-      await tx.emailCampaignClick.deleteMany({
-        where: { campaign: { projectId } },
-      });
-      await tx.emailCampaign.deleteMany({
+      // (EmailCampaign + EmailCampaignClick are not project-scoped
+      // -- campaigns are top-level marketing artifacts, not pinned
+      // to one project. Nothing to delete here.)
+
+      // Delete email logs scoped to this project
+      await tx.emailLog.deleteMany({
         where: { projectId },
       });
 
