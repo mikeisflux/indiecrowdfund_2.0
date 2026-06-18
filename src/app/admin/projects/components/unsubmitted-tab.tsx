@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileEdit, Eye } from "lucide-react";
+import { FileEdit, Eye, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import { Project } from "./types";
 
 // ─── Unsubmitted Project Card ─────────────────────────────────────
@@ -64,9 +67,37 @@ export function UnsubmittedProjectCard({ project, isSelected, onClick }: Unsubmi
 
 interface UnsubmittedDetailPanelProps {
   selectedProject: Project | null;
+  // Refresh the parent projects list after deletion so the deleted
+  // project disappears from the Unsubmitted view.
+  onDeleted?: () => void;
 }
 
-export function UnsubmittedDetailPanel({ selectedProject }: UnsubmittedDetailPanelProps) {
+export function UnsubmittedDetailPanel({ selectedProject, onDeleted }: UnsubmittedDetailPanelProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!selectedProject) return;
+    if (!confirm(`Permanently delete the unsubmitted project "${selectedProject.title}"?\n\nThis cannot be undone. All rewards, items, and uploaded media will be removed.`)) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const res = await apiFetch(`/api/projects/${selectedProject.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete project");
+      }
+      toast.success("Project deleted");
+      onDeleted?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete project");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Card className="h-fit sticky top-4">
       {selectedProject ? (
@@ -144,6 +175,25 @@ export function UnsubmittedDetailPanel({ selectedProject }: UnsubmittedDetailPan
                 View Project
               </Button>
             </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="w-full mt-2"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Project
+                </>
+              )}
+            </Button>
           </CardContent>
         </>
       ) : (

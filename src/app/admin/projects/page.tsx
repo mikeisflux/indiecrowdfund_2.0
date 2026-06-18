@@ -497,7 +497,13 @@ export default function ProjectsPage() {
                 ))}
               </div>
 
-              <UnsubmittedDetailPanel selectedProject={selectedProject} />
+              <UnsubmittedDetailPanel
+                selectedProject={selectedProject}
+                onDeleted={() => {
+                  setSelectedProject(null);
+                  fetchProjects();
+                }}
+              />
             </div>
           )}
         </TabsContent>
