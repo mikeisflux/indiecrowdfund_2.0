@@ -57,6 +57,7 @@ import {
   Clock,
   AlertCircle,
   Newspaper,
+  Calendar,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-utils";
@@ -163,6 +164,7 @@ const navigation: NavSection[] = [
       { name: "Bug Reports", href: "/admin/bug-reports", icon: Bug, badgeKey: "bugReports" },
       { name: "Changelog", href: "/admin/changelog", icon: FileEdit },
       { name: "Cron Jobs", href: "/admin/cron", icon: Clock },
+      { name: "Dev Calendar", href: "/admin/dev-calendar", icon: Calendar },
     ],
   },
 ];
