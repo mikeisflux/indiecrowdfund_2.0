@@ -973,9 +973,10 @@ export async function DELETE(
         where: { projectId },
       });
 
-      // Delete digital distributions
+      // Delete digital distributions (relation field is `digitalFile`,
+      // not `file` -- see fulfillment.prisma)
       await tx.digitalDistribution.deleteMany({
-        where: { file: { projectId } },
+        where: { digitalFile: { projectId } },
       });
 
       // Delete pledge addons (must come before rewards due to FK constraint)
@@ -990,6 +991,20 @@ export async function DELETE(
       await tx.reward.deleteMany({
         where: { projectId },
       });
+
+      // Delete backer notes BEFORE pledges -- BackerNote.pledgeId is
+      // a scalar FK with no explicit Prisma relation field, so we
+      // can't filter through a `pledge` join. Gather the project's
+      // pledge ids and IN-filter instead.
+      const projectPledges = await tx.pledge.findMany({
+        where: { projectId },
+        select: { id: true },
+      });
+      if (projectPledges.length > 0) {
+        await tx.backerNote.deleteMany({
+          where: { pledgeId: { in: projectPledges.map((p: { id: string }) => p.id) } },
+        });
+      }
 
       // Delete pledges
       await tx.pledge.deleteMany({
@@ -1051,18 +1066,11 @@ export async function DELETE(
         where: { projectId },
       });
 
-      // Delete media files for projects
-      await tx.mediaFile.deleteMany({
-        where: { projectId },
-      });
+      // (MediaFile is not project-scoped -- it's a generic uploader
+      // table scoped to the user. Nothing to delete here.)
 
       // Delete messages related to projects
       await tx.message.deleteMany({
-        where: { projectId },
-      });
-
-      // Delete backer notes
-      await tx.backerNote.deleteMany({
         where: { projectId },
       });
 
@@ -1109,10 +1117,8 @@ export async function DELETE(
         where: { projectId },
       });
 
-      // Delete custom pages
-      await tx.customPage.deleteMany({
-        where: { projectId },
-      });
+      // (CustomPage is the global page-builder content type, not
+      // tied to projects -- nothing to delete here.)
 
       // Finally delete the project. Use deleteMany so two concurrent
       // admin/creator deletes don't both run through all the related-row
