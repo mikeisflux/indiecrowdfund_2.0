@@ -44,7 +44,11 @@ export function SurveyItemsStep({ data, itemResponses, setItemResponses, onNext,
               <div key={variant.id} className="space-y-2">
                 <Label>{variant.variantType}</Label>
                 <Select
-                  value={itemResponses[item.id]?.variants?.[variant.id] || ""}
+                  value={
+                    itemResponses[item.id]?.variants?.[variant.id] ||
+                    itemResponses[item.id]?.variants?.[variant.variantType] ||
+                    ""
+                  }
                   onValueChange={(value) =>
                     setItemResponses({
                       ...itemResponses,
@@ -52,7 +56,13 @@ export function SurveyItemsStep({ data, itemResponses, setItemResponses, onNext,
                         ...itemResponses[item.id],
                         variants: {
                           ...itemResponses[item.id]?.variants,
+                          // Write under BOTH keys: the variant.id so
+                          // brand-new responses are stable, and the
+                          // variantType so a creator re-saving the
+                          // survey (which regenerates variant.ids)
+                          // doesn't orphan the backer's selection.
                           [variant.id]: value,
+                          [variant.variantType]: value,
                         },
                       },
                     })

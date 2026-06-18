@@ -96,33 +96,27 @@ export async function GET() {
       (projectPrefs as ProjectPref[]).map((p) => [p.projectId, p])
     );
 
+    // Return the flat shape the client expects (projectId/projectTitle/
+    // projectImage + per-channel toggles at top level). The previous
+    // shape (id + nested preferences object) made every
+    // p.projectId === undefined on the client, which built request
+    // URLs like /api/backer/notifications/preferences/undefined and
+    // 404'd on every toggle click.
     const projects = backedProjects.map(({ project }) => {
       const pref = projectPrefsMap.get(project.id);
       return {
-        id: project.id,
-        title: project.title,
-        slug: project.slug,
-        imageUrl: project.imageUrl,
+        projectId: project.id,
+        projectTitle: project.title,
+        projectSlug: project.slug,
+        projectImage: project.imageUrl,
         status: project.status,
         creatorName: project.creator.name,
-        preferences: pref
-          ? {
-              updates: pref.updates,
-              comments: pref.comments,
-              surveys: pref.surveys,
-              shipping: pref.shipping,
-              messages: pref.messages,
-              digestFrequency: pref.digestFrequency,
-            }
-          : {
-              // Defaults
-              updates: true,
-              comments: true,
-              surveys: true,
-              shipping: true,
-              messages: true,
-              digestFrequency: "instant",
-            },
+        updates: pref?.updates ?? true,
+        comments: pref?.comments ?? true,
+        surveys: pref?.surveys ?? true,
+        shipping: pref?.shipping ?? true,
+        messages: pref?.messages ?? true,
+        digestFrequency: pref?.digestFrequency ?? "instant",
         hasCustomPrefs: !!pref,
       };
     });

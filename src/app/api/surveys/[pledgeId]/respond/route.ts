@@ -144,6 +144,22 @@ export async function GET(
       return NextResponse.json({ error: "Survey not found" }, { status: 404 });
     }
 
+    // Defensive dedupe: if a creator's old data has two SurveyItemVariant
+    // rows with the same variantType on the same itemQuestion (e.g.,
+    // two "Size" rows from a pre-fix duplicate), keep the first by
+    // sortOrder. Without this the backer sees two identical "Size"
+    // dropdowns, fills one, and submission fails with "Please select a
+    // Size" because the unfilled duplicate is still empty.
+    for (const itemQ of survey.itemQuestions) {
+      const seen = new Set<string>();
+      itemQ.variants = itemQ.variants.filter((v: { variantType: string }) => {
+        const key = v.variantType.trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
     if (survey.status === "DRAFT") {
       return NextResponse.json(
         { error: "Survey has not been sent yet" },
@@ -450,9 +466,23 @@ export async function POST(
           addonIds.includes(itemQ.rewardId);
 
         if (applies) {
-          // Check variants are selected
+          // Check variants are selected. Accept either the variant.id
+          // key (preferred, exact match) or the variantType key
+          // (fallback). The fallback handles two cases:
+          //   1. A creator re-saved the item-questions after this
+          //      backer started filling the survey -- our save flow
+          //      deletes + recreates SurveyItemVariant rows, so the
+          //      backer's selections reference OLD variant.ids that
+          //      no longer exist. variantType is stable across saves.
+          //   2. Legacy / cross-device responses where the client
+          //      keyed by variantType from a previous client build.
+          // Without this fallback, backers see their picked size in
+          // the UI but submission fails with "Please select a Size"
+          // -- exact symptom reported by the creator.
           for (const variant of itemQ.variants) {
-            const selection = data.itemResponses?.[itemQ.id]?.variants?.[variant.id];
+            const variants = data.itemResponses?.[itemQ.id]?.variants;
+            const selection =
+              variants?.[variant.id] || variants?.[variant.variantType];
             if (!selection) {
               return NextResponse.json(
                 { error: `Please select a ${variant.variantType} for ${itemQ.itemName}` },
