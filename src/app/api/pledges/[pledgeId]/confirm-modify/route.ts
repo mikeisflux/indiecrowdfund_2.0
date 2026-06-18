@@ -6,6 +6,8 @@ const pledgesConfirmModifyLogger = logger.child({ module: "pledges-confirm-modif
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { callDivinityCoinAPI } from "@/lib/payments/divinitycoin";
+import { verifyWhopUpchargePayment } from "@/lib/payments/whop/upcharge";
+import { capturePayPalUpchargeOrder } from "@/lib/payments/paypal/upcharge";
 import { notifyPledgeModified } from "@/lib/notifications/pledge-notifications";
 
 /**
@@ -71,28 +73,49 @@ export async function POST(
       });
     }
 
-    // Verify payment based on payment method (DC only)
-    if (pending.paymentMethod !== "DIVINITYCOIN") {
-      return NextResponse.json(
-        { error: "Unsupported payment method for pledge modification" },
-        { status: 400 }
-      );
-    }
+    // Verify payment based on payment method. Each processor stores
+    // its own reference in pending.paymentIntentId:
+    //   DC:     Stripe-style PaymentIntent ID
+    //   WHOP:   Whop checkout configuration ID
+    //   PAYPAL: PayPal order ID
+    const paymentMethod = pending.paymentMethod || "DIVINITYCOIN";
 
     if (!pending.paymentIntentId) {
       return NextResponse.json(
-        { error: "Missing payment intent ID" },
+        { error: "Missing payment reference" },
         { status: 400 }
       );
     }
 
-    const verifyResult = await callDivinityCoinAPI("verify-payment", {
-      paymentIntentId: pending.paymentIntentId,
-    });
-
-    if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
+    if (paymentMethod === "DIVINITYCOIN") {
+      const verifyResult = await callDivinityCoinAPI("verify-payment", {
+        paymentIntentId: pending.paymentIntentId,
+      });
+      if (!verifyResult.success || verifyResult.data?.status !== "succeeded") {
+        return NextResponse.json(
+          { error: "Payment not yet completed" },
+          { status: 400 }
+        );
+      }
+    } else if (paymentMethod === "WHOP") {
+      const verify = await verifyWhopUpchargePayment(pending.paymentIntentId);
+      if (!verify.paid) {
+        return NextResponse.json(
+          { error: "Payment not yet completed" },
+          { status: 400 }
+        );
+      }
+    } else if (paymentMethod === "PAYPAL") {
+      const capture = await capturePayPalUpchargeOrder(pending.paymentIntentId);
+      if (!capture.captured) {
+        return NextResponse.json(
+          { error: "Payment capture failed" },
+          { status: 400 }
+        );
+      }
+    } else {
       return NextResponse.json(
-        { error: "Payment not yet completed" },
+        { error: "Unsupported payment method for pledge modification" },
         { status: 400 }
       );
     }
