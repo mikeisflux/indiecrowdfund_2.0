@@ -611,5 +611,8 @@ export function useProjectsData() {
     submitMakeLive,
     syncAllProjectStats,
     fetchProjects,
+    // Expose setter so the UI can drop a project from the list
+    // instantly after delete (no waiting for refetch).
+    setUnsubmittedProjects,
   };
 }

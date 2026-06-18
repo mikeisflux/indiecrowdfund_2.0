@@ -995,14 +995,23 @@ export async function DELETE(
       // Delete backer notes BEFORE pledges -- BackerNote.pledgeId is
       // a scalar FK with no explicit Prisma relation field, so we
       // can't filter through a `pledge` join. Gather the project's
-      // pledge ids and IN-filter instead.
+      // pledge ids and IN-filter instead. Same approach for
+      // BackerReview and RefundRequest, which are also pledge-scoped
+      // with no project FK.
       const projectPledges = await tx.pledge.findMany({
         where: { projectId },
         select: { id: true },
       });
       if (projectPledges.length > 0) {
+        const pledgeIds = projectPledges.map((p: { id: string }) => p.id);
         await tx.backerNote.deleteMany({
-          where: { pledgeId: { in: projectPledges.map((p: { id: string }) => p.id) } },
+          where: { pledgeId: { in: pledgeIds } },
+        });
+        await tx.backerReview.deleteMany({
+          where: { pledgeId: { in: pledgeIds } },
+        });
+        await tx.refundRequest.deleteMany({
+          where: { pledgeId: { in: pledgeIds } },
         });
       }
 
@@ -1120,6 +1129,39 @@ export async function DELETE(
 
       // (CustomPage is the global page-builder content type, not
       // tied to projects -- nothing to delete here.)
+
+      // Analytics / behavior
+      await tx.analyticsEvent.deleteMany({
+        where: { projectId },
+      });
+      await tx.userBehavior.deleteMany({
+        where: { projectId },
+      });
+
+      // Retailer pledges
+      await tx.retailerPledge.deleteMany({
+        where: { projectId },
+      });
+
+      // Per-processor settlements (nullable projectId on each, but
+      // we hold the value so the filter is exact)
+      await tx.divinityCoinSettlement.deleteMany({
+        where: { projectId },
+      });
+      await tx.whopSettlement.deleteMany({
+        where: { projectId },
+      });
+      await tx.payPalPayout.deleteMany({
+        where: { projectId },
+      });
+
+      // Fulfillment integrations + per-project print orders
+      await tx.fulfillmentIntegration.deleteMany({
+        where: { projectId },
+      });
+      await tx.projectPrintOrder.deleteMany({
+        where: { projectId },
+      });
 
       // Finally delete the project. Use deleteMany so two concurrent
       // admin/creator deletes don't both run through all the related-row
