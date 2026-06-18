@@ -216,12 +216,12 @@ export default function PledgePage() {
                   <p className="text-muted-foreground text-xs leading-relaxed mt-2">
                     <span className="font-medium text-red-600 dark:text-red-400">
                       Filing a chargeback or credit-card dispute against
-                      IndieCrowdfund or our payment processors instead of
-                      contacting support first will result in an immediate
-                      permanent ban on your account
+                      IndieCrowdfund or our payment processors will result in
+                      an immediate permanent ban on your account
                     </span>{" "}
                     &mdash; you back at your own risk, and a delayed or
-                    scaled-back campaign is not grounds for a dispute.{" "}
+                    scaled-back campaign is not grounds for a dispute. File =
+                    banned.{" "}
                     <a
                       href="/terms?tab=chargebacks"
                       target="_blank"

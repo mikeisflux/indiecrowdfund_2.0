@@ -50,23 +50,18 @@ export function BackerAgreementContent() {
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-4 mb-6">
           <p className="text-red-700 dark:text-red-300 mb-2">
             If you file a credit-card dispute or chargeback against
-            IndieCrowdfund or any of our payment processors instead of using
-            our support channel first, your account will be{" "}
-            <strong>permanently banned</strong> the moment the dispute is
-            opened, regardless of outcome. You will lose access to every
-            pledge, reward, and digital download tied to that account, and
-            future accounts under the same email, payment method, IP, or
-            device fingerprint will also be banned.
+            IndieCrowdfund or any of our payment processors, your account
+            will be <strong>permanently banned</strong> the moment the
+            dispute is opened, regardless of outcome. You will lose access
+            to every pledge, reward, and digital download tied to that
+            account, and future accounts under the same email, payment
+            method, IP, or device fingerprint will also be banned.
           </p>
           <p className="text-red-700 dark:text-red-300 mb-0 text-sm">
-            Delayed, scaled-back, or cancelled campaigns are{" "}
-            <strong>not</strong> grounds for a chargeback &mdash; those risks
-            are what you accepted under sections A&ndash;E above. The proper
-            recourse is{" "}
-            <a href="mailto:support@indiecrowdfund.com" className="underline">
-              support@indiecrowdfund.com
-            </a>
-            . See our full{" "}
+            <strong>File = banned.</strong> Delayed, scaled-back, or
+            cancelled campaigns are <strong>not</strong> grounds for a
+            chargeback &mdash; those risks are what you accepted under
+            sections A&ndash;E above. See our full{" "}
             <a href="/terms?tab=chargebacks" className="underline">
               Chargeback Handling Policy
             </a>{" "}

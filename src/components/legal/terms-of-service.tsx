@@ -73,6 +73,34 @@ export function TermsOfServiceContent() {
         </ul>
         <p className="mb-6">IndieCrowdfund is not responsible for disputes between creators and backers.</p>
 
+        <h3 className="text-xl font-semibold mt-8 mb-4">5a. Chargebacks &mdash; Immediate Permanent Ban</h3>
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-4 mb-6">
+          <p className="text-red-700 dark:text-red-300 font-semibold mb-2">
+            File a chargeback = banned. No appeals.
+          </p>
+          <p className="text-red-700 dark:text-red-300 text-sm mb-3">
+            If you initiate a credit-card dispute or chargeback against
+            IndieCrowdfund or any of our payment processors (Stripe / PayPal /
+            Divinity Payments / Whop) on any pledge or marketplace purchase,
+            your account is <strong>permanently banned</strong> the moment
+            the dispute is filed, regardless of outcome. You lose access to
+            every pledge, reward, and digital download tied to that account.
+            Future accounts under the same email, payment method, IP, or
+            device fingerprint are also banned. There is no appeal.
+          </p>
+          <p className="text-red-700 dark:text-red-300 text-sm mb-0">
+            Rewards are not guaranteed, you back at your own risk, and a
+            delayed or scaled-back campaign is <strong>not</strong> grounds
+            for a chargeback. The only carve-outs are actual unauthorized-use
+            fraud (your card was used by someone else) and regulator /
+            law-enforcement directives. See the full{" "}
+            <a href="/terms?tab=chargebacks" className="underline">
+              Chargeback Handling Policy
+            </a>
+            .
+          </p>
+        </div>
+
         <h3 className="text-xl font-semibold mt-8 mb-4">6. Fees, Payments, and Campaign Types</h3>
         <p className="mb-4">
           IndieCrowdfund charges platform and processing fees for funded projects. Fees are disclosed during project setup and may vary by region.
