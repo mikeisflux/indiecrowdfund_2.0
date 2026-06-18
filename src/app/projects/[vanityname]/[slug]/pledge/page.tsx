@@ -220,8 +220,7 @@ export default function PledgePage() {
                       an immediate permanent ban on your account
                     </span>{" "}
                     &mdash; you back at your own risk, and a delayed or
-                    scaled-back campaign is not grounds for a dispute. File =
-                    banned.{" "}
+                    scaled-back campaign is not grounds for a dispute.{" "}
                     <a
                       href="/terms?tab=chargebacks"
                       target="_blank"

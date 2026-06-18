@@ -18,9 +18,10 @@ export function ChargebacksPolicyContent() {
             store. Rewards are not guaranteed and you back at your own risk. If
             you initiate a credit card dispute or chargeback against
             IndieCrowdfund or any of our payment processors, your account will
-            be <strong>permanently banned</strong> and you will lose access to
-            every project, pledge, and digital download tied to it &mdash; with
-            no further refunds, exceptions, or appeals.
+            be <strong>permanently banned</strong>
+            {" "}and you will lose access to every project, pledge, and digital
+            download tied to it &mdash; with no further refunds, exceptions,
+            or appeals.
           </p>
         </div>
 
@@ -52,7 +53,7 @@ export function ChargebacksPolicyContent() {
           <li>Your IndieCrowdfund account is <strong>permanently banned</strong> the moment the dispute is filed</li>
           <li>You lose access to all active pledges, completed pledges, digital downloads, and the backer dashboard tied to that account</li>
           <li>Any future accounts created under the same email, payment method, IP, or device fingerprint are also banned</li>
-          <li>Outstanding rewards are forfeit &mdash; we will not ship a physical reward, deliver a digital file, or grant any access tied to a disputed account</li>
+          <li>Outstanding rewards tied to the disputed account are forfeit &mdash; creators are not obligated to ship physical rewards, deliver digital files, or grant any access to a banned backer, and IndieCrowdfund will revoke any platform-side access immediately</li>
           <li>The creator gets our full evidence package (pledge timeline, address provided, communications, fulfillment records) and we counter-dispute the chargeback on their behalf</li>
           <li>The ban applies even if the dispute is later withdrawn or won by the cardholder</li>
           <li>There is no appeal process</li>

@@ -75,9 +75,6 @@ export function TermsOfServiceContent() {
 
         <h3 className="text-xl font-semibold mt-8 mb-4">5a. Chargebacks &mdash; Immediate Permanent Ban</h3>
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-4 mb-6">
-          <p className="text-red-700 dark:text-red-300 font-semibold mb-2">
-            File a chargeback = banned. No appeals.
-          </p>
           <p className="text-red-700 dark:text-red-300 text-sm mb-3">
             If you initiate a credit-card dispute or chargeback against
             IndieCrowdfund or any of our payment processors (Stripe / PayPal /

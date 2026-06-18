@@ -58,10 +58,10 @@ export function BackerAgreementContent() {
             method, IP, or device fingerprint will also be banned.
           </p>
           <p className="text-red-700 dark:text-red-300 mb-0 text-sm">
-            <strong>File = banned.</strong> Delayed, scaled-back, or
-            cancelled campaigns are <strong>not</strong> grounds for a
-            chargeback &mdash; those risks are what you accepted under
-            sections A&ndash;E above. See our full{" "}
+            Delayed, scaled-back, or cancelled campaigns are{" "}
+            <strong>not</strong> grounds for a chargeback &mdash; those
+            risks are what you accepted under sections A&ndash;E above. See
+            our full{" "}
             <a href="/terms?tab=chargebacks" className="underline">
               Chargeback Handling Policy
             </a>{" "}
