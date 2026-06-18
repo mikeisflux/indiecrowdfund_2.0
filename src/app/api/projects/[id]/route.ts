@@ -940,18 +940,21 @@ export async function DELETE(
         where: { survey: { projectId } },
       });
 
-      // Delete survey item variants
+      // Delete survey item variants (relation field is `itemQuestion`,
+      // not `surveyItemQuestion` -- see survey.prisma). Same for
+      // surveyItemCustomQuestion below.
       await tx.surveyItemVariant.deleteMany({
-        where: { surveyItemQuestion: { survey: { projectId } } },
+        where: { itemQuestion: { survey: { projectId } } },
+      });
+
+      // Delete survey item custom questions (must come before item
+      // questions because of the FK from custom-question.itemQuestionId)
+      await tx.surveyItemCustomQuestion.deleteMany({
+        where: { itemQuestion: { survey: { projectId } } },
       });
 
       // Delete survey item questions
       await tx.surveyItemQuestion.deleteMany({
-        where: { survey: { projectId } },
-      });
-
-      // Delete survey item custom questions
-      await tx.surveyItemCustomQuestion.deleteMany({
         where: { survey: { projectId } },
       });
 
