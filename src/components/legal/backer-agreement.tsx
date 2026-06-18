@@ -46,6 +46,34 @@ export function BackerAgreementContent() {
           Some projects may not be completed despite good-faith efforts.
         </p>
 
+        <h3 className="text-xl font-semibold mt-8 mb-4">F. Chargebacks result in an immediate permanent ban</h3>
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-4 mb-6">
+          <p className="text-red-700 dark:text-red-300 mb-2">
+            If you file a credit-card dispute or chargeback against
+            IndieCrowdfund or any of our payment processors instead of using
+            our support channel first, your account will be{" "}
+            <strong>permanently banned</strong> the moment the dispute is
+            opened, regardless of outcome. You will lose access to every
+            pledge, reward, and digital download tied to that account, and
+            future accounts under the same email, payment method, IP, or
+            device fingerprint will also be banned.
+          </p>
+          <p className="text-red-700 dark:text-red-300 mb-0 text-sm">
+            Delayed, scaled-back, or cancelled campaigns are{" "}
+            <strong>not</strong> grounds for a chargeback &mdash; those risks
+            are what you accepted under sections A&ndash;E above. The proper
+            recourse is{" "}
+            <a href="mailto:support@indiecrowdfund.com" className="underline">
+              support@indiecrowdfund.com
+            </a>
+            . See our full{" "}
+            <a href="/terms?tab=chargebacks" className="underline">
+              Chargeback Handling Policy
+            </a>{" "}
+            for the complete terms.
+          </p>
+        </div>
+
         <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-6 mt-8">
           <p className="font-semibold text-lg mb-0">
             By pledging, you agree you understand these risks.
