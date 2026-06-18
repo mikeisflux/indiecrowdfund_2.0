@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Eye, Link2 } from "lucide-react";
+import { Sparkles, Eye, Link2, PowerOff, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/fetch-utils";
 import { Project } from "./types";
 import { SetVanityUrlDialog } from "./dialogs";
 
@@ -68,6 +71,9 @@ interface PrelaunchDetailPanelProps {
   showPrelaunchVanityDialog: boolean;
   onShowPrelaunchVanityDialogChange: (open: boolean) => void;
   onVanityUrlSuccess: (newVanityUrl: string) => void;
+  // Refresh the parent projects list after deactivation so the
+  // project drops out of the "Prelaunch Active" view.
+  onDeactivated?: () => void;
 }
 
 export function PrelaunchDetailPanel({
@@ -76,7 +82,35 @@ export function PrelaunchDetailPanel({
   showPrelaunchVanityDialog,
   onShowPrelaunchVanityDialogChange,
   onVanityUrlSuccess,
+  onDeactivated,
 }: PrelaunchDetailPanelProps) {
+  const [isDeactivating, setIsDeactivating] = useState(false);
+
+  const handleDeactivate = async () => {
+    if (!selectedProject) return;
+    if (!confirm(`Deactivate the pre-launch page for "${selectedProject.title}"? Followers will no longer see the page.`)) {
+      return;
+    }
+    setIsDeactivating(true);
+    try {
+      const res = await apiFetch(`/api/projects/${selectedProject.id}/prelaunch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prelaunchActive: false }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to deactivate prelaunch");
+      }
+      toast.success("Pre-launch page deactivated");
+      onDeactivated?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to deactivate prelaunch");
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
+
   return (
     <Card className="h-fit sticky top-4">
       {selectedProject ? (
@@ -160,6 +194,25 @@ export function PrelaunchDetailPanel({
                 {prelaunchVanityUrl ? "Edit Vanity URL" : "Set Vanity URL"}
               </Button>
             </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="w-full mt-2"
+              onClick={handleDeactivate}
+              disabled={isDeactivating}
+            >
+              {isDeactivating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deactivating...
+                </>
+              ) : (
+                <>
+                  <PowerOff className="mr-2 h-4 w-4" />
+                  Deactivate Pre-Launch Page
+                </>
+              )}
+            </Button>
             {prelaunchVanityUrl && (
               <p className="text-xs text-muted-foreground mt-2">
                 Vanity URL: <code className="bg-muted dark:bg-zinc-800 px-1 rounded">{prelaunchVanityUrl}</code>

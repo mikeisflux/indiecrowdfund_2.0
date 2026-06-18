@@ -400,6 +400,7 @@ export default function ProjectsPage() {
                 showPrelaunchVanityDialog={showPrelaunchVanityDialog}
                 onShowPrelaunchVanityDialogChange={setShowPrelaunchVanityDialog}
                 onVanityUrlSuccess={(newVanityUrl) => setPrelaunchVanityUrl(newVanityUrl)}
+                onDeactivated={() => fetchProjects()}
               />
             </div>
           )}
