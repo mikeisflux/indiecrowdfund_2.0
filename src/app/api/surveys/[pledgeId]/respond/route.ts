@@ -386,6 +386,23 @@ export async function POST(
       return NextResponse.json({ error: "Survey not found" }, { status: 404 });
     }
 
+    // Same defensive dedupe as GET: if old creator data has two
+    // SurveyItemVariant rows with the same variantType on one
+    // itemQuestion, the duplicate would still fire "Please select
+    // a Size" here because the backer's response only fills one
+    // copy. GET dedupes for rendering but POST has its own load
+    // -- without dedup here, the backer can fill what the UI shows
+    // and still get blocked at submit.
+    for (const itemQ of survey.itemQuestions) {
+      const seen = new Set<string>();
+      itemQ.variants = itemQ.variants.filter((v: { variantType: string }) => {
+        const key = v.variantType.trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
     if (survey.status === "DRAFT") {
       return NextResponse.json(
         { error: "Survey has not been sent yet" },
