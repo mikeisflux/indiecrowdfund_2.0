@@ -233,12 +233,19 @@ export function EmailEditor({
     },
   });
 
-  // Sync only on true external changes — see block-editor.tsx for rationale.
+  // Sync only on true external changes — see block-editor.tsx for
+  // rationale. Guard isDestroyed to avoid the ProseMirror keydown
+  // crash ("Cannot read properties of null (reading 'pmViewDesc')")
+  // when the editor is torn down mid-flight.
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     if (value === lastEmittedRef.current) return;
     lastEmittedRef.current = value;
-    editor.commands.setContent(value, false);
+    try {
+      editor.commands.setContent(value, false);
+    } catch {
+      // Editor was torn down mid-update; safe to swallow.
+    }
   }, [value, editor]);
 
   const addLink = useCallback(() => {

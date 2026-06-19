@@ -339,6 +339,13 @@ export function ErrorReporter() {
         // carry over their session cookie. The 404 is the route correctly
         // protecting a private draft, not a backend bug.
         (response.status === 404 && /\/api\/projects\/slug\/[^/?]+(\?|$)/.test(requestUrl)) ||
+        // /api/projects/[id] returns 404 with "Project not found" after a
+        // SUPER_ADMIN deletes a project from /admin/projects — any tab
+        // still pointed at the now-deleted project (left open, opened
+        // from a stale link, etc.) will GET the id and 404. The delete
+        // is the action that produced the missing row, so the 404 is
+        // the route correctly reporting that state. Not actionable.
+        (response.status === 404 && /\/api\/projects\/[a-z0-9]+$/i.test(requestUrl)) ||
         isBotProbe404;
       // 401s from authed-only endpoints fired by client-side useEffects before the
       // session handshake completes (or after a silent session expiry on long-lived

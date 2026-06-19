@@ -205,11 +205,21 @@ export function RichTextEditor({
   // of our own onUpdate. setContent is destructive (nukes cursor) and
   // emitUpdate=false stops it from firing onUpdate again, which would
   // otherwise loop. See block-editor.tsx for the full rationale.
+  //
+  // Guard `editor.isDestroyed` -- React 18 StrictMode (and ordinary
+  // route navigation) can unmount the editor between the time this
+  // effect was scheduled and when it runs. Calling commands on a
+  // destroyed view triggers ProseMirror's "Cannot read properties of
+  // null (reading 'pmViewDesc')" crash in the keydown handler.
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     if (value === lastEmittedRef.current) return;
     lastEmittedRef.current = value;
-    editor.commands.setContent(value, false);
+    try {
+      editor.commands.setContent(value, false);
+    } catch {
+      // Editor was torn down mid-update; safe to swallow.
+    }
   }, [value, editor]);
 
   const addLink = useCallback(() => {
