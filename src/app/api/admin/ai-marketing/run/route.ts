@@ -9,6 +9,8 @@ import {
   generateSmartSegments,
   batchPredictUsers,
   batchOptimalSendTimes,
+  personalizeEmailForUser,
+  generateContentVariants,
 } from "@/lib/ai/marketing-services";
 import { autoTagProject } from "@/lib/ai/anthropic";
 import { getAISettings, clearSettingsCache } from "@/lib/ai/settings-integration";
@@ -469,6 +471,130 @@ export async function POST(request: Request) {
             emailsSent: emailCount,
           },
         };
+        break;
+      }
+
+      // ==========================================
+      // TEST EMAIL PERSONALIZATION
+      // ==========================================
+      // The UI's "Run Now" on the Email Personalization card hits
+      // this. We pick a representative recent backer, pull a few
+      // LIVE projects to use as candidates, and run one personalize
+      // pass so the operator can see the AI is actually wired up
+      // and what the output looks like.
+      case "testEmailPersonalization": {
+        const settings = await getAISettings();
+        if (!settings.emailPersonalization) {
+          return NextResponse.json({
+            success: false,
+            message: "Email Personalization is disabled. Enable it in AI Settings first.",
+          });
+        }
+
+        const sampleUser = await db.user.findFirst({
+          where: { deletedAt: null, lockedAt: null },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, email: true, name: true },
+        });
+        if (!sampleUser) {
+          return NextResponse.json({
+            success: false,
+            message: "No users available to use as a sample for the personalization test.",
+          });
+        }
+
+        const sampleProjects = await db.project.findMany({
+          where: { status: "LIVE", deletedAt: null },
+          orderBy: { createdAt: "desc" },
+          take: 3,
+          select: { id: true, title: true, description: true, category: true },
+        });
+        if (sampleProjects.length === 0) {
+          return NextResponse.json({
+            success: false,
+            message: "No LIVE projects to use as personalization candidates.",
+          });
+        }
+
+        try {
+          const personalized = await personalizeEmailForUser(
+            sampleUser.id,
+            params?.campaignType || "weekly_digest",
+            sampleProjects.map((p: { id: string; title: string; description: string | null; category: string | null }) => ({
+              id: p.id,
+              title: p.title,
+              description: p.description || "",
+              category: p.category || "general",
+            }))
+          );
+          result = {
+            success: true,
+            message: `Personalized email content for ${sampleUser.email}`,
+            sampleUser: { id: sampleUser.id, email: sampleUser.email, name: sampleUser.name },
+            campaignType: params?.campaignType || "weekly_digest",
+            candidateCount: sampleProjects.length,
+            personalized,
+          };
+        } catch (err) {
+          return NextResponse.json({
+            success: false,
+            message:
+              "Personalization call failed -- check ANTHROPIC_API_KEY in admin settings and PM2 logs for the Anthropic error.",
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        break;
+      }
+
+      // ==========================================
+      // TEST CONTENT OPTIMIZATION (A/B variant generation)
+      // ==========================================
+      // The UI's "Run Now" on Content Optimization. We generate 3
+      // A/B variants of a sample subject line so the operator can
+      // see real Anthropic output. Real-world use is wired into the
+      // campaign-builder; this just smoke-tests the path.
+      case "testContentOptimization": {
+        const settings = await getAISettings();
+        if (!settings.contentOptimization) {
+          return NextResponse.json({
+            success: false,
+            message: "Content Optimization is disabled. Enable it in AI Settings first.",
+          });
+        }
+
+        const sampleContent: string =
+          params?.content || "Back this comic and get exclusive variant covers";
+        const contentType: "subject" | "body" | "cta" =
+          params?.contentType === "body" || params?.contentType === "cta"
+            ? params.contentType
+            : "subject";
+        const context = {
+          campaignType: params?.campaignType || "project_launch",
+          targetAudience: params?.targetAudience || "comic backers",
+        };
+
+        try {
+          const variants = await generateContentVariants(
+            sampleContent,
+            contentType,
+            context
+          );
+          result = {
+            success: true,
+            message: `Generated ${variants.variants?.length || 0} ${contentType} variants`,
+            sample: sampleContent,
+            contentType,
+            context,
+            variants,
+          };
+        } catch (err) {
+          return NextResponse.json({
+            success: false,
+            message:
+              "Content variant generation failed -- check ANTHROPIC_API_KEY in admin settings and PM2 logs for the Anthropic error.",
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
         break;
       }
 
