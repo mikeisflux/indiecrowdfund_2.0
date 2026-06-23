@@ -82,6 +82,8 @@ export function ActiveProjectPanel({
   const [reconcileMessage, setReconcileMessage] = useState<string | null>(null);
   const [isDeletingAbandoned, setIsDeletingAbandoned] = useState(false);
   const [deleteAbandonedMessage, setDeleteAbandonedMessage] = useState<string | null>(null);
+  const [isBackfillingWhopIds, setIsBackfillingWhopIds] = useState(false);
+  const [whopBackfillMessage, setWhopBackfillMessage] = useState<string | null>(null);
   const [isMigratingToDc, setIsMigratingToDc] = useState(false);
   const [migrateDcMessage, setMigrateDcMessage] = useState<string | null>(null);
   const [showVanityUrlDialog, setShowVanityUrlDialog] = useState(false);
@@ -399,6 +401,52 @@ export function ActiveProjectPanel({
       setReconcileMessage("Error: Network request failed");
     } finally {
       setIsReconciling(false);
+    }
+  };
+
+  // Whop-only: stamp whopPaymentId onto historical pledges that
+  // missed it because of the pre-fix webhook race (browser-confirm
+  // marked COMPLETED before the webhook stamped the id). First
+  // click runs a dry-run preview; second click within the same
+  // session (with a confirm prompt) commits.
+  const handleBackfillWhopIds = async (commit: boolean) => {
+    if (!project) return;
+    if (commit) {
+      const ok = window.confirm(
+        `Stamp the Whop payment id onto every pledge on "${project.title}" that's missing one?\n\nThis fixes refund/dispute lookup for existing pledges. Idempotent — safe to re-run.`
+      );
+      if (!ok) return;
+    }
+    setIsBackfillingWhopIds(true);
+    setWhopBackfillMessage(null);
+    try {
+      const response = await apiFetch(`/api/admin/backfill-whop-payment-ids`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, dryRun: !commit }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setWhopBackfillMessage(`Error: ${data.error || "Backfill failed"}`);
+        return;
+      }
+      if (data.pledgesScanned === 0) {
+        setWhopBackfillMessage("No Whop pledges are missing a payment id — already clean.");
+        return;
+      }
+      if (commit) {
+        setWhopBackfillMessage(
+          `Stamped payment ids on ${data.updated}/${data.pledgesScanned} pledges. ${data.notFound} not found in Whop, ${data.errored} errored.`
+        );
+      } else {
+        setWhopBackfillMessage(
+          `Dry run: ${data.pledgesScanned} pledges missing payment id, ${data.pledgesScanned - data.notFound} have a Whop match (would update), ${data.notFound} have no match. Press again to commit.`
+        );
+      }
+    } catch {
+      setWhopBackfillMessage("Error: Network request failed");
+    } finally {
+      setIsBackfillingWhopIds(false);
     }
   };
 
@@ -745,6 +793,46 @@ export function ActiveProjectPanel({
             )}
             {processMessage && (
               <p className={`text-sm mt-2 ${processMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{processMessage}</p>
+            )}
+
+            {/* Whop-specific: backfill historical whopPaymentId
+                values. Only shows for WHOP projects since other
+                processors don't have this gap. */}
+            {String(project.paymentProcessor) === "WHOP" && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <ToolButton
+                  variant="outline"
+                  onClick={() => handleBackfillWhopIds(false)}
+                  disabled={isBackfillingWhopIds}
+                  tooltip={
+                    <>
+                      <p className="font-semibold mb-1">Backfill: Dry Run</p>
+                      <p>Preview only. Walks Whop&apos;s payments list and reports how many existing pledges are missing <code>whopPaymentId</code> and how many would get stamped. Writes nothing.</p>
+                    </>
+                  }
+                >
+                  {isBackfillingWhopIds ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSearch className="mr-2 h-4 w-4" />}
+                  Backfill: Dry Run
+                </ToolButton>
+                <ToolButton
+                  variant="default"
+                  onClick={() => handleBackfillWhopIds(true)}
+                  disabled={isBackfillingWhopIds}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  tooltip={
+                    <>
+                      <p className="font-semibold mb-1">Backfill Whop Payment IDs</p>
+                      <p>Stamps the correct <code>whopPaymentId</code> onto every Whop pledge on this project that&apos;s missing one. Fixes refund / dispute / reconciliation lookups that were broken by the pre-fix webhook race. Confirms first. Idempotent.</p>
+                    </>
+                  }
+                >
+                  {isBackfillingWhopIds ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                  Backfill Payment IDs
+                </ToolButton>
+              </div>
+            )}
+            {whopBackfillMessage && (
+              <p className={`text-sm mt-2 ${whopBackfillMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{whopBackfillMessage}</p>
             )}
           </div>
 
