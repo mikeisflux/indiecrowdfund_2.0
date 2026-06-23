@@ -91,17 +91,19 @@ export async function POST(req: NextRequest) {
     const config = await getWhopConfig();
     const client = new Whop({ apiKey: config.apiKey });
 
-    // Walk the full payments list once and index by checkout config
-    // id -- cheaper than calling payments.list per pledge when the
-    // backfill is for many rows. Look back 180 days (covers all live
-    // Whop campaigns plus a buffer).
+    // Walk the full payments list and index by metadata.pledgeId.
+    // Whop's Payment SDK type does NOT have a checkout_configuration_id
+    // field, so we can't match by that. Every paid payment DOES carry
+    // the metadata we set on its source checkout configuration --
+    // which includes { pledgeId, projectId, userId } -- so that's our
+    // join key instead.
     const since = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
     type WhopPayment = {
       id?: string;
       status?: string;
-      checkout_configuration_id?: string;
+      metadata?: Record<string, unknown> | null;
     };
-    const indexByCheckout = new Map<string, string>();
+    const indexByPledgeId = new Map<string, string>();
     const iter = await client.payments.list({
       company_id: config.companyId,
       first: 100,
@@ -110,13 +112,15 @@ export async function POST(req: NextRequest) {
     let walked = 0;
     for await (const raw of iter) {
       const p = raw as unknown as WhopPayment;
+      const md = p.metadata as Record<string, unknown> | null | undefined;
+      const pledgeId = typeof md?.pledgeId === "string" ? md.pledgeId : null;
       if (
         p.id &&
-        p.checkout_configuration_id &&
+        pledgeId &&
         (p.status === "paid" || p.status === "succeeded") &&
-        !indexByCheckout.has(p.checkout_configuration_id)
+        !indexByPledgeId.has(pledgeId)
       ) {
-        indexByCheckout.set(p.checkout_configuration_id, p.id);
+        indexByPledgeId.set(pledgeId, p.id);
       }
       walked += 1;
       if (walked >= 5000) break;
@@ -133,8 +137,8 @@ export async function POST(req: NextRequest) {
     }> = [];
 
     for (const p of pledges) {
-      const checkoutId = p.whopCheckoutId as string;
-      const paymentId = indexByCheckout.get(checkoutId);
+      const checkoutId = (p.whopCheckoutId as string) || "";
+      const paymentId = indexByPledgeId.get(p.id);
       if (!paymentId) {
         notFound += 1;
         sample.push({ pledgeId: p.id, whopCheckoutId: checkoutId, result: "not-found" });
@@ -181,7 +185,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       pledgesScanned: pledges.length,
-      whopPaymentsIndexed: indexByCheckout.size,
+      whopPaymentsIndexed: indexByPledgeId.size,
       updated,
       notFound,
       errored,
