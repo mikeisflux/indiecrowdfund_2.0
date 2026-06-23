@@ -103,16 +103,41 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        if (!pledge || pledge.status === "COMPLETED") break;
+        if (!pledge) break;
 
-        // Save Whop checkout config ID and payment ID for refunds
+        // Always stamp the Whop checkout config ID + payment ID,
+        // EVEN if the pledge is already COMPLETED. The /api/whop/
+        // confirm/[pledgeId] route (fired by the browser when the
+        // user lands on Whop's success URL) frequently marks the
+        // pledge COMPLETED before this webhook arrives, and the
+        // previous "break" on COMPLETED meant whopPaymentId never
+        // got written for any browser-confirmed pledge -- breaking
+        // refund / dispute / reconciliation lookups that key on it.
+        // Use updateMany with a guard so we only set the field when
+        // it's currently NULL (don't overwrite a different payment
+        // id, e.g. if a partial-refund webhook reuses payment.id).
         const whopPaymentId = data?.id as string | undefined;
-        const updateData: Record<string, string> = {};
-        if (checkoutConfigId) updateData.whopCheckoutId = checkoutConfigId;
-        if (whopPaymentId) updateData.whopPaymentId = whopPaymentId;
-        if (Object.keys(updateData).length > 0) {
-          await db.pledge.update({ where: { id: pledgeId }, data: updateData });
+        if (checkoutConfigId) {
+          await db.pledge.updateMany({
+            where: { id: pledgeId, whopCheckoutId: null },
+            data: { whopCheckoutId: checkoutConfigId },
+          });
         }
+        if (whopPaymentId) {
+          await db.pledge.updateMany({
+            where: { id: pledgeId, whopPaymentId: null },
+            data: { whopPaymentId },
+          });
+        }
+
+        // Now short-circuit the rest of the side-effects (project
+        // amount increment, reward slot claim, confirmation email,
+        // backer notification) if the pledge was already marked
+        // COMPLETED by the browser confirm path. Those operations
+        // are idempotent-by-design through the confirmationEmailSent
+        // guard below, but bailing out here is cheaper and matches
+        // pre-fix behavior for the already-confirmed case.
+        if (pledge.status === "COMPLETED") break;
 
         // Atomically mark as confirmed
         const result = await db.pledge.updateMany({
