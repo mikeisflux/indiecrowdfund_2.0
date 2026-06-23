@@ -124,6 +124,70 @@ export async function POST(
       );
     }
 
+    // Require a bank account on file for the project's payment
+    // processor. Without this we can't pay the creator out after
+    // their campaign ends -- which is exactly the situation that
+    // surfaced after one creator went LIVE without ever connecting
+    // a bank, raised >$1k, and we had no way to route the funds.
+    // Each processor has its own table; check the one that matches
+    // project.paymentProcessor.
+    const processor = (project.paymentProcessor || "STRIPE") as string;
+    let hasBankAccount = false;
+    let processorLabel = "";
+    if (processor === "DIVINITYCOIN") {
+      processorLabel = "Divinity Payments";
+      const acct = await db.divinityCoinBankAccount.findUnique({
+        where: { userId: project.creatorId },
+        select: { id: true },
+      });
+      hasBankAccount = !!acct;
+    } else if (processor === "PAYPAL") {
+      processorLabel = "PayPal";
+      // PayPal supports either a bank account OR a legacy payout
+      // config keyed by email; either one is sufficient.
+      const [acct, payoutConfig] = await Promise.all([
+        db.payPalBankAccount.findUnique({
+          where: { userId: project.creatorId },
+          select: { id: true },
+        }),
+        db.payPalPayoutConfig.findUnique({
+          where: { userId: project.creatorId },
+          select: { id: true },
+        }),
+      ]);
+      hasBankAccount = !!(acct || payoutConfig);
+    } else if (processor === "WHOP") {
+      processorLabel = "Whop";
+      const acct = await db.whopBankAccount.findUnique({
+        where: { userId: project.creatorId },
+        select: { id: true },
+      });
+      hasBankAccount = !!acct;
+    } else {
+      // STRIPE (legacy) -- relies on stripeAccountId on the project,
+      // not a per-user bank table. Treat as configured if the field
+      // is set; the launch path was originally written for this.
+      processorLabel = "Stripe";
+      hasBankAccount = !!project.stripeAccountId;
+    }
+
+    if (!hasBankAccount) {
+      projectsLaunchLogger.warn(
+        { projectId, creatorId: project.creatorId, processor },
+        "Launch blocked: no bank account on file for project's payment processor"
+      );
+      return NextResponse.json(
+        {
+          error: "Bank account required",
+          message: `A bank account for ${processorLabel} must be on file before your project can be launched. Go to the Payment step in your project setup, or to IndieKit > Settings > Payments to add it.`,
+          code: "BANK_ACCOUNT_REQUIRED",
+          processor,
+          redirectTo: `/projects/${project.creator.vanityUrl || "edit"}/${project.slug}/edit?step=payment`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Check campaign limits based on user role (skip for ADMIN/SUPER_ADMIN)
     if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
       // Get all user's projects that are LIVE or FUNDED (not yet fully fulfilled)
