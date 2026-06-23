@@ -13,6 +13,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   CheckCircle,
   Eye,
   Zap,
@@ -31,6 +37,25 @@ import {
 import { Project } from "./types";
 import { formatDuration } from "./utils";
 import { SetVanityUrlDialog, AdjustEndDateDialog } from "./dialogs";
+
+// Tooltip-wrapped button. Keeps the JSX in the buttons section
+// readable without dozens of nested <TooltipProvider> wrappers.
+function ToolButton({
+  tooltip,
+  children,
+  ...rest
+}: React.ComponentProps<typeof Button> & { tooltip: React.ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button {...rest}>{children}</Button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs text-xs leading-relaxed">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 interface ActiveProjectPanelProps {
   project: Project | null;
@@ -272,41 +297,103 @@ export function ActiveProjectPanel({
     }
   };
 
+  // Dispatch reconciliation to the right backend based on the
+  // project's payment processor. Each processor has different
+  // failure modes and different APIs for cross-referencing
+  // payments back to our DB; the route the button hits is picked
+  // automatically.
   const handleReconcilePledges = async () => {
     if (!project) return;
 
     setIsReconciling(true);
     setReconcileMessage(null);
+    const processor = String(project.paymentProcessor || "STRIPE");
 
     try {
+      if (processor === "WHOP") {
+        // Whop: list payments via SDK, find ones with no matching
+        // Pledge row (orphans). Surfaces email + amount + checkout
+        // id so we can manually reconcile each.
+        const response = await apiFetch(`/api/admin/reconcile-whop-pledges`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: project.id }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setReconcileMessage(`Error: ${data.error || "Failed to reconcile"}`);
+          return;
+        }
+        if (data.orphanCount === 0) {
+          setReconcileMessage(
+            `Clean: ${data.whopPaidCount} Whop payments match ${data.ourPledgeCount} pledges. No orphans.`
+          );
+        } else {
+          const sample = data.orphans
+            .slice(0, 3)
+            .map((o: { email?: string; amount?: number }) => `${o.email || "?"} ($${o.amount || 0})`)
+            .join(", ");
+          setReconcileMessage(
+            `${data.orphanCount} orphan${data.orphanCount === 1 ? "" : "s"} ($${data.orphanTotalAmount} total). Sample: ${sample}. Full list in JSON response — check Network tab.`
+          );
+        }
+        return;
+      }
+
+      if (processor === "DIVINITYCOIN") {
+        // DC: re-runs the verify path (queries DC's API per pledge,
+        // marks succeeded ones COMPLETED, deletes abandoned carts).
+        const response = await apiFetch(
+          `/api/admin/projects/${project.id}/process-pledges`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "verify" }),
+          }
+        );
+        const data = await response.json();
+        if (!response.ok) {
+          setReconcileMessage(`Error: ${data.error || "Failed to reconcile"}`);
+          return;
+        }
+        const r = data.results;
+        if (r.total === 0) {
+          setReconcileMessage("All Divinity Payments pledges already settled");
+        } else {
+          setReconcileMessage(
+            `Verified ${r.verified}/${r.total}: ${r.alreadySucceeded} completed, ${r.abandoned} abandoned`
+          );
+          if (r.alreadySucceeded > 0) handleSyncStats();
+        }
+        return;
+      }
+
+      // STRIPE (legacy) -- cross-references Stripe API against our DB
       const response = await apiFetch(`/api/admin/reconcile-pledges`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: project.id, applyFixes: true }),
       });
-
       const data = await response.json();
-
-      if (response.ok) {
-        const result = data.results?.[0];
-        if (!result) {
-          setReconcileMessage("No pledges found for this project");
-        } else if (!result.discrepancy.hasIssues) {
-          setReconcileMessage("All pledges are in sync with Stripe");
-        } else {
-          const issues = [];
-          if (result.details.statusMismatch.length > 0) {
-            issues.push(`${result.details.statusMismatch.length} status fixes`);
-          }
-          if (result.details.missingInDb.length > 0) {
-            issues.push(`${result.details.missingInDb.length} missing pledges`);
-          }
-          setReconcileMessage(`Reconciled: ${issues.join(", ") || "fixes applied"}`);
-          // Refresh stats after reconciliation
-          handleSyncStats();
-        }
-      } else {
+      if (!response.ok) {
         setReconcileMessage(`Error: ${data.error || "Failed to reconcile"}`);
+        return;
+      }
+      const result = data.results?.[0];
+      if (!result) {
+        setReconcileMessage("No pledges found for this project");
+      } else if (!result.discrepancy.hasIssues) {
+        setReconcileMessage(`All ${processor} pledges are in sync`);
+      } else {
+        const issues = [];
+        if (result.details.statusMismatch.length > 0) {
+          issues.push(`${result.details.statusMismatch.length} status fixes`);
+        }
+        if (result.details.missingInDb.length > 0) {
+          issues.push(`${result.details.missingInDb.length} missing pledges`);
+        }
+        setReconcileMessage(`Reconciled: ${issues.join(", ") || "fixes applied"}`);
+        handleSyncStats();
       }
     } catch {
       setReconcileMessage("Error: Network request failed");
@@ -440,186 +527,270 @@ export function ActiveProjectPanel({
         </Accordion>
 
         {/* Action Buttons for Active Campaigns */}
-        <div className="p-4 border-t bg-muted/50 dark:bg-zinc-800/50">
-          <div className="flex items-center gap-2 mb-2">
-            <Button variant="outline" className="flex-1" asChild>
-              <a href={project.creator.vanityUrl ? `/projects/${project.creator.vanityUrl}/${project.slug}` : `/projects/${project.slug}`} target="_blank" rel="noopener noreferrer">
-                <Eye className="mr-2 h-4 w-4" />
-                View Campaign
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSyncStats}
-              disabled={isSyncing}
-              className="flex-1"
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-              {isSyncing ? "Syncing..." : "Sync Stats"}
-            </Button>
-          </div>
-          <div className="flex items-center gap-2 mb-2">
-            <Button variant="outline" className="flex-1" asChild>
-              <a href={`/api/admin/projects/${project.id}/process-pledges`} target="_blank" rel="noopener noreferrer">
-                <FileSearch className="mr-2 h-4 w-4" />
-                Diagnose
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleVerifyPayments}
-              disabled={isVerifying}
-              className="flex-1"
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${isVerifying ? "animate-spin" : ""}`} />
-              {isVerifying ? "Verifying..." : "Verify Payments"}
-            </Button>
-          </div>
-          <div className="flex items-center gap-2 mb-2">
-            <Button
-              variant="outline"
-              onClick={handleReconcilePledges}
-              disabled={isReconciling}
-              className="flex-1"
-            >
-              {isReconciling ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              {isReconciling ? "Reconciling..." : "Reconcile Pledges"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowEndDateDialog(true)}
-              className="flex-1"
-            >
-              <CalendarClock className="mr-2 h-4 w-4" />
-              Adjust End Date
-            </Button>
-          </div>
-          <div className="flex items-center gap-2 mb-2">
-            <Button
-              variant="outline"
-              onClick={handleBackfillBackerNumbers}
-              disabled={isBackfilling}
-              className="flex-1"
-            >
-              {isBackfilling ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Hash className="mr-2 h-4 w-4" />
-              )}
-              {isBackfilling ? "Assigning..." : "Assign Backer #s"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowVanityUrlDialog(true)}
-              className="flex-1"
-            >
-              <Link2 className="mr-2 h-4 w-4" />
-              {currentVanityUrl ? "Edit Vanity URL" : "Set Vanity URL"}
-            </Button>
-          </div>
-          {currentVanityUrl && (
-            <p className="text-xs text-muted-foreground mb-2">
-              Vanity URL: <code className="bg-muted dark:bg-zinc-800 px-1 rounded">{currentVanityUrl}</code>
-            </p>
-          )}
-          {backfillMessage && (
-            <p className={`text-sm mb-2 ${backfillMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
-              {backfillMessage}
-            </p>
-          )}
-          {verifyMessage && (
-            <p className={`text-sm mb-2 ${verifyMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
-              {verifyMessage}
-            </p>
-          )}
-          {reconcileMessage && (
-            <p className={`text-sm mb-2 ${reconcileMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
-              {reconcileMessage}
-            </p>
-          )}
-          {syncMessage && (
-            <p className={`text-sm mb-4 ${syncMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
-              {syncMessage}
-            </p>
-          )}
+        <TooltipProvider delayDuration={250}>
+        <div className="p-4 border-t bg-muted/50 dark:bg-zinc-800/50 space-y-5">
 
-          {/* Process Pledges Button - shows for funded projects */}
-          {Number(project.currentAmount) >= Number(project.goalAmount) && (
-            <div className="mb-4">
-              <Button
+          {/* Processor Badge — every tool below is automatically
+              dispatched to the right backend based on this. */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Payment processor:</span>
+            <Badge variant="outline" className="font-mono">
+              {String(project.paymentProcessor || "STRIPE")}
+            </Badge>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────
+              Section 1: Campaign Management
+              Tools that aren't tied to a specific processor.
+          ──────────────────────────────────────────────────────────*/}
+          <div>
+            <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-2">
+              Campaign Management
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              <ToolButton
+                variant="outline"
+                asChild
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">View Campaign</p>
+                    <p>Opens the public-facing project page in a new tab — what a backer sees.</p>
+                  </>
+                }
+              >
+                <a
+                  href={project.creator.vanityUrl ? `/projects/${project.creator.vanityUrl}/${project.slug}` : `/projects/${project.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Campaign
+                </a>
+              </ToolButton>
+
+              <ToolButton
+                variant="outline"
+                onClick={handleSyncStats}
+                disabled={isSyncing}
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Sync Stats</p>
+                    <p>Recalculates the project&apos;s <code>currentAmount</code> and <code>backerCount</code> directly from the Pledge table. Use after manual SQL fixes, after Reconcile, or whenever the campaign page numbers look off.</p>
+                  </>
+                }
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+                {isSyncing ? "Syncing..." : "Sync Stats"}
+              </ToolButton>
+
+              <ToolButton
+                variant="outline"
+                onClick={() => setShowEndDateDialog(true)}
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Adjust End Date</p>
+                    <p>Shift the campaign&apos;s end date forward or back. Useful for extending a campaign that&apos;s about to close, or shortening one that&apos;s stuck open.</p>
+                  </>
+                }
+              >
+                <CalendarClock className="mr-2 h-4 w-4" />
+                Adjust End Date
+              </ToolButton>
+
+              <ToolButton
+                variant="outline"
+                onClick={handleBackfillBackerNumbers}
+                disabled={isBackfilling}
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Assign Backer #s</p>
+                    <p>Assigns sequential backer numbers (#1, #2, …) to every COMPLETED pledge that doesn&apos;t have one yet, in chronological order by pledge date. Idempotent — safe to re-run.</p>
+                  </>
+                }
+              >
+                {isBackfilling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Hash className="mr-2 h-4 w-4" />}
+                {isBackfilling ? "Assigning..." : "Assign Backer #s"}
+              </ToolButton>
+
+              <ToolButton
+                variant="outline"
+                onClick={() => setShowVanityUrlDialog(true)}
+                className="col-span-2"
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">{currentVanityUrl ? "Edit Vanity URL" : "Set Vanity URL"}</p>
+                    <p>The creator&apos;s vanity URL appears in their project link (e.g. <code>/projects/&lt;vanity&gt;/&lt;slug&gt;</code>). Required before launch — set it here if a creator launched before the field was enforced.</p>
+                  </>
+                }
+              >
+                <Link2 className="mr-2 h-4 w-4" />
+                {currentVanityUrl ? "Edit Vanity URL" : "Set Vanity URL"}
+              </ToolButton>
+            </div>
+            {currentVanityUrl && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Vanity URL: <code className="bg-muted dark:bg-zinc-800 px-1 rounded">{currentVanityUrl}</code>
+              </p>
+            )}
+            {syncMessage && (
+              <p className={`text-sm mt-2 ${syncMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{syncMessage}</p>
+            )}
+            {backfillMessage && (
+              <p className={`text-sm mt-1 ${backfillMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{backfillMessage}</p>
+            )}
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────
+              Section 2: Payments & Reconciliation
+              All processor-aware -- the tool routes to the right
+              backend based on project.paymentProcessor automatically.
+          ──────────────────────────────────────────────────────────*/}
+          <div>
+            <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-2">
+              Payments &amp; Reconciliation
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              <ToolButton
+                variant="outline"
+                asChild
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Diagnose</p>
+                    <p>Opens a JSON dump of every pledge on this project plus its raw status from the payment processor — DC PaymentIntent state, PayPal capture state, Whop payment state, Stripe charge state. Read-only; nothing is modified.</p>
+                  </>
+                }
+              >
+                <a href={`/api/admin/projects/${project.id}/process-pledges`} target="_blank" rel="noopener noreferrer">
+                  <FileSearch className="mr-2 h-4 w-4" />
+                  Diagnose
+                </a>
+              </ToolButton>
+
+              <ToolButton
+                variant="outline"
+                onClick={handleVerifyPayments}
+                disabled={isVerifying}
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Verify Payments</p>
+                    <p>For every PENDING immediate-charge pledge: queries the processor for the actual status. If the payment succeeded but the webhook never ran, the pledge gets flipped to COMPLETED. If it failed/was abandoned, it&apos;s marked accordingly.</p>
+                    <p className="mt-1 opacity-75">Runs against <strong>{String(project.paymentProcessor)}</strong>.</p>
+                  </>
+                }
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isVerifying ? "animate-spin" : ""}`} />
+                {isVerifying ? "Verifying..." : "Verify Payments"}
+              </ToolButton>
+
+              <ToolButton
+                variant="outline"
+                onClick={handleReconcilePledges}
+                disabled={isReconciling}
+                className="col-span-2"
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Reconcile Pledges</p>
+                    <p>Cross-references the processor&apos;s payment list against our Pledge table. Finds:</p>
+                    <ul className="list-disc list-inside mt-1 space-y-0.5">
+                      <li>Pledges marked PENDING that actually succeeded on the processor</li>
+                      <li>Pledges marked COMPLETED that don&apos;t actually exist on the processor</li>
+                      <li>Processor payments with no matching Pledge row (orphans)</li>
+                    </ul>
+                    <p className="mt-1 opacity-75">Dispatch by processor — Whop hits the orphan finder, DC re-runs the verify path, Stripe runs full cross-reference.</p>
+                  </>
+                }
+              >
+                {isReconciling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                {isReconciling ? "Reconciling..." : `Reconcile Pledges (${String(project.paymentProcessor)})`}
+              </ToolButton>
+            </div>
+            {verifyMessage && (
+              <p className={`text-sm mt-2 ${verifyMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{verifyMessage}</p>
+            )}
+            {reconcileMessage && (
+              <p className={`text-sm mt-1 ${reconcileMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{reconcileMessage}</p>
+            )}
+
+            {/* Process Pending Pledges -- only relevant once the
+                campaign has hit its goal. Same button name, different
+                semantics per processor (DC reconciles intent states,
+                Stripe captures authorized cards). */}
+            {Number(project.currentAmount) >= Number(project.goalAmount) && (
+              <ToolButton
                 variant="default"
                 onClick={handleProcessPledges}
                 disabled={isProcessingPledges}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Process Pending Pledges</p>
+                    <p>Runs the all-pledges settlement pass for this funded campaign:</p>
+                    <ul className="list-disc list-inside mt-1 space-y-0.5">
+                      <li><strong>Divinity Payments</strong>: re-queries every PENDING PaymentIntent and reconciles to COMPLETED / failed / abandoned.</li>
+                      <li><strong>PayPal</strong>: captures every AUTHORIZE pledge that&apos;s still PENDING.</li>
+                      <li><strong>Stripe</strong>: captures every authorized card.</li>
+                      <li><strong>Whop</strong>: charges happen immediately at checkout, so this just runs the verify path.</li>
+                    </ul>
+                    <p className="mt-1 opacity-75">Only available once the campaign has hit its goal.</p>
+                  </>
+                }
               >
-                {isProcessingPledges ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <CreditCard className="mr-2 h-4 w-4" />
-                )}
+                {isProcessingPledges ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
                 {isProcessingPledges
                   ? "Processing..."
-                  : project.paymentProcessor === "DIVINITYCOIN"
+                  : String(project.paymentProcessor) === "DIVINITYCOIN"
                     ? "Reconcile Pending DC Pledges"
                     : "Process Pending Pledges"}
-              </Button>
-              {processMessage && (
-                <p className={`text-sm mt-2 ${processMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
-                  {processMessage}
-                </p>
-              )}
-            </div>
-          )}
+              </ToolButton>
+            )}
+            {processMessage && (
+              <p className={`text-sm mt-2 ${processMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{processMessage}</p>
+            )}
+          </div>
 
-          {/* Migrate to DivinityCoin — shows for projects on Mentom
-              (NMI, primary case) AND for projects already flipped to
-              DC (so leftover NMI pledges can still be migrated after
-              the project record itself has moved). Idempotent; the
-              dry-run path makes it safe to surface broadly — if there
-              are no NMI pledges left, it just reports 0 migrated.
-              String-cast the enum check so the local Project type can
-              drop NMI from its union (Prisma still has it for legacy
-              DB rows). */}
+          {/* ─────────────────────────────────────────────────────────
+              Section 3: Legacy Migration (NMI -> DC)
+              Only renders for projects that touched Mentom Payments.
+          ──────────────────────────────────────────────────────────*/}
           {(String(project.paymentProcessor) === "NMI" || String(project.paymentProcessor) === "DIVINITYCOIN") && (
-            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800 p-3">
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-200 mb-1">
+            <div className="rounded-lg border border-amber-300 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800 p-3">
+              <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-1">
                 {String(project.paymentProcessor) === "NMI"
                   ? "On Mentom Payments — needs migration"
                   : "Migrate leftover Mentom (NMI) pledges"}
-              </p>
+              </h4>
               <p className="text-xs text-amber-800 dark:text-amber-300 mb-3">
-                Re-stages every NMI pledge (PENDING / FAILED / COMPLETED) on DivinityCoin and emails each backer a link to re-enter their card. PaymentCloud was decommissioned, so even &quot;COMPLETED&quot; NMI charges were reversed back to the backer. Always test with Dry Run first.
+                PaymentCloud (NMI) was decommissioned. Even &quot;COMPLETED&quot; NMI charges were reversed back to the backer. Re-stages every NMI pledge on Divinity Payments and emails each backer a link to re-enter their card. Always Dry Run first.
               </p>
-              <div className="flex items-center gap-2">
-                <Button
+              <div className="grid grid-cols-2 gap-2">
+                <ToolButton
                   variant="outline"
                   onClick={() => handleMigrateToDc(true)}
                   disabled={isMigratingToDc}
-                  className="flex-1"
+                  tooltip={
+                    <>
+                      <p className="font-semibold mb-1">Dry Run</p>
+                      <p>Previews what the migration would do — counts pledges, lists emails, reports whether the project record itself would flip processors. Writes nothing.</p>
+                    </>
+                  }
                 >
-                  {isMigratingToDc ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileSearch className="mr-2 h-4 w-4" />
-                  )}
+                  {isMigratingToDc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSearch className="mr-2 h-4 w-4" />}
                   Dry Run
-                </Button>
-                <Button
+                </ToolButton>
+                <ToolButton
                   onClick={() => handleMigrateToDc(false)}
                   disabled={isMigratingToDc}
-                  className="flex-1 bg-amber-600 hover:bg-amber-700"
+                  className="bg-amber-600 hover:bg-amber-700"
+                  tooltip={
+                    <>
+                      <p className="font-semibold mb-1">Migrate to Divinity Payments</p>
+                      <p>Idempotent commit. Flips every NMI pledge&apos;s processor + status, clears NMI fields, preserves campaign totals, emails each backer. Confirms via dialog before running.</p>
+                    </>
+                  }
                 >
-                  {isMigratingToDc ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowRightLeft className="mr-2 h-4 w-4" />
-                  )}
-                  Migrate to DivinityCoin
-                </Button>
+                  {isMigratingToDc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRightLeft className="mr-2 h-4 w-4" />}
+                  Migrate to DC
+                </ToolButton>
               </div>
               {migrateDcMessage && (
                 <p className={`text-sm mt-2 ${migrateDcMessage.startsWith("Error") ? "text-red-600" : "text-emerald-700 dark:text-emerald-400"}`}>
@@ -629,51 +800,71 @@ export function ActiveProjectPanel({
             </div>
           )}
 
-          {/* Delete Abandoned Carts Button */}
-          <div className="mb-4">
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAbandonedCarts}
-              disabled={isDeletingAbandoned}
-              className="w-full"
-            >
-              {isDeletingAbandoned ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+          {/* ─────────────────────────────────────────────────────────
+              Section 4: Danger Zone
+              Destructive actions kept visually separate.
+          ──────────────────────────────────────────────────────────*/}
+          <div className="rounded-lg border border-red-300 dark:border-red-900 bg-red-50/40 dark:bg-red-950/20 p-3">
+            <h4 className="text-xs font-semibold uppercase text-red-700 dark:text-red-400 tracking-wide mb-2">
+              Danger Zone
+            </h4>
+            <div className="space-y-2">
+              <ToolButton
+                variant="destructive"
+                onClick={handleDeleteAbandonedCarts}
+                disabled={isDeletingAbandoned}
+                className="w-full"
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Delete Abandoned Carts</p>
+                    <p>Permanently deletes every PENDING pledge on this project that has no evidence of payment activity (no <code>stripePaymentIntentId</code> / <code>divinityCoinPaymentId</code> / <code>paypalOrderId</code> / <code>whopCheckoutId</code>). Confirms first.</p>
+                    <p className="mt-1 opacity-75">Use after a campaign closes to clean out unfunded carts that backers walked away from. Cannot be undone.</p>
+                  </>
+                }
+              >
+                {isDeletingAbandoned ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                {isDeletingAbandoned ? "Deleting..." : "Delete Abandoned Carts"}
+              </ToolButton>
+              {deleteAbandonedMessage && (
+                <p className={`text-sm ${deleteAbandonedMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{deleteAbandonedMessage}</p>
               )}
-              {isDeletingAbandoned ? "Deleting..." : "Delete Abandoned Carts"}
-            </Button>
-            {deleteAbandonedMessage && (
-              <p className={`text-sm mt-2 ${deleteAbandonedMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
-                {deleteAbandonedMessage}
-              </p>
-            )}
-          </div>
 
-          {(project.status === "LIVE" || project.status === "APPROVED") && (
-            <div className="flex items-center gap-2">
-              {project.status === "APPROVED" ? (
-                <Button
-                  onClick={onMakeLive}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                >
-                  <Zap className="mr-2 h-4 w-4" />
-                  Make Live
-                </Button>
-              ) : (
-                <Button
-                  variant="destructive"
-                  onClick={onDeactivate}
-                  className="flex-1"
-                >
-                  <Power className="mr-2 h-4 w-4" />
-                  Deactivate
-                </Button>
+              {(project.status === "LIVE" || project.status === "APPROVED") && (
+                project.status === "APPROVED" ? (
+                  <ToolButton
+                    onClick={onMakeLive}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                    tooltip={
+                      <>
+                        <p className="font-semibold mb-1">Make Live</p>
+                        <p>Flips an APPROVED project to LIVE status. Starts the campaign clock and opens it to backers.</p>
+                      </>
+                    }
+                  >
+                    <Zap className="mr-2 h-4 w-4" />
+                    Make Live
+                  </ToolButton>
+                ) : (
+                  <ToolButton
+                    variant="destructive"
+                    onClick={onDeactivate}
+                    className="w-full"
+                    tooltip={
+                      <>
+                        <p className="font-semibold mb-1">Deactivate</p>
+                        <p>Takes a LIVE campaign offline. Pledges are paused, the public page becomes inaccessible. Reversible by an admin.</p>
+                      </>
+                    }
+                  >
+                    <Power className="mr-2 h-4 w-4" />
+                    Deactivate
+                  </ToolButton>
+                )
               )}
             </div>
-          )}
+          </div>
         </div>
+        </TooltipProvider>
       </CardContent>
 
       {/* Set Vanity URL Dialog */}
