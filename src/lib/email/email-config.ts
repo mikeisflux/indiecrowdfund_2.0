@@ -60,6 +60,12 @@ export interface SendEmailOptions {
   isCreatorEmail?: boolean; // True when sending from a creator's email handle
   attachments?: EmailAttachment[]; // Optional attachments
   _fromQueue?: boolean; // Internal: skip auto-queue when called from queue processor
+  // Internal: skip the auto-create of an `adminEmail` SENT-folder row.
+  // The admin compose-dialog endpoint already creates and tracks its
+  // own row BEFORE calling sendEmail; without this flag we'd insert a
+  // second SENT row and the admin's Sent folder would show every
+  // outgoing email twice.
+  _skipAdminLog?: boolean;
 }
 
 // Microsoft/Outlook domains that commonly block emails due to IP reputation
@@ -420,7 +426,7 @@ async function sendViaMailgun(
   }
 }
 
-export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName, isCreatorEmail, attachments, _fromQueue }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck, replyTo, fromEmail: customFromEmail, fromName: customFromName, isCreatorEmail, attachments, _fromQueue, _skipAdminLog }: SendEmailOptions) {
   emailLogger.info(`[Email] sendEmail called - to: ${to}, subject: ${subject}${_fromQueue ? " (from queue)" : ""}`);
 
   // Check if email is on the blocklist (bounced, spam reported, etc.)
@@ -517,8 +523,16 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
   }
 
   if (result.success) {
-    // Save a copy to admin email system (sent folder)
-    try {
+    // Save a copy to admin email system (sent folder) UNLESS the
+    // caller already wrote its own row. The admin compose-dialog
+    // endpoint pre-creates an adminEmail row before calling
+    // sendEmail so it can track status across the send lifecycle;
+    // without _skipAdminLog we'd create a duplicate and the Sent
+    // folder would show every outgoing email twice.
+    if (_skipAdminLog) {
+      // Caller is managing the SENT-folder row itself; just exit
+      // the auto-log block.
+    } else try {
       let mailbox = await db.mailbox.findFirst({
         where: { email: fromEmail },
       });

@@ -260,6 +260,10 @@ export async function POST(
           html: bodyHtml,
           text: bodyText || bodyHtml.replace(/<[^>]*>/g, ""),
           attachments: attachments.length > 0 ? attachments : undefined,
+          // We already created our own adminEmail row above (line ~230);
+          // skip sendEmail's auto-log so we don't double up the Sent
+          // folder for every message this route handles.
+          _skipAdminLog: true,
         });
 
         if (sendResult.success) {
