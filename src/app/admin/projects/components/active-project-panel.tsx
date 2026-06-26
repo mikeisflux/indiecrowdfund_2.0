@@ -31,6 +31,7 @@ import {
   Hash,
   Link2,
   CalendarClock,
+  Star,
   Trash2,
   ArrowRightLeft,
 } from "lucide-react";
@@ -84,6 +85,8 @@ export function ActiveProjectPanel({
   const [deleteAbandonedMessage, setDeleteAbandonedMessage] = useState<string | null>(null);
   const [isBackfillingWhopIds, setIsBackfillingWhopIds] = useState(false);
   const [whopBackfillMessage, setWhopBackfillMessage] = useState<string | null>(null);
+  const [isRequestingRatings, setIsRequestingRatings] = useState(false);
+  const [ratingsMessage, setRatingsMessage] = useState<string | null>(null);
   const [isMigratingToDc, setIsMigratingToDc] = useState(false);
   const [migrateDcMessage, setMigrateDcMessage] = useState<string | null>(null);
   const [showVanityUrlDialog, setShowVanityUrlDialog] = useState(false);
@@ -409,6 +412,50 @@ export function ActiveProjectPanel({
   // marked COMPLETED before the webhook stamped the id). First
   // click runs a dry-run preview; second click within the same
   // session (with a confirm prompt) commits.
+  // Send the "rate your creator" nudge to this project's already-
+  // fulfilled backers who never rated. First click is a dry-run
+  // preview; second click commits. Scoped to this project so rollout
+  // can go campaign-by-campaign. Idempotent — ratingRequestSentAt
+  // dedupes, so re-running only picks up un-emailed backers.
+  const handleRequestRatings = async (commit: boolean) => {
+    if (!project) return;
+    if (commit) {
+      const ok = window.confirm(
+        `Email a "rate your creator" request to every DELIVERED backer on "${project.title}" who hasn't rated yet?\n\nUnsubscribed backers are skipped automatically. Idempotent — re-running only emails backers who haven't been emailed yet.`
+      );
+      if (!ok) return;
+    }
+    setIsRequestingRatings(true);
+    setRatingsMessage(null);
+    try {
+      const response = await apiFetch(`/api/admin/send-rating-request-backlog`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, dryRun: !commit, deliveredOnly: true }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setRatingsMessage(`Error: ${data.error || "Failed"}`);
+        return;
+      }
+      if (!commit) {
+        setRatingsMessage(
+          data.totalOutstanding === 0
+            ? "No DELIVERED backers awaiting a rating request — all caught up."
+            : `Dry run: ${data.totalOutstanding} DELIVERED backers haven't been asked to rate. Press again to send (batched up to ${data.limit}/run).`
+        );
+      } else {
+        setRatingsMessage(
+          `Sent ${data.sent} rating requests (${data.skipped} skipped — unsubscribed / already rated). Re-run for the rest if more remain.`
+        );
+      }
+    } catch {
+      setRatingsMessage("Error: Network request failed");
+    } finally {
+      setIsRequestingRatings(false);
+    }
+  };
+
   const handleBackfillWhopIds = async (commit: boolean) => {
     if (!project) return;
     if (commit) {
@@ -662,6 +709,37 @@ export function ActiveProjectPanel({
 
               <ToolButton
                 variant="outline"
+                onClick={() => handleRequestRatings(false)}
+                disabled={isRequestingRatings}
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Request Ratings (Dry Run)</p>
+                    <p>Previews how many DELIVERED backers on this campaign haven&apos;t been asked to rate the creator yet. Sends nothing.</p>
+                  </>
+                }
+              >
+                {isRequestingRatings ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSearch className="mr-2 h-4 w-4" />}
+                Request Ratings: Preview
+              </ToolButton>
+
+              <ToolButton
+                variant="default"
+                onClick={() => handleRequestRatings(true)}
+                disabled={isRequestingRatings}
+                className="bg-amber-500 hover:bg-amber-600"
+                tooltip={
+                  <>
+                    <p className="font-semibold mb-1">Send Rating Requests</p>
+                    <p>Emails a deep-linked &quot;rate your creator&quot; nudge to every DELIVERED backer on this campaign who hasn&apos;t rated yet. Skips unsubscribed backers. Idempotent (batched up to 200/run) — re-run for the rest. Confirms first.</p>
+                  </>
+                }
+              >
+                {isRequestingRatings ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Star className="mr-2 h-4 w-4" />}
+                Request Ratings: Send
+              </ToolButton>
+
+              <ToolButton
+                variant="outline"
                 onClick={() => setShowVanityUrlDialog(true)}
                 className="col-span-2"
                 tooltip={
@@ -685,6 +763,9 @@ export function ActiveProjectPanel({
             )}
             {backfillMessage && (
               <p className={`text-sm mt-1 ${backfillMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{backfillMessage}</p>
+            )}
+            {ratingsMessage && (
+              <p className={`text-sm mt-1 ${ratingsMessage.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>{ratingsMessage}</p>
             )}
           </div>
 

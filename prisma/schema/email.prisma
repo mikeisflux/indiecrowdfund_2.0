@@ -42,6 +42,7 @@ enum EmailType {
   WELCOME
   PASSWORD_RESET
   EMAIL_VERIFICATION
+  RATING_REQUEST
 }
 
 // ============================================

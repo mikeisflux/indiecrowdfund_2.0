@@ -79,6 +79,12 @@ model Pledge {
   // Fulfillment
   fulfillmentStatus     FulfillmentStatus @default(NOT_STARTED)
 
+  // When we sent the "rate your creator" nudge email for this pledge.
+  // Dedup guard so the delivered-trigger, the backer-marked-received
+  // trigger, and the one-time backlog send never double-email the
+  // same backer for the same pledge.
+  ratingRequestSentAt   DateTime?
+
   // Modifier addon assignments
   needsModifierAssignment Boolean     @default(false)  // True if backer has ambiguous modifier addon assignments
 

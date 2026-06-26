@@ -6,6 +6,7 @@ const creatorIndiekitFulfillmentLogger = logger.child({ module: "creator-indieki
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/auth/collaborator";
+import { maybeSendRatingRequest } from "@/lib/email/rating-request";
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,6 +64,26 @@ export async function POST(req: NextRequest) {
         .filter(([, r]) => r < targetRank)
         .map(([s]) => s);
 
+      // Capture which pledges will actually move BEFORE the update, so
+      // we know exactly which backers to nudge for a rating once they
+      // hit DELIVERED (the updateMany only returns a count).
+      const movingPledgeIds =
+        effectiveStatus === "DELIVERED"
+          ? (
+              await db.pledge.findMany({
+                where: {
+                  id: { in: backerIds },
+                  projectId,
+                  deletedAt: null,
+                  ...(allowedFromStatuses.length > 0
+                    ? { fulfillmentStatus: { in: allowedFromStatuses as ("NOT_STARTED" | "IN_PROGRESS" | "SHIPPED" | "DELIVERED")[] } }
+                    : { id: "__never__" }),
+                },
+                select: { id: true },
+              })
+            ).map((p: { id: string }) => p.id)
+          : [];
+
       const updateResult = await db.pledge.updateMany({
         where: {
           id: { in: backerIds },
@@ -76,6 +97,16 @@ export async function POST(req: NextRequest) {
           fulfillmentStatus: effectiveStatus,
         },
       });
+
+      // Fire the rating-request nudge for every pledge that just hit
+      // DELIVERED. Fire-and-forget so the creator's status update
+      // returns instantly; maybeSendRatingRequest dedupes internally
+      // so a re-mark never double-emails.
+      if (movingPledgeIds.length > 0) {
+        Promise.allSettled(
+          movingPledgeIds.map((id: string) => maybeSendRatingRequest(id))
+        ).catch(() => {});
+      }
 
       return NextResponse.json({
         success: true,

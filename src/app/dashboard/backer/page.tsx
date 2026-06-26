@@ -2,7 +2,7 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { toast } from "sonner";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -347,7 +347,7 @@ export default function BackerDashboard() {
     checkAddress();
   }, []);
 
-  const openReviewDialog = (pledgeId: string, projectTitle: string) => {
+  const openReviewDialog = useCallback((pledgeId: string, projectTitle: string) => {
     const existing = reviews[pledgeId];
     setReviewDraft({
       markedReceived: existing?.markedReceived ?? false,
@@ -360,7 +360,25 @@ export default function BackerDashboard() {
     });
     setReviewDialogPledgeId(pledgeId);
     setReviewDialogProject({ title: projectTitle });
-  };
+  }, [reviews]);
+
+  // Deep-link: the rating-request email links to
+  // /dashboard/backer?review=<pledgeId>. When that param is present
+  // and the backed projects + reviews have loaded, auto-open the
+  // review dialog for that pledge. One-shot via a ref so closing the
+  // dialog doesn't immediately re-open it.
+  const reviewDeepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (reviewDeepLinkHandled.current) return;
+    const reviewPledgeId = searchParams?.get("review");
+    if (!reviewPledgeId) return;
+    const projects = data?.backedProjects || [];
+    if (projects.length === 0) return; // wait for load
+    const match = projects.find((p) => p.pledge.id === reviewPledgeId);
+    if (!match) return; // not this backer's pledge — ignore
+    reviewDeepLinkHandled.current = true;
+    openReviewDialog(reviewPledgeId, match.title);
+  }, [searchParams, data, openReviewDialog]);
 
   const saveReview = async () => {
     if (!reviewDialogPledgeId) return;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { maybeSendRatingRequest } from "@/lib/email/rating-request";
 
 const reviewSchema = z.object({
   pledgeId: z.string().min(1),
@@ -145,6 +146,15 @@ export async function POST(req: NextRequest) {
         reviewBody: reviewBody ?? null,
       },
     });
+
+    // If the backer just marked this order received but hasn't left a
+    // star rating, fire the rating-request nudge — this covers orders
+    // the creator never formally marked DELIVERED. Fire-and-forget;
+    // maybeSendRatingRequest dedupes (and no-ops if they DID include a
+    // rating in this same save, since overallRating would now be set).
+    if (becameReceived && upserted.overallRating == null) {
+      maybeSendRatingRequest(pledgeId).catch(() => {});
+    }
 
     return NextResponse.json({ review: upserted });
   } catch (error) {
