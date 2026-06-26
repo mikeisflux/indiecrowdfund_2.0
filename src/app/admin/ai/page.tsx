@@ -133,6 +133,29 @@ export default function AIControlPage() {
   const [runResults, setRunResults] = useState<RunResults>({});
   const [showResultsViewer, setShowResultsViewer] = useState(false);
   const [resultsViewerTab, setResultsViewerTab] = useState("predictive");
+  // Persisted run history (survives refresh + includes cron runs).
+  const [runLog, setRunLog] = useState<Array<{
+    id: string;
+    action: string;
+    serviceId: string;
+    success: boolean;
+    message: string | null;
+    trigger: string;
+    durationMs: number | null;
+    createdAt: string;
+  }>>([]);
+
+  const fetchRunLog = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/ai-marketing/run?limit=50");
+      if (res.ok) {
+        const data = await res.json();
+        setRunLog(data.runs || []);
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, []);
 
   // Save cron schedules to database
   const saveCronSchedules = useCallback(async (jobs: CronJob[]) => {
@@ -228,7 +251,8 @@ export default function AIControlPage() {
 
   useEffect(() => {
     loadStatus();
-  }, [loadStatus]);
+    fetchRunLog();
+  }, [loadStatus, fetchRunLog]);
 
   // Run a service
   const runService = async (serviceId: string, action: string) => {
@@ -259,6 +283,9 @@ export default function AIControlPage() {
       );
 
       setRunResults((prev) => ({ ...prev, [serviceId]: data }));
+      // Refresh the persisted run history so the new run shows in
+      // the History tab immediately (and survives a refresh).
+      fetchRunLog();
 
       // Reset status after 10 seconds
       setTimeout(() => {
@@ -672,16 +699,50 @@ export default function AIControlPage() {
 
         {/* Run History Tab */}
         <TabsContent value="history" className="mt-6 space-y-6">
-          {Object.keys(runResults).length === 0 ? (
+          {/* Persisted run log — survives refreshes and includes
+              cron-triggered runs. Always shown when any rows exist. */}
+          {runLog.length > 0 && (
             <Card>
-              <CardContent className="py-12">
-                <div className="text-center text-muted-foreground">
-                  <History className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="font-medium">No runs yet</p>
-                  <p className="text-sm">Click &quot;Run Now&quot; on any service to see results here.</p>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <History className="h-4 w-4" /> Recent Runs
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {runLog.map((run) => (
+                    <div key={run.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`h-2 w-2 rounded-full shrink-0 ${run.success ? "bg-emerald-500" : "bg-red-500"}`} />
+                        <span className="font-medium capitalize shrink-0">{run.serviceId.replace(/-/g, " ")}</span>
+                        <span className="text-muted-foreground truncate">{run.message}</span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
+                        {run.trigger === "cron" && (
+                          <span className="rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-1.5 py-0.5">cron</span>
+                        )}
+                        {run.durationMs != null && <span>{run.durationMs}ms</span>}
+                        <span>{new Date(run.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {Object.keys(runResults).length === 0 ? (
+            runLog.length === 0 ? (
+              <Card>
+                <CardContent className="py-12">
+                  <div className="text-center text-muted-foreground">
+                    <History className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="font-medium">No runs yet</p>
+                    <p className="text-sm">Click &quot;Run Now&quot; on any service to see results here.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null
           ) : (
             <>
               {/* Results Summary Cards */}

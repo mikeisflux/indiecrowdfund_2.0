@@ -34,6 +34,36 @@ async function requireAdmin() {
   return { user: session.user };
 }
 
+// GET - Recent AI service run history (persisted; survives refreshes
+// and includes cron-triggered runs). ?limit=N (default 50, max 200).
+export async function GET(request: Request) {
+  const authResult = await requireAdmin();
+  if ("error" in authResult) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+  }
+  const url = new URL(request.url);
+  const limit = Math.max(1, Math.min(200, parseInt(url.searchParams.get("limit") || "50") || 50));
+  const serviceId = url.searchParams.get("serviceId");
+
+  const runs = await db.aiRunLog.findMany({
+    where: serviceId ? { serviceId } : {},
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      action: true,
+      serviceId: true,
+      success: true,
+      message: true,
+      trigger: true,
+      durationMs: true,
+      createdAt: true,
+    },
+  });
+
+  return NextResponse.json({ runs });
+}
+
 // POST - Run an AI service manually
 export async function POST(request: Request) {
   try {
@@ -47,6 +77,27 @@ export async function POST(request: Request) {
     if (!action) {
       return NextResponse.json({ error: "Action is required" }, { status: 400 });
     }
+
+    // Map a run action to the UI-facing service id so the history tab
+    // can label/group rows. Returns null for non-run actions
+    // (getStatus, refreshSettings, getAutomationStatus) which we don't
+    // log — they're polls, not runs.
+    const SERVICE_ID_BY_ACTION: Record<string, string> = {
+      runAutoTagging: "auto-tagging",
+      runPredictiveAnalytics: "predictive-analytics",
+      runSegmentation: "smart-segmentation",
+      runSendTimeOptimization: "send-time-optimization",
+      testEmailPersonalization: "email-personalization",
+      testContentOptimization: "content-optimization",
+      runUserProfiling: "user-profiling",
+      runAutomation: "automation",
+    };
+    const loggedServiceId = SERVICE_ID_BY_ACTION[action] || null;
+    const runStartedAt = Date.now();
+    const trigger =
+      request.headers.get("x-cron-trigger") === "1" ? "cron" : "manual";
+    const triggeredById =
+      "user" in authResult ? authResult.user?.id ?? null : null;
 
     let result;
 
@@ -600,6 +651,39 @@ export async function POST(request: Request) {
 
       default:
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+    }
+
+    // Persist a run-log row so the admin Run History tab survives
+    // refreshes and captures cron-triggered runs. Only log actual run
+    // actions (loggedServiceId non-null); skip getStatus/polls.
+    if (loggedServiceId) {
+      const r = result as unknown as { success?: boolean; message?: string } | undefined;
+      const summary =
+        r?.message ||
+        (r?.success === false ? "Run reported failure" : "Completed");
+      // Cap the stored payload so a huge result (e.g. hundreds of
+      // segment users) doesn't bloat the row.
+      let resultJson: unknown = result;
+      try {
+        const serialized = JSON.stringify(result);
+        if (serialized.length > 20000) {
+          resultJson = { truncated: true, message: summary, success: r?.success ?? true };
+        }
+      } catch {
+        resultJson = { message: summary };
+      }
+      await db.aiRunLog.create({
+        data: {
+          action,
+          serviceId: loggedServiceId,
+          success: r?.success !== false,
+          message: summary,
+          resultJson: resultJson as object,
+          trigger,
+          triggeredById,
+          durationMs: Date.now() - runStartedAt,
+        },
+      }).catch((e: unknown) => adminAiMarketingRunLogger.error({ err: formatError(e) }, "Failed to write AI run log"));
     }
 
     return NextResponse.json(result);

@@ -1,0 +1,47 @@
+// ============================================
+// AI SERVICE RUN LOG
+// ============================================
+//
+// Persistent history of AI Control Center service runs (manual
+// "Run Now" clicks AND cron-triggered runs). Before this, the
+// admin Run History tab read only in-memory React state, so it
+// showed nothing after a refresh and never captured scheduled
+// runs. Every invocation of /api/admin/ai-marketing/run now
+// writes a row here.
+
+model AiRunLog {
+  id          String   @id @default(cuid())
+
+  // The run action, e.g. "runAutoTagging", "runPredictiveAnalytics",
+  // "runSegmentation", "testEmailPersonalization", etc.
+  action      String
+
+  // Friendly service id matching the UI cards
+  // ("auto-tagging", "predictive-analytics", ...). Derived from
+  // action so the history tab can group/label without a lookup.
+  serviceId   String
+
+  success     Boolean  @default(true)
+
+  // Short human-readable summary ("Generated 2 user segments",
+  // "No projects need tagging", error message on failure).
+  message     String?  @db.Text
+
+  // Full JSON result payload for the detail viewer (capped at write
+  // time so a huge result doesn't bloat the row).
+  resultJson  Json?
+
+  // How the run was triggered.
+  trigger     String   @default("manual")  // "manual" | "cron"
+
+  // Who triggered it (null for cron).
+  triggeredById String?
+
+  durationMs  Int?
+
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([serviceId, createdAt])
+  @@index([success])
+}
