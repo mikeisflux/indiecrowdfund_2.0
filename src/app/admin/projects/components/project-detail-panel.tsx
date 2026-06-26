@@ -27,6 +27,7 @@ import {
   CreditCard,
   Loader2,
   EyeOff,
+  Landmark,
 } from "lucide-react";
 import { Project } from "./types";
 import { getFlags, formatDate, formatDuration } from "./utils";
@@ -60,6 +61,15 @@ export function ProjectDetailPanel({
   }>({ loading: false, exists: false, lastFour: null, brand: null, expMonth: null, expYear: null });
   const [fullCardDetails, setFullCardDetails] = useState<Record<string, string | null> | null>(null);
   const [loadingFullCard, setLoadingFullCard] = useState(false);
+  const [bankStatus, setBankStatus] = useState<{
+    loading: boolean;
+    exists: boolean;
+    label: string | null;
+    accountType: string | null;
+    bankName: string | null;
+    last4: string | null;
+    bankCountry: string | null;
+  }>({ loading: false, exists: false, label: null, accountType: null, bankName: null, last4: null, bankCountry: null });
 
   // Update vanity URL when project changes
   useEffect(() => {
@@ -90,11 +100,37 @@ export function ProjectDetailPanel({
     }
   }, []);
 
+  // Fetch payout bank-account status (processor-aware) when project
+  // changes. Mirrors the chargeback-card status fetch.
+  const fetchBankStatus = useCallback(async (projectId: string) => {
+    setBankStatus({ loading: true, exists: false, label: null, accountType: null, bankName: null, last4: null, bankCountry: null });
+    try {
+      const response = await fetch(`/api/projects/${projectId}/bank-status`);
+      if (response.ok) {
+        const data = await response.json();
+        setBankStatus({
+          loading: false,
+          exists: !!data.exists,
+          label: data.label ?? null,
+          accountType: data.accountType ?? null,
+          bankName: data.bankName ?? null,
+          last4: data.last4 ?? null,
+          bankCountry: data.bankCountry ?? null,
+        });
+      } else {
+        setBankStatus({ loading: false, exists: false, label: null, accountType: null, bankName: null, last4: null, bankCountry: null });
+      }
+    } catch {
+      setBankStatus({ loading: false, exists: false, label: null, accountType: null, bankName: null, last4: null, bankCountry: null });
+    }
+  }, []);
+
   useEffect(() => {
     if (project?.id) {
       fetchChargebackCard(project.id);
+      fetchBankStatus(project.id);
     }
-  }, [project?.id, fetchChargebackCard]);
+  }, [project?.id, fetchChargebackCard, fetchBankStatus]);
 
   const handleViewFullCard = async () => {
     if (!project?.id) return;
@@ -338,6 +374,57 @@ export function ProjectDetailPanel({
                 <div className="flex items-center gap-2 text-amber-600">
                   <AlertCircle className="h-4 w-4" />
                   <span className="text-sm">No chargeback protection card on file for this project.</span>
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Payout Bank Account — processor-aware. Shows whether the
+              creator can actually be paid out for this campaign, the
+              same check the launch route enforces. */}
+          <AccordionItem value="bank-account">
+            <AccordionTrigger className="px-4">
+              Payout Bank Account
+              {bankStatus.exists ? (
+                <Badge className="ml-2 bg-green-500">On File</Badge>
+              ) : !bankStatus.loading ? (
+                <Badge variant="destructive" className="ml-2">Missing</Badge>
+              ) : null}
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              {bankStatus.loading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading...</span>
+                </div>
+              ) : bankStatus.exists ? (
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                    <Landmark className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      {bankStatus.accountType === "paypal_config"
+                        ? "PayPal payout configured"
+                        : bankStatus.accountType === "stripe_connect"
+                        ? "Stripe Connect account linked"
+                        : `${bankStatus.bankName || "Bank account"}${bankStatus.last4 ? ` ····${bankStatus.last4}` : ""}`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {bankStatus.label} payout
+                      {bankStatus.bankCountry ? ` · ${bankStatus.bankCountry}` : ""}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-amber-600">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-sm">
+                    No {bankStatus.label || "payout"} bank account on file. This creator cannot be paid out until they add one
+                    {bankStatus.label === "Divinity Payments" || bankStatus.label === "Whop" || bankStatus.label === "PayPal"
+                      ? " in IndieKit → Settings → Payments."
+                      : "."}
+                  </span>
                 </div>
               )}
             </AccordionContent>
