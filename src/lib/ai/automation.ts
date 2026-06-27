@@ -250,24 +250,22 @@ async function shouldSendCampaignToday(): Promise<{ send: boolean; reason: strin
     return { send: false, reason: "Daily email limit already reached" };
   }
 
-  // Check when last automated campaign was sent (minimum 3 days apart)
-  const lastAutoCampaign = await db.emailCampaign.findFirst({
+  // Smart-daily cadence: at most ONE automated campaign per day. We no
+  // longer enforce a multi-day gap between campaigns — the per-user
+  // frequency cap (canSendEmail: max N emails per rolling 7 days, default
+  // 3) is what protects each individual recipient, so the platform can run
+  // every day while no single person is over-mailed.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const sentToday = await db.emailCampaign.count({
     where: {
       status: "SENT",
+      sentAt: { gte: startOfToday },
       filters: { path: ["automated"], equals: true },
     },
-    orderBy: { sentAt: "desc" },
-    select: { sentAt: true },
   });
-
-  if (lastAutoCampaign?.sentAt) {
-    const daysSince = (Date.now() - lastAutoCampaign.sentAt.getTime()) / (24 * 60 * 60 * 1000);
-    if (daysSince < 3) {
-      return {
-        send: false,
-        reason: `Last automated campaign was ${daysSince.toFixed(1)} days ago (minimum 3 days)`,
-      };
-    }
+  if (sentToday > 0) {
+    return { send: false, reason: "An automated campaign already went out today" };
   }
 
   // Check if there are live projects to promote
@@ -299,7 +297,7 @@ async function shouldSendCampaignToday(): Promise<{ send: boolean; reason: strin
 // ============================================
 
 interface CampaignPlan {
-  type: "weekly_discovery" | "new_projects" | "ending_soon" | "win_back" | "abandoned_cart";
+  type: "weekly_discovery" | "new_projects" | "ending_soon" | "win_back" | "abandoned_cart" | "daily_digest";
   audience: string;
   name: string;
   projects: Array<{
@@ -472,6 +470,21 @@ async function planCampaigns(
     }
   }
 
+  // DAILY DIGEST — the everyday fallback so something relevant goes out
+  // each day even when no special campaign (new projects, ending soon,
+  // win-back, abandoned cart) is eligible. The per-user 7-day frequency
+  // cap governs who actually receives one, so "daily" never means "every
+  // user every day". Projects are reordered to each recipient's interests
+  // at send time, and delivered at their optimal hour.
+  if (plans.length === 0 && liveProjects.length > 0) {
+    plans.push({
+      type: "daily_digest",
+      audience: "subscriber",
+      name: `Today on IndieCrowdfund — ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+      projects: liveProjects.slice(0, 5).map(formatProject),
+    });
+  }
+
   // Only send 1 campaign per run to avoid fatigue
   return plans.slice(0, 1);
 }
@@ -529,6 +542,10 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
 
   // Map campaign type to descriptions for the AI
   const typeDescriptions: Record<string, { audience: string; tone: string }> = {
+    daily_digest: {
+      audience: "Backers and subscribers who like a daily pulse of fresh projects matched to their taste",
+      tone: "Warm, curated, and concise — like a trusted friend's daily pick, never a hard sell",
+    },
     weekly_discovery: {
       audience: "Newsletter subscribers and platform users who enjoy discovering new projects",
       tone: "Friendly, curated, like a personal recommendation from a friend",
