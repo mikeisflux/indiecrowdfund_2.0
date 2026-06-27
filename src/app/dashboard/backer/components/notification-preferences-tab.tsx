@@ -299,10 +299,13 @@ export function NotificationPreferencesTab() {
 
     setSaving(projectId);
     try {
-      const response = await apiFetch(`/api/backer/notifications/preferences/${projectId}`, {
-        method: "PATCH",
+      // The per-project upsert lives on the base route (POST, projectId in
+      // the body). The old `PATCH /preferences/${projectId}` path has no
+      // route and 404'd on every toggle, so preferences never saved.
+      const response = await apiFetch(`/api/backer/notifications/preferences`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", },
-        body: JSON.stringify({ [key]: value }),
+        body: JSON.stringify({ projectId, [key]: value }),
       });
 
       if (!response.ok) throw new Error("Failed to update preference");
