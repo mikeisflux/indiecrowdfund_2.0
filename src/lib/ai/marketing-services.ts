@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
+import { getSecret } from "@/lib/vault";
 
 import { logger } from "@/lib/logger";
 
@@ -14,7 +15,12 @@ async function getAnthropic(): Promise<Anthropic> {
   const settings = await db.platformSettings.findFirst({
     select: { anthropicApiKey: true },
   });
-  const apiKey = settings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+  // Decrypt the stored key — the settings route encrypts it on save,
+  // so reading it raw fed the SDK an encrypted blob and produced a
+  // 401. getSecret decrypts (and passes through legacy plaintext).
+  const apiKey =
+    getSecret("anthropic_api_key", settings?.anthropicApiKey) ||
+    process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
     throw new Error("Anthropic API key not configured. Set it in Admin Settings > AI.");

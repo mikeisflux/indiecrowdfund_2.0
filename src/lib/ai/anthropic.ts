@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
+import { getSecret } from "@/lib/vault";
 
 import { logger } from "@/lib/logger";
 
@@ -15,7 +16,15 @@ async function getAnthropic(): Promise<Anthropic> {
   const settings = await db.platformSettings.findFirst({
     select: { anthropicApiKey: true },
   });
-  const apiKey = settings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+  // The admin settings route encrypts anthropicApiKey on save
+  // (encryptSecret). Reading it raw and handing the ciphertext to the
+  // SDK is what produced the 401 "authentication_error" — the stored
+  // value was a 232-char encrypted blob, not the real sk-ant- key.
+  // getSecret decrypts it (and passes through legacy plaintext keys
+  // that start with sk-ant-).
+  const apiKey =
+    getSecret("anthropic_api_key", settings?.anthropicApiKey) ||
+    process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
     throw new Error("Anthropic API key not configured. Set it in Admin Settings > AI.");
