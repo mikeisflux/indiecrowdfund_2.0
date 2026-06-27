@@ -246,9 +246,14 @@ model EmailQueue {
   createdAt     DateTime         @default(now())
   processedAt   DateTime?
   sentAt        DateTime?
+  // When set, the queue processor won't pick this row up until this time.
+  // NULL = send as soon as possible (preserves all existing behavior).
+  // Used to deliver AI-marketing emails at each recipient's optimal hour.
+  scheduledFor  DateTime?
 
   @@index([status, priority, createdAt])
   @@index([createdAt])
+  @@index([status, scheduledFor])
 }
 
 enum EmailQueueStatus {

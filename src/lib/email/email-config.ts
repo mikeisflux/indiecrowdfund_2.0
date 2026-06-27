@@ -66,6 +66,8 @@ export interface SendEmailOptions {
   // second SENT row and the admin's Sent folder would show every
   // outgoing email twice.
   _skipAdminLog?: boolean;
+  // Queue-only: hold this email until the given time (optimal-hour sends).
+  scheduledFor?: Date;
 }
 
 // Microsoft/Outlook domains that commonly block emails due to IP reputation
@@ -608,7 +610,7 @@ export async function sendEmail({ to, subject, html, text, skipUnsubscribeCheck,
 
 // Queue an email for rate-limited sending (1 per second max)
 export async function queueEmail(options: SendEmailOptions & { priority?: number }): Promise<{ success: boolean; queueId?: string; error?: string }> {
-  const { to, subject, html, text, fromEmail, fromName, replyTo, isCreatorEmail, skipUnsubscribeCheck, priority = 0 } = options;
+  const { to, subject, html, text, fromEmail, fromName, replyTo, isCreatorEmail, skipUnsubscribeCheck, priority = 0, scheduledFor } = options;
 
   try {
     const queueEntry = await db.emailQueue.create({
@@ -624,6 +626,7 @@ export async function queueEmail(options: SendEmailOptions & { priority?: number
         skipUnsubscribeCheck: skipUnsubscribeCheck || false,
         priority,
         status: "PENDING",
+        scheduledFor: scheduledFor || null,
       },
     });
 
@@ -676,6 +679,7 @@ export async function processEmailQueue(): Promise<{ processed: number; errors: 
         SELECT "id" FROM "EmailQueue"
         WHERE "status" = 'PENDING'
           AND "attempts" < "maxAttempts"
+          AND ("scheduledFor" IS NULL OR "scheduledFor" <= NOW())
         ORDER BY "priority" DESC, "createdAt" ASC
         LIMIT 1
         FOR UPDATE SKIP LOCKED
