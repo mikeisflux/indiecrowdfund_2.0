@@ -409,6 +409,23 @@ interface ProjectDetails {
   rewards?: Array<{ title: string; description: string; amount: number }>;
 }
 
+// Format/medium words that are useless as discovery tags on a platform
+// that is ENTIRELY comics — every project is a "comic", so tagging it as
+// one adds zero signal (and made every project look identical). Stripped
+// from AI output as defense-in-depth (the prompt already forbids them) and
+// used to detect projects previously mis-tagged with only these so they
+// get re-tagged from their actual story.
+export const GENERIC_PROJECT_TAGS = [
+  "comics", "comic", "comic-book", "comic-books", "comicbook",
+  "graphic-novel", "graphic-novels",
+  "indie", "indie-comic", "indie-comics",
+  "crowdfunding", "kickstarter",
+  "book", "books", "game", "games", "board-game", "boardgame",
+  "music", "album", "art", "art-book", "artbook",
+  "manga", "webcomic", "webcomics",
+];
+const GENERIC_TAG_SET = new Set(GENERIC_PROJECT_TAGS);
+
 /**
  * Auto-tag a project based on its content
  */
@@ -455,7 +472,10 @@ ${project.rewards?.length
         ? result.suggestedCategories.filter(validCategory).slice(0, 3)
         : [],
       tags: Array.isArray(result.tags)
-        ? result.tags.slice(0, 12).map((t) => String(t).slice(0, 60))
+        ? result.tags
+            .map((t) => String(t).slice(0, 60).trim())
+            .filter((t) => t.length > 0 && !GENERIC_TAG_SET.has(t.toLowerCase().replace(/\s+/g, "-")))
+            .slice(0, 12)
         : [],
       confidence: Math.max(0, Math.min(1, Number(result.confidence) || 0)),
     };

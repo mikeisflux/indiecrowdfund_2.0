@@ -12,7 +12,7 @@ import {
   personalizeEmailForUser,
   generateContentVariants,
 } from "@/lib/ai/marketing-services";
-import { autoTagProject } from "@/lib/ai/anthropic";
+import { autoTagProject, GENERIC_PROJECT_TAGS } from "@/lib/ai/anthropic";
 import { getAISettings, clearSettingsCache } from "@/lib/ai/settings-integration";
 import { batchUpdateUserInterests } from "@/lib/ai/user-interests";
 import { runAutomatedMarketing } from "@/lib/ai/automation";
@@ -334,7 +334,13 @@ export async function POST(request: Request) {
         const projects = await db.project.findMany({
           where: {
             deletedAt: null,
-            OR: [{ tags: { isEmpty: true } }, { tags: { equals: [] } }],
+            OR: [
+              { tags: { isEmpty: true } },
+              // Re-tag projects stuck with only generic format tags
+              // ("comics", "comic-books", …) from the old tagger — they
+              // all looked identical and gave search/segmentation nothing.
+              { tags: { hasSome: GENERIC_PROJECT_TAGS } },
+            ],
           },
           take: limit,
           select: {
