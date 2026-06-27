@@ -194,7 +194,7 @@ async function refreshUserProfiles(): Promise<AutomationStepResult> {
       ],
       interestProfile: null,
     },
-    take: 100,
+    take: 500,
     select: { id: true },
   });
 
@@ -204,7 +204,7 @@ async function refreshUserProfiles(): Promise<AutomationStepResult> {
         lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       },
     },
-    take: Math.max(0, 100 - usersNeedingProfiles.length),
+    take: Math.max(0, 500 - usersNeedingProfiles.length),
     select: { userId: true },
   });
 
@@ -477,6 +477,17 @@ async function planCampaigns(
 // STEP 5: Create and send a campaign
 // ============================================
 
+// Next occurrence of `hour` (0-23) in server-local time. optimalSendHour is
+// computed from behavior timestamps using the same server clock, so no
+// timezone conversion is needed. The automation runs ~3 AM, so most hours
+// land later the same day; the queue's scheduledFor holds the email till then.
+function nextOptimalSlot(hour: number): Date {
+  const d = new Date();
+  d.setHours(hour, 0, 0, 0);
+  if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+  return d;
+}
+
 async function createAndSendCampaign(plan: CampaignPlan): Promise<{
   step: AutomationStepResult;
   created: boolean;
@@ -555,7 +566,7 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
   });
 
   // Get recipients
-  const recipientMap = new Map<string, { email: string; name: string | null }>();
+  const recipientMap = new Map<string, { email: string; name: string | null; userId?: string }>();
 
   if (plan.type === "abandoned_cart" && plan.abandonedPledgeUserIds && plan.abandonedPledgeUserIds.length > 0) {
     // Abandoned cart campaigns: send only to users with pending pledges
@@ -571,11 +582,32 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
     for (const u of abandonedUsers) {
       const sendCheck = await canSendEmail(u.id);
       if (sendCheck.canSend) {
-        recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
+        recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name, userId: u.id });
+      }
+    }
+  } else if (plan.type === "win_back") {
+    // Win-back is TARGETED, not a blast: only registered users our
+    // predictive model flags as high churn risk (>= 0.5). Previously this
+    // emailed the entire list, which defeats the purpose of a win-back.
+    const atRiskScores = await db.userMarketingScore.findMany({
+      where: { churnRisk: { gte: 0.5 } },
+      select: { userId: true },
+    });
+    const atRiskIds = atRiskScores.map((s: { userId: string }) => s.userId);
+    if (atRiskIds.length > 0) {
+      const atRiskUsers = await db.user.findMany({
+        where: { id: { in: atRiskIds }, emailVerified: { not: null }, deletedAt: null },
+        select: { id: true, email: true, name: true },
+      });
+      for (const u of atRiskUsers) {
+        const sendCheck = await canSendEmail(u.id);
+        if (sendCheck.canSend) {
+          recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name, userId: u.id });
+        }
       }
     }
   } else {
-    // Standard campaigns: newsletter subscribers + verified users
+    // Standard broadcasts: newsletter subscribers + verified users
 
     // Newsletter subscribers (excluding retailers)
     const subscribers = await db.newsletterSubscriber.findMany({
@@ -601,14 +633,35 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
       const sendCheck = await canSendEmail(u.id);
       if (sendCheck.canSend) {
         const existing = recipientMap.get(u.email.toLowerCase());
-        if (!existing || (u.name && !existing.name)) {
-          recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name });
+        if (!existing) {
+          recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name, userId: u.id });
+        } else {
+          // Already added as a subscriber — attach the userId (and name)
+          // so they get send-time optimization too.
+          existing.userId = u.id;
+          if (u.name && !existing.name) existing.name = u.name;
         }
       }
     }
   }
 
   const recipients = Array.from(recipientMap.values());
+
+  // Batch-load each registered recipient's optimal send hour in ONE query
+  // (no per-recipient DB calls in the send loop below).
+  const recipientUserIds = recipients
+    .map((r) => r.userId)
+    .filter((id): id is string => !!id);
+  const sendHourByUser = new Map<string, number | null>();
+  if (recipientUserIds.length > 0) {
+    const scores = await db.userMarketingScore.findMany({
+      where: { userId: { in: recipientUserIds } },
+      select: { userId: true, optimalSendHour: true },
+    });
+    scores.forEach((s: { userId: string; optimalSendHour: number | null }) =>
+      sendHourByUser.set(s.userId, s.optimalSendHour)
+    );
+  }
 
   automationLogger.info(
     `Automated campaign "${plan.name}" — queuing ${recipients.length} emails`
@@ -641,11 +694,18 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
         return `href="${baseUrl}/api/email/track/click?c=${campaign.id}&e=${encodedEmail}&url=${encodedUrl}"`;
       });
 
+      // Deliver at the recipient's optimal hour when we know it; otherwise
+      // send as soon as the queue drains (scheduledFor undefined = now).
+      const optimalHour = recipient.userId ? sendHourByUser.get(recipient.userId) : null;
+      const scheduledFor =
+        optimalHour !== null && optimalHour !== undefined ? nextOptimalSlot(optimalHour) : undefined;
+
       const result = await queueEmail({
         to: recipient.email,
         subject: aiContent.subject,
         html: personalizedHtml,
         priority: EMAIL_PRIORITY.AI_MARKETING,
+        scheduledFor,
       });
 
       if (result.success) {
