@@ -384,6 +384,13 @@ export function ErrorReporter() {
         // get 401 here by design; the widget falls back to a "sign in
         // to message" prompt. Not actionable.
         requestUrl.includes("/api/chat/rooms/resolve") ||
+        // /api/marketplace/purchase[/confirm] 401 = a guest, or a
+        // logged-in user whose session lapsed between page load and
+        // clicking Buy, hit the purchase endpoint. The shop page now
+        // checks the session first and redirects to login; this is the
+        // backstop for the session-expired-mid-visit race. Expected
+        // auth behavior, surfaced to the user as a login redirect.
+        requestUrl.includes("/api/marketplace/purchase") ||
         isEditPageSubResource401
       );
       // These endpoints never return 403 themselves — a 403 means the bot blocker blocked the IP

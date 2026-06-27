@@ -199,9 +199,14 @@ export default function BookDetailPage() {
   const handlePurchase = async (paymentMethod: "stripe" | "divinitycoin" | "paypal") => {
     if (!book) return;
 
-    // Redirect unauthenticated users to login before attempting purchase
+    // Redirect unauthenticated users to login before attempting purchase.
+    // NextAuth's /api/auth/session returns 200 with an empty body for
+    // guests (not a non-200), so the old `!sessionRes.ok` check always
+    // passed and let guests fall through to the purchase call, which then
+    // 401'd. Parse the body and require an actual user.
     const sessionRes = await fetch("/api/auth/session");
-    if (!sessionRes.ok) {
+    const session = await sessionRes.json().catch(() => null);
+    if (!session?.user) {
       window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.href)}`;
       return;
     }
