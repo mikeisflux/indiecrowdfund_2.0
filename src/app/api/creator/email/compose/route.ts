@@ -174,11 +174,25 @@ export async function POST(request: NextRequest) {
       attachments: attachments || undefined,
     });
 
-    if (!result.success) {
+    // A "skipped" result means the recipient unsubscribed or is blocked —
+    // an expected outcome, not a server error. Don't 500 (it spammed Sentry
+    // and looked like a crash). Genuine send failures still 500 below; for
+    // skips we fall through and deliver the message in-app instead.
+    const emailSkipped =
+      !result.success && "skipped" in result && (result as { skipped?: boolean }).skipped === true;
+
+    if (!result.success && !emailSkipped) {
       creatorEmailComposeLogger.error({ err: String(result.error) }, "Failed to send email:");
       return NextResponse.json(
         { error: result.error || "Failed to send email" },
         { status: 500 }
+      );
+    }
+
+    if (emailSkipped) {
+      creatorEmailComposeLogger.info(
+        { to: to.trim(), reason: result.error },
+        "Creator email copy skipped (recipient unsubscribed/blocked); delivering in-app only"
       );
     }
 
@@ -219,8 +233,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Email was skipped AND there's no in-app account to fall back to —
+    // no channel can reach this person. Surface it to the creator. A 403
+    // is already excluded from client error reporting (see error-reporter
+    // isExpected403), so unlike the old 500 it won't spam Sentry.
+    if (emailSkipped && !recipient) {
+      return NextResponse.json(
+        { error: "This person has unsubscribed from emails and doesn't have an account, so your message couldn't be delivered." },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
+      emailSkipped,
       message: messageRecord ? {
         id: messageRecord.id,
         subject: messageRecord.subject,
