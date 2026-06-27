@@ -6,6 +6,7 @@ const adminSeoCronLogger = logger.child({ module: "admin-seo-cron" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { runSeoAudit } from "@/lib/seo-audit";
+import { fixSeoPages } from "@/lib/seo-fix";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,20 @@ export async function POST(req: NextRequest) {
     let auditScore = 0;
     let auditPagesCount = 0;
     let projectIssuesFound = 0;
+    let autoFixed = 0;
+
+    // Step 0: Auto-fix SEO meta FIRST so the audit below reflects the
+    // freshly-cleaned state. Fills missing fields AND repairs descriptions
+    // that fail the 50-160 length rule, using the curated defaults — the
+    // exact same engine as the admin "Fix All" button (src/lib/seo-fix.ts).
+    try {
+      const fix = await fixSeoPages({ fixMissing: true, overwriteExisting: false });
+      autoFixed = fix.summary.totalFieldsFixed;
+    } catch (fixError) {
+      const msg = fixError instanceof Error ? fixError.message : "Unknown fix error";
+      errors.push(`Auto-fix failed: ${msg}`);
+      adminSeoCronLogger.error({ err: String(fixError) }, "SEO cron auto-fix error:");
+    }
 
     // Step 1: Run a full SEO audit (reuse audit logic)
     try {
@@ -150,6 +165,9 @@ export async function POST(req: NextRequest) {
     if (auditId) {
       outputParts.push(`Audit: ${auditPagesCount} pages audited, overall score: ${auditScore}/100.`);
     }
+    if (autoFixed > 0) {
+      outputParts.push(`Auto-fixed ${autoFixed} meta fields.`);
+    }
     outputParts.push(`Project/Book issues found: ${projectIssuesFound}.`);
     if (errors.length > 0) {
       outputParts.push(`Errors: ${errors.length}.`);
@@ -163,7 +181,7 @@ export async function POST(req: NextRequest) {
         auditId: auditId || null,
         pagesProcessed: auditPagesCount,
         issuesFound: totalIssues + projectIssuesFound,
-        autoFixed: 0,
+        autoFixed,
         errors,
         duration,
         output,
@@ -177,6 +195,7 @@ export async function POST(req: NextRequest) {
         auditScore,
         pagesProcessed: auditPagesCount,
         projectIssuesFound,
+        autoFixed,
         errors,
         duration,
         status,

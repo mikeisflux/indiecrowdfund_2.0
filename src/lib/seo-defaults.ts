@@ -18,7 +18,7 @@ export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
   "/": {
     title: "IndieCrowdfund - The Best Kickstarter Alternative for Independent Creators",
     description:
-      "IndieCrowdfund is the top crowdfunding platform for creative projects. Launch your campaign, fund innovative ideas, and join a thriving community of creators and backers.",
+      "IndieCrowdfund is the top crowdfunding platform for creative projects. Launch your campaign, fund bold ideas, and join a thriving community of creators.",
     ogTitle: "IndieCrowdfund - Crowdfunding for Independent Creators",
     ogDescription:
       "The best Kickstarter alternative with lower fees and more flexibility. Launch your project today.",
@@ -58,7 +58,7 @@ export const SEO_PAGE_DEFAULTS: Record<string, SeoPageDefaults> = {
   "/fees": {
     title: "Fees & Pricing - Transparent Crowdfunding Costs",
     description:
-      "IndieCrowdfund offers competitive and transparent pricing for creators. Learn about our platform fees, payment processing rates, and why we're more affordable than Kickstarter.",
+      "IndieCrowdfund offers transparent, competitive pricing for creators. Learn about our platform fees, processing rates, and why we beat Kickstarter.",
     ogTitle: "IndieCrowdfund Fees - Lower Than Kickstarter",
     ogDescription:
       "Transparent, competitive pricing for creators. See why our fees beat Kickstarter and other platforms.",

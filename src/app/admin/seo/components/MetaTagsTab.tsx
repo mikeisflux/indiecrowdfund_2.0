@@ -25,6 +25,7 @@ import {
   FileText,
   Eye,
   EyeOff,
+  Wand2,
 } from "lucide-react";
 import { SeoPageMeta, MetaForm } from "./types";
 import { ScoreBadge, EmptyState } from "./helpers";
@@ -42,6 +43,8 @@ interface MetaTagsTabProps {
   onSaveMeta: () => void;
   onEditMeta: (page: SeoPageMeta) => void;
   onResetMetaForm: () => void;
+  isFixingAll?: boolean;
+  onFixAll?: (overwriteExisting?: boolean) => void;
 }
 
 export function MetaTagsTab({
@@ -57,6 +60,8 @@ export function MetaTagsTab({
   onSaveMeta,
   onEditMeta,
   onResetMetaForm,
+  isFixingAll = false,
+  onFixAll,
 }: MetaTagsTabProps) {
   const filteredPages = pages.filter(
     (p) =>
@@ -83,6 +88,20 @@ export function MetaTagsTab({
                   className="pl-9 w-full sm:w-60"
                 />
               </div>
+              {onFixAll && (
+                <Button
+                  variant="outline"
+                  onClick={() => onFixAll(false)}
+                  disabled={isFixingAll}
+                >
+                  {isFixingAll ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4 mr-2" />
+                  )}
+                  Fix All Issues
+                </Button>
+              )}
               <Button
                 onClick={() => {
                   onResetMetaForm();

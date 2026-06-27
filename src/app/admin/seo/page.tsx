@@ -799,6 +799,8 @@ export default function SeoManagementPage() {
             onSaveMeta={handleSaveMeta}
             onEditMeta={openEditMeta}
             onResetMetaForm={resetMetaForm}
+            isFixingAll={isFixingAll}
+            onFixAll={handleFixAll}
           />
         </TabsContent>
 
