@@ -19,7 +19,16 @@ import { runAutomatedMarketing } from "@/lib/ai/automation";
 
 export const dynamic = "force-dynamic";
 
-async function requireAdmin() {
+async function requireAdmin(request: Request) {
+  // Server-to-server: the AI-services scheduler cron calls this with
+  // Bearer CRON_SECRET (no user session). Authorize it so scheduled
+  // runs reuse the exact same run logic + run-log writing as manual
+  // "Run Now" clicks instead of duplicating it.
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && request.headers.get("authorization") === `Bearer ${cronSecret}`) {
+    return { cron: true as const };
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return { error: "Unauthorized", status: 401 };
@@ -37,7 +46,7 @@ async function requireAdmin() {
 // GET - Recent AI service run history (persisted; survives refreshes
 // and includes cron-triggered runs). ?limit=N (default 50, max 200).
 export async function GET(request: Request) {
-  const authResult = await requireAdmin();
+  const authResult = await requireAdmin(request);
   if ("error" in authResult) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
@@ -67,7 +76,7 @@ export async function GET(request: Request) {
 // POST - Run an AI service manually
 export async function POST(request: Request) {
   try {
-    const authResult = await requireAdmin();
+    const authResult = await requireAdmin(request);
     if ("error" in authResult) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }

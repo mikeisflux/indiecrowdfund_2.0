@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { formatError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { db } from "@/lib/db";
 import { runAutomatedMarketing } from "@/lib/ai/automation";
 
 const cronAiMarketingLogger = logger.child({ module: "cron-ai-marketing" });
@@ -32,6 +33,7 @@ export async function GET(req: NextRequest) {
 
     cronAiMarketingLogger.info("Starting automated AI marketing run");
 
+    const startedAt = Date.now();
     const result = await runAutomatedMarketing();
 
     cronAiMarketingLogger.info(
@@ -44,6 +46,20 @@ export async function GET(req: NextRequest) {
       },
       "AI marketing automation complete"
     );
+
+    // Record in the AI run log so the admin Run History tab shows the
+    // automated daily marketing run alongside the per-service runs.
+    await db.aiRunLog.create({
+      data: {
+        action: "runAutomation",
+        serviceId: "automation",
+        success: result.success !== false,
+        message: `Created ${result.campaignsCreated ?? 0} campaigns, queued ${result.emailsQueued ?? 0} emails${result.errors?.length ? `, ${result.errors.length} errors` : ""}`,
+        resultJson: { success: result.success, campaignsCreated: result.campaignsCreated, emailsQueued: result.emailsQueued, errors: result.errors?.slice(0, 20) } as object,
+        trigger: "cron",
+        durationMs: Date.now() - startedAt,
+      },
+    }).catch((e: unknown) => cronAiMarketingLogger.error({ err: formatError(e) }, "Failed to write AI run log"));
 
     return NextResponse.json(result);
   } catch (error) {
