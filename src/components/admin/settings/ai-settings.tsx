@@ -141,9 +141,9 @@ export function AiSettings({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="claude-sonnet-4-20250514">Claude Sonnet 4 (Recommended)</SelectItem>
-                  <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</SelectItem>
-                  <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku (Faster/Cheaper)</SelectItem>
+                  <SelectItem value="claude-sonnet-4-6">Claude Sonnet 4.6 (Recommended)</SelectItem>
+                  <SelectItem value="claude-opus-4-8">Claude Opus 4.8 (Most Capable)</SelectItem>
+                  <SelectItem value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (Faster/Cheaper)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -308,7 +308,7 @@ export default function SettingsPage() {
   const [aiSettings, setAiSettings] = useState({
     anthropicEnabled: false,
     anthropicApiKey: "",
-    anthropicModel: "claude-sonnet-4-20250514",
+    anthropicModel: "claude-sonnet-4-6",
     autoTagging: false,
     marketingCopy: false,
     contentModeration: false,

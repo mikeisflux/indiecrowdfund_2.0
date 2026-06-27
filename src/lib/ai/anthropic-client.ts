@@ -65,7 +65,7 @@ export async function claudeJSON<T>(
 ): Promise<T> {
   const anthropic = await getAnthropic();
   const response = await anthropic.messages.create({
-    model: options?.model || "claude-sonnet-4-20250514",
+    model: options?.model || "claude-sonnet-4-6",
     max_tokens: options?.maxTokens || 1024,
     ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
     system: `${INSTRUCTION_GUARD}\n\n${systemPrompt}`,
