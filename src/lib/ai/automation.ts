@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
 import { generateCampaignContent } from "@/lib/ai/anthropic";
 import { generateSmartSegments } from "@/lib/ai/marketing-services";
 import { getAISettings, canSendEmail } from "@/lib/ai/settings-integration";
-import { batchUpdateUserInterests } from "@/lib/ai/user-interests";
+import { batchUpdateUserInterests, calculateProjectMatchScore } from "@/lib/ai/user-interests";
 import { queueEmail, EMAIL_PRIORITY, escapeHtmlForEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
 
@@ -310,6 +310,7 @@ interface CampaignPlan {
     category: string;
     goalAmount: number;
     vanityUrl: string | null;
+    tags: string[];
   }>;
   // Only populated for abandoned_cart campaigns
   abandonedPledgeUserIds?: string[];
@@ -353,6 +354,7 @@ async function planCampaigns(
       goalAmount: true,
       createdAt: true,
       endDate: true,
+      tags: true,
       creator: { select: { vanityUrl: true } },
     },
   });
@@ -367,6 +369,7 @@ async function planCampaigns(
     category: p.category || "General",
     goalAmount: Number(p.goalAmount),
     vanityUrl: p.creator?.vanityUrl || null,
+    tags: p.tags || [],
   });
 
   // WEEKLY DISCOVERY — send on Tuesday or Wednesday if not sent recently
@@ -486,6 +489,34 @@ function nextOptimalSlot(hour: number): Date {
   d.setHours(hour, 0, 0, 0);
   if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
   return d;
+}
+
+type AiRecommendation = {
+  projectTitle: string;
+  recommendationReason: string;
+  callToAction: string;
+};
+
+// Reorder a campaign's AI project recommendations so the projects that best
+// match THIS user's interest profile (category + tag affinities) appear
+// first. Pure + in-memory (calculateProjectMatchScore does no DB), so it's
+// safe to run per-recipient in the send loop. No profile -> original order.
+function personalizeRecommendations(
+  recommendations: AiRecommendation[],
+  projects: CampaignPlan["projects"],
+  interests: { categoryInterests: Record<string, number>; tagInterests: Record<string, number> } | undefined
+): AiRecommendation[] {
+  if (!interests) return recommendations;
+  return recommendations
+    .map((rec) => {
+      const project = projects.find((p) => p.title === rec.projectTitle);
+      const score = project
+        ? calculateProjectMatchScore(interests, { category: project.category, tags: project.tags })
+        : 0;
+      return { rec, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.rec);
 }
 
 async function createAndSendCampaign(plan: CampaignPlan): Promise<{
@@ -663,6 +694,22 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
     );
   }
 
+  // Batch-load interest profiles so each email's projects can be reordered
+  // to the recipient's interests (one query; pure scoring in the loop).
+  const interestsByUser = new Map<string, { categoryInterests: Record<string, number>; tagInterests: Record<string, number> }>();
+  if (recipientUserIds.length > 0) {
+    const profiles = await db.userInterestProfile.findMany({
+      where: { userId: { in: recipientUserIds } },
+      select: { userId: true, categoryInterests: true, tagInterests: true },
+    });
+    profiles.forEach((p: { userId: string; categoryInterests: unknown; tagInterests: unknown }) =>
+      interestsByUser.set(p.userId, {
+        categoryInterests: (p.categoryInterests as Record<string, number>) ?? {},
+        tagInterests: (p.tagInterests as Record<string, number>) ?? {},
+      })
+    );
+  }
+
   automationLogger.info(
     `Automated campaign "${plan.name}" — queuing ${recipients.length} emails`
   );
@@ -673,8 +720,11 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
 
   for (const recipient of recipients) {
     try {
-      // Personalize
-      let personalizedHtml = htmlContent
+      // Personalize: reorder this email's projects to the recipient's
+      // interests, then fill in name + site URL.
+      const interests = recipient.userId ? interestsByUser.get(recipient.userId) : undefined;
+      const recs = personalizeRecommendations(aiContent.projectRecommendations, plan.projects, interests);
+      let personalizedHtml = generateAutomatedEmailHtml(aiContent, plan, recs)
         .replace(/\{\{USER_NAME\}\}/gi, recipient.name?.split(" ")[0] || "there")
         .replace(/\{\{SITE_URL\}\}/gi, baseUrl);
 
@@ -821,9 +871,10 @@ function generateAutomatedEmailHtml(
     }>;
     footer: string;
   },
-  plan: CampaignPlan
+  plan: CampaignPlan,
+  recommendations: AiRecommendation[] = aiContent.projectRecommendations
 ): string {
-  const projectCards = aiContent.projectRecommendations
+  const projectCards = recommendations
     .map((rec, i) => {
       const project = plan.projects.find(p => p.title === rec.projectTitle) || plan.projects[i];
       if (!project) return "";
