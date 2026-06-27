@@ -1,63 +1,15 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
-import { getSecret } from "@/lib/vault";
+import { claudeJSON } from "./anthropic-client";
 
 import { logger } from "@/lib/logger";
 
 const aiMarketingServicesLogger = logger.child({ module: "ai-marketing-services" });
 
-
-// Lazy initialization to avoid build-time errors
-let anthropicClient: Anthropic | null = null;
-let cachedApiKey: string | null = null;
-
-async function getAnthropic(): Promise<Anthropic> {
-  const settings = await db.platformSettings.findFirst({
-    select: { anthropicApiKey: true },
-  });
-  // Decrypt the stored key — the settings route encrypts it on save,
-  // so reading it raw fed the SDK an encrypted blob and produced a
-  // 401. getSecret decrypts (and passes through legacy plaintext).
-  const apiKey =
-    getSecret("anthropic_api_key", settings?.anthropicApiKey) ||
-    process.env.ANTHROPIC_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("Anthropic API key not configured. Set it in Admin Settings > AI.");
-  }
-
-  if (!anthropicClient || cachedApiKey !== apiKey) {
-    anthropicClient = new Anthropic({ apiKey });
-    cachedApiKey = apiKey;
-  }
-  return anthropicClient;
-}
-
-/** Call Claude and parse JSON from the response */
-async function claudeJSON<T>(
-  systemPrompt: string,
-  userPrompt: string,
-  options?: { model?: string; maxTokens?: number; temperature?: number }
-): Promise<T> {
-  const anthropic = await getAnthropic();
-  const response = await anthropic.messages.create({
-    model: options?.model || "claude-sonnet-4-20250514",
-    max_tokens: options?.maxTokens || 1024,
-    ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
-    system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
-  });
-
-  const textContent = response.content.find((c) => c.type === "text");
-  const responseText = textContent?.type === "text" ? textContent.text : "";
-
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("No JSON found in Claude response");
-  }
-
-  return JSON.parse(jsonMatch[0]) as T;
-}
+// getAnthropic + claudeJSON moved to ./anthropic-client (shared with
+// anthropic.ts). claudeJSON there also applies the INSTRUCTION_GUARD
+// prompt-injection hardening this module's prompts previously lacked,
+// and reads the API key through the decrypt path so it can't 401 on an
+// encrypted key again.
 
 // ============================================
 // EMAIL PERSONALIZATION
