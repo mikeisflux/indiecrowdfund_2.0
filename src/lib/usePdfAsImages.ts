@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-
-// Use local worker for reliability
-pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+import { getPdfjs } from "@/lib/pdfjs-lazy";
 
 type PdfImagesState =
   | { status: "idle" }
@@ -59,6 +56,7 @@ export function usePdfAsImages(
           throw new Error(`PDF Fetch Error: ${fetchError instanceof Error ? fetchError.message : 'Network error'}`);
         }
 
+        const pdfjsLib = await getPdfjs();
         const loadingTask = pdfjsLib.getDocument({ data: pdfData });
         const pdf = await loadingTask.promise;
 

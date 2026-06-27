@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLocalBookUrl } from "@/lib/local-books-db";
-
-// Use local worker for reliability
-pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+import { getPdfjs } from "@/lib/pdfjs-lazy";
 
 // Cache for thumbnail URLs by file ID or PDF URL
 const thumbnailCache = new Map<string, string>();
@@ -27,7 +24,8 @@ export async function prefetchThumbnail(pdfUrl: string, cacheKey: string): Promi
     if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
     const pdfData = await response.arrayBuffer();
 
-    // Load PDF
+    // Load PDF (pdf.js loaded lazily, browser-only — see pdfjs-lazy.ts)
+    const pdfjsLib = await getPdfjs();
     const loadingTask = pdfjsLib.getDocument({ data: pdfData });
     const pdf = await loadingTask.promise;
 
@@ -173,7 +171,8 @@ export function PdfThumbnail({
 
         if (cancelled || !mountedRef.current) return;
 
-        // Load PDF
+        // Load PDF (pdf.js loaded lazily, browser-only — see pdfjs-lazy.ts)
+        const pdfjsLib = await getPdfjs();
         const loadingTask = pdfjsLib.getDocument({ data: pdfData });
         const pdf = await loadingTask.promise;
 
