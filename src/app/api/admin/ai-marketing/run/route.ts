@@ -7,8 +7,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   generateSmartSegments,
-  batchPredictUsers,
-  batchOptimalSendTimes,
+  predictUserBehavior,
+  getOptimalSendTime,
   personalizeEmailForUser,
   generateContentVariants,
 } from "@/lib/ai/marketing-services";
@@ -18,6 +18,32 @@ import { batchUpdateUserInterests } from "@/lib/ai/user-interests";
 import { runAutomatedMarketing } from "@/lib/ai/automation";
 
 export const dynamic = "force-dynamic";
+// Full-user-base predictive/send-time runs are chunked but can still take
+// a couple of minutes for a large list; allow up to 5 minutes.
+export const maxDuration = 300;
+
+// Process items in small SEQUENTIAL chunks with a pause between them.
+// Predictive Analytics and Send-Time Optimization are pure statistics (no
+// AI cost) computed from each user's own behavior, so they run across the
+// WHOLE user base — but firing ~1,600 concurrent DB reads would swamp the
+// connection pool (the "timeout exceeded when trying to connect" failure).
+// Chunking keeps the single worker handling this request responsive; the
+// per-service cron runs it off-peak so that core is idle anyway.
+async function processInChunks<T>(
+  items: T[],
+  handler: (item: T) => Promise<void>,
+  opts: { chunkSize?: number; pauseMs?: number } = {}
+): Promise<void> {
+  const chunkSize = opts.chunkSize ?? 10;
+  const pauseMs = opts.pauseMs ?? 200;
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    await Promise.all(chunk.map((item) => handler(item).catch(() => {})));
+    if (i + chunkSize < items.length && pauseMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, pauseMs));
+    }
+  }
+}
 
 async function requireAdmin(request: Request) {
   // Server-to-server: the AI-services scheduler cron calls this with
@@ -148,9 +174,9 @@ export async function POST(request: Request) {
           });
         }
 
-        const limit = params?.limit || 100;
-
-        // Get active users
+        // Score the ENTIRE active user base (was capped at 100). Optional
+        // params.limit only for a quick manual spot-check.
+        const limit = typeof params?.limit === "number" ? params.limit : undefined;
         const users = await db.user.findMany({
           where: {
             deletedAt: null,
@@ -160,28 +186,65 @@ export async function POST(request: Request) {
               },
             },
           },
-          take: limit,
+          ...(limit ? { take: limit } : {}),
           select: { id: true },
         });
 
-        const predictions = await batchPredictUsers(users.map((u) => u.id));
+        let analyzed = 0;
+        let highValue = 0;
+        let atRiskCount = 0;
+        let predictedRevenue = 0;
+        const topProspects: Array<{ userId: string; conversionProbability: number; predictedLifetimeValue: number }> = [];
+        const atRiskTop: Array<{ userId: string; churnRisk: number }> = [];
 
-        // Categorize results
-        const highValue = predictions.filter((p) => p.conversionProbability > 0.6);
-        const atRisk = predictions.filter((p) => p.churnRisk > 0.5);
-        const predictedRevenue = predictions.reduce((sum, p) => sum + p.predictedLifetimeValue, 0);
+        await processInChunks(users.map((u) => u.id), async (id) => {
+          const p = await predictUserBehavior(id);
+          // Persist so the daily automation can target campaigns by score.
+          await db.userMarketingScore.upsert({
+            where: { userId: id },
+            create: {
+              userId: id,
+              conversionProbability: p.conversionProbability,
+              churnRisk: p.churnRisk,
+              predictedLtv: p.predictedLifetimeValue,
+              nextAction: p.nextActionPrediction,
+              predictionConfidence: p.confidence,
+              predictionsCalculatedAt: new Date(),
+            },
+            update: {
+              conversionProbability: p.conversionProbability,
+              churnRisk: p.churnRisk,
+              predictedLtv: p.predictedLifetimeValue,
+              nextAction: p.nextActionPrediction,
+              predictionConfidence: p.confidence,
+              predictionsCalculatedAt: new Date(),
+            },
+          });
+          analyzed++;
+          predictedRevenue += p.predictedLifetimeValue;
+          if (p.conversionProbability > 0.6) {
+            highValue++;
+            if (topProspects.length < 10) {
+              topProspects.push({ userId: id, conversionProbability: p.conversionProbability, predictedLifetimeValue: p.predictedLifetimeValue });
+            }
+          }
+          if (p.churnRisk > 0.5) {
+            atRiskCount++;
+            if (atRiskTop.length < 10) atRiskTop.push({ userId: id, churnRisk: p.churnRisk });
+          }
+        });
 
         result = {
           success: true,
-          message: `Analyzed ${predictions.length} users`,
+          message: `Analyzed ${analyzed} users`,
           summary: {
-            totalAnalyzed: predictions.length,
-            highValueProspects: highValue.length,
-            atRiskUsers: atRisk.length,
+            totalAnalyzed: analyzed,
+            highValueProspects: highValue,
+            atRiskUsers: atRiskCount,
             predictedRevenue: Math.round(predictedRevenue),
           },
-          topProspects: highValue.slice(0, 10),
-          atRiskUsers: atRisk.slice(0, 10),
+          topProspects,
+          atRiskUsers: atRiskTop,
         };
         break;
       }
@@ -198,24 +261,43 @@ export async function POST(request: Request) {
           });
         }
 
-        const limit = params?.limit || 100;
-
-        // Get users with behavior data
+        // Compute for the ENTIRE base with behavior data (was capped at 100).
+        const limit = typeof params?.limit === "number" ? params.limit : undefined;
         const users = await db.user.findMany({
           where: {
             deletedAt: null,
             behaviors: { some: {} },
           },
-          take: limit,
-          select: { id: true, email: true },
+          ...(limit ? { take: limit } : {}),
+          select: { id: true },
         });
 
-        const times = await batchOptimalSendTimes(users.map((u) => u.id));
-
-        // Aggregate by hour
+        let analyzed = 0;
         const hourDistribution = new Map<number, number>();
-        Array.from(times.values()).forEach((time) => {
-          hourDistribution.set(time.optimalHour, (hourDistribution.get(time.optimalHour) || 0) + 1);
+
+        await processInChunks(users.map((u) => u.id), async (id) => {
+          const t = await getOptimalSendTime(id);
+          // Persist so the automation can deliver each email at the user's hour.
+          await db.userMarketingScore.upsert({
+            where: { userId: id },
+            create: {
+              userId: id,
+              optimalSendHour: t.optimalHour,
+              optimalSendDay: t.optimalDay,
+              sendTimezone: t.timezone,
+              sendTimeConfidence: t.confidence,
+              sendTimeCalculatedAt: new Date(),
+            },
+            update: {
+              optimalSendHour: t.optimalHour,
+              optimalSendDay: t.optimalDay,
+              sendTimezone: t.timezone,
+              sendTimeConfidence: t.confidence,
+              sendTimeCalculatedAt: new Date(),
+            },
+          });
+          analyzed++;
+          hourDistribution.set(t.optimalHour, (hourDistribution.get(t.optimalHour) || 0) + 1);
         });
 
         const distribution = Array.from(hourDistribution.entries())
@@ -224,9 +306,9 @@ export async function POST(request: Request) {
 
         result = {
           success: true,
-          message: `Calculated optimal send times for ${times.size} users`,
+          message: `Calculated optimal send times for ${analyzed} users`,
           summary: {
-            totalAnalyzed: times.size,
+            totalAnalyzed: analyzed,
             peakHour: distribution.reduce((max, curr) => (curr.count > max.count ? curr : max), distribution[0])?.hour,
           },
           hourlyDistribution: distribution,

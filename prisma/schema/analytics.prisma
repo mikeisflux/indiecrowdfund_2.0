@@ -139,6 +139,45 @@ model UserInterestProfile {
   @@index([lastCalculatedAt])
 }
 
+// Per-user marketing scores computed by the AI services (Predictive
+// Analytics + Send-Time Optimization). Both are PURE STATISTICS derived
+// from the user's own behavior history — no AI/Anthropic cost — so they
+// run across the entire user base (chunked) and persist here. The daily
+// marketing automation reads these to target campaigns (by churn /
+// conversion) and to deliver each email at the user's optimal hour.
+//
+// Kept separate from UserInterestProfile on purpose: that model is gated
+// by a 7-day refresh cadence and requires the heavy interest JSON; these
+// scores update on their own schedule and must exist for users who don't
+// have a full interest profile yet.
+model UserMarketingScore {
+  id                      String    @id @default(cuid())
+  userId                  String    @unique
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Predictive analytics (0-1 probabilities)
+  conversionProbability   Float?
+  churnRisk               Float?
+  predictedLtv            Float?
+  nextAction              String?
+  predictionConfidence    Float?
+  predictionsCalculatedAt DateTime?
+
+  // Send-time optimization
+  optimalSendHour         Int?      // 0-23, in the user's timezone
+  optimalSendDay          Int?      // 0-6 (0 = Sunday)
+  sendTimezone            String?
+  sendTimeConfidence      Float?
+  sendTimeCalculatedAt    DateTime?
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([churnRisk])
+  @@index([conversionProbability])
+  @@index([optimalSendHour])
+}
+
 model UserPreference {
   id              String   @id @default(cuid())
   userId          String   @unique
