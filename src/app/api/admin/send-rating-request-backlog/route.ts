@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
           review: { is: { overallRating: { not: null } } },
         },
         // Only backers we can actually email.
-        user: { is: { email: { not: null }, emailUnsubscribedAt: null, deletedAt: null } },
+        user: { is: { emailUnsubscribedAt: null, deletedAt: null } },
       },
       select: { id: true },
       orderBy: { createdAt: "asc" },
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
           ...(deliveredOnly ? { fulfillmentStatus: "DELIVERED" } : {}),
           ...(body.projectId ? { projectId: body.projectId } : {}),
           NOT: { review: { is: { overallRating: { not: null } } } },
-          user: { is: { email: { not: null }, emailUnsubscribedAt: null, deletedAt: null } },
+          user: { is: { emailUnsubscribedAt: null, deletedAt: null } },
         },
       });
       return NextResponse.json({
