@@ -147,6 +147,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Stamp the review-submitted metric the moment a star rating exists, so
+    // the reminder system stops nudging this backer. overallRating is what
+    // "left a review" means; markedReceived alone doesn't count.
+    if (upserted.overallRating != null) {
+      await db.pledge.updateMany({
+        where: { id: pledgeId, reviewSubmittedAt: null },
+        data: { reviewSubmittedAt: now },
+      });
+    }
+
     // If the backer just marked this order received but hasn't left a
     // star rating, fire the rating-request nudge — this covers orders
     // the creator never formally marked DELIVERED. Fire-and-forget;

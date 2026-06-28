@@ -6,6 +6,12 @@ const ratingRequestLogger = logger.child({ module: "rating-request-email" });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+// The nudge PERSISTS: re-send every RATING_REMINDER_INTERVAL_DAYS until the
+// backer leaves a star rating, up to RATING_REMINDER_MAX reminders (so we
+// never nag forever and torch deliverability). Tune these two to taste.
+export const RATING_REMINDER_INTERVAL_DAYS = 7;
+export const RATING_REMINDER_MAX = 5;
+
 interface SendRatingRequestResult {
   sent: boolean;
   reason?: string;
@@ -38,6 +44,8 @@ export async function maybeSendRatingRequest(
         id: true,
         status: true,
         ratingRequestSentAt: true,
+        reviewSubmittedAt: true,
+        ratingReminderCount: true,
         user: { select: { email: true, name: true, emailUnsubscribedAt: true, deletedAt: true } },
         project: {
           select: {
@@ -51,10 +59,23 @@ export async function maybeSendRatingRequest(
 
     if (!pledge) return { sent: false, reason: "pledge-not-found" };
     if (pledge.status !== "COMPLETED") return { sent: false, reason: "not-completed" };
-    if (pledge.ratingRequestSentAt) return { sent: false, reason: "already-sent" };
+    if (pledge.reviewSubmittedAt) return { sent: false, reason: "already-reviewed" };
     if (!pledge.user || pledge.user.deletedAt) return { sent: false, reason: "no-user" };
     if (!pledge.user.email) return { sent: false, reason: "no-email" };
     if (pledge.user.emailUnsubscribedAt) return { sent: false, reason: "unsubscribed" };
+
+    // Persistent-reminder cadence: stop at the cap, and don't re-send until
+    // the weekly interval has elapsed since the last nudge.
+    if (pledge.ratingReminderCount >= RATING_REMINDER_MAX) {
+      return { sent: false, reason: "reminder-cap-reached" };
+    }
+    if (pledge.ratingRequestSentAt) {
+      const daysSince =
+        (Date.now() - pledge.ratingRequestSentAt.getTime()) / (24 * 60 * 60 * 1000);
+      if (daysSince < RATING_REMINDER_INTERVAL_DAYS) {
+        return { sent: false, reason: "reminded-recently" };
+      }
+    }
 
     // Skip if they've already rated.
     const existing = await db.backerReview.findUnique({
@@ -62,10 +83,11 @@ export async function maybeSendRatingRequest(
       select: { overallRating: true },
     });
     if (existing?.overallRating != null) {
-      // Still stamp so the backlog job doesn't keep re-scanning it.
+      // Lazily backfill the metric so the reminder job stops scanning this
+      // pledge (covers historical reviews predating reviewSubmittedAt).
       await db.pledge.updateMany({
-        where: { id: pledgeId, ratingRequestSentAt: null },
-        data: { ratingRequestSentAt: new Date() },
+        where: { id: pledgeId, reviewSubmittedAt: null },
+        data: { reviewSubmittedAt: new Date() },
       });
       return { sent: false, reason: "already-rated" };
     }
@@ -82,9 +104,9 @@ export async function maybeSendRatingRequest(
         <p>Hi ${escapeHtml(backerName)},</p>
         <p>
           Your order from <strong>${escapeHtml(projectTitle)}</strong> by
-          ${escapeHtml(creatorName)} has been delivered. We'd love to hear how
-          it went — your honest rating helps other backers know which creators
-          deliver, and helps great creators stand out.
+          ${escapeHtml(creatorName)} should be in your hands now. We'd love to
+          hear how it went — your honest rating helps other backers know which
+          creators deliver, and helps great creators stand out.
         </p>
         <p>It takes about 20 seconds — just tap the stars.</p>
         <p style="margin: 28px 0;">
@@ -102,7 +124,7 @@ export async function maybeSendRatingRequest(
         <p style="color: #999; font-size: 12px; margin-top: 24px;">— The IndieCrowdfund Team</p>
       </div>
     `;
-    const text = `Hi ${backerName},\n\nYour order from "${projectTitle}" by ${creatorName} has been delivered. We'd love your honest rating — it takes about 20 seconds.\n\nRate ${creatorName}: ${reviewUrl}\n\nDidn't get your reward or something went wrong? Contact support@indiecrowdfund.com.\n\n— The IndieCrowdfund Team`;
+    const text = `Hi ${backerName},\n\nYour order from "${projectTitle}" by ${creatorName} should be in your hands now. We'd love your honest rating — it takes about 20 seconds.\n\nRate ${creatorName}: ${reviewUrl}\n\nDidn't get your reward or something went wrong? Contact support@indiecrowdfund.com.\n\n— The IndieCrowdfund Team`;
 
     const result = (await sendEmail({ to: pledge.user.email, subject, html, text })) as {
       success: boolean;
@@ -110,12 +132,16 @@ export async function maybeSendRatingRequest(
       queued?: boolean;
     };
 
-    // Stamp regardless of transient send outcome: if it queued or sent
-    // we don't want a retry storm from the backlog job. (sendEmail
-    // auto-queues failures for retry internally.)
-    await db.pledge.updateMany({
-      where: { id: pledgeId, ratingRequestSentAt: null },
-      data: { ratingRequestSentAt: new Date() },
+    // Record the nudge (last-sent timestamp + bump the count) regardless of
+    // transient send outcome — sendEmail auto-queues failures internally and
+    // we don't want a retry storm. These two fields drive the weekly
+    // persist-until-reviewed cadence and the cap.
+    await db.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        ratingRequestSentAt: new Date(),
+        ratingReminderCount: { increment: 1 },
+      },
     });
 
     if (!result.success && !result.queued) {

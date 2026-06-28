@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { formatError } from "@/lib/errors";
-import { maybeSendRatingRequest } from "@/lib/email/rating-request";
+import { maybeSendRatingRequest, RATING_REMINDER_INTERVAL_DAYS, RATING_REMINDER_MAX } from "@/lib/email/rating-request";
 
 const backlogLogger = logger.child({ module: "admin-rating-request-backlog" });
 
@@ -53,28 +53,33 @@ export async function POST(req: NextRequest) {
   const limit = Math.max(1, Math.min(1000, body.limit ?? 200));
 
   try {
-    // Candidate pledges: COMPLETED, not soft-deleted, no rating-request
-    // email sent yet, and the backer hasn't left a star rating. We
-    // can't filter "no overallRating" directly in the Pledge query
-    // (it's on BackerReview) so we exclude pledges that already have a
-    // review row WITH an overallRating via a NOT-relation filter.
+    // Candidate pledges DUE for a rating nudge. maybeSendRatingRequest
+    // re-checks the exact per-pledge cadence/cap; this pre-filters to
+    // not-yet-reviewed, fulfilled, under-cap pledges that are due.
+    const dueBefore = new Date(
+      Date.now() - RATING_REMINDER_INTERVAL_DAYS * 24 * 60 * 60 * 1000
+    );
     const candidates = await db.pledge.findMany({
       where: {
         status: "COMPLETED",
         deletedAt: null,
-        ratingRequestSentAt: null,
+        // Hasn't reviewed (metric), under the reminder cap, and due (never
+        // nudged or last nudge older than the weekly interval).
+        reviewSubmittedAt: null,
+        ratingReminderCount: { lt: RATING_REMINDER_MAX },
+        OR: [
+          { ratingRequestSentAt: null },
+          { ratingRequestSentAt: { lt: dueBefore } },
+        ],
         ...(deliveredOnly ? { fulfillmentStatus: { in: ["SHIPPED", "DELIVERED"] } } : {}),
         ...(body.projectId ? { projectId: body.projectId } : {}),
-        // Exclude pledges where a review with an actual star rating
-        // already exists.
-        NOT: {
-          review: { is: { overallRating: { not: null } } },
-        },
+        // Safety net for un-backfilled history: skip pledges already rated.
+        NOT: { review: { is: { overallRating: { not: null } } } },
         // Only backers we can actually email.
         user: { is: { emailUnsubscribedAt: null, deletedAt: null } },
       },
       select: { id: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: { ratingRequestSentAt: { sort: "asc", nulls: "first" } },
       take: limit,
     });
 
@@ -85,7 +90,12 @@ export async function POST(req: NextRequest) {
         where: {
           status: "COMPLETED",
           deletedAt: null,
-          ratingRequestSentAt: null,
+          reviewSubmittedAt: null,
+          ratingReminderCount: { lt: RATING_REMINDER_MAX },
+          OR: [
+            { ratingRequestSentAt: null },
+            { ratingRequestSentAt: { lt: dueBefore } },
+          ],
           ...(deliveredOnly ? { fulfillmentStatus: { in: ["SHIPPED", "DELIVERED"] } } : {}),
           ...(body.projectId ? { projectId: body.projectId } : {}),
           NOT: { review: { is: { overallRating: { not: null } } } },

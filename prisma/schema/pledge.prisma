@@ -79,11 +79,16 @@ model Pledge {
   // Fulfillment
   fulfillmentStatus     FulfillmentStatus @default(NOT_STARTED)
 
-  // When we sent the "rate your creator" nudge email for this pledge.
-  // Dedup guard so the delivered-trigger, the backer-marked-received
-  // trigger, and the one-time backlog send never double-email the
-  // same backer for the same pledge.
+  // When we LAST sent the "rate your creator" nudge. The nudge re-sends on
+  // a weekly cadence (see RATING_REMINDER_* in rating-request.ts) until the
+  // backer leaves a rating or the reminder cap is hit.
   ratingRequestSentAt   DateTime?
+  // THE metric for "this backer left a star rating" (null = hasn't). Set
+  // when a review with an overallRating is submitted; stops the reminders.
+  reviewSubmittedAt     DateTime?
+  // How many rating nudges we've sent for this pledge (caps the persist
+  // loop at RATING_REMINDER_MAX so we never nag forever).
+  ratingReminderCount   Int       @default(0)
 
   // Modifier addon assignments
   needsModifierAssignment Boolean     @default(false)  // True if backer has ambiguous modifier addon assignments
