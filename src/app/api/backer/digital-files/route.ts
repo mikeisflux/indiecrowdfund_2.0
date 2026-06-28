@@ -314,7 +314,13 @@ export async function POST(request: NextRequest) {
     });
     const expiresIn = (settings?.signedUrlExpirationMinutes || 60) * 60;
 
-    const downloadUrl = await r2.getDownloadUrl(file.r2StorageKey, { expiresIn });
+    const downloadUrl = await r2.getDownloadUrl(file.r2StorageKey, {
+      expiresIn,
+      // Force a real download with the correct filename — without this the
+      // browser renders large PDFs inline and they appear corrupted.
+      filename: file.fileName,
+      contentType: file.mimeType || undefined,
+    });
 
     // Update or create distribution record
     await db.digitalDistribution.upsert({

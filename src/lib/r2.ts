@@ -52,6 +52,11 @@ interface UploadOptions {
 
 interface PresignedUrlOptions {
   expiresIn?: number; // Seconds, default 3600 (1 hour)
+  // Force a browser DOWNLOAD (vs inline render) with this filename. Without
+  // it, a large application/pdf opens in the browser's built-in PDF viewer,
+  // which chokes/garbles on big files — so the download "looks corrupted".
+  filename?: string;
+  contentType?: string;
 }
 
 /**
@@ -233,6 +238,14 @@ export class R2Storage {
       const command = new GetObjectCommand({
         Bucket: this.config.bucketName,
         Key: key,
+        // Force an attachment download (not inline render) so large PDFs
+        // download intact instead of choking the browser's inline viewer.
+        ...(options.filename
+          ? {
+              ResponseContentDisposition: `attachment; filename="${options.filename.replace(/["\\\r\n]/g, "")}"`,
+            }
+          : {}),
+        ...(options.contentType ? { ResponseContentType: options.contentType } : {}),
       });
 
       return await getSignedUrl(this.client, command, {
