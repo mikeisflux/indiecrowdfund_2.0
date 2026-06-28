@@ -23,8 +23,10 @@ export const maxDuration = 300;
 // Body (all optional):
 //   {
 //     dryRun?: boolean,        // default false — preview counts only
-//     deliveredOnly?: boolean, // default true — only DELIVERED pledges
-//                              //   (set false to include all COMPLETED)
+//     deliveredOnly?: boolean, // default true — only FULFILLED pledges
+//                              //   (SHIPPED or DELIVERED). set false to
+//                              //   include every COMPLETED pledge
+//                              //   regardless of fulfillment.
 //     limit?: number,          // default 200, max 1000 per run —
 //                              //   throttle so we don't blast the
 //                              //   whole backlog + the email provider
@@ -61,7 +63,7 @@ export async function POST(req: NextRequest) {
         status: "COMPLETED",
         deletedAt: null,
         ratingRequestSentAt: null,
-        ...(deliveredOnly ? { fulfillmentStatus: "DELIVERED" } : {}),
+        ...(deliveredOnly ? { fulfillmentStatus: { in: ["SHIPPED", "DELIVERED"] } } : {}),
         ...(body.projectId ? { projectId: body.projectId } : {}),
         // Exclude pledges where a review with an actual star rating
         // already exists.
@@ -84,7 +86,7 @@ export async function POST(req: NextRequest) {
           status: "COMPLETED",
           deletedAt: null,
           ratingRequestSentAt: null,
-          ...(deliveredOnly ? { fulfillmentStatus: "DELIVERED" } : {}),
+          ...(deliveredOnly ? { fulfillmentStatus: { in: ["SHIPPED", "DELIVERED"] } } : {}),
           ...(body.projectId ? { projectId: body.projectId } : {}),
           NOT: { review: { is: { overallRating: { not: null } } } },
           user: { is: { emailUnsubscribedAt: null, deletedAt: null } },
