@@ -297,7 +297,7 @@ async function shouldSendCampaignToday(): Promise<{ send: boolean; reason: strin
 // ============================================
 
 interface CampaignPlan {
-  type: "weekly_discovery" | "new_projects" | "ending_soon" | "win_back" | "abandoned_cart" | "daily_digest";
+  type: "weekly_discovery" | "new_projects" | "ending_soon" | "win_back" | "abandoned_cart" | "daily_digest" | "high_value_outreach" | "high_engagement";
   audience: string;
   name: string;
   projects: Array<{
@@ -470,6 +470,29 @@ async function planCampaigns(
     }
   }
 
+  // HIGH-VALUE BACKER OUTREACH — Thursday: re-engage your biggest backers
+  // (targeted at high-spend backers in createAndSendCampaign) with a curated
+  // pick. Skipped if one went out in the last 14 days.
+  if (dayOfWeek === 4 && !recentTypes.has("high_value_outreach")) {
+    plans.push({
+      type: "high_value_outreach",
+      audience: "backer",
+      name: `Picked For You — ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+      projects: liveProjects.slice(0, 5).map(formatProject),
+    });
+  }
+
+  // HIGH ENGAGEMENT PROJECTS — Friday: showcase the projects getting the
+  // most traction to the whole list.
+  if (dayOfWeek === 5 && !recentTypes.has("high_engagement")) {
+    plans.push({
+      type: "high_engagement",
+      audience: "subscriber",
+      name: `Trending on IndieCrowdfund — ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+      projects: liveProjects.slice(0, 5).map(formatProject),
+    });
+  }
+
   // DAILY DIGEST — the everyday fallback so something relevant goes out
   // each day even when no special campaign (new projects, ending soon,
   // win-back, abandoned cart) is eligible. The per-user 7-day frequency
@@ -542,6 +565,14 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
 
   // Map campaign type to descriptions for the AI
   const typeDescriptions: Record<string, { audience: string; tone: string }> = {
+    high_value_outreach: {
+      audience: "Your most valuable backers — people who've pledged generously before",
+      tone: "Warm, appreciative, a touch exclusive — a VIP pick from someone who knows their taste",
+    },
+    high_engagement: {
+      audience: "Subscribers and backers who like to see what's catching fire on the platform",
+      tone: "Energetic and social-proof-driven — the projects everyone's backing right now",
+    },
     daily_digest: {
       audience: "Backers and subscribers who like a daily pulse of fresh projects matched to their taste",
       tone: "Warm, curated, and concise — like a trusted friend's daily pick, never a hard sell",
@@ -648,6 +679,29 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
         select: { id: true, email: true, name: true },
       });
       for (const u of atRiskUsers) {
+        const sendCheck = await canSendEmail(u.id);
+        if (sendCheck.canSend) {
+          recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name, userId: u.id });
+        }
+      }
+    }
+  } else if (plan.type === "high_value_outreach") {
+    // High-value backers: total completed pledges over $100 (same
+    // definition as the admin "high-value" audience). Your most valuable
+    // supporters — re-engage them with a curated pick.
+    const highValueGroups = await db.pledge.groupBy({
+      by: ["userId"],
+      where: { status: "COMPLETED", deletedAt: null },
+      _sum: { amount: true },
+      having: { amount: { _sum: { gt: 100 } } },
+    });
+    const highValueIds = highValueGroups.map((g: { userId: string }) => g.userId);
+    if (highValueIds.length > 0) {
+      const hvUsers = await db.user.findMany({
+        where: { id: { in: highValueIds }, emailVerified: { not: null }, deletedAt: null },
+        select: { id: true, email: true, name: true },
+      });
+      for (const u of hvUsers) {
         const sendCheck = await canSendEmail(u.id);
         if (sendCheck.canSend) {
           recipientMap.set(u.email.toLowerCase(), { email: u.email.toLowerCase(), name: u.name, userId: u.id });
