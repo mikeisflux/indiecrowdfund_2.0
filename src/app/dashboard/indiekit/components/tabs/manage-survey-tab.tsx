@@ -89,6 +89,7 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
   const [lockConfirm, setLockConfirm] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
+  const [isRemindingPending, setIsRemindingPending] = useState(false);
 
   // Request updated survey
   const [requestUpdateConfirm, setRequestUpdateConfirm] = useState(false);
@@ -201,6 +202,34 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
       toast.error("Failed to backfill survey");
     } finally {
       setIsBackfilling(false);
+    }
+  };
+
+  const sendSurveyReminders = async () => {
+    if (!projectId) return;
+    setIsRemindingPending(true);
+    try {
+      const response = await apiFetch("/api/creator/indiekit/surveys", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, action: "remind" }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(
+          data.emailsSent > 0
+            ? `Reminder sent to ${data.emailsSent} pending backers`
+            : "No pending backers — everyone's completed their survey"
+        );
+        fetchSurvey();
+      } else {
+        toast.error(data.error || "Failed to send survey reminders");
+      }
+    } catch (error) {
+      console.error("Error sending survey reminders:", error);
+      toast.error("Failed to send survey reminders");
+    } finally {
+      setIsRemindingPending(false);
     }
   };
 
@@ -353,7 +382,8 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
             </div>
           )}
 
-          <div className="mt-4 flex gap-2 flex-wrap">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {/* View / refresh */}
             <Link href={`/dashboard/projects/${projectId}/survey/responses`}>
               <Button variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
@@ -366,6 +396,8 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
             </Button>
             {survey.status === "SENT" && (
               <>
+                <div className="hidden sm:block h-6 w-px bg-border mx-1" aria-hidden />
+                {/* Reach backers without a completed survey */}
                 <Button
                   variant="outline"
                   onClick={backfillSurvey}
@@ -380,6 +412,19 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
                 </Button>
                 <Button
                   variant="outline"
+                  className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                  onClick={sendSurveyReminders}
+                  disabled={isRemindingPending}
+                >
+                  {isRemindingPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Send Survey Reminders
+                </Button>
+                <Button
+                  variant="outline"
                   className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200"
                   onClick={() => setRequestUpdateConfirm(true)}
                   disabled={isRequestingUpdate}
@@ -391,6 +436,8 @@ export function ManageSurveyTab({ projectId }: ManageSurveyTabProps) {
                   )}
                   Request Updated Survey
                 </Button>
+                {/* Finalize */}
+                <div className="hidden sm:block h-6 w-px bg-border mx-1" aria-hidden />
                 <Button
                   variant="outline"
                   className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"

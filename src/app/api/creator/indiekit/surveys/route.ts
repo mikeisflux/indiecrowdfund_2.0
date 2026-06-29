@@ -479,6 +479,58 @@ export async function PATCH(req: NextRequest) {
 
         break;
       }
+
+      case "remind": {
+        // Nudge backers who were sent the survey but haven't completed it
+        // (the "pending" count). Reuses the survey-available email, which
+        // deep-links straight to their survey.
+        if (survey.status !== "SENT") {
+          return NextResponse.json(
+            { error: "Survey must be in SENT status to send reminders" },
+            { status: 400 }
+          );
+        }
+
+        const pendingBackers = await db.pledge.findMany({
+          where: {
+            projectId,
+            deletedAt: null,
+            status: "COMPLETED",
+            surveyCompleted: false,
+          },
+          include: {
+            user: { select: { email: true, name: true } },
+          },
+        });
+
+        for (const pledge of pendingBackers) {
+          if (pledge.user?.email) {
+            try {
+              await sendSurveyAvailableEmail(
+                pledge.user.email,
+                pledge.user.name || "Backer",
+                project.title,
+                project.creator?.name || "The Creator",
+                pledge.id
+              );
+              emailsSent++;
+            } catch (emailError) {
+              creatorIndiekitSurveysLogger.error({ err: String(emailError) }, `Failed to send survey reminder to ${pledge.user.email}:`);
+            }
+          }
+        }
+
+        if (emailsSent > 0) {
+          await db.fulfillmentActivity.create({
+            data: {
+              projectId,
+              type: "SURVEY_REMINDER",
+              title: `Survey reminder: sent to ${emailsSent} pending backers`,
+            },
+          });
+        }
+        break;
+      }
     }
 
     return NextResponse.json({ success: true, emailsSent });

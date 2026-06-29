@@ -367,10 +367,43 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
   const [confirmResendDialog, setConfirmResendDialog] = useState<EmailCampaign | null>(null);
   const [confirmDeleteDialog, setConfirmDeleteDialog] = useState<EmailCampaign | null>(null);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
+  const [isRemindingPending, setIsRemindingPending] = useState(false);
 
   const handleEditCampaign = (campaign: EmailCampaign) => {
     // Navigate to campaign editor
     window.location.href = `/dashboard/indiekit/emails/${campaign.id}/edit`;
+  };
+
+  // Nudge backers who haven't completed their survey yet — same action as
+  // the "Send Survey Reminders" button on the Survey Responses tab.
+  const sendSurveyReminders = async () => {
+    if (!projectId) {
+      toast.error("No project selected");
+      return;
+    }
+    setIsRemindingPending(true);
+    try {
+      const res = await apiFetch("/api/creator/indiekit/surveys", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, action: "remind" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(
+          data.emailsSent > 0
+            ? `Reminder sent to ${data.emailsSent} pending backers`
+            : "No pending backers — everyone's completed their survey"
+        );
+        onRefresh?.();
+      } else {
+        toast.error(data.error || "Failed to send survey reminders");
+      }
+    } catch {
+      toast.error("Failed to send survey reminders");
+    } finally {
+      setIsRemindingPending(false);
+    }
   };
 
   const handleDuplicateCampaign = async (campaign: EmailCampaign) => {
@@ -537,15 +570,32 @@ export function EmailsTab({ emailCampaigns, onOpenEmailDialog, projectId, onRefr
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-2">
         <div>
           <h3 className="text-lg font-semibold">Email Campaigns</h3>
           <p className="text-sm text-muted-foreground">Communicate with your backers</p>
         </div>
-        <Button onClick={() => onOpenEmailDialog()} variant="outline">
-          <PenLine className="h-4 w-4 mr-2" />
-          Draft Your Next Email
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {projectId && (
+            <Button
+              variant="outline"
+              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+              onClick={sendSurveyReminders}
+              disabled={isRemindingPending}
+            >
+              {isRemindingPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Send Survey Reminders
+            </Button>
+          )}
+          <Button onClick={() => onOpenEmailDialog()} variant="outline">
+            <PenLine className="h-4 w-4 mr-2" />
+            Draft Your Next Email
+          </Button>
+        </div>
       </div>
 
       {/* Email Campaign Stats Summary */}
