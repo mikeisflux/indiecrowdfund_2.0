@@ -247,7 +247,16 @@ export default function BackerSurveyPage() {
       const itemResponse = itemResponses[itemQ.id] || {};
       // Every variant is required server-side ("Please select a <type> for <item>")
       for (const variant of itemQ.variants) {
-        const selected = itemResponse.variants?.[variant.variantType];
+        // Accept EITHER the variant.id key or the variantType key — this
+        // MUST match the read (SurveyItemsStep) and the server validation,
+        // which both check both keys. The dropdown shows the saved value via
+        // the same fallback, so checking only variantType here blocked any
+        // backer whose stored selection was keyed by variant.id: they saw
+        // their size selected but the submit gate insisted they hadn't
+        // picked one ("I selected a T-Shirt size but it won't let me submit").
+        const selected =
+          itemResponse.variants?.[variant.id] ||
+          itemResponse.variants?.[variant.variantType];
         if (!selected || selected.trim() === "") {
           return `Please select a ${variant.variantType} for ${itemQ.itemName}.`;
         }
