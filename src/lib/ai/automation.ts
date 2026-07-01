@@ -15,7 +15,7 @@ import { generateCampaignContent } from "@/lib/ai/anthropic";
 import { generateSmartSegments } from "@/lib/ai/marketing-services";
 import { getAISettings, canSendEmail } from "@/lib/ai/settings-integration";
 import { batchUpdateUserInterests, calculateProjectMatchScore } from "@/lib/ai/user-interests";
-import { queueEmail, EMAIL_PRIORITY, escapeHtmlForEmail } from "@/lib/email";
+import { queueEmail, EMAIL_PRIORITY, escapeHtmlForEmail, getUnsubscribeUrl } from "@/lib/email";
 import { logger } from "@/lib/logger";
 
 const automationLogger = logger.child({ module: "ai-marketing-automation" });
@@ -815,6 +815,15 @@ async function createAndSendCampaign(plan: CampaignPlan): Promise<{
         return `href="${baseUrl}/api/email/track/click?c=${campaign.id}&e=${encodedEmail}&url=${encodedUrl}"`;
       });
 
+      // Resolve the unsubscribe placeholder AFTER click-tracking so the
+      // opt-out link stays a clean, direct signed URL. (The old template
+      // linked to {{SITE_URL}}/unsubscribe, which is a 404 — there is no
+      // such page, only the /api/unsubscribe?token= endpoint.)
+      personalizedHtml = personalizedHtml.replace(
+        /\{\{UNSUBSCRIBE_URL\}\}/gi,
+        getUnsubscribeUrl(recipient.email)
+      );
+
       // Deliver at the recipient's optimal hour when we know it; otherwise
       // send as soon as the queue drains (scheduledFor undefined = now).
       const optimalHour = recipient.userId ? sendHourByUser.get(recipient.userId) : null;
@@ -996,7 +1005,7 @@ function generateAutomatedEmailHtml(
       <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center;">
         <p style="color: #6b7280; font-size: 14px;">${escapeHtmlForEmail(aiContent.footer)}</p>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 16px;">
-          <a href="{{SITE_URL}}/unsubscribe" style="color: #9ca3af;">Unsubscribe</a> |
+          <a href="{{UNSUBSCRIBE_URL}}" style="color: #9ca3af;">Unsubscribe</a> |
           <a href="{{SITE_URL}}" style="color: #9ca3af;">Visit IndieCrowdfund</a>
         </p>
         <p style="color: #d1d5db; font-size: 10px; margin-top: 8px;">

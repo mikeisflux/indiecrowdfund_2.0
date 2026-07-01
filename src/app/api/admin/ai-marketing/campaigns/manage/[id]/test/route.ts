@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 const adminAiMarketingCampaignsManageTestLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-test" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, getUnsubscribeUrl } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +43,13 @@ function replaceTemplateVariables(content: string, email: string, name: string |
   result = result.replace(/\{\{FIRST_NAME\}\}/gi, displayName);
   result = result.replace(/\{\{USER_EMAIL\}\}/gi, email);
   result = result.replace(/\{\{EMAIL\}\}/gi, email);
+
+  // Resolve the site + unsubscribe placeholders so the test email matches
+  // what real recipients get. Without this the CTA buttons ship as the
+  // literal string "{{SITE_URL}}/projects/..." and are not clickable.
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+  result = result.replace(/\{\{SITE_URL\}\}/gi, baseUrl);
+  result = result.replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, getUnsubscribeUrl(email));
 
   return result;
 }

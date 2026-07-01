@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 const adminAiMarketingCampaignsManageSendLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-send" });
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { queueEmail, EMAIL_PRIORITY } from "@/lib/email";
+import { queueEmail, EMAIL_PRIORITY, getUnsubscribeUrl } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +49,14 @@ function replaceTemplateVariables(content: string, recipient: Recipient): string
   result = result.replace(/\{\{FIRST_NAME\}\}/gi, displayName);
   result = result.replace(/\{\{USER_EMAIL\}\}/gi, recipient.email);
   result = result.replace(/\{\{EMAIL\}\}/gi, recipient.email);
+
+  // Resolve the site URL placeholder BEFORE click-tracking runs so the CTA
+  // buttons become absolute https://indiecrowdfund.com/... links — which is
+  // what the tracking regex (and the email client) actually need. Without
+  // this the buttons ship as the literal string "{{SITE_URL}}/projects/..."
+  // and are not clickable. {{UNSUBSCRIBE_URL}} is handled after tracking.
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://indiecrowdfund.com";
+  result = result.replace(/\{\{SITE_URL\}\}/gi, baseUrl);
 
   return result;
 }
@@ -348,6 +356,15 @@ export async function POST(
 
         // Add tracking pixel and click tracking
         personalizedHtml = addEmailTracking(personalizedHtml, campaign.id, recipient.email);
+
+        // Resolve the unsubscribe placeholder AFTER click-tracking so the
+        // opt-out link stays a clean, direct signed URL (not wrapped in the
+        // click-tracking redirect). An unresolved {{UNSUBSCRIBE_URL}} would
+        // otherwise ship as broken, non-clickable text.
+        personalizedHtml = personalizedHtml.replace(
+          /\{\{UNSUBSCRIBE_URL\}\}/gi,
+          getUnsubscribeUrl(recipient.email)
+        );
 
         // Queue the email with AI_MARKETING priority (lowest - 1)
         const result = await queueEmail({
