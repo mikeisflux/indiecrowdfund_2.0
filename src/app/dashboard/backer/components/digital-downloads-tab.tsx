@@ -119,23 +119,31 @@ export function DigitalDownloadsTab() {
     }
   };
 
-  const fetchDigitalFiles = async () => {
+  const fetchDigitalFiles = async (opts?: { silent?: boolean }) => {
     try {
       const response = await fetch("/api/backer/digital-files", {
-        
+
       });
       if (!response.ok) {
         throw new Error("Failed to fetch digital files");
       }
       const filesData = await response.json();
       setData(filesData);
+      setError(null);
       // Auto-expand projects with new files
       const projectsWithNew = filesData.projects
         .filter((p: ProjectWithFiles) => p.newFileCount > 0)
         .map((p: ProjectWithFiles) => p.id);
       setExpandedProjects(new Set(projectsWithNew));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      // A background refresh (e.g. right after a download) can fail
+      // transiently — the browser may cancel the in-flight request when the
+      // download fires. The user already has their files and their download
+      // worked, so don't clobber the whole tab with a scary "Failed to load
+      // downloads". Only surface errors on the real (non-silent) load.
+      if (!opts?.silent) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -159,16 +167,23 @@ export function DigitalDownloadsTab() {
 
       const { downloadUrl, fileName } = await response.json();
 
-      // Trigger download
+      // Trigger download. target=_blank + rel=noopener so that if the
+      // browser can't honor the download attribute (cross-origin presigned
+      // R2 URLs ignore it), it opens the file in a new context instead of
+      // navigating THIS page away — which would cancel the tab's in-flight
+      // requests and surface a bogus "Failed to load downloads".
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = fileName;
+      link.target = "_blank";
+      link.rel = "noopener";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      // Refresh data to update download counts
-      fetchDigitalFiles();
+      // Refresh download counts in the background — a failure here must not
+      // surface as a page error, since the download itself succeeded.
+      fetchDigitalFiles({ silent: true });
     } catch (err) {
       console.error("Download error:", err);
       throw err;
