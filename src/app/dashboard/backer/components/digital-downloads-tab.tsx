@@ -21,6 +21,7 @@ import {
   Library,
 } from "lucide-react";
 import { DownloadCard } from "./download-card";
+import { DownloadStatusDialog, type DownloadStatus } from "./download-status-dialog";
 
 // Marketplace book item shape from /api/backer/digital-library?source=marketplace.
 // Mirrors LibraryItem but typed locally so we don't import from the
@@ -81,6 +82,12 @@ export function DigitalDownloadsTab() {
   const [error, setError] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [isVisible, setIsVisible] = useState(false);
+  // Page-level download feedback (Preparing → Started) so backers get a
+  // clear signal even though the file opens from a cross-origin R2 URL.
+  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>({
+    open: false,
+    phase: "preparing",
+  });
 
   useEffect(() => {
     fetchDigitalFiles();
@@ -150,12 +157,15 @@ export function DigitalDownloadsTab() {
   };
 
   const handleDownload = async (fileId: string) => {
+    // Show the "Preparing…" dialog immediately so the backer knows the
+    // click registered, even before the presigned URL comes back.
+    setDownloadStatus({ open: true, phase: "preparing" });
     try {
       const response = await apiFetch("/api/backer/digital-files", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          
+
         },
         body: JSON.stringify({ fileId }),
       });
@@ -181,11 +191,20 @@ export function DigitalDownloadsTab() {
       link.click();
       document.body.removeChild(link);
 
+      // Confirm to the backer that the download is going, and keep the URL
+      // around so they can re-trigger it manually if the browser blocked it.
+      setDownloadStatus({ open: true, phase: "started", fileName, downloadUrl });
+
       // Refresh download counts in the background — a failure here must not
       // surface as a page error, since the download itself succeeded.
       fetchDigitalFiles({ silent: true });
     } catch (err) {
       console.error("Download error:", err);
+      setDownloadStatus({
+        open: true,
+        phase: "error",
+        error: err instanceof Error ? err.message : "Something went wrong. Please try again.",
+      });
       throw err;
     }
   };
@@ -266,6 +285,12 @@ export function DigitalDownloadsTab() {
       "space-y-6 transition-all duration-500",
       isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
     )}>
+      {/* Download progress/confirmation dialog */}
+      <DownloadStatusDialog
+        status={downloadStatus}
+        onOpenChange={(open) => setDownloadStatus((prev) => ({ ...prev, open }))}
+      />
+
       {/* Marketplace Books — rendered first so backers arriving from a
           marketplace purchase email see their book immediately, in a
           visual book-shelf format. The full reader (with progress
