@@ -226,7 +226,7 @@ export function DigitalDownloadsTab() {
           <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
           <h3 className="text-lg font-semibold mb-2">Failed to load downloads</h3>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={fetchDigitalFiles}>Try Again</Button>
+          <Button onClick={() => fetchDigitalFiles()}>Try Again</Button>
         </CardContent>
       </Card>
     );
