@@ -142,8 +142,15 @@ export async function GET(
     });
     const expiresIn = (settings?.signedUrlExpirationMinutes || 60) * 60;
 
-    // Generate presigned download URL
-    const downloadUrl = await r2.getDownloadUrl(r2KeyToUse, { expiresIn });
+    // Generate presigned download URL. Force a real attachment download
+    // with the correct filename — without this the browser tries to render
+    // the (often large) PDF inline, which is what backers experience as
+    // "can't download it". Matches the crowdfunding digital-files path.
+    const downloadUrl = await r2.getDownloadUrl(r2KeyToUse, {
+      expiresIn,
+      filename: purchase.book.pdfFileName || undefined,
+      contentType: "application/pdf",
+    });
 
     return NextResponse.json({
       downloadUrl,

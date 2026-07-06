@@ -209,6 +209,39 @@ export function DigitalDownloadsTab() {
     }
   };
 
+  // Marketplace book download. Same UX as crowdfunding files (Preparing →
+  // Started dialog + forced attachment download), but hits the marketplace
+  // purchase endpoint. GET, so no CSRF header needed.
+  const handleMarketplaceDownload = async (purchaseId: string) => {
+    setDownloadStatus({ open: true, phase: "preparing" });
+    try {
+      const res = await fetch(`/api/backer/marketplace-purchases/${purchaseId}/download`);
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || "Download failed");
+      }
+      const { downloadUrl, fileName } = await res.json();
+
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      if (fileName) link.download = fileName;
+      link.target = "_blank";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setDownloadStatus({ open: true, phase: "started", fileName, downloadUrl });
+    } catch (err) {
+      console.error("Marketplace download error:", err);
+      setDownloadStatus({
+        open: true,
+        phase: "error",
+        error: err instanceof Error ? err.message : "Something went wrong. Please try again.",
+      });
+    }
+  };
+
   const toggleProject = (projectId: string) => {
     setExpandedProjects((prev) => {
       const next = new Set(prev);
@@ -315,33 +348,39 @@ export function DigitalDownloadsTab() {
           <CardContent>
             <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {marketplaceBooks.map((book) => (
-                <Link
-                  key={book.id}
-                  href="/dashboard/backer?tab=digital-library"
-                  className="group block"
-                  title={book.title}
-                >
-                  <div className="aspect-[2/3] relative rounded-md overflow-hidden bg-muted border shadow-sm group-hover:shadow-md group-hover:scale-[1.02] transition-all">
-                    {book.coverImageUrl ? (
-                      <Image
-                        src={book.coverImageUrl}
-                        alt={book.title}
-                        fill
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-3 text-center">
-                        <BookOpen className="h-8 w-8 text-amber-500 mb-2" />
-                        <p className="text-xs font-medium text-foreground line-clamp-3">{book.title}</p>
-                      </div>
+                <div key={book.id} className="group block" title={book.title}>
+                  <Link href="/dashboard/backer?tab=digital-library" className="block">
+                    <div className="aspect-[2/3] relative rounded-md overflow-hidden bg-muted border shadow-sm group-hover:shadow-md group-hover:scale-[1.02] transition-all">
+                      {book.coverImageUrl ? (
+                        <Image
+                          src={book.coverImageUrl}
+                          alt={book.title}
+                          fill
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-3 text-center">
+                          <BookOpen className="h-8 w-8 text-amber-500 mb-2" />
+                          <p className="text-xs font-medium text-foreground line-clamp-3">{book.title}</p>
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs font-medium line-clamp-2">{book.title}</p>
+                    {book.totalPages != null && (
+                      <p className="text-[10px] text-muted-foreground">{book.totalPages} pages</p>
                     )}
-                  </div>
-                  <p className="mt-2 text-xs font-medium line-clamp-2">{book.title}</p>
-                  {book.totalPages != null && (
-                    <p className="text-[10px] text-muted-foreground">{book.totalPages} pages</p>
-                  )}
-                </Link>
+                  </Link>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-2 h-7 text-xs"
+                    onClick={() => handleMarketplaceDownload(book.sourceId)}
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    Download
+                  </Button>
+                </div>
               ))}
             </div>
           </CardContent>
