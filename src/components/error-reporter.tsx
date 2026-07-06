@@ -105,6 +105,11 @@ export function ErrorReporter() {
       // Network aborts from users navigating away
       /The operation was aborted/,
       /AbortError/,
+      // HTMLMediaElement load/play aborted — fires when a <video>/<audio>
+      // (or a <source>) is removed or its src changes while a fetch is in
+      // flight, or the user navigates away mid-load. User-driven, benign.
+      /fetching process for the media resource was aborted/i,
+      /media resource was aborted/i,
       // iOS Safari privacy-mode quota errors
       /QuotaExceededError/,
       // Google reCAPTCHA widget timeouts — their service, not ours
@@ -325,6 +330,12 @@ export function ErrorReporter() {
         // the buyer; the admin still gets the row-level detail in
         // pm2 logs (the route logs the R2 key + directory listing).
         (response.status === 404 && /\/api\/backer\/marketplace-purchases\/[^/]+\/download/.test(requestUrl)) ||
+        // /api/user/public-profile/[username] 404 = no user with that
+        // vanity URL / id — a mistyped /u/ link, an unclaimed vanity being
+        // previewed during ?setup=vanity before it's saved, or a deleted
+        // user. The public profile page renders its own "not found" state;
+        // this is expected user-facing behavior, not a backend regression.
+        (response.status === 404 && /\/api\/user\/public-profile\//.test(requestUrl)) ||
         // /api/projects/vanity/[creator]/[slug] returns 404 for any
         // project that isn't LIVE / FUNDED / FAILED — by design, the
         // public view shouldn't expose drafts, pending review, or
@@ -473,6 +484,11 @@ export function ErrorReporter() {
         );
       const isExpected5xx = response.status >= 500 && response.status < 600 &&
         (
+          // Any 503 Service Unavailable: our maintenance page and nginx's
+          // overload response both return 503. It's transient by definition
+          // ("try again shortly") and fires on every in-flight API call
+          // during a deploy / maintenance window — not actionable per-request.
+          response.status === 503 ||
           requestUrl.includes("/api/auth/recaptcha") ||
           // /api/auth/session is fired on every page load by NextAuth. A
           // 5xx here is the same transient pm2-reload / nginx-upstream

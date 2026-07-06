@@ -463,7 +463,7 @@ export function FollowingTab() {
                       <Avatar className="h-10 w-10">
                         {item.creatorImage && <AvatarImage src={item.creatorImage} />}
                         <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20">
-                          {item.creatorName[0]?.toUpperCase()}
+                          {item.creatorName?.[0]?.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
 
