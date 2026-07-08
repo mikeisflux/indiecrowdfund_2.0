@@ -41,6 +41,19 @@ model PlatformSettings {
   paypalWebhookId       String?
   paypalMode            String   @default("live")  // "live" or "sandbox"
 
+  // PayPal Connect Settings (Complete Payments Platform / multiparty marketplace).
+  // SEPARATE credentials + webhook from standard PayPal above — the platform's
+  // Partner (PPCP) REST app. clientId/secret are the partner app credentials;
+  // bnCode is the PayPal-Partner-Attribution-Id; partnerMerchantId is the
+  // platform's own PayPal merchant/payer id used in seller-status lookups.
+  paypalConnectEnabled           Boolean @default(false)
+  paypalConnectClientId          String?
+  paypalConnectClientSecret      String? @db.Text
+  paypalConnectBnCode            String?
+  paypalConnectPartnerMerchantId String?
+  paypalConnectWebhookId         String?
+  paypalConnectMode              String  @default("live")  // "live" or "sandbox"
+
   // Whop Settings
   whopEnabled           Boolean  @default(false)
   whopApiKey            String?

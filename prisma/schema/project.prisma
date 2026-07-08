@@ -175,6 +175,7 @@ enum PaymentProcessor {
   STRIPE
   DIVINITYCOIN
   PAYPAL
+  PAYPAL_CONNECT
   WHOP
   NMI
 }

@@ -51,6 +51,16 @@ model Pledge {
   paypalOrderId            String?      @unique
   paypalAuthorizationId    String?      @unique  // Set when intent=AUTHORIZE (deferred capture)
 
+  // PayPal Connect (Complete Payments Platform / multiparty marketplace) fields.
+  // Kept SEPARATE from the standard PayPal columns above so the two processors
+  // never share state. Populated only when paymentProcessor = PAYPAL_CONNECT.
+  // The order is routed to the creator's own PayPal account (payee.merchant_id)
+  // with the platform fee taken via payment_instruction.platform_fees.
+  paypalConnectOrderId          String?  @unique
+  paypalConnectCaptureId        String?  @unique
+  paypalConnectAuthorizationId  String?  @unique  // Set when intent=AUTHORIZE (deferred capture)
+  paypalConnectSellerMerchantId String?           // Creator's merchantIdInPayPal (payee)
+
   // Whop fields
   whopCheckoutId        String?      @unique
   whopPaymentId         String?      @unique  // Whop payment ID for refunds (from payment.succeeded webhook)
