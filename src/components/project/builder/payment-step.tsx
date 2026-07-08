@@ -16,6 +16,7 @@ import {
   PaymentProcessorSection,
   DivinityCoinBankSection,
   PayPalBankPayoutSection,
+  PayPalConnectPayoutSection,
   WhopBankPayoutSection,
   RetailerAccessSection,
   ChargebackCardSection,
@@ -465,6 +466,14 @@ export function PaymentStep() {
         <>
           <Separator />
           <PayPalBankPayoutSection />
+        </>
+      )}
+
+      {/* PayPal Connect onboarding - Only show when PayPal Connect is selected */}
+      {payment.paymentProcessor === "PAYPAL_CONNECT" && (
+        <>
+          <Separator />
+          <PayPalConnectPayoutSection />
         </>
       )}
 

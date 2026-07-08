@@ -53,6 +53,7 @@ interface PaymentStepProps {
   paypalOrderId: string | null;
   paypalClientId: string | null;
   paypalMode: string;
+  paypalConnectMerchantId?: string | null;
   whopSessionId: string | null;
   whopPlanId: string | null;
   whopEnvironment: "production" | "sandbox";
@@ -161,6 +162,7 @@ export function PaymentStep({
   paypalOrderId,
   paypalClientId,
   paypalMode,
+  paypalConnectMerchantId,
   whopSessionId,
   whopPlanId,
   whopEnvironment,
@@ -325,6 +327,47 @@ export function PaymentStep({
                 pledgeId={currentPledgeId}
                 clientId={paypalClientId}
                 paypalMode={paypalMode}
+                agreedToTerms={agreedToTerms}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+                total={displayTotal}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            ) : paymentError ? (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{paymentError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    setPaymentError(null);
+                    setClientSecret(null);
+                    setIsProcessing(false);
+                  }}
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">Loading PayPal...</p>
+              </div>
+            )
+          ) : project?.paymentProcessor === "PAYPAL_CONNECT" ? (
+            /* PayPal Connect (marketplace) — same button UI as standard PayPal
+               but scoped to the creator's merchant id and captured via the
+               Connect endpoint. */
+            paypalOrderId && paypalClientId && currentPledgeId ? (
+              <PayPalPaymentForm
+                paypalOrderId={paypalOrderId}
+                pledgeId={currentPledgeId}
+                clientId={paypalClientId}
+                paypalMode={paypalMode}
+                merchantId={paypalConnectMerchantId ?? undefined}
+                captureUrlBase="/api/paypal/connect/capture"
                 agreedToTerms={agreedToTerms}
                 isProcessing={isProcessing}
                 setIsProcessing={setIsProcessing}

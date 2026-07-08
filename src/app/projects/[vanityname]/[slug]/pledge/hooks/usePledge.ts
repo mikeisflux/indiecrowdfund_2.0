@@ -87,6 +87,8 @@ export function usePledge() {
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
   const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
   const [paypalMode, setPaypalMode] = useState<string>("live");
+  // PayPal Connect (marketplace) — the seller's merchant id for the buyer SDK
+  const [paypalConnectMerchantId, setPaypalConnectMerchantId] = useState<string | null>(null);
   // Whop state
   const [whopSessionId, setWhopSessionId] = useState<string | null>(null);
   const [whopPlanId, setWhopPlanId] = useState<string | null>(null);
@@ -224,12 +226,15 @@ export function usePledge() {
   //   initStripe();
   // }, []);
 
-  // Load PayPal client ID and client token when project uses PayPal
+  // Load PayPal client ID and client token when project uses PayPal or
+  // PayPal Connect. Connect uses the separate partner-app config endpoint.
   useEffect(() => {
-    if (!project || project.paymentProcessor !== "PAYPAL") return;
+    if (!project) return;
+    const isConnect = project.paymentProcessor === "PAYPAL_CONNECT";
+    if (project.paymentProcessor !== "PAYPAL" && !isConnect) return;
     async function initPayPal() {
       try {
-        const configRes = await fetch("/api/paypal/config");
+        const configRes = await fetch(isConnect ? "/api/paypal/connect/config" : "/api/paypal/config");
         const configData = await configRes.json();
         if (configData.clientId) setPaypalClientId(configData.clientId);
         if (configData.mode) setPaypalMode(configData.mode);
@@ -370,8 +375,10 @@ export function usePledge() {
       const result = await createPledgeAPI(project.id, selectedReward?.id || null, selectedAddons, total, totalShipping, shippingCountry);
       setCurrentPledgeId(result.pledgeId);
       if (result.paypalOrderId) {
-        // PayPal flow: no clientSecret, use paypalOrderId directly
+        // PayPal flow: no clientSecret, use paypalOrderId directly.
+        // PayPal Connect additionally carries the seller's merchant id.
         setPaypalOrderId(result.paypalOrderId);
+        if (result.paypalConnectMerchantId) setPaypalConnectMerchantId(result.paypalConnectMerchantId);
       } else if (result.whopSessionId) {
         // Whop flow: use sessionId for embedded checkout
         setWhopSessionId(result.whopSessionId);
@@ -613,7 +620,7 @@ export function usePledge() {
     dcStripePromise, clientSecret, setClientSecret,
     intentType, paymentError, setPaymentError, currentPledgeId,
     // PayPal
-    paypalOrderId, paypalClientId, paypalMode,
+    paypalOrderId, paypalClientId, paypalMode, paypalConnectMerchantId,
     // Whop
     whopSessionId, whopPlanId, whopEnvironment,
     // DivinityCoin white-label hosted checkout (iframe on this page)

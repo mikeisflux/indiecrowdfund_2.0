@@ -130,6 +130,9 @@ export async function createPledgeForPayment(
   publishableKey?: string;
   type?: string;
   paypalOrderId?: string;
+  // PayPal Connect (marketplace): the seller's merchant id for the buyer SDK.
+  paypalConnectMerchantId?: string;
+  paypalConnect?: boolean;
   whopSessionId?: string;
   // DivinityCoin white-label hosted checkout (DC partner API 2026-05-15).
   // When the server returns type === "hosted_checkout", the client

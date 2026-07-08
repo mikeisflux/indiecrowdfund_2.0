@@ -150,6 +150,59 @@ export function PaymentProcessorSection({
 
         <Card
           className={`cursor-pointer transition-all ${
+            payment.paymentProcessor === "PAYPAL_CONNECT" ? "border-2 border-primary" : "border"
+          } ${mustUseAltProcessor || isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={() => !mustUseAltProcessor && !isLaunched && updatePayment({ paymentProcessor: "PAYPAL_CONNECT" })}
+        >
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-[#003087] flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-white" />
+                </div>
+                PayPal Connect
+                {mustUseAltProcessor ? (
+                  <Badge variant="outline" className="ml-2 text-amber-600 border-amber-400">SFW only</Badge>
+                ) : (
+                  <Badge variant="secondary" className="ml-2">Recommended</Badge>
+                )}
+              </CardTitle>
+              {payment.paymentProcessor === "PAYPAL_CONNECT" && (
+                <CheckCircle className="h-5 w-5 text-primary" />
+              )}
+            </div>
+            <CardDescription>
+              {mustUseAltProcessor
+                ? "Not available for adult/controversial content"
+                : "Payouts direct to your own PayPal account"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
+                <span>Pledges paid straight to your PayPal — no manual payouts</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
+                <span>Platform fee taken automatically at checkout</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-3 w-3 text-green-500" />
+                <span>PayPal, Venmo, Pay Later &amp; cards; PayPal handles disputes</span>
+              </div>
+            </div>
+            {payment.paymentProcessor === "PAYPAL_CONNECT" && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                After saving, connect your PayPal account from the payout step to
+                start accepting pledges.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card
+          className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "WHOP" ? "border-2 border-primary" : "border"
           } ${campaignType === "ALL_OR_NOTHING" || isLaunched ? "opacity-50 cursor-not-allowed" : ""}`}
           onClick={() => campaignType === "KEEP_IT_ALL" && !isLaunched && updatePayment({ paymentProcessor: "WHOP" })}

@@ -4,7 +4,7 @@ export interface ProjectData {
   title: string;
   slug: string;
   imageUrl: string;
-  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "WHOP";
+  paymentProcessor: "STRIPE" | "DIVINITYCOIN" | "PAYPAL" | "PAYPAL_CONNECT" | "WHOP";
   campaignType: "ALL_OR_NOTHING" | "KEEP_IT_ALL";
   hasAdultContent: boolean;
   hasControversialContent?: boolean;

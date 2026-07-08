@@ -30,6 +30,12 @@ interface PayPalPaymentFormProps {
   // skipping the standard capture step (it'd 404 because the
   // upcharge orderId isn't tied to a Pledge row).
   upchargeConfirmUrl?: string;
+  // PayPal Connect (marketplace) overrides. When set, the buyer SDK is
+  // initialized with the seller's merchant id (payee context) and the capture
+  // hits the Connect endpoint. Both default to the standard PayPal behavior so
+  // existing (non-Connect) usage is completely unchanged.
+  merchantId?: string;
+  captureUrlBase?: string; // default "/api/paypal/capture"
 }
 
 export function PayPalPaymentForm({
@@ -43,6 +49,8 @@ export function PayPalPaymentForm({
   onSuccess,
   onError,
   upchargeConfirmUrl,
+  merchantId,
+  captureUrlBase = "/api/paypal/capture",
 }: PayPalPaymentFormProps) {
   const [sdkReady, setSdkReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -116,6 +124,9 @@ export function PayPalPaymentForm({
         // v6: createInstance with clientId (per official sample)
         const sdkInstance = await window.paypal.createInstance({
           clientId,
+          // PayPal Connect (multiparty): scope the buyer session to the
+          // seller's merchant account so the order's payee resolves.
+          ...(merchantId ? { merchantId } : {}),
           components: ["paypal-payments"],
           pageType: "checkout",
         });
@@ -142,7 +153,7 @@ export function PayPalPaymentForm({
                 if (!res.ok) throw new Error(body.error || "Payment confirmation failed");
               } else {
                 // Original-pledge path
-                const captureRes = await apiFetch(`/api/paypal/capture/${data.orderId}`, { method: "POST" });
+                const captureRes = await apiFetch(`${captureUrlBase}/${data.orderId}`, { method: "POST" });
                 const captureData = await captureRes.json();
                 if (!captureRes.ok) throw new Error(captureData.error || "Payment capture failed");
                 await apiFetch(`/api/pledges/${pledgeId}/confirm`, { method: "POST" });
