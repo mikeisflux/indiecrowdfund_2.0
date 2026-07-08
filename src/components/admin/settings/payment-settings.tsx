@@ -38,6 +38,14 @@ interface PaymentSettingsProps {
     paypalClientSecret: string;
     paypalWebhookId: string;
     paypalMode: string;
+    // PayPal Connect (Complete Payments Platform) settings
+    paypalConnectEnabled: boolean;
+    paypalConnectClientId: string;
+    paypalConnectClientSecret: string;
+    paypalConnectBnCode: string;
+    paypalConnectPartnerMerchantId: string;
+    paypalConnectWebhookId: string;
+    paypalConnectMode: string;
     // Whop settings
     whopEnabled: boolean;
     whopApiKey: string;
@@ -364,6 +372,124 @@ export function PaymentSettings({ settings, onSettingsChange, onSave }: PaymentS
               <li>Payouts API: creators add their PayPal email, platform pays out on campaign end</li>
               <li>Enable &quot;Payouts&quot; in your PayPal app permissions (Apps &amp; Credentials)</li>
               <li>~2.9% + $0.30 processing fee + 3% platform fee</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* PayPal Connect (Complete Payments Platform) Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>PayPal Connect Configuration</CardTitle>
+              <CardDescription>Marketplace (Complete Payments Platform). Pledges pay creators directly with an automatic platform fee. Uses a SEPARATE PayPal Platform app from standard PayPal above.</CardDescription>
+            </div>
+            <Badge variant={settings.paypalConnectEnabled ? "default" : "secondary"}>
+              {settings.paypalConnectEnabled ? "Enabled" : "Disabled"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label>Enable PayPal Connect</Label>
+              <p className="text-sm text-muted-foreground">Allow creators to connect their own PayPal account and receive pledges directly</p>
+            </div>
+            <Switch
+              checked={settings.paypalConnectEnabled}
+              onCheckedChange={(checked) => onSettingsChange({ ...settings, paypalConnectEnabled: checked })}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Client ID</Label>
+              <SecureKeyInput
+                value={settings.paypalConnectClientId}
+                onChange={(value) => onSettingsChange({ ...settings, paypalConnectClientId: value })}
+                onSave={onSave}
+                hasExistingValue={settings.paypalConnectClientId === "••••••••"}
+                placeholder="AXxxxx..."
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-muted-foreground">Client ID of your PayPal <strong>Platform</strong> REST app (not the standard app)</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Client Secret</Label>
+              <SecureKeyInput
+                value={settings.paypalConnectClientSecret}
+                onChange={(value) => onSettingsChange({ ...settings, paypalConnectClientSecret: value })}
+                onSave={onSave}
+                hasExistingValue={settings.paypalConnectClientSecret === "••••••••"}
+                placeholder="EHxxxx..."
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-muted-foreground">Private secret — never expose to clients</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>BN Code (Attribution ID)</Label>
+              <SecureKeyInput
+                value={settings.paypalConnectBnCode}
+                onChange={(value) => onSettingsChange({ ...settings, paypalConnectBnCode: value })}
+                onSave={onSave}
+                hasExistingValue={settings.paypalConnectBnCode === "••••••••"}
+                placeholder="Your BN / PayPal-Partner-Attribution-Id"
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-muted-foreground">From App Settings → Reports (PayPal-Partner-Attribution-Id)</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Partner Merchant ID</Label>
+              <SecureKeyInput
+                value={settings.paypalConnectPartnerMerchantId}
+                onChange={(value) => onSettingsChange({ ...settings, paypalConnectPartnerMerchantId: value })}
+                onSave={onSave}
+                hasExistingValue={settings.paypalConnectPartnerMerchantId === "••••••••"}
+                placeholder="Your platform account's merchant/payer ID"
+                forceShowValue={showAllKeys}
+              />
+              <p className="text-xs text-muted-foreground">Your platform account&apos;s merchant ID (payer ID), used for seller-status lookups</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Webhook ID</Label>
+              <Input
+                value={settings.paypalConnectWebhookId}
+                onChange={(e) => onSettingsChange({ ...settings, paypalConnectWebhookId: e.target.value })}
+                placeholder="Dedicated Connect webhook ID"
+              />
+              <p className="text-xs text-muted-foreground">Webhook URL: <code className="bg-muted px-1 rounded">https://indiecrowdfund.com/api/webhooks/paypal/connect</code></p>
+            </div>
+            <div className="space-y-2">
+              <Label>Mode</Label>
+              <Select
+                value={settings.paypalConnectMode}
+                onValueChange={(v) => onSettingsChange({ ...settings, paypalConnectMode: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="live">Live</SelectItem>
+                  <SelectItem value="sandbox">Sandbox (testing)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-muted/50 dark:bg-zinc-900 p-4 text-sm space-y-2">
+            <p className="font-medium">PayPal Connect Setup:</p>
+            <ul className="list-disc list-inside text-muted-foreground dark:text-muted-foreground space-y-1">
+              <li>Requires a PayPal <strong>Platform</strong>-type REST app + partner approval (separate from standard PayPal)</li>
+              <li>Enable &quot;Platform Fee&quot; + &quot;Delayed Disbursement&quot; features on the app (PayPal configures these)</li>
+              <li>Sandbox works without approval; live requires an approved partner account</li>
+              <li>Creators connect their own PayPal from the campaign payment step; pledges pay them directly, platform fee auto-deducted</li>
             </ul>
           </div>
         </CardContent>

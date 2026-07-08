@@ -110,6 +110,14 @@ interface PlatformSettings {
   paypalClientSecret: string | null;
   paypalWebhookId: string | null;
   paypalMode: string;
+  // PayPal Connect (Complete Payments Platform) settings
+  paypalConnectEnabled: boolean;
+  paypalConnectClientId: string | null;
+  paypalConnectClientSecret: string | null;
+  paypalConnectBnCode: string | null;
+  paypalConnectPartnerMerchantId: string | null;
+  paypalConnectWebhookId: string | null;
+  paypalConnectMode: string;
   // Whop settings
   whopEnabled: boolean;
   whopApiKey: string | null;
@@ -231,6 +239,14 @@ export default function SettingsPage() {
     paypalClientSecret: "",
     paypalWebhookId: "",
     paypalMode: "sandbox",
+    // PayPal Connect settings
+    paypalConnectEnabled: false,
+    paypalConnectClientId: "",
+    paypalConnectClientSecret: "",
+    paypalConnectBnCode: "",
+    paypalConnectPartnerMerchantId: "",
+    paypalConnectWebhookId: "",
+    paypalConnectMode: "sandbox",
     // Whop settings
     whopEnabled: false,
     whopApiKey: "",
@@ -431,6 +447,13 @@ export default function SettingsPage() {
         paypalClientSecret: settings.paypalClientSecret || "",
         paypalWebhookId: settings.paypalWebhookId || "",
         paypalMode: settings.paypalMode || "sandbox",
+        paypalConnectEnabled: settings.paypalConnectEnabled || false,
+        paypalConnectClientId: settings.paypalConnectClientId || "",
+        paypalConnectClientSecret: settings.paypalConnectClientSecret || "",
+        paypalConnectBnCode: settings.paypalConnectBnCode || "",
+        paypalConnectPartnerMerchantId: settings.paypalConnectPartnerMerchantId || "",
+        paypalConnectWebhookId: settings.paypalConnectWebhookId || "",
+        paypalConnectMode: settings.paypalConnectMode || "sandbox",
         whopEnabled: settings.whopEnabled || false,
         whopApiKey: settings.whopApiKey || "",
         whopPlanId: settings.whopPlanId || "",
@@ -701,6 +724,13 @@ export default function SettingsPage() {
             paypalClientSecret: currentPaymentSettings.paypalClientSecret,
             paypalWebhookId: currentPaymentSettings.paypalWebhookId,
             paypalMode: currentPaymentSettings.paypalMode,
+            paypalConnectEnabled: currentPaymentSettings.paypalConnectEnabled,
+            paypalConnectClientId: currentPaymentSettings.paypalConnectClientId,
+            paypalConnectClientSecret: currentPaymentSettings.paypalConnectClientSecret,
+            paypalConnectBnCode: currentPaymentSettings.paypalConnectBnCode,
+            paypalConnectPartnerMerchantId: currentPaymentSettings.paypalConnectPartnerMerchantId,
+            paypalConnectWebhookId: currentPaymentSettings.paypalConnectWebhookId,
+            paypalConnectMode: currentPaymentSettings.paypalConnectMode,
             whopEnabled: currentPaymentSettings.whopEnabled,
             whopApiKey: currentPaymentSettings.whopApiKey,
             whopPlanId: currentPaymentSettings.whopPlanId,
