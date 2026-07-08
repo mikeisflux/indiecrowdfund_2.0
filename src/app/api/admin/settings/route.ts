@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { auditLog, computeChanges } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { invalidatePayPalConfigCache } from "@/lib/payments/paypal";
+import { invalidatePayPalConnectConfigCache } from "@/lib/payments/paypal-connect";
 import { invalidateWhopConfigCache } from "@/lib/payments/whop";
 import { encryptSecret } from "@/lib/vault";
 
@@ -65,6 +66,8 @@ export async function GET() {
           divinityCoinEnabled: true, divinityCoinApiKey: true, divinityCoinWebhookSecret: true, divinityCoinPartnerId: true,
           divinityCoinSettlementFrequency: true, divinityCoinStripePublishableKey: true,
           paypalEnabled: true, paypalClientId: true, paypalClientSecret: true, paypalWebhookId: true, paypalMode: true,
+          paypalConnectEnabled: true, paypalConnectClientId: true, paypalConnectClientSecret: true, paypalConnectBnCode: true,
+          paypalConnectPartnerMerchantId: true, paypalConnectWebhookId: true, paypalConnectMode: true,
           whopEnabled: true, whopApiKey: true, whopPlanId: true, whopCompanyId: true, whopWebhookSecret: true, whopEnvironment: true,
           nmiEnabled: true, nmiSecurityKey: true, nmiPublicKey: true, nmiWebhookSecret: true,
           nmiEnvironment: true, nmiGatewayUrlOverride: true, nmiPerTransactionFee: true, nmiPercentageFee: true,
@@ -202,6 +205,7 @@ export async function GET() {
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey ? "••••••••" : null,
       paypalClientSecret: settings.paypalClientSecret ? "••••••••" : null,
+      paypalConnectClientSecret: settings.paypalConnectClientSecret ? "••••••••" : null,
       whopApiKey: settings.whopApiKey ? "••••••••" : null,
       whopWebhookSecret: settings.whopWebhookSecret ? "••••••••" : null,
       nmiSecurityKey: settings.nmiSecurityKey ? "••••••••" : null,
@@ -289,6 +293,7 @@ export async function PATCH(req: NextRequest) {
       'stripePublishableKey', 'stripeSecretKey', 'stripeWebhookSecret', 'stripeConnectWebhookSecret',
       'divinityCoinApiKey', 'divinityCoinWebhookSecret', 'divinityCoinStripePublishableKey',
       'paypalClientId', 'paypalClientSecret', 'paypalWebhookId',
+      'paypalConnectClientId', 'paypalConnectClientSecret', 'paypalConnectWebhookId', 'paypalConnectBnCode', 'paypalConnectPartnerMerchantId',
       'whopApiKey', 'whopWebhookSecret',
       'nmiSecurityKey', 'nmiPublicKey', 'nmiWebhookSecret',
       'printingComicsApiKey', 'printingComicsWebhookSecret',
@@ -328,6 +333,8 @@ export async function PATCH(req: NextRequest) {
         "divinityCoinEnabled", "divinityCoinApiKey", "divinityCoinWebhookSecret",
         "divinityCoinPartnerId", "divinityCoinSettlementFrequency", "divinityCoinStripePublishableKey",
         "paypalEnabled", "paypalClientId", "paypalClientSecret", "paypalWebhookId", "paypalMode",
+        "paypalConnectEnabled", "paypalConnectClientId", "paypalConnectClientSecret", "paypalConnectBnCode",
+        "paypalConnectPartnerMerchantId", "paypalConnectWebhookId", "paypalConnectMode",
         "whopEnabled", "whopApiKey", "whopPlanId", "whopCompanyId", "whopWebhookSecret", "whopEnvironment",
         "nmiEnabled", "nmiSecurityKey", "nmiPublicKey", "nmiWebhookSecret",
         "nmiEnvironment", "nmiGatewayUrlOverride", "nmiPerTransactionFee", "nmiPercentageFee",
@@ -506,6 +513,7 @@ export async function PATCH(req: NextRequest) {
     // Invalidate payment config caches if payment settings were changed
     if (section === "payments") {
       invalidatePayPalConfigCache();
+      invalidatePayPalConnectConfigCache();
       invalidateWhopConfigCache();
     }
 
@@ -520,6 +528,7 @@ export async function PATCH(req: NextRequest) {
       divinityCoinWebhookSecret: settings.divinityCoinWebhookSecret ? "••••••••" : null,
       divinityCoinStripePublishableKey: settings.divinityCoinStripePublishableKey ? "••••••••" : null,
       paypalClientSecret: settings.paypalClientSecret ? "••••••••" : null,
+      paypalConnectClientSecret: settings.paypalConnectClientSecret ? "••••••••" : null,
       whopApiKey: settings.whopApiKey ? "••••••••" : null,
       whopWebhookSecret: settings.whopWebhookSecret ? "••••••••" : null,
       nmiSecurityKey: settings.nmiSecurityKey ? "••••••••" : null,
