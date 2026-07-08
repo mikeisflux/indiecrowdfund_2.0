@@ -162,12 +162,12 @@ Build a modern crowdfunding platform similar to Kickstarter with the following k
 - **Tax Considerations** link and information
 
 - **Payment Processor Selection** (required)
-  - **Toggle: Stripe vs CCBill**
+  - **Toggle: Stripe vs PayPal vs CCBill**
   - **Content Type Declaration**:
     - ☐ "My project contains adult content or age-restricted materials"
     - ☐ "My project contains high-risk or controversial content"
     - If ANY checked → CCBill required
-    - If NONE checked → Can choose Stripe or CCBill
+    - If NONE checked → Can choose Stripe, PayPal, or CCBill
   
   - **Stripe Option** (if no adult/sensitive content):
     - "Recommended for most projects"
@@ -176,7 +176,19 @@ Build a modern crowdfunding platform similar to Kickstarter with the following k
     - More payment methods
     - Better for international
     - "Connect Stripe Account" button
-  
+
+  - **PayPal Connect Option** (if no adult/sensitive content):
+    - "Recommended if you prefer PayPal"
+    - Pledges paid directly to your own PayPal account
+    - Platform fee collected automatically (no manual payouts)
+    - PayPal, Venmo, Pay Later & card checkout
+    - "Connect PayPal Account" button (Partner Referrals onboarding)
+
+  - **PayPal (Standard) Option** (legacy):
+    - Simple single-account checkout, no account connection
+    - Funds disbursed manually by the platform
+    - Kept for existing creators — new creators steered to PayPal Connect
+
   - **CCBill Option**:
     - "Required for adult content"
     - Higher fees (10-15%)
@@ -205,7 +217,18 @@ Build a modern crowdfunding platform similar to Kickstarter with the following k
   - Link bank account
   - Set payout schedule
   - Tax information collection
-  
+
+  **If PayPal Connect Selected**:
+  - PayPal Partner Referrals onboarding flow (redirect to PayPal signup/login)
+  - Grant platform permission to process payments & refunds on your behalf
+  - Confirm PayPal account email
+  - Platform verifies `payments_receivable` before the project can launch
+  - No separate bank fields — payouts land in the creator's PayPal balance
+
+  **If PayPal (Standard) Selected**:
+  - No account connection required (legacy single-account collection)
+  - Platform disburses to creator manually
+
   **If CCBill Selected**:
   - CCBill merchant account number
   - CCBill subaccount number
@@ -576,6 +599,10 @@ Creators can post updates to backers and followers:
 - Fees structure displayed
 - Settlement timeline (CCBill's standard terms)
 - Chargeback reserve information
+
+#### Processor-specific payout behavior
+- **Stripe / PayPal Connect**: No manual platform payout step — pledges are paid **directly** to the creator's connected account and the platform fee is taken automatically at capture time. The Payouts table for these creators reflects PayPal/Stripe's own disbursement records (and any **delayed disbursement** releases for PayPal Connect), not a platform-initiated transfer.
+- **Standard PayPal / CCBill**: Funds are collected by the platform account and disbursed to the creator manually per the payout schedule above.
 
 ---
 
@@ -2005,13 +2032,20 @@ const worker = new Worker('recommendations', async (job) => {
 
 ---
 
-## Payment Processing: Stripe vs CCBill
+## Payment Processing: Stripe, PayPal & CCBill
 
 ### Overview
 
-Allow creators to choose between two payment processors based on their content type:
-- **Stripe**: For mainstream, non-adult content (lower fees, better UX)
-- **CCBill**: Required for adult or high-risk content (higher fees, specialized)
+Allow creators to choose between several payment processors based on their content type and how they want to get paid:
+- **Stripe**: For mainstream, non-adult content (lower fees, better UX). Uses **Stripe Connect** to onboard creators as connected accounts and split platform fees automatically.
+- **PayPal**: For mainstream, non-adult content. Two flavors:
+  - **PayPal Connect** *(recommended, Stripe-Connect equivalent)*: Built on the **PayPal Complete Payments Platform** (multiparty/marketplace). Each creator onboards their own PayPal account to the platform via the Partner Referrals API; pledges are paid directly to the creator with the platform's fee taken automatically as a `platform_fee`. Supports delayed disbursement, refunds, disputes, and partner reporting.
+  - **Standard PayPal** *(legacy/simple)*: A single platform-owned PayPal account collects all pledges; the platform manually disburses to creators later. No per-creator onboarding. Kept for backwards compatibility and creators who don't want to connect an account.
+- **CCBill**: Required for adult or high-risk content (higher fees, specialized).
+
+> **PayPal Connect vs Standard PayPal**: PayPal Connect is the direction we want creators to use — money flows straight to the creator's own PayPal account, the platform fee is collected automatically, and PayPal handles KYC/risk on the creator. Standard PayPal remains available so existing creators keep working, but new creators are steered toward PayPal Connect (or Stripe).
+>
+> **Additive by design — do not modify the existing PayPal integration.** PayPal Connect ships as a **separate, self-contained module** layered on top of whatever standard PayPal setup already exists. It does **not** touch, replace, or re-route the original PayPal code path. In particular it uses its **own dedicated webhook endpoint** — `POST /api/webhooks/paypal/connect` — which is distinct from the standard PayPal webhook (`POST /api/webhooks/paypal`). The two never share credentials, routes, or handlers. A creator on Standard PayPal is completely unaffected by anything in this section.
 
 ### Payment Processor Selection Flow
 
@@ -2019,9 +2053,11 @@ Allow creators to choose between two payment processors based on their content t
 
 ```typescript
 // Payment processor selection component
+type ProcessorType = 'stripe' | 'paypal_connect' | 'paypal' | 'ccbill';
+
 interface PaymentProcessorSelectorProps {
   projectId: string;
-  currentProcessor?: 'stripe' | 'ccbill';
+  currentProcessor?: ProcessorType;
 }
 
 export function PaymentProcessorSelector({
@@ -2090,7 +2126,52 @@ export function PaymentProcessorSelector({
             exampleNet: 96.80,
           }}
         />
-        
+
+        {/* PayPal Connect Option (recommended PayPal flavor) */}
+        <ProcessorCard
+          name="PayPal Connect"
+          disabled={mustUseCCBill}
+          selected={selectedProcessor === 'paypal_connect'}
+          onSelect={() => setSelectedProcessor('paypal_connect')}
+          badge="Recommended for PayPal"
+          features={[
+            'Pledges paid directly to your own PayPal account',
+            'Platform fee collected automatically (no manual payouts)',
+            'Buyers can pay with PayPal, Venmo, Pay Later & cards',
+            'PayPal handles seller KYC/risk & disputes',
+            'Delayed disbursement + automated refunds',
+          ]}
+          fees={{
+            percentage: 3.49,
+            fixed: 0.49,
+            exampleAmount: 100,
+            exampleFee: 3.98,
+            exampleNet: 96.02,
+          }}
+        />
+
+        {/* Standard PayPal Option (legacy — do not modify) */}
+        <ProcessorCard
+          name="PayPal (Standard)"
+          disabled={mustUseCCBill}
+          selected={selectedProcessor === 'paypal'}
+          onSelect={() => setSelectedProcessor('paypal')}
+          badge="Legacy"
+          features={[
+            'Simple single-account PayPal checkout',
+            'No account connection required',
+            'Funds collected by the platform, disbursed manually',
+            'Best for creators who don’t want to connect an account',
+          ]}
+          fees={{
+            percentage: 3.49,
+            fixed: 0.49,
+            exampleAmount: 100,
+            exampleFee: 3.98,
+            exampleNet: 96.02,
+          }}
+        />
+
         {/* CCBill Option */}
         <ProcessorCard
           name="CCBill"
@@ -2308,6 +2389,400 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 }
 ```
 
+### PayPal Integration (Standard PayPal + PayPal Connect)
+
+PayPal support ships in **two independent layers**. Standard PayPal is the existing basic setup and is **left untouched**. **PayPal Connect** is a new, additive marketplace module built on the **PayPal Complete Payments Platform (PPCP)** — PayPal's multiparty/marketplace product, which is the closest equivalent to Stripe Connect.
+
+> **Isolation contract (must hold):**
+> - PayPal Connect lives under its own namespace: `lib/payments/paypal-connect/*`, routes under `/api/payments/paypal/connect/*`, and its **own webhook** at `POST /api/webhooks/paypal/connect`.
+> - It uses **separate credentials** (`PAYPAL_CONNECT_*` env vars) and its **own webhook id/secret**, never the standard PayPal ones.
+> - Nothing in this section modifies the standard PayPal code path, its webhook (`/api/webhooks/paypal`), or its DB fields. A creator on Standard PayPal is never routed through Connect logic.
+> - The processor factory decides which path runs based on `project.paymentProcessor` (`PAYPAL` vs `PAYPAL_CONNECT`).
+
+#### Why PayPal Connect (Complete Payments Platform)
+
+With PayPal Connect, each creator connects **their own** PayPal account to our platform. When a backer pledges, PayPal moves the money **directly into the creator's PayPal balance** and automatically peels off our **platform fee** in the same transaction — exactly like Stripe Connect's `application_fee_amount` + `transfer_data.destination`. This removes the manual disbursement step that Standard PayPal requires, and PayPal (not us) handles the creator's KYC, risk screening, and disputes.
+
+**Prerequisites (one-time, platform level):**
+1. **Become an approved partner.** Fill out the PayPal Platforms onboarding form (`developer.paypal.com/platforms/get-started`). PPCP APIs are only enabled for approved partners — unapproved live calls return `401 Unauthorized`. Sandbox calls work before approval, so we build and test against sandbox first.
+2. **Create a Platform REST app** in the developer dashboard (Type = **Platform**). This provisions the platform's sandbox Partner account.
+3. Enable the features we need in **REST app settings**: `PAYMENT`, `REFUND`, `DELAY_FUNDS_DISBURSEMENT` (defaults), plus **Platform Fee** (`PARTNER_FEE`) and **Disputes API** if used.
+4. Grab credentials: **Client ID**, **Client Secret**, **BN code** (PayPal-Partner-Attribution-Id, under App Settings → Reports), and the platform's **Partner Merchant ID** (payer ID).
+5. **Live account notes:** requires a PayPal **business** account with a linked+confirmed bank account (needed to receive platform fees). The live partner account should hold no balance and not be used to sell — its only job is to sweep platform fees to the bank. Go-live is done together with a PayPal rep after the integration checklist passes.
+
+#### Environment / Config
+
+```typescript
+// lib/payments/paypal-connect/client.ts
+const PAYPAL_ENV = process.env.PAYPAL_CONNECT_ENV ?? 'sandbox'; // 'sandbox' | 'live'
+
+export const PAYPAL_BASE_URL =
+  PAYPAL_ENV === 'live'
+    ? 'https://api-m.paypal.com'
+    : 'https://api-m.sandbox.paypal.com';
+
+const CLIENT_ID = process.env.PAYPAL_CONNECT_CLIENT_ID!;
+const CLIENT_SECRET = process.env.PAYPAL_CONNECT_CLIENT_SECRET!;
+const BN_CODE = process.env.PAYPAL_CONNECT_BN_CODE!;            // PayPal-Partner-Attribution-Id
+const PARTNER_MERCHANT_ID = process.env.PAYPAL_CONNECT_PARTNER_MERCHANT_ID!;
+
+// Exchange client_id/secret for an access token (cache until it expires).
+let cachedToken: { value: string; expiresAt: number } | null = null;
+
+export async function getPayPalAccessToken(): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
+    return cachedToken.value;
+  }
+
+  const res = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      Authorization:
+        'Basic ' + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  });
+
+  if (!res.ok) throw new Error(`PayPal token error: ${res.status}`);
+  const data = await res.json();
+
+  cachedToken = {
+    value: data.access_token,
+    expiresAt: Date.now() + data.expires_in * 1000,
+  };
+  return cachedToken.value;
+}
+
+// Standard headers for every PPCP call — BN code is required for partner attribution/reporting.
+export async function paypalHeaders(): Promise<Record<string, string>> {
+  return {
+    Authorization: `Bearer ${await getPayPalAccessToken()}`,
+    'Content-Type': 'application/json',
+    'PayPal-Partner-Attribution-Id': BN_CODE,
+  };
+}
+```
+
+#### Creator (Seller) Onboarding — Before Payment (recommended)
+
+We use the **Partner Referrals API v2** to onboard creators *before* they take pledges. This is PayPal's recommended, most common flow and supports both PayPal Checkout and Expanded Checkout. It maps 1:1 to `createStripeConnectAccount()`.
+
+**Onboarding decisions (confirm with PayPal account manager):**
+- **Intent** — which account types creators may have. We use **Mixed** (business or personal) so casual creators can onboard, while businesses use business accounts. (Casual/personal accounts can't accept unbranded card payments.)
+- **Features** — request `PAYMENT`, `REFUND`, `DELAY_FUNDS_DISBURSEMENT`, `PARTNER_FEE` (required to take a platform fee), and `ACCESS_MERCHANT_INFORMATION` (to read the creator's email/currency/country). Features in the API call **must match** the REST app config or onboarding errors.
+- **Products** — `EXPRESS_CHECKOUT` (PayPal button + debit/credit/PayPal Credit/Venmo/APMs). Use `PPCP` if we later add advanced card fields.
+
+**Step 1 — Generate the creator's signup link** (mirrors Stripe's account link):
+
+```typescript
+// lib/payments/paypal-connect/onboarding.ts
+import { PAYPAL_BASE_URL, paypalHeaders } from './client';
+
+export async function createPayPalConnectOnboardingLink(userId: string) {
+  const user = await db.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('User not found');
+
+  // tracking_id = our internal id so we can correlate the return + webhooks.
+  const res = await fetch(`${PAYPAL_BASE_URL}/v2/customer/partner-referrals`, {
+    method: 'POST',
+    headers: await paypalHeaders(),
+    body: JSON.stringify({
+      tracking_id: userId,
+      partner_config_override: {
+        return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/settings/payment/paypal-connect/complete`,
+      },
+      operations: [
+        {
+          operation: 'API_INTEGRATION',
+          api_integration_preference: {
+            rest_api_integration: {
+              integration_method: 'PAYPAL',
+              integration_type: 'THIRD_PARTY',
+              third_party_details: {
+                features: [
+                  'PAYMENT',
+                  'REFUND',
+                  'DELAY_FUNDS_DISBURSEMENT',
+                  'PARTNER_FEE',
+                  'ACCESS_MERCHANT_INFORMATION',
+                ],
+              },
+            },
+          },
+        },
+      ],
+      products: ['EXPRESS_CHECKOUT'],
+      legal_consents: [{ type: 'SHARE_DATA_CONSENT', granted: true }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Partner referral failed: ${res.status}`);
+  const data = await res.json();
+
+  // Persist the self link so we can refresh the (single-use) action_url later.
+  const selfLink = data.links.find((l: any) => l.rel === 'self')?.href;
+  const actionUrl = data.links.find((l: any) => l.rel === 'action_url')?.href;
+
+  await db.payPalConnectConfig.upsert({
+    where: { userId },
+    create: { userId, referralSelfLink: selfLink, onboardingStatus: 'STARTED' },
+    update: { referralSelfLink: selfLink, onboardingStatus: 'STARTED' },
+  });
+
+  return actionUrl; // redirect the creator here (button/link, or minibrowser)
+}
+```
+
+> The `action_url` is **single-use**. To regenerate it, `GET` the `self` link or call Partner Referrals again.
+
+**Step 2 — Handle the return URL.** After signup, PayPal redirects the creator to our `return_url` with query params: `merchantId` (our `tracking_id`), `merchantIdInPayPal` (the creator's PayPal merchant id), `permissionsGranted`, `accountStatus`, `consentStatus`, `isEmailConfirmed`, and (for PPCP) `riskStatus`. We store `merchantIdInPayPal` but **do not trust the redirect as proof of completion** — we confirm via the status API/webhook.
+
+**Step 3 — Confirm the creator can actually receive money** before enabling their project. Poll the seller status endpoint (or react to the webhook) and require `payments_receivable === true`, `primary_email_confirmed === true`, and the expected OAuth third-party scopes:
+
+```typescript
+// lib/payments/paypal-connect/onboarding.ts
+export async function getPayPalConnectStatus(sellerMerchantId: string) {
+  const res = await fetch(
+    `${PAYPAL_BASE_URL}/v1/customer/partners/${process.env.PAYPAL_CONNECT_PARTNER_MERCHANT_ID}/merchant-integrations/${sellerMerchantId}`,
+    { headers: await paypalHeaders() },
+  );
+  if (!res.ok) throw new Error(`Status check failed: ${res.status}`);
+  const data = await res.json();
+
+  const ready =
+    data.payments_receivable === true &&
+    data.primary_email_confirmed === true &&
+    Array.isArray(data.oauth_integrations) &&
+    data.oauth_integrations.length > 0;
+
+  return { ready, raw: data };
+}
+```
+
+> Alternative onboarding modes (available but not our default):
+> - **After payment** — a creator can receive a first pledge before connecting; PayPal emails them to onboard within **30 days** or the payment is refunded to the backer. Supports only the PayPal button pre-onboarding, business accounts only.
+> - **Build into software** — for downloadable/self-hosted packages; PayPal shares the seller's own REST credentials (first-party). No platform fee, delayed disbursement, or partner reporting. Not applicable to our hosted platform.
+
+#### Onboarding webhooks (dedicated endpoint)
+
+Subscribe the **PayPal Connect** app to onboarding events and point them at our **dedicated** listener:
+
+- `MERCHANT.ONBOARDING.COMPLETED` — creator finished onboarding and granted permissions.
+- `MERCHANT.PARTNER-CONSENT.REVOKED` — creator removed our permissions (disable their Connect projects).
+
+#### Backer Checkout — Create Order with Platform Fee
+
+Pledging is an **Orders v2** call routed to the creator as the `payee`, with our cut declared in `payment_instruction.platform_fees`. This is the PayPal analogue of the Stripe PaymentIntent with `application_fee_amount` + `transfer_data.destination`.
+
+```typescript
+// lib/payments/paypal-connect/checkout.ts
+import { PAYPAL_BASE_URL, paypalHeaders } from './client';
+
+export async function createPayPalConnectOrder(pledgeData: {
+  projectId: string;
+  rewardId: string;
+  addonIds: string[];
+  amount: number;
+  userId: string;
+}) {
+  const { projectId, amount, userId } = pledgeData;
+
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    include: { creator: { include: { payPalConnectConfig: true } } },
+  });
+
+  const sellerMerchantId = project?.creator.payPalConnectConfig?.merchantIdInPayPal;
+  if (!sellerMerchantId || !project.creator.payPalConnectConfig?.paymentsReceivable) {
+    throw new Error('Creator has not completed PayPal Connect onboarding');
+  }
+
+  // Pending pledge first (same pattern as Stripe).
+  const pledge = await db.pledge.create({
+    data: { ...pledgeData, status: 'PENDING', paymentProcessor: 'PAYPAL_CONNECT' },
+  });
+
+  const platformFee = (amount * 0.05).toFixed(2); // 5% platform fee
+  const total = amount.toFixed(2);
+
+  const res = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders`, {
+    method: 'POST',
+    headers: await paypalHeaders(),
+    body: JSON.stringify({
+      intent: 'CAPTURE',
+      purchase_units: [
+        {
+          reference_id: pledge.id,
+          custom_id: pledge.id, // echoed back on webhooks
+          amount: { currency_code: 'USD', value: total },
+          payee: { merchant_id: sellerMerchantId },
+          payment_instruction: {
+            disbursement_mode: 'INSTANT', // or 'DELAYED' for held disbursement
+            platform_fees: [
+              {
+                amount: { currency_code: 'USD', value: platformFee },
+                // payee omitted => fee goes to the platform (partner) account
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Create order failed: ${res.status}`);
+  const order = await res.json();
+
+  await db.pledge.update({
+    where: { id: pledge.id },
+    data: { paypalOrderId: order.id },
+  });
+
+  return { orderId: order.id, pledgeId: pledge.id }; // hand orderId to the JS SDK button
+}
+```
+
+**Front end** uses PayPal's JS SDK button (loaded with the **platform** client-id and `merchant-id` = the creator's `merchantIdInPayPal`, plus `data-partner-attribution-id` = BN code). On approve, capture server-side:
+
+```typescript
+// lib/payments/paypal-connect/checkout.ts
+export async function capturePayPalConnectOrder(orderId: string) {
+  const res = await fetch(
+    `${PAYPAL_BASE_URL}/v2/checkout/orders/${orderId}/capture`,
+    { method: 'POST', headers: await paypalHeaders() },
+  );
+  if (!res.ok) throw new Error(`Capture failed: ${res.status}`);
+  return res.json(); // completion is also confirmed asynchronously via webhook
+}
+```
+
+> **Delayed disbursement:** set `disbursement_mode: 'DELAYED'` to hold funds in the platform, then call `POST /v1/payments/referenced-payouts-items` (or the disbursement endpoint) to release to the creator later — useful for holding pledges until a campaign succeeds, and required if we want to refund before disbursing.
+
+#### PayPal Connect Webhooks (separate from standard PayPal)
+
+Dedicated route — **never** shares the standard PayPal handler:
+
+```typescript
+// app/api/webhooks/paypal/connect/route.ts
+import { PAYPAL_BASE_URL, paypalHeaders } from '@/lib/payments/paypal-connect/client';
+
+export async function POST(req: Request) {
+  const body = await req.text();
+  const headers = Object.fromEntries(req.headers);
+
+  // Verify signature against the PayPal Connect webhook id (its own, not standard PayPal's).
+  const verifyRes = await fetch(
+    `${PAYPAL_BASE_URL}/v1/notifications/verify-webhook-signature`,
+    {
+      method: 'POST',
+      headers: await paypalHeaders(),
+      body: JSON.stringify({
+        auth_algo: headers['paypal-auth-algo'],
+        cert_url: headers['paypal-cert-url'],
+        transmission_id: headers['paypal-transmission-id'],
+        transmission_sig: headers['paypal-transmission-sig'],
+        transmission_time: headers['paypal-transmission-time'],
+        webhook_id: process.env.PAYPAL_CONNECT_WEBHOOK_ID, // dedicated id
+        webhook_event: JSON.parse(body),
+      }),
+    },
+  );
+
+  const { verification_status } = await verifyRes.json();
+  if (verification_status !== 'SUCCESS') {
+    return Response.json({ error: 'Invalid signature' }, { status: 400 });
+  }
+
+  const event = JSON.parse(body);
+
+  switch (event.event_type) {
+    case 'MERCHANT.ONBOARDING.COMPLETED':
+      await handleConnectOnboardingCompleted(event);
+      break;
+    case 'MERCHANT.PARTNER-CONSENT.REVOKED':
+      await handleConnectConsentRevoked(event);
+      break;
+    case 'CHECKOUT.ORDER.APPROVED':
+      await handleConnectOrderApproved(event);
+      break;
+    case 'PAYMENT.CAPTURE.COMPLETED':
+      await handleConnectCaptureCompleted(event); // flip pledge -> COMPLETED, bump project totals
+      break;
+    case 'PAYMENT.CAPTURE.DENIED':
+    case 'PAYMENT.CAPTURE.DECLINED':
+      await handleConnectCaptureFailed(event);
+      break;
+    case 'PAYMENT.CAPTURE.REFUNDED':
+      await handleConnectRefund(event);
+      break;
+    case 'CUSTOMER.DISPUTE.CREATED':
+      await handleConnectDispute(event);
+      break;
+  }
+
+  // Store Paypal-Debug-Id for troubleshooting/go-live checklist.
+  return Response.json({ received: true });
+}
+
+async function handleConnectCaptureCompleted(event: any) {
+  const capture = event.resource;
+  const pledgeId = capture.custom_id; // set on the order
+
+  const pledge = await db.pledge.update({
+    where: { id: pledgeId },
+    data: { status: 'COMPLETED', paypalCaptureId: capture.id },
+    include: { project: true, user: true },
+  });
+
+  await db.project.update({
+    where: { id: pledge.projectId },
+    data: {
+      currentAmount: { increment: pledge.amount },
+      backerCount: { increment: 1 },
+    },
+  });
+
+  await db.reward.update({
+    where: { id: pledge.rewardId },
+    data: { quantityClaimed: { increment: 1 } },
+  });
+
+  await sendPledgeConfirmationEmail(pledge);
+}
+```
+
+#### Refunds
+
+```typescript
+// lib/payments/paypal-connect/refund.ts
+export async function refundPayPalConnectCapture(captureId: string, amount?: number) {
+  const res = await fetch(
+    `${PAYPAL_BASE_URL}/v2/payments/captures/${captureId}/refund`,
+    {
+      method: 'POST',
+      headers: await paypalHeaders(),
+      body: JSON.stringify(
+        amount ? { amount: { currency_code: 'USD', value: amount.toFixed(2) } } : {},
+      ),
+    },
+  );
+  if (!res.ok) throw new Error(`Refund failed: ${res.status}`);
+  return res.json();
+}
+```
+
+> With **delayed disbursement**, refunds must happen **before** funds are disbursed to the creator; once disbursed, the creator must have onboarded to refund on their behalf.
+
+#### Reporting & disputes
+
+- Creators handle disputes in the PayPal Resolution Center; we can read/update via the Disputes API if `READ_SELLER_DISPUTE`/`UPDATE_SELLER_DISPUTE` features were granted.
+- Partner reporting via **SFTP** (set up an SFTP user) and/or the **Transaction Search API** for custom reconciliation. Always persist the `Paypal-Debug-Id` response header per call.
+
+#### Go-live checklist (PPCP)
+
+Before contacting the PayPal rep to go live, complete PayPal's integration checklist against sandbox: capture ≥2 completed sales (with order IDs + debug IDs), ≥1 refund (mandatory with delayed disbursement), record the sandbox REST app email/client-id and subscribed webhooks, provide screen recordings (creator onboarding, backer checkout, a declined payment, refund/dashboard tools), and answer the seller-onboarding + buyer-checkout questionnaire (Partner Referrals usage, features passed, the pre-payment `GET merchant-integrations` receivable check, BN code on every order, etc.). The rep then copies the sandbox config to live.
+
 ### CCBill Integration
 
 *[Keep existing CCBill implementation from previous version]*
@@ -2350,13 +2825,48 @@ class CCBillProcessor implements PaymentProcessor {
   }
 }
 
+// Standard PayPal — the existing basic setup. LEFT UNTOUCHED; shown here only
+// so the factory can route to it. Uses the original /api/webhooks/paypal path.
+class PayPalStandardProcessor implements PaymentProcessor {
+  async createPayment(params: PaymentParams): Promise<PaymentResult> {
+    // Existing standard PayPal implementation — do not modify.
+  }
+  async handleWebhook(payload: any): Promise<void> {
+    // Existing standard PayPal webhook — do not modify.
+  }
+  async processRefund(transactionId: string): Promise<void> {
+    // Existing standard PayPal refund — do not modify.
+  }
+}
+
+// PayPal Connect — new PPCP marketplace processor. Fully additive; its own
+// module, credentials, and webhook (/api/webhooks/paypal/connect).
+class PayPalConnectProcessor implements PaymentProcessor {
+  async createPayment(params: PaymentParams): Promise<PaymentResult> {
+    return createPayPalConnectOrder(params); // Orders v2 + platform_fees
+  }
+  async handleWebhook(payload: any): Promise<void> {
+    // Handled by app/api/webhooks/paypal/connect/route.ts
+  }
+  async processRefund(transactionId: string): Promise<void> {
+    await refundPayPalConnectCapture(transactionId);
+  }
+}
+
 // Factory to get correct processor
 export function getPaymentProcessor(
-  processorType: 'stripe' | 'ccbill'
+  processorType: 'stripe' | 'paypal_connect' | 'paypal' | 'ccbill'
 ): PaymentProcessor {
-  return processorType === 'stripe' 
-    ? new StripeProcessor() 
-    : new CCBillProcessor();
+  switch (processorType) {
+    case 'stripe':
+      return new StripeProcessor();
+    case 'paypal_connect':
+      return new PayPalConnectProcessor();
+    case 'paypal':
+      return new PayPalStandardProcessor();
+    case 'ccbill':
+      return new CCBillProcessor();
+  }
 }
 ```
 
@@ -2382,6 +2892,8 @@ model Project {
 
 enum PaymentProcessor {
   STRIPE
+  PAYPAL          // Standard PayPal (existing basic setup — unchanged)
+  PAYPAL_CONNECT  // PayPal Complete Payments Platform (new marketplace module)
   CCBILL
 }
 
@@ -2394,11 +2906,46 @@ model Pledge {
   stripePaymentIntentId String?  @unique
   stripeChargeId        String?
   
+  // Standard PayPal fields (existing — do not modify)
+  paypalOrderIdStandard String?  @unique
+  paypalCaptureIdStandard String? @unique
+  
+  // PayPal Connect (PPCP) fields — separate from standard PayPal
+  paypalOrderId         String?  @unique
+  paypalCaptureId       String?  @unique
+  
   // CCBill fields
   ccbillTransactionId   String?  @unique
   ccbillSubscriptionId  String?  @unique
   
   // ... relations
+}
+
+// PayPal Connect (PPCP) per-creator onboarding state.
+// Mirrors StripeConfig/CCBillConfig; isolated from any standard PayPal config.
+model PayPalConnectConfig {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  merchantIdInPayPal  String?  @unique   // creator's PayPal merchant id (payee.merchant_id)
+  referralSelfLink    String?            // HATEOAS self link to refresh the action_url
+  onboardingStatus    PayPalConnectOnboardingStatus @default(NOT_STARTED)
+  paymentsReceivable  Boolean  @default(false)
+  emailConfirmed      Boolean  @default(false)
+  scopesGranted       String[] @default([])
+  isLive              Boolean  @default(false) // sandbox vs live
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+enum PayPalConnectOnboardingStatus {
+  NOT_STARTED
+  STARTED       // referral link generated, creator redirected
+  PENDING       // returned but not yet payments_receivable/email_confirmed
+  COMPLETED     // MERCHANT.ONBOARDING.COMPLETED + receivable checks pass
+  REVOKED       // MERCHANT.PARTNER-CONSENT.REVOKED
 }
 ```
 
@@ -3483,11 +4030,26 @@ enum EmailType {
 │   │   ├── /payment-intent   # POST create payment intent
 │   │   ├── /confirm          # POST confirm payment
 │   │   └── /webhook          # POST handle Stripe webhook
+│   ├── /paypal               # Standard PayPal (existing — unchanged)
+│   │   └── ...
+│   ├── /paypal/connect       # PayPal Connect (PPCP) — additive module
+│   │   ├── /onboard          # POST create Partner Referrals signup link
+│   │   ├── /complete         # GET handle onboarding return URL
+│   │   ├── /status           # GET check seller onboarding/receivable status
+│   │   ├── /order            # POST create order (payee + platform_fees)
+│   │   ├── /capture          # POST capture approved order
+│   │   └── /refund           # POST refund a capture
 │   ├── /ccbill
 │   │   ├── /initiate         # POST create CCBill payment URL
 │   │   ├── /success          # GET handle success redirect
 │   │   └── /webhook          # POST handle CCBill postback
 │   └── /select-processor     # POST select payment processor
+│
+├── /webhooks
+│   ├── /stripe               # POST Stripe webhook
+│   ├── /paypal               # POST Standard PayPal webhook (existing — unchanged)
+│   ├── /paypal/connect       # POST PayPal Connect webhook (dedicated, separate id/secret)
+│   └── /ccbill               # POST CCBill postback
 │
 ├── /recommendations
 │   ├── /                     # GET personalized recommendations
@@ -4022,6 +4584,19 @@ NEXTAUTH_SECRET="your-secret-key-here"
 STRIPE_PUBLIC_KEY="pk_test_..."
 STRIPE_SECRET_KEY="sk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
+
+# Standard PayPal (existing basic setup — leave as-is)
+PAYPAL_CLIENT_ID="..."
+PAYPAL_CLIENT_SECRET="..."
+PAYPAL_WEBHOOK_ID="..."
+
+# PayPal Connect (PPCP / Complete Payments Platform) — SEPARATE credentials & webhook
+PAYPAL_CONNECT_ENV="sandbox"                 # sandbox | live
+PAYPAL_CONNECT_CLIENT_ID="..."               # Platform REST app client id
+PAYPAL_CONNECT_CLIENT_SECRET="..."
+PAYPAL_CONNECT_BN_CODE="..."                 # PayPal-Partner-Attribution-Id (BN code)
+PAYPAL_CONNECT_PARTNER_MERCHANT_ID="..."     # platform (partner) merchant/payer id
+PAYPAL_CONNECT_WEBHOOK_ID="..."              # dedicated webhook id for /api/webhooks/paypal/connect
 
 # CCBill
 CCBILL_WEBHOOK_SALT="your-ccbill-salt"
