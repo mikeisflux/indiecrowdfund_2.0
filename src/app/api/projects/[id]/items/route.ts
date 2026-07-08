@@ -1,0 +1,261 @@
+import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
+
+const projectsItemsLogger = logger.child({ module: "projects-items" });
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { canUserEditProject } from "@/lib/project-auth";
+
+const itemSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
+  sku: z.string().optional().nullable(),
+  inStock: z.boolean().optional(),
+});
+
+// Create a new project item
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: projectId } = await params;
+
+    // Verify project ownership or collaborator with edit permission
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
+      select: { creatorId: true },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const item = itemSchema.parse(body);
+
+    const created = await db.projectItem.create({
+      data: {
+        projectId,
+        title: item.title,
+        description: item.description || null,
+        imageUrl: item.imageUrl || null,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      item: created,
+    });
+  } catch (error) {
+    projectsItemsLogger.error({ err: formatError(error) }, "Create item error:");
+    if (error instanceof z.ZodError) {
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
+    }
+    return NextResponse.json(
+      { error: "Failed to create item" },
+      { status: 500 }
+    );
+  }
+}
+
+// Update an existing project item
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: projectId } = await params;
+
+    // Verify project ownership or collaborator with edit permission
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
+      select: { creatorId: true },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const item = itemSchema.parse(body);
+
+    if (!item.id) {
+      return NextResponse.json({ error: "Item ID required for update" }, { status: 400 });
+    }
+
+    const updateData: Record<string, unknown> = {
+      title: item.title,
+      description: item.description || null,
+      imageUrl: item.imageUrl || null,
+    };
+    if (item.sku !== undefined) {
+      updateData.sku = item.sku || null;
+    }
+    if (item.inStock !== undefined) {
+      updateData.inStock = item.inStock;
+    }
+
+    // Verify the item belongs to this project (prevents cross-project IDOR)
+    const existingItem = await db.projectItem.findFirst({
+      where: { id: item.id, projectId },
+    });
+    if (!existingItem) {
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    }
+
+    const updated = await db.projectItem.update({
+      where: { id: item.id },
+      data: updateData,
+    });
+
+    return NextResponse.json({
+      success: true,
+      item: updated,
+    });
+  } catch (error) {
+    projectsItemsLogger.error({ err: formatError(error) }, "Update item error:");
+    if (error instanceof z.ZodError) {
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
+    }
+    return NextResponse.json(
+      { error: "Failed to update item" },
+      { status: 500 }
+    );
+  }
+}
+
+// Delete a project item
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: projectId } = await params;
+    const { searchParams } = new URL(req.url);
+    const itemId = searchParams.get("itemId");
+
+    if (!itemId) {
+      return NextResponse.json({ error: "Item ID required" }, { status: 400 });
+    }
+
+    // Verify project ownership or collaborator with edit permission
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
+      select: { creatorId: true, status: true },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Block deletion if project is live - use End Item instead
+    if (project.status === "LIVE" || project.status === "FUNDED") {
+      return NextResponse.json(
+        { error: "Cannot delete items from a live campaign. Use 'End Item' instead." },
+        { status: 400 }
+      );
+    }
+
+    // Scoped delete via deleteMany — blocks cross-project abuse AND
+    // resolves concurrent double-clicks as { count: 0 } instead of P2025.
+    // (This also removes from rewards via projectItemId cascade.)
+    await db.projectItem.deleteMany({
+      where: { id: itemId, projectId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    projectsItemsLogger.error({ err: formatError(error) }, "Delete item error:");
+    return NextResponse.json(
+      { error: "Failed to delete item" },
+      { status: 500 }
+    );
+  }
+}
+
+// Get all items for a project
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: projectId } = await params;
+
+    // Verify project access (creator or any accepted collaborator)
+    const project = await db.project.findFirst({
+      where: { id: projectId , deletedAt: null },
+      select: { creatorId: true },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // For GET, allow any collaborator (not just those with edit permission)
+    const canEdit = await canUserEditProject(projectId, session.user.id, project.creatorId);
+    if (!canEdit) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const items = await db.projectItem.findMany({
+      where: { projectId },
+      orderBy: { createdAt: "asc" },
+    });
+
+    // Map items to include isEnded boolean for frontend
+    const mappedItems = items.map((item: typeof items[number]) => ({
+      ...item,
+      isEnded: !!item.endedAt,
+    }));
+
+    return NextResponse.json({ items: mappedItems });
+  } catch (error) {
+    projectsItemsLogger.error({ err: formatError(error) }, "Get items error:");
+    return NextResponse.json(
+      { error: "Failed to fetch items" },
+      { status: 500 }
+    );
+  }
+}

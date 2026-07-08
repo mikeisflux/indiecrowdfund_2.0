@@ -1,0 +1,43 @@
+// ============================================
+// BACKER REVIEWS & CREATOR RATINGS
+// ============================================
+
+model BackerReview {
+  id        String @id @default(cuid())
+  pledgeId  String @unique   // One review per pledge (enforces no duplicates)
+  userId    String           // The backer leaving the review
+  projectId String           // The project being reviewed
+  creatorId String           // The creator being rated
+
+  // Fulfillment acknowledgement — backer confirms they received their order
+  markedReceived    Boolean   @default(false)
+  markedReceivedAt  DateTime?
+
+  // Star ratings (1–5, null = not yet provided)
+  overallRating         Int?
+  deliveryRating        Int?
+  qualityRating         Int?
+  communicationRating   Int?
+
+  // Written review (both optional)
+  reviewTitle String? @db.VarChar(200)
+  reviewBody  String? @db.Text
+
+  // Moderation
+  isPublished Boolean @default(true)
+  isHidden    Boolean @default(false)  // Admins can hide abusive reviews
+
+  // Relations
+  pledge  Pledge  @relation(fields: [pledgeId], references: [id])
+  user    User    @relation("ReviewAuthor", fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+  creator User    @relation("CreatorReviews", fields: [creatorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([creatorId])
+  @@index([projectId])
+  @@index([userId])
+  @@index([isPublished, isHidden])
+}

@@ -1,0 +1,179 @@
+// ============================================
+// BACKER SURVEYS
+// ============================================
+
+model Survey {
+  id                String           @id @default(cuid())
+  projectId         String           @unique
+
+  // Survey intro
+  introTitle        String?
+  introMessage      String?          @db.Text
+
+  // Status
+  status            SurveyStatus     @default(DRAFT)
+  sentAt            DateTime?
+  lockedAt          DateTime?
+
+  // Address settings
+  collectAddresses  Boolean          @default(true)
+  addressesLocked   Boolean          @default(false)
+
+  // Relations
+  itemQuestions     SurveyItemQuestion[]
+  backerQuestions   SurveyBackerQuestion[]
+  responses         SurveyResponse[]
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
+enum SurveyStatus {
+  DRAFT
+  SENT
+  LOCKED
+}
+
+// Item questions - for reward-specific variants (size, color, etc.)
+model SurveyItemQuestion {
+  id              String               @id @default(cuid())
+  surveyId        String
+  rewardId        String               // Which reward this applies to
+
+  // Item details
+  itemName        String               // e.g., "T-Shirt", "Art Print"
+  itemDescription String?              @db.Text
+  imageUrl        String?
+
+  // Question ordering
+  sortOrder       Int                  @default(0)
+
+  // Relations
+  survey          Survey               @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  variants        SurveyItemVariant[]
+  customQuestions SurveyItemCustomQuestion[]
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  // One row per (survey, reward) -- the IndieKit survey-builder UI
+  // keys per-reward question selections by rewardId; before this unique
+  // constraint, racing "Save" clicks or state loss between sessions
+  // could produce duplicate rows for the same reward, and the load-side
+  // Map-set loop would render whichever row Postgres returned last,
+  // making it look like a "Save Draft" silently reverted to the old
+  // selections. POST is an upsert on this key. Migration at
+  // prisma/migrations/add_unique_survey_item_question.sql collapses
+  // any pre-existing duplicates before installing the index.
+  @@unique([surveyId, rewardId])
+  @@index([surveyId])
+  @@index([rewardId])
+}
+
+// Variant options for items (e.g., Size: S/M/L/XL, Color: Red/Blue/Green)
+model SurveyItemVariant {
+  id              String             @id @default(cuid())
+  itemQuestionId  String
+
+  variantType     String             // e.g., "Size", "Color", "Style"
+  options         String[]           // e.g., ["S", "M", "L", "XL"]
+
+  // Auto-generated SKU prefix
+  skuPrefix       String?
+
+  sortOrder       Int                @default(0)
+
+  itemQuestion    SurveyItemQuestion @relation(fields: [itemQuestionId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime           @default(now())
+
+  @@index([itemQuestionId])
+}
+
+// Custom questions for specific items (beyond variants)
+model SurveyItemCustomQuestion {
+  id              String             @id @default(cuid())
+  itemQuestionId  String
+
+  question        String
+  description     String?
+  questionType    SurveyQuestionType @default(OPEN_TEXT)
+  options         String[]           // For multiple/single selection
+  isRequired      Boolean            @default(false)
+
+  sortOrder       Int                @default(0)
+
+  itemQuestion    SurveyItemQuestion @relation(fields: [itemQuestionId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime           @default(now())
+
+  @@index([itemQuestionId])
+}
+
+// Backer questions - general questions for all or specific backers
+model SurveyBackerQuestion {
+  id              String             @id @default(cuid())
+  surveyId        String
+
+  question        String
+  description     String?            @db.Text
+  questionType    SurveyQuestionType @default(OPEN_TEXT)
+  displayType     String?            // Original frontend type (address, email, phone, etc.)
+  options         String[]           // For multiple/single selection
+
+  // Targeting
+  targetType      SurveyTargetType   @default(ALL_BACKERS)
+  targetRewardIds String[]           // If targeting specific rewards
+
+  isRequired      Boolean            @default(false)
+  sortOrder       Int                @default(0)
+
+  survey          Survey             @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([surveyId])
+}
+
+enum SurveyQuestionType {
+  OPEN_TEXT
+  SINGLE_SELECT
+  MULTIPLE_SELECT
+}
+
+enum SurveyTargetType {
+  ALL_BACKERS
+  SPECIFIC_REWARDS
+}
+
+model SurveyResponse {
+  id              String   @id @default(cuid())
+  surveyId        String
+  pledgeId        String   @unique
+
+  // Item responses (variant selections + custom question answers)
+  itemResponses   Json?    // { itemQuestionId: { variants: { variantType: selectedOption }, customAnswers: { questionId: answer } } }
+
+  // Backer question responses
+  backerResponses Json?    // { questionId: answer }
+
+  // Shipping address
+  shippingAddress Json?    // { name, line1, line2, city, state, postalCode, country, phone }
+  addressLocked   Boolean  @default(false)
+
+  // Status
+  isComplete      Boolean  @default(false)
+  completedAt     DateTime?
+
+  survey          Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([surveyId])
+  @@index([isComplete])
+}

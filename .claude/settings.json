@@ -1,0 +1,13 @@
+{
+  "instructions": [
+    "ALWAYS check prisma/schema.prisma for correct model and field names before writing database queries",
+    "VERIFY API ENDPOINTS EXIST before adding frontend code that calls them - check src/app/api/... Never create fetch calls to non-existent endpoints",
+    "DO NOT import anything not used in the file - verify every import before committing",
+    "For Next.js route handlers, OMIT unused parameters entirely (not even _req)",
+    "ALWAYS use <Image /> from next/image instead of <img> tags",
+    "ALWAYS include all dependencies in useEffect, useCallback, and useMemo dependency arrays",
+    "Use getCSRFHeaders() for mutating requests from client",
+    "Soft deletes use deletedAt field - always filter with deletedAt: null for active records",
+    "Common models: Reward (both rewards type:TIER and add-ons type:ADDON), PledgeAddon (join table), DigitalFile"
+  ]
+}

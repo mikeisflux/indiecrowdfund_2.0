@@ -1,0 +1,635 @@
+// ============================================
+// ERROR TRACKING (Self-hosted Sentry alternative)
+// ============================================
+
+// Groups errors by fingerprint for deduplication (like Sentry "Issues")
+model ErrorGroup {
+  id              String          @id @default(cuid())
+
+  // Identification
+  fingerprint     String          @unique   // Hash of error message + source for grouping
+  title           String                    // Short error message
+  type            String          @default("Error") // Error, TypeError, ReferenceError, etc.
+
+  // Categorization
+  level           ErrorLevel      @default(ERROR)
+  source          ErrorSource     @default(SERVER) // client, server, edge, api
+  endpoint        String?                   // API route or page path
+
+  // Status
+  status          ErrorStatus     @default(UNRESOLVED)
+  assignedTo      String?                   // Admin user ID
+
+  // Aggregation
+  eventCount      Int             @default(1)
+  firstSeen       DateTime        @default(now())
+  lastSeen        DateTime        @default(now())
+
+  // Latest occurrence data
+  latestMessage   String          @db.Text   // Full error message
+  latestStack     String?         @db.Text   // Stack trace
+  latestMetadata  Json?                      // { url, method, userAgent, userId, headers, etc. }
+
+  // Occurrences (recent individual events)
+  occurrences     ErrorOccurrence[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([status, lastSeen])
+  @@index([level, status])
+  @@index([source])
+  @@index([lastSeen])
+  @@index([eventCount])
+}
+
+// Individual error occurrences (like Sentry "Events")
+model ErrorOccurrence {
+  id              String          @id @default(cuid())
+  groupId         String
+  group           ErrorGroup      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // Error details
+  message         String          @db.Text
+  stack           String?         @db.Text
+
+  // Context
+  url             String?                   // Request URL or page URL
+  method          String?                   // HTTP method (GET, POST, etc.)
+  statusCode      Int?                      // HTTP response status code
+  userId          String?                   // Authenticated user ID
+  userAgent       String?         @db.Text
+  ip              String?
+  metadata        Json?                     // Additional context (headers, body, etc.)
+
+  // Timing
+  timestamp       DateTime        @default(now())
+
+  @@index([groupId, timestamp])
+  @@index([timestamp])
+}
+
+enum ErrorLevel {
+  DEBUG
+  INFO
+  WARNING
+  ERROR
+  FATAL
+}
+
+enum ErrorSource {
+  CLIENT
+  SERVER
+  EDGE
+  API
+  MIDDLEWARE
+  CRON
+}
+
+enum ErrorStatus {
+  UNRESOLVED
+  IN_PROGRESS
+  RESOLVED
+  IGNORED
+}
+
+// ============================================
+// CHANGELOG
+// ============================================
+
+model ChangelogEntry {
+  id          String   @id @default(cuid())
+
+  // Content
+  title       String
+  description String   @db.Text
+  category    ChangelogCategory
+  version     String?  // e.g., "1.0.0", "2024-01"
+
+  // Git reference
+  commitHash  String?
+  branch      String?
+
+  // Publishing
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Author (admin who created)
+  authorId    String?
+  author      User?    @relation("ChangelogAuthor", fields: [authorId], references: [id])
+
+  @@index([category])
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+enum ChangelogCategory {
+  FEATURE
+  BUGFIX
+  IMPROVEMENT
+  SECURITY
+  PERFORMANCE
+  UI_UX
+  API
+  DOCUMENTATION
+  OTHER
+}
+
+// ============================================
+// PRESS RELEASES
+// ============================================
+
+// Admin-managed dated press releases shown at /press (list) and
+// /press/[slug] (detail). Mirrors the changelog pattern: drafts
+// (isPublished=false) are hidden from the public site; publishedAt sets
+// ordering and the public-facing date. Content is HTML, written/edited
+// in /admin/press and rendered with dangerouslySetInnerHTML on the
+// public page — the risk surface is admin-only so the dependency cost
+// of a markdown library or sanitizer isn't worth it.
+model PressRelease {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String?  @db.Text
+  content     String   @db.Text
+  imageUrl    String?
+  authorName  String?
+
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([isPublished, publishedAt])
+}
+
+// ============================================
+// BACKER DASHBOARD ENHANCEMENTS
+// ============================================
+
+// User saved addresses for shipping
+model UserAddress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label       String   // "Home", "Work", "Office", etc.
+  isDefault   Boolean  @default(false)
+
+  // Address fields
+  fullName    String
+  line1       String
+  line2       String?
+  city        String
+  state       String
+  postalCode  String
+  country     String
+  phone       String?
+
+  // Validation
+  isValidated Boolean  @default(false)
+  validatedAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+// Project collections/wishlists
+model ProjectCollection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  color       String?  // For UI theming
+
+  projects    ProjectCollectionItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isPublic])
+}
+
+model ProjectCollectionItem {
+  id           String   @id @default(cuid())
+  collectionId String
+  collection   ProjectCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  notes        String?  // Personal notes about the project
+  addedAt      DateTime @default(now())
+
+  @@unique([collectionId, projectId])
+  @@index([collectionId])
+  @@index([projectId])
+}
+
+// Notification preferences per project
+model ProjectNotificationPreference {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Notification types
+  updates     Boolean  @default(true)
+  comments    Boolean  @default(true)
+  surveys     Boolean  @default(true)
+  shipping    Boolean  @default(true)
+  messages    Boolean  @default(true)
+
+  // Email digest frequency
+  digestFrequency String @default("instant") // instant, daily, weekly, none
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// Creator follow relationship
+model CreatorFollow {
+  id          String   @id @default(cuid())
+  followerId  String   // The user doing the following
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  creatorId   String   // The creator being followed
+  creator     User     @relation("Following", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Notification preferences for this follow
+  notifyNewProjects Boolean @default(true)
+  notifyUpdates     Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, creatorId])
+  @@index([followerId])
+  @@index([creatorId])
+}
+
+// ============================================
+// HERO SLIDER
+// ============================================
+
+model HeroSlide {
+  id              String          @id @default(cuid())
+
+  // Content
+  title           String
+  subtitle        String?
+  description     String?         @db.Text
+
+  // Call to Action
+  buttonText      String?
+  buttonLink      String?
+  showPrimaryButton   Boolean     @default(true)
+  secondaryButtonText String?
+  secondaryButtonLink String?
+  showSecondaryButton Boolean     @default(true)
+
+  // Media
+  mediaType       HeroMediaType   @default(IMAGE)
+  imageUrl        String?
+  videoUrl        String?         // YouTube URL or uploaded video URL
+  videoThumbnail  String?         // Thumbnail for video slides
+  videoAutoplay   Boolean         @default(true)
+  videoMuted      Boolean         @default(true)
+  videoLoop       Boolean         @default(true)
+
+  // Display settings
+  textAlignment   String          @default("center")  // left, center, right
+  overlayOpacity  Int             @default(0)         // 0-100 for dark overlay on media
+  textColor       String          @default("white")   // white, dark
+  showSubtitle    Boolean         @default(true)
+  showDescription Boolean         @default(true)
+
+  // Status
+  isActive        Boolean         @default(true)
+  sortOrder       Int             @default(0)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+enum HeroMediaType {
+  IMAGE
+  YOUTUBE
+  VIDEO
+}
+
+// ============================================
+// ANNOUNCEMENT BAR
+// ============================================
+
+model AnnouncementBar {
+  id              String    @id @default(cuid())
+
+  // Content
+  text            String    @db.Text
+  linkUrl         String?
+  linkText        String?
+
+  // Styling
+  backgroundColor String    @default("#2563eb")
+  textColor       String    @default("#ffffff")
+
+  // Options
+  dismissible     Boolean   @default(true)
+  isActive        Boolean   @default(true)
+
+  // Scheduling (optional)
+  startDate       DateTime?
+  endDate         DateTime?
+
+  // Priority/ordering
+  sortOrder       Int       @default(0)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// ============================================
+// PROMOTIONAL POPUP
+// ============================================
+
+model PromoPopup {
+  id              String    @id @default(cuid())
+
+  // Settings
+  isActive        Boolean   @default(true)
+  showFrequency   String    @default("once_per_session") // once_per_session, once_per_login, once_per_day, every_visit
+
+  // Slides stored as JSON array
+  // Each slide: { title, subtitle, features[], iconName, gradientFrom, gradientTo }
+  slides          Json      @default("[]")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// CONSENT BANNER (TOS, Cookies, Privacy, AI Tracking)
+// ============================================
+
+model ConsentBanner {
+  id              String    @id @default(cuid())
+
+  // Settings
+  isActive        Boolean   @default(true)
+  showFrequency   String    @default("once_per_login") // once_per_session, once_per_login, once_per_day, every_visit
+
+  // Content stored as JSON
+  // { heading, message, acceptButtonText, links: [{ label, url }] }
+  content         Json      @default("{}")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// WEBHOOK EVENT DEDUPLICATION
+// ============================================
+
+// Track processed webhook events to prevent duplicate processing
+model ProcessedWebhookEvent {
+  id              String    @id @default(cuid())
+  eventId         String    @unique  // Stripe event ID (evt_xxx)
+  eventType       String               // Event type (e.g., payment_intent.succeeded)
+  source          String    @default("stripe")  // Source system (stripe, etc.)
+  processedAt     DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([processedAt])
+}
+
+// ============================================
+// COMMUNITY CHAT
+// ============================================
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+
+  // Message type: text, emoji, sticker, gif
+  type      ChatMessageType @default(TEXT)
+
+  // For stickers / gifs - stores extra payload
+  stickerData Json?
+
+  // Room scoping. NULL = the legacy global community chat (kept for the
+  // /chat page). Otherwise the creator-owned ChatRoom this message lives
+  // in. Project Community tabs always set this to the project creator's
+  // room id.
+  roomId    String?
+  room      ChatRoom? @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  // Author
+  userId    String
+  user      User     @relation("ChatMessages", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Soft delete (for admin moderation)
+  deletedAt   DateTime?
+  deletedById String?    // Admin who deleted the message
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([deletedAt, createdAt])
+  @@index([roomId, createdAt])
+}
+
+enum ChatMessageType {
+  TEXT
+  EMOJI
+  STICKER
+  GIF
+}
+
+model ChatPresence {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Same NULL=global semantics as ChatMessage.roomId
+  roomId       String?
+  room         ChatRoom? @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  lastActiveAt DateTime @default(now())
+  joinedAt     DateTime @default(now())
+
+  @@unique([userId, roomId])
+  @@index([lastActiveAt])
+  @@index([roomId, lastActiveAt])
+}
+
+// Per-creator branded chat room. Embedded on every project's Community tab
+// so the same chat travels with a creator across all their projects. The
+// ownerUserIds array lets multiple user accounts (e.g. a personal + a
+// company account run by the same human) share a single room.
+model ChatRoom {
+  id            String   @id @default(cuid())
+  // Brand label shown in the chat header, e.g. "Divinity Comics's Chat".
+  name          String
+  // URL-safe slug for direct links (e.g. /chat/<slug>). Globally unique.
+  slug          String   @unique
+  // Primary owner — used for moderation defaults and the room's "home"
+  // creator if multiple accounts share the room.
+  ownerUserId   String
+  // Every user account allowed to manage this room. The first entry is
+  // always ownerUserId. Used to merge multiple accounts (personal +
+  // company) into one shared chat.
+  ownerUserIds  String[]
+
+  // RTMP / virtual launch party hooks. Wired into the schema now so the
+  // launch-party feature can ship without a follow-up migration; the UI
+  // is not built yet.
+  rtmpEnabled       Boolean   @default(false)
+  rtmpStreamKey     String?   @unique
+  rtmpIngestUrl     String?
+  rtmpPlaybackUrl   String?
+  liveStreamStartedAt DateTime?
+  // Per-session identifier used by the RTMP server (SRS / Nginx-RTMP)
+  // for connect/disconnect callbacks and analytics joins. Generated on
+  // every "Go Live" click and discarded on stop.
+  liveSessionId     String?   @unique
+  // Cached viewer count, refreshed by the RTMP server's webhook +
+  // occasional polls. Display-only — never trust as a hard count.
+  viewerCount       Int       @default(0)
+
+  messages      ChatMessage[]
+  presences     ChatPresence[]
+  members       ChatRoomMember[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([ownerUserId])
+}
+
+// Persistent room membership. A user "joins" a creator's chat once and
+// stays joined until they leave. Drives the active-users sidebar (online
+// status comes from the matching ChatPresence row) and the per-room
+// new-message notifications.
+model ChatRoomMember {
+  id            String   @id @default(cuid())
+  roomId        String
+  userId        String
+  // Per-member opt-out for new-message notifications. Defaults to ON; the
+  // user can toggle this from their notification preferences in profile
+  // settings.
+  notificationsEnabled Boolean @default(true)
+  joinedAt      DateTime @default(now())
+  // Last time this member opened the room — used by the notification
+  // dispatcher to skip alerting users who are already actively reading.
+  lastReadAt    DateTime @default(now())
+
+  room          ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user          User     @relation("ChatRoomMembers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+// ============================================
+// ACHIEVEMENT BADGES
+// ============================================
+
+model UserAchievement {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  badgeType   BadgeType
+  earnedAt    DateTime    @default(now())
+
+  // Metadata about how badge was earned
+  metadata    Json?       // { projectId, pledgeId, etc }
+
+  @@unique([userId, badgeType])
+  @@index([userId])
+}
+
+enum BadgeType {
+  FIRST_PLEDGE                // First pledge ever
+  SUPER_BACKER_10            // Backed 10+ projects
+  SUPER_BACKER_25            // Backed 25+ projects
+  SUPER_BACKER_50            // Backed 50+ projects
+  EARLY_BIRD                 // Pledged within first 24 hours
+  STRETCH_GOAL_CONTRIBUTOR   // Contributed to reaching stretch goal
+  PREMIUM_SUPPORTER          // Pledged $500+ total
+  SURVEY_CHAMPION            // Completed 10+ surveys promptly
+  SURVEY_COMPLETIONIST       // Completed all pending surveys
+  REFERRAL_MASTER            // Referred 5+ successful backers
+  ANNIVERSARY_BACKER         // Active backer for 1+ year
+}
+
+// ============================================
+// REDEMPTION BONUS SYSTEM
+// ============================================
+
+// Monthly redemption bonus tracking with Decimal for precision
+model RedemptionBonusLedger {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Month tracking (first day of month)
+  month           DateTime
+
+  // Bonus calculation (using Decimal for financial precision)
+  totalBadges     Int      @default(0)
+  rawBonusPercent Decimal  @db.Decimal(10, 6)  // Sum of badge bonuses before cap (e.g., 0.000500 for 0.05%)
+  appliedBonusPercent Decimal @db.Decimal(10, 6)  // After 0.03% cap applied
+
+  // Usage tracking
+  redemptionCount Int      @default(0)
+  totalBonusApplied Decimal @default(0) @db.Decimal(10, 2)  // Total $ saved from bonus
+
+  applications    RedemptionBonusApplication[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, month])
+  @@index([userId, month])
+}
+
+// Track individual bonus applications to redemptions
+model RedemptionBonusApplication {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  redemptionId          String   // Link to DivinityCoinRedemption
+  bonusLedgerId         String
+  bonusLedger           RedemptionBonusLedger @relation(fields: [bonusLedgerId], references: [id], onDelete: Cascade)
+
+  bonusPercentApplied   Decimal  @db.Decimal(10, 6)
+  bonusAmountSaved      Decimal  @db.Decimal(10, 2)  // Actual $ saved
+
+  appliedAt             DateTime @default(now())
+
+  @@index([userId])
+  @@index([bonusLedgerId])
+  @@index([redemptionId])
+}

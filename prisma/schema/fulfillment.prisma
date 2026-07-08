@@ -1,0 +1,432 @@
+// ============================================
+// INDIEKIT - FULFILLMENT MANAGEMENT
+// ============================================
+
+// Products/SKUs for fulfillment
+model FulfillmentProduct {
+  id                String            @id @default(cuid())
+  projectId         String
+
+  // Product details
+  sku               String
+  name              String
+  description       String?           @db.Text
+  type              ProductType       @default(PHYSICAL)
+  imageUrl          String?
+
+  // Physical product attributes
+  weight            Float?            // in oz
+  weightUnit        String?           @default("oz")
+  length            Float?            // in inches
+  width             Float?            // in inches
+  height            Float?            // in inches
+  dimensionUnit     String?           @default("in")
+
+  // Customs info for international shipping
+  customsCode       String?           // HS/Tariff code
+  countryOfOrigin   String?
+  customsDescription String?
+
+  // Status
+  status            ProductStatus     @default(INCOMPLETE)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([projectId, sku])
+  @@index([projectId])
+  @@index([status])
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+}
+
+enum ProductStatus {
+  READY
+  INCOMPLETE
+  NO_WEIGHT
+  NO_CUSTOMS
+  ERROR
+}
+
+// Backer segments for targeted actions
+model BackerSegment {
+  id                String            @id @default(cuid())
+  projectId         String
+
+  name              String
+  description       String?
+  type              SegmentType       @default(CUSTOM)
+
+  // Filter criteria (stored as JSON)
+  criteria          Json?             // { field: "pledgeAmount", operator: ">=", value: 100 }
+
+  // Cached count (updated periodically)
+  backerCount       Int               @default(0)
+
+  // Dynamic vs static
+  isDynamic         Boolean           @default(true)
+  staticBackerIds   String[]          // For static segments, list of pledge IDs
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([projectId])
+  @@index([type])
+}
+
+enum SegmentType {
+  PLEDGE_LEVEL
+  ADDON
+  SURVEY_STATUS
+  SHIPPING_REGION
+  PAYMENT_STATUS
+  CUSTOM
+}
+
+// Activity log for timeline
+model FulfillmentActivity {
+  id                String              @id @default(cuid())
+  projectId         String
+
+  // Activity details
+  type              ActivityType
+  title             String
+  description       String?
+  metadata          Json?               // Additional context
+
+  // Related entities
+  pledgeId          String?
+  userId            String?
+
+  // Grouping for batch operations
+  batchId           String?             // Group related activities
+  affectedCount     Int?                // Number of items affected
+
+  createdAt         DateTime            @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([type])
+  @@index([pledgeId])
+  @@index([batchId])
+}
+
+enum ActivityType {
+  SURVEY_SENT
+  SURVEY_REMINDER
+  SURVEY_COMPLETED
+  ORDERS_LOCKED
+  ADDRESSES_LOCKED
+  CARDS_CHARGED
+  CHARGE_FAILED
+  ORDERS_PUSHED
+  PUSH_FAILED
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  DIGITAL_DISTRIBUTED
+  ADDRESS_UPDATED
+  REFUND_ISSUED
+  NOTE_ADDED
+  BALANCE_ADJUSTED
+}
+
+// Support tickets/notes for backers
+model BackerNote {
+  id                String            @id @default(cuid())
+  pledgeId          String
+
+  content           String            @db.Text
+  isInternal        Boolean           @default(true)
+
+  // Who created this
+  createdById       String?
+  createdBy         User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([pledgeId])
+  @@index([createdById])
+}
+
+// Digital file distribution
+model DigitalFile {
+  id                String            @id @default(cuid())
+  projectId         String
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?           @db.Text
+  fileName          String
+  fileUrl           String            // Legacy URL or public domain URL
+  r2StorageKey      String?           // Cloudflare R2 storage key
+  fileSize          Int               // in bytes
+  mimeType          String?
+
+  // Access control - which rewards/addons grant access
+  accessType        DigitalAccessType @default(ALL_BACKERS)
+  rewardIds         String[]          // Reward IDs that grant access
+  addonIds          String[]          // Addon IDs that grant access
+
+  // Distribution tracking
+  totalEligible     Int               @default(0)
+  distributedCount  Int               @default(0)
+  downloadCount     Int               @default(0)
+
+  // PDF Cover Extraction (for Digital Library)
+  coverImageUrl     String?           // Generated PDF first page thumbnail
+  coverExtractedAt  DateTime?         // When cover was generated
+  coverExtractionFailed Boolean       @default(false)  // If extraction failed
+  totalPages        Int?              // Total page count in PDF
+
+  // Uploaded by
+  uploadedById      String?
+  uploadedBy        User?             @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  distributions     DigitalDistribution[]
+  distributionRules DistributionRule[]
+
+  @@index([projectId])
+  @@index([uploadedById])
+}
+
+enum DigitalAccessType {
+  ALL_BACKERS       // All backers can access
+  SPECIFIC_REWARDS  // Only specific reward tiers
+  SPECIFIC_ADDONS   // Only specific addons
+  REWARD_AND_ADDON  // Specific rewards or addons
+}
+
+// Distribution rules and tracking
+model DigitalDistribution {
+  id                String            @id @default(cuid())
+  digitalFileId     String
+  pledgeId          String
+
+  // Distribution status
+  distributedAt     DateTime?
+  downloadedAt      DateTime?
+  downloadCount     Int               @default(0)
+
+  // Reading Progress (for Digital Library)
+  readingProgress   Json?             // { currentPage: number, totalPages: number, lastPosition: string }
+  lastReadAt        DateTime?
+  readingStatus     ReadingStatus     @default(UNREAD)
+
+  digitalFile       DigitalFile       @relation(fields: [digitalFileId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt @default(now())
+
+  @@unique([digitalFileId, pledgeId])
+  @@index([digitalFileId])
+  @@index([pledgeId])
+}
+
+enum ReadingStatus {
+  UNREAD
+  IN_PROGRESS
+  COMPLETED
+}
+
+// Distribution rules - defines which file gets distributed when conditions are met
+model DistributionRule {
+  id                String                      @id @default(cuid())
+  projectId         String
+  digitalFileId     String
+  digitalFile       DigitalFile                 @relation(fields: [digitalFileId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?
+
+  // Trigger conditions
+  triggerType       DistributionTriggerType     @default(ALL_BACKERS)
+  triggerRewardId   String?                     // If triggering on a specific reward
+  triggerAddonId    String?                     // If triggering on a specific addon
+
+  // Requirements
+  requiresPayment   Boolean                     @default(false)  // Must payment be completed?
+
+  // Status tracking
+  status            DistributionRuleStatus      @default(NOT_STARTED)
+  distributedCount  Int                         @default(0)
+  totalEligible     Int                         @default(0)
+
+  // Timestamps
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  @@index([projectId])
+  @@index([digitalFileId])
+  @@index([status])
+}
+
+enum DistributionTriggerType {
+  ALL_BACKERS       // All backers get the file
+  SPECIFIC_REWARD   // Only backers of a specific reward tier
+  SPECIFIC_ADDON    // Only backers who purchased a specific addon
+}
+
+enum DistributionRuleStatus {
+  NOT_STARTED
+  STARTED
+  COMPLETED
+}
+
+// ============================================
+// FULFILLMENT INTEGRATIONS
+// ============================================
+
+model FulfillmentIntegration {
+  id              String                    @id @default(cuid())
+  projectId       String
+  project         Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Integration type
+  provider        FulfillmentProvider
+
+  // Credentials (encrypted)
+  credentials     Json                      // { apiKey, apiSecret, shopDomain, accessToken, etc. }
+
+  // Connection status
+  status          FulfillmentIntegrationStatus @default(PENDING)
+  lastSyncAt      DateTime?
+  lastSyncError   String?
+
+  // Stats
+  ordersPushed    Int                       @default(0)
+  ordersShipped   Int                       @default(0)
+  ordersFailed    Int                       @default(0)
+
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+  @@index([provider])
+  @@index([status])
+}
+
+enum FulfillmentProvider {
+  SHOPIFY
+  SHIPSTATION
+  SHIPPO
+  EASYPOST
+  STAMPS_COM
+  MANUAL
+}
+
+enum FulfillmentIntegrationStatus {
+  PENDING
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+
+// Shopify fulfillment order tracking
+model ShopifyFulfillmentOrder {
+  id                  String    @id @default(cuid())
+  projectId           String
+  pledgeId            String
+
+  // Shopify IDs
+  shopifyOrderId      String    // Shopify order ID
+  shopifyFulfillmentId String?  // Shopify fulfillment ID (once fulfilled)
+
+  // Order details
+  orderNumber         String?
+  status              ShopifyOrderStatus @default(PENDING)
+
+  // Tracking
+  trackingNumber      String?
+  trackingCompany     String?
+  trackingUrl         String?
+
+  // Timestamps
+  pushedAt            DateTime?
+  fulfilledAt         DateTime?
+  shippedAt           DateTime?
+  deliveredAt         DateTime?
+
+  // Error handling
+  lastError           String?   @db.Text
+  errorCount          Int       @default(0)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([projectId, pledgeId])
+  @@unique([shopifyOrderId])
+  @@index([projectId])
+  @@index([pledgeId])
+  @@index([status])
+}
+
+enum ShopifyOrderStatus {
+  PENDING           // Not yet pushed to Shopify
+  PUSHED            // Order created in Shopify
+  PROCESSING        // Being processed by Shopify
+  FULFILLED         // Fulfilled but not shipped
+  SHIPPED           // Shipped with tracking
+  DELIVERED         // Delivered to customer
+  FAILED            // Push failed
+  CANCELLED         // Order cancelled
+}
+
+// SKU mapping for fulfillment (Shopify, manual, or other systems)
+model ShopifySkuMapping {
+  id                String    @id @default(cuid())
+  projectId         String
+
+  // Source item (reward or addon)
+  sourceType        SkuMappingSourceType
+  sourceId          String    // Reward ID or ProjectItem ID
+  sourceName        String    // Cached name for display
+
+  // SKU mapping (can have multiple SKUs per source item)
+  shopifySku        String
+  shopifyProductId  String?   // Optional Shopify product ID
+  shopifyVariantId  String?   // Optional Shopify variant ID
+  shopifyProductName String?  // Cached product name from Shopify
+
+  // Quantity mapping (e.g., 1 reward = 2 of this SKU)
+  quantity          Int       @default(1)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Allow multiple SKUs per source item, but prevent duplicate SKU mappings
+  @@unique([projectId, sourceType, sourceId, shopifySku])
+  @@index([projectId])
+  @@index([shopifySku])
+  @@index([projectId, sourceType, sourceId])
+}
+
+enum SkuMappingSourceType {
+  REWARD            // Reward tier
+  ADDON             // Add-on item
+  PROJECT_ITEM      // Individual project item
+  MODIFIER_COMBO    // Base reward + modifier addon combination
+}
+
+// Track items that are skipped from fulfillment (not mapped to SKU)
+model FulfillmentSkippedItem {
+  id                String    @id @default(cuid())
+  projectId         String
+  sourceType        SkuMappingSourceType
+  sourceId          String    // Reward ID, Addon ID, or ProjectItem ID
+  sourceName        String    // Cached name for display
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([projectId, sourceType, sourceId])
+  @@index([projectId])
+}

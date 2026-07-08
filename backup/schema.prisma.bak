@@ -1,0 +1,3775 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  name              String?
+  image             String?
+  heroImage         String?   // Profile banner/hero image
+  password          String?
+  bio               String?   @db.Text
+  location          String?
+  timezone          String?
+  vanityUrl         String?   @unique
+  websites          String[]
+  socialLinks       Json?     // { twitter: "", instagram: "", youtube: "", etc }
+  showNameOnly      Boolean   @default(false)
+  role              UserRole  @default(USER)
+  retailerAccess    Boolean   @default(false)
+
+  // Creator email address (e.g., "mike" for mike@indiecrowdfund.com)
+  creatorEmailHandle String?  @unique
+  stripeCustomerId  String?   @unique  // Stripe Customer ID for payment methods
+
+  // Shopify Integration (per-creator, not per-project)
+  shopifyApiKey     String?   // Shopify app Client ID
+  shopifyApiSecret  String?   // Shopify app Client Secret
+  shopifyAccessToken String?  // OAuth access token for connected store
+  shopifyShopDomain String?   // Connected store domain (e.g., "my-store.myshopify.com")
+
+  // ShipStation Integration (per-creator, not per-project)
+  shipstationApiKey    String?   // ShipStation API Key
+  shipstationApiSecret String?   // ShipStation API Secret
+
+  // Shippo Integration (per-creator, not per-project)
+  shippoApiToken       String?   // Shippo API Token (single token auth)
+
+  // EasyPost Integration (per-creator, not per-project)
+  easypostApiKey       String?   // EasyPost API Key
+
+  // Stamps.com Integration (per-creator, not per-project)
+  stampsIntegrationId  String?   // Stamps.com Integration ID
+  stampsUsername       String?   // Stamps.com Username
+  stampsPassword       String?   // Stamps.com Password (encrypted)
+
+  // Email preferences
+  emailUnsubscribedAt DateTime?  // Global email unsubscribe timestamp
+
+  // ID Verification
+  idVerified        Boolean   @default(false)
+  idVerifiedAt      DateTime?
+  idVerificationId  String?   // Shufti reference ID
+  dateOfBirth       DateTime?
+
+  // Chat Moderation
+  chatBannedAt      DateTime?   // When user was banned from chat
+  chatBannedById    String?     // Admin who banned the user
+  chatBanReason     String?     // Reason for the ban
+
+  // Auth
+  accounts          Account[]
+  sessions          Session[]
+
+  // Relations
+  createdProjects   Project[] @relation("ProjectCreator")
+  collaborations    ProjectCollaborator[]
+  pledges           Pledge[]
+  sentMessages      Message[] @relation("MessageSender")
+  receivedMessages  Message[] @relation("MessageRecipient")
+  chatMessages      ChatMessage[] @relation("ChatMessages")
+  chatPresence      ChatPresence?
+  comments          Comment[]
+  behaviors         UserBehavior[]
+  preferences       UserPreference?
+  interestProfile   UserInterestProfile?
+  emailLogs         EmailLog[]
+  stripeConfig      StripeConfig?
+  divinityCoinBankAccount DivinityCoinBankAccount?
+  divinityCoinBalance Decimal @default(0) @db.Decimal(10, 2)
+  divinityCoinRedemptions DivinityCoinRedemption[]
+  divinityCoinTransactions DivinityCoinTransaction[]
+  achievements      UserAchievement[]
+  redemptionBonusLedgers RedemptionBonusLedger[]
+  redemptionBonusApplications RedemptionBonusApplication[]
+  idVerifications   IDVerification[]
+  notifications     Notification[]
+  bugReports        BugReport[]
+  mediaFiles        MediaFile[]
+  apiKeys           ApiKey[]
+  backerNotes       BackerNote[]
+  emailCampaignClicks EmailCampaignClick[]
+  uploadedDigitalFiles DigitalFile[]
+  // Backer dashboard enhancements
+  savedAddresses    UserAddress[]
+  projectCollections ProjectCollection[]
+  projectNotificationPrefs ProjectNotificationPreference[]
+  following         CreatorFollow[] @relation("Followers")
+  followers         CreatorFollow[] @relation("Following")
+
+  // Creator email list (per-user subscriber list)
+  emailListSubscribers EmailListSubscriber[] @relation("CreatorEmailList")
+
+  // Marketplace relations
+  marketplaceBooks     MarketplaceBook[]     @relation("MarketplaceCreator")
+  marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")
+  marketplaceReviews   MarketplaceBookReview[] @relation("MarketplaceReviewer")
+  marketplaceDiscountCodes MarketplaceDiscountCode[] @relation("MarketplaceDiscountCreator")
+  marketplaceCodeRedemptions MarketplaceCodeRedemption[] @relation("MarketplaceCodeCustomer")
+  changelogEntries     ChangelogEntry[]        @relation("ChangelogAuthor")
+  companyProfile       CompanyProfile?
+
+  // Account locking (for fraud/abuse)
+  lockedAt          DateTime?  // When account was locked
+  lockedReason      String?    @db.Text  // Admin notes on why account was locked
+  lockedById        String?    // Admin who locked the account
+  lastKnownIP       String?    // Last known IP address for ban enforcement
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?  // Soft delete timestamp
+
+  @@index([email])
+  @@index([vanityUrl])
+  @@index([creatorEmailHandle])
+  @@index([deletedAt])  // For soft delete filtering
+  @@index([lockedAt])   // For locked account filtering
+}
+
+// IP Blocklist for banned users
+model IPBlocklist {
+  id          String    @id @default(cuid())
+  ipAddress   String
+  userId      String?   // User who triggered the ban (if any)
+  reason      String?   @db.Text
+  bannedById  String?   // Admin who added the block
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime? // Optional expiration for temporary bans
+
+  @@unique([ipAddress])
+  @@index([ipAddress])
+  @@index([expiresAt])
+}
+
+enum UserRole {
+  USER
+  CREATOR
+  COOL_KIDS
+  ADMIN
+  SUPER_ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
+}
+
+// ============================================
+// PROJECT MANAGEMENT
+// ============================================
+
+model Project {
+  id                    String        @id @default(cuid())
+  creatorId             String
+
+  // Basics
+  title                 String
+  subtitle              String?
+  slug                  String        @unique
+  category              String
+  subcategory           String?
+  secondaryCategory     String?
+  secondarySubcategory  String?
+  location              String?
+  imageUrl              String?
+  videoUrl              String?
+  goalAmount            Decimal       @db.Decimal(10, 2)
+  currency              String        @default("USD")
+
+  // Duration
+  durationType          DurationType
+  durationDays          Int?
+  endDate               DateTime?
+  launchDate            DateTime?
+
+  // Story
+  description           String        @db.Text
+  risks                 String        @db.Text
+  usesAI                Boolean       @default(false)
+  faqs                  Json?
+
+  // Payment
+  contactEmail          String
+  projectType           ProjectType
+  paymentProcessor      PaymentProcessor @default(STRIPE)
+  hasAdultContent       Boolean       @default(false)
+  hasRiskyContent       Boolean       @default(false)
+  promoContentSfw       Boolean       @default(true)  // Agrees promotional materials (video, image, title) are SFW
+  bankAccountId         String?
+
+  // Stripe
+  stripeAccountId       String?
+
+  // Promotion
+  prelaunchActive       Boolean         @default(false)
+  prelaunchStatus       PrelaunchStatus @default(DRAFT)
+  prelaunchDescription  String?         @db.Text
+  customReferralTags    String[]
+  googleAnalyticsId     String?
+  googleAnalyticsSecret String?
+  metaPixelId           String?
+  metaConversionsToken  String?
+
+  // Retailer Settings
+  allowRetailerPledges  Boolean       @default(false)
+  retailerDiscount      Float         @default(50)
+  retailerMinQuantity   Int           @default(1)
+  retailerMaxQuantity   Int?
+
+  // Status
+  status                ProjectStatus @default(DRAFT)
+  currentAmount         Decimal       @default(0) @db.Decimal(10, 2)
+  backerCount           Int           @default(0)
+  followerCount         Int           @default(0)
+  isStaffPick           Boolean       @default(false)
+
+  // AI-generated tags for matching
+  tags                  String[]
+
+  // Relations
+  creator               User          @relation("ProjectCreator", fields: [creatorId], references: [id])
+  projectItems          ProjectItem[]
+  rewards               Reward[]
+  pledges               Pledge[]
+  updates               Update[]
+  collaborators         ProjectCollaborator[]
+  messages              Message[]
+  analytics             AnalyticsEvent[]
+  comments              Comment[]
+  payouts               Payout[]
+  behaviors             UserBehavior[]
+  emailLogs             EmailLog[]
+  projectSimilarities   ProjectSimilarity[] @relation("ProjectSimilarities")
+  similarProjects       ProjectSimilarity[] @relation("SimilarProjects")
+  followers             ProjectFollower[]
+  retailerPledges       RetailerPledge[]
+  divinityCoinSettlements DivinityCoinSettlement[]
+  digitalFiles          DigitalFile[]
+  collectionItems       ProjectCollectionItem[]
+  notificationPrefs     ProjectNotificationPreference[]
+  fulfillmentIntegrations FulfillmentIntegration[]
+  chargebackCard        CreatorChargebackCard?
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  launchedAt            DateTime?
+  fundedAt              DateTime?
+  deletedAt             DateTime?     // Soft delete timestamp
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([category])
+  @@index([slug])
+  @@index([deletedAt])  // For soft delete filtering
+  @@index([status, deletedAt])  // Common query pattern
+}
+
+model ProjectFollower {
+  id          String   @id @default(cuid())
+  projectId   String
+  userId      String?
+  email       String?
+  isPrelaunch Boolean  @default(false)
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@unique([projectId, email])
+  @@index([projectId])
+}
+
+enum DurationType {
+  FIXED_DAYS
+  END_DATE
+}
+
+enum ProjectType {
+  INDIVIDUAL
+  BUSINESS
+  NONPROFIT
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  LIVE
+  PAUSED
+  FUNDED
+  FAILED
+  CANCELLED
+}
+
+enum PrelaunchStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum PaymentProcessor {
+  STRIPE
+  DIVINITYCOIN
+}
+
+// ============================================
+// PROJECT ITEMS (independent of rewards)
+// ============================================
+
+model ProjectItem {
+  id          String  @id @default(cuid())
+  projectId   String
+  title       String
+  description String? @db.Text
+  imageUrl    String?
+  endedAt     DateTime? // If set, item is no longer available for new pledges
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rewardItems RewardItem[]
+
+  @@index([projectId])
+}
+
+// ============================================
+// REWARDS & ADD-ONS
+// ============================================
+
+model Reward {
+  id                String       @id @default(cuid())
+  projectId         String
+  type              RewardType   @default(TIER)
+
+  title             String
+  description       String       @db.Text
+  amount            Decimal      @db.Decimal(10, 2)
+  imageUrl          String?
+
+  // Delivery
+  estimatedDelivery DateTime?
+  shippingType      ShippingType
+  shippingCountries String[]
+  shippingCost      Json         @default("{}")  // Per-country rates: { "US": 5, "CA": 8 }
+
+  // Availability
+  quantityAvailable Int?
+  quantityClaimed   Int          @default(0)
+  visibility        Visibility   @default(PUBLIC)
+  secretToken       String?      @unique  // For secret rewards - only accessible via this token
+  availableFrom     DateTime?
+  availableUntil    DateTime?
+
+  // Status - for ending rewards that have backers
+  isEnded           Boolean      @default(false)
+  endedAt           DateTime?
+
+  // Modifier addon settings (for ADDON type rewards that modify base rewards)
+  isModifier        Boolean      @default(false)  // True if this addon modifies a base reward instead of being standalone
+  modifiesRewardIds String[]                      // Which reward IDs this can modify (empty = all tiers in project)
+
+  // Survey integration - whether this addon appears in the IndieKit survey
+  showInSurvey      Boolean      @default(false)
+
+  // Tracking if copied
+  copiedFromId      String?
+
+  // Relations
+  project           Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pledges           Pledge[]
+  items             RewardItem[]
+  copiedFrom        Reward?      @relation("RewardCopies", fields: [copiedFromId], references: [id])
+  copies            Reward[]     @relation("RewardCopies")
+  selectedAddons    PledgeAddon[]
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([projectId, type])
+}
+
+enum RewardType {
+  TIER
+  ADDON
+}
+
+enum ShippingType {
+  WORLDWIDE
+  SELECTED_COUNTRIES
+  NO_SHIPPING
+}
+
+enum Visibility {
+  PUBLIC
+  SECRET
+}
+
+model RewardItem {
+  id            String  @id @default(cuid())
+  rewardId      String
+  projectItemId String?  // Optional reference to project-level item
+  title         String
+  description   String? @db.Text
+  imageUrl      String?
+
+  reward        Reward       @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  projectItem   ProjectItem? @relation(fields: [projectItemId], references: [id])
+
+  @@index([rewardId])
+  @@index([projectItemId])
+}
+
+// ============================================
+// PLEDGES & PAYMENTS
+// ============================================
+
+model Pledge {
+  id                    String       @id @default(cuid())
+  userId                String
+  projectId             String
+  rewardId              String?      // Optional - null for "pledge without reward"
+
+  // Backer number - order in which they backed this project (assigned on successful payment)
+  backerNumber          Int?
+
+  // Amounts
+  amount                Decimal      @db.Decimal(10, 2)
+  rewardAmount          Decimal      @default(0) @db.Decimal(10, 2)
+  addonsAmount          Decimal      @default(0) @db.Decimal(10, 2)
+  shippingAmount        Decimal      @default(0) @db.Decimal(10, 2)
+
+  // Payment
+  status                PledgeStatus
+  paymentProcessor      PaymentProcessor
+
+  // Stripe fields
+  stripePaymentIntentId String?      @unique
+  stripeSetupIntentId   String?      @unique
+  stripePaymentMethodId String?
+  stripeCustomerId      String?
+
+  // DivinityCoin fields
+  divinityCoinPaymentId String?      @unique
+
+  // Payment retry tracking
+  retryCount            Int          @default(0)
+  nextRetryAt           DateTime?
+  lastFailureReason     String?
+  chargedImmediately    Boolean      @default(false)  // True if campaign was already funded when pledge was made
+
+  // Survey
+  surveyCompleted       Boolean      @default(false)
+  shippingAddress       Json?
+  surveyResponses       Json?
+
+  // Fulfillment
+  fulfillmentStatus     FulfillmentStatus @default(NOT_STARTED)
+
+  // Modifier addon assignments
+  needsModifierAssignment Boolean     @default(false)  // True if backer has ambiguous modifier addon assignments
+
+  // Email tracking
+  confirmationEmailSent Boolean      @default(false)
+  metadata              Json?
+
+  // Conversion tracking - which email campaign led to this pledge
+  sourceCampaignId      String?
+  sourceCampaign        EmailCampaign? @relation("CampaignConversions", fields: [sourceCampaignId], references: [id])
+
+  // Relations
+  user                  User         @relation(fields: [userId], references: [id])
+  project               Project      @relation(fields: [projectId], references: [id])
+  reward                Reward?      @relation(fields: [rewardId], references: [id])
+  addons                PledgeAddon[]
+  modifierAssignments   PledgeModifierAssignment[]
+  divinityCoinTransactions DivinityCoinTransaction[]
+  emailLogs             EmailLog[]
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  deletedAt             DateTime?    // Soft delete timestamp
+
+  @@index([projectId, status])
+  @@index([userId])
+  @@index([rewardId])
+  @@index([status, nextRetryAt])  // For retry job queries
+  @@index([sourceCampaignId])
+  @@index([deletedAt])  // For soft delete filtering
+  @@index([needsModifierAssignment])  // For finding backers needing modifier assignment
+}
+
+model PledgeAddon {
+  id        String @id @default(cuid())
+  pledgeId  String
+  addonId   String
+  quantity  Int    @default(1)
+  amount    Decimal @db.Decimal(10, 2)
+
+  pledge    Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  addon     Reward @relation(fields: [addonId], references: [id])
+
+  @@unique([pledgeId, addonId])
+  @@index([pledgeId])
+}
+
+// Tracks which modifier addon is assigned to which base reward for each pledge
+// Example: Backer has Cover A, Cover B + Upgrade to Metal, Upgrade to Foil
+// This table stores: Cover A -> Metal, Cover B -> Foil
+model PledgeModifierAssignment {
+  id              String    @id @default(cuid())
+  pledgeId        String
+  rewardId        String    // The base reward being modified (e.g., Cover A)
+  modifierAddonId String    // The modifier addon being applied (e.g., Upgrade to Metal)
+
+  // Whether this was auto-assigned (simple case) or manually assigned
+  isAutoAssigned  Boolean   @default(false)
+  assignedBy      String?   // User ID if manually assigned by creator
+
+  pledge          Pledge    @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([pledgeId, modifierAddonId])  // Each modifier can only be assigned once per pledge
+  @@index([pledgeId])
+  @@index([rewardId])
+}
+
+// Maps reward + modifier addon combinations to specific SKUs
+// Example: Cover A + Upgrade to Metal = SKU-COVER-A-METAL
+model ModifierSkuMapping {
+  id                 String    @id @default(cuid())
+  projectId          String
+  baseRewardId       String    // The base reward (e.g., Cover A tier)
+  modifierAddonId    String    // The modifier addon (e.g., Upgrade to Metal)
+
+  // The resulting SKU when this combination is fulfilled
+  shopifySku         String
+  shopifyProductId   String?
+  shopifyVariantId   String?
+  shopifyProductName String?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([projectId, baseRewardId, modifierAddonId])
+  @@index([projectId])
+}
+
+enum PledgeStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+  CHARGEBACK
+}
+
+enum FulfillmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SHIPPED
+  DELIVERED
+}
+
+// ============================================
+// PAYOUTS
+// ============================================
+
+model Payout {
+  id                String       @id @default(cuid())
+  projectId         String
+  amount            Decimal      @db.Decimal(10, 2)
+  grossAmount       Decimal      @db.Decimal(10, 2)
+  processorFees     Decimal      @db.Decimal(10, 2)
+  platformFees      Decimal      @db.Decimal(10, 2)
+  type              PayoutType
+  status            PayoutStatus
+  payoutId          String?      @unique
+  bankAccountLast4  String?
+
+  project           Project      @relation(fields: [projectId], references: [id])
+
+  sentAt            DateTime?
+  createdAt         DateTime     @default(now())
+  deletedAt         DateTime?    // Soft delete timestamp
+
+  @@index([projectId])
+  @@index([deletedAt])  // For soft delete filtering
+}
+
+enum PayoutType {
+  CAMPAIGN
+  LATE_PLEDGE
+  PLEDGE_MANAGER
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ============================================
+// COLLABORATORS
+// ============================================
+
+model ProjectCollaborator {
+  id                        String             @id @default(cuid())
+  projectId                 String
+  userId                    String?            // Optional - linked when user accepts invite
+  email                     String             // Required - used to identify the collaborator
+  title                     String?
+
+  // Permissions
+  canEditProject            Boolean            @default(false)
+  canManageCommunity        Boolean            @default(false)
+  canCoordinateFulfillment  Boolean            @default(false)
+  canConfigurePledgeManager Boolean            @default(false)
+
+  status                    CollaboratorStatus @default(PENDING)
+
+  project                   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user                      User?              @relation(fields: [userId], references: [id])
+
+  invitedAt                 DateTime           @default(now())
+  acceptedAt                DateTime?
+
+  @@unique([projectId, email])
+  @@index([projectId])
+  @@index([userId])
+  @@index([email])
+}
+
+enum CollaboratorStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// ============================================
+// UPDATES
+// ============================================
+
+model Update {
+  id          String           @id @default(cuid())
+  projectId   String
+  title       String
+  content     String           @db.Text
+  visibility  UpdateVisibility @default(PUBLIC)
+  status      UpdateStatus     @default(DRAFT)
+
+  likes       Int              @default(0)
+  commentsCount Int            @default(0)
+
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+
+  publishedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([projectId, status])
+}
+
+enum UpdateVisibility {
+  PUBLIC
+  BACKERS_ONLY
+}
+
+enum UpdateStatus {
+  DRAFT
+  PUBLISHED
+}
+
+// ============================================
+// COMMENTS
+// ============================================
+
+model Comment {
+  id          String   @id @default(cuid())
+  projectId   String?
+  updateId    String?
+  userId      String
+  content     String   @db.Text
+  parentId    String?  // For creator replies
+
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  update      Update?  @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+  parent      Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([updateId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+// ============================================
+// MESSAGES
+// ============================================
+
+model Message {
+  id              String   @id @default(cuid())
+  projectId       String?  // Optional - null for creator inbox emails from external senders
+  senderId        String
+  recipientId     String
+  subject         String?
+  content         String   @db.Text
+  read            Boolean  @default(false)
+  isSpam          Boolean  @default(false)
+
+  // Optional project relation - creator inbox emails don't have a project
+  project         Project?  @relation(fields: [projectId], references: [id])
+  sender          User     @relation("MessageSender", fields: [senderId], references: [id])
+  recipient       User     @relation("MessageRecipient", fields: [recipientId], references: [id])
+
+  createdAt       DateTime @default(now())
+  readAt          DateTime?
+
+  @@index([projectId, recipientId])
+  @@index([senderId])
+  @@index([recipientId])
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+model AnalyticsEvent {
+  id          String    @id @default(cuid())
+  projectId   String
+  eventType   EventType
+
+  // Attribution
+  referrer    String?
+  channel     String?
+  customTag   String?
+
+  // Data
+  amount      Decimal?  @db.Decimal(10, 2)
+  userId      String?
+  metadata    Json?
+
+  project     Project   @relation(fields: [projectId], references: [id])
+
+  timestamp   DateTime  @default(now())
+
+  @@index([projectId, eventType, timestamp])
+  @@index([projectId, referrer])
+}
+
+enum EventType {
+  PAGE_VIEW
+  PROJECT_FOLLOW
+  VIDEO_PLAY
+  VIDEO_COMPLETE
+  PLEDGE_STARTED
+  PLEDGE_COMPLETED
+  PLEDGE_FAILED
+  REWARD_SELECTED
+  ADDON_SELECTED
+  SHARE
+}
+
+// ============================================
+// PAYMENT PROCESSOR CONFIGURATION
+// ============================================
+
+model StripeConfig {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  stripeAccountId String   @unique
+  isOnboarded     Boolean  @default(false)
+  isActive        Boolean  @default(true)
+
+  user            User     @relation(fields: [userId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Creator chargeback protection card (AES-256 encrypted, per-project)
+model CreatorChargebackCard {
+  id                    String   @id @default(cuid())
+  projectId             String   @unique
+
+  // Encrypted card details (AES-256 encrypted)
+  cardNumberEncrypted   String   @db.Text
+  expMonthEncrypted     String   @db.Text
+  expYearEncrypted      String   @db.Text
+  cvcEncrypted          String   @db.Text
+
+  // Encrypted billing address
+  billingNameEncrypted  String   @db.Text
+  billingLine1Encrypted String   @db.Text
+  billingLine2Encrypted String?  @db.Text
+  billingCityEncrypted  String   @db.Text
+  billingStateEncrypted String   @db.Text
+  billingZipEncrypted   String   @db.Text
+  billingCountryEncrypted String @db.Text
+
+  // Non-sensitive display data
+  cardLastFour          String   // e.g., "4242"
+  cardBrand             String?  // e.g., "Visa", "Mastercard"
+  expMonth              Int
+  expYear               Int
+
+  project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+// DivinityCoin bank account for creator payouts
+model DivinityCoinBankAccount {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+
+  // Encrypted bank details (AES-256 encrypted)
+  bankNameEncrypted     String   @db.Text
+  accountHolderEncrypted String  @db.Text
+  accountNumberEncrypted String  @db.Text
+  routingNumberEncrypted String  @db.Text
+
+  // Non-sensitive display data
+  bankNameDisplay       String?  // e.g., "Chase Bank"
+  accountLastFour       String?  // e.g., "4567"
+  accountType           String   @default("checking") // checking or savings
+
+  // Verification status
+  isVerified            Boolean  @default(false)
+  verifiedAt            DateTime?
+  verificationMethod    String?  // e.g., "micro_deposits", "instant"
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settlements           DivinityCoinSettlement[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// DivinityCoin settlement tracking for admin payouts
+model DivinityCoinSettlement {
+  id                    String   @id @default(cuid())
+  bankAccountId         String
+
+  // Settlement details
+  amount                Decimal  @db.Decimal(10, 2) // Amount in USD
+  currency              String   @default("USD")
+  status                DivinityCoinSettlementStatus @default(PENDING)
+
+  // Project reference (optional - for project-specific settlements)
+  projectId             String?
+  projectName           String?  // Denormalized for history
+
+  // DivinityCoin reference
+  divinitySettlementId  String?  @unique // External settlement ID from DivinityCoin
+  divinityBatchId       String?  // Batch ID if part of a batch settlement
+
+  // Processing details
+  initiatedAt           DateTime?
+  processedAt           DateTime?
+  completedAt           DateTime?
+  failedAt              DateTime?
+  failureReason         String?
+
+  // Admin notes
+  adminNotes            String?  @db.Text
+  processedBy           String?  // Admin user ID who processed it
+
+  bankAccount           DivinityCoinBankAccount @relation(fields: [bankAccountId], references: [id])
+  project               Project? @relation(fields: [projectId], references: [id])
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([bankAccountId])
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum DivinityCoinSettlementStatus {
+  PENDING     // Awaiting processing
+  INITIATED   // Wire transfer initiated
+  PROCESSING  // In progress
+  COMPLETED   // Successfully delivered
+  FAILED      // Failed to process
+  CANCELLED   // Cancelled by admin
+}
+
+// ============================================
+// RECOMMENDATION ENGINE & BEHAVIORAL TRACKING
+// ============================================
+
+model UserBehavior {
+  id          String            @id @default(cuid())
+  userId      String?
+  sessionId   String
+  eventType   BehaviorEventType
+
+  // Event data
+  projectId   String?
+  categoryId  String?
+  rewardId    String?
+  searchQuery String?
+
+  // Context
+  path        String
+  referrer    String?
+  userAgent   String?
+  ipAddress   String?
+  country     String?
+
+  // Engagement metrics
+  timeSpent   Int?
+  scrollDepth Float?
+
+  metadata    Json?
+
+  timestamp   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
+
+  @@index([userId, eventType, timestamp])
+  @@index([sessionId, timestamp])
+  @@index([projectId, eventType])
+  @@index([categoryId, timestamp])
+}
+
+enum BehaviorEventType {
+  PAGE_VIEW
+  PAGE_EXIT
+  PROJECT_VIEW
+  PROJECT_CLICK
+  REWARD_CLICK
+  VIDEO_PLAY
+  VIDEO_COMPLETE
+  SEARCH
+  FILTER_APPLY
+  PROJECT_SAVE
+  PROJECT_SHARE
+  COMMENT_POST
+  PLEDGE_START
+  PLEDGE_COMPLETE
+  SCROLL_DEPTH
+  HOVER
+  CREATOR_VIEW
+}
+
+// User interest profile for AI-powered email matching
+model UserInterestProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Category interests (weighted by engagement)
+  categoryInterests Json     // { "TECHNOLOGY": 0.85, "GAMES": 0.72, ... }
+
+  // Tag interests from viewed/backed projects
+  tagInterests      Json     // { "indie": 0.9, "puzzle": 0.65, ... }
+
+  // Search-based interests
+  searchInterests   String[] // Keywords from search queries
+
+  // Engagement metrics
+  totalProjectsViewed    Int     @default(0)
+  totalProjectsBacked    Int     @default(0)
+  avgPledgeAmount        Float   @default(0)
+
+  // Preferred project attributes
+  preferredGoalRange     Json?   // { "min": 1000, "max": 50000 }
+  preferredDuration      Int?    // Preferred campaign duration in days
+
+  // Time preferences (for send time optimization)
+  activeHours            Int[]   // Hours when user is most active (0-23)
+  activeDays             Int[]   // Days when user is most active (0-6, 0=Sunday)
+
+  // Profile quality score (based on data available)
+  profileScore           Float   @default(0) // 0-100
+
+  // Last calculation timestamp
+  lastCalculatedAt       DateTime @default(now())
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([profileScore])
+  @@index([lastCalculatedAt])
+}
+
+model UserPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // Category preferences (weighted scores 0-1)
+  categoryScores  Json
+
+  // Preferred pledge ranges
+  minPledge       Float?
+  maxPledge       Float?
+  avgPledge       Float?
+
+  // Creator preferences
+  followedCreators String[]
+  backedCreators   String[]
+
+  // Content preferences
+  prefersVideo     Boolean  @default(true)
+  prefersLongForm  Boolean  @default(true)
+
+  // Geographic preferences
+  prefersLocal     Boolean  @default(false)
+  preferredCountries String[]
+
+  // Engagement level (0-100)
+  engagementScore  Int      @default(50)
+
+  // Email preferences
+  emailPreferences Json?
+
+  // Last calculated
+  lastUpdated      DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model ProjectSimilarity {
+  id               String   @id @default(cuid())
+  projectId        String
+  similarProjectId String
+  similarityScore  Float
+  reason           String
+
+  project          Project  @relation("ProjectSimilarities", fields: [projectId], references: [id])
+  similarProject   Project  @relation("SimilarProjects", fields: [similarProjectId], references: [id])
+
+  createdAt        DateTime @default(now())
+
+  @@unique([projectId, similarProjectId])
+  @@index([projectId, similarityScore])
+}
+
+model EmailLog {
+  id             String    @id @default(cuid())
+  userId         String?
+  projectId      String?
+  pledgeId       String?
+  type           EmailType
+  subject        String?
+  recipientEmail String    // Store recipient email in case user email changes
+  htmlContent    String?   @db.Text  // Store the full HTML content for viewing/downloading
+
+  sentAt         DateTime  @default(now())
+  openedAt       DateTime?
+  clickedAt      DateTime?
+
+  user           User?     @relation(fields: [userId], references: [id])
+  project        Project?  @relation(fields: [projectId], references: [id])
+  pledge         Pledge?   @relation(fields: [pledgeId], references: [id])
+
+  @@index([userId, type, sentAt])
+  @@index([projectId, type])
+  @@index([pledgeId])
+  @@index([recipientEmail])
+}
+
+enum EmailType {
+  WEEKLY_DISCOVERY
+  CREATOR_LAUNCH
+  CATEGORY_ALERT
+  ENDING_SOON
+  PROJECT_FUNDED
+  FUNDING_MILESTONE
+  UPDATE_NOTIFICATION
+  SURVEY_REMINDER
+  PLEDGE_CONFIRMATION
+  PLEDGE_MODIFICATION
+  PLEDGE_CANCELLATION
+  PLEDGE_REFUND
+  WELCOME
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+// ============================================
+// NEWSLETTER SUBSCRIBERS
+// ============================================
+
+model NewsletterSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  source       String?  // csv_import, website_signup, creator_import, etc.
+  tags         String[] // Tags for categorization (e.g., creator account names who uploaded)
+  isActive     Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+  unsubscribedAt DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+  @@index([isActive])
+  @@index([source])
+}
+
+// ============================================
+// BACKER SURVEYS
+// ============================================
+
+model Survey {
+  id                String           @id @default(cuid())
+  projectId         String           @unique
+
+  // Survey intro
+  introTitle        String?
+  introMessage      String?          @db.Text
+
+  // Status
+  status            SurveyStatus     @default(DRAFT)
+  sentAt            DateTime?
+  lockedAt          DateTime?
+
+  // Address settings
+  collectAddresses  Boolean          @default(true)
+  addressesLocked   Boolean          @default(false)
+
+  // Relations
+  itemQuestions     SurveyItemQuestion[]
+  backerQuestions   SurveyBackerQuestion[]
+  responses         SurveyResponse[]
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
+enum SurveyStatus {
+  DRAFT
+  SENT
+  LOCKED
+}
+
+// Item questions - for reward-specific variants (size, color, etc.)
+model SurveyItemQuestion {
+  id              String               @id @default(cuid())
+  surveyId        String
+  rewardId        String               // Which reward this applies to
+
+  // Item details
+  itemName        String               // e.g., "T-Shirt", "Art Print"
+  itemDescription String?              @db.Text
+  imageUrl        String?
+
+  // Question ordering
+  sortOrder       Int                  @default(0)
+
+  // Relations
+  survey          Survey               @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  variants        SurveyItemVariant[]
+  customQuestions SurveyItemCustomQuestion[]
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([surveyId])
+  @@index([rewardId])
+}
+
+// Variant options for items (e.g., Size: S/M/L/XL, Color: Red/Blue/Green)
+model SurveyItemVariant {
+  id              String             @id @default(cuid())
+  itemQuestionId  String
+
+  variantType     String             // e.g., "Size", "Color", "Style"
+  options         String[]           // e.g., ["S", "M", "L", "XL"]
+
+  // Auto-generated SKU prefix
+  skuPrefix       String?
+
+  sortOrder       Int                @default(0)
+
+  itemQuestion    SurveyItemQuestion @relation(fields: [itemQuestionId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime           @default(now())
+
+  @@index([itemQuestionId])
+}
+
+// Custom questions for specific items (beyond variants)
+model SurveyItemCustomQuestion {
+  id              String             @id @default(cuid())
+  itemQuestionId  String
+
+  question        String
+  description     String?
+  questionType    SurveyQuestionType @default(OPEN_TEXT)
+  options         String[]           // For multiple/single selection
+  isRequired      Boolean            @default(false)
+
+  sortOrder       Int                @default(0)
+
+  itemQuestion    SurveyItemQuestion @relation(fields: [itemQuestionId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime           @default(now())
+
+  @@index([itemQuestionId])
+}
+
+// Backer questions - general questions for all or specific backers
+model SurveyBackerQuestion {
+  id              String             @id @default(cuid())
+  surveyId        String
+
+  question        String
+  description     String?            @db.Text
+  questionType    SurveyQuestionType @default(OPEN_TEXT)
+  options         String[]           // For multiple/single selection
+
+  // Targeting
+  targetType      SurveyTargetType   @default(ALL_BACKERS)
+  targetRewardIds String[]           // If targeting specific rewards
+
+  isRequired      Boolean            @default(false)
+  sortOrder       Int                @default(0)
+
+  survey          Survey             @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([surveyId])
+}
+
+enum SurveyQuestionType {
+  OPEN_TEXT
+  SINGLE_SELECT
+  MULTIPLE_SELECT
+}
+
+enum SurveyTargetType {
+  ALL_BACKERS
+  SPECIFIC_REWARDS
+}
+
+model SurveyResponse {
+  id              String   @id @default(cuid())
+  surveyId        String
+  pledgeId        String   @unique
+
+  // Item responses (variant selections + custom question answers)
+  itemResponses   Json?    // { itemQuestionId: { variants: { variantType: selectedOption }, customAnswers: { questionId: answer } } }
+
+  // Backer question responses
+  backerResponses Json?    // { questionId: answer }
+
+  // Shipping address
+  shippingAddress Json?    // { name, line1, line2, city, state, postalCode, country, phone }
+  addressLocked   Boolean  @default(false)
+
+  // Status
+  isComplete      Boolean  @default(false)
+  completedAt     DateTime?
+
+  survey          Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([surveyId])
+  @@index([isComplete])
+}
+
+// ============================================
+// PROJECT VIEWS & REFERRAL TRACKING
+// ============================================
+
+model ProjectView {
+  id          String   @id @default(cuid())
+  projectId   String
+  date        DateTime @db.Date
+  views       Int      @default(0)
+  uniqueViews Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, date])
+  @@index([projectId, date])
+}
+
+model ReferralTracker {
+  id           String   @id @default(cuid())
+  projectId    String
+  referrer     String
+  referrerType String
+  tag          String?
+  date         DateTime @db.Date
+  visits       Int      @default(0)
+  pledges      Int      @default(0)
+  pledgeAmount Decimal  @default(0) @db.Decimal(10, 2)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([projectId, referrer, date])
+  @@index([projectId, date])
+  @@index([projectId, referrerType])
+}
+
+// ============================================
+// PROJECT REVIEW & APPROVAL
+// ============================================
+
+model ProjectReview {
+  id              String              @id @default(cuid())
+  projectId       String
+  reviewerId      String?
+  reviewerEmail   String?
+
+  // Review action
+  action          ReviewAction
+  previousStatus  ProjectStatus
+  newStatus       ProjectStatus
+
+  // Feedback
+  notes           String?             @db.Text
+  internalNotes   String?             @db.Text
+  rejectionReason ReviewRejectionReason?
+
+  // Auto-review flags
+  flagsRaised     String[]
+  aiConfidenceScore Float?
+
+  createdAt       DateTime            @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([reviewerId])
+}
+
+model ProjectTag {
+  id          String   @id @default(cuid())
+  projectId   String
+  tag         String
+  confidence  Float    @default(1.0)
+  source      TagSource @default(MANUAL)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, tag])
+  @@index([projectId])
+  @@index([tag])
+}
+
+enum ReviewAction {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REQUESTED_CHANGES
+  RESUBMITTED
+  FLAGGED
+  UNFLAGGED
+  DEACTIVATE
+  REACTIVATE
+  SEND_TO_REVIEW
+}
+
+enum ReviewRejectionReason {
+  INCOMPLETE_INFORMATION
+  POLICY_VIOLATION
+  PROHIBITED_CONTENT
+  INTELLECTUAL_PROPERTY
+  FRAUD_SUSPECTED
+  UNREALISTIC_GOALS
+  MISSING_REWARDS
+  IDENTITY_VERIFICATION
+  OTHER
+}
+
+enum TagSource {
+  MANUAL
+  AI_GENERATED
+  USER_SUGGESTED
+}
+
+// ============================================
+// RETAILER / LCS SYSTEM
+// ============================================
+
+model Retailer {
+  id                    String          @id @default(cuid())
+  userId                String?         @unique
+
+  // Business Information
+  businessName          String
+  businessType          RetailerType
+  contactName           String
+  email                 String          @unique
+  phone                 String
+
+  // Address
+  address               String
+  city                  String
+  state                 String
+  zipCode               String
+  country               String          @default("US")
+
+  // Tax Information
+  taxId                 String
+  taxIdType             TaxIdType       @default(EIN)
+  resaleCertificate     String?
+
+  // Business Details
+  yearsInBusiness       Int?
+  numberOfLocations     Int             @default(1)
+  annualRevenue         String?
+  websiteUrl            String?
+  socialMedia           Json?
+
+  // Verification
+  status                RetailerStatus  @default(PENDING)
+  verificationNotes     String?         @db.Text
+  verifiedAt            DateTime?
+  verifiedBy            String?
+
+  // Access
+  accessCode            String?         @unique
+  passwordHash          String?
+  lastLoginAt           DateTime?
+
+  // Relations
+  pledges               RetailerPledge[]
+  satisfactionSurveys   RetailerSatisfactionSurvey[]
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([accessCode])
+}
+
+model RetailerPledge {
+  id                    String              @id @default(cuid())
+  retailerId            String
+  projectId             String
+  rewardId              String
+
+  // Order Details
+  quantity              Int
+  unitPrice             Decimal             @db.Decimal(10, 2)
+  discountPercent       Float
+  totalAmount           Decimal             @db.Decimal(10, 2)
+  originalAmount        Decimal             @db.Decimal(10, 2)
+
+  // Payment
+  status                RetailerPledgeStatus @default(PENDING)
+  paymentMethod         String?
+  paymentReference      String?
+  invoiceNumber         String?             @unique
+
+  // Shipping
+  shippingAddress       Json?
+  shippingMethod        String?
+  shippingCost          Decimal             @default(0) @db.Decimal(10, 2)
+  trackingNumber        String?
+
+  // Fulfillment
+  fulfillmentStatus     FulfillmentStatus   @default(NOT_STARTED)
+  fulfillmentNotes      String?             @db.Text
+
+  // PO Information
+  purchaseOrderNumber   String?
+
+  // Relations
+  retailer              Retailer            @relation(fields: [retailerId], references: [id])
+  project               Project             @relation(fields: [projectId], references: [id])
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  paidAt                DateTime?
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
+
+  @@index([retailerId])
+  @@index([projectId])
+  @@index([status])
+}
+
+enum RetailerType {
+  COMIC_SHOP
+  BOOKSTORE
+  GAME_STORE
+  HOBBY_SHOP
+  ONLINE_RETAILER
+  DISTRIBUTOR
+  OTHER
+}
+
+enum TaxIdType {
+  EIN
+  SSN
+  VAT
+  OTHER
+}
+
+enum RetailerStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum RetailerPledgeStatus {
+  PENDING
+  INVOICED
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// Retailer Satisfaction Survey - sent after marking shipment received
+model RetailerSatisfactionSurvey {
+  id                    String    @id @default(cuid())
+  retailerId            String
+  retailerPledgeId      String    @unique
+
+  // Rating (1-5 stars)
+  rating                Int?
+
+  // Feedback
+  feedback              String?   @db.Text
+
+  // Categories
+  productQuality        Int?      // 1-5 rating
+  shippingSpeed         Int?      // 1-5 rating
+  packaging             Int?      // 1-5 rating
+  communication         Int?      // 1-5 rating
+  overallExperience     Int?      // 1-5 rating
+
+  // Would recommend?
+  wouldRecommend        Boolean?
+
+  // Status
+  sentAt                DateTime?
+  completedAt           DateTime?
+
+  // Relations
+  retailer              Retailer  @relation(fields: [retailerId], references: [id])
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([retailerId])
+  @@index([completedAt])
+  @@index([rating])
+}
+
+// ============================================
+// PLATFORM SETTINGS
+// ============================================
+
+model PlatformSettings {
+  id                    String   @id @default("default")
+
+  // General Settings
+  siteName              String   @default("IndieCrowdfund")
+  siteDescription       String?  @db.Text
+  supportEmail          String   @default("support@indiecrowdfund.com")
+  timezone              String   @default("America/New_York")
+  currency              String   @default("USD")
+  platformFee           Float    @default(5)
+  maintenanceMode       Boolean  @default(false)
+  logoUrl               String?
+  faviconUrl            String?
+
+  // API Keys (encrypted in production)
+  googlePlacesApiKey    String?
+
+  // Stripe Settings
+  stripeEnabled         Boolean  @default(true)
+  stripeSecretKey       String?  @db.Text
+  stripePublishableKey  String?
+  stripeWebhookSecret   String?
+  stripeConnectWebhookSecret String?  // Separate webhook secret for Stripe Connect events
+
+  // DivinityCoin Settings - Universal credit redemption payment solution
+  divinityCoinEnabled   Boolean  @default(false)
+  divinityCoinApiKey    String?
+  divinityCoinWebhookSecret String?
+  divinityCoinPartnerId String?
+  divinityCoinSettlementFrequency String @default("weekly")
+  divinityCoinStripePublishableKey String?  // DC's Stripe publishable key for rendering card form
+
+  // Payout Settings
+  autoPayouts           Boolean  @default(false)
+
+  // Email Settings
+  emailProvider         String   @default("sendgrid")
+  smtpHost              String?
+  smtpPort              Int      @default(587)
+  smtpUser              String?
+  smtpPassword          String?
+  smtpFromEmail         String?
+  smtpFromName          String?
+  smtpReplyToEmail      String?
+  sendgridApiKey        String?
+  sendgridWebhookVerificationKey String?  // ECDSA public key for verifying SendGrid event webhooks
+  mailgunApiKey         String?
+  mailgunDomain         String?
+  mailgunWebhookSigningKey String?  // Mailgun webhook signing key for verifying event webhooks
+  emailVerificationRequired Boolean @default(false)
+  welcomeEmailEnabled   Boolean  @default(true)
+  pledgeConfirmationEnabled Boolean @default(true)
+  projectUpdateNotifications Boolean @default(true)
+
+  // Email Queue Settings
+  emailQueueEnabled     Boolean  @default(true)  // Enable/disable email queue processing
+  emailQueuePausedAt    DateTime?  // Timestamp when queue was paused
+
+  // Social Settings
+  twitterHandle         String?
+  facebookUrl           String?
+  instagramHandle       String?
+  youtubeUrl            String?
+  discordUrl            String?
+
+  // Social OAuth Settings
+  facebookAppId         String?
+  facebookAppSecret     String?
+  facebookPageAccessToken String?
+  youtubeClientId       String?
+  youtubeClientSecret   String?
+  youtubeApiKey         String?
+  twitterApiKey         String?
+  twitterApiSecret      String?
+  twitterBearerToken    String?
+  twitterAccessToken    String?
+  twitterAccessSecret   String?
+
+  // Image Generation API Keys
+  dalleApiKey           String?
+  stabilityApiKey       String?
+
+  // Social Auto-Posting Settings
+  autoPostEnabled       Boolean  @default(false)
+  postApprovalRequired  Boolean  @default(true)
+
+  // AI Settings
+  aiProvider            String   @default("openai")
+  openaiApiKey          String?
+  anthropicApiKey       String?
+  aiAutoModeration      Boolean  @default(false)
+  aiAutoTagging         Boolean  @default(false)
+  aiContentGeneration   Boolean  @default(false)
+  aiFraudDetection      Boolean  @default(true)
+
+  // AI Marketing Settings
+  aiAutoTagConfidence   Int      @default(75)
+  aiMaxTags             Int      @default(5)
+  aiEmailPersonalization Boolean @default(false)
+  aiBehaviorTracking    Boolean  @default(false)
+  aiPredictiveAnalytics Boolean  @default(false)
+  aiSmartSegmentation   Boolean  @default(false)
+  aiAutoOptimization    Boolean  @default(false)
+  aiSendTimeOptimization Boolean @default(false)
+  aiContentOptimization Boolean  @default(false)
+  aiAbTesting           Boolean  @default(false)
+  aiEmailFrequencyCap   Int      @default(3)
+  aiDailyEmailLimit     Int      @default(1000)
+  aiQuietHoursStart     String   @default("22:00")
+  aiQuietHoursEnd       String   @default("08:00")
+  aiCronSchedules       String?  @db.Text // JSON string for cron job schedules
+
+  // Behavior Tracking Settings
+  aiTrackPageViews      Boolean  @default(true)
+  aiTrackScrollDepth    Boolean  @default(false)
+  aiTrackTimeOnPage     Boolean  @default(true)
+  aiTrackClicks         Boolean  @default(true)
+  aiTrackHovers         Boolean  @default(false)
+  aiTrackFormInteractions Boolean @default(false)
+  aiTrackVideoEngagement Boolean @default(false)
+  aiTrackRewardComparisons Boolean @default(false)
+  aiTrackAbandonedCarts Boolean  @default(true)
+  aiSessionRecording    Boolean  @default(false)
+  aiHeatmaps            Boolean  @default(false)
+  aiFunnelAnalysis      Boolean  @default(true)
+  aiRetentionDays       Int      @default(90)
+
+  // ID Verification Settings (Shufti Pro)
+  idVerificationEnabled Boolean  @default(false)
+  shuftiClientId        String?
+  shuftiSecretKey       String?
+  shuftiCallbackUrl     String?
+  shuftiRedirectUrl     String?
+  idVerificationMinAge  Int      @default(18)
+  idVerificationMode    String   @default("production") // "sandbox" or "production"
+
+  // Security Settings
+  twoFactorRequired     Boolean  @default(false)
+  sessionTimeout        Int      @default(7)
+  maxLoginAttempts      Int      @default(5)
+  passwordMinLength     Int      @default(8)
+  requireSpecialChars   Boolean  @default(true)
+  // Global Rate Limiting (for general API requests)
+  globalRateLimitEnabled    Boolean  @default(true)
+  globalRateLimitRequests   Int      @default(100)
+  globalRateLimitWindow     Int      @default(60)
+  // Login/Sensitive Endpoint Rate Limiting
+  loginRateLimitEnabled     Boolean  @default(true)
+  loginRateLimitRequests    Int      @default(5)
+  loginRateLimitWindow      Int      @default(300)
+  // Password Reset Rate Limiting
+  passwordResetRateLimitRequests  Int  @default(3)
+  passwordResetRateLimitWindow    Int  @default(900)
+  // Legacy fields (kept for backwards compatibility)
+  ipRateLimitEnabled    Boolean  @default(true)
+  ipRateLimitRequests   Int      @default(100)
+  ipRateLimitWindow     Int      @default(60)
+  csrfProtection        Boolean  @default(true)
+  contentSecurityPolicy Boolean  @default(true)
+
+  // reCAPTCHA Bot Protection
+  recaptchaEnabled      Boolean  @default(false)
+  recaptchaSiteKey      String?
+  recaptchaSecretKey    String?
+
+  // Theme Settings
+  primaryColor          String   @default("#0066FF")
+  secondaryColor        String   @default("#6366F1")
+  accentColor           String   @default("#F59E0B")
+  backgroundColor       String   @default("#FFFFFF")
+  textColor             String   @default("#1F2937")
+  fontFamily            String   @default("Inter")
+  borderRadius          String   @default("8")
+
+  // Cloudflare R2 Storage Settings
+  r2Enabled             Boolean  @default(false)
+  r2AccountId           String?
+  r2AccessKeyId         String?
+  r2SecretAccessKey     String?
+  r2BucketName          String?
+  r2PublicDomain        String?
+  r2Region              String   @default("auto")
+  maxFileSizeMB         Int      @default(50)
+  maxProjectStorageMB   Int      @default(200)
+  allowedFileTypes      String   @default("pdf,epub,zip,mp3")
+  digitalDownloadsEnabled Boolean @default(false)
+  signedUrlExpirationMinutes Int @default(60)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// ============================================
+// BOT PROTECTION & IP BLOCKING
+// ============================================
+
+model BlockedIP {
+  id            String   @id @default(cuid())
+  ipAddress     String   @unique
+  reason        String
+  violationCount Int     @default(1)
+  blockedAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  // Metadata for debugging
+  lastUserAgent String?
+  lastPath      String?
+  lastActionId  String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([ipAddress])
+  @@index([expiresAt])
+}
+
+model SuspiciousActivity {
+  id            String   @id @default(cuid())
+  ipAddress     String
+  reason        String
+  actionId      String?
+  path          String?
+  userAgent     String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([ipAddress])
+  @@index([createdAt])
+}
+
+// ============================================
+// MODERATION & REPORTS
+// ============================================
+
+model Report {
+  id            String       @id @default(cuid())
+  reporterId    String?
+  reporterEmail String?
+
+  // What is being reported
+  targetType    ReportTarget
+  targetId      String
+  projectId     String?
+  userId        String?
+
+  // Report details
+  reason        ReportReason
+  description   String       @db.Text
+  evidence      String[]
+
+  // Status
+  status        ReportStatus @default(PENDING)
+  priority      ReportPriority @default(MEDIUM)
+
+  // Resolution
+  resolvedBy    String?
+  resolvedAt    DateTime?
+  resolution    String?      @db.Text
+  actionTaken   ReportAction?
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status, priority])
+  @@index([targetType, targetId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+enum ReportTarget {
+  PROJECT
+  USER
+  COMMENT
+  MESSAGE
+  UPDATE
+  REWARD
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  FRAUD
+  COPYRIGHT
+  INAPPROPRIATE_CONTENT
+  MISLEADING
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+  ESCALATED
+}
+
+enum ReportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ReportAction {
+  WARNING_ISSUED
+  CONTENT_REMOVED
+  USER_SUSPENDED
+  USER_BANNED
+  PROJECT_SUSPENDED
+  PROJECT_REMOVED
+  NO_ACTION
+}
+
+// ============================================
+// MEDIA LIBRARY
+// ============================================
+
+model MediaFile {
+  id            String     @id @default(cuid())
+  uploaderId    String?
+  uploader      User?      @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  url           String
+  thumbnailUrl  String?
+
+  // Metadata
+  width         Int?
+  height        Int?
+  duration      Int?
+
+  // Organization
+  folder        String     @default("uploads")
+  tags          String[]
+  altText       String?
+
+  // Usage tracking
+  usageCount    Int        @default(0)
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([uploaderId])
+  @@index([folder])
+  @@index([mimeType])
+}
+
+// ============================================
+// PAGE BUILDER
+// ============================================
+
+model CustomPage {
+  id            String     @id @default(cuid())
+  slug          String     @unique
+  title         String
+  description   String?
+
+  // Page content (JSON structure)
+  content       Json
+
+  // SEO
+  metaTitle     String?
+  metaDescription String?
+  ogImage       String?
+
+  // Status
+  isPublished   Boolean    @default(false)
+  publishedAt   DateTime?
+
+  createdBy     String?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([isPublished])
+}
+
+// ============================================
+// EMAIL TEMPLATES & CAMPAIGNS
+// ============================================
+
+model EmailTemplate {
+  id            String     @id @default(cuid())
+  name          String     @unique
+  subject       String
+  htmlContent   String     @db.Text
+  textContent   String?    @db.Text
+
+  // Variables that can be used
+  variables     String[]
+
+  isActive      Boolean    @default(true)
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model EmailCampaign {
+  id            String           @id @default(cuid())
+  name          String
+  subject       String
+  htmlContent   String           @db.Text
+
+  // Targeting
+  targetAudience String          @default("all")
+  filters       Json?
+
+  // Status
+  status        CampaignStatus   @default(DRAFT)
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+
+  // Stats
+  recipientCount Int             @default(0)
+  sentCount     Int              @default(0)
+  openCount     Int              @default(0)
+  clickCount    Int              @default(0)
+  bounceCount   Int              @default(0)
+  unsubscribeCount Int           @default(0)
+  conversionCount Int            @default(0)  // Pledges attributed to this campaign
+
+  createdBy     String?
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Relations
+  clicks        EmailCampaignClick[]
+  conversions   Pledge[]         @relation("CampaignConversions")
+
+  @@index([status])
+}
+
+// Track individual email link clicks for conversion attribution
+model EmailCampaignClick {
+  id          String    @id @default(cuid())
+  campaignId  String
+  email       String?   // Email address that was sent to
+  userId      String?   // User ID if logged in or matched
+  url         String    // The URL they clicked
+  ipAddress   String?   // For matching anonymous users
+  userAgent   String?   // Browser info
+  clickedAt   DateTime  @default(now())
+  converted   Boolean   @default(false)
+  convertedAt DateTime?
+  pledgeId    String?   // If converted, link to the pledge
+
+  campaign    EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([campaignId])
+  @@index([email])
+  @@index([userId])
+  @@index([clickedAt])
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+// ============================================
+// CREATOR EMAIL LIST (Per-user subscriber list)
+// ============================================
+
+model EmailListSubscriber {
+  id              String    @id @default(cuid())
+  creatorId       String    // The creator who owns this subscriber
+  email           String
+  name            String?
+  status          String    @default("subscribed") // subscribed, unsubscribed, bounced
+  source          String?   // Where they signed up: import, teaser, project, manual
+  sourceProjectId String?   // If signed up from a specific project
+  tags            String[]  // For segmentation
+
+  // Engagement tracking
+  lastEmailSentAt DateTime?
+  lastOpenedAt    DateTime?
+  lastClickedAt   DateTime?
+
+  creator         User      @relation("CreatorEmailList", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([creatorId, email])
+  @@index([creatorId])
+  @@index([email])
+  @@index([status])
+}
+
+// ============================================
+// MAILBOX MANAGEMENT
+// ============================================
+
+model Mailbox {
+  id            String        @id @default(cuid())
+  name          String
+  email         String        @unique
+  description   String?
+  color         String?       @default("#3B82F6")
+
+  // IMAP/SMTP settings for external mailboxes (optional)
+  imapHost      String?
+  imapPort      Int?
+  smtpHost      String?
+  smtpPort      Int?
+  username      String?
+  password      String?       // Encrypted
+  useSSL        Boolean       @default(true)
+
+  isDefault     Boolean       @default(false)
+  isActive      Boolean       @default(true)
+  isCreatorMailbox Boolean    @default(false)  // True for auto-created creator mailboxes
+
+  emails        AdminEmail[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([isActive])
+}
+
+// Email Queue for rate-limited sending (1 email per second max)
+model EmailQueue {
+  id            String           @id @default(cuid())
+
+  // Email details
+  toEmail       String
+  subject       String
+  bodyHtml      String           @db.Text
+  bodyText      String?          @db.Text
+  fromEmail     String?
+  fromName      String?
+  replyTo       String?
+  isCreatorEmail Boolean         @default(false)
+
+  // Queue status
+  status        EmailQueueStatus @default(PENDING)
+  priority      Int              @default(0)  // Higher = more urgent
+  attempts      Int              @default(0)
+  maxAttempts   Int              @default(3)
+  error         String?
+
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  processedAt   DateTime?
+  sentAt        DateTime?
+
+  @@index([status, priority, createdAt])
+  @@index([createdAt])
+}
+
+enum EmailQueueStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model AdminEmail {
+  id            String           @id @default(cuid())
+  mailboxId     String
+
+  // Email details
+  fromEmail     String
+  fromName      String?
+  toEmail       String
+  toName        String?
+  ccEmails      String[]
+  bccEmails     String[]
+  replyTo       String?
+  subject       String
+  bodyHtml      String           @db.Text
+  bodyText      String?          @db.Text
+
+  // Folder/status
+  folder        EmailFolder      @default(INBOX)
+  status        AdminEmailStatus @default(PENDING)
+
+  // Tracking
+  isRead        Boolean          @default(false)
+  isStarred     Boolean          @default(false)
+  isArchived    Boolean          @default(false)
+
+  // Dates
+  sentAt        DateTime?
+  receivedAt    DateTime?
+  openedAt      DateTime?
+
+  // Thread support
+  threadId      String?
+  inReplyTo     String?
+
+  // Attachments stored as JSON array
+  attachments   Json?
+
+  mailbox       Mailbox          @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([mailboxId, folder])
+  @@index([mailboxId, status])
+  @@index([mailboxId, isRead])
+  @@index([threadId])
+}
+
+enum EmailFolder {
+  INBOX
+  SENT
+  DRAFTS
+  TRASH
+  SPAM
+  ARCHIVE
+}
+
+enum AdminEmailStatus {
+  PENDING
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+// ============================================
+// ID VERIFICATION
+// ============================================
+
+model IDVerification {
+  id                String                 @id @default(cuid())
+  userId            String
+
+  // Shufti Reference
+  shuftiReference   String                 @unique
+  verificationUrl   String?
+
+  // Verification Status
+  status            IDVerificationStatus   @default(PENDING)
+
+  // Results
+  isDocumentValid   Boolean?
+  isFaceMatch       Boolean?
+  isAgeVerified     Boolean?
+  detectedAge       Int?
+  documentType      String?
+  documentCountry   String?
+
+  // Decline info
+  declineReason     String?
+  declineCodes      String[]
+
+  // Raw response (for debugging)
+  rawResponse       Json?
+
+  // Timestamps
+  requestedAt       DateTime              @default(now())
+  completedAt       DateTime?
+  expiresAt         DateTime?
+
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([shuftiReference])
+  @@index([status])
+}
+
+enum IDVerificationStatus {
+  PENDING
+  PROCESSING
+  VERIFIED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          String             @id @default(cuid())
+  userId      String
+  type        NotificationType
+  title       String
+  message     String
+  read        Boolean            @default(false)
+  actionUrl   String?
+
+  // Related entities (optional)
+  projectId   String?
+  senderId    String?            // For collaborator invites, this would be the project creator
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime           @default(now())
+  readAt      DateTime?
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+enum NotificationType {
+  COLLABORATOR_INVITE
+  COLLABORATOR_ACCEPTED
+  COLLABORATOR_DECLINED
+  PROJECT_UPDATE
+  PROJECT_FUNDED
+  PROJECT_LAUNCHED
+  PROJECT_ENDED
+  PLEDGE_RECEIVED
+  PLEDGE_FAILED
+  PLEDGE_SHIPPED
+  PLEDGE_DELIVERED
+  COMMENT_REPLY
+  COMMENT_NEW
+  MESSAGE_RECEIVED
+  SURVEY_SENT
+  SURVEY_REMINDER
+  FOLLOWED_PROJECT_LAUNCHED
+  MARKETPLACE_BOOK_APPROVED
+  MARKETPLACE_BOOK_REJECTED
+  MARKETPLACE_PURCHASE
+  SYSTEM
+}
+
+// ============================================
+// BUG REPORTS
+// ============================================
+
+model BugReport {
+  id            String           @id @default(cuid())
+
+  // Reporter info
+  userId        String?          // Optional - can be anonymous
+  name          String?
+  email         String
+
+  // Bug details
+  title         String
+  description   String           @db.Text
+  category      BugCategory      @default(OTHER)
+  severity      BugSeverity      @default(MEDIUM)
+  pageUrl       String?          // URL where bug occurred
+  browser       String?          // Browser info
+  device        String?          // Device info
+  steps         String?          @db.Text // Steps to reproduce
+  expectedBehavior String?       @db.Text
+  actualBehavior   String?       @db.Text
+  screenshot    String?          // URL to screenshot
+
+  // Status tracking
+  status        BugStatus        @default(NEW)
+  priority      BugPriority      @default(MEDIUM)
+  assignedTo    String?          // Admin user ID
+  resolution    String?          @db.Text
+
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  resolvedAt    DateTime?
+
+  // Relations
+  user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+enum BugCategory {
+  UI_VISUAL
+  FUNCTIONALITY
+  PERFORMANCE
+  SECURITY
+  PAYMENT
+  ACCOUNT
+  PROJECT
+  REWARDS
+  OTHER
+}
+
+enum BugSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BugStatus {
+  NEW
+  ACKNOWLEDGED
+  IN_PROGRESS
+  NEEDS_INFO
+  RESOLVED
+  CLOSED
+  WONT_FIX
+}
+
+enum BugPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ============================================
+// API KEYS
+// ============================================
+
+model ApiKey {
+  id            String        @id @default(cuid())
+
+  // Key details
+  name          String        // Display name for the key
+  key           String        @unique // The actual API key (hashed prefix for display)
+  keyHash       String        // Hashed version of the full key for verification
+  prefix        String        // First 8 chars for identification (e.g., "sk_live_")
+
+  // Environment
+  environment   ApiEnvironment @default(PRODUCTION)
+
+  // Status
+  status        ApiKeyStatus  @default(ACTIVE)
+
+  // Usage tracking
+  lastUsedAt    DateTime?
+  usageCount    Int           @default(0)
+
+  // Timestamps
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  expiresAt     DateTime?     // Optional expiration
+  revokedAt     DateTime?
+
+  // Created by admin
+  createdById   String?
+  createdBy     User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([key])
+  @@index([prefix])
+  @@index([status])
+  @@index([createdById])
+}
+
+enum ApiEnvironment {
+  PRODUCTION
+  DEVELOPMENT
+  STAGING
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+// ============================================
+// INDIEKIT - FULFILLMENT MANAGEMENT
+// ============================================
+
+// Products/SKUs for fulfillment
+model FulfillmentProduct {
+  id                String            @id @default(cuid())
+  projectId         String
+
+  // Product details
+  sku               String
+  name              String
+  description       String?           @db.Text
+  type              ProductType       @default(PHYSICAL)
+  imageUrl          String?
+
+  // Physical product attributes
+  weight            Float?            // in oz
+  weightUnit        String?           @default("oz")
+  length            Float?            // in inches
+  width             Float?            // in inches
+  height            Float?            // in inches
+  dimensionUnit     String?           @default("in")
+
+  // Customs info for international shipping
+  customsCode       String?           // HS/Tariff code
+  countryOfOrigin   String?
+  customsDescription String?
+
+  // Status
+  status            ProductStatus     @default(INCOMPLETE)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([projectId, sku])
+  @@index([projectId])
+  @@index([status])
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+}
+
+enum ProductStatus {
+  READY
+  INCOMPLETE
+  NO_WEIGHT
+  NO_CUSTOMS
+  ERROR
+}
+
+// Backer segments for targeted actions
+model BackerSegment {
+  id                String            @id @default(cuid())
+  projectId         String
+
+  name              String
+  description       String?
+  type              SegmentType       @default(CUSTOM)
+
+  // Filter criteria (stored as JSON)
+  criteria          Json?             // { field: "pledgeAmount", operator: ">=", value: 100 }
+
+  // Cached count (updated periodically)
+  backerCount       Int               @default(0)
+
+  // Dynamic vs static
+  isDynamic         Boolean           @default(true)
+  staticBackerIds   String[]          // For static segments, list of pledge IDs
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([projectId])
+  @@index([type])
+}
+
+enum SegmentType {
+  PLEDGE_LEVEL
+  ADDON
+  SURVEY_STATUS
+  SHIPPING_REGION
+  PAYMENT_STATUS
+  CUSTOM
+}
+
+// Activity log for timeline
+model FulfillmentActivity {
+  id                String              @id @default(cuid())
+  projectId         String
+
+  // Activity details
+  type              ActivityType
+  title             String
+  description       String?
+  metadata          Json?               // Additional context
+
+  // Related entities
+  pledgeId          String?
+  userId            String?
+
+  // Grouping for batch operations
+  batchId           String?             // Group related activities
+  affectedCount     Int?                // Number of items affected
+
+  createdAt         DateTime            @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([type])
+  @@index([pledgeId])
+  @@index([batchId])
+}
+
+enum ActivityType {
+  SURVEY_SENT
+  SURVEY_REMINDER
+  SURVEY_COMPLETED
+  ORDERS_LOCKED
+  ADDRESSES_LOCKED
+  CARDS_CHARGED
+  CHARGE_FAILED
+  ORDERS_PUSHED
+  PUSH_FAILED
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  DIGITAL_DISTRIBUTED
+  ADDRESS_UPDATED
+  REFUND_ISSUED
+  NOTE_ADDED
+  BALANCE_ADJUSTED
+}
+
+// Support tickets/notes for backers
+model BackerNote {
+  id                String            @id @default(cuid())
+  pledgeId          String
+
+  content           String            @db.Text
+  isInternal        Boolean           @default(true)
+
+  // Who created this
+  createdById       String?
+  createdBy         User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([pledgeId])
+  @@index([createdById])
+}
+
+// Digital file distribution
+model DigitalFile {
+  id                String            @id @default(cuid())
+  projectId         String
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?           @db.Text
+  fileName          String
+  fileUrl           String            // Legacy URL or public domain URL
+  r2StorageKey      String?           // Cloudflare R2 storage key
+  fileSize          Int               // in bytes
+  mimeType          String?
+
+  // Access control - which rewards/addons grant access
+  accessType        DigitalAccessType @default(ALL_BACKERS)
+  rewardIds         String[]          // Reward IDs that grant access
+  addonIds          String[]          // Addon IDs that grant access
+
+  // Distribution tracking
+  totalEligible     Int               @default(0)
+  distributedCount  Int               @default(0)
+  downloadCount     Int               @default(0)
+
+  // PDF Cover Extraction (for Digital Library)
+  coverImageUrl     String?           // Generated PDF first page thumbnail
+  coverExtractedAt  DateTime?         // When cover was generated
+  coverExtractionFailed Boolean       @default(false)  // If extraction failed
+  totalPages        Int?              // Total page count in PDF
+
+  // Uploaded by
+  uploadedById      String?
+  uploadedBy        User?             @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  distributions     DigitalDistribution[]
+  distributionRules DistributionRule[]
+
+  @@index([projectId])
+  @@index([uploadedById])
+}
+
+enum DigitalAccessType {
+  ALL_BACKERS       // All backers can access
+  SPECIFIC_REWARDS  // Only specific reward tiers
+  SPECIFIC_ADDONS   // Only specific addons
+  REWARD_AND_ADDON  // Specific rewards or addons
+}
+
+// Distribution rules and tracking
+model DigitalDistribution {
+  id                String            @id @default(cuid())
+  digitalFileId     String
+  pledgeId          String
+
+  // Distribution status
+  distributedAt     DateTime?
+  downloadedAt      DateTime?
+  downloadCount     Int               @default(0)
+
+  // Reading Progress (for Digital Library)
+  readingProgress   Json?             // { currentPage: number, totalPages: number, lastPosition: string }
+  lastReadAt        DateTime?
+  readingStatus     ReadingStatus     @default(UNREAD)
+
+  digitalFile       DigitalFile       @relation(fields: [digitalFileId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt @default(now())
+
+  @@unique([digitalFileId, pledgeId])
+  @@index([digitalFileId])
+  @@index([pledgeId])
+}
+
+enum ReadingStatus {
+  UNREAD
+  IN_PROGRESS
+  COMPLETED
+}
+
+// Distribution rules - defines which file gets distributed when conditions are met
+model DistributionRule {
+  id                String                      @id @default(cuid())
+  projectId         String
+  digitalFileId     String
+  digitalFile       DigitalFile                 @relation(fields: [digitalFileId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?
+
+  // Trigger conditions
+  triggerType       DistributionTriggerType     @default(ALL_BACKERS)
+  triggerRewardId   String?                     // If triggering on a specific reward
+  triggerAddonId    String?                     // If triggering on a specific addon
+
+  // Requirements
+  requiresPayment   Boolean                     @default(false)  // Must payment be completed?
+
+  // Status tracking
+  status            DistributionRuleStatus      @default(NOT_STARTED)
+  distributedCount  Int                         @default(0)
+  totalEligible     Int                         @default(0)
+
+  // Timestamps
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  @@index([projectId])
+  @@index([digitalFileId])
+  @@index([status])
+}
+
+enum DistributionTriggerType {
+  ALL_BACKERS       // All backers get the file
+  SPECIFIC_REWARD   // Only backers of a specific reward tier
+  SPECIFIC_ADDON    // Only backers who purchased a specific addon
+}
+
+enum DistributionRuleStatus {
+  NOT_STARTED
+  STARTED
+  COMPLETED
+}
+
+// ============================================
+// BACKER DASHBOARD ENHANCEMENTS
+// ============================================
+
+// User saved addresses for shipping
+model UserAddress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label       String   // "Home", "Work", "Office", etc.
+  isDefault   Boolean  @default(false)
+
+  // Address fields
+  fullName    String
+  line1       String
+  line2       String?
+  city        String
+  state       String
+  postalCode  String
+  country     String
+  phone       String?
+
+  // Validation
+  isValidated Boolean  @default(false)
+  validatedAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+// Project collections/wishlists
+model ProjectCollection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  color       String?  // For UI theming
+
+  projects    ProjectCollectionItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isPublic])
+}
+
+model ProjectCollectionItem {
+  id           String   @id @default(cuid())
+  collectionId String
+  collection   ProjectCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  notes        String?  // Personal notes about the project
+  addedAt      DateTime @default(now())
+
+  @@unique([collectionId, projectId])
+  @@index([collectionId])
+  @@index([projectId])
+}
+
+// Notification preferences per project
+model ProjectNotificationPreference {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Notification types
+  updates     Boolean  @default(true)
+  comments    Boolean  @default(true)
+  surveys     Boolean  @default(true)
+  shipping    Boolean  @default(true)
+  messages    Boolean  @default(true)
+
+  // Email digest frequency
+  digestFrequency String @default("instant") // instant, daily, weekly, none
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// Creator follow relationship
+model CreatorFollow {
+  id          String   @id @default(cuid())
+  followerId  String   // The user doing the following
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  creatorId   String   // The creator being followed
+  creator     User     @relation("Following", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Notification preferences for this follow
+  notifyNewProjects Boolean @default(true)
+  notifyUpdates     Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, creatorId])
+  @@index([followerId])
+  @@index([creatorId])
+}
+
+// ============================================
+// DIGITAL MARKETPLACE
+// ============================================
+
+model MarketplaceBook {
+  id                String   @id @default(cuid())
+  creatorId         String
+  creator           User     @relation("MarketplaceCreator", fields: [creatorId], references: [id])
+
+  // Basic Info
+  title             String
+  slug              String
+  description       String   @db.Text  // Rich text HTML
+  shortDescription  String?  @db.VarChar(300)
+
+  // Media
+  coverImageUrl     String?
+  promoVideoUrl     String?
+  galleryImages     Json?    // Array of image URLs
+
+  // Pricing
+  price             Decimal  @db.Decimal(10, 2)
+  currency          String   @default("USD")
+
+  // Digital File
+  pdfFileUrl        String   // R2 storage URL
+  pdfFileName       String?
+  pdfFileSize       Int?     // In bytes
+
+  // PDF Cover Extraction
+  pdfCoverImageUrl  String?  // Auto-extracted first page as cover
+  pdfCoverExtractedAt DateTime?
+  pdfCoverExtractionFailed Boolean @default(false)
+  pdfTotalPages     Int?     // Total page count
+
+  // Content Flags
+  hasAdultContent   Boolean  @default(false)
+  hasRiskyContent   Boolean  @default(false)
+  promoContentSfw   Boolean  @default(true)
+  paymentProcessor  PaymentProcessor @default(STRIPE)
+
+  // Status & Moderation
+  status            MarketplaceBookStatus @default(DRAFT)
+  submittedAt       DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  deactivatedAt     DateTime?
+  deactivationReason String?
+
+  // Featured/Curated
+  isFeatured        Boolean  @default(false)
+  isStaffPick       Boolean  @default(false)
+  featuredOrder     Int?
+  staffPickOrder    Int?
+
+  // Categorization
+  category          String?
+  tags              String[] @default([])
+
+  // Stats
+  purchaseCount     Int      @default(0)
+  viewCount         Int      @default(0)
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  publishedAt       DateTime?
+  deletedAt         DateTime?  // Soft delete
+
+  // Relations
+  purchases         MarketplacePurchase[]
+  reviews           MarketplaceBookReview[]
+  codeRedemptions   MarketplaceCodeRedemption[]
+  discountCodes     MarketplaceDiscountCode[] @relation("MarketplaceDiscountBook")
+  companyId         String?
+  company           CompanyProfile? @relation(fields: [companyId], references: [id])
+
+  @@unique([creatorId, slug])
+  @@index([status])
+  @@index([isFeatured])
+  @@index([isStaffPick])
+  @@index([category])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+enum MarketplaceBookStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  LIVE
+  DEACTIVATED
+  ARCHIVED
+}
+
+model CompanyProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+
+  // Profile Info
+  name              String
+  slug              String   @unique
+  tagline           String?  @db.VarChar(200)
+  about             String?  @db.Text  // Rich text HTML
+
+  // Media
+  bannerImageUrl    String?
+  logoUrl           String?
+
+  // Contact & Social
+  website           String?
+  socialLinks       Json?    // { twitter, facebook, instagram, etc. }
+  physicalMediaUrl  String?  // Link to order physical copies (books, merch, etc.)
+
+  // Status
+  isActive          Boolean  @default(true)
+  isVerified        Boolean  @default(false)
+
+  // Stats
+  bookCount         Int      @default(0)
+  totalSales        Int      @default(0)
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  books             MarketplaceBook[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model MarketplacePurchase {
+  id                String   @id @default(cuid())
+  bookId            String
+  book              MarketplaceBook @relation(fields: [bookId], references: [id])
+  buyerId           String
+  buyer             User     @relation("MarketplaceBuyer", fields: [buyerId], references: [id])
+
+  // Transaction
+  amount            Decimal  @db.Decimal(10, 2)
+  platformFee       Decimal  @default(0) @db.Decimal(10, 2)
+  creatorPayout     Decimal  @default(0) @db.Decimal(10, 2)
+  currency          String   @default("USD")
+  paymentProcessor  PaymentProcessor
+  transactionId     String?  // Stripe or DivinityCoin transaction ID
+
+  // Stripe fields
+  stripePaymentIntentId    String?  @unique
+  stripeCheckoutSessionId  String?  @unique
+  stripeCustomerId         String?
+
+  // DivinityCoin fields
+  divinityCoinPaymentId String?  @unique
+
+  // Status
+  status            MarketplacePurchaseStatus @default(PENDING)
+  completedAt       DateTime?
+  refundedAt        DateTime?
+  refundReason      String?
+
+  // Delivery
+  deliveredAt       DateTime?
+  downloadCount     Int      @default(0)
+  lastDownloadedAt  DateTime?
+
+  // Reading Progress (synced from Digital Library)
+  readingProgress   Json?    // { currentPage: number, totalPages: number }
+  lastReadAt        DateTime?
+
+  // Discount code relation
+  codeRedemption    MarketplaceCodeRedemption?
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([buyerId])
+  @@index([bookId])
+  @@index([status])
+}
+
+enum MarketplacePurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model MarketplaceBookReview {
+  id                String   @id @default(cuid())
+  bookId            String
+  book              MarketplaceBook @relation(fields: [bookId], references: [id])
+  reviewerId        String
+  reviewer          User     @relation("MarketplaceReviewer", fields: [reviewerId], references: [id])
+
+  // Review Content
+  action            MarketplaceReviewAction
+  previousStatus    MarketplaceBookStatus?
+  newStatus         MarketplaceBookStatus
+  notes             String?  @db.Text
+  internalNotes     String?  @db.Text
+  rejectionReason   String?
+
+  // AI Analysis
+  flagsRaised       String[] @default([])
+  aiConfidenceScore Float?
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+
+  @@index([bookId])
+  @@index([reviewerId])
+}
+
+enum MarketplaceReviewAction {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REQUESTED_CHANGES
+  FLAGGED
+  DEACTIVATED
+  REACTIVATED
+}
+
+// ============================================
+// MARKETPLACE DISCOUNT CODES
+// ============================================
+
+model MarketplaceDiscountCode {
+  id                String   @id @default(cuid())
+  creatorId         String
+  creator           User     @relation("MarketplaceDiscountCreator", fields: [creatorId], references: [id])
+
+  // Specific book this code applies to
+  bookId            String?
+  book              MarketplaceBook? @relation("MarketplaceDiscountBook", fields: [bookId], references: [id])
+
+  // Code details
+  code              String   @unique
+  type              MarketplaceDiscountType @default(FREE_BOOK)
+
+  // Validity period (monthly)
+  validFrom         DateTime
+  validUntil        DateTime
+
+  // Usage limits
+  maxRedemptions    Int      @default(0)  // Max times this code can be used (0 = unlimited)
+  maxPerCustomer    Int      @default(1)  // Max times per customer
+  usageCount        Int      @default(0)  // Current usage count
+
+  // Status
+  isActive          Boolean  @default(true)
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  redemptions       MarketplaceCodeRedemption[]
+
+  @@index([creatorId])
+  @@index([bookId])
+  @@index([code])
+  @@index([validFrom, validUntil])
+  @@index([isActive])
+}
+
+model MarketplaceCodeRedemption {
+  id                String   @id @default(cuid())
+  codeId            String
+  code              MarketplaceDiscountCode @relation(fields: [codeId], references: [id])
+  customerId        String
+  customer          User     @relation("MarketplaceCodeCustomer", fields: [customerId], references: [id])
+  bookId            String
+  book              MarketplaceBook @relation(fields: [bookId], references: [id])
+  purchaseId        String?  @unique
+  purchase          MarketplacePurchase? @relation(fields: [purchaseId], references: [id])
+
+  // Amount saved
+  discountAmount    Decimal  @db.Decimal(10, 2)
+
+  // Timestamps
+  redeemedAt        DateTime @default(now())
+
+  @@unique([codeId, customerId, bookId])
+  @@index([codeId])
+  @@index([customerId])
+  @@index([bookId])
+}
+
+enum MarketplaceDiscountType {
+  FREE_BOOK         // 100% off one book
+  PERCENTAGE        // Future: percentage discount
+  FIXED_AMOUNT      // Future: fixed dollar amount off
+}
+
+// ==================== CHANGELOG ====================
+
+model ChangelogEntry {
+  id          String   @id @default(cuid())
+
+  // Content
+  title       String
+  description String   @db.Text
+  category    ChangelogCategory
+  version     String?  // e.g., "1.0.0", "2024-01"
+
+  // Git reference
+  commitHash  String?
+  branch      String?
+
+  // Publishing
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Author (admin who created)
+  authorId    String?
+  author      User?    @relation("ChangelogAuthor", fields: [authorId], references: [id])
+
+  @@index([category])
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+enum ChangelogCategory {
+  FEATURE
+  BUGFIX
+  IMPROVEMENT
+  SECURITY
+  PERFORMANCE
+  UI_UX
+  API
+  DOCUMENTATION
+  OTHER
+}
+
+// ==================== EMAIL BLOCKLIST ====================
+
+model EmailBlocklist {
+  id            String              @id @default(cuid())
+
+  // What to block
+  type          EmailBlocklistType
+  value         String              // email address, domain, or IP
+
+  // Metadata
+  reason        String?             @db.Text
+  source        String?             // How it was added (manual, auto-spam, bounce, etc.)
+
+  // Stats
+  blockedCount  Int                 @default(0)  // How many emails were blocked
+  lastBlockedAt DateTime?
+
+  // Status
+  isActive      Boolean             @default(true)
+  expiresAt     DateTime?           // Optional expiration for temporary blocks
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([type, value])
+  @@index([type])
+  @@index([isActive])
+  @@index([value])
+}
+
+enum EmailBlocklistType {
+  EMAIL       // Specific email address
+  DOMAIN      // Entire domain (e.g., spam.com)
+  IP          // IP address
+  PATTERN     // Regex pattern (e.g., *@tempmail.*)
+}
+
+// ============================================
+// FULFILLMENT INTEGRATIONS
+// ============================================
+
+model FulfillmentIntegration {
+  id              String                    @id @default(cuid())
+  projectId       String
+  project         Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Integration type
+  provider        FulfillmentProvider
+
+  // Credentials (encrypted)
+  credentials     Json                      // { apiKey, apiSecret, shopDomain, accessToken, etc. }
+
+  // Connection status
+  status          FulfillmentIntegrationStatus @default(PENDING)
+  lastSyncAt      DateTime?
+  lastSyncError   String?
+
+  // Stats
+  ordersPushed    Int                       @default(0)
+  ordersShipped   Int                       @default(0)
+  ordersFailed    Int                       @default(0)
+
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+  @@index([provider])
+  @@index([status])
+}
+
+enum FulfillmentProvider {
+  SHOPIFY
+  SHIPSTATION
+  SHIPPO
+  EASYPOST
+  STAMPS_COM
+  MANUAL
+}
+
+enum FulfillmentIntegrationStatus {
+  PENDING
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+
+// Shopify fulfillment order tracking
+model ShopifyFulfillmentOrder {
+  id                  String    @id @default(cuid())
+  projectId           String
+  pledgeId            String
+
+  // Shopify IDs
+  shopifyOrderId      String    // Shopify order ID
+  shopifyFulfillmentId String?  // Shopify fulfillment ID (once fulfilled)
+
+  // Order details
+  orderNumber         String?
+  status              ShopifyOrderStatus @default(PENDING)
+
+  // Tracking
+  trackingNumber      String?
+  trackingCompany     String?
+  trackingUrl         String?
+
+  // Timestamps
+  pushedAt            DateTime?
+  fulfilledAt         DateTime?
+  shippedAt           DateTime?
+  deliveredAt         DateTime?
+
+  // Error handling
+  lastError           String?   @db.Text
+  errorCount          Int       @default(0)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([projectId, pledgeId])
+  @@unique([shopifyOrderId])
+  @@index([projectId])
+  @@index([pledgeId])
+  @@index([status])
+}
+
+enum ShopifyOrderStatus {
+  PENDING           // Not yet pushed to Shopify
+  PUSHED            // Order created in Shopify
+  PROCESSING        // Being processed by Shopify
+  FULFILLED         // Fulfilled but not shipped
+  SHIPPED           // Shipped with tracking
+  DELIVERED         // Delivered to customer
+  FAILED            // Push failed
+  CANCELLED         // Order cancelled
+}
+
+// SKU mapping for fulfillment (Shopify, manual, or other systems)
+model ShopifySkuMapping {
+  id                String    @id @default(cuid())
+  projectId         String
+
+  // Source item (reward or addon)
+  sourceType        SkuMappingSourceType
+  sourceId          String    // Reward ID or ProjectItem ID
+  sourceName        String    // Cached name for display
+
+  // SKU mapping (can have multiple SKUs per source item)
+  shopifySku        String
+  shopifyProductId  String?   // Optional Shopify product ID
+  shopifyVariantId  String?   // Optional Shopify variant ID
+  shopifyProductName String?  // Cached product name from Shopify
+
+  // Quantity mapping (e.g., 1 reward = 2 of this SKU)
+  quantity          Int       @default(1)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Allow multiple SKUs per source item, but prevent duplicate SKU mappings
+  @@unique([projectId, sourceType, sourceId, shopifySku])
+  @@index([projectId])
+  @@index([shopifySku])
+  @@index([projectId, sourceType, sourceId])
+}
+
+enum SkuMappingSourceType {
+  REWARD            // Reward tier
+  ADDON             // Add-on item
+  PROJECT_ITEM      // Individual project item
+  MODIFIER_COMBO    // Base reward + modifier addon combination
+}
+
+// Track items that are skipped from fulfillment (not mapped to SKU)
+model FulfillmentSkippedItem {
+  id                String    @id @default(cuid())
+  projectId         String
+  sourceType        SkuMappingSourceType
+  sourceId          String    // Reward ID, Addon ID, or ProjectItem ID
+  sourceName        String    // Cached name for display
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([projectId, sourceType, sourceId])
+  @@index([projectId])
+}
+
+// ============================================
+// LCS LOCATOR - COMIC SHOP DIRECTORY
+// ============================================
+
+model ComicShop {
+  id              String    @id @default(cuid())
+
+  // Basic Info
+  name            String
+  slug            String    @unique
+
+  // Location
+  address         String?
+  city            String
+  state           String?
+  zipCode         String?
+  country         String    @default("USA")
+  region          String?   // Northeast, Midwest, Southeast, Southwest, West, International
+
+  // Contact
+  phone           String?
+  email           String?
+  website         String?
+
+  // Social Media (future)
+  socialLinks     Json?     // { facebook, twitter, instagram }
+
+  // Stats (future features)
+  viewCount       Int       @default(0)
+  favoriteCount   Int       @default(0)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([city])
+  @@index([state])
+  @@index([region])
+  @@index([name])
+}
+
+// ============================================
+// HERO SLIDER
+// ============================================
+
+model HeroSlide {
+  id              String          @id @default(cuid())
+
+  // Content
+  title           String
+  subtitle        String?
+  description     String?         @db.Text
+
+  // Call to Action
+  buttonText      String?
+  buttonLink      String?
+  showPrimaryButton   Boolean     @default(true)
+  secondaryButtonText String?
+  secondaryButtonLink String?
+  showSecondaryButton Boolean     @default(true)
+
+  // Media
+  mediaType       HeroMediaType   @default(IMAGE)
+  imageUrl        String?
+  videoUrl        String?         // YouTube URL or uploaded video URL
+  videoThumbnail  String?         // Thumbnail for video slides
+  videoAutoplay   Boolean         @default(true)
+  videoMuted      Boolean         @default(true)
+  videoLoop       Boolean         @default(true)
+
+  // Display settings
+  textAlignment   String          @default("center")  // left, center, right
+  overlayOpacity  Int             @default(0)         // 0-100 for dark overlay on media
+  textColor       String          @default("white")   // white, dark
+  showSubtitle    Boolean         @default(true)
+  showDescription Boolean         @default(true)
+
+  // Status
+  isActive        Boolean         @default(true)
+  sortOrder       Int             @default(0)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+enum HeroMediaType {
+  IMAGE
+  YOUTUBE
+  VIDEO
+}
+
+// ============================================
+// ANNOUNCEMENT BAR
+// ============================================
+
+model AnnouncementBar {
+  id              String    @id @default(cuid())
+
+  // Content
+  text            String    @db.Text
+  linkUrl         String?
+  linkText        String?
+
+  // Styling
+  backgroundColor String    @default("#2563eb")
+  textColor       String    @default("#ffffff")
+
+  // Options
+  dismissible     Boolean   @default(true)
+  isActive        Boolean   @default(true)
+
+  // Scheduling (optional)
+  startDate       DateTime?
+  endDate         DateTime?
+
+  // Priority/ordering
+  sortOrder       Int       @default(0)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// ============================================
+// PROMOTIONAL POPUP
+// ============================================
+
+model PromoPopup {
+  id              String    @id @default(cuid())
+
+  // Settings
+  isActive        Boolean   @default(true)
+  showFrequency   String    @default("once_per_session") // once_per_session, once_per_day, every_visit
+
+  // Slides stored as JSON array
+  // Each slide: { title, subtitle, features[], iconName, gradientFrom, gradientTo }
+  slides          Json      @default("[]")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// WEBHOOK EVENT DEDUPLICATION
+// ============================================
+
+// Track processed webhook events to prevent duplicate processing
+model ProcessedWebhookEvent {
+  id              String    @id @default(cuid())
+  eventId         String    @unique  // Stripe event ID (evt_xxx)
+  eventType       String               // Event type (e.g., payment_intent.succeeded)
+  source          String    @default("stripe")  // Source system (stripe, etc.)
+  processedAt     DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([processedAt])
+}
+
+// ============================================
+// COMMUNITY CHAT
+// ============================================
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  
+  // Message type: text, emoji, sticker
+  type      ChatMessageType @default(TEXT)
+  
+  // For stickers - stores sticker pack and sticker ID
+  stickerData Json?
+  
+  // Author
+  userId    String
+  user      User     @relation("ChatMessages", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Soft delete (for admin moderation)
+  deletedAt   DateTime?
+  deletedById String?    // Admin who deleted the message
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([deletedAt, createdAt])
+}
+
+enum ChatMessageType {
+  TEXT
+  EMOJI
+  STICKER
+}
+
+model ChatPresence {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastActiveAt DateTime @default(now())
+  joinedAt     DateTime @default(now())
+
+  @@index([lastActiveAt])
+}
+
+// ============================================
+// DIVINITYCOIN CREDIT SYSTEM
+// ============================================
+
+// DivinityCoin credit redemption tracking
+model DivinityCoinRedemption {
+  id              String   @id @default(cuid())
+  code            String   @unique // The redemption code
+  userId          String
+  amount          Decimal  @db.Decimal(10, 2) // Amount in USD
+  redeemedAt      DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([code])
+}
+
+// DivinityCoin transaction history with audit logging
+model DivinityCoinTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  pledgeId        String?
+  amount          Decimal  @db.Decimal(10, 2) // Positive for credits, negative for payments
+  type            String   // REDEMPTION, PAYMENT, REFUND, REFUND_DEDUCTION
+  description     String?
+  metadata        String?  @db.Text // JSON audit data: requestId, IP, previous/new balance, timestamps
+
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pledge          Pledge?  @relation(fields: [pledgeId], references: [id])
+
+  @@index([userId])
+  @@index([pledgeId])
+  @@index([createdAt])
+}
+
+// ============================================
+// ACHIEVEMENT BADGES
+// ============================================
+
+model UserAchievement {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  badgeType   BadgeType
+  earnedAt    DateTime    @default(now())
+
+  // Metadata about how badge was earned
+  metadata    Json?       // { projectId, pledgeId, etc }
+
+  @@unique([userId, badgeType])
+  @@index([userId])
+}
+
+enum BadgeType {
+  FIRST_PLEDGE                // First pledge ever
+  SUPER_BACKER_10            // Backed 10+ projects
+  SUPER_BACKER_25            // Backed 25+ projects
+  SUPER_BACKER_50            // Backed 50+ projects
+  EARLY_BIRD                 // Pledged within first 24 hours
+  STRETCH_GOAL_CONTRIBUTOR   // Contributed to reaching stretch goal
+  PREMIUM_SUPPORTER          // Pledged $500+ total
+  SURVEY_CHAMPION            // Completed 10+ surveys promptly
+  SURVEY_COMPLETIONIST       // Completed all pending surveys
+  REFERRAL_MASTER            // Referred 5+ successful backers
+  ANNIVERSARY_BACKER         // Active backer for 1+ year
+}
+
+// ============================================
+// REDEMPTION BONUS SYSTEM
+// ============================================
+
+// Monthly redemption bonus tracking with Decimal for precision
+model RedemptionBonusLedger {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Month tracking (first day of month)
+  month           DateTime
+
+  // Bonus calculation (using Decimal for financial precision)
+  totalBadges     Int      @default(0)
+  rawBonusPercent Decimal  @db.Decimal(10, 6)  // Sum of badge bonuses before cap (e.g., 0.000500 for 0.05%)
+  appliedBonusPercent Decimal @db.Decimal(10, 6)  // After 0.03% cap applied
+
+  // Usage tracking
+  redemptionCount Int      @default(0)
+  totalBonusApplied Decimal @default(0) @db.Decimal(10, 2)  // Total $ saved from bonus
+
+  applications    RedemptionBonusApplication[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, month])
+  @@index([userId, month])
+}
+
+// Track individual bonus applications to redemptions
+model RedemptionBonusApplication {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  redemptionId          String   // Link to DivinityCoinRedemption
+  bonusLedgerId         String
+  bonusLedger           RedemptionBonusLedger @relation(fields: [bonusLedgerId], references: [id], onDelete: Cascade)
+
+  bonusPercentApplied   Decimal  @db.Decimal(10, 6)
+  bonusAmountSaved      Decimal  @db.Decimal(10, 2)  // Actual $ saved
+
+  appliedAt             DateTime @default(now())
+
+  @@index([userId])
+  @@index([bonusLedgerId])
+  @@index([redemptionId])
+}

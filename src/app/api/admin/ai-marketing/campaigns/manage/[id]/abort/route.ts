@@ -1,0 +1,106 @@
+import { NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
+
+const adminAiMarketingCampaignsManageAbortLogger = logger.child({ module: "admin-ai-marketing-campaigns-manage-abort" });
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { exec } from "child_process";
+
+export const dynamic = "force-dynamic";
+
+// Helper to check admin role
+async function requireAdmin() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { error: "Unauthorized", status: 401 };
+  }
+
+  const user = await db.user.findFirst({
+    where: { id: session.user.id, deletedAt: null },
+    select: { role: true },
+  });
+
+  if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
+    return { error: "Forbidden - Admin access required", status: 403 };
+  }
+
+  return { user: session.user };
+}
+
+// POST - Abort sending campaign
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authResult = await requireAdmin();
+    if ("error" in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    const { id } = await params;
+
+    // Get campaign
+    const campaign = await db.emailCampaign.findUnique({
+      where: { id },
+      select: { id: true, name: true, status: true },
+    });
+
+    if (!campaign) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+
+    // Can only abort campaigns that are currently sending
+    if (campaign.status !== "SENDING") {
+      return NextResponse.json(
+        { error: "Campaign is not currently sending" },
+        { status: 400 }
+      );
+    }
+
+    // CAS on status: SENDING → CANCELLED so two admins hitting Abort
+    // simultaneously don't both kick off the PM2 restart. The restart
+    // is the real danger here — triggering it twice in quick succession
+    // can leave the process in a weird state.
+    const cancelCas = await db.emailCampaign.updateMany({
+      where: { id, status: "SENDING" },
+      data: { status: "CANCELLED" },
+    });
+
+    if (cancelCas.count === 0) {
+      return NextResponse.json(
+        { error: "Campaign is not currently sending" },
+        { status: 400 }
+      );
+    }
+
+    adminAiMarketingCampaignsManageAbortLogger.info(`Campaign "${campaign.name}" has been aborted - restarting server to stop send`);
+
+    // Send response first, then restart
+    const response = NextResponse.json({
+      success: true,
+      message: `Campaign "${campaign.name}" has been aborted`,
+    });
+
+    // Restart PM2 to kill the running send process
+    // Use setImmediate to send response before restart
+    setImmediate(() => {
+      // Delete and restart properly to preserve npm start config
+      exec("cd /root/indiecrowdfund_2.0 && npx pm2 delete indiecrowdfund 2>/dev/null; npx pm2 start npm --name indiecrowdfund -- start", (error) => {
+        if (error) {
+          adminAiMarketingCampaignsManageAbortLogger.error({ err: formatError(error) }, "Failed to restart PM2:");
+        }
+      });
+    });
+
+    return response;
+  } catch (error) {
+    adminAiMarketingCampaignsManageAbortLogger.error({ err: formatError(error) }, "Error aborting campaign:");
+    return NextResponse.json(
+      { error: "Failed to abort campaign" },
+      { status: 500 }
+    );
+  }
+}

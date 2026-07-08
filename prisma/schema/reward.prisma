@@ -1,0 +1,86 @@
+// ============================================
+// REWARDS & ADD-ONS
+// ============================================
+
+model Reward {
+  id                String       @id @default(cuid())
+  projectId         String
+  type              RewardType   @default(TIER)
+
+  title             String
+  description       String       @db.Text
+  amount            Decimal      @db.Decimal(10, 2)
+  imageUrl          String?
+
+  // Delivery
+  estimatedDelivery DateTime?
+  shippingType      ShippingType
+  shippingCountries String[]
+  shippingCost      Json         @default("{}")  // Per-country rates: { "US": 5, "CA": 8 }
+
+  // Availability
+  quantityAvailable Int?
+  quantityClaimed   Int          @default(0)
+  visibility        Visibility   @default(PUBLIC)
+  secretToken       String?      @unique  // For secret rewards - only accessible via this token
+  availableFrom     DateTime?
+  availableUntil    DateTime?
+
+  // Status - for ending rewards that have backers
+  isEnded           Boolean      @default(false)
+  endedAt           DateTime?
+
+  // Modifier addon settings (for ADDON type rewards that modify base rewards)
+  isModifier        Boolean      @default(false)  // True if this addon modifies a base reward instead of being standalone
+  modifiesRewardIds String[]                      // Which reward IDs this can modify (empty = all tiers in project)
+
+  // Survey integration - whether this addon appears in the IndieKit survey
+  showInSurvey      Boolean      @default(false)
+
+  // Tracking if copied
+  copiedFromId      String?
+
+  // Relations
+  project           Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pledges           Pledge[]
+  items             RewardItem[]
+  copiedFrom        Reward?      @relation("RewardCopies", fields: [copiedFromId], references: [id])
+  copies            Reward[]     @relation("RewardCopies")
+  selectedAddons    PledgeAddon[]
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([projectId, type])
+}
+
+enum RewardType {
+  TIER
+  ADDON
+}
+
+enum ShippingType {
+  WORLDWIDE
+  SELECTED_COUNTRIES
+  NO_SHIPPING
+}
+
+enum Visibility {
+  PUBLIC
+  SECRET
+}
+
+model RewardItem {
+  id            String  @id @default(cuid())
+  rewardId      String
+  projectItemId String?  // Optional reference to project-level item
+  title         String
+  description   String? @db.Text
+  imageUrl      String?
+
+  reward        Reward       @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  projectItem   ProjectItem? @relation(fields: [projectItemId], references: [id])
+
+  @@index([rewardId])
+  @@index([projectItemId])
+}

@@ -1,0 +1,341 @@
+import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
+
+const userVerifyEmailLogger = logger.child({ module: "user-verify-email" });
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
+import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
+
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "IndieCrowdfund";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+// POST - Send verification email
+export async function POST() {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get the user
+    const user = await db.user.findFirst({
+      where: { id: session.user.id, deletedAt: null },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        emailVerified: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (user.emailVerified) {
+      return NextResponse.json({
+        success: true,
+        message: "Email is already verified",
+        alreadyVerified: true,
+      });
+    }
+
+    // Delete any existing verification tokens for this email
+    await db.verificationToken.deleteMany({
+      where: { identifier: user.email },
+    });
+
+    // Create a new verification token
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await db.verificationToken.create({
+      data: {
+        identifier: user.email,
+        token,
+        expires,
+      },
+    });
+
+    // Create verification URL
+    const verificationUrl = `${APP_URL}/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
+
+    // Send the verification email
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background-color: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center;">
+              <h1 style="margin: 0; font-size: 24px; color: #1a1a1a;">Verify Your Email Address</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 20px 40px;">
+              <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #4a4a4a;">
+                Hi ${user.name || "there"},
+              </p>
+              <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #4a4a4a;">
+                Please click the button below to verify your email address for your ${APP_NAME} account.
+              </p>
+            </td>
+          </tr>
+
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding: 20px 40px; text-align: center;">
+              <a href="${verificationUrl}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Verify Email Address
+              </a>
+            </td>
+          </tr>
+
+          <!-- Alternative Link -->
+          <tr>
+            <td style="padding: 20px 40px;">
+              <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #666;">
+                If the button doesn't work, copy and paste this link into your browser:
+              </p>
+              <p style="margin: 10px 0 0; font-size: 12px; line-height: 1.6; color: #888; word-break: break-all;">
+                ${verificationUrl}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Expiry Notice -->
+          <tr>
+            <td style="padding: 20px 40px;">
+              <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #888;">
+                This link will expire in 24 hours.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Whitelist Instructions -->
+          <tr>
+            <td style="padding: 20px 40px;">
+              <div style="background: linear-gradient(90deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px 20px;">
+                <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #15803d;">
+                  Important: Whitelist Our Emails
+                </p>
+                <p style="margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: #166534;">
+                  To make sure you receive pledge receipts, shipping updates, project notifications, and other important account emails, please add our email address to your contacts or safe sender list.
+                </p>
+                <p style="margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: #166534;">
+                  <strong>How to whitelist:</strong>
+                </p>
+                <ul style="margin: 0 0 10px; padding-left: 20px; font-size: 13px; line-height: 1.8; color: #166534;">
+                  <li><strong>Gmail:</strong> Move this email to your Primary tab, or add our address to your Contacts</li>
+                  <li><strong>Outlook/Hotmail:</strong> Right-click this email → "Never block sender" or add to Safe Senders list</li>
+                  <li><strong>Yahoo:</strong> Add our email address to your Contacts</li>
+                  <li><strong>Apple Mail:</strong> Add our email address to your Contacts or VIPs</li>
+                </ul>
+                <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #166534;">
+                  Without whitelisting, important emails like pledge receipts and project updates may end up in your spam or promotions folder.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #f8f8f8; border-radius: 0 0 16px 16px;">
+              <p style="margin: 0; font-size: 14px; color: #888; text-align: center;">
+                If you didn't request this verification, you can safely ignore this email.
+              </p>
+              <p style="margin: 10px 0 0; font-size: 12px; color: #aaa; text-align: center;">
+                © ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    const subject = `Verify your email address - ${APP_NAME}`;
+    const result = await sendEmail({
+      to: user.email,
+      subject,
+      html: emailHtml,
+      skipUnsubscribeCheck: true, // Verification is transactional — must bypass unsubscribe list
+    });
+
+    if (!result.success) {
+      // If the email was auto-queued for retry, treat as soft success — user will receive it soon
+      if ("queued" in result && result.queued) {
+        return NextResponse.json({
+          success: true,
+          message: "Verification email sent! Please check your inbox.",
+        });
+      }
+      // Surface the underlying provider/blocklist error so the UI can
+      // show the real reason ("address is on our blocklist", "provider
+      // down", "rate limited", etc.) instead of a generic "failed".
+      userVerifyEmailLogger.warn(
+        { userId: user.id, email: user.email, error: result.error },
+        "Verification email send failed"
+      );
+      return NextResponse.json(
+        { error: result.error || "Failed to send verification email" },
+        { status: 500 }
+      );
+    }
+
+    // Record the successful send in EmailLog so admins can audit
+    // delivery attempts. Absence of a row here = the send never made
+    // it to the provider; presence = provider accepted and the
+    // delivery problem is downstream (spam folder, recipient ISP, etc).
+    try {
+      await db.emailLog.create({
+        data: {
+          userId: user.id,
+          type: "EMAIL_VERIFICATION",
+          subject,
+          recipientEmail: user.email,
+          htmlContent: emailHtml,
+        },
+      });
+    } catch (logErr) {
+      // EmailLog is for audit only — never let a logging failure
+      // turn a successful send into a 500 the user can't recover from.
+      userVerifyEmailLogger.warn(
+        { err: String(logErr), userId: user.id },
+        "Failed to write EmailLog row for verification email (send still succeeded)"
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Verification email sent! Please check your inbox.",
+    });
+  } catch (error) {
+    userVerifyEmailLogger.error({ err: formatError(error) }, "Send verification email error:");
+    return NextResponse.json(
+      { error: "Failed to send verification email" },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - Verify email token
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const token = searchParams.get("token");
+    let email = searchParams.get("email");
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "Verification token is required" },
+        { status: 400 }
+      );
+    }
+
+    // Backwards compatibility: older signup verification emails went
+    // out with only ?token=... and no &email=... So if email is
+    // missing, look it up by the token alone — verificationToken.token
+    // is a random 32-byte hex string, unique by construction. Once we
+    // know the row, we know the identifier (email).
+    if (!email) {
+      const tokenRow = await db.verificationToken.findFirst({
+        where: { token },
+        select: { identifier: true },
+      });
+      if (!tokenRow) {
+        return NextResponse.json(
+          { error: "Invalid or expired verification link" },
+          { status: 400 }
+        );
+      }
+      email = tokenRow.identifier;
+    }
+
+    // Find the verification token
+    const verificationToken = await db.verificationToken.findFirst({
+      where: {
+        identifier: email,
+        token,
+      },
+    });
+
+    if (!verificationToken) {
+      return NextResponse.json(
+        { error: "Invalid or expired verification link" },
+        { status: 400 }
+      );
+    }
+
+    // Check if token has expired
+    if (verificationToken.expires < new Date()) {
+      // Delete the expired token (deleteMany is idempotent if another
+      // concurrent call already removed it).
+      await db.verificationToken.deleteMany({
+        where: {
+          identifier: email,
+          token,
+        },
+      });
+      return NextResponse.json(
+        { error: "Verification link has expired. Please request a new one." },
+        { status: 400 }
+      );
+    }
+
+    // Verify the user's email (use case-insensitive match for safety)
+    const userToVerify = await db.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!userToVerify) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    await db.user.update({
+      where: { id: userToVerify.id },
+      data: { emailVerified: new Date() },
+    });
+
+    // Delete the used token — use deleteMany for idempotency if
+    // another concurrent verify request already consumed it.
+    await db.verificationToken.deleteMany({
+      where: {
+        identifier: email,
+        token,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Email verified successfully!",
+    });
+  } catch (error) {
+    userVerifyEmailLogger.error({ err: formatError(error) }, "Verify email error:");
+    return NextResponse.json(
+      { error: "Failed to verify email" },
+      { status: 500 }
+    );
+  }
+}

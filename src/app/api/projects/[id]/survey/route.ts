@@ -1,0 +1,277 @@
+import { NextRequest, NextResponse } from "next/server";
+import { formatError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
+
+const projectsSurveyLogger = logger.child({ module: "projects-survey" });
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
+
+// GET - Get survey for a project (creator view)
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const projectId = id;
+
+    // Verify project ownership or collaborator access
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
+      include: {
+        collaborators: {
+          where: { userId: session.user.id, status: "ACCEPTED" },
+        },
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const isOwner = project.creatorId === session.user.id;
+    const isCollaborator = project.collaborators.length > 0;
+
+    if (!isOwner && !isCollaborator) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Get or create survey
+    const survey = await db.survey.findUnique({
+      where: { projectId },
+      include: {
+        itemQuestions: {
+          include: {
+            variants: {
+              orderBy: { sortOrder: "asc" },
+            },
+            customQuestions: {
+              orderBy: { sortOrder: "asc" },
+            },
+          },
+          orderBy: { sortOrder: "asc" },
+        },
+        backerQuestions: {
+          orderBy: { sortOrder: "asc" },
+        },
+        responses: {
+          include: {
+            // We'll get pledge info separately
+          },
+        },
+      },
+    });
+
+    // If no survey exists, return null
+    if (!survey) {
+      return NextResponse.json({ survey: null });
+    }
+
+    // Get response stats
+    const totalBackers = await db.pledge.count({
+      where: { projectId, status: "COMPLETED" },
+    });
+
+    const completedResponses = await db.surveyResponse.count({
+      where: { surveyId: survey.id, isComplete: true },
+    });
+
+    // Get rewards for item question mapping
+    const rewards = await db.reward.findMany({
+      where: { projectId },
+      select: { id: true, title: true },
+    });
+
+    return NextResponse.json({
+      survey,
+      stats: {
+        totalBackers,
+        completedResponses,
+        responseRate: totalBackers > 0 ? Math.round((completedResponses / totalBackers) * 100) : 0,
+      },
+      rewards,
+    });
+  } catch (error) {
+    projectsSurveyLogger.error({ err: formatError(error) }, "Error fetching survey:");
+    return NextResponse.json(
+      { error: "Failed to fetch survey" },
+      { status: 500 }
+    );
+  }
+}
+
+const surveySchema = z.object({
+  introTitle: z.string().optional().nullable(),
+  introMessage: z.string().optional().nullable(),
+  collectAddresses: z.boolean().optional(),
+});
+
+// POST - Create survey for a project
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const projectId = id;
+    const body = await req.json();
+
+    // Verify project ownership
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
+      include: {
+        collaborators: {
+          where: {
+            userId: session.user.id,
+            status: "ACCEPTED",
+            canCoordinateFulfillment: true,
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const isOwner = project.creatorId === session.user.id;
+    const hasPermission = project.collaborators.length > 0;
+
+    if (!isOwner && !hasPermission) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const data = surveySchema.parse(body);
+
+    // Create with P2002 catch on projectId @unique — the findUnique
+    // check is TOCTOU under concurrent creates.
+    let survey;
+    try {
+      survey = await db.survey.create({
+        data: {
+          projectId,
+          introTitle: data.introTitle,
+          introMessage: data.introMessage,
+          collectAddresses: data.collectAddresses ?? true,
+        },
+      });
+    } catch (createErr) {
+      const isUniqueViolation =
+        createErr &&
+        typeof createErr === "object" &&
+        "code" in createErr &&
+        (createErr as { code?: string }).code === "P2002";
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: "Survey already exists for this project" },
+          { status: 409 }
+        );
+      }
+      throw createErr;
+    }
+
+    return NextResponse.json({ survey });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
+    }
+    projectsSurveyLogger.error({ err: formatError(error) }, "Error creating survey:");
+    return NextResponse.json(
+      { error: "Failed to create survey" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Update survey intro and settings
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const projectId = id;
+    const body = await req.json();
+
+    // Verify project ownership
+    const project = await db.project.findFirst({
+      where: { id: projectId, deletedAt: null },
+      include: {
+        collaborators: {
+          where: {
+            userId: session.user.id,
+            status: "ACCEPTED",
+            canCoordinateFulfillment: true,
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const isOwner = project.creatorId === session.user.id;
+    const hasPermission = project.collaborators.length > 0;
+
+    if (!isOwner && !hasPermission) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const survey = await db.survey.findUnique({
+      where: { projectId },
+    });
+
+    if (!survey) {
+      return NextResponse.json({ error: "Survey not found" }, { status: 404 });
+    }
+
+    // Don't allow editing locked surveys
+    if (survey.status === "LOCKED") {
+      return NextResponse.json(
+        { error: "Cannot edit a locked survey" },
+        { status: 400 }
+      );
+    }
+
+    const data = surveySchema.parse(body);
+
+    const updatedSurvey = await db.survey.update({
+      where: { id: survey.id },
+      data: {
+        introTitle: data.introTitle,
+        introMessage: data.introMessage,
+        collectAddresses: data.collectAddresses,
+      },
+    });
+
+    return NextResponse.json({ survey: updatedSurvey });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errorMessage = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
+    }
+    projectsSurveyLogger.error({ err: formatError(error) }, "Error updating survey:");
+    return NextResponse.json(
+      { error: "Failed to update survey" },
+      { status: 500 }
+    );
+  }
+}

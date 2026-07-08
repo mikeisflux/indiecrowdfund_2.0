@@ -1,0 +1,32 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/payment-retries",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/process-funded-campaigns",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/process-failed-campaigns",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/email-retries",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/email-queue",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-dc-pledges",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-chat",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}

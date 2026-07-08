@@ -1,0 +1,388 @@
+// ============================================
+// EMAIL LOGS
+// ============================================
+
+model EmailLog {
+  id             String    @id @default(cuid())
+  userId         String?
+  projectId      String?
+  pledgeId       String?
+  type           EmailType
+  subject        String?
+  recipientEmail String    // Store recipient email in case user email changes
+  htmlContent    String?   @db.Text  // Store the full HTML content for viewing/downloading
+
+  sentAt         DateTime  @default(now())
+  openedAt       DateTime?
+  clickedAt      DateTime?
+
+  user           User?     @relation(fields: [userId], references: [id])
+  project        Project?  @relation(fields: [projectId], references: [id])
+  pledge         Pledge?   @relation(fields: [pledgeId], references: [id])
+
+  @@index([userId, type, sentAt])
+  @@index([projectId, type])
+  @@index([pledgeId])
+  @@index([recipientEmail])
+}
+
+enum EmailType {
+  WEEKLY_DISCOVERY
+  CREATOR_LAUNCH
+  CATEGORY_ALERT
+  ENDING_SOON
+  PROJECT_FUNDED
+  FUNDING_MILESTONE
+  UPDATE_NOTIFICATION
+  SURVEY_REMINDER
+  PLEDGE_CONFIRMATION
+  PLEDGE_MODIFICATION
+  PLEDGE_CANCELLATION
+  PLEDGE_REFUND
+  WELCOME
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+  RATING_REQUEST
+}
+
+// ============================================
+// NEWSLETTER SUBSCRIBERS
+// ============================================
+
+model NewsletterSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  source       String?  // csv_import, website_signup, creator_import, etc.
+  tags         String[] // Tags for categorization (e.g., creator account names who uploaded)
+  isActive     Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+  unsubscribedAt DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+  @@index([isActive])
+  @@index([source])
+}
+
+// ============================================
+// CREATOR EMAIL LIST (Per-user subscriber list)
+// ============================================
+
+model EmailListSubscriber {
+  id              String    @id @default(cuid())
+  creatorId       String    // The creator who owns this subscriber
+  email           String
+  name            String?
+  status          String    @default("subscribed") // subscribed, unsubscribed, bounced
+  source          String?   // Where they signed up: import, teaser, project, manual
+  sourceProjectId String?   // If signed up from a specific project
+  tags            String[]  // For segmentation
+
+  // Engagement tracking
+  lastEmailSentAt DateTime?
+  lastOpenedAt    DateTime?
+  lastClickedAt   DateTime?
+
+  creator         User      @relation("CreatorEmailList", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([creatorId, email])
+  @@index([creatorId])
+  @@index([email])
+  @@index([status])
+}
+
+// ============================================
+// EMAIL TEMPLATES & CAMPAIGNS
+// ============================================
+
+model EmailTemplate {
+  id            String     @id @default(cuid())
+  name          String     @unique
+  subject       String
+  htmlContent   String     @db.Text
+  textContent   String?    @db.Text
+
+  // Variables that can be used
+  variables     String[]
+
+  isActive      Boolean    @default(true)
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model EmailCampaign {
+  id            String           @id @default(cuid())
+  name          String
+  subject       String
+  htmlContent   String           @db.Text
+
+  // Targeting
+  targetAudience String          @default("all")
+  filters       Json?
+
+  // Status
+  status        CampaignStatus   @default(DRAFT)
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+
+  // Stats
+  recipientCount Int             @default(0)
+  sentCount     Int              @default(0)
+  openCount     Int              @default(0)
+  clickCount    Int              @default(0)
+  bounceCount   Int              @default(0)
+  unsubscribeCount Int           @default(0)
+  conversionCount Int            @default(0)  // Pledges attributed to this campaign
+
+  createdBy     String?
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Relations
+  clicks        EmailCampaignClick[]
+  conversions   Pledge[]         @relation("CampaignConversions")
+
+  @@index([status])
+}
+
+// Track individual email link clicks for conversion attribution
+model EmailCampaignClick {
+  id          String    @id @default(cuid())
+  campaignId  String
+  email       String?   // Email address that was sent to
+  userId      String?   // User ID if logged in or matched
+  url         String    // The URL they clicked
+  ipAddress   String?   // For matching anonymous users
+  userAgent   String?   // Browser info
+  clickedAt   DateTime  @default(now())
+  converted   Boolean   @default(false)
+  convertedAt DateTime?
+  pledgeId    String?   // If converted, link to the pledge
+
+  campaign    EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([campaignId])
+  @@index([email])
+  @@index([userId])
+  @@index([clickedAt])
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+// ============================================
+// MAILBOX MANAGEMENT
+// ============================================
+
+model Mailbox {
+  id            String        @id @default(cuid())
+  name          String
+  email         String        @unique
+  description   String?
+  color         String?       @default("#3B82F6")
+
+  // IMAP/SMTP settings for external mailboxes (optional)
+  imapHost      String?
+  imapPort      Int?
+  smtpHost      String?
+  smtpPort      Int?
+  username      String?
+  password      String?       // Encrypted
+  useSSL        Boolean       @default(true)
+
+  isDefault     Boolean       @default(false)
+  isActive      Boolean       @default(true)
+  isCreatorMailbox Boolean    @default(false)  // True for auto-created creator mailboxes
+
+  emails        AdminEmail[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([isActive])
+}
+
+// Email Queue for rate-limited sending (1 email per second max)
+model EmailQueue {
+  id            String           @id @default(cuid())
+
+  // Email details
+  toEmail       String
+  subject       String
+  bodyHtml      String           @db.Text
+  bodyText      String?          @db.Text
+  fromEmail     String?
+  fromName      String?
+  replyTo       String?
+  isCreatorEmail Boolean         @default(false)
+  // Transactional emails (password reset, email verification) must always
+  // be delivered even when the recipient unsubscribed from marketing.
+  // Persisted so the worker can pass it through to sendEmail() on every
+  // retry, including auto-queue fallbacks from failed direct sends.
+  skipUnsubscribeCheck Boolean   @default(false)
+
+  // Queue status
+  status        EmailQueueStatus @default(PENDING)
+  priority      Int              @default(0)  // Higher = more urgent
+  attempts      Int              @default(0)
+  maxAttempts   Int              @default(3)
+  error         String?
+
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  processedAt   DateTime?
+  sentAt        DateTime?
+  // When set, the queue processor won't pick this row up until this time.
+  // NULL = send as soon as possible (preserves all existing behavior).
+  // Used to deliver AI-marketing emails at each recipient's optimal hour.
+  scheduledFor  DateTime?
+
+  @@index([status, priority, createdAt])
+  @@index([createdAt])
+  @@index([status, scheduledFor])
+}
+
+enum EmailQueueStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model AdminEmail {
+  id            String           @id @default(cuid())
+  mailboxId     String
+
+  // Email details
+  fromEmail     String
+  fromName      String?
+  toEmail       String
+  toName        String?
+  ccEmails      String[]
+  bccEmails     String[]
+  replyTo       String?
+  subject       String
+  bodyHtml      String           @db.Text
+  bodyText      String?          @db.Text
+
+  // Folder/status
+  folder        EmailFolder      @default(INBOX)
+  status        AdminEmailStatus @default(PENDING)
+
+  // Tracking
+  isRead        Boolean          @default(false)
+  isStarred     Boolean          @default(false)
+  isArchived    Boolean          @default(false)
+
+  // Dates
+  sentAt        DateTime?
+  receivedAt    DateTime?
+  openedAt      DateTime?
+
+  // Thread support
+  threadId      String?
+  inReplyTo     String?
+
+  // Attachments stored as JSON array
+  attachments   Json?
+
+  mailbox       Mailbox          @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([mailboxId, folder])
+  @@index([mailboxId, status])
+  @@index([mailboxId, isRead])
+  @@index([threadId])
+}
+
+enum EmailFolder {
+  INBOX
+  SENT
+  DRAFTS
+  TRASH
+  SPAM
+  ARCHIVE
+}
+
+enum AdminEmailStatus {
+  PENDING
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+// ============================================
+// EMAIL BLOCKLIST
+// ============================================
+
+model EmailBlocklist {
+  id            String              @id @default(cuid())
+
+  // What to block
+  type          EmailBlocklistType
+  value         String              // email address, domain, or IP
+
+  // Metadata
+  reason        String?             @db.Text
+  source        String?             // How it was added (manual, auto-spam, bounce, etc.)
+
+  // Stats
+  blockedCount  Int                 @default(0)  // How many emails were blocked
+  lastBlockedAt DateTime?
+
+  // Status
+  isActive      Boolean             @default(true)
+  expiresAt     DateTime?           // Optional expiration for temporary blocks
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([type, value])
+  @@index([type])
+  @@index([isActive])
+  @@index([value])
+}
+
+enum EmailBlocklistType {
+  EMAIL       // Specific email address
+  DOMAIN      // Entire domain (e.g., spam.com)
+  IP          // IP address
+  PATTERN     // Regex pattern (e.g., *@tempmail.*)
+}
+
+// ============================================
+// SUBSCRIBER SEGMENTS
+// ============================================
+
+model SubscriberSegment {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  // JSON array of filter rules: [{ type: "tag"|"source", values: string[], operator: "AND"|"OR" }]
+  rules       Json
+  // Cached count, refreshed on read
+  cachedCount Int      @default(0)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+}

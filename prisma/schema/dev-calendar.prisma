@@ -1,0 +1,67 @@
+// ============================================
+// DEV CALENDAR
+// ============================================
+//
+// Internal calendar for the engineering team. Records reminders,
+// notes, and cron-job schedules in one place so the operator can
+// glance at a single screen and see what needs attention today,
+// this week, or in the future. Not user-visible.
+
+model DevCalendarEntry {
+  id              String                  @id @default(cuid())
+
+  // What kind of entry this is. NOTE = freeform engineering note
+  // pinned to a date. REMINDER = one-off thing to do on a date
+  // (e.g. "check DC false positives in 7 days"). JOB_SCHEDULE =
+  // documents a cron job that runs on a recurring cadence -- the
+  // cronExpression field stores the schedule for reference (we
+  // don't execute it; it's documentation of what's deployed).
+  type            DevCalendarEntryType    @default(NOTE)
+
+  title           String
+  description     String?                 @db.Text
+
+  // When this entry is relevant. For REMINDER/NOTE: the date it
+  // should appear on. For JOB_SCHEDULE: the first/next expected
+  // run timestamp (informational only).
+  scheduledFor    DateTime?
+
+  // Cron-format schedule for JOB_SCHEDULE entries (e.g. "*/10 * * * *").
+  // Free text -- we don't parse it.
+  cronExpression  String?
+
+  // Optional URL link (PR, doc, dashboard, etc.).
+  link            String?
+
+  // Soft status flow. PENDING -> DONE / SKIPPED. IN_PROGRESS for
+  // ongoing initiatives.
+  status          DevCalendarEntryStatus  @default(PENDING)
+
+  // Free-form tags for filtering ("chargeback", "deploy", "ops",
+  // etc.).
+  tags            String[]
+
+  // Audit trail
+  createdById     String?
+  completedAt     DateTime?
+
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@index([scheduledFor])
+  @@index([status])
+  @@index([type])
+}
+
+enum DevCalendarEntryType {
+  NOTE
+  REMINDER
+  JOB_SCHEDULE
+}
+
+enum DevCalendarEntryStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  SKIPPED
+}
