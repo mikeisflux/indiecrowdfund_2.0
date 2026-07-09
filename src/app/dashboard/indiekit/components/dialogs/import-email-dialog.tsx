@@ -306,7 +306,7 @@ export function ImportEmailDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5 text-teal-600" />
@@ -515,7 +515,7 @@ export function ImportEmailDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t bg-background px-6 py-4">
           {step === "upload" && (
             <Button variant="outline" onClick={handleClose}>
               Cancel
