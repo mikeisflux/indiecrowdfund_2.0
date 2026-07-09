@@ -197,7 +197,7 @@ export function ConsentBanner() {
   // version that just kept growing the bar in place.
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl rounded-xl border border-border bg-background shadow-2xl p-4 sm:p-6 animate-in slide-in-from-bottom duration-300">
+      <div className="w-full max-w-2xl max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl p-4 sm:p-6 animate-in slide-in-from-bottom duration-300">
         <div className="flex flex-col gap-4">
           <div>
             <h3 className="font-semibold text-base mb-1">{content.heading}</h3>

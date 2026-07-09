@@ -633,7 +633,7 @@ export default function PromoPopupPage() {
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setIsPreviewOpen(false)}
           />
-          <div className="relative w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl">
+          <div className="relative w-full max-w-2xl max-h-[calc(100dvh-2rem)] rounded-2xl overflow-x-hidden overflow-y-auto shadow-2xl">
             <button
               onClick={() => setIsPreviewOpen(false)}
               className="absolute top-4 right-4 z-10 rounded-full p-1.5 bg-white/10 hover:bg-white/20 text-white transition-colors"
