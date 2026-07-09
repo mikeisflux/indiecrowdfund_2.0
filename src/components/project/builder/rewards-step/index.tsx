@@ -548,7 +548,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       amount: addon.amount,
       type: "ADDON",
     });
-    toast.success("Add-on imported successfully");
+    // Success toast is shown once by ImportAddonDialog after a (possibly bulk) import.
   };
 
   // Handler for copying a tier from current project as an addon
@@ -569,8 +569,7 @@ export function RewardsStep({ onFormOpenChange }: RewardsStepProps) {
       title: `${tier.title} (Add-on)`,
       items: itemsWithProjectItemId,
     });
-
-    toast.success("Reward copied as add-on successfully");
+    // Success toast is shown once by ImportAddonDialog after a (possibly bulk) import.
   };
 
   // CSV Import handlers

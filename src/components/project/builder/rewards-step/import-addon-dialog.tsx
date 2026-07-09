@@ -17,7 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Copy, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { RewardData } from "@/types";
 
 interface ProjectReward {
@@ -53,6 +55,8 @@ export function ImportAddonDialog({
   const [selectedProject, setSelectedProject] = useState<string>("current");
   const [previousProjects, setPreviousProjects] = useState<PreviousProject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // Which rows (by display index) are checked for import.
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
 
   // Fetch projects when dialog opens
   const fetchProjects = useCallback(async () => {
@@ -114,8 +118,15 @@ export function ImportAddonDialog({
     if (isOpen) {
       fetchProjects();
       setSelectedProject("current");
+      setSelectedRows(new Set());
     }
   }, [isOpen, fetchProjects]);
+
+  // Clear the selection whenever the source project changes — the display
+  // indices no longer point at the same rewards.
+  useEffect(() => {
+    setSelectedRows(new Set());
+  }, [selectedProject]);
 
   // Get rewards to display based on selected project
   const getRewardsToDisplay = () => {
@@ -147,16 +158,41 @@ export function ImportAddonDialog({
 
   const rewardsToDisplay = getRewardsToDisplay();
 
-  const handleImport = (reward: { title: string; amount: number; description: string; idx: number; isCurrent: boolean }) => {
-    if (reward.isCurrent) {
-      onImportFromCurrentProject(reward.idx);
-    } else {
-      onImportAddon({
-        title: reward.title,
-        description: reward.description,
-        amount: reward.amount,
-      });
-    }
+  const toggleRow = (displayIdx: number) => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(displayIdx)) next.delete(displayIdx);
+      else next.add(displayIdx);
+      return next;
+    });
+  };
+
+  const allSelected = rewardsToDisplay.length > 0 && selectedRows.size === rewardsToDisplay.length;
+
+  const toggleSelectAll = () => {
+    setSelectedRows(
+      allSelected ? new Set() : new Set(rewardsToDisplay.map((_, i) => i)),
+    );
+  };
+
+  const handleImportSelected = () => {
+    // Import in display order so the resulting add-ons keep the same ordering.
+    const selected = rewardsToDisplay.filter((_, i) => selectedRows.has(i));
+    if (selected.length === 0) return;
+
+    selected.forEach((reward) => {
+      if (reward.isCurrent) {
+        onImportFromCurrentProject(reward.idx);
+      } else {
+        onImportAddon({
+          title: reward.title,
+          description: reward.description,
+          amount: reward.amount,
+        });
+      }
+    });
+
+    toast.success(`Imported ${selected.length} add-on${selected.length > 1 ? "s" : ""}`);
     onOpenChange(false);
   };
 
@@ -166,7 +202,8 @@ export function ImportAddonDialog({
         <DialogHeader>
           <DialogTitle>Import add-on from project</DialogTitle>
           <DialogDescription>
-            Copy a reward tier from this project as an add-on, or import a reward/add-on from another project.
+            Select one or more rewards to import as add-ons — copy reward tiers from this
+            project, or pull rewards/add-ons from another project.
           </DialogDescription>
         </DialogHeader>
 
@@ -200,29 +237,68 @@ export function ImportAddonDialog({
             </SelectContent>
           </Select>
 
+          {/* Select-all header */}
+          {rewardsToDisplay.length > 0 && (
+            <div className="flex items-center gap-2 px-1">
+              <Checkbox
+                id="import-addon-select-all"
+                checked={allSelected}
+                onCheckedChange={toggleSelectAll}
+              />
+              <label
+                htmlFor="import-addon-select-all"
+                className="text-sm text-muted-foreground cursor-pointer select-none"
+              >
+                {allSelected ? "Deselect all" : "Select all"}
+                {selectedRows.size > 0 && ` (${selectedRows.size} selected)`}
+              </label>
+            </div>
+          )}
+
           {/* Rewards List */}
           <div className="max-h-[300px] overflow-y-auto space-y-2">
             {rewardsToDisplay.length > 0 ? (
-              rewardsToDisplay.map((reward, displayIdx) => (
-                <div
-                  key={displayIdx}
-                  className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleImport(reward)}
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{reward.title}</p>
-                      {!reward.isCurrent && (
-                        <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
-                          {reward.type === "ADDON" ? "Add-on" : "Reward"}
-                        </span>
-                      )}
+              rewardsToDisplay.map((reward, displayIdx) => {
+                const checked = selectedRows.has(displayIdx);
+                return (
+                  <div
+                    key={displayIdx}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={checked}
+                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                      checked ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                    }`}
+                    onClick={() => toggleRow(displayIdx)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleRow(displayIdx);
+                      }
+                    }}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleRow(displayIdx)}
+                      // Row onClick already toggles; stop the inner control from
+                      // firing a second toggle that would cancel it out.
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Select ${reward.title}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate">{reward.title}</p>
+                        {!reward.isCurrent && (
+                          <span className="text-xs px-1.5 py-0.5 bg-muted rounded shrink-0">
+                            {reward.type === "ADDON" ? "Add-on" : "Reward"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">${Number(reward.amount).toFixed(2)}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">${Number(reward.amount).toFixed(2)}</p>
                   </div>
-                  <Copy className="h-4 w-4 text-muted-foreground" />
-                </div>
-              ))
+                );
+              })
             ) : selectedProject === "current" ? (
               <p className="text-sm text-muted-foreground p-3 text-center">
                 No reward tiers to copy. Create reward tiers first.
@@ -238,6 +314,9 @@ export function ImportAddonDialog({
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
+          </Button>
+          <Button onClick={handleImportSelected} disabled={selectedRows.size === 0}>
+            Import{selectedRows.size > 0 ? ` (${selectedRows.size})` : ""}
           </Button>
         </DialogFooter>
       </DialogContent>
