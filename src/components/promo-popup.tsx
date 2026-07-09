@@ -143,7 +143,7 @@ export function PromoPopup() {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-2rem)] rounded-2xl overflow-x-hidden overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-300">
         {/* Close button - positioned on modal frame, always visible */}
         <button
           onClick={handleDismiss}
