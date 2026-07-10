@@ -1,21 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -34,6 +28,7 @@ import {
   Trash2,
   CreditCard,
   RotateCw,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
@@ -173,19 +168,38 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
   // Per-product configurator schema, fetched on demand from the catalog
   // proxy. Keyed by product slug. Each option carries its key, label,
   // type, and (for select-type options) the accepted values.
+  // Mirrors PrintingComics' GET /catalog/products/:slug option schema
+  // (server/src/routes/v1/catalog.ts + prisma ProductOption/Value models).
+  type PCOptionType =
+    | "TILES"    // image grid (cover/interior paper)
+    | "RADIO"    // inline buttons (yes/no)
+    | "SELECT"   // dropdown
+    | "TOGGLE"   // boolean switch
+    | "TEXT"     // free text
+    | "NUMBER"   // numeric
+    | "UPLOAD"   // file upload
+    | "CONFIRM"; // required acknowledgement checkbox
   interface PCOptionValue {
-    label: string;
-    value: string | number;
+    id: string;
+    label: string;              // ALSO the identifier submitted in the order options map
+    subLabel?: string | null;
+    imageUrl?: string | null;
     priceModifierCents?: number;
+    sortOrder?: number;
   }
   interface PCOption {
-    key: string;
-    label: string;
-    type: "select" | "number" | "text";
+    id: string;
+    name: string;               // creator-facing label
+    internalKey?: string | null; // key for the order options map (falls back to id)
+    section?: string | null;
+    type: PCOptionType;
     required?: boolean;
-    values?: PCOptionValue[];           // present when type === "select"
-    min?: number; max?: number; step?: number; // present when type === "number"
-    defaultValue?: string | number;
+    helpText?: string | null;
+    longDescription?: string | null;
+    sortOrder?: number;
+    dependsOnOptionId?: string | null;
+    dependsOnValue?: string | null;
+    values?: PCOptionValue[];
   }
   interface PCProductFull {
     slug: string;
@@ -525,7 +539,6 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
       }
     }, 600);
     return () => clearTimeout(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formOpen, lineItems, shipCountry, shipRegion, shipPostalCode, shippingRateId]);
 
   const handleSubmit = async () => {
@@ -755,15 +768,22 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
       </Card>
 
       {/* New-order dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Submit a new print order</DialogTitle>
-            <DialogDescription>
-              Cartons will ship to the address you enter — that&apos;s YOUR address, not a backer&apos;s. Once the books arrive you&apos;ll fulfill backers from your end.
-            </DialogDescription>
-          </DialogHeader>
-
+      {formOpen && (
+        <Card className="mt-4">
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle>Submit a new print order</CardTitle>
+                <CardDescription>
+                  Cartons will ship to the address you enter — that&apos;s YOUR address, not a backer&apos;s. Once the books arrive you&apos;ll fulfill backers from your end.
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setFormOpen(false)} aria-label="Close" disabled={submitting}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
           <div className="space-y-4 py-2">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -871,85 +891,218 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                         </p>
                       );
                     }
-                    return (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {cfg.options.map((opt) => {
-                          const current = item.options[opt.key];
-                          if (opt.type === "select" && Array.isArray(opt.values) && opt.values.length > 0) {
-                            const value = current != null ? String(current) : "__default__";
-                            return (
-                              <div key={opt.key} className="space-y-1">
-                                <Label>{opt.label}{opt.required ? " *" : ""}</Label>
-                                <Select
-                                  value={value}
-                                  onValueChange={(v) =>
-                                    updateLineItemOption(
-                                      idx,
-                                      opt.key,
-                                      v === "__default__"
-                                        ? undefined
-                                        : (opt.values?.find((o) => String(o.value) === v)?.value ?? v)
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={opt.required ? "Pick one" : "Product default"} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {!opt.required && <SelectItem value="__default__">Product default</SelectItem>}
-                                    {opt.values.map((v) => (
-                                      <SelectItem key={String(v.value)} value={String(v.value)}>
-                                        {v.label}
-                                        {v.priceModifierCents
-                                          ? ` (+$${(v.priceModifierCents / 100).toFixed(2)})`
-                                          : ""}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            );
-                          }
-                          if (opt.type === "number") {
-                            return (
-                              <div key={opt.key} className="space-y-1">
-                                <Label>{opt.label}{opt.required ? " *" : ""}</Label>
-                                <Input
-                                  type="number"
-                                  min={opt.min}
-                                  max={opt.max}
-                                  step={opt.step ?? 1}
-                                  value={current != null ? String(current) : ""}
-                                  onChange={(e) => {
-                                    const v = e.target.value;
-                                    updateLineItemOption(
-                                      idx,
-                                      opt.key,
-                                      v === "" ? undefined : Number(v)
-                                    );
-                                  }}
-                                  placeholder={opt.defaultValue != null ? `e.g. ${opt.defaultValue}` : ""}
-                                />
-                              </div>
-                            );
-                          }
-                          // Fallback: plain text input
-                          return (
-                            <div key={opt.key} className="space-y-1">
-                              <Label>{opt.label}{opt.required ? " *" : ""}</Label>
-                              <Input
-                                value={current != null ? String(current) : ""}
-                                onChange={(e) =>
-                                  updateLineItemOption(
-                                    idx,
-                                    opt.key,
-                                    e.target.value === "" ? undefined : e.target.value
-                                  )
-                                }
-                              />
+
+                    const optKeyOf = (o: PCOption) => o.internalKey || o.id;
+                    const sorted = [...cfg.options].sort(
+                      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+                    );
+                    // Conditional options only show when the option they depend
+                    // on currently holds the matching value.
+                    const isVisible = (o: PCOption) => {
+                      if (!o.dependsOnOptionId) return true;
+                      const parent = cfg.options.find((p) => p.id === o.dependsOnOptionId);
+                      if (!parent) return true;
+                      const cur = item.options[optKeyOf(parent)];
+                      return cur != null && String(cur) === String(o.dependsOnValue ?? "");
+                    };
+                    const visible = sorted.filter(isVisible);
+
+                    const priceTag = (cents?: number) =>
+                      cents ? ` (+$${(cents / 100).toFixed(2)})` : "";
+
+                    const renderOption = (opt: PCOption) => {
+                      const key = optKeyOf(opt);
+                      const current = item.options[key];
+                      const req = opt.required ? " *" : "";
+                      const header = (
+                        <div>
+                          <Label className="text-sm">{opt.name}{req}</Label>
+                          {opt.helpText && (
+                            <p className="text-[11px] text-muted-foreground">{opt.helpText}</p>
+                          )}
+                        </div>
+                      );
+                      const values = opt.values ?? [];
+
+                      // Image tiles / inline radio — pick one value (by label).
+                      if ((opt.type === "TILES" || opt.type === "RADIO") && values.length > 0) {
+                        return (
+                          <div key={key} className="space-y-1.5">
+                            {header}
+                            <div className={opt.type === "TILES"
+                              ? "grid grid-cols-2 sm:grid-cols-3 gap-2"
+                              : "flex flex-wrap gap-2"}>
+                              {values.map((v) => {
+                                const selected = current != null && String(current) === v.label;
+                                return (
+                                  <button
+                                    key={v.id}
+                                    type="button"
+                                    onClick={() =>
+                                      updateLineItemOption(idx, key, selected && !opt.required ? undefined : v.label)
+                                    }
+                                    className={`text-left rounded-lg border transition-colors ${
+                                      opt.type === "TILES" ? "p-2" : "px-3 py-1.5"
+                                    } ${selected ? "border-primary ring-1 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                                  >
+                                    {opt.type === "TILES" && v.imageUrl && (
+                                      <div
+                                        className="mb-1.5 h-16 w-full rounded bg-muted bg-cover bg-center"
+                                        style={{ backgroundImage: `url(${v.imageUrl})` }}
+                                      />
+                                    )}
+                                    <span className="text-sm font-medium">{v.label}</span>
+                                    {v.subLabel && (
+                                      <span className="block text-[11px] text-muted-foreground">{v.subLabel}</span>
+                                    )}
+                                    {v.priceModifierCents ? (
+                                      <span className="block text-[11px] text-muted-foreground">
+                                        {priceTag(v.priceModifierCents).trim()}
+                                      </span>
+                                    ) : null}
+                                  </button>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+                          </div>
+                        );
+                      }
+
+                      // Dropdown
+                      if (opt.type === "SELECT" && values.length > 0) {
+                        return (
+                          <div key={key} className="space-y-1.5">
+                            {header}
+                            <Select
+                              value={current != null ? String(current) : "__default__"}
+                              onValueChange={(v) =>
+                                updateLineItemOption(idx, key, v === "__default__" ? undefined : v)
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={opt.required ? "Pick one" : "Product default"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {!opt.required && <SelectItem value="__default__">Product default</SelectItem>}
+                                {values.map((v) => (
+                                  <SelectItem key={v.id} value={v.label}>
+                                    {v.label}{v.subLabel ? ` — ${v.subLabel}` : ""}{priceTag(v.priceModifierCents)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      }
+
+                      // Boolean switch
+                      if (opt.type === "TOGGLE") {
+                        const on = current != null && String(current) === "true";
+                        return (
+                          <div key={key} className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+                            {header}
+                            <Switch
+                              checked={on}
+                              onCheckedChange={(c) => updateLineItemOption(idx, key, c ? "true" : undefined)}
+                            />
+                          </div>
+                        );
+                      }
+
+                      // Required acknowledgement checkbox
+                      if (opt.type === "CONFIRM") {
+                        const on = current != null && String(current) === "true";
+                        return (
+                          <label key={key} className="flex items-start gap-2 rounded-lg border p-2.5 cursor-pointer">
+                            <Checkbox
+                              checked={on}
+                              onCheckedChange={(c) => updateLineItemOption(idx, key, c ? "true" : undefined)}
+                              className="mt-0.5"
+                            />
+                            <div>
+                              <span className="text-sm font-medium">{opt.name}{req}</span>
+                              {opt.helpText && (
+                                <p className="text-[11px] text-muted-foreground">{opt.helpText}</p>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      }
+
+                      // Numeric
+                      if (opt.type === "NUMBER") {
+                        return (
+                          <div key={key} className="space-y-1.5">
+                            {header}
+                            <Input
+                              type="number"
+                              value={current != null ? String(current) : ""}
+                              onChange={(e) =>
+                                updateLineItemOption(idx, key, e.target.value === "" ? undefined : Number(e.target.value))
+                              }
+                            />
+                          </div>
+                        );
+                      }
+
+                      // Upload → pick from the creator's uploaded PDFs
+                      if (opt.type === "UPLOAD") {
+                        return (
+                          <div key={key} className="space-y-1.5">
+                            {header}
+                            <Select
+                              value={current != null ? String(current) : "__none__"}
+                              onValueChange={(v) => updateLineItemOption(idx, key, v === "__none__" ? undefined : v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="(none)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">(none)</SelectItem>
+                                {uploads.map((u) => (
+                                  <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      }
+
+                      // TEXT + fallback
+                      return (
+                        <div key={key} className="space-y-1.5">
+                          {header}
+                          <Input
+                            value={current != null ? String(current) : ""}
+                            onChange={(e) =>
+                              updateLineItemOption(idx, key, e.target.value === "" ? undefined : e.target.value)
+                            }
+                          />
+                        </div>
+                      );
+                    };
+
+                    // Group by section, preserving first-seen order.
+                    const sectionOrder: (string | null)[] = [];
+                    for (const o of visible) {
+                      const s = o.section || null;
+                      if (!sectionOrder.includes(s)) sectionOrder.push(s);
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {sectionOrder.map((section) => (
+                          <div key={section ?? "__nosection__"} className="space-y-2.5">
+                            {section && (
+                              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                {section}
+                              </p>
+                            )}
+                            {visible
+                              .filter((o) => (o.section || null) === section)
+                              .map((opt) => renderOption(opt))}
+                          </div>
+                        ))}
                       </div>
                     );
                   })()}
@@ -1189,18 +1342,19 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              <Send className="h-4 w-4 mr-2" />
-              Submit print order
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 mt-4 border-t">
+              <Button variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={submitting}>
+                {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                <Send className="h-4 w-4 mr-2" />
+                Submit print order
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
