@@ -1,7 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Mail, X, Loader2 } from "lucide-react";
@@ -14,13 +14,24 @@ export function EmailVerificationBanner() {
   const [dismissed, setDismissed] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  // Once we've confirmed the email is verified we stop re-checking —
+  // verification never reverts within a session.
+  const confirmedVerifiedRef = useRef(false);
 
   const checkVerification = useCallback(async () => {
+    if (confirmedVerifiedRef.current) return;
     try {
-      const res = await fetch("/api/user/me");
+      // no-store so a freshly-verified user never gets a cached
+      // "unverified" response from the browser/CDN.
+      const res = await fetch("/api/user/me", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
-      if (data.user && !data.user.emailVerified) {
+      if (!data.user) return;
+      if (data.user.emailVerified) {
+        // Verified — clear the banner and stop polling.
+        confirmedVerifiedRef.current = true;
+        setNeedsVerification(false);
+      } else {
         setNeedsVerification(true);
       }
     } catch {
@@ -28,10 +39,29 @@ export function EmailVerificationBanner() {
     }
   }, []);
 
+  // Re-check on auth change AND on every route change. The banner lives
+  // in the root layout and never remounts, so without re-checking on
+  // navigation a user who verifies (via the emailed link, then clicks
+  // "Browse Crowdfunds") would keep seeing the stale warning.
   useEffect(() => {
     if (status === "authenticated") {
       checkVerification();
     }
+  }, [status, pathname, checkVerification]);
+
+  // Also re-check when the tab regains focus — covers verifying in a
+  // separate tab and switching back to the original one.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const recheck = () => {
+      if (document.visibilityState === "visible") checkVerification();
+    };
+    document.addEventListener("visibilitychange", recheck);
+    window.addEventListener("focus", recheck);
+    return () => {
+      document.removeEventListener("visibilitychange", recheck);
+      window.removeEventListener("focus", recheck);
+    };
   }, [status, checkVerification]);
 
   const handleResend = async () => {
