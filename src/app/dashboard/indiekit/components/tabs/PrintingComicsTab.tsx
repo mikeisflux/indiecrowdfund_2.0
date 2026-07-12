@@ -29,6 +29,7 @@ import {
   CreditCard,
   RotateCw,
   X,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
@@ -941,22 +942,33 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                                     onClick={() =>
                                       updateLineItemOption(idx, key, selected && !opt.required ? undefined : v.label)
                                     }
-                                    className={`text-left rounded-lg border transition-colors ${
-                                      opt.type === "TILES" ? "p-2" : "px-3 py-1.5"
-                                    } ${selected ? "border-primary ring-1 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                                    className={`relative text-center rounded-lg border-2 transition-all duration-150 ${
+                                      opt.type === "TILES" ? "p-3" : "px-4 py-2.5"
+                                    } ${
+                                      selected
+                                        ? "border-primary bg-primary text-primary-foreground font-semibold shadow-[0_0_18px_-2px_hsl(var(--primary)/0.6)]"
+                                        : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                                    }`}
                                   >
+                                    {selected && (
+                                      <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary-foreground/25">
+                                        <Check className="h-3 w-3" />
+                                      </span>
+                                    )}
                                     {opt.type === "TILES" && v.imageUrl && (
                                       <div
                                         className="mb-1.5 h-16 w-full rounded bg-muted bg-cover bg-center"
                                         style={{ backgroundImage: `url(${v.imageUrl})` }}
                                       />
                                     )}
-                                    <span className="text-sm font-medium">{v.label}</span>
+                                    <span className="block text-sm font-medium leading-tight">{v.label}</span>
                                     {v.subLabel && (
-                                      <span className="block text-[11px] text-muted-foreground">{v.subLabel}</span>
+                                      <span className={`block text-[11px] mt-0.5 ${selected ? "text-primary-foreground/85" : "text-muted-foreground"}`}>
+                                        {v.subLabel}
+                                      </span>
                                     )}
                                     {v.priceModifierCents ? (
-                                      <span className="block text-[11px] text-muted-foreground">
+                                      <span className={`block text-[11px] mt-0.5 ${selected ? "text-primary-foreground/85" : "text-muted-foreground"}`}>
                                         {priceTag(v.priceModifierCents).trim()}
                                       </span>
                                     ) : null}
@@ -999,7 +1011,14 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                       if (opt.type === "TOGGLE") {
                         const on = current != null && String(current) === "true";
                         return (
-                          <div key={key} className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+                          <div
+                            key={key}
+                            className={`flex items-center justify-between gap-3 rounded-lg border-2 p-2.5 transition-all duration-150 ${
+                              on
+                                ? "border-primary bg-primary/5 shadow-[0_0_18px_-4px_hsl(var(--primary)/0.5)]"
+                                : "border-border"
+                            }`}
+                          >
                             {header}
                             <Switch
                               checked={on}
@@ -1013,7 +1032,14 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                       if (opt.type === "CONFIRM") {
                         const on = current != null && String(current) === "true";
                         return (
-                          <label key={key} className="flex items-start gap-2 rounded-lg border p-2.5 cursor-pointer">
+                          <label
+                            key={key}
+                            className={`flex items-start gap-2 rounded-lg border-2 p-2.5 cursor-pointer transition-all duration-150 ${
+                              on
+                                ? "border-primary bg-primary/5 shadow-[0_0_18px_-4px_hsl(var(--primary)/0.5)]"
+                                : "border-border"
+                            }`}
+                          >
                             <Checkbox
                               checked={on}
                               onCheckedChange={(c) => updateLineItemOption(idx, key, c ? "true" : undefined)}
@@ -1090,11 +1116,18 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                     }
 
                     return (
-                      <div className="space-y-4">
+                      <div className="space-y-5">
                         {sectionOrder.map((section) => (
-                          <div key={section ?? "__nosection__"} className="space-y-2.5">
+                          <div
+                            key={section ?? "__nosection__"}
+                            className={
+                              section
+                                ? "space-y-3 border-l-2 border-primary/50 pl-3"
+                                : "space-y-3"
+                            }
+                          >
                             {section && (
-                              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              <p className="text-sm font-bold text-foreground">
                                 {section}
                               </p>
                             )}
