@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
+import { downloadFileInChunks } from "@/lib/chunked-download";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -175,25 +176,41 @@ export function DigitalDownloadsTab() {
         throw new Error(error.error || "Download failed");
       }
 
-      const { downloadUrl, fileName } = await response.json();
+      const { downloadUrl, fileName, mimeType } = await response.json();
 
-      // Trigger download. target=_blank + rel=noopener so that if the
-      // browser can't honor the download attribute (cross-origin presigned
-      // R2 URLs ignore it), it opens the file in a new context instead of
-      // navigating THIS page away — which would cancel the tab's in-flight
-      // requests and surface a bogus "Failed to load downloads".
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = fileName;
-      link.target = "_blank";
-      link.rel = "noopener";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Confirm to the backer that the download is going, and keep the URL
-      // around so they can re-trigger it manually if the browser blocked it.
-      setDownloadStatus({ open: true, phase: "started", fileName, downloadUrl });
+      // Large files (e.g. a ~1GB omnibus PDF) downloaded in a single shot
+      // from the cross-origin presigned R2 URL fail/corrupt on flaky
+      // networks with no resume — the same reason UPLOADS are chunked
+      // through our own origin. Pull the file from our same-origin,
+      // Range-capable endpoint in retryable chunks with a progress bar.
+      // On any failure, fall back to the classic presigned-URL download.
+      try {
+        setDownloadStatus({ open: true, phase: "downloading", fileName, progress: 0 });
+        await downloadFileInChunks({
+          url: `/api/backer/digital-files/download?fileId=${encodeURIComponent(fileId)}`,
+          fileName,
+          mimeType,
+          onProgress: (loaded, total) => {
+            const progress = total > 0 ? (loaded / total) * 100 : 0;
+            setDownloadStatus({ open: true, phase: "downloading", fileName, progress });
+          },
+        });
+        setDownloadStatus({ open: true, phase: "started", fileName, downloadUrl });
+      } catch (chunkErr) {
+        console.error("Chunked download failed, falling back to direct URL:", chunkErr);
+        // Fallback: classic direct download via the presigned URL. target
+        // =_blank + rel=noopener so a blocked download opens a new context
+        // instead of navigating this page away.
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = fileName;
+        link.target = "_blank";
+        link.rel = "noopener";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setDownloadStatus({ open: true, phase: "started", fileName, downloadUrl });
+      }
 
       // Refresh download counts in the background — a failure here must not
       // surface as a page error, since the download itself succeeded.

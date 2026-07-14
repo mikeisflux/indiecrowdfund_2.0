@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Loader2, CheckCircle2, AlertCircle, Download } from "lucide-react";
 
-export type DownloadPhase = "preparing" | "started" | "error";
+export type DownloadPhase = "preparing" | "downloading" | "started" | "error";
 
 export interface DownloadStatus {
   open: boolean;
@@ -23,6 +23,8 @@ export interface DownloadStatus {
   // (common with cross-origin R2 links + popup blockers).
   downloadUrl?: string;
   error?: string;
+  // 0–100 for the chunked ("downloading") phase on large files.
+  progress?: number;
 }
 
 interface DownloadStatusDialogProps {
@@ -38,7 +40,8 @@ interface DownloadStatusDialogProps {
  * manual fallback link so they always know the download is going.
  */
 export function DownloadStatusDialog({ status, onOpenChange }: DownloadStatusDialogProps) {
-  const { open, phase, fileName, downloadUrl, error } = status;
+  const { open, phase, fileName, downloadUrl, error, progress } = status;
+  const pct = Math.max(0, Math.min(100, Math.round(progress ?? 0)));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,7 +56,7 @@ export function DownloadStatusDialog({ status, onOpenChange }: DownloadStatusDia
                 : "bg-gradient-to-br from-emerald-500/20 to-cyan-500/20"
             )}
           >
-            {phase === "preparing" && (
+            {(phase === "preparing" || phase === "downloading") && (
               <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />
             )}
             {phase === "started" && (
@@ -66,12 +69,23 @@ export function DownloadStatusDialog({ status, onOpenChange }: DownloadStatusDia
 
           <DialogTitle className="text-center">
             {phase === "preparing" && "Preparing your download…"}
+            {phase === "downloading" && "Downloading…"}
             {phase === "started" && "Download started!"}
             {phase === "error" && "Download failed"}
           </DialogTitle>
 
           <DialogDescription className="text-center">
             {phase === "preparing" && "Getting your file ready — this only takes a second."}
+            {phase === "downloading" && (
+              <>
+                {fileName ? (
+                  <span className="font-medium text-foreground break-all">{fileName}</span>
+                ) : (
+                  "Your file"
+                )}{" "}
+                is downloading in resumable chunks — keep this tab open.
+              </>
+            )}
             {phase === "started" && (
               <>
                 {fileName ? (
@@ -88,6 +102,19 @@ export function DownloadStatusDialog({ status, onOpenChange }: DownloadStatusDia
             {phase === "error" && (error || "Something went wrong. Please try again.")}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Chunked-download progress for large files. */}
+        {phase === "downloading" && (
+          <div className="mt-1 space-y-1.5">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-300"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground tabular-nums">{pct}%</p>
+          </div>
+        )}
 
         {/* Manual fallback — some browsers block the automatic download for
             cross-origin links. Give the backer a direct button. */}
@@ -108,7 +135,7 @@ export function DownloadStatusDialog({ status, onOpenChange }: DownloadStatusDia
         )}
 
         <DialogFooter className="sm:justify-center">
-          {phase === "preparing" ? (
+          {phase === "preparing" || phase === "downloading" ? (
             <Button variant="outline" disabled className="min-w-[120px]">
               Please wait…
             </Button>
