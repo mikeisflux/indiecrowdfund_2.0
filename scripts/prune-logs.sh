@@ -28,8 +28,9 @@ psql_q() { psql "${PGCONN[@]}" -At -c "$1"; }
 
 # table | where-clause | human label
 ROWS=(
+  'UserBehavior|"timestamp" < now() - interval '"'"'90 days'"'"'|UserBehavior analytics >90d'
   'EmailQueue|status IN ('"'"'SENT'"'"','"'"'FAILED'"'"') AND COALESCE("sentAt","createdAt") < now() - interval '"'"'30 days'"'"'|EmailQueue sent/failed >30d'
-  'EmailLog|"sentAt" < now() - interval '"'"'90 days'"'"'|EmailLog >90d'
+  'EmailLog|"sentAt" < now() - interval '"'"'180 days'"'"'|EmailLog rows >180d'
   'AiRunLog|"createdAt" < now() - interval '"'"'30 days'"'"'|AiRunLog >30d'
   'ErrorOccurrence|"timestamp" < now() - interval '"'"'30 days'"'"'|ErrorOccurrence >30d'
   'EmailCampaignClick|"clickedAt" < now() - interval '"'"'180 days'"'"'|EmailCampaignClick >180d'
@@ -46,7 +47,20 @@ for entry in "${ROWS[@]}"; do
   fi
 done
 
+# EmailLog: strip the big htmlContent column off rows older than 30 days
+# instead of deleting the audit rows. Reclaims most of EmailLog's size
+# while keeping who/what/when the email was sent.
+strip_where='"htmlContent" IS NOT NULL AND "sentAt" < now() - interval '"'"'30 days'"'"''
+strip_count=$(psql_q "SELECT COUNT(*) FROM \"EmailLog\" WHERE $strip_where" 2>/dev/null || echo "ERR")
+printf '  %-28s %s rows\n' "EmailLog strip html >30d" "$strip_count"
+if [ "$APPLY" = 1 ] && [ "$strip_count" != "ERR" ] && [ "${strip_count:-0}" -gt 0 ] 2>/dev/null; then
+  psql_q "UPDATE \"EmailLog\" SET \"htmlContent\" = NULL WHERE $strip_where" >/dev/null
+  VACUUM_TABLES+=("EmailLog")
+fi
+
 if [ "$APPLY" = 1 ] && [ "${#VACUUM_TABLES[@]}" -gt 0 ]; then
+  # unique the list so we don't vacuum EmailLog twice
+  mapfile -t VACUUM_TABLES < <(printf '%s\n' "${VACUUM_TABLES[@]}" | sort -u)
   echo "  vacuuming: ${VACUUM_TABLES[*]}"
   for t in "${VACUUM_TABLES[@]}"; do
     psql "${PGCONN[@]}" -c "VACUUM (ANALYZE) \"$t\";" >/dev/null 2>&1 || true
@@ -55,7 +69,7 @@ fi
 
 echo
 echo "=== flat log files ==="
-FLAT_LOGS=(/var/log/email-queue.log /var/log/ai-marketing.log /var/log/scheduled-campaigns.log)
+FLAT_LOGS=(/var/log/email-queue.log /var/log/ai-marketing.log /var/log/scheduled-campaigns.log /var/log/indiecrowdfund-cron.log)
 for f in "${FLAT_LOGS[@]}"; do
   [ -f "$f" ] || continue
   sz=$(du -h "$f" 2>/dev/null | cut -f1)
