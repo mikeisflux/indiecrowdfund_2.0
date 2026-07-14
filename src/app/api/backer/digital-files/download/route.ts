@@ -17,8 +17,10 @@ export const dynamic = "force-dynamic";
 // whole object in a single shot — which fails/corrupts for very large
 // files on consumer networks (the same reason multipart UPLOAD is proxied
 // through our own origin). This endpoint serves the object from our
-// origin and honors HTTP Range, so the client can pull it in retryable
-// chunks (see lib/chunked-download.ts) or the browser can resume natively.
+// origin and honors HTTP Range + Content-Disposition: attachment, so the
+// browser's NATIVE downloader streams it straight to disk (the Files app on
+// iOS Safari) without holding it in memory, and can resume. This is what the
+// backer download button links to.
 //
 // Memory stays bounded: bytes are pulled from R2 in small internal
 // windows and streamed straight through — the whole file is never

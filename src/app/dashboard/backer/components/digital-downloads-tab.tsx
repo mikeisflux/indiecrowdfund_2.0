@@ -1,7 +1,6 @@
 "use client";
 
 import { apiFetch } from "@/lib/fetch-utils";
-import { downloadFileInChunks } from "@/lib/chunked-download";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -176,41 +175,31 @@ export function DigitalDownloadsTab() {
         throw new Error(error.error || "Download failed");
       }
 
-      const { downloadUrl, fileName, mimeType } = await response.json();
+      const { fileName } = await response.json();
 
-      // Large files (e.g. a ~1GB omnibus PDF) downloaded in a single shot
-      // from the cross-origin presigned R2 URL fail/corrupt on flaky
-      // networks with no resume — the same reason UPLOADS are chunked
-      // through our own origin. Pull the file from our same-origin,
-      // Range-capable endpoint in retryable chunks with a progress bar.
-      // On any failure, fall back to the classic presigned-URL download.
-      try {
-        setDownloadStatus({ open: true, phase: "downloading", fileName, progress: 0 });
-        await downloadFileInChunks({
-          url: `/api/backer/digital-files/download?fileId=${encodeURIComponent(fileId)}`,
-          fileName,
-          mimeType,
-          onProgress: (loaded, total) => {
-            const progress = total > 0 ? (loaded / total) * 100 : 0;
-            setDownloadStatus({ open: true, phase: "downloading", fileName, progress });
-          },
-        });
-        setDownloadStatus({ open: true, phase: "started", fileName, downloadUrl });
-      } catch (chunkErr) {
-        console.error("Chunked download failed, falling back to direct URL:", chunkErr);
-        // Fallback: classic direct download via the presigned URL. target
-        // =_blank + rel=noopener so a blocked download opens a new context
-        // instead of navigating this page away.
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = fileName;
-        link.target = "_blank";
-        link.rel = "noopener";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setDownloadStatus({ open: true, phase: "started", fileName, downloadUrl });
-      }
+      // Large files (a ~1GB omnibus PDF) must be handed to the browser's
+      // NATIVE downloader so it streams to disk. Two things break otherwise,
+      // especially on iOS Safari (observed with a backer):
+      //   - Assembling the file in JS memory (Blob) blows the per-tab memory
+      //     ceiling -> "WebKit encountered an internal error".
+      //   - A cross-origin presigned R2 URL gets opened inline / truncated
+      //     -> Acrobat reports "damaged or corrupted".
+      // Our same-origin, Range-capable endpoint returns the file with
+      // Content-Disposition: attachment, so the browser streams it straight
+      // to disk (the Files app on iOS) without holding it in memory, and can
+      // resume. Same-origin also means the session cookie rides along for auth.
+      const streamUrl = `/api/backer/digital-files/download?fileId=${encodeURIComponent(fileId)}`;
+      const link = document.createElement("a");
+      link.href = streamUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Keep the same-origin stream URL as the manual fallback too — the
+      // cross-origin presigned URL is exactly what was failing on the
+      // backer's device/network.
+      setDownloadStatus({ open: true, phase: "started", fileName, downloadUrl: streamUrl });
 
       // Refresh download counts in the background — a failure here must not
       // surface as a page error, since the download itself succeeded.
