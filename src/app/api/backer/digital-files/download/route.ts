@@ -164,6 +164,9 @@ export async function GET(request: NextRequest) {
       "Accept-Ranges": "bytes",
       "Content-Disposition": `attachment; filename="${safeName}"`,
       "Cache-Control": "private, no-store",
+      // Tell nginx (and any buffering proxy) to stream this response through
+      // instead of spooling the whole ~1GB object before sending a byte.
+      "X-Accel-Buffering": "no",
     };
     if (isPartial) {
       headers["Content-Range"] = `bytes ${start}-${end}/${totalSize}`;
