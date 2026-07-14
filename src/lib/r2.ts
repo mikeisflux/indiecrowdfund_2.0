@@ -305,6 +305,33 @@ export class R2Storage {
   }
 
   /**
+   * Fetch a small byte range of an object without buffering the whole
+   * thing. Used by integrity checks (read the first/last few bytes to
+   * validate a file header/trailer) on very large objects. `start`/`end`
+   * are inclusive byte offsets, matching HTTP Range semantics.
+   */
+  async getFileRange(key: string, start: number, end: number): Promise<Buffer | null> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.config.bucketName,
+        Key: key,
+        Range: `bytes=${start}-${end}`,
+      });
+      const response = await this.client.send(command);
+      if (!response.Body) return null;
+      const chunks: Uint8Array[] = [];
+      const body = response.Body as AsyncIterable<Uint8Array>;
+      for await (const chunk of body) {
+        chunks.push(chunk);
+      }
+      return Buffer.concat(chunks);
+    } catch (error) {
+      r2Logger.error({ err: error }, `[R2] Failed to get byte range for ${key}:`);
+      return null;
+    }
+  }
+
+  /**
    * Start a multipart upload. Returns the uploadId the client needs to
    * reference for every UploadPart call and the final
    * CompleteMultipartUpload. Used for files >100MB where a single PUT
