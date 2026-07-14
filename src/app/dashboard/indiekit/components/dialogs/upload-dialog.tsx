@@ -149,88 +149,90 @@ export function UploadDialog({ open, onOpenChange, projectId, onUploaded }: Uplo
         const parts: { partNumber: number; etag: string }[] = [];
         let bytesUploaded = 0;
 
+        // CSRF token for the same-origin proxy POST (raw-bytes body, so
+        // apiFetch can't be used). Computed once — it doesn't change.
+        const csrfToken =
+          typeof document !== "undefined"
+            ? document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ""
+            : "";
+
+        // Upload one part with retry + exponential backoff. Flaky consumer
+        // networks drop mid-part (observed "Network error uploading part"),
+        // and a single dropped part used to fail the whole multi-hundred-MB
+        // upload. Retry transient failures (network + 5xx); 4xx and bad
+        // responses are permanent, so fail fast on those.
+        const MAX_PART_RETRIES = 4;
+        const uploadPartWithRetry = async (partNumber: number, chunk: Blob): Promise<string> => {
+          let lastErr: Error | null = null;
+          for (let attempt = 1; attempt <= MAX_PART_RETRIES; attempt++) {
+            try {
+              return await new Promise<string>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                const proxyUrl = `/api/creator/digital-files/multipart?action=upload-part&fileId=${encodeURIComponent(
+                  fileId
+                )}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`;
+                xhr.open("POST", proxyUrl);
+                xhr.setRequestHeader("Content-Type", "application/octet-stream");
+                if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
+                xhr.upload.onprogress = (event) => {
+                  if (event.lengthComputable) {
+                    const done = bytesUploaded + event.loaded;
+                    setUploadProgress(Math.round(5 + (done / selectedFile.size) * 90));
+                  }
+                };
+                xhr.onload = () => {
+                  if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                      const data = JSON.parse(xhr.responseText);
+                      if (!data.etag) {
+                        reject(Object.assign(new Error(`Part ${partNumber} returned no etag`), { retryable: false }));
+                        return;
+                      }
+                      resolve(data.etag);
+                    } catch {
+                      reject(Object.assign(new Error(`Part ${partNumber} parse failed`), { retryable: false }));
+                    }
+                  } else {
+                    // 5xx = transient (retry); 4xx = permanent (fail fast).
+                    reject(Object.assign(new Error(`Part ${partNumber} failed with status ${xhr.status}`), { retryable: xhr.status >= 500 }));
+                  }
+                };
+                xhr.onerror = () =>
+                  reject(Object.assign(new Error(`Network error on part ${partNumber}`), { retryable: true }));
+                xhr.onabort = () => reject(Object.assign(new Error("Upload cancelled"), { retryable: false }));
+                xhr.send(chunk);
+              });
+            } catch (err) {
+              lastErr = err as Error;
+              const retryable = (err as { retryable?: boolean }).retryable === true;
+              if (!retryable || attempt >= MAX_PART_RETRIES) {
+                reportClientFailure("Upload part failed after retries", {
+                  partNumber,
+                  attempt,
+                  phase: "proxy-upload-part",
+                  error: lastErr.message,
+                });
+                throw lastErr;
+              }
+              // Exponential backoff: 1s, 2s, 4s, 8s (capped 15s).
+              await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** (attempt - 1), 15000)));
+            }
+          }
+          throw lastErr ?? new Error("Upload failed");
+        };
+
         try {
           for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
             const start = (partNumber - 1) * CHUNK_SIZE;
             const end = Math.min(start + CHUNK_SIZE, selectedFile.size);
             const chunk = selectedFile.slice(start, end);
 
-            // Server-proxy upload: browser POSTs the chunk to our
-            // origin (same-origin -> no CORS preflight, no
-            // r2.cloudflarestorage.com to reach), and our server
-            // forwards to R2 over its own clean upstream. This
-            // bypasses the network-layer block creators have been
-            // hitting on direct browser-to-R2 PUTs.
-            //
-            // CSRF: include the token so the proxy lets the POST
-            // through. apiFetch can't be used here because it
-            // JSON.stringify's the body -- we need raw bytes.
-            const csrfToken =
-              typeof document !== "undefined"
-                ? document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ""
-                : "";
-
-            const etag = await new Promise<string>((resolve, reject) => {
-              const xhr = new XMLHttpRequest();
-              const proxyUrl = `/api/creator/digital-files/multipart?action=upload-part&fileId=${encodeURIComponent(
-                fileId
-              )}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`;
-              xhr.open("POST", proxyUrl);
-              xhr.setRequestHeader("Content-Type", "application/octet-stream");
-              if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
-
-              xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable) {
-                  const total = selectedFile.size;
-                  const done = bytesUploaded + event.loaded;
-                  setUploadProgress(Math.round(5 + (done / total) * 90));
-                }
-              };
-
-              xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                  try {
-                    const data = JSON.parse(xhr.responseText);
-                    if (!data.etag) {
-                      reportClientFailure("Proxy response missing etag", {
-                        partNumber,
-                        phase: "proxy-upload-part",
-                        xhrResponse: (xhr.responseText || "").slice(0, 500),
-                      });
-                      reject(new Error(`Part ${partNumber} returned no etag`));
-                      return;
-                    }
-                    resolve(data.etag);
-                  } catch {
-                    reportClientFailure("Proxy response parse failed", {
-                      partNumber,
-                      phase: "proxy-upload-part",
-                      xhrResponse: (xhr.responseText || "").slice(0, 500),
-                    });
-                    reject(new Error(`Part ${partNumber} parse failed`));
-                  }
-                } else {
-                  reportClientFailure("HTTP error uploading part via proxy", {
-                    partNumber,
-                    xhrStatus: xhr.status,
-                    xhrStatusText: xhr.statusText,
-                    xhrResponse: (xhr.responseText || "").slice(0, 1000),
-                    phase: "proxy-upload-part",
-                  });
-                  reject(new Error(`Part ${partNumber} failed with status ${xhr.status}`));
-                }
-              };
-              xhr.onerror = () => {
-                reportClientFailure("Network error uploading part via proxy", {
-                  partNumber,
-                  phase: "proxy-upload-part",
-                });
-                reject(new Error(`Network error on part ${partNumber}`));
-              };
-              xhr.onabort = () => reject(new Error("Upload cancelled"));
-
-              xhr.send(chunk);
-            });
+            // Server-proxy upload with per-part retry: browser POSTs the
+            // chunk to our origin (same-origin -> no CORS, no
+            // r2.cloudflarestorage.com to reach); our server forwards to R2.
+            // A single dropped part now retries instead of failing the whole
+            // upload.
+            const etag = await uploadPartWithRetry(partNumber, chunk);
 
             parts.push({ partNumber, etag });
             bytesUploaded += end - start;

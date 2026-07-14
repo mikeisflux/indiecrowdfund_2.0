@@ -126,6 +126,27 @@ server {
         proxy_read_timeout 86400;
     }
 
+    # Large digital-file downloads stream a ~1GB response from R2 through
+    # Node. They must NOT be buffered by nginx (spooling a gig before the
+    # first byte) and must tolerate slow clients — the generic /api/ block's
+    # 30s send / 120s read timeouts drop a big download over a slow
+    # connection. No rate limit here; a single legit download shouldn't be
+    # throttled. (More specific prefix wins over /api/ regardless of order.)
+    location /api/backer/digital-files/download {
+        proxy_pass http://ic_nextjs;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 3600s;
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+
     location /api/ {
         limit_req zone=api_limit burst=20 nodelay;
         proxy_pass http://ic_nextjs;
