@@ -9,11 +9,15 @@ const log = logger.child({ module: "admin-digital-file-verify" });
 export const dynamic = "force-dynamic";
 
 // Auth: an ADMIN/SUPER_ADMIN session, OR a server-to-server call carrying
-// the internal secret (so it can be curled locally on the box without a
-// browser session). Mirrors the internal blocked-ips auth model.
+// the internal secret or the cron secret (so it can be curled locally on
+// the box without a browser session). Mirrors the internal cron auth model.
 async function authorize(req: NextRequest): Promise<{ ok: true } | { error: string; status: number }> {
   const internalSecret = process.env.INTERNAL_API_SECRET;
   if (internalSecret && req.headers.get("x-internal-secret") === internalSecret) {
+    return { ok: true };
+  }
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && req.headers.get("authorization") === `Bearer ${cronSecret}`) {
     return { ok: true };
   }
   const session = await auth();
