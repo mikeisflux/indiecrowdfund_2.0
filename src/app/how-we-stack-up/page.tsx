@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Check, Minus, X, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/footer";
-import { GROUPS, type Support } from "./data";
+import { GROUPS, PLATFORM, type Support } from "./data";
 
 export const metadata: Metadata = {
   title: "How We Stack Up | IndieCrowdfund",
@@ -24,6 +24,16 @@ function Cell({ value }: { value: Support }) {
     return (
       <span className="inline-flex items-center justify-center" aria-label="Limited or third-party">
         <Minus className="h-5 w-5 text-amber-500" strokeWidth={3} />
+      </span>
+    );
+  }
+  if (value === "unknown") {
+    return (
+      <span
+        className="inline-flex items-center justify-center text-sm font-bold text-muted-foreground/50"
+        aria-label="Not launched yet"
+      >
+        ?
       </span>
     );
   }
@@ -85,6 +95,9 @@ export default function HowWeStackUpPage() {
             <LegendItem icon={<X className="h-4 w-4 text-muted-foreground/40" strokeWidth={2.5} />}>
               Not available
             </LegendItem>
+            <LegendItem icon={<span className="text-sm font-bold text-muted-foreground/50">?</span>}>
+              Not launched yet
+            </LegendItem>
           </div>
         </div>
       </section>
@@ -115,6 +128,9 @@ export default function HowWeStackUpPage() {
                 <th className="px-3 py-4 text-center text-sm font-semibold text-muted-foreground whitespace-nowrap" scope="col">
                   Fund My Comic
                 </th>
+                <th className="px-3 py-4 text-center text-sm font-semibold text-muted-foreground" scope="col">
+                  Backmebro
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -122,7 +138,7 @@ export default function HowWeStackUpPage() {
                 <Fragment key={group.title}>
                   <tr className="bg-muted/40">
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                     >
                       {group.title}
@@ -148,6 +164,9 @@ export default function HowWeStackUpPage() {
                       <td className="px-3 py-3 text-center">
                         <Cell value={row.fmc} />
                       </td>
+                      <td className="px-3 py-3 text-center">
+                        <Cell value={row.bmb} />
+                      </td>
                     </tr>
                   ))}
                 </Fragment>
@@ -163,6 +182,18 @@ export default function HowWeStackUpPage() {
                 <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.ks}</td>
                 <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.ig}</td>
                 <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground">{totalYes.fmc}</td>
+                <td className="px-3 py-3 text-center text-sm font-semibold text-muted-foreground/50">&mdash;</td>
+              </tr>
+              {/* Platform / technology — facts only */}
+              <tr className="border-t border-border/60 bg-muted/10">
+                <th scope="row" className="sticky left-0 z-10 bg-background px-4 py-3 text-sm font-normal text-foreground">
+                  Platform &amp; frontend technology
+                </th>
+                <td className="bg-primary/[0.04] px-3 py-3 text-center text-xs font-medium">{PLATFORM.ic}</td>
+                <td className="px-3 py-3 text-center text-xs text-muted-foreground">{PLATFORM.ks}</td>
+                <td className="px-3 py-3 text-center text-xs text-muted-foreground">{PLATFORM.ig}</td>
+                <td className="px-3 py-3 text-center text-xs text-muted-foreground">{PLATFORM.fmc}</td>
+                <td className="px-3 py-3 text-center text-xs text-muted-foreground">{PLATFORM.bmb}</td>
               </tr>
             </tbody>
           </table>

@@ -3,12 +3,13 @@
 // "yes"     = fully included
 // "partial" = limited, or typically requires a separate paid add-on / partner
 // "no"      = not offered
+// "unknown" = not yet known (e.g. a platform that hasn't launched) — shown as "?"
 //
-// Competitor columns (Kickstarter, Indiegogo, Fund My Comic) reflect publicly
-// available information and may not capture recent changes — the page carries
-// a note to that effect. IndieCrowdfund marks are drawn from the platform's
-// own feature set.
-export type Support = "yes" | "partial" | "no";
+// Competitor columns (Kickstarter, Indiegogo, Fund My Comic, Backmebro) reflect
+// publicly available information and may change; the page carries a note to
+// that effect. Backmebro has not launched yet, so every cell is "unknown".
+// IndieCrowdfund marks are drawn from the platform's own feature set.
+export type Support = "yes" | "partial" | "no" | "unknown";
 
 export interface FeatureRow {
   label: string;
@@ -16,6 +17,7 @@ export interface FeatureRow {
   ks: Support; // Kickstarter
   ig: Support; // Indiegogo
   fmc: Support; // Fund My Comic
+  bmb: Support; // Backmebro (not launched yet)
 }
 
 export interface FeatureGroup {
@@ -23,59 +25,76 @@ export interface FeatureGroup {
   rows: FeatureRow[];
 }
 
+// Underlying platform / frontend stack. Facts only, stated neutrally.
+//   - IndieCrowdfund: verified from this codebase (Next.js / React).
+//   - Fund My Comic: verified from its page source — a white-labeled
+//     Thrinacia instance with an AngularJS (Angular 1.x, end-of-lifed
+//     Jan 2022) frontend. (The "Wp*" controllers in its source are
+//     Thrinacia's WordPress-blog integration module, not the platform.)
+//   - Backmebro: Node.js, per the vendor (pre-launch).
+//   - Kickstarter: Ruby on Rails (long publicly documented).
+//   - Indiegogo: not publicly disclosed post-2025 Gamefound migration.
+export const PLATFORM: Record<"ic" | "ks" | "ig" | "fmc" | "bmb", string> = {
+  ic: "Next.js / React",
+  ks: "Ruby on Rails",
+  ig: "Not publicly disclosed",
+  fmc: "Thrinacia · AngularJS",
+  bmb: "Node.js (pre-launch)",
+};
+
 export const GROUPS: FeatureGroup[] = [
   {
     title: "Crowdfunding",
     rows: [
-      { label: "Rewards-based crowdfunding campaigns", ic: "yes", ks: "yes", ig: "yes", fmc: "yes" },
-      { label: "Flexible “keep-it-all” funding option", ic: "yes", ks: "no", ig: "yes", fmc: "yes" },
-      { label: "Prelaunch / coming-soon pages", ic: "yes", ks: "yes", ig: "yes", fmc: "yes" },
-      { label: "Native à-la-carte add-ons", ic: "yes", ks: "yes", ig: "yes", fmc: "yes" },
-      { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial" },
-      { label: "Backer reviews & star ratings", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Team collaborators on a campaign", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Built-in referral tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "partial" },
+      { label: "Rewards-based crowdfunding campaigns", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
+      { label: "Flexible “keep-it-all” funding option", ic: "yes", ks: "no", ig: "yes", fmc: "yes", bmb: "unknown" },
+      { label: "Prelaunch / coming-soon pages", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
+      { label: "Native à-la-carte add-ons", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
+      { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "unknown" },
+      { label: "Backer reviews & star ratings", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Team collaborators on a campaign", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Built-in referral tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "partial", bmb: "unknown" },
     ],
   },
   {
     title: "Payments",
     rows: [
-      { label: "Multiple payment processors", ic: "yes", ks: "no", ig: "yes", fmc: "partial" },
-      { label: "PayPal accepted", ic: "yes", ks: "no", ig: "yes", fmc: "yes" },
-      { label: "Crypto / token payments (DivinityCoin)", ic: "yes", ks: "no", ig: "no", fmc: "no" },
+      { label: "Multiple payment processors", ic: "yes", ks: "no", ig: "yes", fmc: "partial", bmb: "unknown" },
+      { label: "PayPal accepted", ic: "yes", ks: "no", ig: "yes", fmc: "yes", bmb: "unknown" },
+      { label: "Crypto / token payments (DivinityCoin)", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
     ],
   },
   {
     title: "Fulfillment (IndieKit)",
     rows: [
-      { label: "Built-in pledge manager & backer surveys", ic: "yes", ks: "yes", ig: "yes", fmc: "partial" },
-      { label: "Order Lock — confirm & charge early", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Shipping-carrier integrations (Shippo, ShipStation, EasyPost, Stamps)", ic: "yes", ks: "partial", ig: "partial", fmc: "no" },
-      { label: "Shopify integration", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Built-in comic printing & hard-copy proofs", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Production / already-shipped tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "no" },
-      { label: "Digital file delivery & downloads", ic: "yes", ks: "yes", ig: "partial", fmc: "partial" },
+      { label: "Built-in pledge manager & backer surveys", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "unknown" },
+      { label: "Order Lock — confirm & charge early", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Shipping-carrier integrations (Shippo, ShipStation, EasyPost, Stamps)", ic: "yes", ks: "partial", ig: "partial", fmc: "no", bmb: "unknown" },
+      { label: "Shopify integration", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Built-in comic printing & hard-copy proofs", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Production / already-shipped tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "no", bmb: "unknown" },
+      { label: "Digital file delivery & downloads", ic: "yes", ks: "yes", ig: "partial", fmc: "partial", bmb: "unknown" },
     ],
   },
   {
     title: "Ongoing store",
     rows: [
-      { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "partial", ig: "yes", fmc: "no" },
-      { label: "Music streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Movie / video streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Physical-media store", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Discount & redeem codes", ic: "yes", ks: "partial", ig: "partial", fmc: "partial" },
+      { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "partial", ig: "yes", fmc: "no", bmb: "unknown" },
+      { label: "Music streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Movie / video streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Physical-media store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Discount & redeem codes", ic: "yes", ks: "partial", ig: "partial", fmc: "partial", bmb: "unknown" },
     ],
   },
   {
     title: "Growth & community",
     rows: [
-      { label: "AI-powered marketing campaigns", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Creator email inbox & marketing", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Community chat", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Wholesale / retailer program", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Backer digital library", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Mature / adult content allowed", ic: "yes", ks: "no", ig: "no", fmc: "yes" },
+      { label: "AI-powered marketing campaigns", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Creator email inbox & marketing", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Community chat", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Wholesale / retailer program", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Backer digital library", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      { label: "Mature / adult content allowed", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
     ],
   },
 ];
