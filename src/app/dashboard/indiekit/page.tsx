@@ -56,6 +56,7 @@ import {
   CreditCard,
   AlertCircle,
   ClipboardCheck,
+  PackageCheck,
   Download,
   Box,
   BarChart3,
@@ -127,6 +128,7 @@ import { EmailMarketingTab } from "./components/tabs/EmailMarketingTab";
 import { SetupTab } from "./components/tabs/SetupTab";
 import { SurveysTab } from "./components/tabs/SurveysTab";
 import { FinalizeTab } from "./components/tabs/FinalizeTab";
+import { OrderLockTab } from "./components/tabs/OrderLockTab";
 import { PaymentsTab } from "./components/tabs/PaymentsTab";
 import { DigitalDeliveryTab } from "./components/tabs/DigitalDeliveryTab";
 import { PhysicalDeliveryTab } from "./components/tabs/PhysicalDeliveryTab";
@@ -149,6 +151,7 @@ const ALWAYS_AVAILABLE_TABS: { id: AlwaysAvailableTab; label: string; icon: Reac
 const PRE_FULFILLMENT_TABS: { id: PhaseTab; label: string; icon: React.ElementType }[] = [
   { id: "setup", label: "Setup", icon: FormInput },
   { id: "surveys", label: "Surveys", icon: ClipboardCheck },
+  { id: "order-lock", label: "Order Lock", icon: PackageCheck },
   { id: "finalize", label: "Finalize", icon: Lock },
   { id: "teaser-pages", label: "Teaser Pages", icon: FileText },
 ];
@@ -801,6 +804,10 @@ export default function IndieKitPage() {
                     setIsAddonDialogOpen(true);
                   }}
                 />
+              )}
+
+              {activeSection === "phase" && activePhaseTab === "order-lock" && (
+                <OrderLockTab projectId={selectedProjectId} />
               )}
 
               {activeSection === "phase" && activePhaseTab === "finalize" && (

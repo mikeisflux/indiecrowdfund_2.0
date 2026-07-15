@@ -273,7 +273,7 @@ export type AlwaysAvailableTab =
   | "account"
   | "projects";
 
-export type PreFulfillmentTab = "setup" | "surveys" | "finalize" | "teaser-pages";
+export type PreFulfillmentTab = "setup" | "surveys" | "order-lock" | "finalize" | "teaser-pages";
 export type FulfillmentTab = "payments" | "digital-delivery" | "physical-delivery";
 export type PostFulfillmentTab = "reports" | "late-backers";
 
