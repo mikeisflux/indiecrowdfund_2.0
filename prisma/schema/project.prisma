@@ -382,6 +382,15 @@ model ProjectPrintOrder {
   shippingMethod              String?
   lastSyncedAt                DateTime?
 
+  // Hard proofing (Printing Comics). When a proof is requested, the
+  // printer uploads a proof and webhooks us; we notify the creator to
+  // review + approve (or request changes) via the tokenized reviewUrl.
+  proofStatus                 String?   // requested | awaiting_upload | awaiting_approval | approved | changes_requested
+  proofUrl                    String?   // the proof PDF (fileUrl)
+  proofReviewUrl              String?   // tokenized approve/request-changes link on Printing Comics
+  proofVersion                Int?
+  proofUpdatedAt              DateTime?
+
   // What we sent to the printer.
   // The legacy single-item fields (productSlug/quantity/options/files)
   // are populated from items[0] for backwards compatibility — the

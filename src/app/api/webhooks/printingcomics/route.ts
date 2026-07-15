@@ -36,6 +36,7 @@ interface PCWebhookPayload {
       paymentStatus?: string;
       shippingMethod?: string;
       trackingNumber?: string;
+      proofStatus?: string;
     };
     payment?: {
       approvalUrl?: string;
@@ -44,6 +45,13 @@ interface PCWebhookPayload {
       providerRef?: string;
       amountCents?: number;
       paidAt?: string;
+    };
+    // Hard proof payload (proof.* / order.proof_* events).
+    proof?: {
+      fileUrl?: string;
+      reviewUrl?: string;
+      status?: string;
+      version?: number;
     };
   };
 }
@@ -121,6 +129,70 @@ export async function POST(req: NextRequest) {
   if (!eventName || !order) {
     log.warn({ eventName, hasOrder: !!order }, "Printing Comics webhook missing event/order");
     return NextResponse.json({ ok: false, reason: "missing_event_or_order" });
+  }
+
+  // ---- Hard proof events ----
+  // The printer uploads a proof and webhooks us (event name like
+  // "order.proof_ready" / "proof.ready", or a payload with data.proof).
+  // These don't change the order's production status — they update the
+  // proof fields and notify the creator to review. Detected by event name
+  // OR proof payload so the exact event string doesn't matter.
+  const evtStr = String(eventName);
+  const proofData = payload.data?.proof;
+  if (evtStr.includes("proof") || proofData) {
+    const key = order.externalRef
+      ? { id: (order.externalRef.split(":").pop() as string) }
+      : order.id
+      ? { printingComicsOrderId: order.id }
+      : null;
+    if (!key) {
+      return NextResponse.json({ ok: false, reason: "no_resolvable_key" });
+    }
+    const existing = await db.projectPrintOrder.findFirst({
+      where: key,
+      select: { id: true, submittedById: true, projectId: true, proofStatus: true },
+    });
+    if (!existing) {
+      log.warn({ key }, "Proof webhook: no matching print order");
+      return NextResponse.json({ ok: true, ignored: true });
+    }
+
+    const newStatus = order.proofStatus || proofData?.status || existing.proofStatus || undefined;
+    await db.projectPrintOrder.update({
+      where: { id: existing.id },
+      data: {
+        proofStatus: newStatus,
+        proofUrl: proofData?.fileUrl ?? undefined,
+        proofReviewUrl: proofData?.reviewUrl ?? undefined,
+        proofVersion: proofData?.version ?? undefined,
+        proofUpdatedAt: new Date(),
+        lastSyncedAt: new Date(),
+      },
+    });
+
+    // Notify the creator once, when a fresh proof becomes ready to review.
+    const readyForReview =
+      newStatus === "awaiting_approval" ||
+      proofData?.status === "pending" ||
+      evtStr.includes("ready") ||
+      evtStr.includes("uploaded");
+    if (readyForReview && existing.proofStatus !== "awaiting_approval" && existing.submittedById) {
+      await db.notification
+        .create({
+          data: {
+            userId: existing.submittedById,
+            type: "SYSTEM",
+            title: "Your print proof is ready to review",
+            message:
+              "Printing Comics uploaded a proof of your print order. Review it and approve (or request changes) to start production.",
+            actionUrl: proofData?.reviewUrl || "/dashboard/indiekit",
+            projectId: existing.projectId,
+          },
+        })
+        .catch((e: unknown) => log.warn({ err: String(e) }, "proof notification failed (non-fatal)"));
+    }
+
+    return NextResponse.json({ ok: true, proof: true });
   }
 
   // STATUS_MAP returns null for events that don't change the local

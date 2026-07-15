@@ -69,6 +69,10 @@ interface ProjectPrintOrder {
   shippingMethod: string | null;
   trackingNumber: string | null;
   lastSyncedAt: string | null;
+  proofStatus: string | null;
+  proofUrl: string | null;
+  proofReviewUrl: string | null;
+  proofVersion: number | null;
   productSlug: string;
   quantity: number;
   options: Record<string, unknown>;
@@ -720,6 +724,35 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                         {o.status.replace(/_/g, " ")}
                       </Badge>
                     </div>
+
+                    {/* Hard proof — surfaced from the printer's proof webhook. */}
+                    {o.proofStatus && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2.5">
+                        <span className="text-xs font-medium">
+                          Proof: {o.proofStatus.replace(/_/g, " ")}{o.proofVersion ? ` (v${o.proofVersion})` : ""}
+                        </span>
+                        {o.proofUrl && (
+                          <a
+                            href={o.proofUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-emerald-700 dark:text-emerald-400 hover:underline"
+                          >
+                            View proof PDF
+                          </a>
+                        )}
+                        {o.proofReviewUrl &&
+                          (o.proofStatus === "awaiting_approval" || o.proofStatus === "changes_requested") && (
+                            <Button asChild size="sm" className="ml-auto">
+                              <a href={o.proofReviewUrl} target="_blank" rel="noopener noreferrer">
+                                <Check className="h-3.5 w-3.5 mr-1.5" />
+                                Review &amp; approve proof
+                                <ExternalLink className="h-3 w-3 ml-1.5" />
+                              </a>
+                            </Button>
+                          )}
+                      </div>
+                    )}
                     {needsPayment && (
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         {linkLive ? (
