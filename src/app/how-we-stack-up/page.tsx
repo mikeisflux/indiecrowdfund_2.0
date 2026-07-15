@@ -7,7 +7,9 @@ import { Footer } from "@/components/footer";
 import { GROUPS, PLATFORM, type Support } from "./data";
 
 export const metadata: Metadata = {
-  title: "How We Stack Up | IndieCrowdfund",
+  // Root layout applies the "%s | IndieCrowdfund" title template, so keep
+  // this bare to avoid a doubled suffix.
+  title: "How We Stack Up",
   description:
     "See how IndieCrowdfund compares to Kickstarter, Indiegogo, and Fund My Comic — crowdfunding, built-in fulfillment, an ongoing store, and more, side by side.",
 };
