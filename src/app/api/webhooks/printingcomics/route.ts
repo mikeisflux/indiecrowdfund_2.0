@@ -48,11 +48,20 @@ interface PCWebhookPayload {
       amountCents?: number;
       paidAt?: string;
     };
-    // proof.* events: proof fields are FLAT under data (no nested object).
+    // Real payloads are the FLAT serialized order at data.* (order.created
+    // has data.id/data.externalRef — NOT data.order.*), and proof.* events
+    // carry flat proof fields. The stable cross-event key is top-level
+    // `orderId` (= Order.id) on every event.
+    id?: string;
     orderId?: string;
     number?: string;
-    proofVersion?: number;
+    externalRef?: string;
     status?: string;
+    paymentStatus?: string;
+    shippingMethod?: string;
+    trackingNumber?: string;
+    // proof fields
+    proofVersion?: number;
     token?: string;
     reviewUrl?: string;
     fileUrl?: string;
@@ -144,7 +153,8 @@ export async function POST(req: NextRequest) {
   // the Printing Comics order id.
   if (evtStr.startsWith("proof.")) {
     const d = payload.data || {};
-    const pcOrderId = d.orderId || payload.orderId;
+    // Stable cross-event key is the top-level orderId (= Order.id).
+    const pcOrderId = payload.orderId || d.orderId;
     if (!pcOrderId) {
       log.warn({ evtStr }, "Proof webhook missing orderId");
       return NextResponse.json({ ok: false, reason: "missing_order_id" });
@@ -191,34 +201,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, proof: true, event: evtStr });
   }
 
-  // ---- Order.* events (carry data.order) ----
-  const order = payload.data?.order;
-  if (!eventName || !order) {
-    log.warn({ eventName, hasOrder: !!order }, "Printing Comics webhook missing event/order");
-    return NextResponse.json({ ok: false, reason: "missing_event_or_order" });
+  // ---- Order.* events ----
+  // Real payloads are a FLAT serialized order at data.* (order.created has
+  // data.id / data.externalRef, NOT data.order.*), with the id also at the
+  // top-level `orderId` on EVERY event — the stable cross-event key. We
+  // normalize both the flat and the older nested (data.order) shapes.
+  if (!eventName) {
+    return NextResponse.json({ ok: false, reason: "missing_event" });
   }
-
-  // STATUS_MAP returns null for events that don't change the local
-  // order status (currently just order.payment_link_created — a pure
-  // payment-URL refresh). Anything not in the map at all is ignored.
   if (!(eventName in STATUS_MAP)) {
     log.warn({ eventName }, "Unknown Printing Comics event — acking and ignoring");
     return NextResponse.json({ ok: true, ignored: true });
   }
   const mappedStatus = STATUS_MAP[eventName];
 
-  // Find the local ProjectPrintOrder. externalRef is now formatted
-  // "<projectId>:<printOrderId>" so PrintingComics' admin can group
-  // by project — split on ':' to get the print-order id we use as
-  // the primary key. Fall back to a raw match (older rows) and to
-  // the printingComicsOrderId we stored at submit time.
+  const d0 = payload.data || {};
+  const order =
+    d0.order && typeof d0.order === "object"
+      ? d0.order
+      : (d0 as NonNullable<PCWebhookPayload["data"]>);
+  // Primary key = top-level orderId (= Order.id), stored as
+  // printingComicsOrderId. externalRef (our "<projectId>:<printOrderId>")
+  // links order.created before we've stored the PC id.
+  const pcOrderId = payload.orderId || order.id;
   let where: { id: string } | { printingComicsOrderId: string } | null = null;
   if (order.externalRef) {
     const parts = order.externalRef.split(":");
-    const printOrderId = parts.length > 1 ? parts[parts.length - 1] : order.externalRef;
-    where = { id: printOrderId };
-  } else if (order.id) {
-    where = { printingComicsOrderId: order.id };
+    where = { id: parts.length > 1 ? parts[parts.length - 1] : order.externalRef };
+  } else if (pcOrderId) {
+    where = { printingComicsOrderId: pcOrderId };
   }
   if (!where) {
     log.warn({ eventName, order }, "Printing Comics webhook had no resolvable order key");
@@ -227,7 +238,7 @@ export async function POST(req: NextRequest) {
 
   // Per-event data side-effects layered onto the base status update.
   const data: Record<string, unknown> = {
-    printingComicsOrderId: order.id || undefined,
+    printingComicsOrderId: pcOrderId || undefined,
     printingComicsOrderNumber: order.number || undefined,
     shippingMethod: order.shippingMethod || undefined,
     trackingNumber: order.trackingNumber || undefined,

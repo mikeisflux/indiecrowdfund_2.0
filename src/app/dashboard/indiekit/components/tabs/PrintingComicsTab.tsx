@@ -114,6 +114,27 @@ interface ProjectPrintOrder {
   createdAt: string;
 }
 
+// Truthy proof flags: the configurator writes lowercase "yes" for the
+// pdf_proof / hard_copy_proof options, but the printer also accepts
+// true/on/1, so normalize before deciding whether a proof was requested.
+const PROOF_TRUTHY = new Set(["yes", "true", "on", "1"]);
+function isProofRequested(o: ProjectPrintOrder): boolean {
+  const check = (opts?: Record<string, unknown> | null) => {
+    if (!opts) return false;
+    for (const key of ["pdf_proof", "hard_copy_proof"]) {
+      const v = opts[key];
+      if (v === true) return true;
+      if (typeof v === "string" && PROOF_TRUTHY.has(v.trim().toLowerCase())) return true;
+    }
+    return false;
+  };
+  if (check(o.options)) return true;
+  if (Array.isArray(o.items)) {
+    return o.items.some((it) => check(it.options));
+  }
+  return false;
+}
+
 const STATUS_BADGE: Record<string, string> = {
   DRAFT: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
@@ -262,6 +283,27 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
   // Per-row "Refresh payment link" busy state (the row id we're
   // currently refreshing, or null).
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const [checkingProofId, setCheckingProofId] = useState<string | null>(null);
+
+  // On-demand proof pull (fallback if a proof.ready webhook was missed).
+  const handleCheckProof = async (pcOrderId: string) => {
+    setCheckingProofId(pcOrderId);
+    try {
+      const r = await fetch(`/api/creator/printingcomics/proof?orderId=${encodeURIComponent(pcOrderId)}`);
+      const data = await r.json();
+      if (!r.ok) {
+        toast.error(data?.error || `Proof check failed (HTTP ${r.status})`);
+        return;
+      }
+      const status = data?.proofStatus || data?.latestProof?.status;
+      toast.success(status ? `Proof: ${String(status).replace(/_/g, " ")}` : "No proof uploaded yet");
+      loadOrders();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Proof check failed");
+    } finally {
+      setCheckingProofId(null);
+    }
+  };
 
   const handleRefreshPaymentLink = async (orderId: string) => {
     setRefreshingId(orderId);
@@ -685,6 +727,9 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                   !o.paidAt &&
                   (o.status === "PENDING" || o.status === "DRAFT") &&
                   !!o.printingComicsOrderId;
+                const proofRequested = isProofRequested(o);
+                const showProofBlock = !!o.proofStatus || (proofRequested && !!o.printingComicsOrderId);
+                const checkingProof = checkingProofId === o.printingComicsOrderId;
                 return (
                   <div key={o.id} className="px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
@@ -725,11 +770,14 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                       </Badge>
                     </div>
 
-                    {/* Hard proof — surfaced from the printer's proof webhook. */}
-                    {o.proofStatus && (
+                    {/* Hard proof — surfaced from the printer's proof webhook,
+                        or on-demand via the "Check for proof" fallback below. */}
+                    {showProofBlock && (
                       <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2.5">
                         <span className="text-xs font-medium">
-                          Proof: {o.proofStatus.replace(/_/g, " ")}{o.proofVersion ? ` (v${o.proofVersion})` : ""}
+                          {o.proofStatus
+                            ? `Proof: ${o.proofStatus.replace(/_/g, " ")}${o.proofVersion ? ` (v${o.proofVersion})` : ""}`
+                            : "Proof requested — awaiting the printer's proof"}
                         </span>
                         {o.proofUrl && (
                           <a
@@ -751,6 +799,22 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                               </a>
                             </Button>
                           )}
+                        {o.printingComicsOrderId && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={o.proofReviewUrl ? "" : "ml-auto"}
+                            onClick={() => handleCheckProof(o.printingComicsOrderId!)}
+                            disabled={checkingProof}
+                          >
+                            {checkingProof ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <RotateCw className="h-3.5 w-3.5 mr-1.5" />
+                            )}
+                            Check for proof
+                          </Button>
+                        )}
                       </div>
                     )}
                     {needsPayment && (
