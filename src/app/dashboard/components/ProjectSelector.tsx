@@ -1,16 +1,22 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Eye, Settings, Share2, Zap, CheckCircle } from "lucide-react";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Eye, Settings, Share2, Zap, CheckCircle, ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Project, SelectedProject } from "../types";
 
@@ -27,21 +33,67 @@ export function ProjectSelector({
   selectedProject,
   onProjectChange,
 }: ProjectSelectorProps) {
+  const [open, setOpen] = useState(false);
+
+  // Sort alphabetically (case-insensitive, natural-ish) so the picker is
+  // scannable no matter what order the API returns projects in.
+  const sortedProjects = useMemo(
+    () =>
+      [...projects].sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: "base", numeric: true })
+      ),
+    [projects]
+  );
+
+  const selectedTitle =
+    projects.find((p) => p.id === selectedProjectId)?.title ?? "Select project";
+
   return (
     <div className="border-b bg-background/60 backdrop-blur-sm">
       <div className="container flex flex-wrap items-center gap-2 py-3 md:h-14 md:py-0 md:gap-4">
-        <Select value={selectedProjectId} onValueChange={onProjectChange}>
-          <SelectTrigger className="w-full sm:w-[280px] bg-card/50 backdrop-blur border-border/50">
-            <SelectValue placeholder="Select project" />
-          </SelectTrigger>
-          <SelectContent>
-            {projects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full sm:w-[280px] justify-between bg-card/50 backdrop-blur border-border/50 font-normal"
+            >
+              <span className="truncate">{selectedTitle}</span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+            <Command
+              filter={(value, search) =>
+                value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+              }
+            >
+              <CommandInput placeholder="Search projects..." />
+              <CommandList>
+                <CommandEmpty>No projects found.</CommandEmpty>
+                {sortedProjects.map((p) => (
+                  <CommandItem
+                    key={p.id}
+                    value={p.title}
+                    onSelect={() => {
+                      onProjectChange(p.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        p.id === selectedProjectId ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <span className="truncate">{p.title}</span>
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
         {selectedProject && (() => {
           const hasEnded = selectedProject.endDate ? new Date(selectedProject.endDate) < new Date() : false;
           const displayStatus = hasEnded && selectedProject.status === "LIVE" ? "ENDED" : selectedProject.status;

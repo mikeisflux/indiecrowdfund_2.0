@@ -54,7 +54,7 @@ export const GROUPS: FeatureGroup[] = [
       { label: "Shopify integration", ic: "yes", ks: "no", ig: "no", fmc: "no" },
       { label: "Built-in comic printing & hard-copy proofs", ic: "yes", ks: "no", ig: "no", fmc: "no" },
       { label: "Production / already-shipped tracking", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Digital file delivery & downloads", ic: "yes", ks: "no", ig: "no", fmc: "partial" },
+      { label: "Digital file delivery & downloads", ic: "yes", ks: "yes", ig: "no", fmc: "partial" },
     ],
   },
   {
