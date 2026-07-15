@@ -295,7 +295,9 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
         toast.error(data?.error || `Proof check failed (HTTP ${r.status})`);
         return;
       }
-      const status = data?.proofStatus || data?.latestProof?.status;
+      // Order-level proofStatus only — latestProof.status uses a different
+      // vocab ("pending" instead of "awaiting_approval").
+      const status = data?.proofStatus;
       toast.success(status ? `Proof: ${String(status).replace(/_/g, " ")}` : "No proof uploaded yet");
       loadOrders();
     } catch (err) {

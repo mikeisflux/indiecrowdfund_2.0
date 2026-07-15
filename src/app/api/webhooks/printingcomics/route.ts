@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
     }
     const existing = await db.projectPrintOrder.findFirst({
       where: { printingComicsOrderId: pcOrderId },
-      select: { id: true, submittedById: true, projectId: true, proofStatus: true },
+      select: { id: true, submittedById: true, projectId: true, proofStatus: true, proofVersion: true },
     });
     if (!existing) {
       log.warn({ pcOrderId }, "Proof webhook: no matching print order");
@@ -180,9 +180,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Notify the creator only on a NEW proof.ready (not on their own
-    // approve / changes-requested actions, and not on repeat deliveries).
-    if (evtStr === "proof.ready" && existing.proofStatus !== "awaiting_approval" && existing.submittedById) {
+    // Notify the creator on a NEW proof.ready — but not on their own
+    // approve / changes-requested actions, and not on a repeat delivery of a
+    // version they've already seen. "New" = either the first time the order
+    // enters awaiting_approval (covers the initial upload and the
+    // changes_requested -> awaiting_approval re-proof loop) OR a bumped
+    // proofVersion while already awaiting_approval (staff re-uploaded a
+    // revised proof without a formal change request).
+    const isFirstReady = existing.proofStatus !== "awaiting_approval";
+    const isNewerVersion =
+      d.proofVersion != null &&
+      (existing.proofVersion == null || d.proofVersion > existing.proofVersion);
+    if (evtStr === "proof.ready" && (isFirstReady || isNewerVersion) && existing.submittedById) {
       await db.notification
         .create({
           data: {

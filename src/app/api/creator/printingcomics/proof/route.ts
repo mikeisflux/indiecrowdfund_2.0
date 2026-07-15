@@ -58,17 +58,25 @@ export async function GET(req: NextRequest) {
         method: "GET",
         path: `/orders/${encodeURIComponent(orderId)}/proof`,
       })) as {
+        // Order-level status vocab: requested | awaiting_approval | approved |
+        // changes_requested. This is what the UI button gates on.
         proofStatus?: string;
+        // Per-proof status vocab is DIFFERENT (pending | approved |
+        // changes_requested) — "pending" here, not "awaiting_approval" — so we
+        // must NOT write latestProof.status into our order-level proofStatus.
         latestProof?: { status?: string; fileUrl?: string; reviewUrl?: string; version?: number };
       };
 
       // Best-effort: keep our local row in sync with the on-demand pull.
+      // Take proofStatus ONLY from the order-level field (never fall back to
+      // latestProof.status, whose "pending" would never match the button's
+      // awaiting_approval check).
       const latest = data?.latestProof;
       await db.projectPrintOrder
         .update({
           where: { id: printOrder.id },
           data: {
-            proofStatus: data?.proofStatus ?? latest?.status ?? undefined,
+            proofStatus: data?.proofStatus ?? undefined,
             proofUrl: latest?.fileUrl ?? undefined,
             proofReviewUrl: latest?.reviewUrl ?? undefined,
             proofVersion: latest?.version ?? undefined,
