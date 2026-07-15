@@ -194,6 +194,20 @@ if [ $BUILD_EXIT_CODE -eq 0 ]; then
         # Move old build to backup
         mv .next ".next-backup-${TIMESTAMP}"
         echo "   Backed up old build to .next-backup-${TIMESTAMP}"
+
+        # Strip the regenerable cache from the backup. `.next/cache` holds
+        # the webpack build cache AND the on-demand Image Optimizer cache
+        # (.next/cache/images) — optimized AVIF/WebP variants of every
+        # remote/R2 image ever rendered through <Image>. Under the 30-day
+        # minimumCacheTTL that grows into the GBs and was the entire reason
+        # these backups hit ~1.7 GB. A rollback only needs server/, static/,
+        # and the manifests — the caches rebuild lazily — so drop them from
+        # the backup (NOT from the live build) to keep backups small.
+        if [ -d ".next-backup-${TIMESTAMP}/cache" ]; then
+            CACHE_SIZE=$(du -sh ".next-backup-${TIMESTAMP}/cache" 2>/dev/null | cut -f1)
+            rm -rf ".next-backup-${TIMESTAMP}/cache"
+            echo "   Pruned regenerable cache from backup (${CACHE_SIZE:-unknown} reclaimed)"
+        fi
     fi
 
     # Move new build into place

@@ -77,8 +77,15 @@ export async function GET(req: NextRequest) {
     const tmpFile = `/tmp/${backupName}.tar.gz`;
 
     try {
-      // Create tar.gz archive using system tar command
-      await execAsync(`tar -czf "${tmpFile}" -C "${BUILD_DIR}" "${backupName}"`);
+      // Create tar.gz archive using system tar command. Exclude the
+      // regenerable cache dir (.next/cache: webpack build cache + the
+      // on-demand Image Optimizer cache) — it's the bulk of the on-disk
+      // size, isn't needed to restore a build, and rebuilds lazily. This
+      // keeps downloads small even for older backups taken before the
+      // build-and-swap script started pruning cache at backup time.
+      await execAsync(
+        `tar --exclude="${backupName}/cache" -czf "${tmpFile}" -C "${BUILD_DIR}" "${backupName}"`
+      );
 
       // Read the file
       const fileBuffer = await fs.readFile(tmpFile);
