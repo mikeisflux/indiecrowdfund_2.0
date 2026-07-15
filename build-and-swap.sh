@@ -83,7 +83,20 @@ fi
 #     exactly matches the committed lockfile.
 echo ""
 echo "📦 Step 2: Installing dependencies..."
-if npm ci 2>&1; then
+# Skip the (~20s) npm ci when nothing about the dependency set changed.
+# We stamp node_modules with the package-lock.json hash after each install;
+# if node_modules is present and that stamp still matches, the tree already
+# matches the committed lockfile and reinstalling is pure wasted time. Any
+# lockfile change (via the git pull above) flips the hash and forces a real
+# npm ci. The stamp lives inside node_modules, so if the tree is wiped the
+# stamp goes with it and we reinstall. Prisma client is regenerated
+# unconditionally in Step 3, so skipping npm ci's postinstall is fine.
+LOCK_STAMP="node_modules/.deploy-lock-hash"
+LOCK_HASH=$(md5sum package-lock.json 2>/dev/null | cut -d' ' -f1)
+if [ -d node_modules ] && [ -f "$LOCK_STAMP" ] && [ -n "$LOCK_HASH" ] && [ "$(cat "$LOCK_STAMP" 2>/dev/null)" = "$LOCK_HASH" ]; then
+    echo -e "${GREEN}   Dependencies unchanged (package-lock.json matches) — skipping npm ci${NC}"
+elif npm ci 2>&1; then
+    echo "$LOCK_HASH" > "$LOCK_STAMP" 2>/dev/null || true
     echo -e "${GREEN}   Dependencies installed${NC}"
 else
     echo -e "${RED}❌ ERROR: Failed to install dependencies${NC}"
