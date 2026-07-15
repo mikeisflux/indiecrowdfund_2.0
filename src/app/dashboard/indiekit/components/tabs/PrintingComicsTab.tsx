@@ -30,6 +30,7 @@ import {
   RotateCw,
   X,
   Check,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/fetch-utils";
@@ -512,6 +513,57 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
   const addLineItem = () => setLineItems((prev) => [...prev, blankItem()]);
   const removeLineItem = (idx: number) =>
     setLineItems((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== idx)));
+
+  // Which line-item file slot is currently uploading (so we can show a
+  // spinner and disable the control). Keyed "<idx>:<slot>".
+  const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
+
+  // Stream a chosen PDF straight through our server to Printing Comics
+  // (nothing is stored on our infrastructure), then select the returned
+  // upload on this line item's cover/interior slot.
+  const handleUploadPdf = async (
+    idx: number,
+    slot: "cover" | "interior",
+    file: File
+  ) => {
+    if (file.type && file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Only PDF files are accepted");
+      return;
+    }
+    const key = `${idx}:${slot}`;
+    setUploadingSlot(key);
+    try {
+      const fd = new FormData();
+      fd.set("file", file, file.name);
+      fd.set("purpose", slot);
+      const r = await apiFetch("/api/creator/printingcomics/uploads", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        toast.error(data?.error || `Upload failed (HTTP ${r.status})`);
+        return;
+      }
+      const uploaded = data?.upload as PCUploadSummary | undefined;
+      if (!uploaded?.id) {
+        toast.error("Upload succeeded but no file id was returned");
+        return;
+      }
+      // Add (or de-dupe) into the picker list and select it here.
+      setUploads((prev) =>
+        prev.some((u) => u.id === uploaded.id) ? prev : [uploaded, ...prev]
+      );
+      updateLineItem(idx, slot === "cover" ? { coverUploadId: uploaded.id } : { interiorUploadId: uploaded.id });
+      toast.success(
+        `${slot === "cover" ? "Cover" : "Interior"} PDF uploaded${data?.idempotent ? " (already on file)" : ""}`
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
 
   // Debounced pricing preview. Re-runs whenever the items, destination,
   // or selected shipping option change. We don't toast errors — just
@@ -1286,6 +1338,31 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                           ))}
                         </SelectContent>
                       </Select>
+                      <label className="mt-1 inline-flex">
+                        <input
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          className="hidden"
+                          disabled={uploadingSlot === `${idx}:cover`}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUploadPdf(idx, "cover", f);
+                            e.target.value = "";
+                          }}
+                        />
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-xs cursor-pointer text-primary hover:underline ${
+                            uploadingSlot === `${idx}:cover` ? "pointer-events-none opacity-60" : ""
+                          }`}
+                        >
+                          {uploadingSlot === `${idx}:cover` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Upload className="h-3.5 w-3.5" />
+                          )}
+                          {uploadingSlot === `${idx}:cover` ? "Uploading…" : "Upload cover PDF"}
+                        </span>
+                      </label>
                     </div>
                     <div className="space-y-1">
                       <Label>Interior PDF</Label>
@@ -1305,6 +1382,31 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                           ))}
                         </SelectContent>
                       </Select>
+                      <label className="mt-1 inline-flex">
+                        <input
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          className="hidden"
+                          disabled={uploadingSlot === `${idx}:interior`}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUploadPdf(idx, "interior", f);
+                            e.target.value = "";
+                          }}
+                        />
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-xs cursor-pointer text-primary hover:underline ${
+                            uploadingSlot === `${idx}:interior` ? "pointer-events-none opacity-60" : ""
+                          }`}
+                        >
+                          {uploadingSlot === `${idx}:interior` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Upload className="h-3.5 w-3.5" />
+                          )}
+                          {uploadingSlot === `${idx}:interior` ? "Uploading…" : "Upload interior PDF"}
+                        </span>
+                      </label>
                     </div>
                   </div>
 
@@ -1332,7 +1434,7 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
               </Button>
 
               <p className="text-[10px] text-muted-foreground">
-                Need to upload a new PDF? POST <code>{`{r2Key, purpose}`}</code> to <code>/api/creator/printingcomics/uploads</code> first. UI to pick from R2 is coming.
+                Print-ready PDFs upload straight to Printing Comics — they&apos;re not stored on IndieCrowdfund. Use &ldquo;Upload cover / interior PDF&rdquo; under each slot, or pick a PDF you&apos;ve already sent them. Max 2 GB per file.
               </p>
             </div>
 

@@ -49,6 +49,90 @@ interface UploadFromR2Input {
 
 const TWO_GB = 2 * 1024 * 1024 * 1024;
 
+// Low-level: hash the bytes and POST them straight to Printing Comics'
+// /uploads endpoint. The file lands ONLY on Printing Comics' servers —
+// we never persist it. Shared by the direct browser-proxy path and the
+// (legacy) R2-key path.
+async function postUploadToPC(
+  config: PrintingComicsConfig,
+  buf: Buffer,
+  filename: string,
+  purpose: string,
+  notes: string | undefined,
+  logCtx: Record<string, unknown>
+): Promise<{ upload: PCUploadResult; idempotent: boolean }> {
+  if (buf.byteLength > TWO_GB) {
+    throw new Error(
+      `File is ${(buf.byteLength / 1024 / 1024 / 1024).toFixed(2)} GB; Printing Comics cap is 2 GB`
+    );
+  }
+
+  const contentHash = createHash("sha256").update(buf).digest("hex");
+
+  // FormData accepts Blob; wrap the Buffer in one. Setting type to
+  // application/pdf is a hint — Printing Comics accepts any file
+  // type but their print pipeline expects preflighted PDFs.
+  const fd = new FormData();
+  fd.set(
+    "file",
+    new Blob([new Uint8Array(buf)], { type: "application/pdf" }),
+    filename
+  );
+  fd.set("purpose", purpose);
+  if (notes) fd.set("notes", notes);
+
+  const url = `${config.baseUrl}/uploads`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      Accept: "application/json",
+      "X-Upload-Content-Hash": contentHash,
+    },
+    body: fd,
+  });
+
+  const text = await res.text();
+  if (!res.ok) {
+    log.warn(
+      { status: res.status, ...logCtx, body: text.slice(0, 500) },
+      "Printing Comics upload failed"
+    );
+    throw new PrintingComicsApiError(res.status, text);
+  }
+  let parsed: { upload: PCUploadResult; idempotent?: boolean };
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new PrintingComicsApiError(res.status, `Non-JSON response: ${text.slice(0, 200)}`);
+  }
+  return { upload: parsed.upload, idempotent: !!parsed.idempotent };
+}
+
+interface UploadDirectInput {
+  // Raw PDF bytes streamed up from the creator's browser. We forward
+  // them straight to Printing Comics without ever touching R2.
+  buffer: Buffer;
+  filename: string;
+  purpose: string;
+  notes?: string;
+}
+
+// Direct browser-proxy upload: the creator's PDF passes through our
+// server (which holds the pc_live_ secret) straight to Printing Comics.
+// Nothing is stored on our infrastructure — the file lives only on the
+// printer's servers, referenced later by its returned upload id.
+export async function uploadPrintFileDirect(
+  config: PrintingComicsConfig,
+  input: UploadDirectInput
+): Promise<{ upload: PCUploadResult; idempotent: boolean }> {
+  const filename = input.filename || "file.pdf";
+  return postUploadToPC(config, input.buffer, filename, input.purpose, input.notes, {
+    filename,
+    source: "direct",
+  });
+}
+
 // Pull the bytes from R2, hash them, and stream them to Printing
 // Comics' /uploads endpoint. Returns the upload metadata so the
 // caller can stash uploadId on the line item.
@@ -71,51 +155,10 @@ export async function uploadPrintFileFromR2(
   if (!buf) {
     throw new Error(`R2 object not found: ${input.r2Key}`);
   }
-  if (buf.byteLength > TWO_GB) {
-    throw new Error(
-      `File is ${(buf.byteLength / 1024 / 1024 / 1024).toFixed(2)} GB; Printing Comics cap is 2 GB`
-    );
-  }
 
   const filename = input.filename || input.r2Key.split("/").pop() || "file.pdf";
-  const contentHash = createHash("sha256").update(buf).digest("hex");
-
-  // FormData accepts Blob; wrap the Buffer in one. Setting type to
-  // application/pdf is a hint — Printing Comics accepts any file
-  // type but their print pipeline expects preflighted PDFs.
-  const fd = new FormData();
-  fd.set(
-    "file",
-    new Blob([new Uint8Array(buf)], { type: "application/pdf" }),
-    filename
-  );
-  fd.set("purpose", input.purpose);
-  if (input.notes) fd.set("notes", input.notes);
-
-  const url = `${config.baseUrl}/uploads`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      Accept: "application/json",
-      "X-Upload-Content-Hash": contentHash,
-    },
-    body: fd,
+  return postUploadToPC(config, buf, filename, input.purpose, input.notes, {
+    r2Key: input.r2Key,
+    source: "r2",
   });
-
-  const text = await res.text();
-  if (!res.ok) {
-    log.warn(
-      { status: res.status, r2Key: input.r2Key, body: text.slice(0, 500) },
-      "Printing Comics upload failed"
-    );
-    throw new PrintingComicsApiError(res.status, text);
-  }
-  let parsed: { upload: PCUploadResult; idempotent?: boolean };
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new PrintingComicsApiError(res.status, `Non-JSON response: ${text.slice(0, 200)}`);
-  }
-  return { upload: parsed.upload, idempotent: !!parsed.idempotent };
 }
