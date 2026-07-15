@@ -103,4 +103,13 @@ export const GROUPS: FeatureGroup[] = [
       { label: "Mature / adult content allowed", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
     ],
   },
+  {
+    title: "Platform & technology",
+    rows: [
+      // FMC "no": its frontend is AngularJS (Angular 1.x), which reached
+      // Google end-of-life in January 2022 (no further releases or security
+      // patches) — confirmed from its page source.
+      { label: "Runs on a modern, actively-supported framework", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "unknown" },
+    ],
+  },
 ];
