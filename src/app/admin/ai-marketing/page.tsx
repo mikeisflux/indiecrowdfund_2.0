@@ -28,6 +28,7 @@ import {
   BarChart3,
   Activity,
   History,
+  Loader2,
 } from "lucide-react";
 
 import {
@@ -102,6 +103,28 @@ export default function AIMarketingPage() {
   const [showSegmentManager, setShowSegmentManager] = useState(false);
   const [showCampaignViewer, setShowCampaignViewer] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null);
+  // The actual email HTML that went out, loaded on demand when the viewer opens.
+  const [campaignHtml, setCampaignHtml] = useState<string | null>(null);
+  const [campaignHtmlLoading, setCampaignHtmlLoading] = useState(false);
+  const viewerCampaignId = showCampaignViewer ? selectedCampaign?.id : undefined;
+  useEffect(() => {
+    if (!viewerCampaignId) return;
+    let cancelled = false;
+    setCampaignHtml(null);
+    setCampaignHtmlLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/ai-marketing/campaigns/manage/${viewerCampaignId}`);
+        const data = await res.json();
+        if (!cancelled) setCampaignHtml(res.ok ? (data.campaign?.htmlContent || "") : "");
+      } catch {
+        if (!cancelled) setCampaignHtml("");
+      } finally {
+        if (!cancelled) setCampaignHtmlLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [viewerCampaignId]);
   const [isApplyingRecommendations, setIsApplyingRecommendations] = useState(false);
   const [activityLogs, setActivityLogs] = useState<Array<{ id: string; action: string; details: string; timestamp: string }>>([]);
   const [showTagReview, setShowTagReview] = useState(false);
@@ -1004,7 +1027,7 @@ export default function AIMarketingPage() {
       </Dialog>
 
       {/* Campaign Viewer Dialog - kept inline as it's small */}
-      <Dialog open={showCampaignViewer} onOpenChange={setShowCampaignViewer}>
+      <Dialog open={showCampaignViewer} onOpenChange={(open) => { setShowCampaignViewer(open); if (!open) setCampaignHtml(null); }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>{selectedCampaign?.name || "Campaign Details"}</DialogTitle>
@@ -1053,11 +1076,27 @@ export default function AIMarketingPage() {
                   )}
                 </div>
               </div>
-              <div className="rounded-lg border bg-muted/50 p-4 dark:bg-zinc-900">
-                <h4 className="font-semibold mb-2">AI-Generated Content</h4>
-                <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                  This campaign was created using AI to personalize content for each recipient based on their interests and behavior.
-                </p>
+              <div className="rounded-lg border overflow-hidden">
+                <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2 dark:bg-zinc-900">
+                  <h4 className="font-semibold">Email sent</h4>
+                  <span className="text-xs text-muted-foreground">The exact email delivered to recipients</span>
+                </div>
+                {campaignHtmlLoading ? (
+                  <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading email…
+                  </div>
+                ) : campaignHtml ? (
+                  <iframe
+                    title="Campaign email preview"
+                    sandbox=""
+                    srcDoc={campaignHtml}
+                    className="h-[460px] w-full bg-white"
+                  />
+                ) : (
+                  <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No email content is stored for this campaign.
+                  </p>
+                )}
               </div>
             </div>
           )}
