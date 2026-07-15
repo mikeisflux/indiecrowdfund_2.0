@@ -30,7 +30,7 @@ export const GROUPS: FeatureGroup[] = [
       { label: "Rewards-based crowdfunding campaigns", ic: "yes", ks: "yes", ig: "yes", fmc: "yes" },
       { label: "Flexible “keep-it-all” funding option", ic: "yes", ks: "no", ig: "yes", fmc: "yes" },
       { label: "Prelaunch / coming-soon pages", ic: "yes", ks: "yes", ig: "yes", fmc: "yes" },
-      { label: "Native à-la-carte add-ons", ic: "yes", ks: "no", ig: "partial", fmc: "yes" },
+      { label: "Native à-la-carte add-ons", ic: "yes", ks: "yes", ig: "yes", fmc: "yes" },
       { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial" },
       { label: "Backer reviews & star ratings", ic: "yes", ks: "no", ig: "no", fmc: "no" },
       { label: "Team collaborators on a campaign", ic: "yes", ks: "no", ig: "no", fmc: "no" },
@@ -40,7 +40,7 @@ export const GROUPS: FeatureGroup[] = [
   {
     title: "Payments",
     rows: [
-      { label: "Multiple payment processors", ic: "yes", ks: "no", ig: "partial", fmc: "partial" },
+      { label: "Multiple payment processors", ic: "yes", ks: "no", ig: "yes", fmc: "partial" },
       { label: "PayPal accepted", ic: "yes", ks: "no", ig: "yes", fmc: "yes" },
       { label: "Crypto / token payments (DivinityCoin)", ic: "yes", ks: "no", ig: "no", fmc: "no" },
     ],
@@ -48,19 +48,19 @@ export const GROUPS: FeatureGroup[] = [
   {
     title: "Fulfillment (IndieKit)",
     rows: [
-      { label: "Built-in pledge manager & backer surveys", ic: "yes", ks: "no", ig: "no", fmc: "partial" },
+      { label: "Built-in pledge manager & backer surveys", ic: "yes", ks: "yes", ig: "yes", fmc: "partial" },
       { label: "Order Lock — confirm & charge early", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Shipping-carrier integrations (Shippo, ShipStation, EasyPost, Stamps)", ic: "yes", ks: "no", ig: "no", fmc: "no" },
+      { label: "Shipping-carrier integrations (Shippo, ShipStation, EasyPost, Stamps)", ic: "yes", ks: "partial", ig: "partial", fmc: "no" },
       { label: "Shopify integration", ic: "yes", ks: "no", ig: "no", fmc: "no" },
       { label: "Built-in comic printing & hard-copy proofs", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Production / already-shipped tracking", ic: "yes", ks: "no", ig: "no", fmc: "no" },
-      { label: "Digital file delivery & downloads", ic: "yes", ks: "yes", ig: "no", fmc: "partial" },
+      { label: "Production / already-shipped tracking", ic: "yes", ks: "partial", ig: "partial", fmc: "no" },
+      { label: "Digital file delivery & downloads", ic: "yes", ks: "yes", ig: "partial", fmc: "partial" },
     ],
   },
   {
     title: "Ongoing store",
     rows: [
-      { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "no", ig: "partial", fmc: "no" },
+      { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "partial", ig: "yes", fmc: "no" },
       { label: "Music streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no" },
       { label: "Movie / video streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no" },
       { label: "Physical-media store", ic: "yes", ks: "no", ig: "no", fmc: "no" },

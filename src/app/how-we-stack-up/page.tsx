@@ -169,10 +169,11 @@ export default function HowWeStackUpPage() {
         </div>
 
         <p className="mx-auto mt-4 max-w-4xl text-xs text-muted-foreground">
-          Comparison based on publicly available information about each platform and may not
-          reflect recent changes. &ldquo;Limited / third-party&rdquo; means the capability is
-          restricted or typically requires a separate paid add-on or partner service. Product
-          names and trademarks belong to their respective owners.
+          Comparison based on publicly available information about each platform, last reviewed
+          July&nbsp;2026, and may not reflect more recent changes. &ldquo;Limited /
+          third-party&rdquo; means the capability is restricted or typically requires a separate
+          paid add-on or partner service. Product names and trademarks are the property of their
+          respective owners and are used here only to identify each platform for comparison.
         </p>
 
         {/* CTA */}
