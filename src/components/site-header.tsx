@@ -219,6 +219,7 @@ export function SiteHeader() {
             <NavLink href="/crowdfunds">Crowdfunds</NavLink>
             <NavLink href="/shop">Digital Shop</NavLink>
             <NavLink href="/retailers">Retailers</NavLink>
+            <NavLink href="/how-we-stack-up">How We Stack Up</NavLink>
             <DropdownMenu>
               <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors relative group flex items-center gap-1 outline-none">
                 Bug Report/Changelog
@@ -294,6 +295,9 @@ export function SiteHeader() {
                 </Link>
                 <Link href="/retailers" className="text-sm font-medium hover:text-primary py-2">
                   Retailers
+                </Link>
+                <Link href="/how-we-stack-up" className="text-sm font-medium hover:text-primary py-2">
+                  How We Stack Up
                 </Link>
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-4 pb-2">Bug Report/Changelog</div>
                 <Link href="/bug-report" className="text-sm font-medium hover:text-primary py-2 flex items-center gap-2">
