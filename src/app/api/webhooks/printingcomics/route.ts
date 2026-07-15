@@ -27,6 +27,8 @@ export const dynamic = "force-dynamic";
 
 interface PCWebhookPayload {
   event?: PCWebhookEvent;
+  // proof.* events carry the PC order id at the top level.
+  orderId?: string;
   data?: {
     order?: {
       id?: string;
@@ -46,13 +48,16 @@ interface PCWebhookPayload {
       amountCents?: number;
       paidAt?: string;
     };
-    // Hard proof payload (proof.* / order.proof_* events).
-    proof?: {
-      fileUrl?: string;
-      reviewUrl?: string;
-      status?: string;
-      version?: number;
-    };
+    // proof.* events: proof fields are FLAT under data (no nested object).
+    orderId?: string;
+    number?: string;
+    proofVersion?: number;
+    status?: string;
+    token?: string;
+    reviewUrl?: string;
+    fileUrl?: string;
+    approvedName?: string;
+    note?: string;
   };
 }
 
@@ -69,6 +74,11 @@ const STATUS_MAP: Record<PCWebhookEvent, string | null> = {
   "order.delivered": "DELIVERED",
   "order.cancelled": "CANCELLED",
   "order.refunded": "REFUNDED",
+  // Proof events are handled in their own branch (they don't change the
+  // order's production status); listed here to satisfy the exhaustive map.
+  "proof.ready": null,
+  "proof.approved": null,
+  "proof.changes_requested": null,
 };
 
 export async function POST(req: NextRequest) {
@@ -125,58 +135,44 @@ export async function POST(req: NextRequest) {
   // Prefer the X-PC-Event header (per docs); fall back to body.event
   // if the provider stops sending the header in a future revision.
   const eventName = (eventHeader || payload.event) as PCWebhookEvent | undefined;
-  const order = payload.data?.order;
-  if (!eventName || !order) {
-    log.warn({ eventName, hasOrder: !!order }, "Printing Comics webhook missing event/order");
-    return NextResponse.json({ ok: false, reason: "missing_event_or_order" });
-  }
+  const evtStr = String(eventName ?? "");
 
-  // ---- Hard proof events ----
-  // The printer uploads a proof and webhooks us (event name like
-  // "order.proof_ready" / "proof.ready", or a payload with data.proof).
-  // These don't change the order's production status — they update the
-  // proof fields and notify the creator to review. Detected by event name
-  // OR proof payload so the exact event string doesn't matter.
-  const evtStr = String(eventName);
-  const proofData = payload.data?.proof;
-  if (evtStr.includes("proof") || proofData) {
-    const key = order.externalRef
-      ? { id: (order.externalRef.split(":").pop() as string) }
-      : order.id
-      ? { printingComicsOrderId: order.id }
-      : null;
-    if (!key) {
-      return NextResponse.json({ ok: false, reason: "no_resolvable_key" });
+  // ---- Hard proof events (proof.ready / proof.approved / proof.changes_requested) ----
+  // These carry a FLAT data payload — { orderId, number, proofVersion,
+  // status, token, reviewUrl, fileUrl, approvedName, note } — with NO
+  // data.order, so handle them before the order-object guard and resolve by
+  // the Printing Comics order id.
+  if (evtStr.startsWith("proof.")) {
+    const d = payload.data || {};
+    const pcOrderId = d.orderId || payload.orderId;
+    if (!pcOrderId) {
+      log.warn({ evtStr }, "Proof webhook missing orderId");
+      return NextResponse.json({ ok: false, reason: "missing_order_id" });
     }
     const existing = await db.projectPrintOrder.findFirst({
-      where: key,
+      where: { printingComicsOrderId: pcOrderId },
       select: { id: true, submittedById: true, projectId: true, proofStatus: true },
     });
     if (!existing) {
-      log.warn({ key }, "Proof webhook: no matching print order");
+      log.warn({ pcOrderId }, "Proof webhook: no matching print order");
       return NextResponse.json({ ok: true, ignored: true });
     }
 
-    const newStatus = order.proofStatus || proofData?.status || existing.proofStatus || undefined;
     await db.projectPrintOrder.update({
       where: { id: existing.id },
       data: {
-        proofStatus: newStatus,
-        proofUrl: proofData?.fileUrl ?? undefined,
-        proofReviewUrl: proofData?.reviewUrl ?? undefined,
-        proofVersion: proofData?.version ?? undefined,
+        proofStatus: d.status ?? undefined,
+        proofUrl: d.fileUrl ?? undefined,
+        proofReviewUrl: d.reviewUrl ?? undefined,
+        proofVersion: d.proofVersion ?? undefined,
         proofUpdatedAt: new Date(),
         lastSyncedAt: new Date(),
       },
     });
 
-    // Notify the creator once, when a fresh proof becomes ready to review.
-    const readyForReview =
-      newStatus === "awaiting_approval" ||
-      proofData?.status === "pending" ||
-      evtStr.includes("ready") ||
-      evtStr.includes("uploaded");
-    if (readyForReview && existing.proofStatus !== "awaiting_approval" && existing.submittedById) {
+    // Notify the creator only on a NEW proof.ready (not on their own
+    // approve / changes-requested actions, and not on repeat deliveries).
+    if (evtStr === "proof.ready" && existing.proofStatus !== "awaiting_approval" && existing.submittedById) {
       await db.notification
         .create({
           data: {
@@ -185,14 +181,21 @@ export async function POST(req: NextRequest) {
             title: "Your print proof is ready to review",
             message:
               "Printing Comics uploaded a proof of your print order. Review it and approve (or request changes) to start production.",
-            actionUrl: proofData?.reviewUrl || "/dashboard/indiekit",
+            actionUrl: d.reviewUrl || "/dashboard/indiekit",
             projectId: existing.projectId,
           },
         })
         .catch((e: unknown) => log.warn({ err: String(e) }, "proof notification failed (non-fatal)"));
     }
 
-    return NextResponse.json({ ok: true, proof: true });
+    return NextResponse.json({ ok: true, proof: true, event: evtStr });
+  }
+
+  // ---- Order.* events (carry data.order) ----
+  const order = payload.data?.order;
+  if (!eventName || !order) {
+    log.warn({ eventName, hasOrder: !!order }, "Printing Comics webhook missing event/order");
+    return NextResponse.json({ ok: false, reason: "missing_event_or_order" });
   }
 
   // STATUS_MAP returns null for events that don't change the local

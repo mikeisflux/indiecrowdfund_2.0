@@ -16,7 +16,12 @@ export type PCWebhookEvent =
   | "order.shipped"
   | "order.delivered"
   | "order.cancelled"
-  | "order.refunded";
+  | "order.refunded"
+  // Hard proofing. Flat `data` payload (no data.order): orderId, number,
+  // proofVersion, status, token, reviewUrl, fileUrl, approvedName, note.
+  | "proof.ready"
+  | "proof.approved"
+  | "proof.changes_requested";
 
 // 5-minute replay-protection window matches the request-signing rules
 // the docs publish for outbound calls. Provider docs don't pin a

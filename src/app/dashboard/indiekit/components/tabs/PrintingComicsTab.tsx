@@ -1173,6 +1173,34 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                     );
                   })()}
 
+                  {/* Hard proofing. Sends the exact lowercase option tokens
+                      Printing Comics accepts (yes) — not a configurator label. */}
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-sm font-semibold">Proofing (optional)</p>
+                    <label className="flex items-start gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={String(item.options["pdf_proof"] ?? "") === "yes"}
+                        onCheckedChange={(c) => updateLineItemOption(idx, "pdf_proof", c ? "yes" : undefined)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="font-medium">PDF proof</span>{" "}
+                        <span className="text-xs text-muted-foreground">— free digital proof to approve before we print.</span>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={String(item.options["hard_copy_proof"] ?? "") === "yes"}
+                        onCheckedChange={(c) => updateLineItemOption(idx, "hard_copy_proof", c ? "yes" : undefined)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="font-medium">Hard-copy printed proof</span>{" "}
+                        <span className="text-xs text-muted-foreground">— a physical proof of this book (single-copy price + $19.95). Blocks production until you approve.</span>
+                      </span>
+                    </label>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label>Cover PDF</Label>
