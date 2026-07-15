@@ -98,7 +98,8 @@ const sections: SectionGroup[] = [
     tabs: [
       { id: 'setup', label: 'Setup', icon: FormInput },
       { id: 'surveys', label: 'Surveys', icon: ClipboardList },
-      { id: 'finalize', label: 'Finalize', icon: Lock },
+      { id: 'order-lock', label: 'Order Lock', icon: Lock },
+      { id: 'finalize', label: 'Finalize', icon: CheckCircle2 },
       { id: 'teaser-pages', label: 'Teaser Pages', icon: FileText },
     ],
   },
@@ -109,6 +110,7 @@ const sections: SectionGroup[] = [
       { id: 'payments', label: 'Payments', icon: CreditCard },
       { id: 'digital-delivery', label: 'Digital Delivery', icon: Download },
       { id: 'physical-delivery', label: 'Physical Delivery', icon: Box },
+      { id: 'printing-comics', label: 'Printing Comics', icon: Truck },
     ],
   },
   {
@@ -339,6 +341,26 @@ const tabContent: Record<string, TabContent> = {
       'Item-variant questions only show for backers whose reward tier matches. Test the preview with each tier in mind.',
     ],
   },
+  'order-lock': {
+    title: 'Order Lock Tab (Pre-Fulfillment)',
+    description: 'Order Lock lets you ask backers to confirm and "lock" their order while the campaign is still LIVE, so you can start printing and shipping sooner. A backer who locks freezes their reward, add-ons, and shipping address as final, and — where their payment method supports it — is charged so you can produce and ship right away.',
+    howTo: [
+      { step: 'Send a lock request', detail: 'Open the Order Lock tab and click "Send Lock Request". Backers get an in-app notification and an email asking them to "Confirm & lock your order". You can send to everyone or to a selected group.' },
+      { step: 'Watch the status board', detail: 'Every backer shows a status: Not sent, Requested, Locked, or Declined. The board updates live as backers respond so you can see how many orders are ready to produce.' },
+      { step: 'Remind pending backers', detail: 'For anyone still in Requested, click "Remind" to re-send the confirm-and-lock nudge. Give backers a few days between reminders.' },
+      { step: 'Understand what locking does', detail: 'When a backer locks, their shipping address + reward + add-ons become FINAL and can no longer be changed, and they\'re marked confirmed so they won\'t also get the post-campaign fulfillment survey. Where supported, payment is collected on lock so you can produce and ship immediately.' },
+      { step: 'Know how each processor charges', detail: 'Backers who already paid simply lock. Divinity Payments backers with a saved card are charged when they lock. PayPal and Whop backers lock now and are charged on the campaign\'s normal schedule.' },
+    ],
+    tips: [
+      'Order Lock is optional — use it when you want to freeze orders early and start production without waiting for the campaign to end.',
+      'A backer who declines ("I need to make changes first") stays unlocked and keeps their normal survey — follow up if you need their order sooner.',
+      'Locked backers skip the fulfillment survey, so make sure your lock request captures everything you need (address, variants, add-ons) before you send it.',
+    ],
+    gotchas: [
+      'Locking is final for the backer — reward, add-ons, and address can no longer be changed once locked.',
+      'PayPal/Whop backers who lock are NOT charged immediately; they follow the campaign\'s normal charge schedule, so don\'t assume a lock always means money collected.',
+    ],
+  },
   'finalize': {
     title: 'Finalize Tab (Pre-Fulfillment)',
     description: 'The gate between Pre-Fulfillment and Fulfillment. This tab walks you through the irreversible steps that make Phase 2 safe: lock orders, charge final amounts owed (add-ons + shipping), and lock shipping addresses. Don\'t open it until 90%+ of backers have completed their survey.',
@@ -435,6 +457,28 @@ const tabContent: Record<string, TabContent> = {
     gotchas: [
       'A push error on one order doesn\'t block the rest of the batch from pushing — they\'re processed independently.',
       'Marking an order as Delivered does NOT trigger another email; only Shipped does. Delivery notifications come from the carrier directly.',
+    ],
+  },
+
+  'printing-comics': {
+    title: 'Printing Comics Tab (Fulfillment)',
+    description: 'Order a bulk print run of your book through the built-in Printing Comics print partner — right from IndieKit. You configure the product, get a live price quote, upload your print-ready files, and place a single order for N copies. Cartons ship to YOUR receiving address, not to backers; you fulfill backers separately.',
+    howTo: [
+      { step: 'Pick the product and trim size', detail: 'Choose the product (e.g. Comic Book or Graphic Novel) and the trim size. A live price quote and shipping options update as you configure each option.' },
+      { step: 'Set quantity and page count', detail: 'Enter how many copies you want and the interior page count, plus your comic title. This is a bulk run — you order N copies at once, separate from per-backer fulfillment.' },
+      { step: 'Configure cover and paper', detail: 'Choose the cover type / paper stock (matte, semi-gloss, gloss, deluxe/premium gloss, holo-chrome, metal, raised metal, glow-in-the-dark, sketch) and the interior paper and interior color (full color or grayscale).' },
+      { step: 'Add embellishments', detail: 'Optionally add lamination, UV, or foil embellishments, each with their own sub-styles. The quote updates as you add them.' },
+      { step: 'Upload print-ready files', detail: 'Upload your print-ready cover and interior PDFs. Then review the live quote plus shipping options and place the order.' },
+      { step: 'Pay Printing Comics and track status', detail: 'Payment for the print run is handled directly with Printing Comics — they send a payment link. IndieKit tracks the order status; the platform doesn\'t process the print payment itself.' },
+    ],
+    tips: [
+      'Pair Printing Comics with the Production Order tab — its "Still to Produce" column already subtracts units you\'ve Already Shipped, so you don\'t over-order.',
+      'Cartons arrive at your receiving address, so budget time to receive, sort, and ship to backers yourself.',
+      'Configure options top-to-bottom and watch the live quote — cover stock and embellishments move the price the most.',
+    ],
+    gotchas: [
+      'This is a bulk print run, not per-backer fulfillment — Printing Comics does not ship to your backers.',
+      'The print-run payment is a separate transaction with Printing Comics via their payment link; it is not charged through the platform or your backers\' cards.',
     ],
   },
 
