@@ -30,6 +30,7 @@ export {
   notifySurveySent,
   notifySurveyReminder,
   notifySurveyUpdateRequested,
+  notifyOrderLockRequested,
   processUnsentConfirmationEmails,
 } from "./pledge-notifications";
 

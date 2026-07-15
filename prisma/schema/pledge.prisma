@@ -86,6 +86,15 @@ model Pledge {
   shippingAddress       Json?
   surveyResponses       Json?
 
+  // Order lock — per-backer "confirm & lock your order" handshake the
+  // creator can send (even during a live campaign). On approval the backer
+  // confirms address + selections, we (optionally) charge, and the order is
+  // frozen from further edits so it can be printed/shipped.
+  orderLockStatus       OrderLockStatus @default(UNLOCKED)
+  orderLockRequestedAt  DateTime?
+  orderLockedAt         DateTime?
+  orderLockDeclinedAt   DateTime?
+
   // Fulfillment
   fulfillmentStatus     FulfillmentStatus @default(NOT_STARTED)
 
@@ -206,4 +215,11 @@ enum FulfillmentStatus {
   IN_PROGRESS
   SHIPPED
   DELIVERED
+}
+
+enum OrderLockStatus {
+  UNLOCKED        // no lock request outstanding
+  LOCK_REQUESTED  // creator asked; awaiting backer approval
+  LOCKED          // backer approved; order frozen (and charged, if enabled)
+  DECLINED        // backer declined the request
 }

@@ -79,6 +79,14 @@ export async function POST(
       return NextResponse.json({ error: "Pledge not found" }, { status: 404 });
     }
 
+    // Order lock freeze: a locked order is final and can't take new items.
+    if (pledge.orderLockStatus === "LOCKED") {
+      return NextResponse.json(
+        { error: "Your order is locked and can no longer be changed." },
+        { status: 403 }
+      );
+    }
+
     // Verify pledge is completed
     if (pledge.status !== "COMPLETED") {
       return NextResponse.json(

@@ -172,6 +172,79 @@ export async function sendSurveyAvailableEmail(
 }
 
 /**
+ * Send an "confirm & lock your order" request email to a backer. Locking
+ * confirms their address + selections so the creator can print & ship.
+ */
+export async function sendOrderLockRequestEmail(
+  email: string,
+  backerName: string,
+  projectTitle: string,
+  creatorName: string,
+  pledgeId: string
+) {
+  const lockUrl = `${APP_URL}/dashboard/pledges/${pledgeId}/lock-order`;
+  const dashboardUrl = `${APP_URL}/dashboard/backer`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Confirm & lock your order</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0;">${APP_NAME}</h1>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #16a34a 0%, #0d9488 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px; color: white;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+              📦 READY TO PRINT & SHIP
+            </div>
+          </div>
+          <h2 style="margin-top: 0; color: white; text-align: center;">Confirm &amp; lock your order</h2>
+          <p style="text-align: center;">Hi ${escapeHtml(backerName || "there")},</p>
+          <p style="text-align: center;"><strong>${escapeHtml(creatorName)}</strong> is ready to produce and ship <strong>&ldquo;${escapeHtml(projectTitle)}&rdquo;</strong>. Review your order, confirm your shipping address, and lock it in.</p>
+        </div>
+
+        <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin-top: 0;">What happens when I lock?</h3>
+          <ul style="color: #666; margin: 10px 0 0 0; padding-left: 20px;">
+            <li>Your reward, add-ons, and shipping address are confirmed</li>
+            <li>Your order is finalized so it can be printed &amp; shipped</li>
+            <li>You won't be able to change it afterward, so double-check first</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${lockUrl}" style="display: inline-block; background: #16a34a; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+            Review &amp; lock my order
+          </a>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+          <a href="${dashboardUrl}" style="color: #666; font-size: 14px; text-decoration: underline;">View all your pledges</a>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+          <p>You received this email because you backed "${projectTitle}" on ${APP_NAME}.</p>
+          <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return queueEmail({
+    to: email,
+    subject: `📦 Confirm & lock your order for "${projectTitle}"`,
+    html,
+    priority: EMAIL_PRIORITY.CREATOR,
+  });
+}
+
+/**
  * Send survey update request email to backer
  */
 export async function sendSurveyUpdateRequestEmail(

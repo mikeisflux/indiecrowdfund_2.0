@@ -349,6 +349,15 @@ export async function POST(
       );
     }
 
+    // Order lock freeze: once a backer has locked their order it can no
+    // longer be changed (address / rewards / add-ons are final for print).
+    if (pledge.orderLockStatus === "LOCKED") {
+      return NextResponse.json(
+        { error: "Your order is locked and can no longer be changed." },
+        { status: 403 }
+      );
+    }
+
     // Only backers with a fully COMPLETED pledge may submit survey responses.
     // PENDING/FAILED/REFUNDED/CANCELLED/CHARGEBACK pledges are not real backers
     // and must be blocked at the response endpoint.

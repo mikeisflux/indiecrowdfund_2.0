@@ -415,6 +415,31 @@ export async function notifySurveyUpdateRequested(projectId: string, projectTitl
 }
 
 /**
+ * Notify specific backers that the creator has requested they lock their
+ * order. `pledges` is the exact set the creator just flagged LOCK_REQUESTED
+ * (each with its userId + pledge id), so the notification links straight to
+ * that backer's approval page.
+ */
+export async function notifyOrderLockRequested(
+  projectId: string,
+  projectTitle: string,
+  pledges: { userId: string; id: string }[]
+) {
+  const notifications = pledges.map((pledge) => ({
+    userId: pledge.userId,
+    type: "ORDER_LOCK_REQUESTED" as NotificationType,
+    title: "Confirm & lock your order",
+    message: `${projectTitle} is ready to print & ship. Review your order and lock it in to get yours made.`,
+    actionUrl: `/dashboard/pledges/${pledge.id}/lock-order`,
+    projectId,
+  }));
+
+  if (notifications.length > 0) {
+    await db.notification.createMany({ data: notifications });
+  }
+}
+
+/**
  * Notify backers with a survey reminder
  */
 export async function notifySurveyReminder(projectId: string, projectTitle: string) {
