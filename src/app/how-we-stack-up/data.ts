@@ -48,6 +48,12 @@ export const GROUPS: FeatureGroup[] = [
     rows: [
       { label: "Rewards-based crowdfunding campaigns", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
       { label: "Flexible “keep-it-all” funding option", ic: "yes", ks: "no", ig: "yes", fmc: "yes", bmb: "unknown" },
+      // FMC "no": Fund My Comic's public campaign pages roll externally-raised
+      // funds into the headline total — e.g. campaign 118 displays "$81,850
+      // raised / 16,370% funded" with the sub-line "$77,743 raised on other
+      // sites by 1,574 backers" (only ~$4.1k of it raised on FMC itself).
+      // Kickstarter/Indiegogo display on-platform pledges only.
+      { label: "Public funding total reflects on-platform pledges only", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "unknown" },
       { label: "Prelaunch / coming-soon pages", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
       { label: "Native à-la-carte add-ons", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
       { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "unknown" },
