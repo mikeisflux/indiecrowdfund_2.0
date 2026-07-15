@@ -940,7 +940,7 @@ export function PrintingComicsTab({ projectId }: PrintingComicsTabProps) {
                                     key={v.id}
                                     type="button"
                                     onClick={() =>
-                                      updateLineItemOption(idx, key, selected && !opt.required ? undefined : v.label)
+                                      updateLineItemOption(idx, key, selected ? undefined : v.label)
                                     }
                                     className={`relative text-center rounded-lg border-2 transition-all duration-150 ${
                                       opt.type === "TILES" ? "p-3" : "px-4 py-2.5"
