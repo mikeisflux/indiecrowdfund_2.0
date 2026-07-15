@@ -6,6 +6,7 @@ const adminAiMarketingCampaignsLogger = logger.child({ module: "admin-ai-marketi
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateCampaignContent } from "@/lib/ai";
+import { renderCampaignEmailHtml } from "@/lib/ai/campaign-email-template";
 import {
   getAISettings,
   generateVariantsIfEnabled,
@@ -209,6 +210,7 @@ export async function POST(request: Request) {
         description: true,
         category: true,
         goalAmount: true,
+        imageUrl: true,
         creator: { select: { vanityUrl: true } },
       },
     });
@@ -454,80 +456,19 @@ function generateEmailHtml(
     }>;
     footer: string;
   },
-  projects: Array<{ id: string; title: string; slug: string; description: string | null; category: string | null; goalAmount: unknown; creator: { vanityUrl: string | null } | null }>,
+  projects: Array<{ id: string; title: string; slug: string; description: string | null; category: string | null; goalAmount: unknown; imageUrl?: string | null; creator: { vanityUrl: string | null } | null }>,
   includeProjectRecommendations: boolean = true
 ): string {
-  let projectsSection = "";
-
-  if (includeProjectRecommendations) {
-    const projectCards = aiContent.projectRecommendations.map((rec, i) => {
-      const project = projects.find(p => p.title === rec.projectTitle) || projects[i];
-      if (!project) return "";
-
-      // Build project URL with vanity URL if available
-      const projectUrl = project.creator?.vanityUrl
-        ? `/projects/${project.creator.vanityUrl}/${project.slug}`
-        : `/projects/${project.slug}`;
-
-      return `
-        <div style="margin-bottom: 24px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
-          <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 18px;">${esc(project.title)}</h3>
-          <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">${esc(rec.recommendationReason)}</p>
-          <a href="{{SITE_URL}}${projectUrl}"
-             style="display: inline-block; padding: 10px 20px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
-            ${esc(rec.callToAction)}
-          </a>
-        </div>
-      `;
-    }).join("");
-
-    projectsSection = `
-      <!-- Projects -->
-      <div style="margin-bottom: 32px;">
-        <h2 style="color: #111827; font-size: 20px; margin-bottom: 16px;">Projects We Think You'll Love</h2>
-        ${projectCards}
-      </div>
-    `;
-  }
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${aiContent.subject}</title>
-    </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <!-- Preheader -->
-      <div style="display: none; max-height: 0; overflow: hidden;">
-        ${aiContent.preheader}
-      </div>
-
-      <!-- Header -->
-      <div style="text-align: center; margin-bottom: 32px;">
-        <h1 style="color: #10b981; margin: 0;">IndieCrowdfund</h1>
-      </div>
-
-      <!-- Intro -->
-      <div style="margin-bottom: 32px;">
-        <p style="font-size: 16px; color: #374151;">Hi {{USER_NAME}},</p>
-        <p style="font-size: 16px; color: #374151;">${aiContent.personalizedIntro}</p>
-      </div>
-
-      ${projectsSection}
-
-      <!-- Footer -->
-      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center;">
-        <p style="color: #6b7280; font-size: 14px;">${aiContent.footer}</p>
-        <p style="color: #9ca3af; font-size: 12px; margin-top: 16px;">
-          <a href="{{UNSUBSCRIBE_URL}}" style="color: #9ca3af;">Unsubscribe</a> |
-          <a href="{{SITE_URL}}" style="color: #9ca3af;">Visit IndieCrowdfund</a>
-        </p>
-      </div>
-    </body>
-    </html>
-  `;
+  return renderCampaignEmailHtml(
+    aiContent,
+    projects.map((p) => ({
+      title: p.title,
+      url: p.creator?.vanityUrl ? `/projects/${p.creator.vanityUrl}/${p.slug}` : `/projects/${p.slug}`,
+      imageUrl: p.imageUrl ?? null,
+      category: p.category,
+    })),
+    { includeProjectRecommendations }
+  );
 }
 
 // Helper to generate plain text email content

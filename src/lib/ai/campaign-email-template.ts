@@ -1,0 +1,193 @@
+// Shared HTML template for AI-generated marketing campaign emails.
+//
+// Every AI campaign path renders through renderCampaignEmailHtml so the
+// look stays consistent: the automated cron campaigns (lib/ai/automation.ts)
+// and the admin-triggered campaigns (api/admin/ai-marketing/campaigns/*).
+// The template is table-based with inline styles for broad email-client
+// support (Outlook/Gmail), uses ABSOLUTE image URLs, and shows each
+// project's campaign image.
+//
+// Placeholders resolved at send time by the caller:
+//   {{USER_NAME}}       recipient first name
+//   {{SITE_URL}}        base URL (also used to absolutize relative images)
+//   {{UNSUBSCRIBE_URL}} signed opt-out link
+
+export interface CampaignEmailContent {
+  subject: string;
+  preheader: string;
+  personalizedIntro: string;
+  projectRecommendations: Array<{
+    projectTitle: string;
+    recommendationReason: string;
+    callToAction: string;
+  }>;
+  footer: string;
+}
+
+export interface CampaignEmailProject {
+  title: string;
+  // Site-relative path, e.g. "/projects/vanity/slug". The renderer
+  // prefixes {{SITE_URL}}; do NOT include the origin here.
+  url: string;
+  imageUrl: string | null;
+  category: string | null;
+}
+
+// Local HTML-escape — keep this module self-contained so every call site
+// gets escaping for free (one of the older admin generators didn't escape
+// at all, which this replaces).
+function esc(value: string | number | undefined | null): string {
+  if (value === undefined || value === null) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Emails need ABSOLUTE image URLs. imageUrl is stored either as an
+// absolute http(s) URL or a site-relative path ("/..."); prefix the
+// latter with {{SITE_URL}} (resolved to the base URL at send time).
+// Never inline base64 into sent mail.
+function resolveImage(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.startsWith("data:")) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `{{SITE_URL}}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
+}
+
+function renderProjectCard(project: CampaignEmailProject, reason: string, cta: string): string {
+  const href = `{{SITE_URL}}${project.url}`;
+  const img = resolveImage(project.imageUrl);
+  const category = project.category && project.category !== "General" ? project.category : "";
+
+  // Cover image sits on top of the card and is itself a link. Fixed
+  // height + object-fit keeps ragged aspect ratios tidy; a branded
+  // gradient stands in when a project has no image.
+  const imageBlock = img
+    ? `
+        <a href="${href}" style="text-decoration: none;">
+          <img src="${esc(img)}" alt="${esc(project.title)}" width="560"
+               style="display: block; width: 100%; max-width: 560px; height: 240px; object-fit: cover; border: 0; border-radius: 12px 12px 0 0;" />
+        </a>`
+    : `
+        <a href="${href}" style="text-decoration: none;">
+          <div style="width: 100%; height: 120px; border-radius: 12px 12px 0 0; background: linear-gradient(135deg, #10b981 0%, #059669 100%);"></div>
+        </a>`;
+
+  const categoryChip = category
+    ? `<span style="display: inline-block; margin-bottom: 10px; padding: 3px 10px; background: #d1fae5; color: #047857; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 999px;">${esc(category)}</span><br />`
+    : "";
+
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #ffffff;">
+      <tr><td style="padding: 0;">${imageBlock}</td></tr>
+      <tr>
+        <td style="padding: 20px;">
+          ${categoryChip}
+          <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 19px; font-weight: 700;">
+            <a href="${href}" style="color: #111827; text-decoration: none;">${esc(project.title)}</a>
+          </h3>
+          <p style="margin: 0 0 18px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${esc(reason)}</p>
+          <table role="presentation" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="border-radius: 8px; background: #10b981;">
+                <a href="${href}"
+                   style="display: inline-block; padding: 12px 24px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; border-radius: 8px;">
+                  ${esc(cta)} &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+// Render the full HTML email. `projects` is the pool used to resolve each
+// recommendation to a project (matched by title, else positionally).
+export function renderCampaignEmailHtml(
+  aiContent: CampaignEmailContent,
+  projects: CampaignEmailProject[],
+  opts?: { includeProjectRecommendations?: boolean }
+): string {
+  const includeProjects = opts?.includeProjectRecommendations !== false;
+
+  let projectCards = "";
+  if (includeProjects) {
+    projectCards = aiContent.projectRecommendations
+      .map((rec, i) => {
+        const project =
+          projects.find((p) => p.title === rec.projectTitle) || projects[i];
+        if (!project) return "";
+        return renderProjectCard(project, rec.recommendationReason, rec.callToAction);
+      })
+      .join("");
+  }
+
+  const projectSection = includeProjects && projectCards
+    ? `
+              <tr>
+                <td style="padding: 24px 24px 8px 24px;">
+                  ${projectCards}
+                </td>
+              </tr>`
+    : "";
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${esc(aiContent.subject)}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151;">
+      <div style="display: none; max-height: 0; overflow: hidden;">
+        ${esc(aiContent.preheader)}
+      </div>
+
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #f4f4f7;">
+        <tr>
+          <td align="center" style="padding: 24px 12px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; width: 100%; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+              <!-- Header -->
+              <tr>
+                <td align="center" style="padding: 28px 24px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); background-color: #10b981;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 800; letter-spacing: -0.02em;">IndieCrowdfund</h1>
+                  <p style="margin: 6px 0 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">Fund the comics and creators you love</p>
+                </td>
+              </tr>
+
+              <!-- Intro -->
+              <tr>
+                <td style="padding: 32px 24px 8px 24px;">
+                  <p style="margin: 0 0 12px 0; font-size: 16px; color: #111827; font-weight: 600;">Hi {{USER_NAME}},</p>
+                  <p style="margin: 0; font-size: 16px; color: #374151;">${esc(aiContent.personalizedIntro)}</p>
+                </td>
+              </tr>
+${projectSection}
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 16px 24px 32px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+                  <p style="color: #6b7280; font-size: 14px; margin: 16px 0 0 0;">${esc(aiContent.footer)}</p>
+                  <p style="color: #9ca3af; font-size: 12px; margin-top: 16px;">
+                    <a href="{{UNSUBSCRIBE_URL}}" style="color: #9ca3af;">Unsubscribe</a> &nbsp;|&nbsp;
+                    <a href="{{SITE_URL}}" style="color: #9ca3af;">Visit IndieCrowdfund</a>
+                  </p>
+                  <p style="color: #d1d5db; font-size: 10px; margin-top: 8px;">
+                    This email was curated by AI based on your interests.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}

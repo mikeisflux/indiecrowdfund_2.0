@@ -12,10 +12,11 @@
 
 import { db } from "@/lib/db";
 import { generateCampaignContent } from "@/lib/ai/anthropic";
+import { renderCampaignEmailHtml } from "@/lib/ai/campaign-email-template";
 import { generateSmartSegments } from "@/lib/ai/marketing-services";
 import { getAISettings, canSendEmail } from "@/lib/ai/settings-integration";
 import { batchUpdateUserInterests, calculateProjectMatchScore } from "@/lib/ai/user-interests";
-import { queueEmail, EMAIL_PRIORITY, escapeHtmlForEmail, getUnsubscribeUrl } from "@/lib/email";
+import { queueEmail, EMAIL_PRIORITY, getUnsubscribeUrl } from "@/lib/email";
 import { logger } from "@/lib/logger";
 
 const automationLogger = logger.child({ module: "ai-marketing-automation" });
@@ -309,6 +310,7 @@ interface CampaignPlan {
     goalAmount: number;
     vanityUrl: string | null;
     tags: string[];
+    imageUrl: string | null;
   }>;
   // Only populated for abandoned_cart campaigns
   abandonedPledgeUserIds?: string[];
@@ -353,6 +355,7 @@ async function planCampaigns(
       createdAt: true,
       endDate: true,
       tags: true,
+      imageUrl: true,
       creator: { select: { vanityUrl: true } },
     },
   });
@@ -368,6 +371,7 @@ async function planCampaigns(
     goalAmount: Number(p.goalAmount),
     vanityUrl: p.creator?.vanityUrl || null,
     tags: p.tags || [],
+    imageUrl: p.imageUrl || null,
   });
 
   // WEEKLY DISCOVERY — send on Tuesday or Wednesday if not sent recently
@@ -954,65 +958,13 @@ function generateAutomatedEmailHtml(
   plan: CampaignPlan,
   recommendations: AiRecommendation[] = aiContent.projectRecommendations
 ): string {
-  const projectCards = recommendations
-    .map((rec, i) => {
-      const project = plan.projects.find(p => p.title === rec.projectTitle) || plan.projects[i];
-      if (!project) return "";
-
-      const projectUrl = project.vanityUrl
-        ? `/projects/${project.vanityUrl}/${project.slug}`
-        : `/projects/${project.slug}`;
-
-      return `
-        <div style="margin-bottom: 24px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
-          <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 18px;">${escapeHtmlForEmail(project.title)}</h3>
-          <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">${escapeHtmlForEmail(rec.recommendationReason)}</p>
-          <a href="{{SITE_URL}}${projectUrl}"
-             style="display: inline-block; padding: 10px 20px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
-            ${escapeHtmlForEmail(rec.callToAction)}
-          </a>
-        </div>
-      `;
-    })
-    .join("");
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${escapeHtmlForEmail(aiContent.subject)}</title>
-    </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="display: none; max-height: 0; overflow: hidden;">
-        ${escapeHtmlForEmail(aiContent.preheader)}
-      </div>
-
-      <div style="text-align: center; margin-bottom: 32px;">
-        <h1 style="color: #10b981; margin: 0;">IndieCrowdfund</h1>
-      </div>
-
-      <div style="margin-bottom: 32px;">
-        <p style="font-size: 16px; color: #374151;">Hi {{USER_NAME}},</p>
-        <p style="font-size: 16px; color: #374151;">${escapeHtmlForEmail(aiContent.personalizedIntro)}</p>
-      </div>
-
-      <div style="margin-bottom: 32px;">
-        ${projectCards}
-      </div>
-
-      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center;">
-        <p style="color: #6b7280; font-size: 14px;">${escapeHtmlForEmail(aiContent.footer)}</p>
-        <p style="color: #9ca3af; font-size: 12px; margin-top: 16px;">
-          <a href="{{UNSUBSCRIBE_URL}}" style="color: #9ca3af;">Unsubscribe</a> |
-          <a href="{{SITE_URL}}" style="color: #9ca3af;">Visit IndieCrowdfund</a>
-        </p>
-        <p style="color: #d1d5db; font-size: 10px; margin-top: 8px;">
-          This email was curated by AI based on your interests.
-        </p>
-      </div>
-    </body>
-    </html>
-  `;
+  return renderCampaignEmailHtml(
+    { ...aiContent, projectRecommendations: recommendations },
+    plan.projects.map((p) => ({
+      title: p.title,
+      url: p.vanityUrl ? `/projects/${p.vanityUrl}/${p.slug}` : `/projects/${p.slug}`,
+      imageUrl: p.imageUrl,
+      category: p.category,
+    }))
+  );
 }
