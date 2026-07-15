@@ -195,14 +195,13 @@ if [ $BUILD_EXIT_CODE -eq 0 ]; then
         mv .next ".next-backup-${TIMESTAMP}"
         echo "   Backed up old build to .next-backup-${TIMESTAMP}"
 
-        # Strip the regenerable cache from the backup. `.next/cache` holds
-        # the webpack build cache AND the on-demand Image Optimizer cache
-        # (.next/cache/images) — optimized AVIF/WebP variants of every
-        # remote/R2 image ever rendered through <Image>. Under the 30-day
-        # minimumCacheTTL that grows into the GBs and was the entire reason
-        # these backups hit ~1.7 GB. A rollback only needs server/, static/,
-        # and the manifests — the caches rebuild lazily — so drop them from
-        # the backup (NOT from the live build) to keep backups small.
+        # Strip the regenerable cache from the backup. `.next/cache` is
+        # dominated by the webpack build cache (.next/cache/webpack/*.pack,
+        # ~1.6 GB — the bulk of every backup), plus the smaller on-demand
+        # Image Optimizer cache (.next/cache/images). None of it is needed
+        # to restore a build: a rollback only needs server/, static/, and
+        # the manifests, and the caches rebuild lazily. Drop the whole cache
+        # dir from the backup to keep backups small.
         if [ -d ".next-backup-${TIMESTAMP}/cache" ]; then
             CACHE_SIZE=$(du -sh ".next-backup-${TIMESTAMP}/cache" 2>/dev/null | cut -f1)
             rm -rf ".next-backup-${TIMESTAMP}/cache"
@@ -213,6 +212,20 @@ if [ $BUILD_EXIT_CODE -eq 0 ]; then
     # Move new build into place
     mv .next-new .next
     echo -e "${GREEN}   New build is now live!${NC}"
+
+    # Drop the webpack build cache from the LIVE build. It's ~1.6 GB of
+    # *.pack files that only speed up an INCREMENTAL rebuild — but this
+    # script always builds into a fresh .next-new (it rm -rf's it first),
+    # so the cache is never read back and provides zero speedup here. It's
+    # pure dead weight on the live filesystem. Runtime never touches it
+    # (that's server/ + static/ + manifests), so removing it is safe.
+    # We keep .next/cache/images and .next/cache/fetch-cache — those ARE
+    # runtime caches the image optimizer and data cache read/write live.
+    if [ -d ".next/cache/webpack" ]; then
+        WP_SIZE=$(du -sh ".next/cache/webpack" 2>/dev/null | cut -f1)
+        rm -rf ".next/cache/webpack"
+        echo "   Pruned unused webpack build cache from live build (${WP_SIZE:-unknown} reclaimed)"
+    fi
 
     # Keep only the 2 most recent backups, delete older ones
     BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
