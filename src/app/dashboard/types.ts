@@ -123,6 +123,9 @@ export interface Referrer {
 export interface ProductionOrderItem {
   name: string;
   count: number;
+  // Units already shipped/delivered for this item, so the view can show
+  // "still to produce = count − shippedCount" and avoid over-producing.
+  shippedCount: number;
   projectItemId: string | null;
   sku: string | null;
   inStock: boolean;

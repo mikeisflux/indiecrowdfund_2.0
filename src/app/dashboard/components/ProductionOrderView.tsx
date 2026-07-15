@@ -176,11 +176,12 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
     lines.push("");
 
     lines.push("Items to Produce");
-    lines.push("Item Name,SKU,Quantity Needed,In Stock");
+    lines.push("Item Name,SKU,Quantity Needed,Already Shipped,Still to Produce,In Stock");
     for (const item of productionOrderStats.items) {
       const sku = getDisplaySku(item);
       const inStock = getInStock(item) ? "Yes" : "No";
-      lines.push(`${escapeCSV(item.name)},${escapeCSV(sku)},${item.count},${inStock}`);
+      const toProduce = Math.max(0, item.count - item.shippedCount);
+      lines.push(`${escapeCSV(item.name)},${escapeCSV(sku)},${item.count},${item.shippedCount},${toProduce},${inStock}`);
     }
 
     const csvContent = lines.join("\n");
@@ -336,12 +337,14 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
           {productionOrderStats.items.length > 0 ? (
             <div className="rounded-lg border border-border/50 overflow-hidden">
               <div className="overflow-x-auto">
-              <div className="min-w-[440px]">
+              <div className="min-w-[560px]">
               {/* Header */}
-              <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_80px] gap-2 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+              <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_64px_76px_80px] gap-2 bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
                 <div>Item Name</div>
                 <div>SKU</div>
-                <div className="text-center">Qty</div>
+                <div className="text-center">Needed</div>
+                <div className="text-center">Shipped</div>
+                <div className="text-center">To Produce</div>
                 <div className="text-center">In Stock</div>
               </div>
               {/* Rows */}
@@ -352,11 +355,13 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                 const isSavingSku = item.projectItemId ? savingSkus[item.projectItemId] : false;
                 const isInStock = getInStock(item);
                 const isSavingStockItem = item.projectItemId ? savingStock[item.projectItemId] : false;
+                // Units still to make = needed − already shipped (never negative).
+                const toProduce = Math.max(0, item.count - item.shippedCount);
 
                 return (
                   <div
                     key={item.projectItemId || index}
-                    className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_80px] gap-2 px-3 py-2 text-sm border-t border-border/50 items-center hover:bg-muted/10 transition-colors"
+                    className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_56px_64px_76px_80px] gap-2 px-3 py-2 text-sm border-t border-border/50 items-center hover:bg-muted/10 transition-colors"
                   >
                     <div className="font-medium truncate">{item.name}</div>
                     <div className="flex items-center gap-1 min-w-0">
@@ -414,6 +419,14 @@ export function ProductionOrderView({ productionOrderStats, projectId }: Product
                     </div>
                     <div className="text-center">
                       <span className="font-bold">{item.count.toLocaleString()}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-muted-foreground tabular-nums">{item.shippedCount.toLocaleString()}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className={`font-bold tabular-nums ${toProduce > 0 ? "text-purple-500" : "text-emerald-500"}`}>
+                        {toProduce.toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex items-center justify-center gap-1.5">
                       {item.projectItemId ? (

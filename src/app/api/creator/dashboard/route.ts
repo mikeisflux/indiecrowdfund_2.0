@@ -601,12 +601,18 @@ export async function GET(req: NextRequest) {
 
     // Count items needed for fulfillment (from rewards and addons)
     // Key by projectItemId or item title to deduplicate items that appear in multiple reward tiers
-    const itemCounts = new Map<string, { name: string; count: number; projectItemId: string | null; sku: string | null; inStock: boolean }>();
+    const itemCounts = new Map<string, { name: string; count: number; shippedCount: number; projectItemId: string | null; sku: string | null; inStock: boolean }>();
     // SKU-level aggregation: sums item qty across rewards + addons for every backer
     // (aftersales add-ons create new PledgeAddon rows, so they're included automatically)
     const skuCounts = new Map<string, { sku: string | null; name: string; quantity: number; backerIds: Set<string>; projectItemId: string | null }>();
 
     fulfillmentData.forEach((pledge) => {
+      // Units on an already-shipped/delivered pledge are counted into
+      // shippedCount so the Production Order view can show "still to
+      // produce = needed − shipped" and creators don't reprint units
+      // already sent (e.g. lock-and-ship-while-live backers).
+      const isShipped =
+        pledge.fulfillmentStatus === "SHIPPED" || pledge.fulfillmentStatus === "DELIVERED";
       // Count items from reward tiers
       if (pledge.reward?.items) {
         pledge.reward.items.forEach((item: { id: string; title: string; projectItemId: string | null; projectItem?: { id: string; title: string; sku: string | null } | null }) => {
@@ -617,8 +623,9 @@ export async function GET(req: NextRequest) {
           const existingItem = itemCounts.get(itemKey);
           if (existingItem) {
             existingItem.count += 1;
+            if (isShipped) existingItem.shippedCount += 1;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: 1, projectItemId: item.projectItemId, sku: null, inStock: false });
+            itemCounts.set(itemKey, { name: itemName, count: 1, shippedCount: isShipped ? 1 : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
           }
 
           const skuValue = item.projectItem?.sku?.trim() || null;
@@ -664,8 +671,9 @@ export async function GET(req: NextRequest) {
           const existingItem = itemCounts.get(itemKey);
           if (existingItem) {
             existingItem.count += pledgeAddon.quantity;
+            if (isShipped) existingItem.shippedCount += pledgeAddon.quantity;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, projectItemId: null, sku: null, inStock: false });
+            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, shippedCount: isShipped ? pledgeAddon.quantity : 0, projectItemId: null, sku: null, inStock: false });
           }
 
           const existingSku = skuCounts.get(itemKey);
@@ -692,8 +700,9 @@ export async function GET(req: NextRequest) {
           const existingItem = itemCounts.get(itemKey);
           if (existingItem) {
             existingItem.count += pledgeAddon.quantity;
+            if (isShipped) existingItem.shippedCount += pledgeAddon.quantity;
           } else {
-            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, projectItemId: item.projectItemId, sku: null, inStock: false });
+            itemCounts.set(itemKey, { name: itemName, count: pledgeAddon.quantity, shippedCount: isShipped ? pledgeAddon.quantity : 0, projectItemId: item.projectItemId, sku: null, inStock: false });
           }
 
           const skuValue = item.projectItem?.sku?.trim() || null;
