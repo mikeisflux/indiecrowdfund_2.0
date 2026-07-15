@@ -104,6 +104,7 @@ const categories = [
       "Tracking deliveries",
       "Locking orders early with Order Lock",
       "Printing your books with Printing Comics",
+      "Requesting & approving print proofs",
     ],
     href: "/faq#shipping",
   },

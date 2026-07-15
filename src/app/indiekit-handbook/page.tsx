@@ -469,16 +469,20 @@ const tabContent: Record<string, TabContent> = {
       { step: 'Configure cover and paper', detail: 'Choose the cover type / paper stock (matte, semi-gloss, gloss, deluxe/premium gloss, holo-chrome, metal, raised metal, glow-in-the-dark, sketch) and the interior paper and interior color (full color or grayscale).' },
       { step: 'Add embellishments', detail: 'Optionally add lamination, UV, or foil embellishments, each with their own sub-styles. The quote updates as you add them.' },
       { step: 'Upload print-ready files', detail: 'Upload your print-ready cover and interior PDFs. Then review the live quote plus shipping options and place the order.' },
+      { step: 'Request a hard proof (optional)', detail: 'Before committing to the full run, tick "PDF proof" and/or "Hard-copy proof" on the product. A PDF proof is a digital preflight; a hard-copy proof is a single physical sample mailed to you. Any proof fees are already rolled into the live quote, so what you see is what you pay.' },
+      { step: 'Review and approve the proof', detail: 'When the printer uploads your proof you get a notification and the order card shows a "Proof: awaiting approval" badge with a "Review & approve proof" button. Open the tokenized review link to approve, or request changes — the printer re-proofs and you review again. If a notification is ever missed, hit "Check for proof" on the order card to pull the latest proof on demand. Production does not start until you approve.' },
       { step: 'Pay Printing Comics and track status', detail: 'Payment for the print run is handled directly with Printing Comics — they send a payment link. IndieKit tracks the order status; the platform doesn\'t process the print payment itself.' },
     ],
     tips: [
       'Pair Printing Comics with the Production Order tab — its "Still to Produce" column already subtracts units you\'ve Already Shipped, so you don\'t over-order.',
       'Cartons arrive at your receiving address, so budget time to receive, sort, and ship to backers yourself.',
       'Configure options top-to-bottom and watch the live quote — cover stock and embellishments move the price the most.',
+      'Always request at least a PDF proof on a first run with a new cover stock or embellishment — it is the cheapest way to catch a color or trim surprise before you print hundreds of copies.',
     ],
     gotchas: [
       'This is a bulk print run, not per-backer fulfillment — Printing Comics does not ship to your backers.',
       'The print-run payment is a separate transaction with Printing Comics via their payment link; it is not charged through the platform or your backers\' cards.',
+      'If you requested a proof, production is gated on your approval — an un-reviewed proof will stall the order, so watch for the proof notification.',
     ],
   },
 
