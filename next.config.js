@@ -6,19 +6,17 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   // Allow custom build output directory for zero-downtime deployments
   distDir: process.env.NEXT_BUILD_OUTPUT || '.next',
-  // Don't re-run type-checking or ESLint inside `next build`. The deploy
-  // script (build-and-swap.sh, Step 4) already runs a full, blocking
+  // Don't re-run type-checking inside `next build`. The deploy script
+  // (build-and-swap.sh, Step 4) already runs a full, blocking
   // `tsc --noEmit --project tsconfig.build.json` that aborts the deploy on
   // any type error BEFORE `next build` is ever reached — so Next's built-in
-  // pass is duplicate work that just re-type-checks the whole codebase a
-  // second time (a big, uncached chunk of every build). ESLint during the
-  // production build is advisory only; lint runs via the separate `lint`
-  // script / CI. Type SAFETY is unchanged — it's still enforced, just once.
+  // pass is duplicate work that re-type-checks the whole codebase a second
+  // time. Type SAFETY is unchanged — it's still enforced, just once.
+  // (ESLint isn't configured here: Next 16 removed the in-build ESLint
+  // integration, so it doesn't run during `next build` at all — linting is
+  // the separate `lint` script / CI.)
   typescript: {
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   async redirects() {
     return [
