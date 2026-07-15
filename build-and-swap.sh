@@ -174,6 +174,32 @@ if [ -d ".next/types" ]; then
     echo -e "${GREEN}   Cleaned stale .next/types${NC}"
 fi
 
+# Step 5b: Seed the new build's cache from the current live build so the
+# webpack build is INCREMENTAL, not cold. next build writes/reads its
+# filesystem cache under <distDir>/cache/webpack; since we build into a
+# fresh .next-new, webpack would otherwise start with an empty cache and
+# rebuild everything from scratch every deploy (~the whole point of the
+# slow builds). Copying the previous cache in first lets webpack reuse it.
+#
+# We hardlink (cp -al) rather than deep-copy: same filesystem, so it's
+# near-instant and adds ~no disk (inodes are shared with the live cache
+# until webpack replaces individual pack files via write-temp-then-rename,
+# which never mutates the live copy in place). Falls back to a real copy,
+# then to a cold build, if hardlinking isn't available.
+if [ -d ".next/cache" ]; then
+    echo ""
+    echo "♻️  Step 5b: Seeding build cache for a faster incremental build..."
+    mkdir -p .next-new
+    if cp -al .next/cache .next-new/cache 2>/dev/null; then
+        echo -e "${GREEN}   Seeded cache via hardlinks (no extra disk)${NC}"
+    elif cp -a .next/cache .next-new/cache 2>/dev/null; then
+        echo -e "${GREEN}   Seeded cache via copy${NC}"
+    else
+        rm -rf .next-new/cache 2>/dev/null || true
+        echo -e "${YELLOW}   Could not seed cache — this build will be cold (still fine)${NC}"
+    fi
+fi
+
 # Step 6: Build new version to separate directory (zero-downtime)
 # NOTE: We call next build directly instead of npm run build because
 # npm run build includes "rm -rf .next" which would break the live site
@@ -212,20 +238,6 @@ if [ $BUILD_EXIT_CODE -eq 0 ]; then
     # Move new build into place
     mv .next-new .next
     echo -e "${GREEN}   New build is now live!${NC}"
-
-    # Drop the webpack build cache from the LIVE build. It's ~1.6 GB of
-    # *.pack files that only speed up an INCREMENTAL rebuild — but this
-    # script always builds into a fresh .next-new (it rm -rf's it first),
-    # so the cache is never read back and provides zero speedup here. It's
-    # pure dead weight on the live filesystem. Runtime never touches it
-    # (that's server/ + static/ + manifests), so removing it is safe.
-    # We keep .next/cache/images and .next/cache/fetch-cache — those ARE
-    # runtime caches the image optimizer and data cache read/write live.
-    if [ -d ".next/cache/webpack" ]; then
-        WP_SIZE=$(du -sh ".next/cache/webpack" 2>/dev/null | cut -f1)
-        rm -rf ".next/cache/webpack"
-        echo "   Pruned unused webpack build cache from live build (${WP_SIZE:-unknown} reclaimed)"
-    fi
 
     # Keep only the 2 most recent backups, delete older ones
     BACKUP_COUNT=$(ls -dt .next-backup-* 2>/dev/null | wc -l)
