@@ -8,12 +8,14 @@ export const alt = "How IndieCrowdfund stacks up against Kickstarter, Indiegogo,
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Keep in sync with the headline scoreboard on the page.
+// Keep in sync with the headline scoreboard on the page. Backmebro hasn't
+// launched, so it shows "?" (matches the table's not-launched-yet state).
 const SCORES = [
   { name: "IndieCrowdfund", score: "31", highlight: true },
   { name: "Indiegogo", score: "11", highlight: false },
   { name: "Kickstarter", score: "8", highlight: false },
   { name: "Fund My Comic", score: "5", highlight: false },
+  { name: "Backmebro", score: "?", highlight: false },
 ];
 
 export default function Image() {
@@ -115,7 +117,7 @@ export default function Image() {
         </div>
 
         {/* Scoreboard */}
-        <div style={{ display: "flex", gap: "20px" }}>
+        <div style={{ display: "flex", gap: "16px" }}>
           {SCORES.map((s) => (
             <div
               key={s.name}
@@ -124,7 +126,7 @@ export default function Image() {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                width: "228px",
+                width: "206px",
                 height: "150px",
                 borderRadius: "18px",
                 border: s.highlight ? "2px solid #10b981" : "1px solid #27272a",
@@ -134,9 +136,9 @@ export default function Image() {
               <div
                 style={{
                   display: "flex",
-                  fontSize: "58px",
+                  fontSize: "54px",
                   fontWeight: 800,
-                  color: s.highlight ? "#10b981" : "#e5e7eb",
+                  color: s.highlight ? "#10b981" : s.score === "?" ? "#6b7280" : "#e5e7eb",
                 }}
               >
                 {s.score}
@@ -144,7 +146,7 @@ export default function Image() {
               <div
                 style={{
                   display: "flex",
-                  fontSize: "20px",
+                  fontSize: "19px",
                   fontWeight: 600,
                   color: s.highlight ? "#a7f3d0" : "#9ca3af",
                   marginTop: "8px",
