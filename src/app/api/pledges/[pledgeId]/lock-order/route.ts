@@ -35,13 +35,25 @@ async function loadOwnedPledge(pledgeId: string, userId: string) {
     where: { id: pledgeId },
     include: {
       project: { select: { id: true, title: true, paymentProcessor: true, slug: true } },
-      reward: { select: { title: true, amount: true } },
-      addons: { include: { addon: { select: { title: true } } } },
+      reward: { select: { title: true, amount: true, shippingType: true } },
+      addons: { include: { addon: { select: { title: true, shippingType: true } } } },
     },
   });
   if (!pledge || pledge.deletedAt) return { error: "Pledge not found", status: 404 as const };
   if (pledge.userId !== userId) return { error: "Access denied", status: 403 as const };
   return { pledge };
+}
+
+// Whether this order physically ships: the main reward ships, or any add-on
+// ships. A digital-only order (digital reward + digital add-ons) needs no
+// address, so we don't force one on the confirm/lock page.
+function orderRequiresShipping(pledge: {
+  reward: { shippingType: string } | null;
+  addons: { addon: { shippingType: string } | null }[];
+}): boolean {
+  const rewardShips = pledge.reward ? pledge.reward.shippingType !== "NO_SHIPPING" : false;
+  const addonShips = pledge.addons.some((a) => a.addon && a.addon.shippingType !== "NO_SHIPPING");
+  return rewardShips || addonShips;
 }
 
 // GET — order summary for the approval page.
@@ -63,6 +75,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ple
         lockStatus: pledge.orderLockStatus,
         lockedAt: pledge.orderLockedAt,
         alreadyPaid: pledge.status === "COMPLETED",
+        requiresShipping: orderRequiresShipping(pledge),
         shippingAddress: pledge.shippingAddress ?? null,
         reward: pledge.reward ? { title: pledge.reward.title, amount: Number(pledge.reward.amount) } : null,
         addons: pledge.addons.map((a: (typeof pledge.addons)[number]) => ({ title: a.addon?.title || "Add-on", quantity: a.quantity, amount: Number(a.amount) })),
@@ -106,7 +119,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ple
     }
 
     // ---- Approve ----
-    if (!shippingAddress && !pledge.shippingAddress) {
+    // Only physical orders need an address. A digital-only order (digital
+    // reward + digital add-ons) locks without one.
+    if (orderRequiresShipping(pledge) && !shippingAddress && !pledge.shippingAddress) {
       return NextResponse.json({ error: "A shipping address is required to lock your order." }, { status: 400 });
     }
 

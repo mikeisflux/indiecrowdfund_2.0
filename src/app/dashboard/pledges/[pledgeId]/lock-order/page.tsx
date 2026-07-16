@@ -29,6 +29,7 @@ interface OrderData {
     currency: string;
     lockStatus: "UNLOCKED" | "LOCK_REQUESTED" | "LOCKED" | "DECLINED";
     alreadyPaid: boolean;
+    requiresShipping: boolean;
     shippingAddress: Addr | null;
     reward: { title: string; amount: number } | null;
     addons: { title: string; quantity: number; amount: number }[];
@@ -70,8 +71,10 @@ export default function LockOrderPage() {
     if (pledgeId) load();
   }, [pledgeId, load]);
 
+  const needsShipping = !!data?.pledge.requiresShipping;
+
   const submit = async (action: "approve" | "decline") => {
-    if (action === "approve") {
+    if (action === "approve" && needsShipping) {
       for (const f of ["line1", "city", "postalCode", "country"] as const) {
         if (!addr[f]?.trim()) {
           toast.error("Please complete your shipping address before locking.");
@@ -81,10 +84,16 @@ export default function LockOrderPage() {
     }
     setSubmitting(true);
     try {
+      // Digital-only orders don't ship, so we don't send (or require) an
+      // address — sending a blank one would fail server-side validation.
+      const body =
+        action === "approve" && needsShipping
+          ? { action, shippingAddress: addr }
+          : { action };
       const res = await apiFetch(`/api/pledges/${pledgeId}/lock-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(action === "approve" ? { action, shippingAddress: addr } : { action }),
+        body: JSON.stringify(body),
       });
       const j = await res.json();
       if (!res.ok) {
@@ -196,7 +205,16 @@ export default function LockOrderPage() {
           </CardContent>
         </Card>
 
-        {/* Shipping address */}
+        {/* Shipping address — only for orders that physically ship. A
+            digital-only order needs no address. */}
+        {!p.requiresShipping ? (
+          <Card>
+            <CardContent className="flex items-start gap-2 py-4 text-sm text-muted-foreground">
+              <Package className="h-4 w-4 mt-0.5 shrink-0 text-emerald-500" />
+              <span>This is a digital reward — no shipping address needed. Just lock it in to confirm.</span>
+            </CardContent>
+          </Card>
+        ) : (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Shipping address</CardTitle>
@@ -247,6 +265,7 @@ export default function LockOrderPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {!p.alreadyPaid && (
           <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
