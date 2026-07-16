@@ -58,6 +58,10 @@ export const GROUPS: FeatureGroup[] = [
       { label: "Public funding total reflects on-platform pledges only", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "unknown" },
       { label: "Prelaunch / coming-soon pages", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
       { label: "Native à-la-carte add-ons", ic: "yes", ks: "yes", ig: "yes", fmc: "yes", bmb: "unknown" },
+      // KS: Kickstarter orders rewards by pledge amount with no manual reorder.
+      // IG: Indiegogo's help center documents drag handles to reorder perks.
+      // FMC: not verified (Thrinacia docs don't mention it; site not reachable).
+      { label: "Drag-to-reorder reward tiers & add-ons", ic: "yes", ks: "no", ig: "yes", fmc: "no", bmb: "unknown" },
       { label: "Late pledges after the campaign ends", ic: "yes", ks: "yes", ig: "yes", fmc: "partial", bmb: "unknown" },
       { label: "Backer reviews & star ratings", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
       { label: "Team collaborators on a campaign", ic: "yes", ks: "yes", ig: "yes", fmc: "no", bmb: "unknown" },
