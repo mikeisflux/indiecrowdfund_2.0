@@ -124,23 +124,24 @@ const getFeaturedProjects = cache(async () => {
     // rotates as new pledges land — every campaign gets a turn at the top,
     // instead of the biggest-funded one permanently owning it. We take the
     // latest completed-pledge time per campaign and sort by it, newest first.
+    const FEATURED_COUNT = 12;
     const recentlyBacked = await db.pledge.groupBy({
       by: ["projectId"],
       where: { status: "COMPLETED", project: liveProjectFilter },
       _max: { createdAt: true },
       orderBy: { _max: { createdAt: "desc" } },
-      take: 6,
+      take: FEATURED_COUNT,
     });
     const orderedIds: string[] = recentlyBacked.map((g) => g.projectId);
 
     // Backfill any remaining slots with live campaigns that have no completed
-    // pledges yet (newest first), so the section still shows up to 6 even
-    // when only a few campaigns have been backed.
-    if (orderedIds.length < 6) {
+    // pledges yet (newest first), so the section still shows up to
+    // FEATURED_COUNT even when only a few campaigns have been backed.
+    if (orderedIds.length < FEATURED_COUNT) {
       const fillers = await db.project.findMany({
         where: { ...liveProjectFilter, id: { notIn: orderedIds } },
         orderBy: { createdAt: "desc" },
-        take: 6 - orderedIds.length,
+        take: FEATURED_COUNT - orderedIds.length,
         select: { id: true },
       });
       for (const f of fillers) orderedIds.push(f.id);
