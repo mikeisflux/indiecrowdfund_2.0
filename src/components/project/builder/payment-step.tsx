@@ -2,6 +2,7 @@
 
 import { apiFetch } from "@/lib/fetch-utils";
 import { validateBankFields, parseBankCountry, type BankCountry } from "@/lib/bank-countries";
+import { PAYPAL_CONNECT_PUBLIC_ENABLED } from "@/lib/paypal-connect-flag";
 import { useState, useEffect } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { Separator } from "@/components/ui/separator";
@@ -469,8 +470,10 @@ export function PaymentStep() {
         </>
       )}
 
-      {/* PayPal Connect onboarding - Only show when PayPal Connect is selected */}
-      {payment.paymentProcessor === "PAYPAL_CONNECT" && (
+      {/* PayPal Connect onboarding — hidden until the PPCP integration is
+          finalized (see PAYPAL_CONNECT_PUBLIC_ENABLED). Regular PayPal is
+          unaffected. */}
+      {PAYPAL_CONNECT_PUBLIC_ENABLED && payment.paymentProcessor === "PAYPAL_CONNECT" && (
         <>
           <Separator />
           <PayPalConnectPayoutSection />

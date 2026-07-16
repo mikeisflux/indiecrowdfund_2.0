@@ -14,6 +14,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { PAYPAL_CONNECT_PUBLIC_ENABLED } from "@/lib/paypal-connect-flag";
 import { PaymentProcessorSectionProps } from "./types";
 
 export function PaymentProcessorSection({
@@ -148,6 +149,9 @@ export function PaymentProcessorSection({
           </CardContent>
         </Card>
 
+        {/* PayPal Connect — hidden from the public campaign builder until the
+            PPCP integration is finalized (see PAYPAL_CONNECT_PUBLIC_ENABLED). */}
+        {PAYPAL_CONNECT_PUBLIC_ENABLED && (
         <Card
           className={`cursor-pointer transition-all ${
             payment.paymentProcessor === "PAYPAL_CONNECT" ? "border-2 border-primary" : "border"
@@ -200,6 +204,7 @@ export function PaymentProcessorSection({
             )}
           </CardContent>
         </Card>
+        )}
 
         <Card
           className={`cursor-pointer transition-all ${
