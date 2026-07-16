@@ -88,7 +88,10 @@ export const GROUPS: FeatureGroup[] = [
       { label: "Digital storefront (sell after the campaign)", ic: "yes", ks: "partial", ig: "yes", fmc: "yes", bmb: "unknown" },
       { label: "Music streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
       { label: "Movie / video streaming store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
-      { label: "Physical-media store", ic: "yes", ks: "no", ig: "no", fmc: "no", bmb: "unknown" },
+      // FMC "partial": each creator's campaign can keep selling its own physical
+      // items after the campaign via Direct Purchase, but there's no dedicated
+      // global physical-media store.
+      { label: "Physical-media store", ic: "yes", ks: "no", ig: "no", fmc: "partial", bmb: "unknown" },
       { label: "Discount & redeem codes", ic: "yes", ks: "partial", ig: "partial", fmc: "partial", bmb: "unknown" },
     ],
   },
