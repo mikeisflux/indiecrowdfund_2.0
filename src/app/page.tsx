@@ -111,20 +111,45 @@ export const revalidate = 60;
 const getFeaturedProjects = cache(async () => {
   try {
     const now = new Date();
-    const projects = await db.project.findMany({
-      where: {
-        status: "LIVE",
-        deletedAt: null,
-        // Only include projects that haven't ended yet
-        OR: [
-          { endDate: null },
-          { endDate: { gt: now } },
-        ],
-        // Hide test projects from home page
-        NOT: {
-          title: { contains: "test", mode: "insensitive" },
-        },
-      },
+    // Shared filter for eligible featured campaigns: live, not ended, not a
+    // test project.
+    const liveProjectFilter = {
+      status: "LIVE" as const,
+      deletedAt: null,
+      OR: [{ endDate: null }, { endDate: { gt: now } }],
+      NOT: { title: { contains: "test", mode: "insensitive" as const } },
+    };
+
+    // Order featured campaigns by MOST RECENTLY BACKED so the top spot
+    // rotates as new pledges land — every campaign gets a turn at the top,
+    // instead of the biggest-funded one permanently owning it. We take the
+    // latest completed-pledge time per campaign and sort by it, newest first.
+    const recentlyBacked = await db.pledge.groupBy({
+      by: ["projectId"],
+      where: { status: "COMPLETED", project: liveProjectFilter },
+      _max: { createdAt: true },
+      orderBy: { _max: { createdAt: "desc" } },
+      take: 6,
+    });
+    const orderedIds: string[] = recentlyBacked.map((g) => g.projectId);
+
+    // Backfill any remaining slots with live campaigns that have no completed
+    // pledges yet (newest first), so the section still shows up to 6 even
+    // when only a few campaigns have been backed.
+    if (orderedIds.length < 6) {
+      const fillers = await db.project.findMany({
+        where: { ...liveProjectFilter, id: { notIn: orderedIds } },
+        orderBy: { createdAt: "desc" },
+        take: 6 - orderedIds.length,
+        select: { id: true },
+      });
+      for (const f of fillers) orderedIds.push(f.id);
+    }
+
+    if (orderedIds.length === 0) return [];
+
+    const projectRows = await db.project.findMany({
+      where: { id: { in: orderedIds } },
       include: {
         creator: {
           select: {
@@ -133,11 +158,13 @@ const getFeaturedProjects = cache(async () => {
           },
         },
       },
-      orderBy: {
-        currentAmount: "desc",
-      },
-      take: 6,
     });
+    // Preserve the most-recently-backed ordering (findMany doesn't guarantee
+    // input order).
+    const projectById = new Map(projectRows.map((p) => [p.id, p]));
+    const projects = orderedIds
+      .map((id) => projectById.get(id))
+      .filter((p): p is (typeof projectRows)[number] => Boolean(p));
 
     const statsMap = await getBatchProjectStats(
       projects.map((p) => ({ id: p.id, status: p.status, goalAmount: p.goalAmount }))
